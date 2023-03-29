@@ -767,7 +767,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 mock_send_slack.assert_not_called()
 
                 def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, project_names, num_projects,
-                                             individual_id, sample_guid_idx):
+                                             individual_id, sample_guid_idx, body):
                     mock_logger.reset_mock()
                     _set_file_iter_stdout([header] + data)
                     response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -786,20 +786,20 @@ class DataManagerAPITest(AuthenticationTestCase):
                         tissue_type=params.get('created_sample_tissue_type'),
                     )
                     self.assertTrue(new_sample_guid in response_json['sampleGuids'])
-                    info_log_calls = [mock.call(info_log, self.data_manager_user) for info_log in info]
-                    info_log_calls.insert(1, mock.call(
+                    mock_logger.info.assert_has_calls([mock.call(info_log, self.data_manager_user) for info_log in info])
+                    mock_model_logger.info.assert_has_calls([mock.call(
                         'create 1 Samples', self.data_manager_user, db_update={
                             'dbEntity': 'Sample', 'entityIds': [response_json['sampleGuids'][sample_guid_idx]],
                             'updateType': 'bulk_create',
                         }
-                    ))
-                    mock_logger.info.assert_has_calls(info_log_calls)
+                    )])
 
                     return response_json, new_sample_guid
 
                 # Test loading new data
                 mock_open.reset_mock()
                 mock_logger.reset_mock()
+                mock_model_logger.reset_mock()
                 mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
                 mock_writes = []
                 def mock_write(content):
@@ -808,14 +808,17 @@ class DataManagerAPITest(AuthenticationTestCase):
                 body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
                 response_json, new_sample_guid = _test_basic_data_loading(
                     params['new_data'], params["num_parsed_samples"], 2,
-                    '1kg project nåme with uniçøde, Test Reprocessed Project', 2, 16, 1)
+                    '1kg project nåme with uniçøde, Test Reprocessed Project', 2, 16, 1, body)
                 self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
-                mock_model_logger.info.assert_called_with(
-                    f'delete {model_cls.__name__}s', self.data_manager_user,
-                    db_update={'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
-                               'parentEntityIds': {params['sample_guid']}, 'updateType': 'bulk_delete'}
-                )
+                mock_model_logger.info.assert_has_calls([
+                    mock.call(f'delete {model_cls.__name__}s', self.data_manager_user,
+                              db_update={'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
+                                         'parentEntityIds': {params['sample_guid']}, 'updateType': 'bulk_delete'}),
+                    mock.call('update 1 Samples', self.data_manager_user,
+                              db_update={'dbEntity': 'Sample', 'entityIds': [params['sample_guid']],
+                                         'updateType': 'bulk_update', 'updateFields': ['data_source']}),
+                ])
                 mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in params['warnings']])
                 self.assertEqual(mock_send_slack.call_count, 2)
                 mock_send_slack.assert_has_calls([
@@ -831,7 +834,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
                 # test database models are correct
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
-                sample_guid = self._check_rna_sample_model(individual_id=1, data_source='muscle_samples.tsv.gz',
+                sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz',
                                                            tissue_type=params.get('exist_sample_tissue_type'))
                 new_sample_guid = self._check_rna_sample_model(
                     individual_id=16, data_source='new_muscle_samples.tsv.gz',
@@ -847,11 +850,11 @@ class DataManagerAPITest(AuthenticationTestCase):
                 # test loading new data without deleting existing data
                 data = [params['no_existing_data']]
                 body.pop('mappingFile')
-                _test_basic_data_loading(data, 1, 1, '1kg project nåme with uniçøde', 1, 2, 0)
+                _test_basic_data_loading(data, 1, 1, '1kg project nåme with uniçøde', 1, 2, 0, body)
 
                 # Test loading data when where are duplicated individual ids in different projects.
                 data = [params['reused_indiv_id_data']]
-                _test_basic_data_loading(data, 1, 1, 'Test Reprocessed Project', 1, 20, 0)
+                _test_basic_data_loading(data, 1, 1, 'Test Reprocessed Project', 1, 20, 0, body)
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')

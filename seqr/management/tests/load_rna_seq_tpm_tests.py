@@ -62,7 +62,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         self.assertEqual(existing_sample.sample_id, 'NA19675_D2')
         self.assertTrue(existing_sample.is_active)
         self.assertIsNone(existing_sample.elasticsearch_index)
-        self.assertEqual(existing_sample.data_source, 'muscle_samples.tsv.gz')
+        self.assertEqual(existing_sample.data_source, RNA_FILE_ID)
         self.assertEqual(existing_sample.tissue_type, 'M')
 
         new_sample = Sample.objects.get(individual_id=2, sample_type='RNA')
