@@ -233,18 +233,11 @@ class AuthenticationTestCase(TestCase):
         self._log_stream.seek(0)
 
     def assert_json_logs(self, user, expected):
-        logs_iter = iter(self._log_stream.getvalue().split('\n'))
-        for message, extra in expected:
-            log = next(self._safe_load_json(row) for row in logs_iter)
-            self.assertDictEqual(
-                log, {'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, 'message': message, **(extra or {})})
-
-    @staticmethod
-    def _safe_load_json(data):
-        try:
-            return json.loads(data)
-        except json.decoder.JSONDecodeError:
-            return None
+        logs = self._log_stream.getvalue().split('\n')
+        for i, (message, extra) in enumerate(expected):
+            self.assertDictEqual(json.loads(logs[i]), {
+                'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, 'message': message, **(extra or {}),
+            })
 
 
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
