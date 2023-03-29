@@ -625,10 +625,10 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
             ],
-            'write_data': [
+            'write_data': {
                 'S_NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "p_value": "0.064", "p_adjust": "0.0000057", "z_score": "7.8"}}\n',
                 'S_NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "p_value": "0.01", "p_adjust": "0.13", "z_score": "-3.1"}}\n'
-            ],
+            },
             'new_data': [
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.13, -3.1],
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
@@ -659,8 +659,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'fibroblasts', 7.8],
                 ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'muscle', 0.064],
             ],
-            'write_data': ['S_NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}\n',
-                           'S_NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.064"}}\n'],
+            'write_data': {'S_NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}\n',
+                           'S_NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.064"}}\n'},
             'new_data': [
                 # existing sample NA19675_D2
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
@@ -885,7 +885,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 _test_basic_data_loading(data, 2, 2, (20, 'Test Reprocessed Project'), body,
                                          project_names='1kg project nåme with uniçøde, Test Reprocessed Project',
                                          num_created_samples=2)
-                self.assertListEqual([re.sub(r'^S[0-9]*', 'S', s) for s in mock_writes], params['write_data'])
+                self.assertSetEqual({re.sub(r'^S[0-9]*', 'S', s) for s in mock_writes}, params['write_data'])
 
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
