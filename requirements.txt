@@ -241,7 +241,7 @@ pytz==2022.7.1
     #   pandas
 pyyaml==6.0
     # via bokeh
-redis==3.3.11
+redis==4.5.3
     # via -r requirements.in
 requests==2.28.2
     # via
