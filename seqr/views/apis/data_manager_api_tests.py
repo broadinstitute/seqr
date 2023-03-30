@@ -270,6 +270,7 @@ SAMPLE_SV_WGS_QC_DATA = [
 
 RNA_SAMPLE_GUID = 'S000150_na19675_d2'
 RNA_TPM_SAMPLE_GUID = 'S000152_na19675_d2'
+RNA_SPLICE_SAMPLE_GUID = 'S000151_na20889'
 PLACEHOLDER_GUID = 'S0000100'
 RNA_FILE_ID = 'gs://rna_data/new_muscle_samples.tsv.gz'
 SAMPLE_GENE_OUTLIER_DATA = {
@@ -285,6 +286,10 @@ RNA_OUTLIER_SAMPLE_DATA = [
     f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'p_value': '0.04', 'p_adjust': '0.112', 'z_score': '1.9'}})}\n",
 ]
 RNA_TPM_SAMPLE_DATA = [
+    f'{RNA_TPM_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n',
+    f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '0.112'}})}\n",
+]
+RNA_SPLICE_SAMPLE_DATA = [
     f'{RNA_TPM_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n',
     f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '0.112'}})}\n",
 ]
@@ -693,34 +698,49 @@ class DataManagerAPITest(AuthenticationTestCase):
         'splice': {
             'model_cls': RnaSeqSpliceOutlier,
             'message_data_type': 'Splice Junction',
-            'header': ['chrom', 'start', 'end', 'strand', 'individualId', 'gene_name', 'type', 'pValue', 'zScore',
+            'header': ['individualId', 'project', 'chrom', 'start', 'end', 'strand', 'geneName', 'type', 'pValue', 'zScore',
                        'deltaPsi', 'readCount', 'geneId', 'tissue', 'dotSize', 'rareDiseaseSamplesWithJunction',
                        'rareDiseaseSamplesTotal'],
-            'optional_headers': ['individual_id'],
-            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', '', 'muscle', 1.34],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678',
-                                 'fibroblasts', 0.064],
-            'reused_indiv_id_data': ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20870', 'fibroblasts',
-                                     0.064],
+            'optional_headers': [],
+            'loaded_data_row': ['NA20889', 'Test Reprocessed Project', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
+                                'psi5', 1.08E-56, 12.34, 0.85, 1297, 'ENSG00000106554', 'muscle', 0.53953638, 1, 20],
+            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
+                                'psi5', 1.08E-56, 12.34, 0.85, 1297, 'ENSG00000106554', 'muscle', 0.53953638, 1, 20],
             'new_data': [
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
-                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
-                ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
-                ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19675_D2', 'fibroblasts', 0.05],
+                # existing sample NA20889
+                ['NA20889', 'Test Reprocessed Project', 'chr2', 167254166, 167258349, '*', 'XIRP2', 'psi3', 1.56E-25, -4.9,
+                 -0.46, 166, 'ENSG00000163092', 'muscle', 0.03850364, 1, 20],
+                ['NA20889', 'Test Reprocessed Project', 'chr7', 132885746, 132975168, '*', 'CHCHD3', 'psi5', 1.08E-56,
+                 -6.53, -0.85, 231, 'ENSG00000106554', 'muscle', 0.53953638, 1, 20],
+                ['NA20889', 'Test Reprocessed Project', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3', 1.56E-25, 6.33,
+                 0.45, 143, 'ENSG00000163092', 'muscle', 0.03454739, 1, 20],
+                # no matched individual NA19675_D3
+                ['NA19675_D3', '1kg project nåme with uniçøde', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3', 1.56E-25,
+                 6.33, 0.45, 143, 'ENSG00000163092', 'muscle', 0.03454739, 1, 20],
+                # a different project sample NA20888
+                ['NA20878', '1kg project nåme with uniçøde', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3', 1.56E-25, 6.33,
+                 0.45, 143, 'ENSG00000163092', 'fibroblasts', 0.03454739, 1, 20],
+                # a project mismatched sample NA20878
+                ['NA20878', 'Test Reprocessed Project', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3', 1.56E-25, 6.33,
+                 0.45, 143, 'ENSG00000163092', 'fibroblasts', 0.03454739, 1, 20],
+                # conflict tissue types samples
+                ['NA19678', '1kg project nåme with uniçøde', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3', 1.56E-25,
+                 6.33, 0.45, 143, 'ENSG00000163092', 'muscle', 0.03454739, 1, 20],
+                ['NA19678', '1kg project nåme with uniçøde', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3', 1.56E-25,
+                 6.33, 0.45, 143, 'ENSG00000163092', 'fibroblasts', 0.03454739, 1, 20],
             ],
             'exist_sample_tissue_type': 'M',
             'created_sample_tissue_type': 'F',
             'num_parsed_samples': 4,
             'initial_model_count': 4,
             'deleted_count': 1,
-            'parsed_file_data': RNA_TPM_SAMPLE_DATA,
-            'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
+            'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
+            'get_models_json': lambda models: list(
+                models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'gene_name', 'type', 'pValue', 'zScore',
+                                   'delta_psi', 'read_count', 'gene_id', 'tissue', 'dot_size',
+                                   'rare_disease_samples_withJunction', 'rare_disease_samples_total')),
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
-            'sample_guid': RNA_TPM_SAMPLE_GUID,
+            'sample_guid': RNA_SPLICE_SAMPLE_GUID,
             'warnings': ['Skipped loading row with mismatched tissue types for sample NA19675_D2: muscle, fibroblasts',
                          'Skipped loading for the following 2 unmatched samples: NA19675_D3, NA20878']
         },
@@ -914,12 +934,13 @@ class DataManagerAPITest(AuthenticationTestCase):
                 _test_basic_data_loading(data, 1, 1, (2, '1kg project nåme with uniçøde'), body)
 
                 # Test loading data when where are duplicated individual ids in different projects.
-                data = params['duplicated_indiv_id_data']
-                mock_writes = []
-                _test_basic_data_loading(data, 2, 2, (20, 'Test Reprocessed Project'), body,
-                                         project_names='1kg project nåme with uniçøde, Test Reprocessed Project',
-                                         num_created_samples=2)
-                self.assertSetEqual({re.sub(r'^S[0-9]*', 'S', s) for s in mock_writes}, params['write_data'])
+                if 'duplicated_indiv_id_data' in params:
+                    data = params['duplicated_indiv_id_data']
+                    mock_writes = []
+                    _test_basic_data_loading(data, 2, 2, (20, 'Test Reprocessed Project'), body,
+                                             project_names='1kg project nåme with uniçøde, Test Reprocessed Project',
+                                             num_created_samples=2)
+                    self.assertSetEqual({re.sub(r'^S[0-9]*', 'S', s) for s in mock_writes}, params['write_data'])
 
 
     @mock.patch('seqr.views.apis.data_manager_api.os')

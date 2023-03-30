@@ -1378,6 +1378,27 @@
     }
 },
 {
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 1,
+    "fields": {
+        "sample": 151,
+        "gene_id": "ENSG00000106554",
+        "p_value": 1.08E-56,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 132885746,
+        "end": 132886973,
+        "strand": "*",
+        "gene_name": "CHCHD3",
+        "type": "psi5",
+        "delta_psi": 0.85,
+        "read_count": 1297,
+        "dot_size": 0.53953638,
+        "rare_disease_samples_with_junction": 1,
+        "rare_disease_samples_total": 20
+    }
+},
+{
     "model": "seqr.phenotypeprioritization",
     "pk": 1,
     "fields": {
