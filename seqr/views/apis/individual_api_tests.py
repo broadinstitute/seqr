@@ -640,16 +640,6 @@ class IndividualAPITest(object):
         })
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
-
-class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data']
-    HAS_EXTERNAL_PROJECT_ACCESS = False
-
-
-class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-    HAS_EXTERNAL_PROJECT_ACCESS = True
-
     def test_get_record_update(self):
         """
         Test updating the consanguinity field of a mocked individual.
@@ -670,3 +660,12 @@ class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
         )
 
         self.assertEqual(False, updates['consanguinity'])
+
+class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data']
+    HAS_EXTERNAL_PROJECT_ACCESS = False
+
+
+class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+    HAS_EXTERNAL_PROJECT_ACCESS = True
