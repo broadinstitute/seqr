@@ -672,8 +672,10 @@ def _get_record_updates(record, individual, invalid_values, allowed_assigned_ana
                                                                    record.get(ABSENT_FEATURES_COL))
     update_record = {}
     for k, v in record.items():
-        if not v:
+        # allow setting fields to False
+        if not isinstance(v, bool) and not v:
             continue
+
         try:
             if k == ASSIGNED_ANALYST_COL:
                 if v not in allowed_assigned_analysts:
@@ -686,7 +688,8 @@ def _get_record_updates(record, individual, invalid_values, allowed_assigned_ana
                     or parsed_val == getattr(individual, k)
                 ):
                     parsed_val = None
-            if parsed_val:
+
+            if isinstance(parsed_val, bool) or parsed_val:
                 update_record[k] = parsed_val
         except (KeyError, ValueError):
             invalid_values[k][v].append(individual.individual_id)
