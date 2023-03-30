@@ -75,7 +75,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         models = RnaSeqTpm.objects.all()
         self.assertEqual(models.count(), 5)
         self.assertSetEqual({model.sample for model in models}, set(existing_rna_samples))
-        self.assertEqual(len(models.filter(sample=existing_sample, gene_id='ENSG00000240361')), 0)
+        self.assertEqual(models.filter(sample=existing_sample, gene_id='ENSG00000240361').count(), 0)
         self.assertEqual(models.get(sample=new_sample, gene_id='ENSG00000233750').tpm, 6.04)
 
         mock_logger.info.assert_has_calls([
@@ -89,10 +89,11 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         # Test a new sample created for a mismatched tissue
         mock_gzip_file.__iter__.return_value[2] = 'NA19678_D1\t1kg project nåme with uniçøde\tNA19678\tENSG00000233750\t6.55\tfibroblasts\n'
         call_command('load_rna_seq_tpm', 'new_file.tsv.gz', '--ignore-extra-samples')
-        models = RnaSeqTpm.objects.filter(sample__sample_id='NA19678_D1')
+        models = RnaSeqTpm.objects.select_related('sample').filter(sample__sample_id='NA19678_D1')
         self.assertEqual(models.count(), 2)
+        self.assertSetEqual({v[0] for v in models.values_list('sample__tissue_type').distinct()}, {'F', 'WB'})
         self.assertEqual(models.get(gene_id='ENSG00000233750', sample__tissue_type='F').tpm, 6.55)
-        self.assertEqual(len({m.sample for m in models}), 2)
+        self.assertEqual(models.values('sample').distinct().count(), 2)
         mock_logger.info.assert_has_calls([
             mock.call('create 1 RnaSeqTpm for NA19678_D1'),
         ])
