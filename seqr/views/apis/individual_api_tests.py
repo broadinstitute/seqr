@@ -514,7 +514,7 @@ class IndividualAPITest(object):
             [{'gene': 'IKBKAP', 'comments': 'multiple panels, no confirm'}, {'gene': 'EHBP1L1'}])
 
         if has_non_hpo_update:
-            self.assertListEqual(response_json['individualsByGuid']['I000002_na19678']['features'], [])
+            self.assertIsNone(response_json['individualsByGuid']['I000002_na19678']['features'])
             self.assertFalse(response_json['individualsByGuid']['I000002_na19678']['affectedRelatives'])
 
         if expected_families:
