@@ -649,3 +649,24 @@ class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
 class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     HAS_EXTERNAL_PROJECT_ACCESS = True
+
+    def test_get_record_update(self):
+        """
+        Test updating the consanguinity field of a mocked individual.
+        Specifically test the False case to avoid incidental false-y checks.
+        """
+        individual = mock.Mock()
+        individual.features = []
+        individual.absent_features = []
+        individual.consanguinity = None
+
+        invalid_values = {}
+
+        updates = _get_record_updates(
+            {'consanguinity': False},
+            individual,
+            invalid_values=invalid_values,
+            allowed_assigned_analysts={},
+        )
+
+        self.assertEqual(False, updates['consanguinity'])
