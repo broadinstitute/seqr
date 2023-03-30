@@ -703,16 +703,15 @@ def _get_record_updates(record, individual, invalid_values, allowed_assigned_ana
             if k == ASSIGNED_ANALYST_COL:
                 if v not in allowed_assigned_analysts:
                     raise ValueError
-                parsed_val = v
+                if v:
+                    update_record[k] = v
             else:
-                parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
-                if (
-                    (has_same_features and k in {FEATURES_COL, ABSENT_FEATURES_COL})
-                    or parsed_val == getattr(individual, k)
-                ):
-                    parsed_val = None
-            if parsed_val or parsed_val is False:
-                update_record[k] = parsed_val
+                _parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
+                if k in {FEATURES_COL, ABSENT_FEATURES_COL} and not has_same_features:
+                    update_record[k] = _parsed_val
+                elif _parsed_val != getattr(individual, k):
+                    update_record[k] = _parsed_val
+
         except (KeyError, ValueError):
             invalid_values[k][v].append(individual.individual_id)
     return update_record
