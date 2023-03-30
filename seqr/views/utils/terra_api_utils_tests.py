@@ -5,6 +5,7 @@ import responses
 from datetime import datetime
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
 
 from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL, GOOGLE_TOKEN_RESULT,\
     GOOGLE_ACCESS_TOKEN_URL, TOKEN_AUTH_TIME, REGISTER_RESPONSE, TEST_SERVICE_ACCOUNT, TEST_OAUTH2_KEY
@@ -128,6 +129,19 @@ class TerraApiUtilsCallsCase(TestCase):
             _ = list_anvil_workspaces(user)
         self.assertEqual(str(ec.exception),
             'Error: called Terra API: GET /api/workspaces?fields=public,workspace.name,workspace.namespace got status: 401 with a reason: Unauthorized')
+        self.assertEqual(ec.exception.status_code, 401)
+
+        responses.add(responses.GET, url, status=403)
+        with self.assertRaises(PermissionDenied) as ec:
+            _ = list_anvil_workspaces(user)
+        self.assertEqual(str(ec.exception),
+                         'test_user got access denied (403) from Terra API: GET /api/workspaces?fields=public,workspace.name,workspace.namespace with reason: Forbidden')
+
+        responses.add(responses.GET, url, status=503)
+        with self.assertRaises(PermissionDenied) as ec:
+            _ = list_anvil_workspaces(user)
+        self.assertEqual(str(ec.exception),
+                         'Terra API Unavailable (503): GET /api/workspaces?fields=public,workspace.name,workspace.namespace with reason: Service Unavailable')
 
     @responses.activate
     @mock.patch('seqr.views.utils.terra_api_utils.logger')
@@ -187,6 +201,15 @@ class TerraApiUtilsCallsCase(TestCase):
         self.assertDictEqual(r, {})
         mock_logger.warning.assert_called_with(
             'test_user got access denied (403) from Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl with reason: Forbidden', user)
+        self.assertEqual(len(mock_logger.method_calls), 1)
+
+        mock_logger.reset_mock()
+        responses.replace(responses.GET, url, status=503)
+        r = user_get_workspace_acl(user, 'my-seqr-billing', 'my-seqr-workspace')
+        self.assertDictEqual(r, {})
+        mock_logger.warning.assert_called_with(
+            'Terra API Unavailable (503): GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl with reason: Service Unavailable',
+            user)
         self.assertEqual(len(mock_logger.method_calls), 1)
 
         mock_logger.reset_mock()
@@ -257,6 +280,7 @@ class TerraApiUtilsCallsCase(TestCase):
         with self.assertRaises(TerraAPIException) as te:
             _ = add_service_account(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertEqual(str(te.exception), 'Failed to grant seqr service account access to the workspace my-seqr-billing/my-seqr-workspace')
+        self.assertEqual(te.exception.status_code, 400)
 
     @responses.activate
     def test_has_service_account(self):
@@ -361,6 +385,7 @@ class TerraApiUtilsCallsCase(TestCase):
             user_get_anvil_groups(user)
         self.assertEqual(str(ec.exception),
             'Error: called Terra API: GET /api/groups got status: 401 with a reason: Unauthorized')
+        self.assertEqual(ec.exception.status_code, 401)
 
         responses.reset()
         cached_groups = ['foo', 'bar', 'baz']
