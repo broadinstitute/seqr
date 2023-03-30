@@ -697,7 +697,6 @@ def _get_record_updates(record, individual, invalid_values, allowed_assigned_ana
                                                                    record.get(ABSENT_FEATURES_COL))
     update_record = {}
     for k, v in record.items():
-        # allow setting fields to False
         if not v:
             continue
         try:
