@@ -424,7 +424,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     if to_delete:
         model_cls.bulk_delete(user, to_delete)
 
-    Sample.bulk_update(user, {'data_source': data_source}, queryset=Sample.objects.filter(id__in={s.id for s in existing_samples}))
+    Sample.bulk_update(user, {'data_source': data_source}, id__in={s.id for s in existing_samples})
 
     loaded_sample_ids = set(model_cls.objects.filter(sample__in=samples).values_list('sample_id', flat=True).distinct())
     prefetch_related_objects(samples, 'individual__family__project')  # newly created samples need prefetching
