@@ -10,7 +10,7 @@ from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaS
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
-from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.permissions_utils import get_internal_projects
 from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
