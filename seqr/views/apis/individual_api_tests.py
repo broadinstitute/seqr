@@ -10,7 +10,7 @@ from seqr.models import Individual
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
-    get_hpo_terms, get_individual_rna_seq_data
+    get_hpo_terms, get_individual_rna_seq_data, _get_record_updates
 from seqr.views.utils.test_utils import AuthenticationTestCase, INDIVIDUAL_FIELDS, INDIVIDUAL_CORE_FIELDS, \
     CORE_INTERNAL_INDIVIDUAL_FIELDS
 
@@ -565,3 +565,23 @@ class IndividualAPITest(AuthenticationTestCase):
         })
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
+    def test_get_record_update(self):
+        """
+        Test updating the consanguinity field of a mocked individual.
+        Specifically test the False case to avoid incidental false-y checks.
+        """
+        individual = mock.Mock()
+        individual.features = []
+        individual.absent_features = []
+        individual.consanguinity = None
+
+        invalid_values = {}
+
+        updates = _get_record_updates(
+            {'consanguinity': False},
+            individual,
+            invalid_values=invalid_values,
+            allowed_assigned_analysts={},
+        )
+
+        self.assertEqual(False, updates['consanguinity'])
