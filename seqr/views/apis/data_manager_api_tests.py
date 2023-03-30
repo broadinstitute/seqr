@@ -633,6 +633,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D3', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
             ],
+            'skipped_samples': 'NA19675_D3',
             'num_parsed_samples': 3,
             'initial_model_count': 3,
             'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
@@ -643,7 +644,6 @@ class DataManagerAPITest(AuthenticationTestCase):
                  'isSignificant': True},
             ],
             'sample_guid': RNA_SAMPLE_GUID,
-            'warnings': ['Skipped loading for the following 1 unmatched samples: NA19675_D3']
         },
         'tpm': {
             'model_cls': RnaSeqTpm,
@@ -675,8 +675,13 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 1.34],
                 ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19678', 'fibroblasts', 0.05],
             ],
+            'skipped_samples': 'NA19675_D3, NA20878',
             'exist_sample_tissue_type': 'M',
             'created_sample_tissue_type': 'F',
+            'extra_warnings': [
+                'Skipped loading for the following 1 tissue type unmatched sample(s) in 1 project(s): NA19678 (fibroblasts, muscle)'
+                ' in the project 1kg project nåme with uniçøde'
+            ],
             'num_parsed_samples': 4,
             'initial_model_count': 4,
             'deleted_count': 1,
@@ -684,8 +689,6 @@ class DataManagerAPITest(AuthenticationTestCase):
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
             'sample_guid': RNA_TPM_SAMPLE_GUID,
-            'warnings': ['Skipped loading row with mismatched tissue types for sample NA19678: muscle, fibroblasts',
-                         'Skipped loading for the following 2 unmatched samples: NA19675_D3, NA20878']
         },
     }
 
@@ -847,10 +850,15 @@ class DataManagerAPITest(AuthenticationTestCase):
                     mock_writes.append(content)
                 mock_open.return_value.__enter__.return_value.write.side_effect = mock_write
                 body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
+                warnings = [
+                    f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
+                    f'unmatched samples: {params["skipped_samples"]}']
+                if params.get('extra_warnings'):
+                    warnings = params['extra_warnings'] + warnings
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
                 response_json, new_sample_guid = _test_basic_data_loading(
                     params['new_data'], params["num_parsed_samples"], 2, 16, body,
-                    project_names='1kg project nåme with uniçøde, Test Reprocessed Project', warnings=params['warnings'],
+                    project_names='1kg project nåme with uniçøde, Test Reprocessed Project', warnings=warnings,
                     additional_logs=[
                         (f'delete {model_cls.__name__}s', {'dbUpdate': {
                             'dbEntity': model_cls.__name__, 'numEntities': deleted_count,

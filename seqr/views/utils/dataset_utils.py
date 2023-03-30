@@ -368,10 +368,8 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     if missing_cols:
         raise ValueError(f'Invalid file: missing column(s) {", ".join(sorted(missing_cols))}')
 
-    warnings = []
-
     sample_id_to_tissue_type = {}
-    samples_with_conflict_tissues = set()
+    samples_with_conflict_tissues = defaultdict(lambda: defaultdict(set))
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in parse_row(row):
@@ -380,9 +378,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
             if (sample_id, project) in sample_id_to_tissue_type:
                 prev_tissue_type = sample_id_to_tissue_type[(sample_id, project)]
                 if tissue_type != prev_tissue_type:
-                    warnings.append(f'Skipped loading row with mismatched tissue types for sample {sample_id}:'
-                                    f' {REVERSE_TISSUE_TYPE[prev_tissue_type]}, {REVERSE_TISSUE_TYPE[tissue_type]}')
-                    samples_with_conflict_tissues |= {(sample_id, project)}
+                    samples_with_conflict_tissues[project][sample_id].update({prev_tissue_type, tissue_type})
                     continue
 
             sample_id_to_tissue_type[(sample_id, project)] = tissue_type
@@ -399,9 +395,17 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
 
             samples_by_id[(sample_id, project)][gene_id] = row_dict
 
-    for key in samples_with_conflict_tissues:
-        sample_id_to_tissue_type.pop(key)
-        samples_by_id.pop(key)
+    conflict_messages = []
+    for project, sample in samples_with_conflict_tissues.items():
+        messages = []
+        for sample_id, tissue_types in sample.items():
+            sample_id_to_tissue_type.pop((sample_id, project))
+            samples_by_id.pop((sample_id, project))
+            messages.append(f'{sample_id} ({", ".join(sorted([REVERSE_TISSUE_TYPE[tissue_type] for tissue_type in tissue_types]))})')
+        conflict_messages.append(f'{", ".join(messages)} in the project {project}')
+    num_samples = sum([len(v) for v in samples_with_conflict_tissues.values()])
+    warnings = [f'Skipped loading for the following {num_samples} tissue type unmatched sample(s) in '
+                f'{len(samples_with_conflict_tissues)} project(s): {", ".join(conflict_messages)}'] if num_samples else []
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
