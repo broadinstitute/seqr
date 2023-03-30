@@ -73,13 +73,12 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         self.assertEqual(new_sample.tissue_type, 'WB')
 
         models = RnaSeqTpm.objects.all()
-        self.assertEqual(models.count(), 6)
-        self.assertSetEqual({model.sample for model in models}, {*list(existing_rna_samples), new_sample})
-        self.assertEqual(models.get(sample=existing_sample, gene_id='ENSG00000240361').tpm, 12.6)
+        self.assertEqual(models.count(), 5)
+        self.assertSetEqual({model.sample for model in models}, set(existing_rna_samples))
+        self.assertEqual(len(models.filter(sample=existing_sample, gene_id='ENSG00000240361')), 0)
         self.assertEqual(models.get(sample=new_sample, gene_id='ENSG00000233750').tpm, 6.04)
 
         mock_logger.info.assert_has_calls([
-            mock.call('create 2 RnaSeqTpm for NA19675_D2'),
             mock.call('create 1 RnaSeqTpm for NA19678_D1'),
         ])
         mock_utils_logger.warning.assert_has_calls([
@@ -93,6 +92,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         models = RnaSeqTpm.objects.filter(sample__sample_id='NA19678_D1')
         self.assertEqual(models.count(), 2)
         self.assertEqual(models.get(gene_id='ENSG00000233750', sample__tissue_type='F').tpm, 6.55)
+        self.assertEqual(len({m.sample for m in models}), 2)
         mock_logger.info.assert_has_calls([
             mock.call('create 1 RnaSeqTpm for NA19678_D1'),
         ])

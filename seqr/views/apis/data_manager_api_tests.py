@@ -2,6 +2,7 @@ from datetime import datetime
 from django.urls.base import reverse
 import json
 import mock
+import re
 from requests import HTTPError
 import responses
 
@@ -620,7 +621,14 @@ class DataManagerAPITest(AuthenticationTestCase):
             'optional_headers': ['detail'],
             'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
             'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-            'reused_indiv_id_data': ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+            'duplicated_indiv_id_data': [
+                ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
+            ],
+            'write_data': {
+                'S_NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "p_value": "0.064", "p_adjust": "0.0000057", "z_score": "7.8"}}\n',
+                'S_NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "p_value": "0.01", "p_adjust": "0.13", "z_score": "-3.1"}}\n'
+            },
             'new_data': [
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.13, -3.1],
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
@@ -647,16 +655,28 @@ class DataManagerAPITest(AuthenticationTestCase):
             'optional_headers': ['individual_id'],
             'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', '', 'muscle', 1.34],
             'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'fibroblasts', 0.064],
-            'reused_indiv_id_data': ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.064],
+            'duplicated_indiv_id_data': [
+                ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'fibroblasts', 7.8],
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'muscle', 0.064],
+            ],
+            'write_data': {'S_NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}\n',
+                           'S_NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.064"}}\n'},
             'new_data': [
+                # existing sample NA19675_D2
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
+                # no matched individual NA19675_D3
                 ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
+                # skip GTEX samples
                 ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
+                # a different project sample NA20888
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
+                # a project mismatched sample NA20878
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19675_D2', 'fibroblasts', 0.05],
+                # conflict tissue types samples
+                ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 1.34],
+                ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19678', 'fibroblasts', 0.05],
             ],
             'exist_sample_tissue_type': 'M',
             'created_sample_tissue_type': 'F',
@@ -665,9 +685,9 @@ class DataManagerAPITest(AuthenticationTestCase):
             'deleted_count': 1,
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
-            'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750',0.064)],
+            'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
             'sample_guid': RNA_TPM_SAMPLE_GUID,
-            'warnings': ['Skipped loading row with mismatched tissue types for sample NA19675_D2: muscle, fibroblasts',
+            'warnings': ['Skipped loading row with mismatched tissue types for sample NA19678: muscle, fibroblasts',
                          'Skipped loading for the following 2 unmatched samples: NA19675_D3, NA20878']
         },
         'splice': {
@@ -706,14 +726,16 @@ class DataManagerAPITest(AuthenticationTestCase):
         },
     }
 
-    def _check_rna_sample_model(self, individual_id, data_source, tissue_type):
+    def _check_rna_sample_model(self, individual_id, data_source, tissue_type, project_name=None):
         rna_samples = Sample.objects.filter(individual_id=individual_id, sample_type='RNA', tissue_type=tissue_type)
+        if project_name:
+            rna_samples = rna_samples.filter(individual__family__project__name=project_name)
         self.assertEqual(len(rna_samples), 1)
         sample = rna_samples.first()
         self.assertTrue(sample.is_active)
         self.assertIsNone(sample.elasticsearch_index)
         self.assertEqual(sample.sample_type, 'RNA')
-        self.assertEqual(sample.tissue_type or tissue_type, tissue_type)
+        self.assertEqual(sample.tissue_type, tissue_type)
         self.assertEqual(sample.data_source, data_source)
         return sample.guid
 
@@ -800,12 +822,16 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
                 mock_send_slack.assert_not_called()
 
-                def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, project_names, num_projects,
-                                             individual_id, sample_guid_idx):
+                def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, individual_tuple, body,
+                                             project_names=None, num_created_samples=1):
                     mock_logger.reset_mock()
+                    mock_model_logger.reset_mock()
                     _set_file_iter_stdout([header] + data)
                     response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                     self.assertEqual(response.status_code, 200)
+                    if not project_names:
+                        project_names = individual_tuple[1]
+                    num_projects = len(project_names.split(','))
                     info = [
                         f'Parsed {num_parsed_samples} RNA-seq samples',
                         f'Attempted data loading for {num_loaded_samples} RNA-seq samples in the following {num_projects}'
@@ -816,24 +842,25 @@ class DataManagerAPITest(AuthenticationTestCase):
                     self.assertDictEqual(response_json, {'info': info, 'warnings': mock.ANY, 'sampleGuids': mock.ANY,
                                                          'fileName': file_name})
                     new_sample_guid = self._check_rna_sample_model(
-                        individual_id=individual_id, data_source='new_muscle_samples.tsv.gz',
+                        individual_id=individual_tuple[0], data_source='new_muscle_samples.tsv.gz',
                         tissue_type=params.get('created_sample_tissue_type'),
+                        project_name=individual_tuple[1],
                     )
                     self.assertTrue(new_sample_guid in response_json['sampleGuids'])
-                    info_log_calls = [mock.call(info_log, self.data_manager_user) for info_log in info]
-                    info_log_calls.insert(1, mock.call(
-                        'create 1 Samples', self.data_manager_user, db_update={
-                            'dbEntity': 'Sample', 'entityIds': [response_json['sampleGuids'][sample_guid_idx]],
+                    mock_logger.info.assert_has_calls([mock.call(info_log, self.data_manager_user) for info_log in info])
+                    mock_model_logger.info.assert_has_calls([mock.call(
+                        f'create {num_created_samples} Samples', self.data_manager_user, db_update={
+                            'dbEntity': 'Sample',
+                            'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else\
+                                [response_json['sampleGuids'][-1]],
                             'updateType': 'bulk_create',
                         }
-                    ))
-                    mock_logger.info.assert_has_calls(info_log_calls)
+                    )])
 
                     return response_json, new_sample_guid
 
                 # Test loading new data
                 mock_open.reset_mock()
-                mock_logger.reset_mock()
                 mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
                 mock_writes = []
                 def mock_write(content):
@@ -841,15 +868,18 @@ class DataManagerAPITest(AuthenticationTestCase):
                 mock_open.return_value.__enter__.return_value.write.side_effect = mock_write
                 body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
                 response_json, new_sample_guid = _test_basic_data_loading(
-                    params['new_data'], params["num_parsed_samples"], 2,
-                    '1kg project nåme with uniçøde, Test Reprocessed Project', 2, 16, 1)
+                    params['new_data'], params["num_parsed_samples"], 2, (16, 'Test Reprocessed Project'), body,
+                    project_names='1kg project nåme with uniçøde, Test Reprocessed Project')
                 self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
-                mock_model_logger.info.assert_called_with(
-                    f'delete {model_cls.__name__}s', self.data_manager_user,
-                    db_update={'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
-                               'parentEntityIds': {params['sample_guid']}, 'updateType': 'bulk_delete'}
-                )
+                mock_model_logger.info.assert_has_calls([
+                    mock.call(f'delete {model_cls.__name__}s', self.data_manager_user,
+                              db_update={'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
+                                         'parentEntityIds': {params['sample_guid']}, 'updateType': 'bulk_delete'}),
+                    mock.call('update 1 Samples', self.data_manager_user,
+                              db_update={'dbEntity': 'Sample', 'entityIds': [params['sample_guid']],
+                                         'updateType': 'bulk_update', 'updateFields': ['data_source']}),
+                ])
                 mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in params['warnings']])
                 self.assertEqual(mock_send_slack.call_count, 2)
                 mock_send_slack.assert_has_calls([
@@ -865,7 +895,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
                 # test database models are correct
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
-                sample_guid = self._check_rna_sample_model(individual_id=1, data_source='muscle_samples.tsv.gz',
+                sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz',
                                                            tissue_type=params.get('exist_sample_tissue_type'))
                 new_sample_guid = self._check_rna_sample_model(
                     individual_id=16, data_source='new_muscle_samples.tsv.gz',
@@ -881,11 +911,16 @@ class DataManagerAPITest(AuthenticationTestCase):
                 # test loading new data without deleting existing data
                 data = [params['no_existing_data']]
                 body.pop('mappingFile')
-                _test_basic_data_loading(data, 1, 1, '1kg project nåme with uniçøde', 1, 2, 0)
+                _test_basic_data_loading(data, 1, 1, (2, '1kg project nåme with uniçøde'), body)
 
                 # Test loading data when where are duplicated individual ids in different projects.
-                data = [params['reused_indiv_id_data']]
-                _test_basic_data_loading(data, 1, 1, 'Test Reprocessed Project', 1, 20, 0)
+                data = params['duplicated_indiv_id_data']
+                mock_writes = []
+                _test_basic_data_loading(data, 2, 2, (20, 'Test Reprocessed Project'), body,
+                                         project_names='1kg project nåme with uniçøde, Test Reprocessed Project',
+                                         num_created_samples=2)
+                self.assertSetEqual({re.sub(r'^S[0-9]*', 'S', s) for s in mock_writes}, params['write_data'])
+
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')

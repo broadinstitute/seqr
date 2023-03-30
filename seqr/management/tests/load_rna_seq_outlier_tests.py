@@ -50,7 +50,7 @@ class LoadRnaSeqTest(TestCase):
         self.assertEqual(sample.guid, EXISTING_SAMPLE_GUID)
         self.assertTrue(sample.is_active)
         self.assertIsNone(sample.elasticsearch_index)
-        self.assertEqual(sample.data_source, 'muscle_samples.tsv.gz')
+        self.assertEqual(sample.data_source, 'new_muscle_samples.tsv.gz')
 
         models = RnaSeqOutlier.objects.all()
         self.assertEqual(models.count(), 2)

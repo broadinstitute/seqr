@@ -65,8 +65,8 @@ class DatasetAPITest(object):
         self.assertEqual(existing_sample.elasticsearch_index, INDEX_NAME)
         self.assertFalse(existing_sample.is_active)
         existing_sample_guid = existing_sample.guid
-        existing_rna_seq_samples = Sample.objects.filter(sample_id='NA19675_D2', sample_type='RNA')
-        existing_rna_seq_sample_guids = {sample.guid for sample in existing_rna_seq_samples}
+        existing_rna_seq_sample_guids = set(Sample.objects.filter(
+            sample_id='NA19675_D2', sample_type='RNA').values_list('guid', flat=True))
         self.assertEqual(Sample.objects.filter(sample_id='NA19678_1').count(), 0)
         self.assertEqual(Sample.objects.filter(sample_id='NA20878').count(), 0)
 
@@ -235,6 +235,7 @@ class DatasetAPITest(object):
         self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
                             {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid} |
                             existing_rna_seq_sample_guids)
+        self.assertTrue(new_sample_type_sample_guid not in existing_rna_seq_sample_guids)
 
         mock_send_email.assert_not_called()
         if self.SLACK_MESSAGE_TEMPLATE:
