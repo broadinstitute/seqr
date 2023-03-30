@@ -692,10 +692,8 @@ class DataManagerAPITest(AuthenticationTestCase):
         },
     }
 
-    def _check_rna_sample_model(self, individual_id, data_source, tissue_type, project_name=None):
+    def _check_rna_sample_model(self, individual_id, data_source, tissue_type):
         rna_samples = Sample.objects.filter(individual_id=individual_id, sample_type='RNA', tissue_type=tissue_type)
-        if project_name:
-            rna_samples = rna_samples.filter(individual__family__project__name=project_name)
         self.assertEqual(len(rna_samples), 1)
         sample = rna_samples.first()
         self.assertTrue(sample.is_active)
@@ -788,7 +786,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
                 mock_send_slack.assert_not_called()
 
-                def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, individual_tuple, body,
+                def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, individual_id, body,
                                              project_names=None, num_created_samples=1):
                     mock_logger.reset_mock()
                     mock_model_logger.reset_mock()
@@ -796,7 +794,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                     response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                     self.assertEqual(response.status_code, 200)
                     if not project_names:
-                        project_names = individual_tuple[1]
+                        project_names = Individual.objects.filter(id=individual_id).values('family__project__name')[0]['family__project__name']
                     num_projects = len(project_names.split(','))
                     info = [
                         f'Parsed {num_parsed_samples} RNA-seq samples',
@@ -808,9 +806,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                     self.assertDictEqual(response_json, {'info': info, 'warnings': mock.ANY, 'sampleGuids': mock.ANY,
                                                          'fileName': file_name})
                     new_sample_guid = self._check_rna_sample_model(
-                        individual_id=individual_tuple[0], data_source='new_muscle_samples.tsv.gz',
+                        individual_id=individual_id, data_source='new_muscle_samples.tsv.gz',
                         tissue_type=params.get('created_sample_tissue_type'),
-                        project_name=individual_tuple[1],
                     )
                     self.assertTrue(new_sample_guid in response_json['sampleGuids'])
                     mock_logger.info.assert_has_calls([mock.call(info_log, self.data_manager_user) for info_log in info])
@@ -834,7 +831,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 mock_open.return_value.__enter__.return_value.write.side_effect = mock_write
                 body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
                 response_json, new_sample_guid = _test_basic_data_loading(
-                    params['new_data'], params["num_parsed_samples"], 2, (16, 'Test Reprocessed Project'), body,
+                    params['new_data'], params["num_parsed_samples"], 2, 16, body,
                     project_names='1kg project nåme with uniçøde, Test Reprocessed Project')
                 self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
@@ -877,12 +874,12 @@ class DataManagerAPITest(AuthenticationTestCase):
                 # test loading new data without deleting existing data
                 data = [params['no_existing_data']]
                 body.pop('mappingFile')
-                _test_basic_data_loading(data, 1, 1, (2, '1kg project nåme with uniçøde'), body)
+                _test_basic_data_loading(data, 1, 1, 2, body)
 
                 # Test loading data when where are duplicated individual ids in different projects.
                 data = params['duplicated_indiv_id_data']
                 mock_writes = []
-                _test_basic_data_loading(data, 2, 2, (20, 'Test Reprocessed Project'), body,
+                _test_basic_data_loading(data, 2, 2, 20, body,
                                          project_names='1kg project nåme with uniçøde, Test Reprocessed Project',
                                          num_created_samples=2)
                 self.assertSetEqual({re.sub(r'^S[0-9]*', 'S', s) for s in mock_writes}, params['write_data'])
