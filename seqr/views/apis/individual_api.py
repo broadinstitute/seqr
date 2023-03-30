@@ -698,7 +698,7 @@ def _get_record_updates(record, individual, invalid_values, allowed_assigned_ana
     update_record = {}
     for k, v in record.items():
         # allow setting fields to False
-        if not isinstance(v, bool) and not v:
+        if not v:
             continue
         try:
             if k == ASSIGNED_ANALYST_COL:
@@ -712,7 +712,7 @@ def _get_record_updates(record, individual, invalid_values, allowed_assigned_ana
                     or parsed_val == getattr(individual, k)
                 ):
                     parsed_val = None
-            if isinstance(parsed_val, bool) or parsed_val:
+            if parsed_val or parsed_val is False:
                 update_record[k] = parsed_val
         except (KeyError, ValueError):
             invalid_values[k][v].append(individual.individual_id)
