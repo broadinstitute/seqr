@@ -659,7 +659,8 @@ class IndividualAPITest(object):
             allowed_assigned_analysts={},
         )
 
-        self.assertEqual(False, updates['consanguinity'])
+        # assert that the consanguinity field will be updated
+        self.assertEqual(False, updates.get('consanguinity'))
 
 class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
