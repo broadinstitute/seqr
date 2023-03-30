@@ -10,8 +10,6 @@ RNA_FILE_ID = 'all_tissue_tpms.tsv.gz'
 MAPPING_FILE_ID = 'mapping.tsv'
 EXISTING_SAMPLE_GUID = 'S000152_na19675_d2'
 
-EXPECTED_MISMATCHED_TISSUE_WARNING = 'Skipped loading for the following 2 unmatched samples: NA19677, NA19678_D1'
-
 class LoadRnaSeqTest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
