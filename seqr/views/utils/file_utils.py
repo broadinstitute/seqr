@@ -68,7 +68,7 @@ def _parse_excel_string_cell(cell):
 def get_temp_upload_directory():
     upload_directory = os.path.join(tempfile.gettempdir(), 'temp_uploads')
     if not os.path.isdir(upload_directory):
-        logger.info("Creating directory: " + upload_directory)
+        logger.debug("Creating directory: " + upload_directory)
         os.makedirs(upload_directory)
     return upload_directory
 
