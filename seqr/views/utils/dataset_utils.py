@@ -362,7 +362,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
 
     samples_by_id = defaultdict(dict)
-    f = file_iter(file_path)
+    f = file_iter(file_path, user=user)
     header = _parse_tsv_row(next(f))
     missing_cols = set(expected_columns) - set(header)
     if missing_cols:
@@ -493,9 +493,9 @@ def _parse_phenotype_pri_row(row):
     yield record
 
 
-def load_phenotype_prioritization_data_file(file_path):
+def load_phenotype_prioritization_data_file(file_path, user):
     data_by_project_sample_id = defaultdict(lambda: defaultdict(list))
-    f = file_iter(file_path)
+    f = file_iter(file_path, user=user)
     header = _parse_tsv_row(next(f))
     missing_cols = [col for col in PHENOTYPE_PRIORITIZATION_REQUIRED_HEADER if col not in header]
     if missing_cols:

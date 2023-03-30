@@ -4,7 +4,9 @@ from copy import deepcopy
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
+from io import StringIO
 import json
+import logging
 import mock
 import re
 from urllib.parse import quote_plus, urlparse
@@ -50,6 +52,9 @@ class AuthenticationTestCase(TestCase):
         self.mock_analyst_group.__bool__.side_effect = lambda: bool(str(self.mock_analyst_group))
         self.mock_analyst_group.resolve_expression.return_value = 'analysts'
         self.addCleanup(patcher.stop)
+
+        self._log_stream = StringIO()
+        logging.getLogger().handlers[0].stream = self._log_stream
 
     @classmethod
     def setUpTestData(cls):
@@ -222,6 +227,18 @@ class AuthenticationTestCase(TestCase):
         response = get_response() if get_response else self.client.get(url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
+
+    def reset_logs(self):
+        self._log_stream.truncate(0)
+        self._log_stream.seek(0)
+
+    def assert_json_logs(self, user, expected):
+        logs = self._log_stream.getvalue().split('\n')
+        for i, (message, extra) in enumerate(expected):
+            self.assertDictEqual(json.loads(logs[i]), {
+                'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, 'message': message, **(extra or {}),
+            })
+
 
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
 TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'

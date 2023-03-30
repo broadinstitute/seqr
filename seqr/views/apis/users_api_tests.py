@@ -94,21 +94,21 @@ class UsersAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'groups': ['analysts', 'project-managers']})
 
-    @mock.patch('seqr.views.apis.users_api.logger')
     @mock.patch('django.contrib.auth.models.send_mail')
-    def test_create_project_collaborator(self, mock_send_mail, mock_logger):
+    def test_create_project_collaborator(self, mock_send_mail):
         create_url = reverse(create_project_collaborator, args=[NON_ANVIL_PROJECT_GUID])
         self.check_manager_login(create_url)
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))
         self._test_create_project_collaborator(
-            response, create_url=create_url, mock_send_mail=mock_send_mail, mock_logger=mock_logger)
+            response, create_url=create_url, mock_send_mail=mock_send_mail)
 
-    def _test_create_project_collaborator(self, response, create_url=None, mock_send_mail=None, mock_logger=None):
+    def _test_create_project_collaborator(self, response, create_url=None, mock_send_mail=None):
         # send invalid request
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Email is required')
 
         # create
+        self.reset_logs()
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({
             'email': 'test@test.com', 'firstName': 'Test'}))
         self.assertEqual(response.status_code, 200)
@@ -146,8 +146,8 @@ class UsersAPITest(object):
         )
         mock_send_mail.reset_mock()
 
-        mock_logger.info.assert_called_with('Created user test@test.com (local)', self.manager_user)
-        mock_logger.reset_mock()
+        self.assert_json_logs(self.manager_user, [('Created user test@test.com (local)', None)])
+        self.reset_logs()
 
         # check user object added to project set
         self.assertEqual(
@@ -162,8 +162,8 @@ class UsersAPITest(object):
         new_collab = next(collab for collab in collaborators if collab['email'] == 'test@test.com')
         self.assertEqual(new_collab['username'], username)
         self.assertEqual(new_collab['displayName'], 'Test Name Update')
-        mock_send_mail.assert_not_called()
-        mock_logger.info.assert_not_called()
+        self.assert_json_logs(user, [('update User 20', {'dbUpdate': {
+            'dbEntity': 'User', 'entityId': 20, 'updateFields': ['last_name'], 'updateType': 'update'}})])
 
         # Test email failure
         mock_send_mail.side_effect = AnymailError('Connection err')

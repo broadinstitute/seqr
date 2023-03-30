@@ -1038,7 +1038,7 @@ class BulkOperationBase(models.Model):
         prefetch_related_objects(models, cls.PARENT_FIELD)
         parent_ids = {getattr(model, cls.PARENT_FIELD).guid for model in models}
         db_update = {
-            'dbEntity': db_entity, 'numEntities': len(models), 'parentEntityIds': parent_ids,
+            'dbEntity': db_entity, 'numEntities': len(models), 'parentEntityIds': sorted(parent_ids),
             'updateType': 'bulk_{}'.format(update_type),
         }
         logger.info(f'{update_type} {db_entity}s', user, db_update=db_update)
