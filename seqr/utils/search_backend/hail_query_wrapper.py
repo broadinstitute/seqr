@@ -30,7 +30,8 @@ GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
 POPULATION_SORTS = {
     'gnomad': [GNOMAD_GENOMES_FIELD],
     'gnomad_exomes': ['gnomad_exomes'],
-    'callset_af': ['callset', 'sv_callset']}
+    'callset_af': ['callset', 'sv_callset'],
+}
 
 COMP_HET_ALT = 'COMP_HET_ALT'
 INHERITANCE_FILTERS = deepcopy(INHERITANCE_FILTERS)
@@ -890,11 +891,11 @@ class BaseHailTableQuery(object):
 
         if sort in POPULATION_SORTS:
             pop_fields = [pop for pop in POPULATION_SORTS[sort] if pop in cls.POPULATIONS]
+            logger.info(f'sort fields {POPULATION_SORTS[sort]}: pop fields {list(cls.POPULATIONS.keys())}: mathched fields {pop_fields}')
             if not pop_fields:
-                logger.info(f'sort {sort} not applied for {cls}: {POPULATION_SORTS[sort]}: {cls.POPULATIONS}')
+                logger.info(f'sort {sort} not applied for {cls}')
                 return None
 
-            logger.info(f'sorting on {pop_fields}')
             def _pop_sort(r):
                 pop_expr = r.populations[pop_fields[0]].af
                 for pop_field in pop_fields[1:]:
