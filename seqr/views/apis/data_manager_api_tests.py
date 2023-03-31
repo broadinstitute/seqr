@@ -796,14 +796,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ]
                 warnings = ['Skipped loading for 1 samples already loaded from this file']
                 self.assertDictEqual(response.json(), {'info': info, 'warnings': warnings, 'sampleGuids': [], 'fileName': mock.ANY})
-                self._has_expected_file_loading_logs(
-                    'gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings, additional_logs_offset=3,
-                    # TODO: we should not be updating these samples to a new data source when no data is loaded
-                    additional_logs=[
-                        ('update 1 Samples', {'dbUpdate': {
-                            'dbEntity': 'Sample', 'entityIds': [params['sample_guid']],
-                            'updateType': 'bulk_update', 'updateFields': ['data_source']}})
-                    ])
+                self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings)
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
                 mock_send_slack.assert_not_called()
 
