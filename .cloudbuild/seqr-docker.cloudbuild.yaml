@@ -1,5 +1,5 @@
 steps:
-- name: 'gcr.io/kaniko-project/executor:latest'
+- name: 'gcr.io/kaniko-project/executor:v1.3.0'
   args:
   - --destination=gcr.io/seqr-project/seqr:${COMMIT_SHA}
   - --destination=gcr.io/seqr-project/seqr:${_CUSTOM_BRANCH_TAG}
