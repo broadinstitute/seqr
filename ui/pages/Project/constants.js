@@ -159,7 +159,6 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     field: 'consanguinity',
     header: 'Consanguinity',
     isEditable: true,
-    isRequiredInternal: true,
     ...NULLABLE_BOOL_FIELD,
   },
   {

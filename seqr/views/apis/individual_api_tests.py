@@ -366,10 +366,10 @@ class IndividualAPITest(object):
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile('test.tsv', 'family   indiv\n1    '.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': mock.ANY, 'warnings': []})
+        self.assertDictEqual(response.json(), {'errors': mock.ANY, 'warnings': None})
         errors = response.json()['errors']
         self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0], "Error while converting test.tsv rows to json: Individual Id not specified in row #1")
+        self.assertEqual(errors[0], 'Missing required columns: Individual Id')
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
             'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"'.encode('utf-8'))})

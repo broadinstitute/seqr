@@ -849,6 +849,25 @@
     }
 },
 {
+    "model": "seqr.individual",
+    "pk": 20,
+    "fields": {
+        "guid": "I000020_na20870",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:50.270Z",
+        "family": 12,
+        "individual_id": "NA20870",
+        "population": "ASJ",
+        "features": [{"id": "HP:0011675"}, {"id": "HP:0001509"}],
+        "mother_id": null,
+        "father_id": null,
+        "sex": "M",
+        "affected": "A",
+        "display_name": ""
+    }
+},
+{
     "model": "seqr.sample",
     "pk": 129,
     "fields": {
@@ -1862,6 +1881,20 @@
         "last_modified_date": "2018-02-23T17:32:23.054Z",
         "saved_variants": [2],
         "note": "test n\u00f8te",
+        "submit_to_clinvar": false,
+        "search_hash": null
+    }
+},
+{
+    "model": "seqr.variantnote",
+    "pk": 714937,
+    "fields": {
+        "guid": "VN0714937_2103343353_r0390_100",
+        "created_date": "2019-05-15T14:51:58.410Z",
+        "created_by": null,
+        "last_modified_date": "2019-02-23T17:32:23.054Z",
+        "saved_variants": [2],
+        "note": "a later note",
         "submit_to_clinvar": false,
         "search_hash": null
     }

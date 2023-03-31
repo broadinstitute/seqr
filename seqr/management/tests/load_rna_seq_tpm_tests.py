@@ -23,41 +23,37 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         mock_gzip_file = mock_gzip_open.return_value.__enter__.return_value
         mock_gzip_file.__iter__.return_value = [
             '',
-            'NA19675_D2\t\tENSG00000240361\t12.6\t\n',
-            'NA19678_D1\t\tENSG00000233750\t 6.04\twhole_blood\n',
-            'NA19678_D1\t\tENSG00000240361\t0.0\twhole_blood\n',
-            'NA19677\t\tENSG00000240361\t0.0\tinvalid\n',
-            'GTEX-001\t\tENSG00000240361\t3.1\tinvalid\n',
-            'NA19675_D2\t\tENSG00000233750\t1.04\tmuscle\n',
-            'NA19677\t\tENSG00000233750\t5.31\tmuscle\n',
-            'GTEX-001\t\tENSG00000233750\t7.8\tmuscle\n',
+            'NA19675_D2\t1kg project nåme with uniçøde\t\tENSG00000240361\t12.6\t\n',
+            'NA19678_D1\t1kg project nåme with uniçøde\t\tENSG00000233750\t 6.04\twhole_blood\n',
+            'NA19678_D1\t1kg project nåme with uniçøde\t\tENSG00000240361\t0.0\twhole_blood\n',
+            'NA19677\t1kg project nåme with uniçøde\t\tENSG00000240361\t0.0\tinvalid\n',
+            'GTEX-001\t1kg project nåme with uniçøde\t\tENSG00000240361\t3.1\tinvalid\n',
+            'NA19675_D2\t1kg project nåme with uniçøde\t\tENSG00000233750\t1.04\tmuscle\n',
+            'NA19677\t1kg project nåme with uniçøde\t\tENSG00000233750\t5.31\tmuscle\n',
+            'GTEX-001\t1kg project nåme with uniçøde\t\tENSG00000233750\t7.8\tmuscle\n',
+            'NA19678\tTest Reprocessed Project\t\tENSG00000240361\t0.2\twhole_blood\n',
         ]
 
         with self.assertRaises(ValueError) as e:
             call_command('load_rna_seq_tpm', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Invalid file: missing column(s) TPM, gene_id, sample_id, tissue')
+        self.assertEqual(str(e.exception), 'Invalid file: missing column(s) TPM, gene_id, project, sample_id, tissue')
 
-        mock_gzip_file.__iter__.return_value[0] = 'sample_id\tindividual_id\tgene_id\tTPM\ttissue\n'
+        mock_gzip_file.__iter__.return_value[0] = 'sample_id\tproject\tindividual_id\tgene_id\tTPM\ttissue\n'
         with self.assertRaises(ValueError) as e:
             call_command('load_rna_seq_tpm', RNA_FILE_ID)
         self.assertEqual(str(e.exception), 'Sample NA19675_D2 has no tissue type')
 
-        mock_gzip_file.__iter__.return_value[1] = 'NA19675_D2\t\tENSG00000240361\t12.6\tfibroblasts\n'
+        mock_gzip_file.__iter__.return_value[1] = 'NA19675_D2\tproject\t\tENSG00000240361\t12.6\tfibroblasts\n'
         with self.assertRaises(ValueError) as e:
             call_command('load_rna_seq_tpm', RNA_FILE_ID)
         self.assertEqual(str(e.exception), 'Mismatched tissue types for sample NA19675_D2: fibroblasts, muscle')
 
-        mock_gzip_file.__iter__.return_value[1] = 'NA19675_D2\t\tENSG00000240361\t12.6\tmuscle\n'
+        mock_gzip_file.__iter__.return_value[1] = 'NA19675_D2\t1kg project nåme with uniçøde\t\tENSG00000240361\t12.6\tmuscle\n'
         with self.assertRaises(ValueError) as e:
             call_command('load_rna_seq_tpm', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19677, NA19678_D1')
+        self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19677, NA19678, NA19678_D1')
 
-        mock_open.return_value.__enter__.return_value.__iter__.return_value = ['NA19678_D1\tNA19678']
-        with self.assertRaises(ValueError) as e:
-            call_command('load_rna_seq_tpm', RNA_FILE_ID, '--mapping-file', MAPPING_FILE_ID)
-        self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19677')
-
-        mock_gzip_file.__iter__.return_value[2] = 'NA19678_D1\tNA19678\tENSG00000233750\t 6.04\twhole_blood\n'
+        mock_gzip_file.__iter__.return_value[2] = 'NA19678_D1\t1kg project nåme with uniçøde\tNA19678\tENSG00000233750\t 6.04\twhole_blood\n'
         call_command('load_rna_seq_tpm', RNA_FILE_ID, '--ignore-extra-samples')
 
         # Existing outlier data should be unchanged
@@ -91,10 +87,11 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             mock.call('create 1 RnaSeqTpm for NA19678_D1'),
         ])
         mock_utils_logger.warning.assert_has_calls([
-            mock.call('Skipped loading for the following 1 unmatched samples: NA19677', None),
+            mock.call('Skipped loading for the following 2 unmatched samples: NA19677, NA19678', None),
         ])
 
         # Test fails on mismatched tissue
-        mock_gzip_file.__iter__.return_value[2] = 'NA19678_D1\t\tENSG00000233750\t6.04\tfibroblasts\n'
+        mock_gzip_file.__iter__.return_value.pop()
+        mock_gzip_file.__iter__.return_value[2] = 'NA19678_D1\t1kg project nåme with uniçøde\t\tENSG00000233750\t6.04\tfibroblasts\n'
         call_command('load_rna_seq_tpm', 'new_file.tsv.gz', '--ignore-extra-samples')
         mock_utils_logger.warning.assert_any_call(EXPECTED_MISMATCHED_TISSUE_WARNING, None)
