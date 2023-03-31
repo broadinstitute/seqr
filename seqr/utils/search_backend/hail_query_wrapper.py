@@ -10,7 +10,7 @@ from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, \
     INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, MAX_NO_LOCATION_COMP_HET_FAMILIES, \
     CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF, \
-    SCREEN_KEY
+    SCREEN_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +171,13 @@ class BaseHailTableQuery(object):
         ),
     }
     COMPUTED_ANNOTATION_FIELDS = {}
+
+    # TODO make sorts class specific
+    CLINVAR_SORT = hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance]
+    SORTS = {
+        PATHOGENICTY_SORT_KEY: lambda r: [CLINVAR_SORT],
+        PATHOGENICTY_HGMD_SORT_KEY: lambda r: [CLINVAR_SORT, hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]],
+    }
 
     @classmethod
     def populations_configs(cls):
@@ -845,14 +852,26 @@ class BaseHailTableQuery(object):
         if not ht:
             raise InvalidSearchException('Filters must be applied before search')
 
-        # TODO #2496: page, sort
-        (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, num_results)))
+        # TODO #2496: page
+        ordering = self._sort_order(ht, sort)
+        (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=ordering)))
         logger.info(f'Total hits: {total_results}')
 
         hail_results = [
             self._json_serialize(row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD)) for row in collected
         ]
         return hail_results, total_results
+
+    @classmethod
+    def _sort_order(cls, ht, sort):
+        # TODO handle comp hets
+        # always secondary sort on position
+        # always final sort on variant ID to keep different variants at the same position grouped properly
+        ordering = [ht.xpos, ht.variantId]
+        sort_func = cls.SORTS[sort]
+        if sort_func and sort != 'xpos':
+            ordering = sort_func(ht) + ordering
+        return hl.array(ordering)
 
     # For production: should use custom json serializer
     @classmethod
