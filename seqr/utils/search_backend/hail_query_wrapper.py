@@ -866,9 +866,7 @@ class BaseHailTableQuery(object):
     @classmethod
     def _sort_order(cls, ht, sort):
         # TODO handle comp hets
-        # always secondary sort on position
-        # always final sort on variant ID to keep different variants at the same position grouped properly
-        ordering = [cls.SORTS[XPOS_SORT_KEY](ht), ht.variantId]
+        ordering = [cls.SORTS[XPOS_SORT_KEY](ht)]
         sort_func = cls.SORTS[sort]
         if sort_func and sort != XPOS_SORT_KEY:
             ordering = sort_func(ht) + ordering
