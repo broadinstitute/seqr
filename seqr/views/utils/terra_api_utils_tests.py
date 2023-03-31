@@ -354,8 +354,7 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
 
     @responses.activate
     @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
-    @mock.patch('seqr.views.utils.terra_api_utils.logger')
-    def test_user_get_anvil_groups(self, mock_logger, mock_redis):
+    def test_user_get_anvil_groups(self, mock_redis):
         url = f'{TEST_TERRA_API_ROOT_URL}api/groups'
         mock_redis.return_value.get.return_value = None
         responses.add(responses.GET, url, status=200, body=json.dumps([
@@ -364,25 +363,19 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
         ]))
         groups = user_get_anvil_groups(self.analyst_user)
         self.assertListEqual(groups, ['TGG_Users', 'External_Users'])
-        mock_logger.info.assert_called_with('GET https://terra.api/api/groups 200 183', self.analyst_user)
-        self.assertEqual(len(mock_logger.method_calls), 1)
+        self.assert_json_logs(self.analyst_user, [('GET https://terra.api/groups 200 183', None)])
         responses.assert_call_count(url, 1)
         mock_redis.return_value.set.assert_called_with('terra_req__test_user__api/groups', json.dumps(groups))
         mock_redis.return_value.expire.assert_called_with('terra_req__test_user__api/groups', 300)
 
         mock_redis.return_value.get.return_value = None
-        responses.add(responses.GET, url, status=401)
-        with self.assertRaises(TerraAPIException) as ec:
-            user_get_anvil_groups(self.analyst_user)
-        self.assertEqual(str(ec.exception),
-            'Error: called Terra API: GET /api/groups got status: 401 with a reason: Unauthorized')
-        self.assertEqual(ec.exception.status_code, 401)
+        self._check_exceptions('api/groups', user_get_anvil_groups, (self.analyst_user,))
 
         responses.reset()
         cached_groups = ['foo', 'bar', 'baz']
         mock_redis.return_value.get.return_value = json.dumps(cached_groups)
         groups = user_get_anvil_groups(self.analyst_user)
         self.assertListEqual(groups, cached_groups)
-        mock_logger.info.assert_called_with('Terra API cache hit for: GET api/groups test_user', self.analyst_user)
+        self.assert_json_logs(self.analyst_user, [('Terra API cache hit for: GET api/groups test_user', None)])
         mock_redis.return_value.get.assert_called_with('terra_req__test_user__api/groups')
         responses.assert_call_count(url, 0)  # no call to the Terra API
