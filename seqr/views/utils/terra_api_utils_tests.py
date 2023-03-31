@@ -91,6 +91,16 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
 
         self.assert_no_logs()
 
+    def _check_handled_exceptions(self, path, func, args):
+        url = f'{TEST_TERRA_API_ROOT_URL}{path}'
+
+        for status, (_, message) in EXCEPTIONS.items():
+            self.reset_logs()
+            responses.replace(responses.GET, url, status=status)
+            r = func(self.analyst_user, *args)
+            self.assertDictEqual(r, {})
+            self.assert_json_logs(self.analyst_user, [(message.format(path=path), {'severity': 'WARNING'})])
+
     @responses.activate
     def test_anvil_call(self):
         url = '{}register'.format(TEST_TERRA_API_ROOT_URL)
@@ -175,25 +185,20 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
             ('GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace/acl 200 425', None),
         ])
 
-        for status, (_, message) in EXCEPTIONS.items():
-            self.reset_logs()
-            responses.replace(responses.GET, url, status=status)
-            r = user_get_workspace_acl(self.analyst_user, 'my-seqr-billing', 'my-seqr-workspace')
-            self.assertDictEqual(r, {})
-            self.assert_json_logs(self.analyst_user, [(message.format(path=path), {'severity': 'WARNING'})])
+        self._check_handled_exceptions(path, user_get_workspace_acl, ('my-seqr-billing', 'my-seqr-workspace'))
 
     @responses.activate
-    @mock.patch('seqr.views.utils.terra_api_utils.logger')
     @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
-    def test_user_get_workspace_access_level(self, mock_redis, mock_logger):
+    def test_user_get_workspace_access_level(self, mock_redis):
         mock_redis.return_value.get.return_value = None
-        url = '{}api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel,canShare'.format(TEST_TERRA_API_ROOT_URL)
+        path = 'api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel,canShare'
+        url = f'{TEST_TERRA_API_ROOT_URL}{path}'
         responses.add(responses.GET, url, status=200, body='{"accessLevel": "OWNER"}')
         permission = user_get_workspace_access_level(self.analyst_user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertDictEqual(permission, {"accessLevel": "OWNER"})
-        mock_logger.info.assert_called_with(
-            'GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel,canShare 200 24', self.analyst_user)
-        self.assertEqual(len(mock_logger.method_calls), 1)
+        self.assert_json_logs(self.analyst_user, [
+            ('GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel,canShare 200 24', None),
+        ])
         responses.assert_call_count(url, 1)
         mock_redis.return_value.set.assert_called_with(
             'terra_req__test_user__api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel,canShare',
@@ -201,11 +206,8 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
         mock_redis.return_value.expire.assert_called_with(
             'terra_req__test_user__api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel,canShare', 60)
 
-        mock_logger.reset_mock()
-        responses.replace(responses.GET, url, status=404)
-        permission = user_get_workspace_access_level(self.analyst_user, 'my-seqr-billing', 'my-seqr-workspace')
-        self.assertDictEqual(permission, {})
-        responses.assert_call_count(url, 2)
+        self._check_handled_exceptions(path, user_get_workspace_access_level, ('my-seqr-billing', 'my-seqr-workspace'))
+        responses.assert_call_count(url, 5)
 
         # Test cache hit
         mock_redis.return_value.get.return_value = '{"accessLevel": "READER"}'
@@ -213,7 +215,7 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
         self.assertDictEqual(permission, {"accessLevel": "READER"})
         mock_redis.return_value.get.assert_called_with(
             'terra_req__test_user__api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel,canShare')
-        responses.assert_call_count(url, 2)  # No API called since the call_count is kept unchanged.
+        responses.assert_call_count(url, 5)  # No API called since the call_count is kept unchanged.
 
     @responses.activate
     def test_add_service_account(self):
@@ -264,9 +266,9 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
     @mock.patch('seqr.views.utils.terra_api_utils.SERVICE_ACCOUNT_CREDENTIALS')
     @mock.patch('seqr.views.utils.terra_api_utils.datetime')
     @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
-    @mock.patch('seqr.views.utils.terra_api_utils.logger')
-    def test_get_anvil_group_members(self, mock_logger, mock_redis, mock_datetime, mock_credentials):
-        url = '{}{}'.format(TEST_TERRA_API_ROOT_URL, 'api/groups/TGG_USERS')
+    def test_get_anvil_group_members(self, mock_redis, mock_datetime, mock_credentials):
+        path = 'api/groups/TGG_USERS'
+        url = '{}{}'.format(TEST_TERRA_API_ROOT_URL, path)
         responses.add(responses.GET, url, status=200, body=json.dumps({
             'adminsEmails': ['test_user@broadinstitute.org'],
             'groupEmail': 'TGG_USERS@firecloud.org',
@@ -275,8 +277,7 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
         mock_redis.return_value.get.return_value = None
         members = get_anvil_group_members(self.analyst_user, USERS_GROUP)
         self.assertListEqual(members, ['test_user@broadinstitute.org', 'test@test.com'])
-        mock_logger.info.assert_called_with('GET https://terra.api/api/groups/TGG_USERS 200 175', self.analyst_user)
-        self.assertEqual(len(mock_logger.method_calls), 1)
+        self.assert_json_logs(self.analyst_user, [('GET https://terra.api/api/groups/TGG_USERS 200 175', None)])
         responses.assert_call_count(url, 1)
         self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer ya29.EXAMPLE')
         mock_redis.return_value.get.assert_called_with('terra_req__test_user__api/groups/TGG_USERS')
@@ -299,17 +300,15 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
         get_anvil_group_members(self.analyst_user, USERS_GROUP, use_sa_credentials=True)
         mock_credentials.refresh.assert_called_once()
 
-        responses.add(responses.GET, url, status=401)
-        self.assertDictEqual(get_anvil_group_members(self.analyst_user, USERS_GROUP), {})
-        mock_logger.warning.assert_called_with(
-            'Error: called Terra API: GET /api/groups/TGG_USERS got status: 401 with a reason: Unauthorized', self.analyst_user)
+        self._check_handled_exceptions(path, get_anvil_group_members, (USERS_GROUP,))
 
         responses.reset()
+        self.reset_logs()
         cached_members = ['test@other_test.com']
         mock_redis.return_value.get.return_value = json.dumps(cached_members)
         members = get_anvil_group_members(self.analyst_user, USERS_GROUP)
         self.assertListEqual(members, cached_members)
-        mock_logger.info.assert_called_with('Terra API cache hit for: GET api/groups/TGG_USERS test_user', self.analyst_user)
+        self.assert_json_logs(self.analyst_user, [('Terra API cache hit for: GET api/groups/TGG_USERS test_user', None)])
         mock_redis.return_value.get.assert_called_with('terra_req__test_user__api/groups/TGG_USERS')
         responses.assert_call_count(url, 0)  # no call to the Terra API
 
