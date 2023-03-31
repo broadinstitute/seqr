@@ -19,6 +19,15 @@ LIST_WORKSPACE_RESPONSE = '[{"accessLevel": "PROJECT_OWNER", "public": false, "w
 {"accessLevel": "PROJECT_OWNER","public": false, "workspace": {"attributes": {"description": "A workspace for seqr project"},"authorizationDomain": [],"bucketName": "fc-6a048145-c134-4004-a009-42824f826ee8","createdBy": "test3@test.com","createdDate": "2020-09-09T15:12:30.142Z","isLocked": false,"lastModified": "2020-09-09T15:12:30.145Z","name": "seqr-project 1000 Genomes Demo","namespace": "my-seqr-billing","workflowCollectionName": "6a048145-c134-4004-a009-42824f826ee8","workspaceId": "6a048145-c134-4004-a009-42824f826ee8"},"workspaceSubmissionStats": {"runningSubmissionsCount": 0}}]'
 USERS_GROUP = 'TGG_USERS'
 
+
+EXCEPTIONS = {
+    401: (TerraAPIException, 'Error: called Terra API: GET /{path} got status: 401 with a reason: Unauthorized'),
+    403: (PermissionDenied, 'test_user got access denied (403) from Terra API: GET /{path} with reason: Forbidden'),
+    404: (TerraNotFoundException, 'test_user called Terra API: GET /{path} got status 404 with reason: Not Found'),
+    503: (PermissionDenied, 'Terra API Unavailable (503): GET /{path} with reason: Service Unavailable'),
+}
+
+
 class TerraApiUtilsHelpersCase(AuthenticationTestCase):
     fixtures = ['users', 'social_auth']
 
@@ -72,30 +81,13 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
         kwargs = kwargs or {}
         self.reset_logs()
 
-        responses.add(responses.GET, url, status=401, body=responses_body)
-        with self.assertRaises(TerraAPIException) as ec:
-            _ = func(*args, **kwargs)
-        self.assertEqual(
-            str(ec.exception), f'Error: called Terra API: GET /{path} got status: 401 with a reason: Unauthorized')
-        self.assertEqual(ec.exception.status_code, 401)
-
-        responses.add(responses.GET, url, status=403, body=responses_body)
-        with self.assertRaises(PermissionDenied) as ec:
-            _ = func(*args, **kwargs)
-        self.assertEqual(
-            str(ec.exception), f'test_user got access denied (403) from Terra API: GET /{path} with reason: Forbidden')
-
-        responses.add(responses.GET, url, status=503, body=responses_body)
-        with self.assertRaises(PermissionDenied) as ec:
-            _ = func(*args, **kwargs)
-        self.assertEqual(str(ec.exception), f'Terra API Unavailable (503): GET /{path} with reason: Service Unavailable')
-
-        responses.add(responses.GET, url, status=404, body=responses_body)
-        with self.assertRaises(TerraAPIException) as ec:
-            _ = func(*args, **kwargs)
-        self.assertEqual(
-            str(ec.exception), f'test_user called Terra API: GET /{path} got status 404 with reason: Not Found')
-        self.assertEqual(ec.exception.status_code, 404)
+        for status, (exception, message) in EXCEPTIONS.items():
+            responses.add(responses.GET, url, status=status, body=responses_body)
+            with self.assertRaises(exception) as ec:
+                _ = func(*args, **kwargs)
+            self.assertEqual(str(ec.exception), message.format(path=path))
+            if isinstance(exception, TerraAPIException):
+                self.assertEqual(ec.exception.status_code, status)
 
         self.assert_no_logs()
 
@@ -149,9 +141,8 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
         self._check_exceptions(GET_WORKSPACE_PATH, list_anvil_workspaces, (self.analyst_user,))
 
     @responses.activate
-    @mock.patch('seqr.views.utils.terra_api_utils.logger')
     @mock.patch('seqr.views.utils.terra_api_utils.anvil_call')
-    def test_refresh_token(self, mock_anvil_call, mock_logger):
+    def test_refresh_token(self, mock_anvil_call):
         with mock.patch('seqr.views.utils.terra_api_utils.time.time') as mock_time:
             mock_time.return_value = AUTH_EXTRA_DATA['auth_time'] + 60*60 + 10
             responses.add(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status = 401)
@@ -160,66 +151,36 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
             self.assertEqual(str(te.exception),
                 'Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token')
             self.assertEqual(te.exception.status_code, 401)
-            mock_logger.warning.assert_called_with(
-                'Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token',
-                self.analyst_user)
-            self.assertEqual(mock_logger.warning.call_count, 1)
-            mock_logger.info.assert_called_with('Refreshing access token', self.analyst_user)
-            self.assertEqual(mock_logger.info.call_count, 1)
+            self.assert_json_logs(self.analyst_user, [
+                ('Refreshing access token', None),
+                ('Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token',
+                 {'severity': 'WARNING'}),
+            ])
 
-            mock_logger.reset_mock()
+            self.reset_logs()
             responses.replace(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
             list_anvil_workspaces(self.analyst_user)
-            mock_logger.warning.assert_not_called()
-            mock_logger.info.assert_called_with('Refreshing access token', self.analyst_user)
-            self.assertEqual(mock_logger.info.call_count, 1)
+            self.assert_json_logs(self.analyst_user, [('Refreshing access token', None)])
             self.assertEqual(mock_anvil_call.call_count, 1)
             self.assertEqual(mock_anvil_call.call_args.args[2], 'ya29.c.EXAMPLE')
 
     @responses.activate
-    @mock.patch('seqr.views.utils.terra_api_utils.logger')
-    def test_get_workspace_acl(self, mock_logger):
-        url = '{}api/workspaces/my-seqr-billing/my-seqr-workspace/acl'.format(TEST_TERRA_API_ROOT_URL)
+    def test_get_workspace_acl(self):
+        path = 'api/workspaces/my-seqr-billing/my-seqr-workspace/acl'
+        url = f'{TEST_TERRA_API_ROOT_URL}{path}'
         responses.add(responses.GET, url, status=200, body='{"acl": {"test1@test1.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"sf-seqr@my-seqr.iam.gserviceaccount.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test2@test2.org": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test3@test3.com": {"accessLevel": "READER","canCompute": false,"canShare": false,"pending": false}}}')
         acl = user_get_workspace_acl(self.analyst_user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertIn('test3@test3.com', acl.keys())
-        mock_logger.info.assert_called_with(
-            'GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace/acl 200 425', self.analyst_user)
-        self.assertEqual(len(mock_logger.method_calls), 1)
+        self.assert_json_logs(self.analyst_user, [
+            ('GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace/acl 200 425', None),
+        ])
 
-        mock_logger.reset_mock()
-        responses.replace(responses.GET, url, status=401)
-        r = user_get_workspace_acl(self.analyst_user, 'my-seqr-billing', 'my-seqr-workspace')
-        self.assertDictEqual(r, {})
-
-        mock_logger.warning.assert_called_with(
-            'Error: called Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl got status: 401 with a reason: Unauthorized', self.analyst_user)
-        self.assertEqual(len(mock_logger.method_calls), 1)
-
-        mock_logger.reset_mock()
-        responses.replace(responses.GET, url, status=403)
-        r = user_get_workspace_acl(self.analyst_user, 'my-seqr-billing', 'my-seqr-workspace')
-        self.assertDictEqual(r, {})
-        mock_logger.warning.assert_called_with(
-            'test_user got access denied (403) from Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl with reason: Forbidden', self.analyst_user)
-        self.assertEqual(len(mock_logger.method_calls), 1)
-
-        mock_logger.reset_mock()
-        responses.replace(responses.GET, url, status=503)
-        r = user_get_workspace_acl(self.analyst_user, 'my-seqr-billing', 'my-seqr-workspace')
-        self.assertDictEqual(r, {})
-        mock_logger.warning.assert_called_with(
-            'Terra API Unavailable (503): GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl with reason: Service Unavailable',
-            self.analyst_user)
-        self.assertEqual(len(mock_logger.method_calls), 1)
-
-        mock_logger.reset_mock()
-        responses.replace(responses.GET, url, status=404)
-        r = user_get_workspace_acl(self.analyst_user, 'my-seqr-billing', 'my-seqr-workspace')
-        self.assertDictEqual(r, {})
-        mock_logger.warning.assert_called_with(
-            'test_user called Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl got status 404 with reason: Not Found', self.analyst_user)
-        self.assertEqual(len(mock_logger.method_calls), 1)
+        for status, (_, message) in EXCEPTIONS.items():
+            self.reset_logs()
+            responses.replace(responses.GET, url, status=status)
+            r = user_get_workspace_acl(self.analyst_user, 'my-seqr-billing', 'my-seqr-workspace')
+            self.assertDictEqual(r, {})
+            self.assert_json_logs(self.analyst_user, [(message.format(path=path), {'severity': 'WARNING'})])
 
     @responses.activate
     @mock.patch('seqr.views.utils.terra_api_utils.logger')
@@ -363,7 +324,7 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
         ]))
         groups = user_get_anvil_groups(self.analyst_user)
         self.assertListEqual(groups, ['TGG_Users', 'External_Users'])
-        self.assert_json_logs(self.analyst_user, [('GET https://terra.api/groups 200 183', None)])
+        self.assert_json_logs(self.analyst_user, [('GET https://terra.api/api/groups 200 183', None)])
         responses.assert_call_count(url, 1)
         mock_redis.return_value.set.assert_called_with('terra_req__test_user__api/groups', json.dumps(groups))
         mock_redis.return_value.expire.assert_called_with('terra_req__test_user__api/groups', 300)
