@@ -27,7 +27,10 @@ VARIANT_KEY_FIELD = 'variantId'
 GROUPED_VARIANTS_FIELD = 'variants'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
 
-POPULATION_SORTS = {'gnomad': GNOMAD_GENOMES_FIELD, 'gnomad_exomes': 'gnomad_exomes', 'callset_af': 'callset'}
+POPULATION_SORTS = {
+    'gnomad': [GNOMAD_GENOMES_FIELD],
+    'gnomad_exomes': ['gnomad_exomes'],
+    'callset_af': ['callset', 'sv_callset']}
 
 COMP_HET_ALT = 'COMP_HET_ALT'
 INHERITANCE_FILTERS = deepcopy(INHERITANCE_FILTERS)
@@ -176,8 +179,14 @@ class BaseHailTableQuery(object):
     COMPUTED_ANNOTATION_FIELDS = {}
 
     SORTS = {
-        PATHOGENICTY_SORT_KEY: None,
-        PATHOGENICTY_HGMD_SORT_KEY: None,
+        # TODO make sorts class specific
+        PATHOGENICTY_SORT_KEY: lambda r: [
+            hl.if_else(hl.is_missing(r.clinvar.clinicalSignificance), 39.5, hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance]),
+        ],
+        PATHOGENICTY_HGMD_SORT_KEY: lambda r: [
+            hl.if_else(hl.is_missing(r.clinvar.clinicalSignificance), 39.5, hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance]),
+            hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']],
+        ],
         # TODO implement rest of sorts
         XPOS_SORT_KEY: lambda r: [hl.dict(CHROM_TO_CHROM_NUMBER)[r.chrom], r.pos],
     }
@@ -215,25 +224,6 @@ class BaseHailTableQuery(object):
         if self._genome_version == GENOME_VERSION_LOOKUP[GENOME_VERSION_GRCh38]:
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
-
-    @classmethod
-    def sort_configs(cls):
-        # TODO sv callset sort
-        sorts = {sort: lambda r: [r.populations[pop_key].af] for sort, pop_key in POPULATION_SORTS.items()}
-        sorts.update({sort: None for sort, pop_key in POPULATION_SORTS.items() if pop_key not in cls.POPULATIONS})
-        sorts.update(cls.SORTS)
-
-        # TODO make sorts class specific
-        # TODO sort benign below missing
-        clinvar_sort = lambda r: hl.if_else(
-            hl.is_missing(r.clinvar.clinicalSignificance), 39.5, hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance],
-        )
-        sorts.update({
-            PATHOGENICTY_SORT_KEY: lambda r: [clinvar_sort(r)],
-            PATHOGENICTY_HGMD_SORT_KEY: lambda r: [clinvar_sort(r), hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]],
-        })
-
-        return sorts
 
     def population_expression(self, r, population, pop_config):
         return hl.struct(**{
@@ -887,12 +877,23 @@ class BaseHailTableQuery(object):
     @classmethod
     def _sort_order(cls, ht, sort):
         # TODO handle comp hets
-        sort_configs = cls.sort_configs()
-        ordering = sort_configs[XPOS_SORT_KEY](ht)
-        sort_func = sort_configs[sort]
+        ordering = cls._get_sort_func(XPOS_SORT_KEY)(ht)
+        sort_func = cls._get_sort_func(sort)
         if sort_func and sort != XPOS_SORT_KEY:
             ordering = sort_func(ht) + ordering
         return hl.array(ordering)
+
+    @classmethod
+    def _get_sort_func(cls, sort):
+        if sort in cls.SORTS:
+            return cls.SORTS[sort]
+
+        # TODO fix sv callset sorting
+        sorts = {sort: lambda r: [r.populations[pop_key[0]].af] for sort, pop_key in POPULATION_SORTS.items()}
+        sorts.update({sort: None for sort, pop_key in POPULATION_SORTS.items() if pop_key[0] not in cls.POPULATIONS})
+        sorts.update(cls.SORTS)
+
+        raise InvalidSearchException(f'Invalid sort "{sort}"')
 
     # For production: should use custom json serializer
     @classmethod
