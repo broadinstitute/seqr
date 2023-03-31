@@ -405,7 +405,7 @@ def load_phenotype_prioritization_data(request):
         return create_json_response({'error': 'File not found: {}'.format(file_path)}, status=400)
 
     try:
-        tool, data_by_project_indiv_id = load_phenotype_prioritization_data_file(file_path)
+        tool, data_by_project_indiv_id = load_phenotype_prioritization_data_file(file_path, request.user)
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
 

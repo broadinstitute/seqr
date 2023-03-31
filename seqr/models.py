@@ -135,7 +135,9 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
     def bulk_update(cls, user, update_json, queryset=None, **filter_kwargs):
         """Helper bulk update method that logs the update"""
         if queryset is None:
-            queryset = cls.objects.filter(**filter_kwargs)
+            queryset = cls.objects.filter(**filter_kwargs).exclude(**update_json)
+            if not queryset:
+                return []
 
         entity_ids = log_model_bulk_update(logger, queryset, user, 'update', update_fields=update_json.keys())
         queryset.update(**update_json)
@@ -1038,7 +1040,7 @@ class BulkOperationBase(models.Model):
         prefetch_related_objects(models, cls.PARENT_FIELD)
         parent_ids = {getattr(model, cls.PARENT_FIELD).guid for model in models}
         db_update = {
-            'dbEntity': db_entity, 'numEntities': len(models), 'parentEntityIds': parent_ids,
+            'dbEntity': db_entity, 'numEntities': len(models), 'parentEntityIds': sorted(parent_ids),
             'updateType': 'bulk_{}'.format(update_type),
         }
         logger.info(f'{update_type} {db_entity}s', user, db_update=db_update)

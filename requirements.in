@@ -17,7 +17,7 @@ pillow                            # required dependency of Djagno ImageField-typ
 psycopg2                          # postgres database access
 pyliftover                        # GRCh37/GRCh38 liftover
 requests                          # simpler way to make http requests
-redis<3.4                         # client lib for the redis in-memory database - used for caching server-side objects
+redis<4.6                         # client lib for the redis in-memory database - used for caching server-side objects
 requests-toolbelt                 # for troubleshooting requests
 slacker                           # library for sending slack messages
 slugify                           # used for encoding names for guids

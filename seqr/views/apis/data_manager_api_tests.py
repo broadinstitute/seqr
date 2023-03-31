@@ -418,9 +418,8 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
 
-    @mock.patch('seqr.utils.file_utils.logger')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_upload_qc_pipeline_output(self, mock_subprocess, mock_file_logger):
+    def test_upload_qc_pipeline_output(self, mock_subprocess):
         url = reverse(upload_qc_pipeline_output,)
         self.check_data_manager_login(url)
 
@@ -429,6 +428,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         })
 
         # Test missing file
+        self.reset_logs()
         mock_does_file_exist = mock.MagicMock()
         mock_subprocess.side_effect = [mock_does_file_exist]
         mock_does_file_exist.wait.return_value = 1
@@ -438,12 +438,9 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertListEqual(
             response.json()['errors'],
             ['File not found: gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'])
-        mock_file_logger.info.assert_has_calls([
-            mock.call(
-                '==> gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv',
-                self.data_manager_user,
-            ),
-            mock.call('BucketNotFoundException: 404 gs://seqr-datsets bucket does not exist.', self.data_manager_user),
+        self.assert_json_logs(self.data_manager_user, [
+            ('==> gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv', None),
+            ('BucketNotFoundException: 404 gs://seqr-datsets bucket does not exist.', None),
         ])
 
         # Test missing columns
@@ -641,6 +638,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D3', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
             ],
+            'skipped_samples': 'NA19675_D3',
             'num_parsed_samples': 3,
             'initial_model_count': 3,
             'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
@@ -651,14 +649,13 @@ class DataManagerAPITest(AuthenticationTestCase):
                  'isSignificant': True},
             ],
             'sample_guid': RNA_SAMPLE_GUID,
-            'warnings': ['Skipped loading for the following 1 unmatched samples: NA19675_D3']
         },
         'tpm': {
             'model_cls': RnaSeqTpm,
             'message_data_type': 'Expression',
             'header': ['sample_id', 'project', 'gene_id', 'individual_id', 'tissue', 'TPM'],
             'optional_headers': ['individual_id'],
-            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', '', 'muscle', 1.34],
+            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D3', 'muscle', 1.34],
             'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'fibroblasts', 0.064],
             'duplicated_indiv_id_data': [
                 ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'fibroblasts', 7.8],
@@ -683,8 +680,13 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 1.34],
                 ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19678', 'fibroblasts', 0.05],
             ],
+            'skipped_samples': 'NA19675_D3, NA20878',
             'exist_sample_tissue_type': 'M',
             'created_sample_tissue_type': 'F',
+            'extra_warnings': [
+                'Skipped loading for the following 1 tissue type unmatched sample(s) in 1 project(s): NA19678 (fibroblasts, muscle)'
+                ' in the project 1kg project nåme with uniçøde'
+            ],
             'num_parsed_samples': 4,
             'initial_model_count': 4,
             'deleted_count': 1,
@@ -692,8 +694,6 @@ class DataManagerAPITest(AuthenticationTestCase):
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
             'sample_guid': RNA_TPM_SAMPLE_GUID,
-            'warnings': ['Skipped loading row with mismatched tissue types for sample NA19678: muscle, fibroblasts',
-                         'Skipped loading for the following 2 unmatched samples: NA19675_D3, NA20878']
         },
         'splice': {
             'model_cls': RnaSeqSpliceOutlier,
@@ -746,10 +746,24 @@ class DataManagerAPITest(AuthenticationTestCase):
         },
     }
 
-    def _check_rna_sample_model(self, individual_id, data_source, tissue_type, project_name=None):
+    def _has_expected_file_loading_logs(self, file, info=None, warnings=None, additional_logs=None, additional_logs_offset=None):
+        expected_logs = [
+            (f'==> gsutil ls {file}', None),
+            (f'==> gsutil cat {file} | gunzip -c -q - ', None),
+        ] + [(info_log, None) for info_log in info or []] + [
+            (warn_log, {'severity': 'WARNING'}) for warn_log in warnings or []
+        ]
+        if additional_logs:
+            if additional_logs_offset:
+                for log in reversed(additional_logs):
+                    expected_logs.insert(additional_logs_offset, log)
+            else:
+                expected_logs += additional_logs
+
+        self.assert_json_logs(self.data_manager_user, expected_logs)
+
+    def _check_rna_sample_model(self, individual_id, data_source, tissue_type):
         rna_samples = Sample.objects.filter(individual_id=individual_id, sample_type='RNA', tissue_type=tissue_type)
-        if project_name:
-            rna_samples = rna_samples.filter(individual__family__project__name=project_name)
         self.assertEqual(len(rna_samples), 1)
         sample = rna_samples.first()
         self.assertTrue(sample.is_active)
@@ -767,9 +781,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
-    @mock.patch('seqr.views.utils.dataset_utils.logger')
-    @mock.patch('seqr.models.logger')
-    def test_update_rna_seq(self, mock_model_logger, mock_logger, mock_open, mock_subprocess, mock_load_uploaded_file,
+    def test_update_rna_seq(self, mock_open, mock_subprocess, mock_load_uploaded_file,
                             mock_os, mock_datetime, mock_send_slack):
         url = reverse(update_rna_seq)
         self.check_data_manager_login(url)
@@ -828,6 +840,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
                 # Test already loaded data
                 mock_send_slack.reset_mock()
+                self.reset_logs()
                 _set_file_iter_stdout([header, loaded_data_row])
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 200)
@@ -837,20 +850,18 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ]
                 warnings = ['Skipped loading for 1 samples already loaded from this file']
                 self.assertDictEqual(response.json(), {'info': info, 'warnings': warnings, 'sampleGuids': [], 'fileName': mock.ANY})
-                mock_logger.info.assert_has_calls([mock.call(info_log, self.data_manager_user) for info_log in info])
-                mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in warnings])
+                self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings)
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
                 mock_send_slack.assert_not_called()
 
-                def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, individual_tuple, body,
-                                             project_names=None, num_created_samples=1):
-                    mock_logger.reset_mock()
-                    mock_model_logger.reset_mock()
+                def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, individual_id, body,
+                                             project_names=None, num_created_samples=1, warnings=None, additional_logs=None):
+                    self.reset_logs()
                     _set_file_iter_stdout([header] + data)
                     response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                     self.assertEqual(response.status_code, 200)
                     if not project_names:
-                        project_names = individual_tuple[1]
+                        project_names = Individual.objects.filter(id=individual_id).values('family__project__name')[0]['family__project__name']
                     num_projects = len(project_names.split(','))
                     info = [
                         f'Parsed {num_parsed_samples} RNA-seq samples',
@@ -859,48 +870,51 @@ class DataManagerAPITest(AuthenticationTestCase):
                     ]
                     file_name = RNA_FILENAME_TEMPLATE.format(data_type)
                     response_json = response.json()
-                    self.assertDictEqual(response_json, {'info': info, 'warnings': mock.ANY, 'sampleGuids': mock.ANY,
+                    self.assertDictEqual(response_json, {'info': info, 'warnings': warnings or [], 'sampleGuids': mock.ANY,
                                                          'fileName': file_name})
                     new_sample_guid = self._check_rna_sample_model(
-                        individual_id=individual_tuple[0], data_source='new_muscle_samples.tsv.gz',
+                        individual_id=individual_id, data_source='new_muscle_samples.tsv.gz',
                         tissue_type=params.get('created_sample_tissue_type'),
-                        project_name=individual_tuple[1],
                     )
                     self.assertTrue(new_sample_guid in response_json['sampleGuids'])
-                    mock_logger.info.assert_has_calls([mock.call(info_log, self.data_manager_user) for info_log in info])
-                    mock_model_logger.info.assert_has_calls([mock.call(
-                        f'create {num_created_samples} Samples', self.data_manager_user, db_update={
-                            'dbEntity': 'Sample',
-                            'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else\
-                                [response_json['sampleGuids'][-1]],
-                            'updateType': 'bulk_create',
-                        }
-                    )])
+                    additional_logs = [(f'create {num_created_samples} Samples', {'dbUpdate': {
+                        'dbEntity': 'Sample', 'updateType': 'bulk_create',
+                        'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else
+                            [response_json['sampleGuids'][-1]],
+                    }})] + (additional_logs or [])
+                    self._has_expected_file_loading_logs(
+                        'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings,
+                        additional_logs=additional_logs, additional_logs_offset=3)
 
                     return response_json, new_sample_guid
 
                 # Test loading new data
                 mock_open.reset_mock()
+                self.reset_logs()
                 mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
                 mock_writes = []
                 def mock_write(content):
                     mock_writes.append(content)
                 mock_open.return_value.__enter__.return_value.write.side_effect = mock_write
                 body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
-                response_json, new_sample_guid = _test_basic_data_loading(
-                    params['new_data'], params["num_parsed_samples"], 2, (16, 'Test Reprocessed Project'), body,
-                    project_names='1kg project nåme with uniçøde, Test Reprocessed Project')
-                self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
+                warnings = [
+                    f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
+                    f'unmatched samples: {params["skipped_samples"]}']
+                if params.get('extra_warnings'):
+                    warnings = params['extra_warnings'] + warnings
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
-                mock_model_logger.info.assert_has_calls([
-                    mock.call(f'delete {model_cls.__name__}s', self.data_manager_user,
-                              db_update={'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
-                                         'parentEntityIds': {params['sample_guid']}, 'updateType': 'bulk_delete'}),
-                    mock.call('update 1 Samples', self.data_manager_user,
-                              db_update={'dbEntity': 'Sample', 'entityIds': [params['sample_guid']],
-                                         'updateType': 'bulk_update', 'updateFields': ['data_source']}),
-                ])
-                mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in params['warnings']])
+                response_json, new_sample_guid = _test_basic_data_loading(
+                    params['new_data'], params["num_parsed_samples"], 2, 16, body,
+                    project_names='1kg project nåme with uniçøde, Test Reprocessed Project', warnings=warnings,
+                    additional_logs=[
+                        (f'delete {model_cls.__name__}s', {'dbUpdate': {
+                            'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
+                           'parentEntityIds': [params['sample_guid']], 'updateType': 'bulk_delete'}}),
+                        ('update 1 Samples', {'dbUpdate': {
+                            'dbEntity': 'Sample', 'entityIds': [params['sample_guid']],
+                            'updateType': 'bulk_update', 'updateFields': ['data_source']}}),
+                    ])
+                self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
                 self.assertEqual(mock_send_slack.call_count, 2)
                 mock_send_slack.assert_has_calls([
                     mock.call(
@@ -931,7 +945,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 # test loading new data without deleting existing data
                 data = [params['no_existing_data']]
                 body.pop('mappingFile')
-                _test_basic_data_loading(data, 1, 1, (2, '1kg project nåme with uniçøde'), body)
+                _test_basic_data_loading(data, 1, 1, 2, body)
 
                 # Test loading data when where are duplicated individual ids in different projects.
                 if 'duplicated_indiv_id_data' in params:
@@ -945,9 +959,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
-    @mock.patch('seqr.views.apis.data_manager_api.logger')
-    @mock.patch('seqr.models.logger')
-    def test_load_rna_seq_sample_data(self, mock_model_logger, mock_logger, mock_open, mock_os):
+    def test_load_rna_seq_sample_data(self, mock_open, mock_os):
         mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
 
         url = reverse(load_rna_seq_sample_data, args=[RNA_SAMPLE_GUID])
@@ -958,6 +970,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 url = reverse(load_rna_seq_sample_data, args=[params['sample_guid']])
                 model_cls = params['model_cls']
                 model_cls.objects.all().delete()
+                self.reset_logs()
                 mock_open.return_value.__enter__.return_value.__iter__.return_value = params['parsed_file_data']
                 file_name = RNA_FILENAME_TEMPLATE.format(data_type)
 
@@ -973,13 +986,13 @@ class DataManagerAPITest(AuthenticationTestCase):
 
                 mock_open.assert_called_with(file_name, 'rt')
 
-                mock_logger.info.assert_called_with('Loading outlier data for NA19675_D2', self.data_manager_user)
-                mock_model_logger.info.assert_called_with(
-                    f'create {model_cls.__name__}s', self.data_manager_user, db_update={
-                        'dbEntity': model_cls.__name__, 'numEntities': 2, 'parentEntityIds': {params['sample_guid']},
+                self.assert_json_logs(self.data_manager_user, [
+                    ('Loading outlier data for NA19675_D2', None),
+                    (f'create {model_cls.__name__}s', {'dbUpdate': {
+                        'dbEntity': model_cls.__name__, 'numEntities': 2, 'parentEntityIds': [params['sample_guid']],
                         'updateType': 'bulk_create',
-                    }
-                )
+                    }}),
+                ])
 
                 self.assertListEqual(list(params['get_models_json'](models)), params['expected_models_json'])
 
@@ -988,8 +1001,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         return ['\t'.join(line).encode('utf-8') for line in data]
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    @mock.patch('seqr.models.logger')
-    def test_load_phenotype_prioritization_data(self, mock_logger, mock_subprocess):
+    def test_load_phenotype_prioritization_data(self, mock_subprocess):
         url = reverse(load_phenotype_prioritization_data)
         self.check_data_manager_login(url)
 
@@ -1042,6 +1054,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         # Test a successful operation
         mock_subprocess.reset_mock()
         mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA)
+        self.reset_logs()
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
         info = [
@@ -1050,16 +1063,23 @@ class DataManagerAPITest(AuthenticationTestCase):
             'Project Test Reprocessed Project: loaded 1 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
-        db_update = {'dbEntity': 'PhenotypePrioritization', 'numEntities': 2,
-                     'parentEntityIds': {'I000002_na19678', 'I000015_na20885'}, 'updateType': 'bulk_create'}
-        mock_logger.info.assert_called_with('create PhenotypePrioritizations', self.data_manager_user, db_update=db_update)
+        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', additional_logs=[
+            ('delete PhenotypePrioritizations', {'dbUpdate': {
+                'dbEntity': 'PhenotypePrioritization', 'numEntities': 1, 'updateType': 'bulk_delete',
+                'parentEntityIds': ['I000002_na19678'],
+            }}),
+            ('create PhenotypePrioritizations', {'dbUpdate': {
+                'dbEntity': 'PhenotypePrioritization', 'numEntities': 2, 'updateType': 'bulk_create',
+                'parentEntityIds': ['I000002_na19678', 'I000015_na20885'],
+            }}),
+        ])
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical').order_by('id'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_LIRICAL_DATA)
         mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
 
         # Test uploading new data
-        mock_logger.reset_mock()
+        self.reset_logs()
         mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + UPDATE_LIRICAL_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
@@ -1068,14 +1088,15 @@ class DataManagerAPITest(AuthenticationTestCase):
             'Project 1kg project nåme with uniçøde: deleted 1 record(s), loaded 2 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
-        mock_logger.info.assert_has_calls([
-            mock.call('delete PhenotypePrioritizations', self.data_manager_user, db_update={
-                'dbEntity': 'PhenotypePrioritization', 'numEntities': 1,
-                'parentEntityIds': {'I000002_na19678'}, 'updateType': 'bulk_delete',
-            }),
-            mock.call('create PhenotypePrioritizations', self.data_manager_user,
-                      db_update={'dbEntity': 'PhenotypePrioritization', 'numEntities': 2,
-                     'parentEntityIds': {'I000002_na19678'}, 'updateType': 'bulk_create'}),
+        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', additional_logs=[
+            ('delete PhenotypePrioritizations', {'dbUpdate': {
+                'dbEntity': 'PhenotypePrioritization', 'numEntities': 1, 'updateType': 'bulk_delete',
+                'parentEntityIds': ['I000002_na19678'],
+            }}),
+            ('create PhenotypePrioritizations', {'dbUpdate': {
+                'dbEntity': 'PhenotypePrioritization', 'numEntities': 2, 'updateType': 'bulk_create',
+                'parentEntityIds': ['I000002_na19678'],
+            }}),
         ])
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
