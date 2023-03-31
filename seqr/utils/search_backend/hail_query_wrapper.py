@@ -173,15 +173,6 @@ class BaseHailTableQuery(object):
     }
     COMPUTED_ANNOTATION_FIELDS = {}
 
-    # TODO make sorts class specific
-    CLINVAR_SORT = lambda r: hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance]
-    SORTS = {
-        PATHOGENICTY_SORT_KEY: lambda r: [CLINVAR_SORT(r)],
-        PATHOGENICTY_HGMD_SORT_KEY: lambda r: [CLINVAR_SORT(r), hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]],
-        # TODO implement rest of sorts
-        XPOS_SORT_KEY: lambda r: [hl.dict(CHROM_TO_CHROM_NUMBER)[r.chrom], r.pos],
-    }
-
     @classmethod
     def populations_configs(cls):
         return {pop: cls._format_population_config(pop_config) for pop, pop_config in cls.POPULATIONS.items()}
@@ -215,6 +206,18 @@ class BaseHailTableQuery(object):
         if self._genome_version == GENOME_VERSION_LOOKUP[GENOME_VERSION_GRCh38]:
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
+
+    @property
+    def sorts(self):
+        # TODO make sorts class specific
+        clinvar_sort = lambda r: hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance]
+        sorts = {
+            PATHOGENICTY_SORT_KEY: lambda r: [clinvar_sort(r)],
+            PATHOGENICTY_HGMD_SORT_KEY: lambda r: [clinvar_sort(r), hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]],
+            # TODO implement rest of sorts
+            XPOS_SORT_KEY: lambda r: [hl.dict(CHROM_TO_CHROM_NUMBER)[r.chrom], r.pos],
+        }
+        return sorts
 
     def population_expression(self, r, population, pop_config):
         return hl.struct(**{
@@ -868,8 +871,8 @@ class BaseHailTableQuery(object):
     @classmethod
     def _sort_order(cls, ht, sort):
         # TODO handle comp hets
-        ordering = cls.SORTS[XPOS_SORT_KEY](ht)
-        sort_func = cls.SORTS[sort]
+        ordering = cls.sorts[XPOS_SORT_KEY](ht)
+        sort_func = cls.sorts[sort]
         if sort_func and sort != XPOS_SORT_KEY:
             ordering = sort_func(ht) + ordering
         return hl.array(ordering)
