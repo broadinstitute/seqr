@@ -891,6 +891,7 @@ class BaseHailTableQuery(object):
         if sort in POPULATION_SORTS:
             pop_fields = [pop for pop in POPULATION_SORTS[sort] if pop in cls.POPULATIONS]
             if not pop_fields:
+                logger.info(f'sort {sort} not applied for {cls}: {POPULATION_SORTS[sort]}: {cls.POPULATIONS}')
                 return None
 
             def _pop_sort(r):
