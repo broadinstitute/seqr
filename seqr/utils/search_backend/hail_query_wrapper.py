@@ -216,14 +216,19 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def sort_configs(cls):
-        sorts = {}
+        sorts = {
+            sort: lambda r: r
+            for sort, pop_key in {'gnomad': 'gnomad_genomes', 'gnomad_exomes': 'gnomad_exomes', 'callset_af': 'callset'}.items()}
         sorts.update(cls.SORTS)
 
         # TODO make sorts class specific
-        clinvar_sort = lambda r: hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance]
+        clinvar_sort = lambda r: hl.or_missing(
+            hl.is_defined(r.clinvar.clinicalSignificance), hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance])
         sorts.update({
             PATHOGENICTY_SORT_KEY: lambda r: [clinvar_sort(r)],
-            PATHOGENICTY_HGMD_SORT_KEY: lambda r: [clinvar_sort(r), hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]],
+            PATHOGENICTY_HGMD_SORT_KEY: lambda r: [
+                clinvar_sort(r), hl.or_missing(hl.is_defined(r.hgmd['class']), hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]),
+            ],
         })
 
         return sorts
