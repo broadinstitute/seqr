@@ -888,10 +888,17 @@ class BaseHailTableQuery(object):
         if sort in cls.SORTS:
             return cls.SORTS[sort]
 
-        # TODO fix sv callset sorting
-        sorts = {sort: lambda r: [r.populations[pop_key[0]].af] for sort, pop_key in POPULATION_SORTS.items()}
-        sorts.update({sort: None for sort, pop_key in POPULATION_SORTS.items() if pop_key[0] not in cls.POPULATIONS})
-        sorts.update(cls.SORTS)
+        if sort in POPULATION_SORTS:
+            pop_fields = [pop for pop in POPULATION_SORTS[sort] if pop in cls.POPULATIONS]
+            if not pop_fields:
+                return None
+
+            def _pop_sort(r):
+                pop_expr = r.populations[pop_fields[0]].af
+                for pop_field in pop_fields[1:]:
+                    pop_expr = hl.or_else(pop_expr, r.populations[pop_field].af)
+                return pop_expr
+            return _pop_sort
 
         raise InvalidSearchException(f'Invalid sort "{sort}"')
 
