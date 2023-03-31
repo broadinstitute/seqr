@@ -10,7 +10,7 @@ from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, \
     INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, MAX_NO_LOCATION_COMP_HET_FAMILIES, \
     CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF, \
-    SCREEN_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+    SCREEN_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, XPOS_SORT_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -177,6 +177,7 @@ class BaseHailTableQuery(object):
     SORTS = {
         PATHOGENICTY_SORT_KEY: lambda r: [CLINVAR_SORT(r)],
         PATHOGENICTY_HGMD_SORT_KEY: lambda r: [CLINVAR_SORT(r), hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]],
+        XPOS_SORT_KEY: lambda r: r.xpos,
     }
 
     @classmethod
@@ -867,9 +868,9 @@ class BaseHailTableQuery(object):
         # TODO handle comp hets
         # always secondary sort on position
         # always final sort on variant ID to keep different variants at the same position grouped properly
-        ordering = [ht.xpos, ht.variantId]
+        ordering = [cls.SORTS[XPOS_SORT_KEY](ht), ht.variantId]
         sort_func = cls.SORTS[sort]
-        if sort_func and sort != 'xpos':
+        if sort_func and sort != XPOS_SORT_KEY:
             ordering = sort_func(ht) + ordering
         return hl.array(ordering)
 
