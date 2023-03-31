@@ -900,7 +900,7 @@ class BaseHailTableQuery(object):
                 pop_expr = r.populations[pop_fields[0]].af
                 for pop_field in pop_fields[1:]:
                     pop_expr = hl.or_else(pop_expr, r.populations[pop_field].af)
-                return pop_expr
+                return [pop_expr]
             return _pop_sort
 
         raise InvalidSearchException(f'Invalid sort "{sort}"')
