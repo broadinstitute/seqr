@@ -218,19 +218,19 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def sort_configs(cls):
+        # TODO sv callset sort
         sorts = {sort: lambda r: [r.populations[pop_key].af] for sort, pop_key in POPULATION_SORTS.items()}
         sorts.update({sort: None for sort, pop_key in POPULATION_SORTS.items() if pop_key not in cls.POPULATIONS})
         sorts.update(cls.SORTS)
 
         # TODO make sorts class specific
         # TODO sort benign below missing
-        clinvar_sort = lambda r: hl.or_missing(
-            hl.is_defined(r.clinvar.clinicalSignificance), hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance])
+        clinvar_sort = lambda r: hl.if_else(
+            hl.is_missing(r.clinvar.clinicalSignificance), 39.5, hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance],
+        )
         sorts.update({
             PATHOGENICTY_SORT_KEY: lambda r: [clinvar_sort(r)],
-            PATHOGENICTY_HGMD_SORT_KEY: lambda r: [
-                clinvar_sort(r), hl.or_missing(hl.is_defined(r.hgmd['class']), hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]),
-            ],
+            PATHOGENICTY_HGMD_SORT_KEY: lambda r: [clinvar_sort(r), hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]],
         })
 
         return sorts
