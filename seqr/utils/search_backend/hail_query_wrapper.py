@@ -27,6 +27,8 @@ VARIANT_KEY_FIELD = 'variantId'
 GROUPED_VARIANTS_FIELD = 'variants'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
 
+POPULATION_SORTS = {'gnomad': GNOMAD_GENOMES_FIELD, 'gnomad_exomes': 'gnomad_exomes', 'callset_af': 'callset'}
+
 COMP_HET_ALT = 'COMP_HET_ALT'
 INHERITANCE_FILTERS = deepcopy(INHERITANCE_FILTERS)
 INHERITANCE_FILTERS[COMPOUND_HET][AFFECTED] = COMP_HET_ALT
@@ -216,12 +218,12 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def sort_configs(cls):
-        sorts = {
-            sort: lambda r: r
-            for sort, pop_key in {'gnomad': 'gnomad_genomes', 'gnomad_exomes': 'gnomad_exomes', 'callset_af': 'callset'}.items()}
+        sorts = {sort: lambda r: [r.populations[pop_key].af] for sort, pop_key in POPULATION_SORTS.items()}
+        sorts.update({sort: None for sort, pop_key in POPULATION_SORTS.items() if pop_key not in cls.POPULATIONS})
         sorts.update(cls.SORTS)
 
         # TODO make sorts class specific
+        # TODO sort benign below missing
         clinvar_sort = lambda r: hl.or_missing(
             hl.is_defined(r.clinvar.clinicalSignificance), hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance])
         sorts.update({
