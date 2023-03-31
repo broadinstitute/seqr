@@ -173,10 +173,10 @@ class BaseHailTableQuery(object):
     COMPUTED_ANNOTATION_FIELDS = {}
 
     # TODO make sorts class specific
-    CLINVAR_SORT = hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance]
+    CLINVAR_SORT = lambda r: hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance]
     SORTS = {
-        PATHOGENICTY_SORT_KEY: lambda r: [CLINVAR_SORT],
-        PATHOGENICTY_HGMD_SORT_KEY: lambda r: [CLINVAR_SORT, hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]],
+        PATHOGENICTY_SORT_KEY: lambda r: [CLINVAR_SORT(r)],
+        PATHOGENICTY_HGMD_SORT_KEY: lambda r: [CLINVAR_SORT(r), hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]],
     }
 
     @classmethod
