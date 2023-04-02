@@ -707,9 +707,12 @@ def _get_record_updates(record, individual, invalid_values, allowed_assigned_ana
                     update_record[k] = v
             else:
                 _parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
-                if k in {FEATURES_COL, ABSENT_FEATURES_COL} and not has_same_features:
-                    update_record[k] = _parsed_val
-                elif _parsed_val != getattr(individual, k):
+                if (
+                    # different features
+                    (k in {FEATURES_COL, ABSENT_FEATURES_COL} and not has_same_features)
+                    # different value (for non-feature col)
+                    or _parsed_val != getattr(individual, k)
+                ):
                     update_record[k] = _parsed_val
 
         except (KeyError, ValueError):
