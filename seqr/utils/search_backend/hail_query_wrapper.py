@@ -900,7 +900,7 @@ class BaseHailTableQuery(object):
         elif sort in self.PREDICTION_FIELDS_CONFIG:
             sort_expression = -ht.predictions[sort]
 
-        return [sort_expression] if sort_expression else []
+        return [sort_expression] if sort_expression is not None else []
 
     # For production: should use custom json serializer
     @classmethod
