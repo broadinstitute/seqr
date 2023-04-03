@@ -15,6 +15,8 @@ from seqr.utils.xpos_utils import CHROM_TO_CHROM_NUMBER
 
 logger = logging.getLogger(__name__)
 
+CHROM_TO_XPOS_OFFSET = {chrom: (1 + i)*int(1e9) for chrom, i in CHROM_TO_CHROM_NUMBER.items()}
+
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 VARIANT_DATASET = Sample.DATASET_TYPE_VARIANT_CALLS
@@ -189,8 +191,7 @@ class BaseHailTableQuery(object):
             hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']],
         ],
         # TODO implement rest of sorts
-        # XPOS_SORT_KEY: lambda r: [hl.dict(CHROM_TO_CHROM_NUMBER)[r.chrom], r.pos],
-        XPOS_SORT_KEY: lambda r: r.xpos,  # TODO does not work for sv
+        XPOS_SORT_KEY: lambda r: r.xpos,
     }
 
     @classmethod
@@ -1241,6 +1242,8 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
         'pos': lambda r: _get_genotype_override_field(r.genotypes, r.interval.start.position, 'start', hl.min),
         'end': lambda r: _get_genotype_override_field(r.genotypes, r.interval.end.position, 'end', hl.max),
         'numExon': lambda r: _get_genotype_override_field(r.genotypes, r.num_exon, 'numExon', hl.max),
+         # make CORE_FIELD once correctly added in loading pipeline
+        'xpos': lambda r: hl.dict(CHROM_TO_XPOS_OFFSET).get(r.interval.start.contig.replace('^chr', '')) + r.interval.start.position,
     })
     COMPUTED_ANNOTATION_FIELDS = {
         'transcripts': lambda self, r: hl.if_else(

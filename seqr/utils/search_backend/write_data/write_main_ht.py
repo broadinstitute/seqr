@@ -104,6 +104,7 @@ CHROMOSOMES = [
     '22', 'X', 'Y', 'M',
 ]
 CHROM_NUMBER_TO_CHROM = hl.literal({i: chrom for i, chrom in enumerate(CHROMOSOMES)})
+CHROM_TO_XPOS_OFFSET = {chrom: (1 + i)*int(1e9) for i, chrom in enumerate(CHROMOSOMES)}
 
 SIFT_FATHMM_MAP = {val: i for i, val in enumerate(['D', 'T'])}
 POLYPHEN_MAP = {val: i for i, val in enumerate(['D', 'P', 'B'])}
@@ -178,6 +179,7 @@ ANNOTATIONS = {
             )),
         ),
         'svType_id': lambda ht: hl.dict(SV_TYPE_MAP)[ht.svType],
+        'xpos': lambda ht: hl.dict(CHROM_TO_XPOS_OFFSET).get(ht.chr.replace('^chr', '')) + ht.start,
     },
     SV_TYPE: {
         'algorithms': lambda ht: hl.str(',').join(ht.algorithms),
