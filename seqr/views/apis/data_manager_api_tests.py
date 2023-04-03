@@ -677,12 +677,12 @@ class DataManagerAPITest(AuthenticationTestCase):
             'skipped_samples': 'NA19675_D3, NA20878',
             'exist_sample_tissue_type': 'M',
             'created_sample_tissue_type': 'F',
-            'extra_warnings': [
-                'Skipped loading for the following 2 tissue-unmatched sample(s): NA19678 (fibroblasts, muscle)',
-            ],
             'num_parsed_samples': 4,
             'initial_model_count': 4,
             'deleted_count': 1,
+            'extra_warnings': [
+                'Skipped data loading for the following 1 sample(s) due to mismatched tissue type: NA19678 (fibroblasts, muscle)',
+            ],
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
@@ -798,14 +798,12 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
                 mock_send_slack.assert_not_called()
 
-                def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, individual_id, body,
-                                             project_names=None, num_created_samples=1, warnings=None, additional_logs=None):
+                def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, individual_id, body, project_names,
+                                             num_created_samples=1, warnings=None, additional_logs=None):
                     self.reset_logs()
                     _set_file_iter_stdout([header] + data)
                     response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                     self.assertEqual(response.status_code, 200)
-                    if not project_names:
-                        project_names = Individual.objects.filter(id=individual_id).values('family__project__name')[0]['family__project__name']
                     num_projects = len(project_names.split(','))
                     info = [
                         f'Parsed {num_parsed_samples} RNA-seq samples',
@@ -849,7 +847,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
                 response_json, new_sample_guid = _test_basic_data_loading(
                     params['new_data'], params["num_parsed_samples"], 2, 16, body,
-                    project_names='1kg project nåme with uniçøde, Test Reprocessed Project', warnings=warnings,
+                    '1kg project nåme with uniçøde, Test Reprocessed Project', warnings=warnings,
                     additional_logs=[
                         (f'delete {model_cls.__name__}s', {'dbUpdate': {
                             'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
@@ -889,13 +887,12 @@ class DataManagerAPITest(AuthenticationTestCase):
                 # test loading new data without deleting existing data
                 data = [params['no_existing_data']]
                 body.pop('mappingFile')
-                _test_basic_data_loading(data, 1, 1, 2, body)
+                _test_basic_data_loading(data, 1, 1, 2, body, '1kg project nåme with uniçøde')
 
                 # Test loading data when where are duplicated individual ids in different projects.
                 data = params['duplicated_indiv_id_data']
                 mock_writes = []
-                _test_basic_data_loading(data, 2, 2, 20, body,
-                                         project_names='1kg project nåme with uniçøde, Test Reprocessed Project',
+                _test_basic_data_loading(data, 2, 2, 20, body, '1kg project nåme with uniçøde, Test Reprocessed Project',
                                          num_created_samples=2)
                 self.assertSetEqual(set([s.split('_', 1)[1] for s in mock_writes]), params['write_data'])
 
