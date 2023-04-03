@@ -191,7 +191,7 @@ class BaseHailTableQuery(object):
             hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']],
         ],
         # TODO implement rest of sorts
-        XPOS_SORT_KEY: lambda r: r.xpos,
+        XPOS_SORT_KEY: lambda r: [r.xpos],
     }
 
     @classmethod
