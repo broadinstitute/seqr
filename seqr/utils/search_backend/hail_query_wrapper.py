@@ -912,7 +912,7 @@ class BaseHailTableQuery(object):
         if sort in PREDICTOR_SORTS:
             # TODO not working
             logger.info(f'applied predictor sort {"NONE" if sort not in self.PREDICTION_FIELDS_CONFIG else sort}')
-            return None if sort not in self.PREDICTION_FIELDS_CONFIG else lambda r: -r.predictions[sort]
+            return None if sort not in self.PREDICTION_FIELDS_CONFIG else lambda r: [-r.predictions[sort]]
 
         raise InvalidSearchException(f'Invalid sort "{sort}"')
 
