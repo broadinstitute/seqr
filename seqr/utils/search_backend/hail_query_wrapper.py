@@ -182,14 +182,6 @@ class BaseHailTableQuery(object):
     COMPUTED_ANNOTATION_FIELDS = {}
 
     SORTS = {
-        # TODO make sorts class specific
-        PATHOGENICTY_SORT_KEY: lambda r: [
-            hl.if_else(hl.is_missing(r.clinvar.clinicalSignificance), 39.5, hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance]),
-        ],
-        PATHOGENICTY_HGMD_SORT_KEY: lambda r: [
-            hl.if_else(hl.is_missing(r.clinvar.clinicalSignificance), 39.5, hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance]),
-            hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']],
-        ],
         # TODO implement rest of sorts
         XPOS_SORT_KEY: lambda r: [r.xpos],
     }
@@ -886,8 +878,7 @@ class BaseHailTableQuery(object):
 
     def _get_sort_expressions(self, ht, sort):
         if sort in self.SORTS:
-            get_sort_expressions = self.SORTS[sort]
-            return get_sort_expressions(ht) if get_sort_expressions else []
+            return self.SORTS[sort](ht)
 
         sort_expression = None
         if sort in POPULATION_SORTS:
@@ -950,6 +941,14 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
+
+    SORTS = {
+        PATHOGENICTY_SORT_KEY: lambda r: [
+            hl.if_else(hl.is_missing(r.clinvar.clinicalSignificance), 39.5, hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance]),
+        ],
+    }
+    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
+    SORTS.update(BaseHailTableQuery.SORTS)
 
     def _selected_main_transcript_expr(self, results):
         if not (self._filtered_genes or self._allowed_consequences):
@@ -1076,6 +1075,9 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
             hl.array(SCREEN_CONSEQUENCES)[r.screen.region_type_id[0]]),
     }
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
+
+    SORTS = deepcopy(BaseVariantHailTableQuery.SORTS)
+    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: SORTS[PATHOGENICTY_SORT_KEY](r) + [hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]]
 
     @classmethod
     def _validate_search_criteria(cls, num_families=None, has_location_search=None, inheritance_mode=None, **kwargs):
@@ -1296,6 +1298,7 @@ DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_typ
 class MultiDataTypeHailTableQuery(object):
 
     DATA_TYPE_ANNOTATION_FIELDS = []
+    DATA_TYPE_SORTS = {}
 
     SV_MERGE_FIELDS = {'interval', 'svType_id', 'rg37_locus_end', 'strvctvre', 'sv_callset',}
     VARIANT_MERGE_FIELDS = {'alleles', 'callset', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rsid',}
@@ -1310,6 +1313,8 @@ class MultiDataTypeHailTableQuery(object):
         self.PREDICTION_FIELDS_CONFIG = {}
         self.BASE_ANNOTATION_FIELDS = {}
         self.COMPUTED_ANNOTATION_FIELDS = {}
+        self.SORTS = {}
+
         self.CORE_FIELDS = set()
         for cls in [QUERY_CLASS_MAP[dt] for dt in self._data_types]:
             self.POPULATIONS.update(cls.POPULATIONS)
@@ -1317,10 +1322,12 @@ class MultiDataTypeHailTableQuery(object):
             self.BASE_ANNOTATION_FIELDS.update(cls.BASE_ANNOTATION_FIELDS)
             self.COMPUTED_ANNOTATION_FIELDS.update(cls.COMPUTED_ANNOTATION_FIELDS)
             self.CORE_FIELDS.update(cls.CORE_FIELDS)
+            self.SORTS.update(cls.SORTS)
         self.BASE_ANNOTATION_FIELDS.update({
             k: self._annotation_for_data_type(k) for k in self.DATA_TYPE_ANNOTATION_FIELDS
         })
         self.CORE_FIELDS = list(self.CORE_FIELDS - set(self.BASE_ANNOTATION_FIELDS.keys()))
+        self.SORTS.update(self.DATA_TYPE_SORTS)
 
         super(MultiDataTypeHailTableQuery, self).__init__(data_type, *args, **kwargs)
 
