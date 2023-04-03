@@ -35,6 +35,8 @@ POPULATION_SORTS = {
     'callset_af': ['callset', 'sv_callset'],
 }
 
+PREDICTOR_SORTS = {'cadd', 'revel', 'eigen', 'mpc', 'splice_ai', 'primate_ai'}
+
 COMP_HET_ALT = 'COMP_HET_ALT'
 INHERITANCE_FILTERS = deepcopy(INHERITANCE_FILTERS)
 INHERITANCE_FILTERS[COMPOUND_HET][AFFECTED] = COMP_HET_ALT
@@ -891,8 +893,6 @@ class BaseHailTableQuery(object):
 
         if sort in POPULATION_SORTS:
             pop_fields = [pop for pop in POPULATION_SORTS[sort] if pop in self.POPULATIONS]
-            # TODO callset sort
-            logger.info(f'sort fields {POPULATION_SORTS[sort]}: pop fields {list(self.POPULATIONS.keys())}: mathched fields {pop_fields}')
             if not pop_fields:
                 return None
 
@@ -902,6 +902,9 @@ class BaseHailTableQuery(object):
                     pop_expr = hl.or_else(pop_expr, r.populations[pop_field].af)
                 return [pop_expr]
             return _pop_sort
+
+        if sort in PREDICTOR_SORTS:
+            return None if sort not in self.PREDICTION_FIELDS_CONFIG else lambda r: r.predictions[sort]
 
         raise InvalidSearchException(f'Invalid sort "{sort}"')
 
