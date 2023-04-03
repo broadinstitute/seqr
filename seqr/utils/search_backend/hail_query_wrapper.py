@@ -1265,7 +1265,7 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
     def _filter_annotated_table(cls, ht, **kwargs):
         # Remove once data is reloaded
         ht = ht.annotate(
-            xpos=hl.dict(CHROM_TO_XPOS_OFFSET).get(r.interval.start.contig.replace('^chr', '')) + r.interval.start.position,
+            xpos=hl.dict(CHROM_TO_XPOS_OFFSET).get(ht.interval.start.contig.replace('^chr', '')) + ht.interval.start.position,
         )
         return super(GcnvHailTableQuery, cls)._filter_annotated_table(ht, **kwargs)
 
