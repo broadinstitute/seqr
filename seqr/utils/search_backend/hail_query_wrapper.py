@@ -35,8 +35,6 @@ POPULATION_SORTS = {
     'callset_af': ['callset', 'sv_callset'],
 }
 
-PREDICTOR_SORTS = {'cadd', 'revel', 'eigen', 'mpc', 'splice_ai', 'primate_ai'}
-
 COMP_HET_ALT = 'COMP_HET_ALT'
 INHERITANCE_FILTERS = deepcopy(INHERITANCE_FILTERS)
 INHERITANCE_FILTERS[COMPOUND_HET][AFFECTED] = COMP_HET_ALT
@@ -871,11 +869,6 @@ class BaseHailTableQuery(object):
 
         # TODO #2496: page
         ordering = self._sort_order(ht, sort)
-        # TODO debug
-        logger.info(ht.aggregate(hl.agg.take(
-            hl.struct(vId=ht.variantId, cadd=ht.predictions.cadd), 20, ordering=ordering,
-            # ordering=hl.array([-ht.predictions[sort], ht.xpos]),
-        )))
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=ordering)))
         logger.info(f'Total hits: {total_results}')
 
@@ -886,34 +879,28 @@ class BaseHailTableQuery(object):
 
     def _sort_order(self, ht, sort):
         # TODO handle comp hets
-        ordering = self._get_sort_func(XPOS_SORT_KEY)(ht)
-        sort_func = self._get_sort_func(sort)
-        if sort_func and sort != XPOS_SORT_KEY:
-            ordering = sort_func(ht) + ordering
-        return hl.array(ordering)
+        sort_expressions = self._get_sort_expressions(ht, XPOS_SORT_KEY)
+        if sort != XPOS_SORT_KEY:
+            sort_expressions = self._get_sort_expressions(ht, sort) + sort_expressions
+        return hl.array(sort_expressions)
 
-    def _get_sort_func(self, sort):
+    def _get_sort_expressions(self, ht, sort):
         if sort in self.SORTS:
-            return self.SORTS[sort]
+            get_sort_expressions = self.SORTS[sort]
+            return get_sort_expressions(ht) if get_sort_expressions else []
 
+        sort_expression = None
         if sort in POPULATION_SORTS:
             pop_fields = [pop for pop in POPULATION_SORTS[sort] if pop in self.POPULATIONS]
-            if not pop_fields:
-                return None
-
-            def _pop_sort(r):
-                pop_expr = r.populations[pop_fields[0]].af
+            if pop_fields:
+                sort_expression = ht.populations[pop_fields[0]].af
                 for pop_field in pop_fields[1:]:
-                    pop_expr = hl.or_else(pop_expr, r.populations[pop_field].af)
-                return [pop_expr]
-            return _pop_sort
+                    sort_expression = hl.or_else(sort_expression, ht.populations[pop_field].af)
 
-        if sort in PREDICTOR_SORTS:
-            # TODO not working
-            logger.info(f'applied predictor sort {"NONE" if sort not in self.PREDICTION_FIELDS_CONFIG else sort}')
-            return None if sort not in self.PREDICTION_FIELDS_CONFIG else lambda r: [-r.predictions[sort]]
+        elif sort in self.PREDICTION_FIELDS_CONFIG:
+            sort_expression = -ht.predictions[sort]
 
-        raise InvalidSearchException(f'Invalid sort "{sort}"')
+        return [sort_expression] if sort_expression else []
 
     # For production: should use custom json serializer
     @classmethod
