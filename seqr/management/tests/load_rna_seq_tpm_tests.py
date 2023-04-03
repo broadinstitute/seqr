@@ -80,8 +80,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             mock.call('create 1 RnaSeqTpm for NA19678_D1'),
         ])
         mock_utils_logger.warning.assert_has_calls([
-            mock.call('Skipped loading for the following 1 tissue type unmatched sample(s) in 1 project(s): NA19675_D2 '
-                      '(muscle, whole_blood) in the project 1kg project nåme with uniçøde', None),
+            mock.call('Skipped loading for the following 2 tissue-unmatched sample(s): NA19675_D2 (muscle, whole_blood)', None),
             mock.call('Skipped loading for the following 2 unmatched samples: NA19677, NA19678', None),
         ])
 
@@ -90,7 +89,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         call_command('load_rna_seq_tpm', 'new_file.tsv.gz', '--ignore-extra-samples')
         models = RnaSeqTpm.objects.select_related('sample').filter(sample__sample_id='NA19678_D1')
         self.assertEqual(models.count(), 2)
-        self.assertSetEqual({v[0] for v in models.values_list('sample__tissue_type').distinct()}, {'F', 'WB'})
+        self.assertSetEqual(set(models.values_list('sample__tissue_type', flat=True)), {'F', 'WB'})
         self.assertEqual(models.get(gene_id='ENSG00000233750', sample__tissue_type='F').tpm, 6.55)
         self.assertEqual(models.values('sample').distinct().count(), 2)
         mock_logger.info.assert_has_calls([
