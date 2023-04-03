@@ -164,7 +164,7 @@ class BaseHailTableQuery(object):
     TRANSCRIPT_FIELDS = ['gene_id']
     ANNOTATION_OVERRIDE_FIELDS = []
 
-    CORE_FIELDS = ['genotypes']
+    CORE_FIELDS = ['genotypes', 'xpos']
     BASE_ANNOTATION_FIELDS = {
         'familyGuids': lambda r: hl.array(r.familyGuids),
     }
@@ -942,7 +942,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     ]
     ANNOTATION_OVERRIDE_FIELDS = [CLINVAR_KEY]
 
-    CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid', 'xpos']
+    CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
     BASE_ANNOTATION_FIELDS = {
         'chrom': lambda r: r.locus.contig.replace("^chr", ""),
         'pos': lambda r: r.locus.position,
@@ -1242,8 +1242,6 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
         'pos': lambda r: _get_genotype_override_field(r.genotypes, r.interval.start.position, 'start', hl.min),
         'end': lambda r: _get_genotype_override_field(r.genotypes, r.interval.end.position, 'end', hl.max),
         'numExon': lambda r: _get_genotype_override_field(r.genotypes, r.num_exon, 'numExon', hl.max),
-         # make CORE_FIELD once correctly added in loading pipeline
-        'xpos': lambda r: hl.dict(CHROM_TO_XPOS_OFFSET).get(r.interval.start.contig.replace('^chr', '')) + r.interval.start.position,
     })
     COMPUTED_ANNOTATION_FIELDS = {
         'transcripts': lambda self, r: hl.if_else(
@@ -1263,6 +1261,14 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
     def _filter_vcf_filters(cls, ht):
         return ht
 
+    @classmethod
+    def _filter_annotated_table(cls, ht, **kwargs):
+        # Remove once data is reloaded
+        ht = ht.annotate(
+            xpos=hl.dict(CHROM_TO_XPOS_OFFSET).get(r.interval.start.contig.replace('^chr', '')) + r.interval.start.position,
+        )
+        return super(GcnvHailTableQuery, cls)._filter_annotated_table(ht, **kwargs)
+
 
 class SvHailTableQuery(BaseSvHailTableQuery):
 
@@ -1274,7 +1280,7 @@ class SvHailTableQuery(BaseSvHailTableQuery):
     POPULATIONS.update(BaseSvHailTableQuery.POPULATIONS)
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + [
-        'algorithms', 'bothsidesSupport', 'cpxIntervals', 'svSourceDetail', 'xpos',
+        'algorithms', 'bothsidesSupport', 'cpxIntervals', 'svSourceDetail',
     ]
     BASE_ANNOTATION_FIELDS = {
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
@@ -1297,8 +1303,8 @@ class MultiDataTypeHailTableQuery(object):
 
     DATA_TYPE_ANNOTATION_FIELDS = []
 
-    SV_MERGE_FIELDS = {'interval', 'svType_id', 'rg37_locus_end', 'strvctvre', 'sv_callset'}
-    VARIANT_MERGE_FIELDS = {'alleles', 'callset', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rsid', 'xpos'}
+    SV_MERGE_FIELDS = {'interval', 'svType_id', 'rg37_locus_end', 'strvctvre', 'sv_callset',}
+    VARIANT_MERGE_FIELDS = {'alleles', 'callset', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rsid',}
     MERGE_FIELDS = {
         GCNV_KEY: SV_MERGE_FIELDS, SV_KEY: SV_MERGE_FIELDS,
         VARIANT_DATASET: VARIANT_MERGE_FIELDS, MITO_DATASET: VARIANT_MERGE_FIELDS,
@@ -1347,7 +1353,7 @@ class MultiDataTypeHailTableQuery(object):
         ht = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type_0, samples[data_type_0], **kwargs)
         ht = ht.annotate(dataType=data_type_0)
 
-        all_type_merge_fields = {'dataType', 'familyGuids', 'override_consequences', 'rg37_locus'}
+        all_type_merge_fields = {'dataType', 'familyGuids', 'override_consequences', 'rg37_locus', 'xpos'}
         family_set_fields, family_dict_fields = cls._get_families_annotation_fields(kwargs['inheritance_mode'])
         all_type_merge_fields.update(family_set_fields)
         all_type_merge_fields.update(family_dict_fields)
