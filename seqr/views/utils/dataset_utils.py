@@ -336,7 +336,7 @@ RARE_DISEASE_SAMPLES_TOTAL = 'rare_disease_samples_total'
 SPLICE_OUTLIER_COLS = [
     CHROM_COL, START_COL, END_COL, STRAND_COL, INDIV_ID_COL, 'gene_name', SPLICE_TYPE_COL, P_VALUE_COL, Z_SCORE_COL,
     DELTA_PSI_COL, READ_COUNT_COL, GENE_ID_COL, TISSUE_COL, DOT_SIZE_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION,
-    RARE_DISEASE_SAMPLES_TOTAL
+    RARE_DISEASE_SAMPLES_TOTAL, PROJECT_COL
 ]
 SPLICE_OUTLIER_FORMATTER = {
     CHROM_COL: get_chrom,
@@ -446,7 +446,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
             existing_data = samples_by_id[(sample_id, project)].get(gene_or_unique_id)
             if existing_data and existing_data != row_dict:
                 raise ValueError(
-                    f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries {existing_data} and {row_dict}')
+                    f'Error in {sample_id} data for {row_dict["gene_id"]}: mismatched entries {existing_data} and {row_dict}')
 
             indiv_id = row_dict.pop(INDIV_ID_COL, None)
             if indiv_id and sample_id not in sample_id_to_individual_id_mapping:
