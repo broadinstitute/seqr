@@ -877,26 +877,23 @@ class BaseHailTableQuery(object):
         ]
         return hail_results, total_results
 
-    @classmethod
-    def _sort_order(cls, ht, sort):
+    def _sort_order(self, ht, sort):
         # TODO handle comp hets
-        ordering = cls._get_sort_func(XPOS_SORT_KEY)(ht)
-        sort_func = cls._get_sort_func(sort)
+        ordering = self._get_sort_func(XPOS_SORT_KEY)(ht)
+        sort_func = self._get_sort_func(sort)
         if sort_func and sort != XPOS_SORT_KEY:
             ordering = sort_func(ht) + ordering
         return hl.array(ordering)
 
-    @classmethod
-    def _get_sort_func(cls, sort):
-        if sort in cls.SORTS:
-            return cls.SORTS[sort]
+    def _get_sort_func(self, sort):
+        if sort in self.SORTS:
+            return self.SORTS[sort]
 
         if sort in POPULATION_SORTS:
-            # TODO pop sort sorting within chromosome
-            pop_fields = [pop for pop in POPULATION_SORTS[sort] if pop in cls.POPULATIONS]
-            logger.info(f'sort fields {POPULATION_SORTS[sort]}: pop fields {list(cls.POPULATIONS.keys())}: mathched fields {pop_fields}')
+            pop_fields = [pop for pop in POPULATION_SORTS[sort] if pop in self.POPULATIONS]
+            # TODO callset sort
+            logger.info(f'sort fields {POPULATION_SORTS[sort]}: pop fields {list(self.POPULATIONS.keys())}: mathched fields {pop_fields}')
             if not pop_fields:
-                logger.info(f'sort {sort} not applied for {cls}')
                 return None
 
             def _pop_sort(r):
