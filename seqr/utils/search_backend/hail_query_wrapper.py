@@ -871,8 +871,12 @@ class BaseHailTableQuery(object):
 
         # TODO #2496: page
         ordering = self._sort_order(ht, sort)
+        logger.info(len(ordering))
         # TODO debug
-        logger.info(ht.aggregate(hl.agg.take(hl.struct(vId=ht.variantId, cadd=ht.predictions.cadd), 20, ordering=hl.array([-ht.predictions[sort], ht.xpos]))))
+        logger.info(ht.aggregate(hl.agg.take(
+            hl.struct(vId=ht.variantId, cadd=ht.predictions.cadd), 20, ordering=ordering,
+            # ordering=hl.array([-ht.predictions[sort], ht.xpos]),
+        )))
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=ordering)))
         logger.info(f'Total hits: {total_results}')
 
