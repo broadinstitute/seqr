@@ -80,7 +80,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             mock.call('create 1 RnaSeqTpm for NA19678_D1'),
         ])
         mock_utils_logger.warning.assert_has_calls([
-            mock.call('Skipped loading for the following 2 tissue-unmatched sample(s): NA19675_D2 (muscle, whole_blood)', None),
+            mock.call('Skipped data loading for the following 1 sample(s) due to mismatched tissue type: NA19675_D2 (muscle, whole_blood)', None),
             mock.call('Skipped loading for the following 2 unmatched samples: NA19677, NA19678', None),
         ])
 
