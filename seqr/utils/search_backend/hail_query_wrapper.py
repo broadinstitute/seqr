@@ -189,7 +189,8 @@ class BaseHailTableQuery(object):
             hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']],
         ],
         # TODO implement rest of sorts
-        XPOS_SORT_KEY: lambda r: [hl.dict(CHROM_TO_CHROM_NUMBER)[r.chrom], r.pos],
+        # XPOS_SORT_KEY: lambda r: [hl.dict(CHROM_TO_CHROM_NUMBER)[r.chrom], r.pos],
+        XPOS_SORT_KEY: lambda r: r.xpos,  # TODO does not work for sv
     }
 
     @classmethod
@@ -890,6 +891,7 @@ class BaseHailTableQuery(object):
             return cls.SORTS[sort]
 
         if sort in POPULATION_SORTS:
+            # TODO pop sort sorting within chromosome
             pop_fields = [pop for pop in POPULATION_SORTS[sort] if pop in cls.POPULATIONS]
             logger.info(f'sort fields {POPULATION_SORTS[sort]}: pop fields {list(cls.POPULATIONS.keys())}: mathched fields {pop_fields}')
             if not pop_fields:
