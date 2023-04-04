@@ -1072,7 +1072,8 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     @classmethod
     def _omim_sort(cls, ht, omim_gene_set):
         return super(BaseVariantHailTableQuery, cls)._omim_sort(ht, omim_gene_set) + hl.if_else(
-            omim_gene_set.contains(cls._get_formatted_main_transcript(ht).geneId), 10, 0)
+            hl.is_missing(ht.mainTranscriptId) | omim_gene_set.contains(cls._get_formatted_main_transcript(ht).geneId),
+            10, 0)
 
 
 class VariantHailTableQuery(BaseVariantHailTableQuery):
