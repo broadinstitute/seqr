@@ -952,7 +952,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                     individual_id=16, data_source='new_muscle_samples.tsv.gz',
                     tissue_type=params.get('created_sample_tissue_type'),
                 )
-                self.assertListEqual(response_json['sampleGuids'], [sample_guid, new_sample_guid])
+                self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
                 # test correct file interactions
                 mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)

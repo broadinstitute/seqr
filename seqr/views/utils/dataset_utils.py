@@ -377,11 +377,11 @@ def _parse_splice_outlier_row(row):
 def _parse_tpm_row(row):
     sample_id = row[SAMPLE_ID_COL]
     if row[TPM_COL] != '0.0' and not sample_id.startswith('GTEX'):
-        if not row[TISSUE_COL]:
+        tissue = row[TISSUE_COL]
+        if not tissue:
             raise ValueError(f'Sample {sample_id} has no tissue type')
 
-        parsed = {GENE_ID_COL: row[GENE_ID_COL], 'tpm': row[TPM_COL], PROJECT_COL: row[PROJECT_COL],
-                  TISSUE_COL: row[TISSUE_COL]}
+        parsed = {GENE_ID_COL: row[GENE_ID_COL], 'tpm': row[TPM_COL], PROJECT_COL: row[PROJECT_COL], TISSUE_COL: tissue}
         if INDIV_ID_COL in row:
             parsed[INDIV_ID_COL] = row[INDIV_ID_COL]
 
