@@ -189,7 +189,6 @@ class BaseHailTableQuery(object):
     COMPUTED_ANNOTATION_FIELDS = {}
 
     SORTS = {
-        # TODO implement rest of sorts
         CONSEQUENCE_SORT_KEY: lambda r: [hl.min(r.transcripts.values().flatmap(lambda t: t.majorConsequence).map(
             lambda c: hl.dict(ALL_CONSEQUENCE_RANK_MAP)[c]
         ))],
@@ -922,6 +921,8 @@ class BaseHailTableQuery(object):
                     individual__family__guid=self._family_guid, rank__lte=100,
                 ).values('gene_id').annotate(min_rank=Min('rank'))
             }
+            if not family_ranks:
+                family_ranks = {'ENSG123': 1}  # TODO remove
             sort_expression = self._gene_rank_sort(ht, family_ranks)
 
         return [sort_expression] if sort_expression is not None else []
