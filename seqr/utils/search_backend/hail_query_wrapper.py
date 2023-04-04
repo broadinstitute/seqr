@@ -1434,12 +1434,17 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
 
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
 
+    @staticmethod
+    def merged_consequence_sort(ht):
+        rank_sort, additional_sort = BaseVariantHailTableQuery.SORTS[CONSEQUENCE_SORT_KEY](ht)
+        is_sv = hl.is_defined(ht.svType)
+        return [
+            hl.if_else(is_sv, SV_CONSEQUENCE_RANK_OFFSET, rank_sort),
+            hl.if_else(is_sv, rank_sort, additional_sort),
+        ]
+
     SORT_OVERRIDES = {
-        CONSEQUENCE_SORT_KEY: lambda r: hl.if_else(
-            hl.is_defined(r.svType),
-            [4.5] + BaseSvHailTableQuery.SORTS[CONSEQUENCE_SORT_KEY](r),
-            BaseVariantHailTableQuery.SORTS[CONSEQUENCE_SORT_KEY](r),
-        )
+        CONSEQUENCE_SORT_KEY: merged_consequence_sort,
     }
 
     @staticmethod
