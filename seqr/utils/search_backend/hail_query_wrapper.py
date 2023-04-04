@@ -907,8 +907,8 @@ class BaseHailTableQuery(object):
         return [sort_expression] if sort_expression is not None else []
 
     @classmethod
-    def _omim_sort(cls, ht, omim_genes):
-        return ht.transcripts.key_set().intersection(omim_genes).size()
+    def _omim_sort(cls, ht, omim_gene_set):
+        return ht.transcripts.key_set().intersection(omim_gene_set).size()
 
     # For production: should use custom json serializer
     @classmethod
@@ -1070,8 +1070,9 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         )
 
     @classmethod
-    def _omim_sort(cls, ht, omim_genes):
-        return super(BaseVariantHailTableQuery, cls)._omim_sort(ht, omim_genes) + omim_genes.contains()
+    def _omim_sort(cls, ht, omim_gene_set):
+        return super(BaseVariantHailTableQuery, cls)._omim_sort(ht, omim_gene_set) + hl.if_else(
+            omim_gene_set.contains(cls._get_formatted_main_transcript(ht).geneId), 10, 0)
 
 
 class VariantHailTableQuery(BaseVariantHailTableQuery):
