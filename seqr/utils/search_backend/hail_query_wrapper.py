@@ -4,7 +4,7 @@ import hail as hl
 import logging
 
 from seqr.views.utils.json_utils import _to_camel_case
-from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
+from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, \
@@ -899,6 +899,10 @@ class BaseHailTableQuery(object):
 
         elif sort in self.PREDICTION_FIELDS_CONFIG:
             sort_expression = -ht.predictions[sort]
+
+        elif sort == 'in_omim':
+            omim_genes = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True)
+            sort_expression = -ht.transcripts.key_set().intersection(hl.set(omim_genes)).size()
 
         return [sort_expression] if sort_expression is not None else []
 
