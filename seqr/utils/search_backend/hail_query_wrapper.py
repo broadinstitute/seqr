@@ -902,7 +902,7 @@ class BaseHailTableQuery(object):
 
         elif sort == 'in_omim':
             omim_genes = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True)
-            sort_expression = -ht.transcripts.key_set().intersection(hl.set(omim_genes)).size()
+            sort_expression = -ht.transcripts.key_set().intersection(hl.set(set(omim_genes))).size()
 
         return [sort_expression] if sort_expression is not None else []
 
