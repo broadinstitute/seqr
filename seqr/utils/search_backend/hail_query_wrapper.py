@@ -946,7 +946,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     SORTS = {
         CONSEQUENCE_SORT_KEY: lambda r: [hl.min(r.transcripts.values().flatmap(lambda t: t.majorConsequence).map(
-            lambda c: hl.dict(CONSEQUENCE_RANK_MAP).get(c, 4.5)))],  # TODO
+            lambda c: hl.dict(CONSEQUENCE_RANK_MAP).get(c)))],  # TODO
         PATHOGENICTY_SORT_KEY: lambda r: [hl.if_else(
             # sort variants absent from clinvar between uncertain and benign
             hl.is_missing(r.clinvar.clinicalSignificance), CLINVAR_SIG_BENIGN_OFFSET,
