@@ -1028,7 +1028,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         ht, family_guid = super(BaseVariantHailTableQuery, cls).import_filtered_table(
             data_type, samples, intervals=None if exclude_intervals else intervals,
             excluded_intervals=intervals if exclude_intervals else None, **kwargs)
-        ht, family_guid = ht.key_by(VARIANT_KEY_FIELD)
+        ht = ht.key_by(VARIANT_KEY_FIELD)
         return ht, family_guid
 
     @classmethod
