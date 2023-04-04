@@ -902,13 +902,13 @@ class BaseHailTableQuery(object):
 
         elif sort == 'in_omim':
             omim_genes = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True)
-            sort_expression = -self._omim_sort(ht, set(omim_genes))
+            sort_expression = -self._omim_sort(ht, hl.set(set(omim_genes)))
 
         return [sort_expression] if sort_expression is not None else []
 
     @classmethod
     def _omim_sort(cls, ht, omim_genes):
-        return ht.transcripts.key_set().intersection(hl.set(omim_genes)).size()
+        return ht.transcripts.key_set().intersection(omim_genes).size()
 
     # For production: should use custom json serializer
     @classmethod
@@ -1066,12 +1066,12 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     @staticmethod
     def _get_formatted_main_transcript(ht):
         return ht.transcripts.values().flatmap(lambda t: t).find(
-            lambda t: hl.or_else(ht.selectedMainTranscriptId, ht.mainTranscriptId) == ht.transcriptId,
+            lambda t: hl.or_else(ht.selectedMainTranscriptId, ht.mainTranscriptId) == t.transcriptId,
         )
 
     @classmethod
     def _omim_sort(cls, ht, omim_genes):
-        return super(BaseVariantHailTableQuery, cls)._omim_sort(ht, omim_genes) + ht.transcripts.key_set().intersection(hl.set(omim_genes)).size()
+        return super(BaseVariantHailTableQuery, cls)._omim_sort(ht, omim_genes) + omim_genes.contains()
 
 
 class VariantHailTableQuery(BaseVariantHailTableQuery):
