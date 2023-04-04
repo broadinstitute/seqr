@@ -460,9 +460,8 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         samples_by_id.pop((sample_id, project))
         tissue_conflict_messages.append(
             f'{sample_id} ({", ".join(sorted([REVERSE_TISSUE_TYPE[tissue_type] for tissue_type in tissue_types]))})')
-    num_samples = sum([len(v) for v in samples_with_conflict_tissues.values()])
-    warnings = [f'Skipped loading for the following {num_samples} tissue-unmatched sample(s): '
-                f'{", ".join(tissue_conflict_messages)}'] if num_samples else []
+    warnings = [f'Skipped data loading for the following {len(samples_with_conflict_tissues)} sample(s) due to mismatched'
+                f' tissue type: {", ".join(tissue_conflict_messages)}'] if samples_with_conflict_tissues else []
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
