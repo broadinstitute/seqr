@@ -85,6 +85,7 @@ CONSEQUENCE_RANKS = [
     "intergenic_variant",
 ]
 CONSEQUENCE_RANK_MAP = {c: i for i, c in enumerate(CONSEQUENCE_RANKS)}
+SV_CONSEQUENCE_RANK_OFFSET = 4.5
 SCREEN_CONSEQUENCES = ['CTCF-bound', 'CTCF-only', 'DNase-H3K4me3', 'PLS', 'dELS', 'pELS', 'DNase-only', 'low-DNase']
 SCREEN_CONSEQUENCE_RANK_MAP = {c: i for i, c in enumerate(SCREEN_CONSEQUENCES)}
 
@@ -100,6 +101,9 @@ SV_TYPE_DETAILS = [
     'INS_iDEL', 'INVdel', 'INVdup', 'ME', 'ME:ALU', 'ME:LINE1', 'ME:SVA', 'dDUP', 'dDUP_iDEL', 'delINV', 'delINVdel',
     'delINVdup', 'dupINV', 'dupINVdel', 'dupINVdup',
 ]
+
+ALL_CONSEQUENCE_RANK_MAP = deepcopy(CONSEQUENCE_RANK_MAP)
+ALL_CONSEQUENCE_RANK_MAP.update(SV_CONSEQUENCE_RANK_MAP)
 
 
 CLINVAR_SIGNIFICANCES = [
@@ -185,6 +189,9 @@ class BaseHailTableQuery(object):
 
     SORTS = {
         # TODO implement rest of sorts
+        CONSEQUENCE_SORT_KEY: lambda r: [hl.min(r.transcripts.values().flatmap(lambda t: t.majorConsequence).map(
+            lambda c: hl.dict(ALL_CONSEQUENCE_RANK_MAP)[c]
+        ))],
         XPOS_SORT_KEY: lambda r: [r.xpos],
     }
 
@@ -945,20 +952,19 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     SORTS = {
-        CONSEQUENCE_SORT_KEY: lambda r: [
-            hl.min(r.transcripts.values().flatmap(lambda t: t.majorConsequence).map(lambda c: hl.dict(CONSEQUENCE_RANK_MAP).get(c))),
-            hl.dict(CONSEQUENCE_RANK_MAP).get(r.transcripts.values().flatmap(lambda t: t).find(
-                lambda t: hl.or_else(r.selectedMainTranscriptId, r.mainTranscriptId) == t.transcriptId,
-            ).majorConsequence),
-        ],  # TODO
         PATHOGENICTY_SORT_KEY: lambda r: [hl.if_else(
             # sort variants absent from clinvar between uncertain and benign
             hl.is_missing(r.clinvar.clinicalSignificance), CLINVAR_SIG_BENIGN_OFFSET,
             hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance],
         )],
     }
-    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
     SORTS.update(BaseHailTableQuery.SORTS)
+    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
+    SORTS[CONSEQUENCE_SORT_KEY] = lambda r: SORTS[CONSEQUENCE_SORT_KEY](r) + [
+        hl.dict(CONSEQUENCE_RANK_MAP)[r.transcripts.values().flatmap(lambda t: t).find(
+            lambda t: hl.or_else(r.selectedMainTranscriptId, r.mainTranscriptId) == t.transcriptId,
+        ).majorConsequence],
+    ]
 
     def _selected_main_transcript_expr(self, results):
         if not (self._filtered_genes or self._allowed_consequences):
@@ -1308,7 +1314,7 @@ DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_typ
 class MultiDataTypeHailTableQuery(object):
 
     DATA_TYPE_ANNOTATION_FIELDS = []
-    DATA_TYPE_SORTS = {}
+    SORT_OVERRIDES = {}
 
     SV_MERGE_FIELDS = {'interval', 'svType_id', 'rg37_locus_end', 'strvctvre', 'sv_callset',}
     VARIANT_MERGE_FIELDS = {'alleles', 'callset', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rsid',}
@@ -1337,7 +1343,7 @@ class MultiDataTypeHailTableQuery(object):
             k: self._annotation_for_data_type(k) for k in self.DATA_TYPE_ANNOTATION_FIELDS
         })
         self.CORE_FIELDS = list(self.CORE_FIELDS - set(self.BASE_ANNOTATION_FIELDS.keys()))
-        self.SORTS.update(self.DATA_TYPE_SORTS)
+        self.SORTS.update(self.SORT_OVERRIDES)
 
         super(MultiDataTypeHailTableQuery, self).__init__(data_type, *args, **kwargs)
 
@@ -1425,6 +1431,14 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
 class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
 
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
+
+    SORT_OVERRIDES = {
+        CONSEQUENCE_SORT_KEY: lambda r: hl.if_else(
+            hl.is_defined(r.svType),
+            [4.5] + BaseSvHailTableQuery.SORTS[CONSEQUENCE_SORT_KEY](r),
+            BaseVariantHailTableQuery.SORTS[CONSEQUENCE_SORT_KEY](r),
+        )
+    }
 
     @staticmethod
     def get_major_consequence(transcript):
