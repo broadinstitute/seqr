@@ -6,7 +6,7 @@ import logging
 
 from seqr.views.utils.json_utils import _to_camel_case
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
-from seqr.models import Sample, Individual
+from seqr.models import Sample, Individual, PhenotypePrioritization
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, \
     INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, MAX_NO_LOCATION_COMP_HET_FAMILIES, \
@@ -907,6 +907,13 @@ class BaseHailTableQuery(object):
             omim_genes = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True)
             sort_expression = -self._omim_sort(ht, hl.set(set(omim_genes)))
 
+        elif sort == 'constraint':
+            constraint_ranks = {
+                agg['gene__gene_id']: agg['mis_z_rank'] + agg['pLI_rank'] for agg in
+                GeneConstraint.objects.values('gene__gene_id', 'mis_z_rank', 'pLI_rank')
+            }
+            sort_expression = self._gene_rank_sort(ht, constraint_ranks)
+
         elif sort == 'prioritized_gene':
             if not self._family_guid:
                 raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
@@ -915,13 +922,17 @@ class BaseHailTableQuery(object):
                     individual__family__guid=self._family_guid, rank__lte=100,
                 ).values('gene_id').annotate(min_rank=Min('rank'))
             }
-            sort_expression = hl.min(ht.transcripts.key_set().map(lambda gene_id: hl.dict(family_ranks).get(gene_id)))
+            sort_expression = self._gene_rank_sort(ht, family_ranks)
 
         return [sort_expression] if sort_expression is not None else []
 
     @classmethod
     def _omim_sort(cls, ht, omim_gene_set):
         return ht.transcripts.key_set().intersection(omim_gene_set).size()
+
+    @staticmethod
+    def _gene_rank_sort(ht, gene_ranks):
+        return hl.min(ht.transcripts.key_set().map(lambda gene_id: hl.dict(gene_ranks).get(gene_id)))
 
     # For production: should use custom json serializer
     @classmethod
