@@ -34,6 +34,7 @@ POPULATION_SORTS = {
     'gnomad_exomes': ['gnomad_exomes'],
     'callset_af': ['callset', 'sv_callset'],
 }
+CONSEQUENCE_SORT_KEY = 'protein_consequence'
 
 COMP_HET_ALT = 'COMP_HET_ALT'
 INHERITANCE_FILTERS = deepcopy(INHERITANCE_FILTERS)
@@ -133,6 +134,7 @@ CLINVAR_SIGNIFICANCES = [
     'Benign/Likely_benign,_drug_response,_other', 'Benign/Likely_benign,_other,_risk_factor', 'Benign,_association',
 ]
 CLINVAR_SIG_MAP = {sig: i for i, sig in enumerate(CLINVAR_SIGNIFICANCES)}
+CLINVAR_SIG_BENIGN_OFFSET = 39.5
 HGMD_SIGNIFICANCES = ['DM', 'DM?', 'DP', 'DFP', 'FP', 'FTV', 'R']
 HGMD_SIG_MAP = {sig: i for i, sig in enumerate(HGMD_SIGNIFICANCES)}
 
@@ -943,10 +945,13 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     SORTS = {
-        PATHOGENICTY_SORT_KEY: lambda r: [
+        CONSEQUENCE_SORT_KEY: lambda r: [hl.min(ht.transcripts.values().flatmap(
+            lambda t: hl.dict(CONSEQUENCE_RANK_MAP).get(t.majorConsequence, 4.5)))],  # TODO
+        PATHOGENICTY_SORT_KEY: lambda r: [hl.if_else(
             # sort variants absent from clinvar between uncertain and benign
-            hl.if_else(hl.is_missing(r.clinvar.clinicalSignificance), 39.5, hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance]),
-        ],
+            hl.is_missing(r.clinvar.clinicalSignificance), CLINVAR_SIG_BENIGN_OFFSET,
+            hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance],
+        )],
     }
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
     SORTS.update(BaseHailTableQuery.SORTS)
