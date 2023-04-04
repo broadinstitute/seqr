@@ -67,6 +67,7 @@ class AuthenticationTestCase(TestCase):
         cls.no_access_user = User.objects.get(username='test_user_no_access')
         cls.inactive_user = User.objects.get(username='test_user_inactive')
         cls.no_policy_user = User.objects.get(username='test_user_no_policies')
+        cls.local_user = User.objects.get(username='test_local_user')
 
         edit_group = Group.objects.get(pk=2)
         view_group = Group.objects.get(pk=3)
@@ -239,6 +240,8 @@ class AuthenticationTestCase(TestCase):
                 'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, 'message': message, **(extra or {}),
             })
 
+    def assert_no_logs(self):
+        self.assertEqual(self._log_stream.getvalue(), '')
 
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
 TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
