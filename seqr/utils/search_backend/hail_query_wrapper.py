@@ -960,7 +960,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     }
     SORTS.update(BaseHailTableQuery.SORTS)
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
-    SORTS[CONSEQUENCE_SORT_KEY] = lambda r: SORTS[CONSEQUENCE_SORT_KEY](r) + [
+    SORTS[CONSEQUENCE_SORT_KEY] = lambda r: BaseHailTableQuery.SORTS[CONSEQUENCE_SORT_KEY](r) + [
         hl.dict(CONSEQUENCE_RANK_MAP)[r.transcripts.values().flatmap(lambda t: t).find(
             lambda t: hl.or_else(r.selectedMainTranscriptId, r.mainTranscriptId) == t.transcriptId,
         ).majorConsequence],
@@ -1093,7 +1093,9 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     SORTS = deepcopy(BaseVariantHailTableQuery.SORTS)
-    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: SORTS[PATHOGENICTY_SORT_KEY](r) + [hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']]]
+    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: BaseVariantHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [
+        hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']],
+    ]
 
     @classmethod
     def _validate_search_criteria(cls, num_families=None, has_location_search=None, inheritance_mode=None, **kwargs):
