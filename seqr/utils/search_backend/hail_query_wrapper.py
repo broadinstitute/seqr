@@ -1215,6 +1215,11 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD]
 
+    SORTS = {
+        'size': lambda r: [hl.if_else(hl.set({'BND', 'CTX'}).contains(r.svType), -50, r.start - r.end)],
+    }
+    SORTS.update(BaseHailTableQuery.SORTS)
+
     @classmethod
     def import_filtered_table(cls, data_type, samples, intervals=None, exclude_intervals=False, **kwargs):
         ht = super(BaseSvHailTableQuery, cls).import_filtered_table(data_type, samples, **kwargs)
