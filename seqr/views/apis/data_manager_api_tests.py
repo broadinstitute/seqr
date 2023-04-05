@@ -711,7 +711,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
             'sample_guid': RNA_TPM_SAMPLE_GUID,
         },
-        'splice': {
+        'splice_outlier': {
             'model_cls': RnaSeqSpliceOutlier,
             'message_data_type': 'Splice Junction',
             'header': ['individualId', 'project', 'geneId', 'chrom', 'start', 'end', 'strand', 'geneName', 'type', 'pValue', 'zScore',
@@ -827,7 +827,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {
-                    'error': f'Invalid file: missing column(s) {", ".join(sorted([col for col in header if col not in params["optional_headers"]]))}',
+                    'error': f'Invalid file: missing column(s): '
+                             f'{", ".join(sorted([col for col in header if col not in params["optional_headers"]]))}',
                 })
 
                 mismatch_row = loaded_data_row[:-1] + [loaded_data_row[-1] - 2]

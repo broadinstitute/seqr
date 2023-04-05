@@ -35,7 +35,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
 
         with self.assertRaises(ValueError) as e:
             call_command('load_rna_seq_tpm', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Invalid file: missing column(s) TPM, gene_id, project, sample_id, tissue')
+        self.assertEqual(str(e.exception), 'Invalid file: missing column(s): TPM, gene_id, project, sample_id, tissue')
 
         mock_gzip_file.__iter__.return_value[0] = 'sample_id\tproject\tindividual_id\tgene_id\tTPM\ttissue\n'
         with self.assertRaises(ValueError) as e:

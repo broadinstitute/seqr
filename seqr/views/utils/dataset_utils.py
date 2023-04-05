@@ -422,7 +422,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     header = _parse_tsv_row(next(f))
     missing_cols = set(expected_columns) - set(header)
     if missing_cols:
-        raise ValueError(f'Invalid file: missing column(s) {", ".join(sorted(missing_cols))}')
+        raise ValueError(f'Invalid file: missing column(s): {", ".join(sorted(missing_cols))}')
 
     sample_id_to_tissue_type = {}
     samples_with_conflict_tissues = defaultdict(set)

@@ -340,7 +340,7 @@ EXCLUDE_PROJECTS = [
 RNA_DATA_TYPE_CONFIGS = {
     'outlier': {'load_func': load_rna_seq_outlier, 'model_class': RnaSeqOutlier},
     'tpm': {'load_func': load_rna_seq_tpm, 'model_class': RnaSeqTpm},
-    'splice': {'load_func': load_rna_seq_splice_outlier, 'model_class': RnaSeqSpliceOutlier}
+    'splice_outlier': {'load_func': load_rna_seq_splice_outlier, 'model_class': RnaSeqSpliceOutlier}
 }
 
 @data_manager_required
