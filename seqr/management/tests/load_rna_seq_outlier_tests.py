@@ -45,7 +45,7 @@ class LoadRnaSeqTest(TestCase):
         call_command('load_rna_seq_outlier', RNA_FILE_ID, '--ignore-extra-samples')
 
         rna_samples = Sample.objects.filter(individual_id=1, sample_id='NA19675_D2', sample_type='RNA')
-        self.assertEqual(len(rna_samples), 3)
+        self.assertEqual(len(rna_samples), 2)
         sample = rna_samples.first()
         self.assertEqual(sample.guid, EXISTING_SAMPLE_GUID)
         self.assertTrue(sample.is_active)
