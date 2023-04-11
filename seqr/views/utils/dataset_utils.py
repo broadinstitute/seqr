@@ -447,9 +447,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
                 gene_or_unique_id = row_dict['gene_id']
             existing_data = samples_by_id[(sample_id, project)].get(gene_or_unique_id)
             if existing_data and existing_data != row_dict:
-                miss_matches.append(
-                    f'Error in {sample_id} data for {row_dict["gene_id"]}: mismatched entries {existing_data} and {row_dict}'
-                )
+                miss_matches.append({'sample_id': sample_id, 'data1': existing_data, 'data2': row_dict})
 
             if indiv_id and sample_id not in sample_id_to_individual_id_mapping:
                 sample_id_to_individual_id_mapping[sample_id] = indiv_id
@@ -457,7 +455,11 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
             samples_by_id[(sample_id, project)][gene_or_unique_id] = row_dict
 
     if miss_matches:
-        raise ValueError(f'{len(miss_matches)} mismatches found: {", ".join(miss_matches[:min(10, len(miss_matches))])}')
+        messages = [
+            f'Error in {s["sample_id"]} data for {s["data1"]["gene_id"]}: mismatched entries {s["data1"]} and {s["data2"]}'
+            for s in miss_matches[:10]
+        ]
+        raise ValueError(f'{len(miss_matches)} mismatches found: {", ".join(messages)}')
 
     tissue_conflict_messages = []
     for (sample_id, project), tissue_types in samples_with_conflict_tissues.items():
