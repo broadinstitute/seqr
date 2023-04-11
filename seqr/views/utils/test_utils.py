@@ -720,6 +720,10 @@ VARIANTS = [
             ]
         },
         'familyGuids': ['F000001_1', 'F000002_2'],
+        'populations': {
+            'callset': {'af': 0.13, 'ac': 4192, 'an': '32588'},
+            'gnomad_genomes': {'af': 0.007},
+        },
         'genotypes': {
             'NA19675': {
                 'sampleId': 'NA19675',
