@@ -673,7 +673,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'header': ['sample_id', 'project', 'gene_id', 'individual_id', 'tissue', 'TPM'],
             'optional_headers': ['individual_id'],
             'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D3', 'muscle', 1.34],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'fibroblasts', 0.064],
+            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 0.064],
             'duplicated_indiv_id_data': [
                 ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'muscle', 7.8],
                 ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.064],
@@ -690,7 +690,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 # skip GTEX samples
                 ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
                 # a different project sample NA20888
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
+                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'muscle', 0.112],
                 # a project mismatched sample NA20878
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
                 # conflict tissue types samples
@@ -698,8 +698,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19678', 'fibroblasts', 0.05],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
-            'exist_sample_tissue_type': 'M',
-            'created_sample_tissue_type': 'F',
+            'sample_tissue_type': 'M',
             'num_parsed_samples': 4,
             'initial_model_count': 3,
             'deleted_count': 1,
@@ -721,7 +720,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'loaded_data_row': ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
                                 'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
             'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
-                                'psi5', 1.08E-56, 12.34, 0.85, 1297, 'muscle', 0.53953638, 1, 20],
+                                'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
             'duplicated_indiv_id_data': [
                 ['NA20870', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
@@ -748,14 +747,13 @@ class DataManagerAPITest(AuthenticationTestCase):
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
                 # a new sample NA20888
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
-                 'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
+                 'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
                 # a project mismatched sample NA20878
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3',
                  1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
-            'exist_sample_tissue_type': 'F',
-            'created_sample_tissue_type': 'M',
+            'sample_tissue_type': 'F',
             'num_parsed_samples': 4,
             'initial_model_count': 1,
             'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
@@ -897,7 +895,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                                                          'fileName': file_name})
                     new_sample_guid = self._check_rna_sample_model(
                         individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz',
-                        tissue_type=params.get('created_sample_tissue_type'),
+                        tissue_type=params.get('sample_tissue_type'),
                     )
                     self.assertTrue(new_sample_guid in response_json['sampleGuids'])
                     additional_logs = [(f'create {num_created_samples} Samples', {'dbUpdate': {
@@ -952,7 +950,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 # test database models are correct
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
                 sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz',
-                                                           tissue_type=params.get('exist_sample_tissue_type'))
+                                                           tissue_type=params.get('sample_tissue_type'))
                 self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
                 # test correct file interactions
