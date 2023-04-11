@@ -282,18 +282,18 @@ SAMPLE_GENE_TPM_DATA = {
 }
 SAMPLE_GENE_SPLICE_DATA = {
     'ENSG00000163092-2-167254166-167258349-*-psi3': {
-        'chrom': '2', 'start': 167254166, 'end': 167258349, 'strand': '*', 'gene_name': 'XIRP2', 'type': 'psi3',
+        'chrom': '2', 'start': 167254166, 'end': 167258349, 'strand': '*', 'type': 'psi3',
         'p_value': 1.56e-25, 'z_score': -4.9, 'delta_psi': -0.46, 'read_count': 166, 'gene_id': 'ENSG00000163092',
         'dot_size': 0.03850364, 'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20
     },
     'ENSG00000106554-7-132885746-132975168-*-psi5': {
-        'chrom': '7', 'start': 132885746, 'end': 132975168, 'strand': '*', 'gene_name': 'CHCHD3', 'type': 'psi5',
+        'chrom': '7', 'start': 132885746, 'end': 132975168, 'strand': '*', 'type': 'psi5',
         'p_value': 1.08e-56, 'z_score': -6.53, 'delta_psi': -0.85, 'read_count': 231, 'gene_id': 'ENSG00000106554',
         'dot_size': 0.53953638, 'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20},
 }
 SAMPLE_GENE_SPLICE_DATA2 = {
     'ENSG00000163092-2-167258096-167258349-*-psi3': {
-        'chrom': '2', 'start': 167258096, 'end': 167258349, 'strand': '*', 'gene_name': 'XIRP2', 'type': 'psi3',
+        'chrom': '2', 'start': 167258096, 'end': 167258349, 'strand': '*', 'type': 'psi3',
         'p_value': 1.56e-25, 'z_score': 6.33, 'delta_psi': 0.45, 'read_count': 143, 'gene_id': 'ENSG00000163092',
         'dot_size': 0.03454739, 'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20
     }
@@ -635,7 +635,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     RNA_DATA_TYPE_PARAMS = {
         'outlier': {
             'model_cls': RnaSeqOutlier,
-            'message_data_type': 'Outlier',
+            'message_data_type': 'Expression Outlier',
             'header': ['sampleID', 'project', 'geneID', 'detail', 'pValue', 'padjust', 'zScore'],
             'optional_headers': ['detail'],
             'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
@@ -713,11 +713,11 @@ class DataManagerAPITest(AuthenticationTestCase):
         },
         'splice_outlier': {
             'model_cls': RnaSeqSpliceOutlier,
-            'message_data_type': 'Splice Junction',
+            'message_data_type': 'Splice Outlier',
             'header': ['individualId', 'project', 'geneId', 'chrom', 'start', 'end', 'strand', 'geneName', 'type', 'pValue', 'zScore',
                        'deltaPsi', 'readCount', 'tissue', 'dotSize', 'rareDiseaseSamplesWithJunction',
                        'rareDiseaseSamplesTotal'],
-            'optional_headers': [],
+            'optional_headers': ['geneName'],
             'loaded_data_row': ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
                                 'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
             'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
@@ -729,15 +729,13 @@ class DataManagerAPITest(AuthenticationTestCase):
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
             ],
             'write_data': {'NA20870\t\t{"ENSG00000163092-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
-                           ' "end": 167258349, "strand": "*", "gene_name": "XIRP2", "type": "psi3", "p_value": 1.56e-25,'
-                           ' "z_score": 6.33, "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163092",'
-                           ' "dot_size": 0.03454739, "rare_disease_samples_with_junction": 1,'
-                           ' "rare_disease_samples_total": 20}}\n',
+                           ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
+                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163092", "dot_size": 0.03454739,'
+                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
                            'NA20870\t\t{"ENSG00000163093-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
-                           ' "end": 167258349, "strand": "*", "gene_name": "XIRP2", "type": "psi3", "p_value": 1.56e-25,'
-                           ' "z_score": 6.33, "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163093",'
-                           ' "dot_size": 0.03454739, "rare_disease_samples_with_junction": 1,'
-                           ' "rare_disease_samples_total": 20}}\n',
+                           ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
+                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163093", "dot_size": 0.03454739,'
+                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
             },
             'new_data': [
                 # existing sample NA19675_1
@@ -762,11 +760,11 @@ class DataManagerAPITest(AuthenticationTestCase):
             'initial_model_count': 1,
             'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
             'get_models_json': lambda models: list(
-                models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'gene_name', 'type', 'p_value', 'z_score', 'delta_psi',
+                models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'type', 'p_value', 'z_score', 'delta_psi',
                                    'read_count', 'dot_size', 'rare_disease_samples_with_junction', 'rare_disease_samples_total')),
             'expected_models_json': [
-                ('ENSG00000163092', '2', 167254166, 167258349, '*', 'XIRP2', 'psi3', 1.56e-25, -4.9, -0.46, 166, 0.03850364, 1, 20),
-                ('ENSG00000106554', '7', 132885746, 132975168, '*', 'CHCHD3', 'psi5', 1.08e-56, -6.53, -0.85, 231, 0.53953638, 1, 20)
+                ('ENSG00000163092', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 0.03850364, 1, 20),
+                ('ENSG00000106554', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 0.53953638, 1, 20)
             ],
             'sample_guid': RNA_SPLICE_SAMPLE_GUID,
         },
@@ -850,7 +848,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {'error': mock.ANY})
                 self.assertTrue(response.json()['error'].startswith(
-                    f'Error in {loaded_data_row[0]} data for {mismatch_row[2]}: mismatched entries '))
+                    f'1 mismatches found: Error in {loaded_data_row[0]} data for {mismatch_row[2]}: mismatched entries '))
 
                 missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
                 _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
@@ -905,7 +903,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                     additional_logs = [(f'create {num_created_samples} Samples', {'dbUpdate': {
                         'dbEntity': 'Sample', 'updateType': 'bulk_create',
                         'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [response_json['sampleGuids'][-1]],
-                    }})] + (additional_logs or []) if num_created_samples else additional_logs or []
+                    }})] + (additional_logs or [])
                     self._has_expected_file_loading_logs(
                         'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings,
                         additional_logs=additional_logs, additional_logs_offset=3)
@@ -970,7 +968,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 # Test loading data when where are duplicated individual ids in different projects.
                 data = params['duplicated_indiv_id_data']
                 mock_writes = []
-                _test_basic_data_loading(data, 2, 2, 7, body, '1kg project nåme with uniçøde, Test Reprocessed Project',
+                _test_basic_data_loading(data, 2, 2, 20, body, '1kg project nåme with uniçøde, Test Reprocessed Project',
                                          num_created_samples=2)
                 self.assertSetEqual(set([s.split('_', 1)[1] for s in mock_writes]), params['write_data'])
 

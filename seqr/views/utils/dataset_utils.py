@@ -11,7 +11,7 @@ from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.xpos_utils import get_chrom
+from seqr.utils.xpos_utils import format_chrom
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.permissions_utils import get_internal_projects
 from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
@@ -334,12 +334,12 @@ DELTA_PSI_COL = 'delta_psi'
 RARE_DISEASE_SAMPLES_WITH_JUNCTION = 'rare_disease_samples_with_junction'
 RARE_DISEASE_SAMPLES_TOTAL = 'rare_disease_samples_total'
 SPLICE_OUTLIER_COLS = [
-    CHROM_COL, START_COL, END_COL, STRAND_COL, INDIV_ID_COL, 'gene_name', SPLICE_TYPE_COL, P_VALUE_COL, Z_SCORE_COL,
+    CHROM_COL, START_COL, END_COL, STRAND_COL, INDIV_ID_COL, SPLICE_TYPE_COL, P_VALUE_COL, Z_SCORE_COL,
     DELTA_PSI_COL, READ_COUNT_COL, GENE_ID_COL, TISSUE_COL, DOT_SIZE_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION,
     RARE_DISEASE_SAMPLES_TOTAL, PROJECT_COL
 ]
 SPLICE_OUTLIER_FORMATTER = {
-    CHROM_COL: get_chrom,
+    CHROM_COL: format_chrom,
     START_COL: int,
     END_COL: int,
     READ_COUNT_COL: int,
@@ -426,11 +426,13 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
 
     sample_id_to_tissue_type = {}
     samples_with_conflict_tissues = defaultdict(set)
+    miss_matches = []
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in parse_row(row):
             tissue_type = TISSUE_TYPE_MAP.get(row_dict.pop(TISSUE_COL, None))
             project = row_dict.pop(PROJECT_COL)
+            indiv_id = row_dict.pop(INDIV_ID_COL, None)
             if (sample_id, project) in sample_id_to_tissue_type:
                 prev_tissue_type = sample_id_to_tissue_type[(sample_id, project)]
                 if tissue_type != prev_tissue_type:
@@ -445,14 +447,17 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
                 gene_or_unique_id = row_dict['gene_id']
             existing_data = samples_by_id[(sample_id, project)].get(gene_or_unique_id)
             if existing_data and existing_data != row_dict:
-                raise ValueError(
-                    f'Error in {sample_id} data for {row_dict["gene_id"]}: mismatched entries {existing_data} and {row_dict}')
+                miss_matches.append(
+                    f'Error in {sample_id} data for {row_dict["gene_id"]}: mismatched entries {existing_data} and {row_dict}'
+                )
 
-            indiv_id = row_dict.pop(INDIV_ID_COL, None)
             if indiv_id and sample_id not in sample_id_to_individual_id_mapping:
                 sample_id_to_individual_id_mapping[sample_id] = indiv_id
 
             samples_by_id[(sample_id, project)][gene_or_unique_id] = row_dict
+
+    if miss_matches:
+        raise ValueError(f'{len(miss_matches)} mismatches found: {", ".join(miss_matches[:min(10, len(miss_matches))])}')
 
     tissue_conflict_messages = []
     for (sample_id, project), tissue_types in samples_with_conflict_tissues.items():
@@ -519,8 +524,14 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     return samples_to_load, info, warnings
 
 
+RNA_MODEL_DISPLAY_NAME = {
+  RnaSeqOutlier: 'Expression Outlier',
+  RnaSeqSpliceOutlier: 'Splice Outlier',
+  RnaSeqTpm: 'Expression',
+}
+
 def _notify_rna_loading(model_cls, sample_projects):
-    data_type = 'Outlier' if model_cls == RnaSeqOutlier else 'Expression' if model_cls == RnaSeqTpm else 'Splice Junction'
+    data_type = RNA_MODEL_DISPLAY_NAME[model_cls]
     for project_agg in sample_projects:
         new_ids = project_agg["new_sample_ids"]
         project_link = f'<{BASE_URL}project/{project_agg["guid"]}/project_page|{project_agg["name"]}>'

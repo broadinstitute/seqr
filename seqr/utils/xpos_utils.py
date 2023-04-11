@@ -41,7 +41,7 @@ MIN_POS = 1
 MAX_POS = 3e8
 
 
-def get_chrom(chrom):
+def format_chrom(chrom):
     if chrom not in CHROM_TO_CHROM_NUMBER:
         fixed_chrom = chrom.replace('chr', '')
         if fixed_chrom.startswith('M'):
@@ -61,7 +61,7 @@ def get_xpos(chrom, pos):
         chrom (string): examples '1', 'Y', 'M'
         pos (integer): genomic position on chromosome
     """
-    chrom = get_chrom(chrom)
+    chrom = format_chrom(chrom)
 
     if pos < MIN_POS or pos > MAX_POS:
         raise ValueError("Invalid position: %s" % (pos,))
