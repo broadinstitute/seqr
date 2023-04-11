@@ -411,8 +411,8 @@ def load_rna_seq_splice_outlier(file_path, user=None, mapping_file=None, ignore_
     )
 
 
-def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns,
-                  get_unique_key=None):
+def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_columns, get_unique_key):
+
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
@@ -470,6 +470,13 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     warnings = [f'Skipped data loading for the following {len(samples_with_conflict_tissues)} sample(s) due to mismatched'
                 f' tissue type: {", ".join(tissue_conflict_messages)}'] if samples_with_conflict_tissues else []
 
+    return warnings, samples_by_id, sample_id_to_individual_id_mapping, sample_id_to_tissue_type
+
+
+def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns,
+                      get_unique_key=None):
+    warnings, samples_by_id, sample_id_to_individual_id_mapping, sample_id_to_tissue_type = _load_rna_seq_file(
+        file_path, user, mapping_file, parse_row, expected_columns, get_unique_key)
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
     logger.info(message, user)
