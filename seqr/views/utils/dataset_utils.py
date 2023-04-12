@@ -11,6 +11,7 @@ from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import format_chrom
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.permissions_utils import get_internal_projects
@@ -426,7 +427,7 @@ def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_column
 
     sample_id_to_tissue_type = {}
     samples_with_conflict_tissues = defaultdict(set)
-    miss_matches = []
+    errors = []
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in parse_row(row):
@@ -447,19 +448,16 @@ def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_column
                 gene_or_unique_id = row_dict['gene_id']
             existing_data = samples_by_id[(sample_id, project)].get(gene_or_unique_id)
             if existing_data and existing_data != row_dict:
-                miss_matches.append({'sample_id': sample_id, 'data1': existing_data, 'data2': row_dict})
+                errors.append(f'Error in {sample_id} data for {existing_data["gene_id"]}: mismatched entries '
+                              f'{existing_data} and {row_dict}')
 
             if indiv_id and sample_id not in sample_id_to_individual_id_mapping:
                 sample_id_to_individual_id_mapping[sample_id] = indiv_id
 
             samples_by_id[(sample_id, project)][gene_or_unique_id] = row_dict
 
-    if miss_matches:
-        messages = [
-            f'Error in {s["sample_id"]} data for {s["data1"]["gene_id"]}: mismatched entries {s["data1"]} and {s["data2"]}'
-            for s in miss_matches[:10]
-        ]
-        raise ValueError(f'{len(miss_matches)} mismatches found: {", ".join(messages)}')
+    if errors:
+        raise ErrorsWarningsException(errors)
 
     tissue_conflict_messages = []
     for (sample_id, project), tissue_types in samples_with_conflict_tissues.items():

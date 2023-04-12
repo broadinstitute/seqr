@@ -841,12 +841,14 @@ class DataManagerAPITest(AuthenticationTestCase):
                 })
 
                 mismatch_row = loaded_data_row[:-1] + [loaded_data_row[-1] - 2]
-                _set_file_iter_stdout([header, loaded_data_row, mismatch_row])
+                _set_file_iter_stdout([header, loaded_data_row, loaded_data_row, mismatch_row])
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 400)
-                self.assertDictEqual(response.json(), {'error': mock.ANY})
-                self.assertTrue(response.json()['error'].startswith(
-                    f'1 mismatches found: Error in {loaded_data_row[0]} data for {mismatch_row[2]}: mismatched entries '))
+                response_json = response.json()
+                self.assertTrue('errors' in response_json.keys())
+                self.assertEqual(len(response_json['errors']), 1)
+                self.assertTrue(response_json['errors'][0].startswith(
+                    f'Error in {loaded_data_row[0]} data for {mismatch_row[2]}: mismatched entries '))
 
                 missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
                 _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
