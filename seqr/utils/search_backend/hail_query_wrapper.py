@@ -1527,7 +1527,7 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
 
     def _consequence_sorts(self):
         rank_sort, variant_sort = super(AllDataTypeHailTableQuery, self)._consequence_sorts()
-        is_sv = hl.is_defined(ht.svType)
+        is_sv = hl.is_defined(self._ht.svType)
         return [
             hl.if_else(is_sv, SV_CONSEQUENCE_RANK_OFFSET, rank_sort),
             hl.if_else(is_sv, rank_sort, variant_sort),
