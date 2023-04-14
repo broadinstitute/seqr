@@ -971,7 +971,7 @@ class EsSearch(object):
                     t.get('majorConsequence') in self._allowed_consequences), None)
                 if not consequence_transcript_id and self._allowed_consequences_secondary:
                     consequence_transcript_id = next((
-                        t for t in gene_transcripts if t.get('majorConsequence') in self._allowed_consequences_secondary
+                        t.get('transcriptId') for t in gene_transcripts if t.get('majorConsequence') in self._allowed_consequences_secondary
                     ), None)
                 selected_main_transcript_id = consequence_transcript_id or selected_main_transcript_id
             if selected_main_transcript_id == main_transcript_id:
