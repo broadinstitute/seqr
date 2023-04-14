@@ -194,6 +194,7 @@ class BaseHailTableQuery(object):
         ))],
         XPOS_SORT_KEY: lambda r: [r.xpos],
     }
+    SORT_FIELDS = {'populations', 'predictions', 'transcripts', 'xpos'}
 
     @classmethod
     def populations_configs(cls):
@@ -881,7 +882,8 @@ class BaseHailTableQuery(object):
         return hail_results, total_results
 
     def _sort_order(self, ht, sort):
-        sort_ht = ht if self._comp_het_ht is None else hl.or_else(hl.dict(ht[GROUPED_VARIANTS_FIELD][0]), hl.dict(ht.row))
+        sort_ht = ht if self._comp_het_ht is None else hl.or_else(
+            ht[GROUPED_VARIANTS_FIELD][0].select(*self.SORT_FIELDS), ht.select(*self.SORT_FIELDS))
         sort_expressions = self._get_sort_expressions(sort_ht, XPOS_SORT_KEY)
         if sort != XPOS_SORT_KEY:
             sort_expressions = self._get_sort_expressions(sort_ht, sort) + sort_expressions
@@ -995,6 +997,8 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     SORTS[CONSEQUENCE_SORT_KEY] = lambda r: BaseHailTableQuery.SORTS[CONSEQUENCE_SORT_KEY](r) + [
         hl.dict(CONSEQUENCE_RANK_MAP)[BaseVariantHailTableQuery._get_formatted_main_transcript(r).majorConsequence],
     ]
+    SORT_FIELDS = {'clinvar', 'selectedMainTranscriptId', 'mainTranscriptId'}
+    SORT_FIELDS.update(BaseHailTableQuery.SORT_FIELDS)
 
     def _selected_main_transcript_expr(self, results):
         if not (self._filtered_genes or self._allowed_consequences):
@@ -1138,6 +1142,8 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: BaseVariantHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [
         hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']],
     ]
+    SORT_FIELDS = {'hgmd'}
+    SORT_FIELDS.update(BaseVariantHailTableQuery.SORT_FIELDS)
 
     @classmethod
     def _validate_search_criteria(cls, num_families=None, has_location_search=None, inheritance_mode=None, **kwargs):
@@ -1261,6 +1267,8 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
         'size': lambda r: [hl.if_else(hl.set({'BND', 'CTX'}).contains(r.svType), -50, r.pos - r.end)],
     }
     SORTS.update(BaseHailTableQuery.SORTS)
+    SORT_FIELDS = {'svType', 'pos', 'end'}
+    SORT_FIELDS.update(BaseHailTableQuery.SORT_FIELDS)
 
     @classmethod
     def import_filtered_table(cls, data_type, samples, intervals=None, exclude_intervals=False, **kwargs):
@@ -1379,6 +1387,7 @@ class MultiDataTypeHailTableQuery(object):
         self.BASE_ANNOTATION_FIELDS = {}
         self.COMPUTED_ANNOTATION_FIELDS = {}
         self.SORTS = {}
+        self.SORT_FIELDS = set()
 
         self.CORE_FIELDS = set()
         for cls in [QUERY_CLASS_MAP[dt] for dt in self._data_types]:
@@ -1388,6 +1397,7 @@ class MultiDataTypeHailTableQuery(object):
             self.COMPUTED_ANNOTATION_FIELDS.update(cls.COMPUTED_ANNOTATION_FIELDS)
             self.CORE_FIELDS.update(cls.CORE_FIELDS)
             self.SORTS.update(cls.SORTS)
+            self.SORT_FIELDS.update(cls.SORT_FIELDS)
         self.BASE_ANNOTATION_FIELDS.update({
             k: self._annotation_for_data_type(k) for k in self.DATA_TYPE_ANNOTATION_FIELDS
         })
