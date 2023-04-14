@@ -902,7 +902,8 @@ class BaseHailTableQuery(object):
                     sort_expression = hl.or_else(sort_expression, af_expr)
 
         elif sort in self.PREDICTION_FIELDS_CONFIG:
-            sort_expression = -self._ht.predictions[sort]
+            prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
+            sort_expression = -self._ht[prediction_path[0]][prediction_path[1]]
 
         elif sort == 'in_omim':
             omim_genes = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True)
