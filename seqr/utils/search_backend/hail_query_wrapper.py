@@ -881,10 +881,10 @@ class BaseHailTableQuery(object):
         return hail_results, total_results
 
     def _sort_order(self, ht, sort):
-        # TODO handle comp hets
-        sort_expressions = self._get_sort_expressions(ht, XPOS_SORT_KEY)
+        sort_ht = hl.or_else(ht.GROUPED_VARIANTS_FIELD[0], ht)
+        sort_expressions = self._get_sort_expressions(sort_ht, XPOS_SORT_KEY)
         if sort != XPOS_SORT_KEY:
-            sort_expressions = self._get_sort_expressions(ht, sort) + sort_expressions
+            sort_expressions = self._get_sort_expressions(sort_ht, sort) + sort_expressions
         return hl.array(sort_expressions)
 
     def _get_sort_expressions(self, ht, sort):
