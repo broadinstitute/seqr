@@ -1003,7 +1003,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 mock_open.assert_called_with(file_name, 'rt')
 
                 self.assert_json_logs(self.data_manager_user, [
-                    (f'Loading outlier data for {sample_guid.split("_", 1)[1].upper()}', None),
+                    (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
                     (f'create {model_cls.__name__}s', {'dbUpdate': {
                         'dbEntity': model_cls.__name__, 'numEntities': 2, 'parentEntityIds': [sample_guid],
                         'updateType': 'bulk_create',
