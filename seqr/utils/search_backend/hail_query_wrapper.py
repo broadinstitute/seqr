@@ -935,7 +935,7 @@ class BaseHailTableQuery(object):
         return [hl.min(self._ht.sortedTranscriptConsequences.map(self.get_major_consequence_id))]
 
     def _omim_sort(self, omim_gene_set):
-        return self._ht.sortedTranscriptConsequences.any(lambda t: omim_gene_set.contains(t.gene_id))
+        return self._ht.sortedTranscriptConsequences.filter(lambda t: omim_gene_set.contains(t.gene_id)).size()
 
     def _gene_rank_sort(self, gene_ranks):
         return hl.min(self._ht.sortedTranscriptConsequences.map(lambda t: hl.dict(gene_ranks).get(t.gene_id)))
