@@ -262,7 +262,7 @@ class BaseHailTableQuery(object):
             exclude_intervals=exclude_intervals, **kwargs,
         )
 
-        self._ht = self._ht.annotate(sort=self._sort_order())
+        self._ht = self._ht.annotate(_sort=self._sort_order())
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
             is_all_recessive_search = inheritance_mode == RECESSIVE
@@ -860,7 +860,8 @@ class BaseHailTableQuery(object):
             **{k: v(self, results) for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()},
         )
         return results.select(
-            'genomeVersion', *self.CORE_FIELDS, *set(list(self.COMPUTED_ANNOTATION_FIELDS.keys()) + list(self.annotation_fields.keys())))
+            'genomeVersion', '_sort', *self.CORE_FIELDS,
+            *set(list(self.COMPUTED_ANNOTATION_FIELDS.keys()) + list(self.annotation_fields.keys())))
 
     def search(self, page, num_results):
         if self._ht:
@@ -874,7 +875,7 @@ class BaseHailTableQuery(object):
             raise InvalidSearchException('Filters must be applied before search')
 
         # TODO #2496: page
-        (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=ht.sort)))
+        (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}')
 
         hail_results = [
