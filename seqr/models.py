@@ -1120,7 +1120,6 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
     type = models.CharField(max_length=12)
     delta_psi = models.FloatField()
     read_count = models.IntegerField()  # RNA-seq reads that span the splice junction
-    dot_size = models.FloatField()
     rare_disease_samples_with_junction = models.IntegerField()
     rare_disease_samples_total = models.IntegerField()
 
@@ -1128,7 +1127,7 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
         unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end', 'strand', 'type')
 
         json_fields = ['gene_id', 'p_value', 'z_score', 'chrom', 'start', 'end', 'strand', 'read_count', 'type',
-                       'delta_psi', 'dot_size', 'rare_disease_samples_with_junction', 'rare_disease_samples_total']
+                       'delta_psi', 'rare_disease_samples_with_junction', 'rare_disease_samples_total']
 
 
 class PhenotypePrioritization(BulkOperationBase):

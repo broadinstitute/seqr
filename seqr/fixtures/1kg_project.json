@@ -1364,7 +1364,6 @@
         "type": "psi5",
         "delta_psi": 0.85,
         "read_count": 1297,
-        "dot_size": 0.53953638,
         "rare_disease_samples_with_junction": 1,
         "rare_disease_samples_total": 20
     }
