@@ -31,7 +31,7 @@ GROUPED_VARIANTS_FIELD = 'variants'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
 
 POPULATION_SORTS = {
-    'gnomad': [GNOMAD_GENOMES_FIELD],
+    'gnomad': [GNOMAD_GENOMES_FIELD, 'gnomad_mito'],
     'gnomad_exomes': ['gnomad_exomes'],
     'callset_af': ['callset', 'sv_callset'],
 }
@@ -202,8 +202,7 @@ class BaseHailTableQuery(object):
     def annotation_fields(self):
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
-                population: self.population_expression(r, population, self._format_population_config(pop_config))
-                for population, pop_config in self.POPULATIONS.items()
+                population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
             }),
             'predictions': lambda r: hl.struct(**{
                 prediction: hl.array(PREDICTION_FIELD_ID_LOOKUP[prediction])[r[path[0]][path[1]]]
@@ -222,7 +221,8 @@ class BaseHailTableQuery(object):
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
 
-    def population_expression(self, r, population, pop_config):
+    def population_expression(self, r, population):
+        pop_config = self._format_population_config(self.POPULATIONS[population])
         return hl.struct(**{
             response_key: hl.or_else(r[population][field], '' if response_key == 'id' else 0)
             for response_key, field in pop_config.items() if field is not None
@@ -895,10 +895,11 @@ class BaseHailTableQuery(object):
         sort_expression = None
         if sort in POPULATION_SORTS:
             pop_fields = [pop for pop in POPULATION_SORTS[sort] if pop in self.POPULATIONS]
-            if pop_fields:
-                sort_expression = self._ht.populations[pop_fields[0]].af
-                for pop_field in pop_fields[1:]:
-                    sort_expression = hl.or_else(sort_expression, self._ht.populations[pop_field].af)
+            af_exprs = [self.population_expression(self._ht, pop).af for pop in pop_fields]
+            if af_exprs:
+                sort_expression = af_exprs[0]
+                for af_expr in af_exprs[1:]:
+                    sort_expression = hl.or_else(sort_expression, af_expr)
 
         elif sort in self.PREDICTION_FIELDS_CONFIG:
             sort_expression = -self._ht.predictions[sort]
@@ -1413,10 +1414,10 @@ class MultiDataTypeHailTableQuery(object):
             return case.or_missing()
         return field_annotation
 
-    def population_expression(self, r, population, pop_config):
+    def population_expression(self, r, population):
         return hl.or_missing(
             hl.dict(DATA_TYPE_POPULATIONS_MAP)[r.dataType].contains(population),
-            super(MultiDataTypeHailTableQuery, self).population_expression(r, population, pop_config),
+            super(MultiDataTypeHailTableQuery, self).population_expression(r, population),
         )
 
     @classmethod
