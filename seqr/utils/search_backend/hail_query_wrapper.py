@@ -866,7 +866,7 @@ class BaseHailTableQuery(object):
             ht = self._format_results(self._ht)
             if self._comp_het_ht:
                 ht = ht.join(self._comp_het_ht, 'outer')
-                ht = ht.annotate(_sort=hl.or_else(ht._sort, ht._sort_1))
+                ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
         else:
             ht = self._comp_het_ht
 
