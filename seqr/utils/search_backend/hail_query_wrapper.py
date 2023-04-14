@@ -873,7 +873,7 @@ class BaseHailTableQuery(object):
         if not ht:
             raise InvalidSearchException('Filters must be applied before search')
 
-        # TODO #2496: page
+        # TODO #3330: page
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}')
 
