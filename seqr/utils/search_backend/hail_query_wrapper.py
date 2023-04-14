@@ -987,10 +987,9 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     SORTS = {
-        PATHOGENICTY_SORT_KEY: lambda r: [hl.if_else(
+        PATHOGENICTY_SORT_KEY: lambda r: [hl.or_else(
             # sort variants absent from clinvar between uncertain and benign
-            hl.is_missing(r.clinvar.clinicalSignificance), CLINVAR_SIG_BENIGN_OFFSET,
-            hl.dict(CLINVAR_SIG_MAP)[r.clinvar.clinicalSignificance],
+            r.clinvar.clinical_significance_id, CLINVAR_SIG_BENIGN_OFFSET,
         )],
     }
     SORTS.update(BaseHailTableQuery.SORTS)
@@ -1142,9 +1141,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     SORTS = deepcopy(BaseVariantHailTableQuery.SORTS)
-    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: BaseVariantHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [
-        hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']],
-    ]
+    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: BaseVariantHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [r.hgmd.class_id]
 
     @classmethod
     def _validate_search_criteria(cls, num_families=None, has_location_search=None, inheritance_mode=None, **kwargs):
