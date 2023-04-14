@@ -186,6 +186,14 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         />
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
+    {(individual.hasRnaOutlierData || individual.hasRnaSpliceOutlierData) && (
+      <Link
+        target="_blank"
+        to={`/project/${individual.projectGuid}/rnaseq_results/${individual.familyGuid}/${individual.individualGuid}/${!!individual.hasRnaOutlierData}/${!!individual.hasRnaSpliceOutlierData}`}
+      >
+        RNAseq Results
+      </Link>
+    )}
     {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
       ({ modalName, title, modalSize, linkText, component }) => {
         const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)

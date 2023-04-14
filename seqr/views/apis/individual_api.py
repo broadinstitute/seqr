@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.db.models import prefetch_related_objects
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Individual, Family, RnaSeqOutlier
+from seqr.models import Individual, Family, RnaSeqOutlier, RnaSeqSpliceOutlier
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
@@ -787,19 +787,45 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 
 @login_and_policies_required
 def get_individual_rna_seq_data(request, individual_guid):
+    return _get_rna_seq_data(RnaSeqOutlier, request, individual_guid)
+
+
+@login_and_policies_required
+def get_individual_rna_seq_splice_data(request, individual_guid):
+    return _get_rna_seq_data(RnaSeqSpliceOutlier, request, individual_guid)
+
+
+RNA_SEQ_CONFIGS = {
+    RnaSeqOutlier: {
+        'isSignificant': True,
+        'responseKey': 'rnaSeqData',
+        'dataKey': 'outliers'
+    },
+    RnaSeqSpliceOutlier: {
+        'isSignificant': False,
+        'responseKey': 'rnaSeqSpliceData',
+        'dataKey': 'spliceOutliers'
+    }
+}
+
+
+def _get_rna_seq_data(model_cls, request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     check_project_permissions(individual.family.project, request.user)
-    outlier_data = RnaSeqOutlier.objects.filter(sample__individual=individual, sample__is_active=True)
+    outlier_data = model_cls.objects.filter(sample__individual=individual, sample__is_active=True)
+    model_configs = RNA_SEQ_CONFIGS[model_cls]
+    is_significant = model_configs['isSignificant']
 
     rna_seq_data = {
-        data['geneId']: data for data in get_json_for_rna_seq_outliers(outlier_data)
+        data['geneId']: data for data in get_json_for_rna_seq_outliers(outlier_data, is_significant)
     }
-    genes_to_show = get_genes([gene_id for gene_id, data in rna_seq_data.items() if data['isSignificant']])
+    genes_to_show = get_genes([gene_id for gene_id, data in rna_seq_data.items() if not is_significant or data['isSignificant']])
 
     return create_json_response({
-        'rnaSeqData': {individual_guid: {'outliers': rna_seq_data}},
+        model_configs['responseKey']: {individual_guid: {model_configs['dataKey']: rna_seq_data}},
         'genesById': genes_to_show,
     })
+
 
 @login_and_policies_required
 def get_hpo_terms(request, hpo_parent_id):

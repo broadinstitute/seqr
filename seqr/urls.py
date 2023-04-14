@@ -32,6 +32,7 @@ from seqr.views.apis.family_api import \
 
 from seqr.views.apis.individual_api import \
     get_individual_rna_seq_data, \
+    get_individual_rna_seq_splice_data, \
     get_hpo_terms, \
     update_individual_hpo_terms, \
     update_individual_handler, \
@@ -178,6 +179,7 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_discussion': update_case_review_discussion,
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_status': update_case_review_status,
     'individual/(?P<individual_guid>[\w.|-]+)/rna_seq_data': get_individual_rna_seq_data,
+    'individual/(?P<individual_guid>[\w.|-]+)/rna_seq_splice_data': get_individual_rna_seq_splice_data,
 
     'family/(?P<family_guid>[\w.|-]+)/details': family_page_data,
     'family/(?P<family_guid>[\w.|-]+)/variant_tag_summary': family_variant_tag_summary,
