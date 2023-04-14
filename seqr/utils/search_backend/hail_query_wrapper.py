@@ -1262,7 +1262,9 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD]
 
     SORTS = {
-        'size': lambda r: [hl.if_else(hl.set({'BND', 'CTX'}).contains(r.svType), -50, r.pos - r.end)],
+        'size': lambda r: [hl.if_else(
+            r.interval.start.contig == r.interval.end.contig, r.interval.start.position - r.interval.end.position, -50,
+        )],
     }
     SORTS.update(BaseHailTableQuery.SORTS)
 
