@@ -914,7 +914,7 @@ class BaseHailTableQuery(object):
                 agg['gene__gene_id']: agg['mis_z_rank'] + agg['pLI_rank'] for agg in
                 GeneConstraint.objects.values('gene__gene_id', 'mis_z_rank', 'pLI_rank')
             }
-            sort_expression = self._gene_rank_sort(self._ht, constraint_ranks)
+            sort_expression = self._gene_rank_sort(constraint_ranks)
 
         elif sort == 'prioritized_gene':
             if not self._family_guid:
@@ -925,7 +925,7 @@ class BaseHailTableQuery(object):
                 ).values('gene_id').annotate(min_rank=Min('rank'))
             }
             if family_ranks:
-                sort_expression = self._gene_rank_sort(self._ht, family_ranks)
+                sort_expression = self._gene_rank_sort(family_ranks)
 
         return [sort_expression] if sort_expression is not None else []
 
@@ -935,9 +935,8 @@ class BaseHailTableQuery(object):
     def _omim_sort(self, omim_gene_set):
         return self._ht.sortedTranscriptConsequences.any(lambda t: omim_gene_set.contains(t.gene_id))
 
-    @staticmethod
-    def _gene_rank_sort(ht, gene_ranks):
-        return hl.min(ht.transcripts.key_set().map(lambda gene_id: hl.dict(gene_ranks).get(gene_id)))
+    def _gene_rank_sort(self, gene_ranks):
+        return hl.min(self._ht.sortedTranscriptConsequences.map(lambda t: hl.dict(gene_ranks).get(t.gene_id)))
 
     # For production: should use custom json serializer
     @classmethod
