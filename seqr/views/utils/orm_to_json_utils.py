@@ -754,7 +754,7 @@ def get_json_for_matchmaker_submission(submission):
         additional_model_fields=['contact_name', 'contact_href', 'submission_id'])
 
 
-def get_json_for_rna_seq_outliers(models, is_significant, **kwargs):
+def get_json_for_rna_seq_outliers(models, is_significant=True, **kwargs):
     additional_values = {
         'isSignificant': Case(
             When(p_adjust__lt=models.model.SIGNIFICANCE_THRESHOLD, then=Value(True)), default=Value(False)
