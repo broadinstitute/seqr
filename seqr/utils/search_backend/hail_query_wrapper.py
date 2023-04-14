@@ -1487,10 +1487,6 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
     pass
 
 
-def merged_consequence_sort(ht):
-
-
-
 class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
 
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
