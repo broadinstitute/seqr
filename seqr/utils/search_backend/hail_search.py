@@ -74,7 +74,7 @@ class HailSearch(object):
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
         # return EsSearch.process_previous_results(*args, **kwargs)
-        # TODO #2496: re-enable caching, not helpful for initial development
+        # TODO #3330: re-enable caching, not helpful for initial development
         return None, {'page': page, 'num_results': num_results}
 
     def filter_variants(self, inheritance=None, genes=None, intervals=None, variant_ids=None, locus=None,
@@ -133,5 +133,5 @@ class HailSearch(object):
     def search(self, page=1, num_results=100):
         hail_results, total_results = self._query_wrapper.search(page, num_results)
         self.previous_search_results['total_results'] = total_results
-        # TODO #2496 actually cache results
+        # TODO #3330 actually cache results
         return hail_results
