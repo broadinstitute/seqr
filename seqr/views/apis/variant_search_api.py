@@ -195,7 +195,7 @@ VARIANT_EXPORT_DATA = [
     {'header': 'alt'},
     {'header': 'gene', 'value_path': '{transcripts: transcripts.*[].{value: geneSymbol, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
     {'header': 'worst_consequence', 'value_path': '{transcripts: transcripts.*[].{value: majorConsequence, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
-    {'header': '1kg_freq', 'value_path': 'populations.g1k.af'},
+    {'header': 'callset_freq', 'value_path': 'populations.callset.af'},
     {'header': 'exac_freq', 'value_path': 'populations.exac.af'},
     {'header': 'gnomad_genomes_freq', 'value_path': 'populations.gnomad_genomes.af'},
     {'header': 'gnomad_exomes_freq', 'value_path': 'populations.gnomad_exomes.af'},
