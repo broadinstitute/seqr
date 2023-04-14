@@ -342,12 +342,12 @@ class VariantSearchAPITest(object):
         response = self.client.get(export_url)
         self.assertEqual(response.status_code, 200)
         expected_content = [
-            ['chrom', 'pos', 'ref', 'alt', 'gene', 'worst_consequence', '1kg_freq', 'exac_freq', 'gnomad_genomes_freq',
+            ['chrom', 'pos', 'ref', 'alt', 'gene', 'worst_consequence', 'callset_freq', 'exac_freq', 'gnomad_genomes_freq',
              'gnomad_exomes_freq', 'topmed_freq', 'cadd', 'revel', 'eigen', 'splice_ai', 'polyphen', 'sift', 'muttaster', 'fathmm',
              'rsid', 'hgvsc', 'hgvsp', 'clinvar_clinical_significance', 'clinvar_gold_stars', 'filter', 'family_id_1',
              'tags_1', 'notes_1', 'family_id_2', 'tags_2', 'notes_2', 'sample_1', 'num_alt_alleles_1', 'gq_1', 'ab_1',
              'sample_2', 'num_alt_alleles_2', 'gq_2', 'ab_2'],
-            ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '', '', '', '', '', '', '', '', '', '', '', '',
+            ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '0.13', '', '0.007', '', '', '', '', '', '', '', '', '',
              '', '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '1',
              'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', 'NA19675', '1', '46.0',
              '0.702127659574', 'NA19679', '0', '99.0', '0.0'],
@@ -363,14 +363,14 @@ class VariantSearchAPITest(object):
             response = self.client.get(export_url)
             self.assertEqual(response.status_code, 200)
             expected_content = [
-                ['chrom', 'pos', 'ref', 'alt', 'gene', 'worst_consequence', '1kg_freq', 'exac_freq', 'gnomad_genomes_freq',
+                ['chrom', 'pos', 'ref', 'alt', 'gene', 'worst_consequence', 'callset_freq', 'exac_freq', 'gnomad_genomes_freq',
                  'gnomad_exomes_freq', 'topmed_freq', 'cadd', 'revel', 'eigen', 'splice_ai', 'polyphen', 'sift', 'muttaster', 'fathmm',
                  'rsid', 'hgvsc', 'hgvsp', 'clinvar_clinical_significance', 'clinvar_gold_stars', 'filter', 'family_id_1',
                  'tags_1', 'notes_1', 'sample_1', 'num_alt_alleles_1', 'gq_1', 'ab_1',],
-                ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '', '', '', '', '', '', '', '', '', '', '', '', '',
+                ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '0.13', '', '0.007', '', '', '', '', '', '', '', '', '', '',
                  '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '1',
                  'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', 'NA19675', '1', '46.0', '0.702127659574',],
-                ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '', '', '', '', '', '', '', '', '', '', '', '', '',
+                ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '0.13', '', '0.007', '', '', '', '', '', '', '', '', '', '',
                  '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '2', '', '',
                  'NA19679', '0', '99.0', '0.0'],
                 ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
