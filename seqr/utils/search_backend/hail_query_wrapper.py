@@ -871,8 +871,8 @@ class BaseHailTableQuery(object):
             raise InvalidSearchException('Filters must be applied before search')
 
         # TODO #2496: page
-        ordering = self._sort_order(ht, sort)
-        (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=ordering)))
+        (total_results, collected) = ht.aggregate(
+            (hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=self._sort_order(ht, sort))))
         logger.info(f'Total hits: {total_results}')
 
         hail_results = [
@@ -881,7 +881,7 @@ class BaseHailTableQuery(object):
         return hail_results, total_results
 
     def _sort_order(self, ht, sort):
-        sort_ht = hl.or_else(ht[GROUPED_VARIANTS_FIELD][0], ht)
+        sort_ht = hl.or_else(ht[GROUPED_VARIANTS_FIELD][0], ht.row)
         sort_expressions = self._get_sort_expressions(sort_ht, XPOS_SORT_KEY)
         if sort != XPOS_SORT_KEY:
             sort_expressions = self._get_sort_expressions(sort_ht, sort) + sort_expressions
