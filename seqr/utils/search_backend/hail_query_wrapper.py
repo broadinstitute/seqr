@@ -881,7 +881,7 @@ class BaseHailTableQuery(object):
         return hail_results, total_results
 
     def _sort_order(self, ht, sort):
-        sort_ht = hl.if_else('GROUPED_VARIANTS_FIELD' in ht.row, ht.GROUPED_VARIANTS_FIELD[0], ht.row)
+        sort_ht = hl.or_else(ht[GROUPED_VARIANTS_FIELD][0], ht)
         sort_expressions = self._get_sort_expressions(sort_ht, XPOS_SORT_KEY)
         if sort != XPOS_SORT_KEY:
             sort_expressions = self._get_sort_expressions(sort_ht, sort) + sort_expressions
