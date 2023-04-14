@@ -45,12 +45,12 @@ class LoadRnaSeqTest(TestCase):
         call_command('load_rna_seq_outlier', RNA_FILE_ID, '--ignore-extra-samples')
 
         rna_samples = Sample.objects.filter(individual_id=1, sample_id='NA19675_D2', sample_type='RNA')
-        self.assertEqual(len(rna_samples), 1)
+        self.assertEqual(len(rna_samples), 3)
         sample = rna_samples.first()
         self.assertEqual(sample.guid, EXISTING_SAMPLE_GUID)
         self.assertTrue(sample.is_active)
         self.assertIsNone(sample.elasticsearch_index)
-        self.assertEqual(sample.data_source, 'muscle_samples.tsv.gz')
+        self.assertEqual(sample.data_source, 'new_muscle_samples.tsv.gz')
 
         models = RnaSeqOutlier.objects.all()
         self.assertEqual(models.count(), 2)

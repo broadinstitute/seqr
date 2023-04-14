@@ -135,7 +135,10 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
     def bulk_update(cls, user, update_json, queryset=None, **filter_kwargs):
         """Helper bulk update method that logs the update"""
         if queryset is None:
-            queryset = cls.objects.filter(**filter_kwargs)
+            queryset = cls.objects.filter(**filter_kwargs).exclude(**update_json)
+
+        if not queryset:
+            return []
 
         entity_ids = log_model_bulk_update(logger, queryset, user, 'update', update_fields=update_json.keys())
         queryset.update(**update_json)

@@ -146,9 +146,11 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
     if r.status_code == 404:
         exception = TerraNotFoundException('{} called Terra API: {} /{} got status 404 with reason: {}'
                                      .format(user, method.upper(), path, r.reason))
-    elif r.status_code == 403:
-        exception = PermissionDenied('{} got access denied (403) from Terra API: {} /{} with reason: {}'
-                               .format(user, method.upper(), path, r.reason))
+    elif r.status_code in {403, 503}:
+        summary = f'{method.upper()} /{path} with reason: {r.reason}'
+        error = f'{user} got access denied (403) from Terra API: {summary}' if r.status_code == 403 else \
+            f'Terra API Unavailable (503): {summary}'
+        exception = PermissionDenied(error)
 
     elif r.status_code != 200:
         exception  = TerraAPIException('Error: called Terra API: {} /{} got status: {} with a reason: {}'.format(method.upper(),
