@@ -429,6 +429,7 @@ ES_SV_WGS_VARIANT = {
           'gq': 33,
           'sample_id': 'NA21234',
           'num_alt': 1,
+          'prev_num_alt': 2,
         }
       ],
       'xpos': 2049045387,
