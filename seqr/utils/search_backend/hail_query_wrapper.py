@@ -103,10 +103,6 @@ SV_TYPE_DETAILS = [
     'delINVdup', 'dupINV', 'dupINVdel', 'dupINVdup',
 ]
 
-ALL_CONSEQUENCE_RANK_MAP = deepcopy(CONSEQUENCE_RANK_MAP)
-ALL_CONSEQUENCE_RANK_MAP.update(SV_CONSEQUENCE_RANK_MAP)
-
-
 CLINVAR_SIGNIFICANCES = [
     'Pathogenic', 'Pathogenic,_risk_factor', 'Pathogenic,_Affects', 'Pathogenic,_drug_response',
     'Pathogenic,_drug_response,_protective,_risk_factor', 'Pathogenic,_association', 'Pathogenic,_other',
@@ -189,9 +185,6 @@ class BaseHailTableQuery(object):
     COMPUTED_ANNOTATION_FIELDS = {}
 
     SORTS = {
-        CONSEQUENCE_SORT_KEY: lambda r: [hl.min(r.transcripts.values().flatmap(lambda t: t.majorConsequence).map(
-            lambda c: hl.dict(ALL_CONSEQUENCE_RANK_MAP)[c]
-        ))],
         XPOS_SORT_KEY: lambda r: [r.xpos],
     }
 
@@ -234,6 +227,10 @@ class BaseHailTableQuery(object):
             response_key: hl.or_else(r[population][field], '' if response_key == 'id' else 0)
             for response_key, field in pop_config.items() if field is not None
         })
+
+    @staticmethod
+    def get_major_consequence_id(transcript):
+        raise NotImplementedError
 
     @staticmethod
     def get_major_consequence(transcript):
@@ -892,6 +889,8 @@ class BaseHailTableQuery(object):
     def _get_sort_expressions(self, sort):
         if sort in self.SORTS:
             return self.SORTS[sort](self._ht)
+        elif sort == CONSEQUENCE_SORT_KEY:
+            return self._consequence_sorts()
 
         sort_expression = None
         if sort in POPULATION_SORTS:
@@ -906,7 +905,7 @@ class BaseHailTableQuery(object):
 
         elif sort == 'in_omim':
             omim_genes = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True)
-            sort_expression = -self._omim_sort(self._ht, hl.set(set(omim_genes)))
+            sort_expression = -self._omim_sort(hl.set(set(omim_genes)))
 
         elif sort == 'constraint':
             constraint_ranks = {
@@ -928,9 +927,11 @@ class BaseHailTableQuery(object):
 
         return [sort_expression] if sort_expression is not None else []
 
-    @classmethod
-    def _omim_sort(cls, ht, omim_gene_set):
-        return ht.transcripts.key_set().intersection(omim_gene_set).size()
+    def _consequence_sorts(self):
+        return [hl.min(self._ht.sortedTranscriptConsequences.map(self.get_major_consequence_id))]
+
+    def _omim_sort(self, omim_gene_set):
+        return self._ht.sortedTranscriptConsequences.any(lambda t: omim_gene_set.contains(t.gene_id))
 
     @staticmethod
     def _gene_rank_sort(ht, gene_ranks):
@@ -994,16 +995,10 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     }
     SORTS.update(BaseHailTableQuery.SORTS)
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
-    SORTS[CONSEQUENCE_SORT_KEY] = lambda r: BaseHailTableQuery.SORTS[CONSEQUENCE_SORT_KEY](r) + [
-        hl.dict(CONSEQUENCE_RANK_MAP)[BaseVariantHailTableQuery._get_formatted_main_transcript(r).majorConsequence],
-    ]
 
     def _selected_main_transcript_expr(self, results):
-        if not (self._filtered_genes or self._allowed_consequences):
-            return hl.missing(hl.dtype('str'))
-
         get_matching_transcripts = lambda allowed_values, get_field: results.sortedTranscriptConsequences.filter(
-            lambda t: hl.set(allowed_values).contains(get_field(t))).map(lambda t: t.transcript_id)
+            lambda t: hl.set(allowed_values).contains(get_field(t)))
 
         gene_transcripts = None
         if self._filtered_genes:
@@ -1021,19 +1016,26 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
             if consequence_transcripts is None:
                 matched_transcripts = gene_transcripts
             else:
+                consequence_transcript_ids = hl.set(consequence_transcripts.map(lambda t: t.transcript_id))
                 matched_transcripts = hl.bind(
                     lambda t: hl.if_else(t.size() > 0, t, gene_transcripts),
-                    gene_transcripts.filter(lambda t: consequence_transcripts.contains(t)),
+                    gene_transcripts.filter(lambda t: consequence_transcript_ids.contains(t.transcript_id)),
                 )
-        else:
+        elif consequence_transcripts is not None:
             matched_transcripts = consequence_transcripts
+        else:
+            matched_transcripts = results.sortedTranscriptConsequences
 
-        return hl.if_else(
-            matched_transcripts.contains(results.sortedTranscriptConsequences[0].transcript_id),
-            hl.missing(hl.dtype('str')), matched_transcripts[0],
+        return matched_transcripts[0]
+
+    def _selected_main_transcript_id_expr(self, results):
+        selected_transcript = self._selected_main_transcript_expr(results)
+        return hl.or_missing(
+            selected_transcript != results.sortedTranscriptConsequences[0], selected_transcript.transcript_id,
         )
+
     COMPUTED_ANNOTATION_FIELDS = {
-        'selectedMainTranscriptId': _selected_main_transcript_expr,
+        'selectedMainTranscriptId': _selected_main_transcript_id_expr,
     }
 
     @classmethod
@@ -1076,6 +1078,10 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         return super(BaseVariantHailTableQuery, cls)._filter_annotated_table(ht, **kwargs)
 
     @staticmethod
+    def get_major_consequence_id(transcript):
+        return transcript.sorted_consequence_ids[0]
+
+    @staticmethod
     def get_major_consequence(transcript):
         return hl.array(CONSEQUENCE_RANKS)[transcript.sorted_consequence_ids[0]]
 
@@ -1089,16 +1095,15 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     def _is_allowed_consequence_filter(tc, allowed_consequence_ids):
         return hl.set(allowed_consequence_ids).intersection(hl.set(tc.sorted_consequence_ids)).size() > 0
 
-    @staticmethod
-    def _get_formatted_main_transcript(ht):
-        return ht.transcripts.values().flatmap(lambda t: t).find(
-            lambda t: hl.or_else(ht.selectedMainTranscriptId, ht.mainTranscriptId) == t.transcriptId,
-        )
+    def _consequence_sorts(self):
+        return super(BaseVariantHailTableQuery, self)._consequence_sorts() + [
+            self._selected_main_transcript_expr(self._ht).sorted_consequence_ids[0],
+        ]
 
-    @classmethod
-    def _omim_sort(cls, ht, omim_gene_set):
-        return super(BaseVariantHailTableQuery, cls)._omim_sort(ht, omim_gene_set) + hl.if_else(
-            hl.is_missing(ht.mainTranscriptId) | omim_gene_set.contains(cls._get_formatted_main_transcript(ht).geneId),
+    def _omim_sort(self, omim_gene_set):
+        main_transcript = self._selected_main_transcript_expr(self._ht)
+        return super(BaseVariantHailTableQuery, self)._omim_sort(omim_gene_set) + hl.if_else(
+            hl.is_missing(main_transcript.sorted_consequence_ids) | omim_gene_set.contains(main_transcript.gene_id),
             10, 0)
 
 
@@ -1278,6 +1283,10 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
         return ht.interval.overlaps(x_interval)
 
     @staticmethod
+    def get_major_consequence_id(transcript):
+        return transcript.major_consequence_id
+
+    @staticmethod
     def get_major_consequence(transcript):
         return hl.array(SV_CONSEQUENCE_RANKS)[transcript.major_consequence_id]
 
@@ -1290,7 +1299,6 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
             )))
             ht = ht.filter(ht.families.size() > 0)
         return ht
-
 
 class GcnvHailTableQuery(BaseSvHailTableQuery):
 
@@ -1365,7 +1373,6 @@ DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_typ
 class MultiDataTypeHailTableQuery(object):
 
     DATA_TYPE_ANNOTATION_FIELDS = []
-    SORT_OVERRIDES = {}
 
     SV_MERGE_FIELDS = {'interval', 'svType_id', 'rg37_locus_end', 'strvctvre', 'sv_callset',}
     VARIANT_MERGE_FIELDS = {'alleles', 'callset', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rsid',}
@@ -1394,7 +1401,6 @@ class MultiDataTypeHailTableQuery(object):
             k: self._annotation_for_data_type(k) for k in self.DATA_TYPE_ANNOTATION_FIELDS
         })
         self.CORE_FIELDS = list(self.CORE_FIELDS - set(self.BASE_ANNOTATION_FIELDS.keys()))
-        self.SORTS.update(self.SORT_OVERRIDES)
 
         super(MultiDataTypeHailTableQuery, self).__init__(data_type, *args, **kwargs)
 
@@ -1482,21 +1488,20 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
 
 
 def merged_consequence_sort(ht):
-    rank_sort, variant_sort = BaseVariantHailTableQuery.SORTS[CONSEQUENCE_SORT_KEY](ht)
-    is_sv = hl.is_defined(ht.svType)
-    return [
-        hl.if_else(is_sv, SV_CONSEQUENCE_RANK_OFFSET, rank_sort),
-        hl.if_else(is_sv, rank_sort, variant_sort),
-    ]
+
 
 
 class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
 
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
 
-    SORT_OVERRIDES = {
-        CONSEQUENCE_SORT_KEY: merged_consequence_sort,
-    }
+    @staticmethod
+    def get_major_consequence_id(transcript):
+        return hl.if_else(
+            hl.is_defined(transcript.sorted_consequence_ids),
+            BaseVariantHailTableQuery.get_major_consequence_id(transcript),
+            BaseSvHailTableQuery.get_major_consequence_id(transcript),
+        )
 
     @staticmethod
     def get_major_consequence(transcript):
@@ -1524,4 +1529,10 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
             hl.set(v1.genotypes.values().filter(lambda g: g.numAlt == 2).map(lambda g: g.familyGuid)),
         )
 
-
+    def _consequence_sorts(self):
+        rank_sort, variant_sort = super(AllDataTypeHailTableQuery, self)._consequence_sorts()
+        is_sv = hl.is_defined(ht.svType)
+        return [
+            hl.if_else(is_sv, SV_CONSEQUENCE_RANK_OFFSET, rank_sort),
+            hl.if_else(is_sv, rank_sort, variant_sort),
+        ]
