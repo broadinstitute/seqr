@@ -284,18 +284,18 @@ SAMPLE_GENE_SPLICE_DATA = {
     'ENSG00000163092-2-167254166-167258349-*-psi3': {
         'chrom': '2', 'start': 167254166, 'end': 167258349, 'strand': '*', 'type': 'psi3',
         'p_value': 1.56e-25, 'z_score': -4.9, 'delta_psi': -0.46, 'read_count': 166, 'gene_id': 'ENSG00000163092',
-        'dot_size': 0.03850364, 'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20
     },
     'ENSG00000106554-7-132885746-132975168-*-psi5': {
         'chrom': '7', 'start': 132885746, 'end': 132975168, 'strand': '*', 'type': 'psi5',
         'p_value': 1.08e-56, 'z_score': -6.53, 'delta_psi': -0.85, 'read_count': 231, 'gene_id': 'ENSG00000106554',
-        'dot_size': 0.53953638, 'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20},
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20},
 }
 SAMPLE_GENE_SPLICE_DATA2 = {
     'ENSG00000163092-2-167258096-167258349-*-psi3': {
         'chrom': '2', 'start': 167258096, 'end': 167258349, 'strand': '*', 'type': 'psi3',
         'p_value': 1.56e-25, 'z_score': 6.33, 'delta_psi': 0.45, 'read_count': 143, 'gene_id': 'ENSG00000163092',
-        'dot_size': 0.03454739, 'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20
     }
 }
 RNA_OUTLIER_SAMPLE_DATA = [
@@ -716,7 +716,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'header': ['individualId', 'project', 'geneId', 'chrom', 'start', 'end', 'strand', 'geneName', 'type', 'pValue', 'zScore',
                        'deltaPsi', 'readCount', 'tissue', 'dotSize', 'rareDiseaseSamplesWithJunction',
                        'rareDiseaseSamplesTotal'],
-            'optional_headers': ['geneName'],
+            'optional_headers': ['geneName', 'dotSize'],
             'loaded_data_row': ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
                                 'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
             'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
@@ -729,11 +729,11 @@ class DataManagerAPITest(AuthenticationTestCase):
             ],
             'write_data': {'NA20870\t\t{"ENSG00000163092-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
-                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163092", "dot_size": 0.03454739,'
+                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163092",'
                            ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
                            'NA20870\t\t{"ENSG00000163093-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
-                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163093", "dot_size": 0.03454739,'
+                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163093",'
                            ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
             },
             'new_data': [
@@ -759,10 +759,10 @@ class DataManagerAPITest(AuthenticationTestCase):
             'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
             'get_models_json': lambda models: list(
                 models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'type', 'p_value', 'z_score', 'delta_psi',
-                                   'read_count', 'dot_size', 'rare_disease_samples_with_junction', 'rare_disease_samples_total')),
+                                   'read_count', 'rare_disease_samples_with_junction', 'rare_disease_samples_total')),
             'expected_models_json': [
-                ('ENSG00000163092', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 0.03850364, 1, 20),
-                ('ENSG00000106554', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 0.53953638, 1, 20)
+                ('ENSG00000163092', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
+                ('ENSG00000106554', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 1, 20)
             ],
             'sample_guid': RNA_SPLICE_SAMPLE_GUID,
         },
@@ -1003,7 +1003,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 mock_open.assert_called_with(file_name, 'rt')
 
                 self.assert_json_logs(self.data_manager_user, [
-                    (f'Loading outlier data for {sample_guid.split("_", 1)[1].upper()}', None),
+                    (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
                     (f'create {model_cls.__name__}s', {'dbUpdate': {
                         'dbEntity': model_cls.__name__, 'numEntities': 2, 'parentEntityIds': [sample_guid],
                         'updateType': 'bulk_create',
