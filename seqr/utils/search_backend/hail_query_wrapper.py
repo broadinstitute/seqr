@@ -883,7 +883,7 @@ class BaseHailTableQuery(object):
 
     def _sort_order(self, ht, sort):
         sort_ht = ht if self._comp_het_ht is None else hl.or_else(
-            ht[GROUPED_VARIANTS_FIELD][0].select(*self.SORT_FIELDS), ht.select(*self.SORT_FIELDS))
+            ht[GROUPED_VARIANTS_FIELD][0].select(*self.SORT_FIELDS), ht.row.select(*self.SORT_FIELDS))
         sort_expressions = self._get_sort_expressions(sort_ht, XPOS_SORT_KEY)
         if sort != XPOS_SORT_KEY:
             sort_expressions = self._get_sort_expressions(sort_ht, sort) + sort_expressions
