@@ -194,7 +194,6 @@ class BaseHailTableQuery(object):
         ))],
         XPOS_SORT_KEY: lambda r: [r.xpos],
     }
-    SORT_FIELDS = {'populations', 'predictions', 'transcripts', 'xpos'}
 
     @classmethod
     def populations_configs(cls):
@@ -240,8 +239,9 @@ class BaseHailTableQuery(object):
     def get_major_consequence(transcript):
         raise NotImplementedError
 
-    def __init__(self, data_type, samples, genome_version, gene_ids=None, **kwargs):
+    def __init__(self, data_type, samples, genome_version, gene_ids=None, sort=None, **kwargs):
         self._genome_version = genome_version
+        self._sort = sort
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
         self._allowed_consequences = None
@@ -261,6 +261,8 @@ class BaseHailTableQuery(object):
             inheritance_mode=inheritance_mode, has_location_search=bool(intervals) and not exclude_intervals,
             exclude_intervals=exclude_intervals, **kwargs,
         )
+
+        self._ht = self._ht.annotate(sort=self._sort_order())
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
             is_all_recessive_search = inheritance_mode == RECESSIVE
@@ -860,7 +862,7 @@ class BaseHailTableQuery(object):
         return results.select(
             'genomeVersion', *self.CORE_FIELDS, *set(list(self.COMPUTED_ANNOTATION_FIELDS.keys()) + list(self.annotation_fields.keys())))
 
-    def search(self, page, num_results, sort):
+    def search(self, page, num_results):
         if self._ht:
             ht = self._format_results(self._ht)
             if self._comp_het_ht:
@@ -872,8 +874,7 @@ class BaseHailTableQuery(object):
             raise InvalidSearchException('Filters must be applied before search')
 
         # TODO #2496: page
-        (total_results, collected) = ht.aggregate(
-            (hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=self._sort_order(ht, sort))))
+        (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=ht.sort)))
         logger.info(f'Total hits: {total_results}')
 
         hail_results = [
@@ -881,39 +882,37 @@ class BaseHailTableQuery(object):
         ]
         return hail_results, total_results
 
-    def _sort_order(self, ht, sort):
-        sort_ht = ht if self._comp_het_ht is None else hl.or_else(
-            ht[GROUPED_VARIANTS_FIELD][0].select(*self.SORT_FIELDS), ht.row.select(*self.SORT_FIELDS))
-        sort_expressions = self._get_sort_expressions(sort_ht, XPOS_SORT_KEY)
-        if sort != XPOS_SORT_KEY:
-            sort_expressions = self._get_sort_expressions(sort_ht, sort) + sort_expressions
-        return hl.array(sort_expressions)
+    def _sort_order(self):
+        sort_expressions = self._get_sort_expressions(XPOS_SORT_KEY)
+        if self._sort != XPOS_SORT_KEY:
+            sort_expressions = self._get_sort_expressions(self._sort) + sort_expressions
+        return sort_expressions
 
-    def _get_sort_expressions(self, ht, sort):
+    def _get_sort_expressions(self, sort):
         if sort in self.SORTS:
-            return self.SORTS[sort](ht)
+            return self.SORTS[sort](self._ht)
 
         sort_expression = None
         if sort in POPULATION_SORTS:
             pop_fields = [pop for pop in POPULATION_SORTS[sort] if pop in self.POPULATIONS]
             if pop_fields:
-                sort_expression = ht.populations[pop_fields[0]].af
+                sort_expression = self._ht.populations[pop_fields[0]].af
                 for pop_field in pop_fields[1:]:
-                    sort_expression = hl.or_else(sort_expression, ht.populations[pop_field].af)
+                    sort_expression = hl.or_else(sort_expression, self._ht.populations[pop_field].af)
 
         elif sort in self.PREDICTION_FIELDS_CONFIG:
-            sort_expression = -ht.predictions[sort]
+            sort_expression = -self._ht.predictions[sort]
 
         elif sort == 'in_omim':
             omim_genes = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True)
-            sort_expression = -self._omim_sort(ht, hl.set(set(omim_genes)))
+            sort_expression = -self._omim_sort(self._ht, hl.set(set(omim_genes)))
 
         elif sort == 'constraint':
             constraint_ranks = {
                 agg['gene__gene_id']: agg['mis_z_rank'] + agg['pLI_rank'] for agg in
                 GeneConstraint.objects.values('gene__gene_id', 'mis_z_rank', 'pLI_rank')
             }
-            sort_expression = self._gene_rank_sort(ht, constraint_ranks)
+            sort_expression = self._gene_rank_sort(self._ht, constraint_ranks)
 
         elif sort == 'prioritized_gene':
             if not self._family_guid:
@@ -924,7 +923,7 @@ class BaseHailTableQuery(object):
                 ).values('gene_id').annotate(min_rank=Min('rank'))
             }
             if family_ranks:
-                sort_expression = self._gene_rank_sort(ht, family_ranks)
+                sort_expression = self._gene_rank_sort(self._ht, family_ranks)
 
         return [sort_expression] if sort_expression is not None else []
 
@@ -997,8 +996,6 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     SORTS[CONSEQUENCE_SORT_KEY] = lambda r: BaseHailTableQuery.SORTS[CONSEQUENCE_SORT_KEY](r) + [
         hl.dict(CONSEQUENCE_RANK_MAP)[BaseVariantHailTableQuery._get_formatted_main_transcript(r).majorConsequence],
     ]
-    SORT_FIELDS = {'clinvar', 'selectedMainTranscriptId', 'mainTranscriptId'}
-    SORT_FIELDS.update(BaseHailTableQuery.SORT_FIELDS)
 
     def _selected_main_transcript_expr(self, results):
         if not (self._filtered_genes or self._allowed_consequences):
@@ -1142,8 +1139,6 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: BaseVariantHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [
         hl.dict(HGMD_CLASS_MAP)[r.hgmd['class']],
     ]
-    SORT_FIELDS = {'hgmd'}
-    SORT_FIELDS.update(BaseVariantHailTableQuery.SORT_FIELDS)
 
     @classmethod
     def _validate_search_criteria(cls, num_families=None, has_location_search=None, inheritance_mode=None, **kwargs):
@@ -1267,8 +1262,6 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
         'size': lambda r: [hl.if_else(hl.set({'BND', 'CTX'}).contains(r.svType), -50, r.pos - r.end)],
     }
     SORTS.update(BaseHailTableQuery.SORTS)
-    SORT_FIELDS = {'svType', 'pos', 'end'}
-    SORT_FIELDS.update(BaseHailTableQuery.SORT_FIELDS)
 
     @classmethod
     def import_filtered_table(cls, data_type, samples, intervals=None, exclude_intervals=False, **kwargs):
@@ -1387,7 +1380,6 @@ class MultiDataTypeHailTableQuery(object):
         self.BASE_ANNOTATION_FIELDS = {}
         self.COMPUTED_ANNOTATION_FIELDS = {}
         self.SORTS = {}
-        self.SORT_FIELDS = set()
 
         self.CORE_FIELDS = set()
         for cls in [QUERY_CLASS_MAP[dt] for dt in self._data_types]:
@@ -1397,7 +1389,6 @@ class MultiDataTypeHailTableQuery(object):
             self.COMPUTED_ANNOTATION_FIELDS.update(cls.COMPUTED_ANNOTATION_FIELDS)
             self.CORE_FIELDS.update(cls.CORE_FIELDS)
             self.SORTS.update(cls.SORTS)
-            self.SORT_FIELDS.update(cls.SORT_FIELDS)
         self.BASE_ANNOTATION_FIELDS.update({
             k: self._annotation_for_data_type(k) for k in self.DATA_TYPE_ANNOTATION_FIELDS
         })

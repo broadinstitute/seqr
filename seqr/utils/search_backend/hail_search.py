@@ -110,7 +110,7 @@ class HailSearch(object):
             data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations,
             gene_ids=None if exclude_locations else set(genes.keys()), variant_ids=variant_ids,
             inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter,
-            annotations=annotations, annotations_secondary=annotations_secondary,
+            annotations=annotations, annotations_secondary=annotations_secondary, sort=self._sort,
             **kwargs,
         )
 
@@ -131,7 +131,7 @@ class HailSearch(object):
         self.filter_variants(variant_ids=variant_ids)
 
     def search(self, page=1, num_results=100):
-        hail_results, total_results = self._query_wrapper.search(page, num_results, self._sort)
+        hail_results, total_results = self._query_wrapper.search(page, num_results)
         self.previous_search_results['total_results'] = total_results
         # TODO #2496 actually cache results
         return hail_results
