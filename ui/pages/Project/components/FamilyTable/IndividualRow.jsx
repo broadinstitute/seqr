@@ -40,7 +40,6 @@ import { getCurrentProject, getParentOptionsByIndividual } from '../../selectors
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 import CollapsableLayout from './CollapsableLayout'
 
-const RnaSeqOutliers = React.lazy(() => import('../RnaSeqOutliers'))
 const PhenotypePrioritizedGenes = React.lazy(() => import('../PhenotypePrioritizedGenes'))
 
 const Detail = styled.div`
@@ -131,13 +130,6 @@ CaseReviewStatus.propTypes = {
 }
 
 const SHOW_DATA_MODAL_CONFIG = [
-  {
-    shouldShowField: 'hasRnaOutlierData',
-    component: RnaSeqOutliers,
-    modalName: ({ sampleId }) => `OUTRIDER-${sampleId}`,
-    title: ({ sampleId }) => `RNA-Seq OUTRIDER: ${sampleId}`,
-    linkText: 'Show RNA-Seq OUTRIDER',
-  },
   {
     shouldShowField: 'hasPhenotypeGeneScores',
     component: PhenotypePrioritizedGenes,
