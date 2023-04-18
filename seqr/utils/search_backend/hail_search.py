@@ -37,12 +37,11 @@ class HailSearch(object):
             sample_type = s.pop('sample_type')
             data_type_key = f'{dataset_type}_{sample_type}' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else dataset_type
             self._sample_data_by_data_type[data_type_key].append(s)
-            genome_version_projects[s.pop('project_genome_version')].add(s.pop('project_name'))
+            genome_version_projects[GENOME_VERSION_LOOKUP[s.pop('project_genome_version')]].add(s.pop('project_name'))
 
         if len(genome_version_projects) > 1:
             project_builds = '; '.join(
-                f'{GENOME_VERSION_LOOKUP[build]} [{", ".join(projects)}]'
-                for build, projects in genome_version_projects.items())
+                f'{build} [{", ".join(projects)}]' for build, projects in genome_version_projects.items())
             raise InvalidSearchException(
                 f'Search is only enabled on a single genome build, requested the following project builds: {project_builds}')
         self._genome_version = list(genome_version_projects.keys())[0]
