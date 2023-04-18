@@ -1,12 +1,15 @@
 from collections import defaultdict
+from django.db.models import F
 import logging
 
+from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Sample
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, NEW_SV_FIELD, SCREEN_KEY
 from seqr.utils.elasticsearch.es_search import EsSearch
 from seqr.utils.search_backend.hail_query_wrapper import QUERY_CLASS_MAP, STRUCTURAL_ANNOTATION_FIELD, \
     AllVariantHailTableQuery, AllSvHailTableQuery, AllDataTypeHailTableQuery
+from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 
 logger = logging.getLogger(__name__)
 
@@ -16,16 +19,30 @@ SV_ANNOTATION_TYPES = {'structural_consequence', STRUCTURAL_ANNOTATION_FIELD, NE
 class HailSearch(object):
 
     def __init__(self, families, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
-        self.samples = Sample.objects.filter(
-            is_active=True, individual__family__in=families,
-        ).select_related('individual__family', 'individual__family__project')
+        sample_data = Sample.objects.filter(is_active=True, individual__family__in=families).values(
+            'sample_id', 'dataset_type', 'sample_type',
+            individual_guid=F('individual__guid'),
+            family_guid=F('individual__family__guid'),
+            project_guid=F('individual__family__project__guid'),
+            affected=F('individual__affected'),
+            sex=F('individual__sex'),
+            project_name=F('individual__family__project__name'),
+            project_genome_version=F('individual__family__project__genome_version'),
+        )
 
-        projects = {s.individual.family.project for s in self.samples}
-        genome_version_projects = defaultdict(list)
-        for p in projects:
-            genome_version_projects[p.get_genome_version_display()].append(p.name)
+        self._sample_data_by_data_type = defaultdict(list)
+        genome_version_projects = defaultdict(set)
+        for s in sample_data:
+            dataset_type = s.pop('dataset_type')
+            sample_type = s.pop('sample_type')
+            data_type_key = f'{dataset_type}_{sample_type}' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else dataset_type
+            self._sample_data_by_data_type[data_type_key].append(s)
+            genome_version_projects[s.pop('project_genome_version')].add(s.pop('project_name'))
+
         if len(genome_version_projects) > 1:
-            project_builds = '; '.join(f'{build} [{", ".join(projects)}]' for build, projects in genome_version_projects.items())
+            project_builds = '; '.join(
+                f'{GENOME_VERSION_LOOKUP[build]} [{", ".join(projects)}]'
+                for build, projects in genome_version_projects.items())
             raise InvalidSearchException(
                 f'Search is only enabled on a single genome build, requested the following project builds: {project_builds}')
         self._genome_version = list(genome_version_projects.keys())[0]
@@ -36,18 +53,7 @@ class HailSearch(object):
         self.previous_search_results = previous_search_results or {}
 
     def _load_filtered_table(self, data_type, **kwargs):
-        sample_data_by_data_type = defaultdict(list)
-        for s in self.samples:
-            data_type_key = f'{s.dataset_type}_{s.sample_type}' if s.dataset_type == Sample.DATASET_TYPE_SV_CALLS else s.dataset_type
-            sample_data_by_data_type[data_type_key].append({
-                'sampleId': s.sample_id,
-                'individualGuid': s.individual.guid,
-                'affected': s.individual.affected,
-                'sex': s.individual.sex,  # TODO do inheritance filter to genotype mapping before wrapper
-                'familyGuid': s.individual.family.guid,
-                'projectGuid': s.individual.family.project.guid,
-            })  # TODO should use values for django query
-        data_types = list(sample_data_by_data_type.keys())
+        data_types = list(self._sample_data_by_data_type.keys())
 
         if data_type == Sample.DATASET_TYPE_VARIANT_CALLS:
             data_types = [
@@ -55,16 +61,15 @@ class HailSearch(object):
             ]
         elif data_type == Sample.DATASET_TYPE_SV_CALLS:
             data_types = [dt for dt in data_types if dt.startswith(Sample.DATASET_TYPE_SV_CALLS)]
-            sample_data_by_data_type = {k: v for k, v in sample_data_by_data_type.items() if k.startswith(Sample.DATASET_TYPE_SV_CALLS)}
 
         single_data_type = data_types[0] if len(data_types) == 1 else None
 
         if single_data_type:
-            sample_data = sample_data_by_data_type[single_data_type]
+            sample_data = self._sample_data_by_data_type[single_data_type]
             data_type = single_data_type
             query_cls = QUERY_CLASS_MAP[single_data_type]
         else:
-            sample_data = sample_data_by_data_type
+            sample_data = {k: v for k, v in self._sample_data_by_data_type.items() if k in data_types}
             data_type = data_types
             is_all_svs = all(dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in data_types)
             is_no_sv = all(not dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in data_types)
@@ -139,5 +144,5 @@ class HailSearch(object):
         end_offset = num_results * page
         hail_results, total_results = self._query_wrapper.search(end_offset)
         self.previous_search_results['total_results'] = total_results
-        self.previous_search_results['all_results'] = hail_results
+        # self.previous_search_results['all_results'] = hail_results  TODO re-enable
         return hail_results[end_offset - num_results:end_offset]

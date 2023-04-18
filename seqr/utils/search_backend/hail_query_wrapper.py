@@ -292,8 +292,8 @@ class BaseHailTableQuery(object):
         family_samples = defaultdict(list)
         project_samples = defaultdict(list)
         for s in sample_data:
-            family_samples[s['familyGuid']].append(s)
-            project_samples[s['projectGuid']].append(s)
+            family_samples[s['family_guid']].append(s)
+            project_samples[s['project_guid']].append(s)
         cls._validate_search_criteria(
             num_projects=len(project_samples), num_families=len(family_samples), inheritance_mode=inheritance_mode, **kwargs)
 
@@ -429,7 +429,7 @@ class BaseHailTableQuery(object):
     def _add_entry_sample_families(cls, ht, sample_data, family_guid):
         sample_index_id_map = dict(enumerate(hl.eval(ht.sample_ids)))
         sample_id_index_map = {v: k for k, v in sample_index_id_map.items()}
-        sample_individual_map = {s['sampleId']: s['individualGuid'] for s in sample_data}
+        sample_individual_map = {s['sample_id']: s['individual_guid'] for s in sample_data}
         missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
         if missing_samples:
             raise InvalidSearchException(
@@ -438,7 +438,7 @@ class BaseHailTableQuery(object):
         sample_index_individual_map = {
             sample_id_index_map[sample_id]: i_guid for sample_id, i_guid in sample_individual_map.items()
         }
-        sample_index_family_map = {sample_id_index_map[s['sampleId']]: s['familyGuid'] for s in sample_data}
+        sample_index_family_map = {sample_id_index_map[s['sample_id']]: s['family_guid'] for s in sample_data}
 
         ht = ht.annotate(entries=hl.enumerate(ht.entries).map(
             lambda x: hl.or_else(x[1], cls._missing_entry(x[1])).annotate(
@@ -464,11 +464,11 @@ class BaseHailTableQuery(object):
 
         individual_affected_status = inheritance_filter.get('affected') or {}
         sample_affected_statuses = {
-            s: individual_affected_status.get(s['individualGuid']) or s['affected']
+            s: individual_affected_status.get(s['individual_guid']) or s['affected']
             for s in sample_data
         }
         affected_status_samples = {
-            s['sampleId'] for s, status in sample_affected_statuses.items() if status == AFFECTED
+            s['sample_id'] for s, status in sample_affected_statuses.items() if status == AFFECTED
         }
         if not affected_status_samples:
             raise InvalidSearchException(
@@ -506,11 +506,11 @@ class BaseHailTableQuery(object):
         individual_genotype_filter = inheritance_filter.get('genotype') or {}
         
         for s, status in sample_affected_statuses.items():
-            genotype = individual_genotype_filter.get(s['individualGuid']) or inheritance_filter.get(status)
+            genotype = individual_genotype_filter.get(s['individual_guid']) or inheritance_filter.get(status)
             if inheritance_mode == X_LINKED_RECESSIVE and status == UNAFFECTED and s['sex'] == Individual.SEX_MALE:
                 genotype = REF_REF
             if genotype:
-                entry_index = sample_id_index_map[s['sampleId']]
+                entry_index = sample_id_index_map[s['sample_id']]
                 ht = ht.annotate(families=hl.if_else(
                     cls.GENOTYPE_QUERY_MAP[genotype](ht.entries[entry_index].GT), ht.families,
                     ht.families.remove(ht.entries[entry_index].familyGuid)
@@ -521,7 +521,7 @@ class BaseHailTableQuery(object):
     @classmethod
     def _annotate_possible_comp_hets(cls, ht, sample_affected_statuses):
         unaffected_samples = {
-            s['sampleId'] for s, status in sample_affected_statuses.items() if status == UNAFFECTED
+            s['sample_id'] for s, status in sample_affected_statuses.items() if status == UNAFFECTED
         }
 
         return ht.annotate(compHetFamilyCarriers=hl.dict(ht.entries.group_by(lambda x: x.familyGuid).items().map(
