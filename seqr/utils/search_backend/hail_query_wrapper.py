@@ -236,7 +236,7 @@ class BaseHailTableQuery(object):
     def get_major_consequence(transcript):
         raise NotImplementedError
 
-    def __init__(self, data_type, samples, genome_version, gene_ids=None, sort=None, **kwargs):
+    def __init__(self, data_type, sample_data, genome_version, gene_ids=None, sort=None, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
         self._comp_het_ht = None
@@ -244,15 +244,15 @@ class BaseHailTableQuery(object):
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
 
-        self._load_filtered_table(data_type, samples, **kwargs)
+        self._load_filtered_table(data_type, sample_data, **kwargs)
 
-    def _load_filtered_table(self, data_type, samples, intervals=None, exclude_intervals=False, inheritance_mode=None,
+    def _load_filtered_table(self, data_type, sample_data, intervals=None, exclude_intervals=False, inheritance_mode=None,
                              pathogenicity=None, annotations=None, annotations_secondary=None, **kwargs):
 
         consequence_overrides = self._parse_overrides(pathogenicity, annotations, annotations_secondary)
 
         self._ht, self._family_guid = self.import_filtered_table(
-            data_type, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
+            data_type, sample_data, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
             consequence_overrides=consequence_overrides, allowed_consequences=self._allowed_consequences,
             allowed_consequences_secondary=self._allowed_consequences_secondary, filtered_genes=self._filtered_genes,
             inheritance_mode=inheritance_mode, has_location_search=bool(intervals) and not exclude_intervals,
@@ -273,7 +273,7 @@ class BaseHailTableQuery(object):
                 self._ht = None
 
     @classmethod
-    def import_filtered_table(cls, data_type, samples, intervals=None, inheritance_mode=None, quality_filter=None,
+    def import_filtered_table(cls, data_type, sample_data, intervals=None, inheritance_mode=None, quality_filter=None,
                               consequence_overrides=None, genome_version=None, **kwargs):
         tables_path = f'/hail_datasets/{genome_version}/{data_type}'
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
@@ -291,10 +291,9 @@ class BaseHailTableQuery(object):
 
         family_samples = defaultdict(list)
         project_samples = defaultdict(list)
-        for s in samples:
-            family = s.individual.family
-            family_samples[family].append(s)
-            project_samples[family.project].append(s)
+        for s in sample_data:
+            family_samples[s['familyGuid']].append(s)
+            project_samples[s['projectGuid']].append(s)
         cls._validate_search_criteria(
             num_projects=len(project_samples), num_families=len(family_samples), inheritance_mode=inheritance_mode, **kwargs)
 
@@ -305,21 +304,20 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading data for {len(family_samples)} families in {len(project_samples)} projects ({cls.__name__})')
         family_guid = None
         if len(family_samples) == 1:
-            f, f_samples = list(family_samples.items())[0]
-            family_guid = f.guid
-            family_ht = hl.read_table(f'{tables_path}/families/{f.guid}.ht', **load_table_kwargs)
+            family_guid, family_sample_data = list(family_samples.items())[0]
+            family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht', **load_table_kwargs)
             families_ht = cls._filter_entries_table(
-                family_ht, family_guid=f.guid, samples=f_samples, **family_filter_kwargs)
+                family_ht, family_guid=family_guid, sample_data=family_sample_data, **family_filter_kwargs)
         else:
             filtered_project_hts = []
             exception_messages = set()
-            for project, samples in project_samples.items():
-                project_ht = hl.read_table(f'{tables_path}/projects/{project.guid}.ht', **load_table_kwargs)
+            for project_guid, project_sample_data in project_samples.items():
+                project_ht = hl.read_table(f'{tables_path}/projects/{project_guid}.ht', **load_table_kwargs)
                 try:
                     filtered_project_hts.append(cls._filter_entries_table(
-                        project_ht, samples=samples, table_name=project.guid, **family_filter_kwargs))
+                        project_ht, sample_data=project_sample_data, table_name=project_guid, **family_filter_kwargs))
                 except InvalidSearchException as e:
-                    logger.info(f'Skipped {project.guid}: {e}')
+                    logger.info(f'Skipped {project_guid}: {e}')
                     exception_messages.add(str(e))
 
             if len(filtered_project_hts) < 1:
@@ -390,13 +388,13 @@ class BaseHailTableQuery(object):
         return family_set_fields, family_dict_fields
 
     @classmethod
-    def _filter_entries_table(cls, ht, family_guid=None, samples=None, inheritance_mode=None, inheritance_filter=None,
+    def _filter_entries_table(cls, ht, family_guid=None, sample_data=None, inheritance_mode=None, inheritance_filter=None,
                               genome_version=None, quality_filter=None, clinvar_path_terms=None, consequence_overrides=None,
                               table_name=None, **kwargs):
         table_name = family_guid or table_name
         logger.info(f'Initial count for {table_name}: {ht.count()}')
 
-        ht, sample_id_index_map = cls._add_entry_sample_families(ht, samples, family_guid)
+        ht, sample_id_index_map = cls._add_entry_sample_families(ht, sample_data, family_guid)
 
         if inheritance_mode == X_LINKED_RECESSIVE:
             x_chrom_interval = hl.parse_locus_interval(
@@ -404,7 +402,7 @@ class BaseHailTableQuery(object):
             ht = ht.filter(cls.get_x_chrom_filter(ht, x_chrom_interval))
 
         ht = cls._filter_inheritance(
-            ht, inheritance_mode, inheritance_filter or {}, samples, sample_id_index_map,
+            ht, inheritance_mode, inheritance_filter or {}, sample_data, sample_id_index_map,
             consequence_overrides=consequence_overrides,
         )
 
@@ -428,10 +426,10 @@ class BaseHailTableQuery(object):
             ))).select_globals()
 
     @classmethod
-    def _add_entry_sample_families(cls, ht, samples, family_guid):
+    def _add_entry_sample_families(cls, ht, sample_data, family_guid):
         sample_index_id_map = dict(enumerate(hl.eval(ht.sample_ids)))
         sample_id_index_map = {v: k for k, v in sample_index_id_map.items()}
-        sample_individual_map = {s.sample_id: s.individual.guid for s in samples}
+        sample_individual_map = {s['sampleId']: s['individualGuid'] for s in sample_data}
         missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
         if missing_samples:
             raise InvalidSearchException(
@@ -440,7 +438,7 @@ class BaseHailTableQuery(object):
         sample_index_individual_map = {
             sample_id_index_map[sample_id]: i_guid for sample_id, i_guid in sample_individual_map.items()
         }
-        sample_index_family_map = {sample_id_index_map[s.sample_id]: s.individual.family.guid for s in samples}
+        sample_index_family_map = {sample_id_index_map[s['sampleId']]: s['familyGuid'] for s in sample_data}
 
         ht = ht.annotate(entries=hl.enumerate(ht.entries).map(
             lambda x: hl.or_else(x[1], cls._missing_entry(x[1])).annotate(
@@ -460,17 +458,17 @@ class BaseHailTableQuery(object):
         return hl.struct(**{k: hl.missing(v) for k, v in entry_type.items()})
 
     @classmethod
-    def _filter_inheritance(cls, ht, inheritance_mode, inheritance_filter, samples, sample_id_index_map, **kwargs):
+    def _filter_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_data, sample_id_index_map, **kwargs):
         if not (inheritance_filter or inheritance_mode):
             return ht
 
         individual_affected_status = inheritance_filter.get('affected') or {}
         sample_affected_statuses = {
-            s: individual_affected_status.get(s.individual.guid) or s.individual.affected
-            for s in samples
+            s: individual_affected_status.get(s['individualGuid']) or s['affected']
+            for s in sample_data
         }
         affected_status_samples = {
-            s.sample_id for s, status in sample_affected_statuses.items() if status == AFFECTED
+            s['sampleId'] for s, status in sample_affected_statuses.items() if status == AFFECTED
         }
         if not affected_status_samples:
             raise InvalidSearchException(
@@ -508,11 +506,11 @@ class BaseHailTableQuery(object):
         individual_genotype_filter = inheritance_filter.get('genotype') or {}
         
         for s, status in sample_affected_statuses.items():
-            genotype = individual_genotype_filter.get(s.individual.guid) or inheritance_filter.get(status)
-            if inheritance_mode == X_LINKED_RECESSIVE and status == UNAFFECTED and s.individual.sex == Individual.SEX_MALE:
+            genotype = individual_genotype_filter.get(s['individualGuid']) or inheritance_filter.get(status)
+            if inheritance_mode == X_LINKED_RECESSIVE and status == UNAFFECTED and s['sex'] == Individual.SEX_MALE:
                 genotype = REF_REF
             if genotype:
-                entry_index = sample_id_index_map[s.sample_id]
+                entry_index = sample_id_index_map[s['sampleId']]
                 ht = ht.annotate(families=hl.if_else(
                     cls.GENOTYPE_QUERY_MAP[genotype](ht.entries[entry_index].GT), ht.families,
                     ht.families.remove(ht.entries[entry_index].familyGuid)
@@ -523,7 +521,7 @@ class BaseHailTableQuery(object):
     @classmethod
     def _annotate_possible_comp_hets(cls, ht, sample_affected_statuses):
         unaffected_samples = {
-            s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED
+            s['sampleId'] for s, status in sample_affected_statuses.items() if status == UNAFFECTED
         }
 
         return ht.annotate(compHetFamilyCarriers=hl.dict(ht.entries.group_by(lambda x: x.familyGuid).items().map(
@@ -1040,9 +1038,9 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     }
 
     @classmethod
-    def import_filtered_table(cls, data_type, samples, intervals=None, exclude_intervals=False, **kwargs):
+    def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, **kwargs):
         ht, family_guid = super(BaseVariantHailTableQuery, cls).import_filtered_table(
-            data_type, samples, intervals=None if exclude_intervals else intervals,
+            data_type, sample_data, intervals=None if exclude_intervals else intervals,
             excluded_intervals=intervals if exclude_intervals else None, **kwargs)
         ht = ht.key_by(VARIANT_KEY_FIELD)
         return ht, family_guid
@@ -1271,8 +1269,8 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     SORTS.update(BaseHailTableQuery.SORTS)
 
     @classmethod
-    def import_filtered_table(cls, data_type, samples, intervals=None, exclude_intervals=False, **kwargs):
-        ht, family_guid = super(BaseSvHailTableQuery, cls).import_filtered_table(data_type, samples, **kwargs)
+    def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, **kwargs):
+        ht, family_guid = super(BaseSvHailTableQuery, cls).import_filtered_table(data_type, sample_data, **kwargs)
         if intervals:
             interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
                 if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
@@ -1422,10 +1420,10 @@ class MultiDataTypeHailTableQuery(object):
         )
 
     @classmethod
-    def import_filtered_table(cls, data_type, samples, **kwargs):
+    def import_filtered_table(cls, data_type, sample_data, **kwargs):
         data_type_0 = data_type[0]
 
-        ht, family_guid = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type_0, samples[data_type_0], **kwargs)
+        ht, family_guid = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type_0, sample_data[data_type_0], **kwargs)
         ht = ht.annotate(dataType=data_type_0)
 
         all_type_merge_fields = {'dataType', 'familyGuids', 'override_consequences', 'rg37_locus', 'xpos'}
@@ -1436,7 +1434,7 @@ class MultiDataTypeHailTableQuery(object):
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
         for dt in data_type[1:]:
             data_type_cls = QUERY_CLASS_MAP[dt]
-            sub_ht, new_family_guid = data_type_cls.import_filtered_table(dt, samples[dt], **kwargs)
+            sub_ht, new_family_guid = data_type_cls.import_filtered_table(dt, sample_data[dt], **kwargs)
             if new_family_guid != family_guid:
                 family_guid = None
             sub_ht = sub_ht.annotate(dataType=dt)

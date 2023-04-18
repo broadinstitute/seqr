@@ -36,11 +36,18 @@ class HailSearch(object):
         self.previous_search_results = previous_search_results or {}
 
     def _load_filtered_table(self, data_type, **kwargs):
-        samples_by_data_type = defaultdict(list)
+        sample_data_by_data_type = defaultdict(list)
         for s in self.samples:
             data_type_key = f'{s.dataset_type}_{s.sample_type}' if s.dataset_type == Sample.DATASET_TYPE_SV_CALLS else s.dataset_type
-            samples_by_data_type[data_type_key].append(s)
-        data_types = list(samples_by_data_type.keys())
+            sample_data_by_data_type[data_type_key].append({
+                'sampleId': s.sample_id,
+                'individualGuid': s.individual.guid,
+                'affected': s.individual.affected,
+                'sex': s.individual.sex,  # TODO do inheritance filter to genotype mapping before wrapper
+                'familyGuid': s.individual.family.guid,
+                'projectGuid': s.individual.family.project.guid,
+            })  # TODO should use values for django query
+        data_types = list(sample_data_by_data_type.keys())
 
         if data_type == Sample.DATASET_TYPE_VARIANT_CALLS:
             data_types = [
@@ -48,16 +55,16 @@ class HailSearch(object):
             ]
         elif data_type == Sample.DATASET_TYPE_SV_CALLS:
             data_types = [dt for dt in data_types if dt.startswith(Sample.DATASET_TYPE_SV_CALLS)]
-            samples_by_data_type = {k: v for k, v in samples_by_data_type.items() if k.startswith(Sample.DATASET_TYPE_SV_CALLS)}
+            sample_data_by_data_type = {k: v for k, v in sample_data_by_data_type.items() if k.startswith(Sample.DATASET_TYPE_SV_CALLS)}
 
         single_data_type = data_types[0] if len(data_types) == 1 else None
 
         if single_data_type:
-            samples = samples_by_data_type[single_data_type]
+            sample_data = sample_data_by_data_type[single_data_type]
             data_type = single_data_type
             query_cls = QUERY_CLASS_MAP[single_data_type]
         else:
-            samples = samples_by_data_type
+            sample_data = sample_data_by_data_type
             data_type = data_types
             is_all_svs = all(dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in data_types)
             is_no_sv = all(not dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in data_types)
@@ -69,7 +76,7 @@ class HailSearch(object):
             else:
                 query_cls = AllDataTypeHailTableQuery
 
-        self._query_wrapper = query_cls(data_type, samples=samples, genome_version=self._genome_version, **kwargs)
+        self._query_wrapper = query_cls(data_type, sample_data=sample_data, genome_version=self._genome_version, **kwargs)
 
     @classmethod
     def process_previous_results(cls, *args, **kwargs):
