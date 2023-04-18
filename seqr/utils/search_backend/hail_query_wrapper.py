@@ -874,7 +874,7 @@ class BaseHailTableQuery(object):
             raise InvalidSearchException('Filters must be applied before search')
 
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=ht._sort)))
-        logger.info(f'Total hits: {total_results}')
+        logger.info(f'Total hits: {total_results}. Fetched: {num_results}')
 
         hail_results = [
             self._json_serialize(row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD)) for row in collected
