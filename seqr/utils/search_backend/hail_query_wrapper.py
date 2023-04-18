@@ -861,7 +861,7 @@ class BaseHailTableQuery(object):
             'genomeVersion', '_sort', *self.CORE_FIELDS,
             *set(list(self.COMPUTED_ANNOTATION_FIELDS.keys()) + list(self.annotation_fields.keys())))
 
-    def search(self, page, num_results):
+    def search(self, num_results):
         if self._ht:
             ht = self._format_results(self._ht)
             if self._comp_het_ht:
@@ -873,7 +873,6 @@ class BaseHailTableQuery(object):
         if not ht:
             raise InvalidSearchException('Filters must be applied before search')
 
-        # TODO #3330: page
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}')
 

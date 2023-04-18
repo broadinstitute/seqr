@@ -131,7 +131,8 @@ class HailSearch(object):
         self.filter_variants(variant_ids=variant_ids)
 
     def search(self, page=1, num_results=100):
-        hail_results, total_results = self._query_wrapper.search(page, num_results)
+        end_offset = num_results * page
+        hail_results, total_results = self._query_wrapper.search(end_offset)
         self.previous_search_results['total_results'] = total_results
         # TODO #3330 actually cache results
-        return hail_results
+        return hail_results[end_offset - num_results:end_offset]
