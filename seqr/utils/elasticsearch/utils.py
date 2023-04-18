@@ -104,7 +104,7 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
     variant_ids = None
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
     if invalid_items:
-        raise InvalidSearchException('HELLO DAN! Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
+        raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
     if not (genes or intervals):
         rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
         if invalid_items:

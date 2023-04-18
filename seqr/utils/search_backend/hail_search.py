@@ -72,10 +72,8 @@ class HailSearch(object):
         self._query_wrapper = query_cls(data_type, samples=samples, genome_version=self._genome_version, **kwargs)
 
     @classmethod
-    def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
-        # return EsSearch.process_previous_results(*args, **kwargs)
-        # TODO #3330: re-enable caching, not helpful for initial development
-        return None, {'page': page, 'num_results': num_results}
+    def process_previous_results(cls, *args, **kwargs):
+        return EsSearch.process_previous_results(*args, **kwargs)
 
     def filter_variants(self, inheritance=None, genes=None, intervals=None, variant_ids=None, locus=None,
                         annotations=None, annotations_secondary=None, skip_genotype_filter=False,
@@ -134,6 +132,5 @@ class HailSearch(object):
         end_offset = num_results * page
         hail_results, total_results = self._query_wrapper.search(end_offset)
         self.previous_search_results['total_results'] = total_results
-        logger.info(f'Fetched: {end_offset}. Returned: {len(hail_results)}. Page len: {len(hail_results[end_offset - num_results:end_offset])}')
-        # TODO #3330 actually cache results
+        self.previous_search_results['all_results'] = hail_results
         return hail_results[end_offset - num_results:end_offset]
