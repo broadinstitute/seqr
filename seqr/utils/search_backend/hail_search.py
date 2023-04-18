@@ -134,5 +134,6 @@ class HailSearch(object):
         end_offset = num_results * page
         hail_results, total_results = self._query_wrapper.search(end_offset)
         self.previous_search_results['total_results'] = total_results
+        logger.info(f'Fetched: {end_offset}. Returned: {len(hail_results)}. Page len: {len(hail_results[end_offset - num_results:end_offset])}')
         # TODO #3330 actually cache results
         return hail_results[end_offset - num_results:end_offset]
