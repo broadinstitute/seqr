@@ -446,7 +446,7 @@ def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_column
                 gene_or_unique_id = row_dict['gene_id']
             existing_data = samples_by_id[(sample_id, project)].get(gene_or_unique_id)
             if existing_data and existing_data != row_dict:
-                errors.append(f'Error in {sample_id} data for {existing_data["gene_id"]}: mismatched entries '
+                errors.append(f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries '
                               f'{existing_data} and {row_dict}')
 
             if indiv_id and sample_id not in sample_id_to_individual_id_mapping:
