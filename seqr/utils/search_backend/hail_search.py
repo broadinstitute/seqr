@@ -2,8 +2,8 @@ from collections import defaultdict
 from django.db.models import F
 import logging
 
-from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Sample
+from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
+from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, NEW_SV_FIELD, SCREEN_KEY
 from seqr.utils.elasticsearch.es_search import EsSearch
@@ -31,12 +31,14 @@ class HailSearch(object):
         )
 
         self._sample_data_by_data_type = defaultdict(list)
+        families = set()
         genome_version_projects = defaultdict(set)
         for s in sample_data:
             dataset_type = s.pop('dataset_type')
             sample_type = s.pop('sample_type')
             data_type_key = f'{dataset_type}_{sample_type}' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else dataset_type
             self._sample_data_by_data_type[data_type_key].append(s)
+            families.add(s['family_guid'])
             genome_version_projects[GENOME_VERSION_LOOKUP[s.pop('project_genome_version')]].add(s.pop('project_name'))
 
         if len(genome_version_projects) > 1:
@@ -45,6 +47,8 @@ class HailSearch(object):
             raise InvalidSearchException(
                 f'Search is only enabled on a single genome build, requested the following project builds: {project_builds}')
         self._genome_version = list(genome_version_projects.keys())[0]
+
+        self._family_guid = families.pop() if len(families) == 1 else None
 
         self._user = user
         self._sort = sort
@@ -119,11 +123,29 @@ class HailSearch(object):
             parsed_intervals = ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
                 '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
 
+        sort_metadata = None
+        if self._sort == 'in_omim':
+            sort_metadata = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True)
+        elif self._sort == 'constraint':
+            sort_metadata = {
+                agg['gene__gene_id']: agg['mis_z_rank'] + agg['pLI_rank'] for agg in
+                GeneConstraint.objects.values('gene__gene_id', 'mis_z_rank', 'pLI_rank')
+            }
+        elif self._sort == 'prioritized_gene':
+            if not self._family_guid:
+                raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
+            sort_metadata = {
+                agg['gene_id']: agg['min_rank'] for agg in PhenotypePrioritization.objects.filter(
+                    individual__family__guid=self._family_guid, rank__lte=100,
+                ).values('gene_id').annotate(min_rank=Min('rank'))
+            }
+
         self._load_filtered_table(
             data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations,
             gene_ids=None if exclude_locations else set(genes.keys()), variant_ids=variant_ids,
             inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter,
-            annotations=annotations, annotations_secondary=annotations_secondary, sort=self._sort,
+            annotations=annotations, annotations_secondary=annotations_secondary,
+            sort=self._sort, sort_metadata=sort_metadata,
             **kwargs,
         )
 

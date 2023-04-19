@@ -5,8 +5,8 @@ import hail as hl
 import logging
 
 from seqr.views.utils.json_utils import _to_camel_case
-from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
-from seqr.models import Sample, Individual, PhenotypePrioritization
+from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
+from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, \
     INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, MAX_NO_LOCATION_COMP_HET_FAMILIES, \
@@ -236,9 +236,10 @@ class BaseHailTableQuery(object):
     def get_major_consequence(transcript):
         raise NotImplementedError
 
-    def __init__(self, data_type, sample_data, genome_version, gene_ids=None, sort=None, **kwargs):
+    def __init__(self, data_type, sample_data, genome_version, gene_ids=None, sort=None, sort_metadata=None, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
+        self._sort_metadata = sort_metadata
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
         self._allowed_consequences = None
@@ -896,26 +897,10 @@ class BaseHailTableQuery(object):
             sort_expression = -self._ht[prediction_path[0]][prediction_path[1]]
 
         elif sort == 'in_omim':
-            omim_genes = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True)
-            sort_expression = -self._omim_sort(hl.set(set(omim_genes)))
+            sort_expression = -self._omim_sort(hl.set(set(self._sort_metadata)))
 
-        elif sort == 'constraint':
-            constraint_ranks = {
-                agg['gene__gene_id']: agg['mis_z_rank'] + agg['pLI_rank'] for agg in
-                GeneConstraint.objects.values('gene__gene_id', 'mis_z_rank', 'pLI_rank')
-            }
-            sort_expression = self._gene_rank_sort(constraint_ranks)
-
-        elif sort == 'prioritized_gene':
-            if not self._family_guid:
-                raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
-            family_ranks = {
-                agg['gene_id']: agg['min_rank'] for agg in PhenotypePrioritization.objects.filter(
-                    individual__family__guid=self._family_guid, rank__lte=100,
-                ).values('gene_id').annotate(min_rank=Min('rank'))
-            }
-            if family_ranks:
-                sort_expression = self._gene_rank_sort(family_ranks)
+        elif self._sort_metadata:
+            sort_expression = self._gene_rank_sort(self._sort_metadata)
 
         return [sort_expression] if sort_expression is not None else []
 
