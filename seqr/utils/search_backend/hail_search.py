@@ -82,40 +82,40 @@ class HailSearch(object):
     @classmethod
     def process_previous_results(cls, *args, **kwargs):
         return EsSearch.process_previous_results(*args, **kwargs)
-
-    def filter_variants(self, inheritance=None, genes=None, intervals=None, variant_ids=None, locus=None,
-                        skip_genotype_filter=False, **kwargs):
-        inheritance_mode = (inheritance or {}).get('mode')
-        inheritance_filter = (inheritance or {}).get('filter') or {}
-        if inheritance_filter.get('genotype'):
-            inheritance_mode = None
-        if not inheritance_mode and inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
-            raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
-        if inheritance_filter.get('affected'):
-            for samples in self._sample_data_by_data_type.values():
-                for s in samples:
-                    s['affected'] = inheritance_filter['affected'].get(s['individual_guid']) or s['affected']
-
-        parsed_intervals = None
-        if variant_ids:
-            variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
-
-        genes = genes or {}
-        exclude_locations = (locus or {}).get('excludeLocations')
-        if genes or intervals:
-            gene_coords = [
-                {field: gene[f'{field}{self._genome_version.title()}'] for field in ['chrom', 'start', 'end']}
-                for gene in genes.values()
-            ]
-            parsed_intervals = ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
-                '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
-
-        self._search_body.update(dict(
-            intervals=parsed_intervals, exclude_intervals=exclude_locations,
-            gene_ids=None if exclude_locations else set(genes.keys()), variant_ids=variant_ids,
-            inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter,
-            **kwargs,
-        ))
+    #
+    # def filter_variants(self, inheritance=None, genes=None, intervals=None, variant_ids=None, locus=None,
+    #                     skip_genotype_filter=False, **kwargs):
+    #     inheritance_mode = (inheritance or {}).get('mode')
+    #     inheritance_filter = (inheritance or {}).get('filter') or {}
+    #     if inheritance_filter.get('genotype'):
+    #         inheritance_mode = None
+    #     if not inheritance_mode and inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
+    #         raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
+    #     if inheritance_filter.get('affected'):
+    #         for samples in self._sample_data_by_data_type.values():
+    #             for s in samples:
+    #                 s['affected'] = inheritance_filter['affected'].get(s['individual_guid']) or s['affected']
+    #
+    #     parsed_intervals = None
+    #     if variant_ids:
+    #         variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
+    #
+    #     genes = genes or {}
+    #     exclude_locations = (locus or {}).get('excludeLocations')
+    #     if genes or intervals:
+    #         gene_coords = [
+    #             {field: gene[f'{field}{self._genome_version.title()}'] for field in ['chrom', 'start', 'end']}
+    #             for gene in genes.values()
+    #         ]
+    #         parsed_intervals = ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
+    #             '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
+    #
+    #     self._search_body.update(dict(
+    #         intervals=parsed_intervals, exclude_intervals=exclude_locations,
+    #         gene_ids=None if exclude_locations else set(genes.keys()), variant_ids=variant_ids,
+    #         inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter,
+    #         **kwargs,
+    #     ))
 
     def filter_by_variant_ids(self, variant_ids):
         self.filter_variants(variant_ids=variant_ids)
