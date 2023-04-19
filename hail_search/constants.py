@@ -219,12 +219,3 @@ CHROMOSOMES = [
     'M',
 ]
 CHROM_TO_XPOS_OFFSET = {chrom: (1 + i)*int(1e9) for i, chrom in enumerate(CHROMOSOMES)}
-
-QUERY_CLASS_MAP = {
-    VARIANT_DATASET: VariantHailTableQuery,
-    MITO_DATASET: MitoHailTableQuery,
-    GCNV_KEY: GcnvHailTableQuery,
-    SV_KEY: SvHailTableQuery,
-}
-
-DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_type, cls in QUERY_CLASS_MAP.items()}

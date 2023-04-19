@@ -1,6 +1,7 @@
 from hail_search.constants import VARIANT_DATASET, SV_DATASET, MITO_DATASET, SCREEN_KEY, NEW_SV_FIELD, \
-    SV_ANNOTATION_TYPES, QUERY_CLASS_MAP
-from hail_search.hail_search_query import AllSvHailTableQuery, AllVariantHailTableQuery, AllDataTypeHailTableQuery
+    SV_ANNOTATION_TYPES
+from hail_search.hail_search_query import AllSvHailTableQuery, AllVariantHailTableQuery, AllDataTypeHailTableQuery, \
+    QUERY_CLASS_MAP
 
 
 def _search_data_type(variant_ids=None, annotations=None, annotations_secondary=None, **kwargs):
