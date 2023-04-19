@@ -5,9 +5,8 @@ import logging
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.elasticsearch.utils import InvalidSearchException
-from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, NEW_SV_FIELD, SCREEN_KEY
 from seqr.utils.elasticsearch.es_search import EsSearch
-from seqr.utils.search_backend.hail_query_wrapper import search_hail_backend, STRUCTURAL_ANNOTATION_FIELD
+from seqr.utils.search_backend.hail_query_wrapper import search_hail_backend
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 
 logger = logging.getLogger(__name__)
