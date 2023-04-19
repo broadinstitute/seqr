@@ -86,8 +86,7 @@ class HailSearch(object):
         return EsSearch.process_previous_results(*args, **kwargs)
 
     def filter_variants(self, inheritance=None, genes=None, intervals=None, variant_ids=None, locus=None,
-                        annotations=None, annotations_secondary=None, skip_genotype_filter=False,
-                        **kwargs):
+                        skip_genotype_filter=False, **kwargs):
         inheritance_mode = (inheritance or {}).get('mode')
         inheritance_filter = (inheritance or {}).get('filter') or {}
         if inheritance_filter.get('genotype'):
@@ -98,15 +97,16 @@ class HailSearch(object):
             for samples in self._sample_data_by_data_type.values():
                 for s in samples:
                     s['affected'] = inheritance_filter['affected'].get(s['individual_guid']) or s['affected']
+        # TODO clean up how inheritance is passed to search?
 
         parsed_intervals = None
+        data_type = None
         if variant_ids:
+            # TODO belongs in backend
             # In production: support SV variant IDs?
             variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
             parsed_intervals = [f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
             data_type = Sample.DATASET_TYPE_VARIANT_CALLS
-        else:
-            data_type = self._dataset_type_for_annotations(annotations, annotations_secondary) if annotations else None
 
         genes = genes or {}
         exclude_locations = (locus or {}).get('excludeLocations')
@@ -122,23 +122,8 @@ class HailSearch(object):
             data_type=data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations,
             gene_ids=None if exclude_locations else set(genes.keys()), variant_ids=variant_ids,
             inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter,
-            annotations=annotations, annotations_secondary=annotations_secondary,
             **kwargs,
         ))
-
-    @staticmethod
-    def _dataset_type_for_annotations(annotations, annotations_secondary):
-        # TODO belongs in backend
-        annotation_types = {k for k, v in annotations.items() if v}
-        if annotations_secondary:
-            annotation_types.update({k for k, v in annotations_secondary.items() if v})
-
-        if SCREEN_KEY not in annotation_types and (
-                NEW_SV_FIELD in annotation_types or annotation_types.issubset(SV_ANNOTATION_TYPES)):
-            return Sample.DATASET_TYPE_SV_CALLS
-        elif annotation_types.isdisjoint(SV_ANNOTATION_TYPES):
-            return Sample.DATASET_TYPE_VARIANT_CALLS
-        return None
 
     def filter_by_variant_ids(self, variant_ids):
         self.filter_variants(variant_ids=variant_ids)
