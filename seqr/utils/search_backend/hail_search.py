@@ -83,8 +83,7 @@ class HailSearch(object):
     def process_previous_results(cls, *args, **kwargs):
         return EsSearch.process_previous_results(*args, **kwargs)
 
-    def filter_variants(self, inheritance=None, genes=None, intervals=None, variant_ids=None, locus=None,
-                        skip_genotype_filter=False, **kwargs):
+    def filter_variants(self, inheritance=None, genes=None, intervals=None, locus=None, skip_genotype_filter=False, **kwargs):
         inheritance_mode = (inheritance or {}).get('mode')
         inheritance_filter = (inheritance or {}).get('filter') or {}
         if inheritance_filter.get('genotype'):
@@ -98,14 +97,6 @@ class HailSearch(object):
         # TODO clean up how inheritance is passed to search?
 
         parsed_intervals = None
-        data_type = None
-        if variant_ids:
-            # TODO belongs in backend
-            # In production: support SV variant IDs?
-            variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
-            parsed_intervals = [f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
-            data_type = Sample.DATASET_TYPE_VARIANT_CALLS
-
         genes = genes or {}
         exclude_locations = (locus or {}).get('excludeLocations')
         if genes or intervals:
@@ -117,7 +108,7 @@ class HailSearch(object):
                 '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
 
         self._search_body.update(dict(
-            data_type=data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations,
+            intervals=parsed_intervals, exclude_intervals=exclude_locations,
             gene_ids=None if exclude_locations else set(genes.keys()), variant_ids=variant_ids,
             inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter,
             **kwargs,

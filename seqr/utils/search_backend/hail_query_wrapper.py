@@ -250,13 +250,15 @@ class BaseHailTableQuery(object):
 
         self._load_filtered_table(data_type, sample_data, **kwargs)
 
-    def _load_filtered_table(self, data_type, sample_data, intervals=None, exclude_intervals=False, inheritance_mode=None,
-                             pathogenicity=None, annotations=None, annotations_secondary=None, **kwargs):
+    def _load_filtered_table(self, data_type, sample_data, intervals=None, variant_ids=None, exclude_intervals=False,
+                             inheritance_mode=None, pathogenicity=None, annotations=None, annotations_secondary=None,
+                             **kwargs):
 
         consequence_overrides = self._parse_overrides(pathogenicity, annotations, annotations_secondary)
+        intervals, variant_ids = self._parse_intervals(intervals, variant_ids)
 
         self._ht, self._family_guid = self.import_filtered_table(
-            data_type, sample_data, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
+            data_type, sample_data, genome_version=self._genome_version, intervals=intervals, variant_ids=variant_ids,
             consequence_overrides=consequence_overrides, allowed_consequences=self._allowed_consequences,
             allowed_consequences_secondary=self._allowed_consequences_secondary, filtered_genes=self._filtered_genes,
             inheritance_mode=inheritance_mode, has_location_search=bool(intervals) and not exclude_intervals,
@@ -574,8 +576,11 @@ class BaseHailTableQuery(object):
     def _formatted_chr_interval(interval):
         return f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
 
-    def _parse_intervals(self, intervals):
-        if intervals:
+    def _parse_intervals(self, intervals, variant_ids):
+        if variant_ids:
+            variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
+            intervals = [f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
+        elif intervals:
             add_chr_prefix = self._should_add_chr_prefix(genome_version=self._genome_version)
             raw_intervals = intervals
             intervals = [hl.eval(hl.parse_locus_interval(
@@ -585,7 +590,7 @@ class BaseHailTableQuery(object):
             invalid_intervals = [raw_intervals[i] for i, interval in enumerate(intervals) if interval is None]
             if invalid_intervals:
                 raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
-        return intervals
+        return intervals, variant_ids
 
     def _parse_overrides(self, pathogenicity, annotations, annotations_secondary):
         consequence_overrides = {CLINVAR_KEY: set(), HGMD_KEY: set()}
@@ -1509,7 +1514,10 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
         ]
 
 
-def _search_data_type(annotations=None, annotations_secondary=None, **kwargs):
+def _search_data_type(variant_ids=None, annotations=None, annotations_secondary=None, **kwargs):
+    if variant_ids:
+        return VARIANT_DATASET
+
     annotation_types = {k for k, v in annotations.items() if v}
     if annotations_secondary:
         annotation_types.update({k for k, v in annotations_secondary.items() if v})
@@ -1524,10 +1532,8 @@ def _search_data_type(annotations=None, annotations_secondary=None, **kwargs):
 
 def search_hail_backend(request):
     sample_data = request.pop('sample_data', {})
-    data_type = request.pop('data_type', None)
-    if not data_type:
-        data_type = _search_data_type(**request)
 
+    data_type = _search_data_type(**request)
     data_types = list(sample_data.keys())
 
     if data_type == VARIANT_DATASET:
