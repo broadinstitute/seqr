@@ -2,11 +2,11 @@ from collections import defaultdict
 from django.db.models import F
 import logging
 
+from hail_search.search import search_hail_backend
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.es_search import EsSearch
-from seqr.utils.search_backend.hail_query_wrapper import search_hail_backend
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 
 logger = logging.getLogger(__name__)

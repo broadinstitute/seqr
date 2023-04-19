@@ -1,154 +1,22 @@
 from copy import deepcopy
 from collections import defaultdict
-from django.db.models import Min
 import hail as hl
 import logging
 
-from seqr.views.utils.json_utils import _to_camel_case
-from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
-from seqr.models import Sample, Individual
-from seqr.utils.elasticsearch.utils import InvalidSearchException
-from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, \
-    INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, MAX_NO_LOCATION_COMP_HET_FAMILIES, \
+from hail_search.constants import CHROM_TO_XPOS_OFFSET, AFFECTED, UNAFFECTED, MALE, VARIANT_DATASET, \
+    MITO_DATASET, STRUCTURAL_ANNOTATION_FIELD, VARIANT_KEY_FIELD, GROUPED_VARIANTS_FIELD, \
+    GNOMAD_GENOMES_FIELD, POPULATION_SORTS, CONSEQUENCE_SORT_KEY, COMP_HET_ALT, INHERITANCE_FILTERS, GCNV_KEY, SV_KEY, \
+    CONSEQUENCE_RANKS, CONSEQUENCE_RANK_MAP, SV_CONSEQUENCE_RANK_OFFSET, SCREEN_CONSEQUENCES, SCREEN_CONSEQUENCE_RANK_MAP, \
+    SV_CONSEQUENCE_RANKS, SV_CONSEQUENCE_RANK_MAP, SV_TYPE_DISPLAYS, SV_DEL_INDICES, SV_TYPE_MAP, SV_TYPE_DETAILS, \
+    CLINVAR_SIGNIFICANCES, CLINVAR_SIG_MAP, CLINVAR_SIG_BENIGN_OFFSET, HGMD_SIGNIFICANCES, HGMD_SIG_MAP, \
+    PREDICTION_FIELD_ID_LOOKUP, QUERY_CLASS_MAP, DATA_TYPE_POPULATIONS_MAP, RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, \
+    ANY_AFFECTED, NEW_SV_FIELD, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, MAX_NO_LOCATION_COMP_HET_FAMILIES, \
     CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF, \
-    SCREEN_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, XPOS_SORT_KEY
-from seqr.utils.xpos_utils import CHROM_TO_CHROM_NUMBER
+    SCREEN_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY
+from seqr.views.utils.json_utils import _to_camel_case
+from seqr.utils.elasticsearch.utils import InvalidSearchException
 
 logger = logging.getLogger(__name__)
-
-CHROM_TO_XPOS_OFFSET = {chrom: (1 + i)*int(1e9) for chrom, i in CHROM_TO_CHROM_NUMBER.items()}
-
-AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
-UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
-MALE = Individual.SEX_MALE
-VARIANT_DATASET = Sample.DATASET_TYPE_VARIANT_CALLS
-SV_DATASET = Sample.DATASET_TYPE_SV_CALLS
-MITO_DATASET = Sample.DATASET_TYPE_MITO_CALLS
-
-STRUCTURAL_ANNOTATION_FIELD = 'structural'
-SV_ANNOTATION_TYPES = {'structural_consequence', STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD}
-
-VARIANT_KEY_FIELD = 'variantId'
-GROUPED_VARIANTS_FIELD = 'variants'
-GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
-
-POPULATION_SORTS = {
-    'gnomad': [GNOMAD_GENOMES_FIELD, 'gnomad_mito'],
-    'gnomad_exomes': ['gnomad_exomes'],
-    'callset_af': ['callset', 'sv_callset'],
-}
-CONSEQUENCE_SORT_KEY = 'protein_consequence'
-
-COMP_HET_ALT = 'COMP_HET_ALT'
-INHERITANCE_FILTERS = deepcopy(INHERITANCE_FILTERS)
-INHERITANCE_FILTERS[COMPOUND_HET][AFFECTED] = COMP_HET_ALT
-
-GCNV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WES}'
-SV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WGS}'
-
-CONSEQUENCE_RANKS = [
-    "transcript_ablation",
-    "splice_acceptor_variant",
-    "splice_donor_variant",
-    "stop_gained",
-    "frameshift_variant",
-    "stop_lost",
-    "start_lost",  # new in v81
-    "initiator_codon_variant",  # deprecated
-    "transcript_amplification",
-    "inframe_insertion",
-    "inframe_deletion",
-    "missense_variant",
-    "protein_altering_variant",  # new in v79
-    "splice_region_variant",
-    "incomplete_terminal_codon_variant",
-    "start_retained_variant",
-    "stop_retained_variant",
-    "synonymous_variant",
-    "coding_sequence_variant",
-    "mature_miRNA_variant",
-    "5_prime_UTR_variant",
-    "3_prime_UTR_variant",
-    "non_coding_transcript_exon_variant",
-    "non_coding_exon_variant",  # deprecated
-    "intron_variant",
-    "NMD_transcript_variant",
-    "non_coding_transcript_variant",
-    "nc_transcript_variant",  # deprecated
-    "upstream_gene_variant",
-    "downstream_gene_variant",
-    "TFBS_ablation",
-    "TFBS_amplification",
-    "TF_binding_site_variant",
-    "regulatory_region_ablation",
-    "regulatory_region_amplification",
-    "feature_elongation",
-    "regulatory_region_variant",
-    "feature_truncation",
-    "intergenic_variant",
-]
-CONSEQUENCE_RANK_MAP = {c: i for i, c in enumerate(CONSEQUENCE_RANKS)}
-SV_CONSEQUENCE_RANK_OFFSET = 4.5
-SCREEN_CONSEQUENCES = ['CTCF-bound', 'CTCF-only', 'DNase-H3K4me3', 'PLS', 'dELS', 'pELS', 'DNase-only', 'low-DNase']
-SCREEN_CONSEQUENCE_RANK_MAP = {c: i for i, c in enumerate(SCREEN_CONSEQUENCES)}
-
-SV_CONSEQUENCE_RANKS = [
-    'COPY_GAIN', 'LOF', 'DUP_LOF', 'DUP_PARTIAL', 'INTRONIC', 'INV_SPAN', 'NEAREST_TSS', 'PROMOTER', 'UTR',
-]
-SV_CONSEQUENCE_RANK_MAP = {c: i for i, c in enumerate(SV_CONSEQUENCE_RANKS)}
-SV_TYPES = ['gCNV_DEL', 'gCNV_DUP', 'BND', 'CPX', 'CTX', 'DEL', 'DUP', 'INS', 'INV', 'CNV']
-SV_TYPE_DISPLAYS = [t.replace('gCNV_', '') for t in SV_TYPES]
-SV_DEL_INDICES = {i for i, sv_type in enumerate(SV_TYPES) if 'DEL' in SV_TYPES}
-SV_TYPE_MAP = {c: i for i, c in enumerate(SV_TYPES)}
-SV_TYPE_DETAILS = [
-    'INS_iDEL', 'INVdel', 'INVdup', 'ME', 'ME:ALU', 'ME:LINE1', 'ME:SVA', 'dDUP', 'dDUP_iDEL', 'delINV', 'delINVdel',
-    'delINVdup', 'dupINV', 'dupINVdel', 'dupINVdup',
-]
-
-CLINVAR_SIGNIFICANCES = [
-    'Pathogenic', 'Pathogenic,_risk_factor', 'Pathogenic,_Affects', 'Pathogenic,_drug_response',
-    'Pathogenic,_drug_response,_protective,_risk_factor', 'Pathogenic,_association', 'Pathogenic,_other',
-    'Pathogenic,_association,_protective', 'Pathogenic,_protective', 'Pathogenic/Likely_pathogenic',
-    'Pathogenic/Likely_pathogenic,_risk_factor', 'Pathogenic/Likely_pathogenic,_drug_response',
-    'Pathogenic/Likely_pathogenic,_other', 'Likely_pathogenic,_risk_factor', 'Likely_pathogenic',
-    'Conflicting_interpretations_of_pathogenicity', 'Conflicting_interpretations_of_pathogenicity,_risk_factor',
-    'Conflicting_interpretations_of_pathogenicity,_Affects',
-    'Conflicting_interpretations_of_pathogenicity,_association,_risk_factor',
-    'Conflicting_interpretations_of_pathogenicity,_other,_risk_factor',
-    'Conflicting_interpretations_of_pathogenicity,_association',
-    'Conflicting_interpretations_of_pathogenicity,_drug_response',
-    'Conflicting_interpretations_of_pathogenicity,_drug_response,_other',
-    'Conflicting_interpretations_of_pathogenicity,_other', 'Uncertain_significance',
-    'Uncertain_significance,_risk_factor', 'Uncertain_significance,_Affects', 'Uncertain_significance,_association',
-    'Uncertain_significance,_other', 'Affects', 'Affects,_risk_factor', 'Affects,_association', 'other', 'NA',
-    'risk_factor', 'drug_response,_risk_factor', 'association', 'confers_sensitivity', 'drug_response', 'not_provided',
-    'Likely_benign,_drug_response,_other', 'Likely_benign,_other', 'Likely_benign', 'Benign/Likely_benign,_risk_factor',
-    'Benign/Likely_benign,_drug_response', 'Benign/Likely_benign,_other', 'Benign/Likely_benign', 'Benign,_risk_factor',
-    'Benign,_confers_sensitivity', 'Benign,_association,_confers_sensitivity', 'Benign,_drug_response', 'Benign,_other',
-    'Benign,_protective', 'Benign', 'protective,_risk_factor', 'protective',
-    # In production - sort these correctly (get current list of values from actual clinvar file)
-    'Pathogenic/Pathogenic,_low_penetrance', 'Pathogenic/Pathogenic,_low_penetrance|risk_factor',
-    'Pathogenic/Likely_pathogenic/Pathogenic,_low_penetrance', 'Pathogenic/Likely_pathogenic/Pathogenic,_low_penetrance|other',
-    'Pathogenic/Likely_pathogenic,_low_penetrance', 'Conflicting_interpretations_of_pathogenicity,_protective',
-    'Likely_risk_allele', 'Uncertain_significance,_drug_response', 'Uncertain_significance/Uncertain_risk_allele',
-    'Uncertain_risk_allele', 'Uncertain_risk_allele,_risk_factor', 'Uncertain_risk_allele,_protective',
-    'association,_risk_factor', 'association,_drug_response', 'association,_drug_response,_risk_factor',
-    'association_not_found', 'drug_response,_other', 'Likely_benign,_association', 'Benign/Likely_benign,_association',
-    'Benign/Likely_benign,_drug_response,_other', 'Benign/Likely_benign,_other,_risk_factor', 'Benign,_association',
-]
-CLINVAR_SIG_MAP = {sig: i for i, sig in enumerate(CLINVAR_SIGNIFICANCES)}
-CLINVAR_SIG_BENIGN_OFFSET = 39.5
-HGMD_SIGNIFICANCES = ['DM', 'DM?', 'DP', 'DFP', 'FP', 'FTV', 'R']
-HGMD_SIG_MAP = {sig: i for i, sig in enumerate(HGMD_SIGNIFICANCES)}
-
-PREDICTION_FIELD_ID_LOOKUP = {
-    'fathmm': ['D', 'T'],
-    'mut_taster': ['D', 'A', 'N', 'P'],
-    'polyphen': ['D', 'P', 'B'],
-    'sift': ['D', 'T'],
-    'mitotip': ['likely_pathogenic',  'possibly_pathogenic', 'possibly_benign', 'likely_benign'],
-    'haplogroup_defining': ['Y'],
-}
 
 
 class BaseHailTableQuery(object):
@@ -175,7 +43,7 @@ class BaseHailTableQuery(object):
     }
     LIFTOVER_ANNOTATION_FIELDS = {
         'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
-            hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
+            hl.is_defined(r.rg37_locus), '37', hl.missing(hl.dtype('str')),
         ),
         'liftedOverChrom': lambda r: hl.if_else(
             hl.is_defined(r.rg37_locus), r.rg37_locus.contig, hl.missing(hl.dtype('str')),
@@ -219,7 +87,7 @@ class BaseHailTableQuery(object):
             )).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
-        if self._genome_version == GENOME_VERSION_LOOKUP[GENOME_VERSION_GRCh38]:
+        if self._genome_version == GENOME_VERSION_GRCh38_DISPLAY:
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
 
@@ -1338,16 +1206,6 @@ class SvHailTableQuery(BaseSvHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseSvHailTableQuery.BASE_ANNOTATION_FIELDS)
 
 
-QUERY_CLASS_MAP = {
-    VARIANT_DATASET: VariantHailTableQuery,
-    MITO_DATASET: MitoHailTableQuery,
-    GCNV_KEY: GcnvHailTableQuery,
-    SV_KEY: SvHailTableQuery,
-}
-
-DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_type, cls in QUERY_CLASS_MAP.items()}
-
-
 class MultiDataTypeHailTableQuery(object):
 
     DATA_TYPE_ANNOTATION_FIELDS = []
@@ -1510,54 +1368,3 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
             hl.if_else(is_sv, SV_CONSEQUENCE_RANK_OFFSET, rank_sort),
             hl.if_else(is_sv, rank_sort, variant_sort),
         ]
-
-
-def _search_data_type(variant_ids=None, annotations=None, annotations_secondary=None, **kwargs):
-    if variant_ids:
-        return VARIANT_DATASET
-
-    annotation_types = {k for k, v in annotations.items() if v}
-    if annotations_secondary:
-        annotation_types.update({k for k, v in annotations_secondary.items() if v})
-
-    if SCREEN_KEY not in annotation_types and (
-            NEW_SV_FIELD in annotation_types or annotation_types.issubset(SV_ANNOTATION_TYPES)):
-        return SV_DATASET
-    elif annotation_types.isdisjoint(SV_ANNOTATION_TYPES):
-        return VARIANT_DATASET
-    return None
-
-
-def search_hail_backend(request):
-    sample_data = request.pop('sample_data', {})
-
-    data_type = _search_data_type(**request)
-    data_types = list(sample_data.keys())
-
-    if data_type == VARIANT_DATASET:
-        data_types = [
-            dt for dt in data_types if dt in {VARIANT_DATASET, MITO_DATASET}
-        ]
-    elif data_type == SV_DATASET:
-        data_types = [dt for dt in data_types if dt.startswith(SV_DATASET)]
-
-    single_data_type = data_types[0] if len(data_types) == 1 else None
-
-    if single_data_type:
-        sample_data = sample_data[single_data_type]
-        data_type = single_data_type
-        query_cls = QUERY_CLASS_MAP[single_data_type]
-    else:
-        sample_data = {k: v for k, v in sample_data.items() if k in data_types}
-        data_type = data_types
-        is_all_svs = all(dt.startswith(SV_DATASET) for dt in data_types)
-        is_no_sv = all(not dt.startswith(SV_DATASET) for dt in data_types)
-
-        if is_all_svs:
-            query_cls = AllSvHailTableQuery
-        elif is_no_sv:
-            query_cls = AllVariantHailTableQuery
-        else:
-            query_cls = AllDataTypeHailTableQuery
-
-    return query_cls(data_type, sample_data=sample_data, **request).search()
