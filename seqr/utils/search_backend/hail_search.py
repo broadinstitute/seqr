@@ -12,8 +12,6 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 
 logger = logging.getLogger(__name__)
 
-SV_ANNOTATION_TYPES = {'structural_consequence', STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD}
-
 
 class HailSearch(object):
 

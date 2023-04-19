@@ -26,6 +26,7 @@ SV_DATASET = Sample.DATASET_TYPE_SV_CALLS
 MITO_DATASET = Sample.DATASET_TYPE_MITO_CALLS
 
 STRUCTURAL_ANNOTATION_FIELD = 'structural'
+SV_ANNOTATION_TYPES = {'structural_consequence', STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD}
 
 VARIANT_KEY_FIELD = 'variantId'
 GROUPED_VARIANTS_FIELD = 'variants'
@@ -1508,7 +1509,7 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
         ]
 
 
-def _data_type_for_annotations(annotations=None, annotations_secondary=None, **kwargs):
+def _search_data_type(annotations=None, annotations_secondary=None, **kwargs):
     annotation_types = {k for k, v in annotations.items() if v}
     if annotations_secondary:
         annotation_types.update({k for k, v in annotations_secondary.items() if v})
@@ -1525,7 +1526,7 @@ def search_hail_backend(request):
     sample_data = request.pop('sample_data', {})
     data_type = request.pop('data_type', None)
     if not data_type:
-        data_type = _data_type_for_annotations(**request)
+        data_type = _search_data_type(**request)
 
     data_types = list(sample_data.keys())
 
