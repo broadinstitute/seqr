@@ -95,7 +95,6 @@ class HailSearch(object):
             for samples in self._sample_data_by_data_type.values():
                 for s in samples:
                     s['affected'] = inheritance_filter['affected'].get(s['individual_guid']) or s['affected']
-        # TODO clean up how inheritance is passed to search?
 
         parsed_intervals = None
         if variant_ids:
