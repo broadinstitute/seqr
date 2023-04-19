@@ -237,10 +237,11 @@ class BaseHailTableQuery(object):
     def get_major_consequence(transcript):
         raise NotImplementedError
 
-    def __init__(self, data_type, sample_data, genome_version, gene_ids=None, sort=None, sort_metadata=None, **kwargs):
+    def __init__(self, data_type, sample_data, genome_version, gene_ids=None, sort=None, sort_metadata=None, num_results=100, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
         self._sort_metadata = sort_metadata
+        self._num_results = num_results
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
         self._allowed_consequences = None
@@ -852,7 +853,7 @@ class BaseHailTableQuery(object):
             'genomeVersion', '_sort', *self.CORE_FIELDS,
             *set(list(self.COMPUTED_ANNOTATION_FIELDS.keys()) + list(self.annotation_fields.keys())))
 
-    def search(self, num_results):
+    def search(self):
         if self._ht:
             ht = self._format_results(self._ht)
             if self._comp_het_ht:
@@ -864,8 +865,8 @@ class BaseHailTableQuery(object):
         if not ht:
             raise InvalidSearchException('Filters must be applied before search')
 
-        (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, num_results, ordering=ht._sort)))
-        logger.info(f'Total hits: {total_results}. Fetched: {num_results}')
+        (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
+        logger.info(f'Total hits: {total_results}. Fetched: {self._num_results}')
 
         hail_results = [
             self._json_serialize(row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD)) for row in collected
@@ -1508,3 +1509,38 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
             hl.if_else(is_sv, SV_CONSEQUENCE_RANK_OFFSET, rank_sort),
             hl.if_else(is_sv, rank_sort, variant_sort),
         ]
+
+
+def search_hail_backend(request):
+    data_type = request.pop('data_type', None)
+    sample_data = request.pop('sample_data', {})
+
+    data_types = list(sample_data.keys())
+
+    if data_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+        data_types = [
+            dt for dt in data_types if dt in {Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS}
+        ]
+    elif data_type == Sample.DATASET_TYPE_SV_CALLS:
+        data_types = [dt for dt in data_types if dt.startswith(Sample.DATASET_TYPE_SV_CALLS)]
+
+    single_data_type = data_types[0] if len(data_types) == 1 else None
+
+    if single_data_type:
+        sample_data = sample_data[single_data_type]
+        data_type = single_data_type
+        query_cls = QUERY_CLASS_MAP[single_data_type]
+    else:
+        sample_data = {k: v for k, v in sample_data.items() if k in data_types}
+        data_type = data_types
+        is_all_svs = all(dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in data_types)
+        is_no_sv = all(not dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in data_types)
+
+        if is_all_svs:
+            query_cls = AllSvHailTableQuery
+        elif is_no_sv:
+            query_cls = AllVariantHailTableQuery
+        else:
+            query_cls = AllDataTypeHailTableQuery
+
+    return query_cls(data_type, sample_data=sample_data, **request).search()

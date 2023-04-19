@@ -7,8 +7,7 @@ from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, NEW_SV_FIELD, SCREEN_KEY
 from seqr.utils.elasticsearch.es_search import EsSearch
-from seqr.utils.search_backend.hail_query_wrapper import QUERY_CLASS_MAP, STRUCTURAL_ANNOTATION_FIELD, \
-    AllVariantHailTableQuery, AllSvHailTableQuery, AllDataTypeHailTableQuery
+from seqr.utils.search_backend.hail_query_wrapper import search_hail_backend, STRUCTURAL_ANNOTATION_FIELD
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 
 logger = logging.getLogger(__name__)
@@ -51,40 +50,31 @@ class HailSearch(object):
         self._family_guid = families.pop() if len(families) == 1 else None
 
         self._user = user
-        self._sort = sort
+
+        self._search_body = {'sort': sort, 'sort_metadata': self._get_sort_metadata(sort)}
+
         self._return_all_queried_families = return_all_queried_families # In production: need to implement for reloading saved variants
         self.previous_search_results = previous_search_results or {}
 
-    def _load_filtered_table(self, data_type, **kwargs):
-        data_types = list(self._sample_data_by_data_type.keys())
-
-        if data_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-            data_types = [
-                dt for dt in data_types if dt in {Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS}
-            ]
-        elif data_type == Sample.DATASET_TYPE_SV_CALLS:
-            data_types = [dt for dt in data_types if dt.startswith(Sample.DATASET_TYPE_SV_CALLS)]
-
-        single_data_type = data_types[0] if len(data_types) == 1 else None
-
-        if single_data_type:
-            sample_data = self._sample_data_by_data_type[single_data_type]
-            data_type = single_data_type
-            query_cls = QUERY_CLASS_MAP[single_data_type]
-        else:
-            sample_data = {k: v for k, v in self._sample_data_by_data_type.items() if k in data_types}
-            data_type = data_types
-            is_all_svs = all(dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in data_types)
-            is_no_sv = all(not dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in data_types)
-
-            if is_all_svs:
-                query_cls = AllSvHailTableQuery
-            elif is_no_sv:
-                query_cls = AllVariantHailTableQuery
-            else:
-                query_cls = AllDataTypeHailTableQuery
-
-        self._query_wrapper = query_cls(data_type, sample_data=sample_data, genome_version=self._genome_version, **kwargs)
+    @staticmethod
+    def _get_sort_metadata(sort):
+        sort_metadata = None
+        if sort == 'in_omim':
+            sort_metadata = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id',                                                                                      flat=True)
+        elif sort == 'constraint':
+            sort_metadata = {
+                agg['gene__gene_id']: agg['mis_z_rank'] + agg['pLI_rank'] for agg in
+                GeneConstraint.objects.values('gene__gene_id', 'mis_z_rank', 'pLI_rank')
+            }
+        elif sort == 'prioritized_gene':
+            if not self._family_guid:
+                raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
+            sort_metadata = {
+                agg['gene_id']: agg['min_rank'] for agg in PhenotypePrioritization.objects.filter(
+                    individual__family__guid=self._family_guid, rank__lte=100,
+                ).values('gene_id').annotate(min_rank=Min('rank'))
+            }
+        return sort_metadata
 
     @classmethod
     def process_previous_results(cls, *args, **kwargs):
@@ -123,34 +113,18 @@ class HailSearch(object):
             parsed_intervals = ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
                 '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
 
-        sort_metadata = None
-        if self._sort == 'in_omim':
-            sort_metadata = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True)
-        elif self._sort == 'constraint':
-            sort_metadata = {
-                agg['gene__gene_id']: agg['mis_z_rank'] + agg['pLI_rank'] for agg in
-                GeneConstraint.objects.values('gene__gene_id', 'mis_z_rank', 'pLI_rank')
-            }
-        elif self._sort == 'prioritized_gene':
-            if not self._family_guid:
-                raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
-            sort_metadata = {
-                agg['gene_id']: agg['min_rank'] for agg in PhenotypePrioritization.objects.filter(
-                    individual__family__guid=self._family_guid, rank__lte=100,
-                ).values('gene_id').annotate(min_rank=Min('rank'))
-            }
-
-        self._load_filtered_table(
-            data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations,
+        self._search_body.update(dict(
+            data_type=data_type, sample_data=self._sample_data_by_data_type,
+            intervals=parsed_intervals, exclude_intervals=exclude_locations,
             gene_ids=None if exclude_locations else set(genes.keys()), variant_ids=variant_ids,
             inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter,
             annotations=annotations, annotations_secondary=annotations_secondary,
-            sort=self._sort, sort_metadata=sort_metadata,
             **kwargs,
-        )
+        ))
 
     @staticmethod
     def _dataset_type_for_annotations(annotations, annotations_secondary):
+        # TODO belongs in backend
         annotation_types = {k for k, v in annotations.items() if v}
         if annotations_secondary:
             annotation_types.update({k for k, v in annotations_secondary.items() if v})
@@ -167,7 +141,8 @@ class HailSearch(object):
 
     def search(self, page=1, num_results=100):
         end_offset = num_results * page
-        hail_results, total_results = self._query_wrapper.search(end_offset)
+        self._search_body['num_results'] = end_offset
+        hail_results, total_results = search_hail_backend(self._search_body)
         self.previous_search_results['total_results'] = total_results
         # self.previous_search_results['all_results'] = hail_results  TODO re-enable
         return hail_results[end_offset - num_results:end_offset]
