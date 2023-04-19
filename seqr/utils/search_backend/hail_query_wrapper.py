@@ -20,6 +20,7 @@ CHROM_TO_XPOS_OFFSET = {chrom: (1 + i)*int(1e9) for chrom, i in CHROM_TO_CHROM_N
 
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
+MALE = Individual.SEX_MALE
 VARIANT_DATASET = Sample.DATASET_TYPE_VARIANT_CALLS
 SV_DATASET = Sample.DATASET_TYPE_SV_CALLS
 MITO_DATASET = Sample.DATASET_TYPE_MITO_CALLS
@@ -501,7 +502,7 @@ class BaseHailTableQuery(object):
         
         for s in sample_data:
             genotype = individual_genotype_filter.get(s['individual_guid']) or inheritance_filter.get(s['affected'])
-            if inheritance_mode == X_LINKED_RECESSIVE and s['affected'] == UNAFFECTED and s['sex'] == Individual.SEX_MALE:
+            if inheritance_mode == X_LINKED_RECESSIVE and s['affected'] == UNAFFECTED and s['sex'] == MALE:
                 genotype = REF_REF
             if genotype:
                 entry_index = sample_id_index_map[s['sample_id']]
