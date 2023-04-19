@@ -95,6 +95,10 @@ class HailSearch(object):
             inheritance_mode = None
         if not inheritance_mode and inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
             raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
+        if inheritance_filter.get('affected'):
+            for samples in self._sample_data_by_data_type.values():
+                for s in samples:
+                    s['affected'] = inheritance_filter['affected'].get(s['individual_guid']) or s['affected']
 
         parsed_intervals = None
         if variant_ids:

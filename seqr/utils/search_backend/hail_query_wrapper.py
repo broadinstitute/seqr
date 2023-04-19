@@ -462,15 +462,7 @@ class BaseHailTableQuery(object):
         if not (inheritance_filter or inheritance_mode):
             return ht
 
-        individual_affected_status = inheritance_filter.get('affected') or {}
-        logger.info(f'{sample_data} ;; {individual_affected_status}')
-        sample_affected_statuses = {
-            s: individual_affected_status.get(s['individual_guid']) or s['affected']
-            for s in sample_data
-        }
-        affected_status_samples = {
-            s['sample_id'] for s, status in sample_affected_statuses.items() if status == AFFECTED
-        }
+        affected_status_samples = {s['sample_id'] for s in sample_data if s['affected'] == AFFECTED}
         if not affected_status_samples:
             raise InvalidSearchException(
                 'Inheritance based search is disabled in families with no data loaded for affected individuals')
@@ -481,15 +473,15 @@ class BaseHailTableQuery(object):
             ).map(lambda x: x.familyGuid)))
         else:
             ht = cls._filter_families_inheritance(
-                ht, inheritance_mode, inheritance_filter, sample_id_index_map, sample_affected_statuses)
+                ht, inheritance_mode, inheritance_filter, sample_id_index_map, sample_data)
 
             if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-                ht = cls._annotate_possible_comp_hets(ht, sample_affected_statuses)
+                ht = cls._annotate_possible_comp_hets(ht, sample_data)
         
                 if inheritance_mode == RECESSIVE:
                     ht = ht.annotate(recessiveFamilies=ht.families, families=ht.compHetFamilyCarriers.key_set())
                     ht = cls._filter_families_inheritance(
-                        ht, COMPOUND_HET, inheritance_filter, sample_id_index_map, sample_affected_statuses)
+                        ht, COMPOUND_HET, inheritance_filter, sample_id_index_map, sample_data)
                     ht = ht.annotate(
                         compHetFamilyCarriers=hl.dict(ht.compHetFamilyCarriers.items().filter(
                             lambda item: ht.families.contains(item[0])
@@ -502,13 +494,13 @@ class BaseHailTableQuery(object):
         return ht.filter(ht.families.size() > 0)
 
     @classmethod
-    def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_index_map, sample_affected_statuses):
+    def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_index_map, sample_data):
         inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
         individual_genotype_filter = inheritance_filter.get('genotype') or {}
         
-        for s, status in sample_affected_statuses.items():
-            genotype = individual_genotype_filter.get(s['individual_guid']) or inheritance_filter.get(status)
-            if inheritance_mode == X_LINKED_RECESSIVE and status == UNAFFECTED and s['sex'] == Individual.SEX_MALE:
+        for s in sample_data:
+            genotype = individual_genotype_filter.get(s['individual_guid']) or inheritance_filter.get(s['affected'])
+            if inheritance_mode == X_LINKED_RECESSIVE and s['affected'] == UNAFFECTED and s['sex'] == Individual.SEX_MALE:
                 genotype = REF_REF
             if genotype:
                 entry_index = sample_id_index_map[s['sample_id']]
@@ -520,10 +512,8 @@ class BaseHailTableQuery(object):
         return ht
     
     @classmethod
-    def _annotate_possible_comp_hets(cls, ht, sample_affected_statuses):
-        unaffected_samples = {
-            s['sample_id'] for s, status in sample_affected_statuses.items() if status == UNAFFECTED
-        }
+    def _annotate_possible_comp_hets(cls, ht, sample_data):
+        unaffected_samples = {s['sample_id'] for s in sample_data if s['affected'] == UNAFFECTED}
 
         return ht.annotate(compHetFamilyCarriers=hl.dict(ht.entries.group_by(lambda x: x.familyGuid).items().map(
             # group unaffected sample entries by family
