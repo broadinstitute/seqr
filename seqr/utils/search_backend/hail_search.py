@@ -51,7 +51,12 @@ class HailSearch(object):
 
         self._user = user
 
-        self._search_body = {'sort': sort, 'sort_metadata': self._get_sort_metadata(sort)}
+        self._search_body = {
+            'sample_data': self._sample_data_by_data_type,
+            'genome_version': self._genome_version,
+            'sort': sort,
+            'sort_metadata': self._get_sort_metadata(sort),
+        }
 
         self._return_all_queried_families = return_all_queried_families # In production: need to implement for reloading saved variants
         self.previous_search_results = previous_search_results or {}
@@ -114,8 +119,7 @@ class HailSearch(object):
                 '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
 
         self._search_body.update(dict(
-            data_type=data_type, sample_data=self._sample_data_by_data_type,
-            intervals=parsed_intervals, exclude_intervals=exclude_locations,
+            data_type=data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations,
             gene_ids=None if exclude_locations else set(genes.keys()), variant_ids=variant_ids,
             inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter,
             annotations=annotations, annotations_secondary=annotations_secondary,
