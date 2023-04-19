@@ -255,14 +255,13 @@ class BaseHailTableQuery(object):
                              **kwargs):
 
         consequence_overrides = self._parse_overrides(pathogenicity, annotations, annotations_secondary)
-        intervals, variant_ids = self._parse_intervals(intervals, variant_ids)
 
         self._ht, self._family_guid = self.import_filtered_table(
-            data_type, sample_data, genome_version=self._genome_version, intervals=intervals, variant_ids=variant_ids,
+            data_type, sample_data, intervals=self._parse_intervals(intervals, variant_ids), variant_ids=variant_ids,
             consequence_overrides=consequence_overrides, allowed_consequences=self._allowed_consequences,
             allowed_consequences_secondary=self._allowed_consequences_secondary, filtered_genes=self._filtered_genes,
             inheritance_mode=inheritance_mode, has_location_search=bool(intervals) and not exclude_intervals,
-            exclude_intervals=exclude_intervals, **kwargs,
+            exclude_intervals=exclude_intervals, genome_version=self._genome_version, **kwargs,
         )
 
         self._ht = self._ht.annotate(_sort=self._sort_order())
@@ -578,9 +577,8 @@ class BaseHailTableQuery(object):
 
     def _parse_intervals(self, intervals, variant_ids):
         if variant_ids:
-            variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
             intervals = [f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
-        elif intervals:
+        if intervals:
             add_chr_prefix = self._should_add_chr_prefix(genome_version=self._genome_version)
             raw_intervals = intervals
             intervals = [hl.eval(hl.parse_locus_interval(
@@ -590,7 +588,7 @@ class BaseHailTableQuery(object):
             invalid_intervals = [raw_intervals[i] for i, interval in enumerate(intervals) if interval is None]
             if invalid_intervals:
                 raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
-        return intervals, variant_ids
+        return intervals
 
     def _parse_overrides(self, pathogenicity, annotations, annotations_secondary):
         consequence_overrides = {CLINVAR_KEY: set(), HGMD_KEY: set()}
