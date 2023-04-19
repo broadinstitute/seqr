@@ -463,8 +463,7 @@ class BaseHailTableQuery(object):
             return ht
 
         individual_affected_status = inheritance_filter.get('affected') or {}
-        logger.info(sample_data)
-        logger.info(individual_affected_status)
+        logger.info(f'{sample_data} ;; {individual_affected_status}')
         sample_affected_statuses = {
             s: individual_affected_status.get(s['individual_guid']) or s['affected']
             for s in sample_data
