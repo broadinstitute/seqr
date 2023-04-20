@@ -4,7 +4,7 @@ import logging
 
 from hail_search.search import search_hail_backend
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
-from seqr.models import Sample, PhenotypePrioritization
+from seqr.models import Individual, Sample, PhenotypePrioritization
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, MAX_NO_LOCATION_COMP_HET_FAMILIES
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.es_search import EsSearch
@@ -120,7 +120,7 @@ class HailSearch(object):
                 for s in samples:
                     s['affected'] = inheritance_filter['affected'].get(s['individual_guid']) or s['affected']
         if inheritance_mode or inheritance_filter:
-            has_affected = any(any(s['affected'] == AFFECTED for s in samples) for samples in self._sample_data_by_data_type.values())
+            has_affected = any(any(s['affected'] == Individual.AFFECTED_STATUS_AFFECTED for s in samples) for samples in self._sample_data_by_data_type.values())
             if not has_affected:
                 raise InvalidSearchException(
                     'Inheritance based search is disabled in families with no data loaded for affected individuals')
