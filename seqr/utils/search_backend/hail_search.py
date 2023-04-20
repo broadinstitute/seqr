@@ -35,7 +35,6 @@ class HailSearch(object):
             sample_type = s.pop('sample_type')
             data_type_key = f'{dataset_type}_{sample_type}' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else dataset_type
             self._sample_data_by_data_type[data_type_key].append(s)
-            self._family_guids.add(s['family_guid'])
             genome_version_projects[GENOME_VERSION_LOOKUP[s.pop('project_genome_version')]].add(s.pop('project_name'))
 
         if len(genome_version_projects) > 1:
