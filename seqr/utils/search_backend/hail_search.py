@@ -1,6 +1,5 @@
 from collections import defaultdict
 from django.db.models import F
-import logging
 
 from hail_search.search import search_hail_backend
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
@@ -9,8 +8,6 @@ from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, MAX_NO_L
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.es_search import EsSearch
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
-
-logger = logging.getLogger(__name__)
 
 
 class HailSearch(object):
@@ -44,9 +41,8 @@ class HailSearch(object):
                 f'Search is only enabled on a single genome build, requested the following project builds: {project_builds}')
         self._genome_version = list(genome_version_projects.keys())[0]
 
-        self._user = user  # TODO use for logging, pass to query wrapper
-
         self._search_body = {
+            'requester_email': user.email,
             'sample_data': self._sample_data_by_data_type,
             'genome_version': self._genome_version,
             'sort': sort,
