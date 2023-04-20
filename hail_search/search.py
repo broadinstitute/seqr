@@ -8,7 +8,7 @@ def _search_data_type(variant_ids=None, annotations=None, annotations_secondary=
     if variant_ids:
         return VARIANT_DATASET
 
-    annotation_types = {k for k, v in annotations.items() if v}
+    annotation_types = {k for k, v in (annotations or {}).items() if v}
     if annotations_secondary:
         annotation_types.update({k for k, v in annotations_secondary.items() if v})
 
