@@ -10,10 +10,9 @@ from hail_search.constants import CHROM_TO_XPOS_OFFSET, AFFECTED, UNAFFECTED, MA
     SV_CONSEQUENCE_RANKS, SV_CONSEQUENCE_RANK_MAP, SV_TYPE_DISPLAYS, SV_DEL_INDICES, SV_TYPE_MAP, SV_TYPE_DETAILS, \
     CLINVAR_SIGNIFICANCES, CLINVAR_SIG_MAP, CLINVAR_SIG_BENIGN_OFFSET, HGMD_SIGNIFICANCES, HGMD_SIG_MAP, \
     PREDICTION_FIELD_ID_LOOKUP, RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, ALT_ALT, \
-    REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, MAX_NO_LOCATION_COMP_HET_FAMILIES, \
-    CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF, \
-    SCREEN_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY
-from seqr.utils.elasticsearch.utils import InvalidSearchException  # TODO
+    REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, \
+    CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF, SCREEN_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
+    XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +20,10 @@ logger = logging.getLogger(__name__)
 def _to_camel_case(snake_case_str):
     converted = snake_case_str.replace('_', ' ').title().replace(' ', '')
     return converted[0].lower() + converted[1:]
+
+
+class SearchException(Exception):
+    pass
 
 
 class BaseHailTableQuery(object):
@@ -171,8 +174,6 @@ class BaseHailTableQuery(object):
         for s in sample_data:
             family_samples[s['family_guid']].append(s)
             project_samples[s['project_guid']].append(s)
-        cls._validate_search_criteria(
-            num_projects=len(project_samples), num_families=len(family_samples), inheritance_mode=inheritance_mode, **kwargs)
 
         family_set_fields, family_dict_fields = cls._get_families_annotation_fields(inheritance_mode)
         if clinvar_path_terms and quality_filter:
@@ -193,12 +194,12 @@ class BaseHailTableQuery(object):
                 try:
                     filtered_project_hts.append(cls._filter_entries_table(
                         project_ht, sample_data=project_sample_data, table_name=project_guid, **family_filter_kwargs))
-                except InvalidSearchException as e:
+                except SearchException as e:
                     logger.info(f'Skipped {project_guid}: {e}')
                     exception_messages.add(str(e))
 
             if len(filtered_project_hts) < 1:
-                raise InvalidSearchException('; '.join(exception_messages))
+                raise SearchException('; '.join(exception_messages))
 
             families_ht = filtered_project_hts[0]
             for project_ht in filtered_project_hts[1:]:
@@ -241,14 +242,6 @@ class BaseHailTableQuery(object):
         return cls._filter_annotated_table(
             ht, consequence_overrides=consequence_overrides, clinvar_path_terms=clinvar_path_terms,
             vcf_quality_filter=vcf_quality_filter, **kwargs), family_guid
-
-    @classmethod
-    def _validate_search_criteria(cls, inheritance_mode=None, allowed_consequences=None, num_projects=None,
-                                  has_location_search=None, **kwargs):
-        if num_projects > 1 and not has_location_search:
-            raise InvalidSearchException('Location must be specified to search across multiple projects')
-        if inheritance_mode in {RECESSIVE, COMPOUND_HET} and not allowed_consequences:
-            raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
     @classmethod
     def _get_family_table_filter_kwargs(cls, **kwargs):
@@ -309,7 +302,7 @@ class BaseHailTableQuery(object):
         sample_individual_map = {s['sample_id']: s['individual_guid'] for s in sample_data}
         missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
         if missing_samples:
-            raise InvalidSearchException(
+            raise SearchException(
                 f'The following samples are available in seqr but missing the loaded data: {", ".join(missing_samples)}'
             )
         sample_index_individual_map = {
@@ -339,12 +332,8 @@ class BaseHailTableQuery(object):
         if not (inheritance_filter or inheritance_mode):
             return ht
 
-        affected_status_samples = {s['sample_id'] for s in sample_data if s['affected'] == AFFECTED}
-        if not affected_status_samples:
-            raise InvalidSearchException(
-                'Inheritance based search is disabled in families with no data loaded for affected individuals')
-
         if inheritance_mode == ANY_AFFECTED:
+            affected_status_samples = {s['sample_id'] for s in sample_data if s['affected'] == AFFECTED}
             ht = ht.annotate(families=hl.set(ht.entries.filter(
                 lambda x: hl.set(affected_status_samples).contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
             ).map(lambda x: x.familyGuid)))
@@ -459,7 +448,7 @@ class BaseHailTableQuery(object):
             ) for interval in intervals]
             invalid_intervals = [raw_intervals[i] for i, interval in enumerate(intervals) if interval is None]
             if invalid_intervals:
-                raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
+                raise SearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
         return intervals
 
     def _parse_overrides(self, pathogenicity, annotations, annotations_secondary):
@@ -993,12 +982,6 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
 
     SORTS = deepcopy(BaseVariantHailTableQuery.SORTS)
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: BaseVariantHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [r.hgmd.class_id]
-
-    @classmethod
-    def _validate_search_criteria(cls, num_families=None, has_location_search=None, inheritance_mode=None, **kwargs):
-        if inheritance_mode in {RECESSIVE, COMPOUND_HET} and num_families > MAX_NO_LOCATION_COMP_HET_FAMILIES and not has_location_search:
-            raise InvalidSearchException('Location must be specified to search for compound heterozygous variants across many families')
-        super(VariantHailTableQuery, cls)._validate_search_criteria(inheritance_mode=inheritance_mode, has_location_search=has_location_search, **kwargs)
 
     @classmethod
     def _get_family_table_filter_kwargs(cls, frequencies=None, load_table_kwargs=None, clinvar_path_terms=None, **kwargs):

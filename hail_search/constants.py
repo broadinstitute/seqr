@@ -62,8 +62,6 @@ INHERITANCE_FILTERS = {
     },
 }
 
-MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
-
 CONSEQUENCE_RANKS = [
     "transcript_ablation",
     "splice_acceptor_variant",

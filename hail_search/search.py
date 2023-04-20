@@ -1,7 +1,7 @@
 from hail_search.constants import VARIANT_DATASET, SV_DATASET, MITO_DATASET, SCREEN_KEY, NEW_SV_FIELD, \
     SV_ANNOTATION_TYPES
 from hail_search.hail_search_query import AllSvHailTableQuery, AllVariantHailTableQuery, AllDataTypeHailTableQuery, \
-    QUERY_CLASS_MAP
+    SearchException, QUERY_CLASS_MAP
 
 
 def _search_data_type(variant_ids=None, annotations=None, annotations_secondary=None, **kwargs):
@@ -52,4 +52,8 @@ def search_hail_backend(request):
         else:
             query_cls = AllDataTypeHailTableQuery
 
-    return query_cls(data_type, sample_data=sample_data, **request).search()
+    try:
+        return query_cls(data_type, sample_data=sample_data, **request).search()
+    except SearchException as e:
+        # TODO return 400 response
+        raise e
