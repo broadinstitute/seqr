@@ -9,7 +9,7 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree
 from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
-from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, Sample, Project, PhenotypePrioritization
+from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -269,6 +269,7 @@ SAMPLE_SV_WGS_QC_DATA = [
 
 RNA_SAMPLE_GUID = 'S000150_na19675_d2'
 RNA_TPM_SAMPLE_GUID = 'S000152_na19675_d2'
+RNA_SPLICE_SAMPLE_GUID = 'S000151_na19675_1'
 PLACEHOLDER_GUID = 'S0000100'
 RNA_FILE_ID = 'gs://rna_data/new_muscle_samples.tsv.gz'
 SAMPLE_GENE_OUTLIER_DATA = {
@@ -279,6 +280,24 @@ SAMPLE_GENE_TPM_DATA = {
     'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '7.8'},
     'ENSG00000233750': {'gene_id': 'ENSG00000233750', 'tpm': '0.064'},
 }
+SAMPLE_GENE_SPLICE_DATA = {
+    'ENSG00000163092-2-167254166-167258349-*-psi3': {
+        'chrom': '2', 'start': 167254166, 'end': 167258349, 'strand': '*', 'type': 'psi3',
+        'p_value': 1.56e-25, 'z_score': -4.9, 'delta_psi': -0.46, 'read_count': 166, 'gene_id': 'ENSG00000163092',
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20
+    },
+    'ENSG00000106554-7-132885746-132975168-*-psi5': {
+        'chrom': '7', 'start': 132885746, 'end': 132975168, 'strand': '*', 'type': 'psi5',
+        'p_value': 1.08e-56, 'z_score': -6.53, 'delta_psi': -0.85, 'read_count': 231, 'gene_id': 'ENSG00000106554',
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20},
+}
+SAMPLE_GENE_SPLICE_DATA2 = {
+    'ENSG00000163092-2-167258096-167258349-*-psi3': {
+        'chrom': '2', 'start': 167258096, 'end': 167258349, 'strand': '*', 'type': 'psi3',
+        'p_value': 1.56e-25, 'z_score': 6.33, 'delta_psi': 0.45, 'read_count': 143, 'gene_id': 'ENSG00000163092',
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20
+    }
+}
 RNA_OUTLIER_SAMPLE_DATA = [
     f'{RNA_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_OUTLIER_DATA)}\n',
     f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'p_value': '0.04', 'p_adjust': '0.112', 'z_score': '1.9'}})}\n",
@@ -286,6 +305,10 @@ RNA_OUTLIER_SAMPLE_DATA = [
 RNA_TPM_SAMPLE_DATA = [
     f'{RNA_TPM_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n',
     f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '0.112'}})}\n",
+]
+RNA_SPLICE_SAMPLE_DATA = [
+    f'{RNA_SPLICE_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_SPLICE_DATA)}\n',
+    f'{PLACEHOLDER_GUID}\t\t{json.dumps(SAMPLE_GENE_SPLICE_DATA2)}\n',
 ]
 RNA_FILENAME_TEMPLATE = 'rna_sample_data__{}__2020-04-15T00:00:00.json.gz'
 
@@ -612,7 +635,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     RNA_DATA_TYPE_PARAMS = {
         'outlier': {
             'model_cls': RnaSeqOutlier,
-            'message_data_type': 'Outlier',
+            'message_data_type': 'Expression Outlier',
             'header': ['sampleID', 'project', 'geneID', 'detail', 'pValue', 'padjust', 'zScore'],
             'optional_headers': ['detail'],
             'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
@@ -650,10 +673,10 @@ class DataManagerAPITest(AuthenticationTestCase):
             'header': ['sample_id', 'project', 'gene_id', 'individual_id', 'tissue', 'TPM'],
             'optional_headers': ['individual_id'],
             'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D3', 'muscle', 1.34],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'fibroblasts', 0.064],
+            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 0.064],
             'duplicated_indiv_id_data': [
-                ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'fibroblasts', 7.8],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'muscle', 0.064],
+                ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'muscle', 7.8],
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.064],
             ],
             'write_data': {'NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}\n',
                            'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.064"}}\n'},
@@ -667,7 +690,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 # skip GTEX samples
                 ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
                 # a different project sample NA20888
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
+                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'muscle', 0.112],
                 # a project mismatched sample NA20878
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
                 # conflict tissue types samples
@@ -675,10 +698,9 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19678', 'fibroblasts', 0.05],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
-            'exist_sample_tissue_type': 'M',
-            'created_sample_tissue_type': 'F',
+            'sample_tissue_type': 'M',
             'num_parsed_samples': 4,
-            'initial_model_count': 4,
+            'initial_model_count': 3,
             'deleted_count': 1,
             'extra_warnings': [
                 'Skipped data loading for the following 1 sample(s) due to mismatched tissue type: NA19678 (fibroblasts, muscle)',
@@ -687,6 +709,63 @@ class DataManagerAPITest(AuthenticationTestCase):
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
             'sample_guid': RNA_TPM_SAMPLE_GUID,
+        },
+        'splice_outlier': {
+            'model_cls': RnaSeqSpliceOutlier,
+            'message_data_type': 'Splice Outlier',
+            'header': ['individualId', 'project', 'geneId', 'chrom', 'start', 'end', 'strand', 'geneName', 'type', 'pValue', 'zScore',
+                       'deltaPsi', 'readCount', 'tissue', 'dotSize', 'rareDiseaseSamplesWithJunction',
+                       'rareDiseaseSamplesTotal'],
+            'optional_headers': ['geneName', 'dotSize'],
+            'loaded_data_row': ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
+                                'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
+            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
+                                'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
+            'duplicated_indiv_id_data': [
+                ['NA20870', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                 'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000163093', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                 'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
+            ],
+            'write_data': {'NA20870\t\t{"ENSG00000163092-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
+                           ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
+                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163092",'
+                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
+                           'NA20870\t\t{"ENSG00000163093-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
+                           ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
+                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163093",'
+                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
+            },
+            'new_data': [
+                # existing sample NA19675_1
+                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000163092', 'chr2', 167254166, 167258349, '*', 'XIRP2', 'psi3',
+                 1.56E-25, -4.9, -0.46, 166, 'fibroblasts', 0.03850364, 1, 20],
+                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132975168, '*', 'CHCHD3', 'psi5',
+                 1.08E-56, -6.53, -0.85, 231, 'fibroblasts', 0.53953638, 1, 20],
+                # no matched individual NA19675_D3
+                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                 'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
+                # a new sample NA20888
+                ['NA20888', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                 'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
+                # a project mismatched sample NA20878
+                ['NA20878', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3',
+                 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
+            ],
+            'skipped_samples': 'NA19675_D3, NA20878',
+            'sample_tissue_type': 'F',
+            'num_parsed_samples': 4,
+            'initial_model_count': 1,
+            'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
+            'get_models_json': lambda models: list(
+                models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'type', 'p_value', 'z_score', 'delta_psi',
+                                   'read_count', 'rare_disease_samples_with_junction', 'rare_disease_samples_total')),
+            'expected_models_json': [
+                ('ENSG00000163092', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
+                ('ENSG00000106554', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 1, 20)
+            ],
+            'sample_guid': RNA_SPLICE_SAMPLE_GUID,
+            'row_id': 'ENSG00000106554-7-132885746-132886973-*-psi5',
         },
     }
 
@@ -758,16 +837,19 @@ class DataManagerAPITest(AuthenticationTestCase):
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {
-                    'error': f'Invalid file: missing column(s) {", ".join(sorted([col for col in header if col not in params["optional_headers"]]))}',
+                    'error': f'Invalid file: missing column(s): '
+                             f'{", ".join(sorted([col for col in header if col not in params["optional_headers"]]))}',
                 })
 
                 mismatch_row = loaded_data_row[:-1] + [loaded_data_row[-1] - 2]
-                _set_file_iter_stdout([header, loaded_data_row, mismatch_row])
+                _set_file_iter_stdout([header, loaded_data_row, loaded_data_row, mismatch_row])
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 400)
-                self.assertDictEqual(response.json(), {'error': mock.ANY})
-                self.assertTrue(response.json()['error'].startswith(
-                    f'Error in NA19675_D2 data for {mismatch_row[2]}: mismatched entries '))
+                response_json = response.json()
+                self.assertTrue('errors' in response_json.keys())
+                self.assertEqual(len(response_json['errors']), 1)
+                self.assertTrue(response_json['errors'][0].startswith(
+                    f'Error in {loaded_data_row[0]} data for {params.get("row_id", mismatch_row[2])}: mismatched entries '))
 
                 missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
                 _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
@@ -798,8 +880,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
                 mock_send_slack.assert_not_called()
 
-                def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, individual_id, body, project_names,
-                                             num_created_samples=1, warnings=None, additional_logs=None):
+                def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, new_sample_individual_id, body,
+                                             project_names, num_created_samples=1, warnings=None, additional_logs=None):
                     self.reset_logs()
                     _set_file_iter_stdout([header] + data)
                     response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -815,14 +897,13 @@ class DataManagerAPITest(AuthenticationTestCase):
                     self.assertDictEqual(response_json, {'info': info, 'warnings': warnings or [], 'sampleGuids': mock.ANY,
                                                          'fileName': file_name})
                     new_sample_guid = self._check_rna_sample_model(
-                        individual_id=individual_id, data_source='new_muscle_samples.tsv.gz',
-                        tissue_type=params.get('created_sample_tissue_type'),
+                        individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz',
+                        tissue_type=params.get('sample_tissue_type'),
                     )
                     self.assertTrue(new_sample_guid in response_json['sampleGuids'])
                     additional_logs = [(f'create {num_created_samples} Samples', {'dbUpdate': {
                         'dbEntity': 'Sample', 'updateType': 'bulk_create',
-                        'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else
-                            [response_json['sampleGuids'][-1]],
+                        'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [response_json['sampleGuids'][-1]],
                     }})] + (additional_logs or [])
                     self._has_expected_file_loading_logs(
                         'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings,
@@ -872,12 +953,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                 # test database models are correct
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
                 sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz',
-                                                           tissue_type=params.get('exist_sample_tissue_type'))
-                new_sample_guid = self._check_rna_sample_model(
-                    individual_id=16, data_source='new_muscle_samples.tsv.gz',
-                    tissue_type=params.get('created_sample_tissue_type'),
-                )
-                self.assertListEqual(response_json['sampleGuids'], [sample_guid, new_sample_guid])
+                                                           tissue_type=params.get('sample_tissue_type'))
+                self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
                 # test correct file interactions
                 mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
@@ -896,7 +973,6 @@ class DataManagerAPITest(AuthenticationTestCase):
                                          num_created_samples=2)
                 self.assertSetEqual(set([s.split('_', 1)[1] for s in mock_writes]), params['write_data'])
 
-
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     def test_load_rna_seq_sample_data(self, mock_open, mock_os):
@@ -907,7 +983,8 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         for data_type, params in self.RNA_DATA_TYPE_PARAMS.items():
             with self.subTest(data_type):
-                url = reverse(load_rna_seq_sample_data, args=[params['sample_guid']])
+                sample_guid = params['sample_guid']
+                url = reverse(load_rna_seq_sample_data, args=[sample_guid])
                 model_cls = params['model_cls']
                 model_cls.objects.all().delete()
                 self.reset_logs()
@@ -922,14 +999,14 @@ class DataManagerAPITest(AuthenticationTestCase):
 
                 models = model_cls.objects.all()
                 self.assertEqual(models.count(), 2)
-                self.assertSetEqual({model.sample.guid for model in models}, {params['sample_guid']})
+                self.assertSetEqual({model.sample.guid for model in models}, {sample_guid})
 
                 mock_open.assert_called_with(file_name, 'rt')
 
                 self.assert_json_logs(self.data_manager_user, [
-                    ('Loading outlier data for NA19675_D2', None),
+                    (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
                     (f'create {model_cls.__name__}s', {'dbUpdate': {
-                        'dbEntity': model_cls.__name__, 'numEntities': 2, 'parentEntityIds': [params['sample_guid']],
+                        'dbEntity': model_cls.__name__, 'numEntities': 2, 'parentEntityIds': [sample_guid],
                         'updateType': 'bulk_create',
                     }}),
                 ])

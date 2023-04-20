@@ -1104,6 +1104,32 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
         json_fields = ['gene_id', 'tpm']
 
 
+class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
+    STRAND_CHOICES = (
+        ('+', '5′ to 3′ direction'),
+        ('-', '3′ to 5′ direction'),
+        ('*', 'Any direction'),
+    )
+
+    p_value = models.FloatField()
+    z_score = models.FloatField()
+    chrom = models.CharField(max_length=2)
+    start = models.IntegerField()
+    end = models.IntegerField()
+    strand = models.CharField(max_length=1, choices=STRAND_CHOICES)  # "+", "-", or "*"
+    type = models.CharField(max_length=12)
+    delta_psi = models.FloatField()
+    read_count = models.IntegerField()  # RNA-seq reads that span the splice junction
+    rare_disease_samples_with_junction = models.IntegerField()
+    rare_disease_samples_total = models.IntegerField()
+
+    class Meta:
+        unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end', 'strand', 'type')
+
+        json_fields = ['gene_id', 'p_value', 'z_score', 'chrom', 'start', 'end', 'strand', 'read_count', 'type',
+                       'delta_psi', 'rare_disease_samples_with_junction', 'rare_disease_samples_total']
+
+
 class PhenotypePrioritization(BulkOperationBase):
     PARENT_FIELD = 'individual'
 

@@ -488,10 +488,8 @@ class FamilyAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
-            'M': {
-                'individualData': {'NA19675_1': 8.38},
-                'rdgData': [1.01, 8.38],
-            }
+            'F': {'individualData': {'NA19675_1': 1.01}, 'rdgData': [1.01]},
+            'M': {'individualData': {'NA19675_1': 8.38}, 'rdgData': [8.38]}
         })
 
     def test_get_family_phenotype_gene_scores(self):

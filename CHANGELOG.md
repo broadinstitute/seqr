@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add RnaSeqSpliceOutlier model (REQUIRES DB MIGRATION)
 
 ## 2/24/23
 * Updated Gregor sample manifest (REQUIRES DB MIGRATION)

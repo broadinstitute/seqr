@@ -6,11 +6,13 @@ from django.utils import timezone
 from tqdm import tqdm
 import random
 
-from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm
+from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.middleware import ErrorsWarningsException
+from seqr.utils.xpos_utils import format_chrom
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.permissions_utils import get_internal_projects
 from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
@@ -320,6 +322,36 @@ TISSUE_COL = 'tissue'
 INDIV_ID_COL = 'individual_id'
 TPM_HEADER_COLS = [SAMPLE_ID_COL, PROJECT_COL, GENE_ID_COL, TISSUE_COL, TPM_COL]
 
+CHROM_COL = 'chrom'
+START_COL = 'start'
+END_COL = 'end'
+STRAND_COL = 'strand'
+READ_COUNT_COL = 'read_count'
+SPLICE_TYPE_COL = 'type'
+P_VALUE_COL ='p_value'
+Z_SCORE_COL = 'z_score'
+DELTA_PSI_COL = 'delta_psi'
+RARE_DISEASE_SAMPLES_WITH_JUNCTION = 'rare_disease_samples_with_junction'
+RARE_DISEASE_SAMPLES_TOTAL = 'rare_disease_samples_total'
+SPLICE_OUTLIER_COLS = [
+    CHROM_COL, START_COL, END_COL, STRAND_COL, INDIV_ID_COL, SPLICE_TYPE_COL, P_VALUE_COL, Z_SCORE_COL,
+    DELTA_PSI_COL, READ_COUNT_COL, GENE_ID_COL, TISSUE_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION,
+    RARE_DISEASE_SAMPLES_TOTAL, PROJECT_COL
+]
+SPLICE_OUTLIER_FORMATTER = {
+    CHROM_COL: format_chrom,
+    START_COL: int,
+    END_COL: int,
+    READ_COUNT_COL: int,
+    RARE_DISEASE_SAMPLES_WITH_JUNCTION: int,
+    RARE_DISEASE_SAMPLES_TOTAL: int,
+    P_VALUE_COL: float,
+    Z_SCORE_COL: float,
+    DELTA_PSI_COL: float,
+}
+
+SPLICE_OUTLIER_HEADER_COLS = {col: _to_camel_case(col) for col in SPLICE_OUTLIER_COLS}
+
 TISSUE_TYPE_MAP = {
     'whole_blood': 'WB',
     'fibroblasts': 'F',
@@ -329,8 +361,17 @@ TISSUE_TYPE_MAP = {
 
 REVERSE_TISSUE_TYPE = {v: k for k, v in TISSUE_TYPE_MAP.items()}
 
+
 def _parse_outlier_row(row):
     yield row['sampleID'], {mapped_key: row[key] for key, mapped_key in RNA_OUTLIER_COLUMNS.items()}
+
+
+def _parse_splice_outlier_row(row):
+    parsed = {
+        key: SPLICE_OUTLIER_FORMATTER[key](row[col]) if SPLICE_OUTLIER_FORMATTER.get(key) else row[col]
+        for key, col in SPLICE_OUTLIER_HEADER_COLS.items()
+    }
+    yield parsed[INDIV_ID_COL], parsed
 
 def _parse_tpm_row(row):
     sample_id = row[SAMPLE_ID_COL]
@@ -354,9 +395,23 @@ def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_s
 def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
     return _load_rna_seq(
         RnaSeqTpm, file_path, user, mapping_file, ignore_extra_samples, _parse_tpm_row, TPM_HEADER_COLS,
+   )
+
+
+def _get_splice_id(row):
+    return '-'.join([row[GENE_ID_COL], row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[STRAND_COL],
+                    row[SPLICE_TYPE_COL]])
+
+
+def load_rna_seq_splice_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
+    return _load_rna_seq(
+        RnaSeqSpliceOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_splice_outlier_row,
+        SPLICE_OUTLIER_HEADER_COLS.values(), get_unique_key=_get_splice_id
     )
 
-def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns):
+
+def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_columns, get_unique_key):
+
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
@@ -366,15 +421,17 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     header = _parse_tsv_row(next(f))
     missing_cols = set(expected_columns) - set(header)
     if missing_cols:
-        raise ValueError(f'Invalid file: missing column(s) {", ".join(sorted(missing_cols))}')
+        raise ValueError(f'Invalid file: missing column(s): {", ".join(sorted(missing_cols))}')
 
     sample_id_to_tissue_type = {}
     samples_with_conflict_tissues = defaultdict(set)
+    errors = []
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in parse_row(row):
             tissue_type = TISSUE_TYPE_MAP.get(row_dict.pop(TISSUE_COL, None))
             project = row_dict.pop(PROJECT_COL)
+            indiv_id = row_dict.pop(INDIV_ID_COL, None)
             if (sample_id, project) in sample_id_to_tissue_type:
                 prev_tissue_type = sample_id_to_tissue_type[(sample_id, project)]
                 if tissue_type != prev_tissue_type:
@@ -383,17 +440,22 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
 
             sample_id_to_tissue_type[(sample_id, project)] = tissue_type
 
-            gene_id = row_dict['gene_id']
-            existing_data = samples_by_id[(sample_id, project)].get(gene_id)
+            if get_unique_key:
+                gene_or_unique_id = get_unique_key(row_dict)
+            else:
+                gene_or_unique_id = row_dict['gene_id']
+            existing_data = samples_by_id[(sample_id, project)].get(gene_or_unique_id)
             if existing_data and existing_data != row_dict:
-                raise ValueError(
-                    f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
+                errors.append(f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries '
+                              f'{existing_data} and {row_dict}')
 
-            indiv_id = row_dict.pop(INDIV_ID_COL, None)
             if indiv_id and sample_id not in sample_id_to_individual_id_mapping:
                 sample_id_to_individual_id_mapping[sample_id] = indiv_id
 
-            samples_by_id[(sample_id, project)][gene_id] = row_dict
+            samples_by_id[(sample_id, project)][gene_or_unique_id] = row_dict
+
+    if errors:
+        raise ErrorsWarningsException(errors)
 
     tissue_conflict_messages = []
     for (sample_id, project), tissue_types in samples_with_conflict_tissues.items():
@@ -404,6 +466,13 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     warnings = [f'Skipped data loading for the following {len(samples_with_conflict_tissues)} sample(s) due to mismatched'
                 f' tissue type: {", ".join(tissue_conflict_messages)}'] if samples_with_conflict_tissues else []
 
+    return warnings, samples_by_id, sample_id_to_individual_id_mapping, sample_id_to_tissue_type
+
+
+def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns,
+                      get_unique_key=None):
+    warnings, samples_by_id, sample_id_to_individual_id_mapping, sample_id_to_tissue_type = _load_rna_seq_file(
+        file_path, user, mapping_file, parse_row, expected_columns, get_unique_key)
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
     logger.info(message, user)
@@ -460,8 +529,14 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     return samples_to_load, info, warnings
 
 
+RNA_MODEL_DISPLAY_NAME = {
+  RnaSeqOutlier: 'Expression Outlier',
+  RnaSeqSpliceOutlier: 'Splice Outlier',
+  RnaSeqTpm: 'Expression',
+}
+
 def _notify_rna_loading(model_cls, sample_projects):
-    data_type = 'Outlier' if model_cls == RnaSeqOutlier else 'Expression'
+    data_type = RNA_MODEL_DISPLAY_NAME[model_cls]
     for project_agg in sample_projects:
         new_ids = project_agg["new_sample_ids"]
         project_link = f'<{BASE_URL}project/{project_agg["guid"]}/project_page|{project_agg["name"]}>'
