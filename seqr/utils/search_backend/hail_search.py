@@ -139,5 +139,5 @@ class HailSearch(object):
             # TODO use raise_for_response
             raise InvalidSearchException(str(e))
         self.previous_search_results['total_results'] = total_results
-        # self.previous_search_results['all_results'] = hail_results  TODO re-enable
+        self.previous_search_results['all_results'] = hail_results
         return hail_results[end_offset - num_results:end_offset]
