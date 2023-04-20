@@ -13,10 +13,14 @@ from hail_search.constants import CHROM_TO_XPOS_OFFSET, AFFECTED, UNAFFECTED, MA
     REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, MAX_NO_LOCATION_COMP_HET_FAMILIES, \
     CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF, \
     SCREEN_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY
-from seqr.views.utils.json_utils import _to_camel_case  # TODO
 from seqr.utils.elasticsearch.utils import InvalidSearchException  # TODO
 
 logger = logging.getLogger(__name__)
+
+
+def _to_camel_case(snake_case_str):
+    converted = snake_case_str.replace('_', ' ').title().replace(' ', '')
+    return converted[0].lower() + converted[1:]
 
 
 class BaseHailTableQuery(object):
