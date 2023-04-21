@@ -766,6 +766,11 @@ PARSED_MULTI_SAMPLE_VARIANT_0 = deepcopy(PARSED_VARIANTS[0])
 for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'].items():
     PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'][guid] = dict(otherSample=genotype, **genotype)
 
+PARSED_MULTI_SAMPLE_COMPOUND_HET_VARIANTS = deepcopy(PARSED_COMPOUND_HET_VARIANTS)
+for variant in PARSED_MULTI_SAMPLE_COMPOUND_HET_VARIANTS:
+    for guid, genotype in variant['genotypes'].items():
+        variant['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+
 
 PARSED_ANY_AFFECTED_MULTI_INDEX_VERSION_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
 PARSED_ANY_AFFECTED_MULTI_INDEX_VERSION_VARIANT.update({
@@ -2488,12 +2493,12 @@ class EsUtilsTest(TestCase):
         self.assertEqual(len(variants), 2)
         self.assertEqual(total_results, 9)
         self.assertDictEqual(variants[0], PARSED_MULTI_SAMPLE_VARIANT_0)
-        self.assertListEqual(variants[1], PARSED_COMPOUND_HET_VARIANTS)
+        self.assertListEqual(variants[1], PARSED_MULTI_SAMPLE_COMPOUND_HET_VARIANTS)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
             'variant_results': [PARSED_MULTI_SAMPLE_VARIANT],
-            'grouped_results': [{'null': [PARSED_MULTI_SAMPLE_VARIANT_0]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
+            'grouped_results': [{'null': [PARSED_MULTI_SAMPLE_VARIANT_0]}, {'ENSG00000228198': PARSED_MULTI_SAMPLE_COMPOUND_HET_VARIANTS}],
             'duplicate_doc_count': 3,
             'loaded_variant_counts': {'test_index_compound_het': {'total': 2, 'loaded': 2},
                                       INDEX_NAME: {'loaded': 4, 'total': 10}},
