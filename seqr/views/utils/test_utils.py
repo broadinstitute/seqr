@@ -357,6 +357,12 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": False
         },
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
     },
 }, {
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
