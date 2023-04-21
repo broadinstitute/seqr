@@ -836,6 +836,7 @@ class EsSearch(object):
         if self._genome_version == GENOME_VERSION_GRCh38:
             self._add_liftover(result, hit)
         self._parse_xstop(result)
+        result[CLINVAR_KEY]['version'] = self.index_metadata[index_name].get('clinvar_version')
 
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
         if data_type == Sample.DATASET_TYPE_SV_CALLS and genotypes:
@@ -1205,6 +1206,12 @@ class EsSearch(object):
             else:
                 variant['genotypes'][guid] = genotype
         variant['familyGuids'] = sorted(set(variant['familyGuids'] + duplicate_variant['familyGuids']))
+
+        # Always show the most up-to-date clinvar
+        clinvar_version = variant[CLINVAR_KEY]['version']
+        dup_clinvar_version = duplicate_variant[CLINVAR_KEY]['version']
+        if dup_clinvar_version and (clinvar_version is None or dup_clinvar_version > clinvar_version):
+            variant[CLINVAR_KEY] = duplicate_variant[CLINVAR_KEY]
 
     def _deduplicate_compound_het_results(self, compound_het_results):
         duplicates = 0

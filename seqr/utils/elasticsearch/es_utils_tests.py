@@ -715,6 +715,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
         'genomeVersion': '37',
         'selectedMainTranscriptId': None,
     })
+    variant['clinvar']['version'] = None
 
 PARSED_NO_CONSEQUENCE_FILTER_VARIANTS = deepcopy(PARSED_VARIANTS)
 PARSED_NO_CONSEQUENCE_FILTER_VARIANTS[1]['selectedMainTranscriptId'] = None
@@ -751,6 +752,7 @@ PARSED_HG38_VARIANT.update({
     ),
     '_sort': [PARSED_MULTI_INDEX_VARIANT['_sort'][0] + 10],
 })
+PARSED_HG38_VARIANT['clinvar']['version'] = None
 
 PARSED_MULTI_SAMPLE_MULTI_INDEX_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
 for guid, genotype in PARSED_MULTI_SAMPLE_MULTI_INDEX_VARIANT['genotypes'].items():
@@ -990,7 +992,7 @@ MAPPING_PROPERTIES = {field: FIELD_TYPE_MAP.get(field, {'type': 'keyword'}) for 
 
 CORE_INDEX_METADATA = {
     INDEX_NAME: {
-        '_meta': {'genomeVersion': '37'},
+        '_meta': {'genomeVersion': '37', 'clinvar_version': '2023-03-05'},
         'properties': MAPPING_PROPERTIES,
     },
     SECOND_INDEX_NAME: {
