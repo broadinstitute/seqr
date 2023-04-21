@@ -128,7 +128,7 @@ const getLitSearch = (genes, variations) => {
   return search
 }
 
-const has37Coords = ({ genomeVersion, liftedOverGenomeVersion, liftedOverPos }) => (
+export const has37Coords = ({ genomeVersion, liftedOverGenomeVersion, liftedOverPos }) => (
   genomeVersion === GENOME_VERSION_37 || (liftedOverGenomeVersion === GENOME_VERSION_37 && liftedOverPos))
 
 const VARIANT_LINKS = [
