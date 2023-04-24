@@ -71,10 +71,8 @@ class Hpo extends React.PureComponent {
         <AwesomeBar
           categories={SEARCH_CATEGORIES}
           inputwidth="300px"
-          label="HPO Term"
           placeholder="Search for an HPO term"
           onResultSelect={this.loadTermData}
-          inline
         />
         <HorizontalSpacer width={10} />
         {terms.map(({ title, description, key }) => (
