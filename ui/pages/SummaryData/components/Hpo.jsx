@@ -2,6 +2,7 @@ import React from 'react'
 import { Divider, Button, Header } from 'semantic-ui-react'
 
 import { NoHoverFamilyLink } from 'shared/components/buttons/FamilyLink'
+import SearchResultsLink from 'shared/components/buttons/SearchResultsLink'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import { Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import DataTable from 'shared/components/table/DataTable'
@@ -77,7 +78,14 @@ class Hpo extends React.PureComponent {
           />
         ))}
         <Divider />
-        {terms.length > 0 && <Header size="small" content={`${familyGuids.size} Families, ${data.length} Individuals`} />}
+        {terms.length > 0 && (
+          <Header size="small">
+            <Header.Content>{`${familyGuids.size} Families, ${data.length} Individuals: `}</Header.Content>
+            <HorizontalSpacer width={10} />
+            {/* TODO search link does not work */}
+            <SearchResultsLink disabled={data.length === 0} buttonText="Variant Search" />
+          </Header>
+        )}
         <DataTable
           data={data}
           loading={loading}
