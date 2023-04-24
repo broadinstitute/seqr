@@ -12,7 +12,7 @@ import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts from './Transcripts'
 import VariantGenes, { LocusListLabels } from './VariantGene'
-import { getLocus, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
+import { getLocus, has37Coords, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
 import { GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS } from '../../../utils/constants'
 
 const LargeText = styled.div`
@@ -127,9 +127,6 @@ const getLitSearch = (genes, variations) => {
   }
   return search
 }
-
-export const has37Coords = ({ genomeVersion, liftedOverGenomeVersion, liftedOverPos }) => (
-  genomeVersion === GENOME_VERSION_37 || (liftedOverGenomeVersion === GENOME_VERSION_37 && liftedOverPos))
 
 const VARIANT_LINKS = [
   {
