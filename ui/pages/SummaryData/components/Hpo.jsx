@@ -1,40 +1,34 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
 import { Divider, Button } from 'semantic-ui-react'
 
 import AwesomeBar from 'shared/components/page/AwesomeBar'
-import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/MatchmakerPanel'
+import { Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import DataTable from 'shared/components/table/DataTable'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 const SEARCH_CATEGORIES = ['hpo_terms']
 
-const SUBMISSION_COLUMNS = [
+const COLUMNS = [
   {
-    name: 'individualId',
-    content: 'Submitted Individual',
-    format: row => (
-      <Link to={`/project/${row.projectGuid}/family_page/${row.familyGuid}/matchmaker_exchange`} target="_blank">
-        {row.individualId}
-      </Link>
-    ),
+    name: 'familyData',
+    content: 'Family',
+    width: 4,
+    format: JSON.stringify,
+    // format: row => (
+    //   <Link to={`/project/${row.projectGuid}/family_page/${row.familyGuid}/matchmaker_exchange`} target="_blank">
+    //     {row.individualId}
+    //   </Link>
+    // ),
   },
-  { name: 'lastModifiedDate', content: 'Submitted Date', format: row => new Date(row.lastModifiedDate).toLocaleDateString() },
+  { name: 'displayName', content: 'Individual', width: 4 },
   {
-    name: 'geneVariants',
-    content: 'Genes',
-    format: row => <SubmissionGeneVariants geneVariants={row.geneVariants} modalId={row.submissionGuid} />,
+    name: 'features',
+    content: 'HPO Terms',
+    width: 8,
+    format: row => <Phenotypes phenotypes={row.features} />,
   },
-  {
-    name: 'phenotypes',
-    content: 'Phenotypes',
-    format: row => <Phenotypes phenotypes={row.phenotypes} maxWidth="400px" />,
-  },
-  { name: 'label', content: 'MME Patient Label', format: row => row.label },
 ]
-
-const getRowFilterVal = row => row.geneSymbols + row.label
 
 class Hpo extends React.PureComponent {
 
@@ -91,13 +85,12 @@ class Hpo extends React.PureComponent {
         <DataTable
           data={data}
           loading={loading}
-          collapsing
-          idField="submissionGuid"
-          defaultSortColumn="lastModifiedDate"
+          idField="individualGuid"
+          defaultSortColumn="displayName"
           defaultSortDescending
-          getRowFilterVal={getRowFilterVal}
+          fixed
           emptyContent={error || (terms.length ? 'No families with selected terms' : 'Select an HPO term')}
-          columns={SUBMISSION_COLUMNS}
+          columns={COLUMNS}
         />
       </div>
     )
