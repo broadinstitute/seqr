@@ -1208,9 +1208,9 @@ class EsSearch(object):
         variant['familyGuids'] = sorted(set(variant['familyGuids'] + duplicate_variant['familyGuids']))
 
         # Always show the most up-to-date clinvar
-        clinvar_version = variant[CLINVAR_KEY]['version']
-        dup_clinvar_version = duplicate_variant[CLINVAR_KEY]['version']
-        if dup_clinvar_version and (clinvar_version is None or dup_clinvar_version > clinvar_version):
+        clinvar_version = variant[CLINVAR_KEY]['version'] or 0
+        dup_clinvar_version = duplicate_variant[CLINVAR_KEY]['version'] or 0
+        if dup_clinvar_version > clinvar_version:
             variant[CLINVAR_KEY] = duplicate_variant[CLINVAR_KEY]
 
     def _deduplicate_compound_het_results(self, compound_het_results):
