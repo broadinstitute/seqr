@@ -110,12 +110,14 @@ def hpo_summary_data(request, hpo_id):
     data = Individual.objects.filter(
         family__project__guid__in=get_project_guids_user_can_view(request.user),
         features__contains=[{'id': hpo_id}],
-    ).values('features', individualGuid=F('guid'), displayName=INDIVIDUAL_DISPLAY_NAME_EXPR, familyData=JSONObject(
-        projectGuid=F('family__project__guid'),
-        familyGuid=F('family__guid'),
-        analysisStatus=F('family__analysis_status'),
-        displayName=Coalesce(NullIf('family__display_name', Value('')), 'family__family_id'),
-    ))
+    ).values(
+        'features', individualGuid=F('guid'), displayName=INDIVIDUAL_DISPLAY_NAME_EXPR, familyId=F('family__family_id'),
+         familyData=JSONObject(
+            projectGuid=F('family__project__guid'),
+            familyGuid=F('family__guid'),
+            analysisStatus=F('family__analysis_status'),
+            displayName=Coalesce(NullIf('family__display_name', Value('')), 'family__family_id'),
+        ))
     add_individual_hpo_details(data)
 
     return create_json_response({'data': list(data)})

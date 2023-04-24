@@ -1,6 +1,7 @@
 import React from 'react'
 import { Divider, Button } from 'semantic-ui-react'
 
+import { NoHoverFamilyLink } from 'shared/components/buttons/FamilyLink'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import { Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import DataTable from 'shared/components/table/DataTable'
@@ -11,22 +12,15 @@ const SEARCH_CATEGORIES = ['hpo_terms']
 
 const COLUMNS = [
   {
-    name: 'familyData',
+    name: 'familyId',
     content: 'Family',
-    width: 4,
-    format: JSON.stringify,
-    // format: row => (
-    //   <Link to={`/project/${row.projectGuid}/family_page/${row.familyGuid}/matchmaker_exchange`} target="_blank">
-    //     {row.individualId}
-    //   </Link>
-    // ),
+    format: row => <b><NoHoverFamilyLink family={row.familyData} /></b>,
   },
-  { name: 'displayName', content: 'Individual', width: 4 },
+  { name: 'displayName', content: 'Individual' },
   {
     name: 'features',
     content: 'HPO Terms',
-    width: 8,
-    format: row => <Phenotypes phenotypes={row.features} />,
+    format: row => <Phenotypes phenotypes={row.features} maxWidth="600px" />,
   },
 ]
 
@@ -86,11 +80,10 @@ class Hpo extends React.PureComponent {
           data={data}
           loading={loading}
           idField="individualGuid"
-          defaultSortColumn="displayName"
-          defaultSortDescending
-          fixed
+          defaultSortColumn="familyId"
           emptyContent={error || (terms.length ? 'No families with selected terms' : 'Select an HPO term')}
           columns={COLUMNS}
+          collapsing
         />
       </div>
     )
