@@ -1208,8 +1208,8 @@ class EsSearch(object):
         variant['familyGuids'] = sorted(set(variant['familyGuids'] + duplicate_variant['familyGuids']))
 
         # Always show the most up-to-date clinvar
-        clinvar_version = variant[CLINVAR_KEY]['version'] or 0
-        dup_clinvar_version = duplicate_variant[CLINVAR_KEY]['version'] or 0
+        clinvar_version = variant[CLINVAR_KEY]['version'] or '1900-01-01'
+        dup_clinvar_version = duplicate_variant[CLINVAR_KEY]['version'] or '1900-01-01'
         if dup_clinvar_version > clinvar_version:
             variant[CLINVAR_KEY] = duplicate_variant[CLINVAR_KEY]
 
