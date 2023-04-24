@@ -49,8 +49,12 @@ class Hpo extends React.PureComponent {
   }
 
   removeTerm = (e, { term }) => {
-    // TODO filter removed data
-    this.setState(prevState => ({ terms: prevState.terms.filter(({ key }) => key !== term) }))
+    this.setState(prevState => ({
+      terms: prevState.terms.filter(({ key }) => key !== term),
+      data: prevState.data.map(
+        ({ matchedTerms, ...row }) => ({ ...row, matchedTerms: matchedTerms.filter(m => m !== term) }),
+      ).filter(({ matchedTerms }) => matchedTerms.length),
+    }))
   }
 
   render() {
