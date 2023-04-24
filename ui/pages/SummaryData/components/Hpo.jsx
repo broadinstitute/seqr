@@ -1,29 +1,17 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
+import { Form } from 'semantic-ui-react'
 import PropTypes from 'prop-types'
 import { Header, Table } from 'semantic-ui-react'
 
-import { getUser } from 'redux/selectors'
-import DataLoader from 'shared/components/DataLoader'
+import StateDataLoader from 'shared/components/StateDataLoader'
+import { StyledForm } from 'shared/components/form/FormHelpers'
+import AwesomeBar from 'shared/components/page/AwesomeBar'
 import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import DataTable from 'shared/components/table/DataTable'
-import {
-  getMmeLoading,
-  getMmeLoadingError,
-  getMmeMetrics,
-  getMmeSubmissions,
-} from '../selectors'
-import { loadMme } from '../reducers'
 
-const METRICS_FIELDS = [
-  { field: 'numberOfCases', title: 'Patients' },
-  { field: 'numberOfUniqueGenes', title: 'Genes' },
-  { field: 'numberOfUniqueFeatures', title: 'Phenotypes' },
-  { field: 'numberOfRequestsReceived', title: 'Match Requests Received' },
-  { field: 'numberOfPotentialMatchesSent', title: 'Potential Matches Sent' },
-  { field: 'numberOfSubmitters', title: 'Submitters' },
-]
+const SEARCH_CATEGORIES = ['hpo_terms']
 
 const SUBMISSION_COLUMNS = [
   {
@@ -51,59 +39,48 @@ const SUBMISSION_COLUMNS = [
 
 const getRowFilterVal = row => row.geneSymbols + row.label
 
-const Matchmaker = React.memo(({ metrics, submissions, error, loading, load, user }) => (
+const getHref = history => result => {
+  console.log(history, result)
+  return '/summary_data/hpo_terms'
+}
+
+const parseResponse = responseJson => responseJson
+
+const Hpo = React.memo(({ match, history }) => (
   <div>
-    {user.isAnalyst && <Header size="medium" content="Matchmaker Metrics:" /> }
-    <DataLoader
-      load={load}
-      content={Object.keys(metrics).length}
-      loading={loading}
-      errorMessage={error}
-      hideError={!user.isAnalyst}
-    >
-      <Table collapsing basic="very">
-        {METRICS_FIELDS.map(({ field, title, round }) => (
-          <Table.Row key={field}>
-            <Table.Cell textAlign="right"><b>{title}</b></Table.Cell>
-            <Table.Cell>{round && metrics[field] ? metrics[field].toPrecision(3) : metrics[field]}</Table.Cell>
-          </Table.Row>
-        ))}
-      </Table>
-    </DataLoader>
-    <Header size="medium" content="Matchmaker Submissions:" />
-    <DataTable
-      collapsing
-      idField="submissionGuid"
-      defaultSortColumn="lastModifiedDate"
-      defaultSortDescending
-      getRowFilterVal={getRowFilterVal}
-      emptyContent="No MME Submissions Found"
-      loading={loading}
-      data={submissions}
-      columns={SUBMISSION_COLUMNS}
-    />
+    <StyledForm>
+      <Form.Field
+        control={AwesomeBar}
+        categories={SEARCH_CATEGORIES}
+        inputwidth="300px"
+        label="HPO Term"
+        placeholder="Search for an HPO term"
+        getResultHref={getHref(match)}
+        inline
+      />
+    </StyledForm>
+    {match.params.hpoTerms ? (
+      <StateDataLoader
+        contentId={match.params.hpoTerms}
+        url="/api/summary_data/hpo"
+        childComponent={DataTable}
+        parseResponse={parseResponse}
+        collapsing
+        reloadOnIdUpdate
+        idField="submissionGuid"
+        defaultSortColumn="lastModifiedDate"
+        defaultSortDescending
+        getRowFilterVal={getRowFilterVal}
+        emptyContent="No MME Submissions Found"
+        columns={SUBMISSION_COLUMNS}
+      />
+    ) : null}
   </div>
 ))
 
-Matchmaker.propTypes = {
-  metrics: PropTypes.object,
-  loading: PropTypes.bool,
-  error: PropTypes.string,
-  load: PropTypes.func,
-  submissions: PropTypes.arrayOf(PropTypes.object),
-  user: PropTypes.object,
+Hpo.propTypes = {
+  history: PropTypes.object,
+  match: PropTypes.object,
 }
 
-const mapStateToProps = state => ({
-  metrics: getMmeMetrics(state),
-  loading: getMmeLoading(state),
-  error: getMmeLoadingError(state),
-  submissions: getMmeSubmissions(state),
-  user: getUser(state),
-})
-
-const mapDispatchToProps = {
-  load: loadMme,
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(Matchmaker)
+export default Hpo
