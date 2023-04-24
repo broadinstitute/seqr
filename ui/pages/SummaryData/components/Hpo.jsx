@@ -1,15 +1,12 @@
 import React from 'react'
-import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Form } from 'semantic-ui-react'
-import PropTypes from 'prop-types'
-import { Header, Table } from 'semantic-ui-react'
+import { Divider, Button } from 'semantic-ui-react'
 
-import StateDataLoader from 'shared/components/StateDataLoader'
-import { StyledForm } from 'shared/components/form/FormHelpers'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import DataTable from 'shared/components/table/DataTable'
+import { HorizontalSpacer } from 'shared/components/Spacers'
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 const SEARCH_CATEGORIES = ['hpo_terms']
 
@@ -39,48 +36,75 @@ const SUBMISSION_COLUMNS = [
 
 const getRowFilterVal = row => row.geneSymbols + row.label
 
-const getHref = history => result => {
-  console.log(history, result)
-  return '/summary_data/hpo_terms'
-}
+class Hpo extends React.PureComponent {
 
-const parseResponse = responseJson => responseJson
+  static propTypes = {}
 
-const Hpo = React.memo(({ match, history }) => (
-  <div>
-    <StyledForm>
-      <Form.Field
-        control={AwesomeBar}
-        categories={SEARCH_CATEGORIES}
-        inputwidth="300px"
-        label="HPO Term"
-        placeholder="Search for an HPO term"
-        getResultHref={getHref(match)}
-        inline
-      />
-    </StyledForm>
-    {match.params.hpoTerms ? (
-      <StateDataLoader
-        contentId={match.params.hpoTerms}
-        url="/api/summary_data/hpo"
-        childComponent={DataTable}
-        parseResponse={parseResponse}
-        collapsing
-        reloadOnIdUpdate
-        idField="submissionGuid"
-        defaultSortColumn="lastModifiedDate"
-        defaultSortDescending
-        getRowFilterVal={getRowFilterVal}
-        emptyContent="No MME Submissions Found"
-        columns={SUBMISSION_COLUMNS}
-      />
-    ) : null}
-  </div>
-))
+  state = {
+    data: [],
+    terms: [],
+    loading: false,
+    error: null,
+  }
 
-Hpo.propTypes = {
-  history: PropTypes.object,
-  match: PropTypes.object,
+  loadTermData = (result) => {
+    this.setState(prevState => ({ loading: true, terms: prevState.terms.concat(result) }))
+    new HttpRequestHelper(`/api/summary_data/hpo/${result.key}`,
+      (responseJson) => {
+        // TODO merge with previous data
+        this.setState({ loading: false, data: responseJson.data })
+      },
+      (e) => {
+        this.setState({ loading: false, error: e.message })
+      }).get()
+  }
+
+  removeTerm = (e, { term }) => {
+    // TODO filter removed data
+    this.setState(prevState => ({ terms: prevState.terms.filter(({ key }) => key !== term) }))
+  }
+
+  render() {
+    const { terms, data, loading, error } = this.state
+    return (
+      <div>
+        <AwesomeBar
+          categories={SEARCH_CATEGORIES}
+          inputwidth="300px"
+          label="HPO Term"
+          placeholder="Search for an HPO term"
+          onResultSelect={this.loadTermData}
+          inline
+        />
+        <HorizontalSpacer width={10} />
+        {terms.map(({ title, description, key }) => (
+          <Button
+            key={key}
+            term={key}
+            content={`${title} ${description}`}
+            onClick={this.removeTerm}
+            size="tiny"
+            color="grey"
+            icon="delete"
+            compact
+          />
+        ))}
+        <Divider />
+        <DataTable
+          data={data}
+          loading={loading}
+          collapsing
+          idField="submissionGuid"
+          defaultSortColumn="lastModifiedDate"
+          defaultSortDescending
+          getRowFilterVal={getRowFilterVal}
+          emptyContent={error || (terms.length ? 'No families with selected terms' : 'Select an HPO term')}
+          columns={SUBMISSION_COLUMNS}
+        />
+      </div>
+    )
+  }
+
 }
 
 export default Hpo
