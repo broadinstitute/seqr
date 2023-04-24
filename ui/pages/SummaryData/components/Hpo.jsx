@@ -21,7 +21,7 @@ const COLUMNS = [
   {
     name: 'features',
     content: 'HPO Terms',
-    format: row => <Phenotypes phenotypes={row.features} maxWidth="600px" />,
+    format: row => <Phenotypes phenotypes={row.features} highlightIds={row.matchedTerms} maxWidth="600px" />,
   },
 ]
 
@@ -41,7 +41,7 @@ class Hpo extends React.PureComponent {
     new HttpRequestHelper(`/api/summary_data/hpo/${result.key}`,
       (responseJson) => {
         // TODO merge with previous data
-        this.setState({ loading: false, data: responseJson.data })
+        this.setState({ loading: false, data: responseJson.data.map(row => ({ ...row, matchedTerms: [result.key] })) })
       },
       (e) => {
         this.setState({ loading: false, error: e.message })
