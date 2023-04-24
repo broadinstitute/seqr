@@ -1,17 +1,18 @@
 from datetime import datetime
-from django.db.models import CharField
-from django.db.models.functions import Concat
+from django.db.models import CharField, F, Value
+from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
 from random import randint
 
 from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissions, parse_mme_features, \
     get_mme_metrics, get_hpo_terms_by_id
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Family, VariantTagType, SavedVariant, FamilyAnalysedBy
+from seqr.models import Family, Individual, VariantTagType, SavedVariant, FamilyAnalysedBy
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions, get_json_for_saved_variants
+from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions, get_json_for_saved_variants,\
+    add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required
 from seqr.views.utils.variant_utils import get_variants_response
@@ -102,6 +103,22 @@ def saved_variants_page(request, tag):
     )
 
     return create_json_response(response_json)
+
+
+@login_and_policies_required
+def hpo_summary_data(request, hpo_id):
+    data = Individual.objects.filter(
+        family__project__guid__in=get_project_guids_user_can_view(request.user),
+        features__contains=[{'id': hpo_id}],
+    ).values('features', individualGuid=F('guid'), displayName=INDIVIDUAL_DISPLAY_NAME_EXPR, familyData=JSONObject(
+        projectGuid=F('family__project__guid'),
+        familyGuid=F('family__guid'),
+        analysisStatus=F('family__analysis_status'),
+        displayName=Coalesce(NullIf('family__display_name', Value('')), 'family__family_id'),
+    ))
+    add_individual_hpo_details(data)
+
+    return create_json_response({'data': list(data)})
 
 
 @analyst_required
