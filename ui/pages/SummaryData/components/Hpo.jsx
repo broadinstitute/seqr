@@ -1,5 +1,5 @@
 import React from 'react'
-import { Divider, Button } from 'semantic-ui-react'
+import { Divider, Button, Header } from 'semantic-ui-react'
 
 import { NoHoverFamilyLink } from 'shared/components/buttons/FamilyLink'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
@@ -54,6 +54,7 @@ class Hpo extends React.PureComponent {
 
   render() {
     const { terms, data, loading, error } = this.state
+    const familyGuids = new Set(data.map(({ familyData }) => familyData.familyGuid))
     return (
       <div>
         <AwesomeBar
@@ -76,6 +77,7 @@ class Hpo extends React.PureComponent {
           />
         ))}
         <Divider />
+        {terms.length > 0 && <Header size="small" content={`${familyGuids.size} Families, ${data.length} Individuals`} />}
         <DataTable
           data={data}
           loading={loading}
