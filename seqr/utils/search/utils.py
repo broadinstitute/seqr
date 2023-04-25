@@ -32,6 +32,11 @@ def get_es_client(timeout=60, **kwargs):
     return elasticsearch.Elasticsearch(**client_kwargs, **kwargs)
 
 
+def ping_search_backend():
+    if not get_es_client(timeout=3, max_retries=0).ping():
+        raise ValueError('No response from elasticsearch ping')
+
+
 def get_index_metadata(index_name, client, include_fields=False, use_cache=True):
     if use_cache:
         cache_key = 'index_metadata__{}'.format(index_name)
