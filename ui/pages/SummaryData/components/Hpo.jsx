@@ -11,6 +11,7 @@ import { ButtonLink } from 'shared/components/StyledComponents'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 const SEARCH_CATEGORIES = ['hpo_terms']
+const MAX_SEARCH_FAMILIES = 750
 const ID_FIELD = 'individualGuid'
 const COLUMNS = [
   {
@@ -70,7 +71,8 @@ class Hpo extends React.PureComponent {
   render() {
     const { terms, data, loading, error } = this.state
     const families = new Set(data.map(({ familyData }) => `${familyData.familyGuid}:${familyData.projectGuid}`))
-    const searchHref = families.size ? `/variant_search/families/${[...families].join(',')}` : ''
+    const searchHref = (families.size && families.size < MAX_SEARCH_FAMILIES) ?
+      `/variant_search/families/${[...families].join(',')}` : ''
     return (
       <div>
         <AwesomeBar
