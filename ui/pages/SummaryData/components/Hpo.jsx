@@ -10,7 +10,7 @@ import { HorizontalSpacer } from 'shared/components/Spacers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 const SEARCH_CATEGORIES = ['hpo_terms']
-
+const ID_FIELD = 'individualGuid'
 const COLUMNS = [
   {
     name: 'familyId',
@@ -40,8 +40,17 @@ class Hpo extends React.PureComponent {
     this.setState(prevState => ({ loading: true, terms: prevState.terms.concat(result) }))
     new HttpRequestHelper(`/api/summary_data/hpo/${result.key}`,
       (responseJson) => {
-        // TODO merge with previous data
-        this.setState({ loading: false, data: responseJson.data.map(row => ({ ...row, matchedTerms: [result.key] })) })
+        this.setState((prevState) => {
+          const prevDataById = prevState.data.reduce((acc, row) => ({ ...acc, [row[ID_FIELD]]: row }), {})
+          const dataById = responseJson.data.reduce((acc, row) => {
+            if (!acc[row[ID_FIELD]]) {
+              acc[row[ID_FIELD]] = { ...row, matchedTerms: [] }
+            }
+            acc[row[ID_FIELD]].matchedTerms.push(result.key)
+            return acc
+          }, prevDataById)
+          return { loading: false, data: Object.values(dataById) }
+        })
       },
       (e) => {
         this.setState({ loading: false, error: e.message })
@@ -93,7 +102,7 @@ class Hpo extends React.PureComponent {
         <DataTable
           data={data}
           loading={loading}
-          idField="individualGuid"
+          idField={ID_FIELD}
           defaultSortColumn="familyId"
           emptyContent={error || (terms.length ? 'No families with selected terms' : 'Select an HPO term')}
           columns={COLUMNS}
