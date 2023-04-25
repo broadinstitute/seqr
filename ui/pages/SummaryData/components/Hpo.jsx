@@ -21,7 +21,7 @@ const COLUMNS = [
   {
     name: 'features',
     content: 'HPO Terms',
-    format: row => <Phenotypes phenotypes={row.features} highlightIds={row.matchedTerms} maxWidth="600px" />,
+    format: row => <Phenotypes phenotypes={row.features} highlightIds={row.matchedTerms} maxWidth="800px" />,
   },
 ]
 
