@@ -110,7 +110,7 @@ def hpo_summary_data(request, hpo_id):
     data = Individual.objects.filter(
         family__project__guid__in=get_project_guids_user_can_view(request.user),
         features__contains=[{'id': hpo_id}],
-    ).values(
+    ).order_by('id').values(
         'features', individualGuid=F('guid'), displayName=INDIVIDUAL_DISPLAY_NAME_EXPR, familyId=F('family__family_id'),
          familyData=JSONObject(
             projectGuid=F('family__project__guid'),
