@@ -21,7 +21,7 @@ from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project, CAN_EDIT, Sample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession
-from seqr.utils.search.utils import VCF_FILE_EXTENSIONS, SEQR_DATSETS_GS_PATH
+from seqr.utils.search.constants import VCF_FILE_EXTENSIONS, SEQR_DATSETS_GS_PATH
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file

@@ -2,6 +2,8 @@ from django.db.models import Min
 
 from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual, Sample, PhenotypePrioritization
+from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+
 
 MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
@@ -11,7 +13,6 @@ MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
 MAX_INDEX_SEARCHES = 75
 PREFILTER_SEARCH_SIZE = 200
 
-XPOS_SORT_KEY = 'xpos'
 
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
@@ -153,9 +154,6 @@ DEFAULT_POP_FIELD_CONFIG = {
 }
 POPULATION_RESPONSE_FIELD_CONFIGS = {k: dict(DEFAULT_POP_FIELD_CONFIG, **v) for k, v in POPULATION_FIELD_CONFIGS.items()}
 
-
-PATHOGENICTY_SORT_KEY = 'pathogenicity'
-PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
 CLINVAR_SORT = {
     '_script': {
         'type': 'number',
