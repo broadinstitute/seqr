@@ -15,7 +15,7 @@ from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from seqr.utils.search.utils import get_es_client, get_index_metadata, SEQR_DATSETS_GS_PATH
+from seqr.utils.search.utils import get_elasticsearch_status, delete_es_index, SEQR_DATSETS_GS_PATH
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
@@ -23,7 +23,7 @@ from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tp
     load_rna_seq_splice_outlier
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
-from seqr.views.utils.json_utils import create_json_response, _to_camel_case
+from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import data_manager_required, get_internal_projects
 
 from seqr.models import Sample, Individual, Project, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, RnaSeqSpliceOutlier
@@ -35,78 +35,7 @@ logger = SeqrLogger(__name__)
 
 @data_manager_required
 def elasticsearch_status(request):
-    client = get_es_client()
-
-    disk_status = {
-        disk['node']: disk for disk in
-        _get_es_meta(client, 'allocation', ['node', 'shards', 'disk.avail', 'disk.used', 'disk.percent'])
-    }
-
-    node_stats = {}
-    for node in  _get_es_meta(client, 'nodes', ['name', 'heap.percent']):
-        if node['name'] in disk_status:
-            disk_status[node.pop('name')].update(node)
-        else:
-            node_stats[node['name'] ] = node
-
-    indices, seqr_index_projects = _get_es_indices(client)
-
-    errors = ['{} does not exist and is used by project(s) {}'.format(
-        index, ', '.join(['{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
-    ) for index, project_individuals in seqr_index_projects.items() if project_individuals]
-
-    return create_json_response({
-        'indices': indices,
-        'diskStats': list(disk_status.values()),
-        'nodeStats': list(node_stats.values()),
-        'errors': errors,
-    })
-
-
-def _get_es_meta(client, meta_type, fields, filter_rows=None):
-    return [{
-        _to_camel_case(field.replace('.', '_')): o[field] for field in fields
-    } for o in getattr(client.cat, meta_type)(format="json", h=','.join(fields))
-        if filter_rows is None or filter_rows(o)]
-
-def _get_es_indices(client):
-    indices = _get_es_meta(
-        client, 'indices', ['index', 'docs.count', 'store.size', 'creation.date.string'],
-        filter_rows=lambda index: all(
-            not index['index'].startswith(omit_prefix) for omit_prefix in ['.', 'index_operations_log']))
-
-    aliases = defaultdict(list)
-    for alias in _get_es_meta(client, 'aliases', ['alias', 'index']):
-        aliases[alias['alias']].append(alias['index'])
-
-    index_metadata = get_index_metadata('_all', client, use_cache=False)
-
-    active_samples = Sample.objects.filter(is_active=True, elasticsearch_index__isnull=False).select_related('individual__family__project')
-
-    seqr_index_projects = defaultdict(lambda: defaultdict(set))
-    es_projects = set()
-    for sample in active_samples:
-        for index_name in sample.elasticsearch_index.split(','):
-            project = sample.individual.family.project
-            es_projects.add(project)
-            if index_name in aliases:
-                for aliased_index_name in aliases[index_name]:
-                    seqr_index_projects[aliased_index_name][project].add(sample.individual.guid)
-            else:
-                seqr_index_projects[index_name.rstrip('*')][project].add(sample.individual.guid)
-
-    for index in indices:
-        index_name = index['index']
-        index.update(index_metadata[index_name])
-
-        projects_for_index = []
-        for index_prefix in list(seqr_index_projects.keys()):
-            if index_name.startswith(index_prefix):
-                projects_for_index += list(seqr_index_projects.pop(index_prefix).keys())
-        index['projects'] = [
-            {'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
-
-    return indices, seqr_index_projects
+    return create_json_response(get_elasticsearch_status())
 
 
 @data_manager_required
@@ -119,9 +48,7 @@ def delete_index(request):
         }
         return create_json_response({'error': 'Index "{}" is still used by: {}'.format(index, ', '.join(projects))}, status=400)
 
-    client = get_es_client()
-    client.indices.delete(index)
-    updated_indices, _ = _get_es_indices(client)
+    updated_indices = delete_es_index(index)
 
     return create_json_response({'indices': updated_indices})
 
