@@ -1,12 +1,13 @@
 import React from 'react'
+import { NavLink } from 'react-router-dom'
 import { Divider, Button, Header } from 'semantic-ui-react'
 
 import { NoHoverFamilyLink } from 'shared/components/buttons/FamilyLink'
-import SearchResultsLink from 'shared/components/buttons/SearchResultsLink'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import { Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import DataTable from 'shared/components/table/DataTable'
 import { HorizontalSpacer } from 'shared/components/Spacers'
+import { ButtonLink } from 'shared/components/StyledComponents'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 const SEARCH_CATEGORIES = ['hpo_terms']
@@ -68,7 +69,8 @@ class Hpo extends React.PureComponent {
 
   render() {
     const { terms, data, loading, error } = this.state
-    const familyGuids = new Set(data.map(({ familyData }) => familyData.familyGuid))
+    const families = new Set(data.map(({ familyData }) => `${familyData.familyGuid}:${familyData.projectGuid}`))
+    const searchHref = families.size ? `/variant_search/families/${[...families].join(',')}` : ''
     return (
       <div>
         <AwesomeBar
@@ -93,10 +95,9 @@ class Hpo extends React.PureComponent {
         <Divider />
         {terms.length > 0 && (
           <Header size="small">
-            <Header.Content>{`${familyGuids.size} Families, ${data.length} Individuals: `}</Header.Content>
+            <Header.Content>{`${families.size} Families, ${data.length} Individuals: `}</Header.Content>
             <HorizontalSpacer width={10} />
-            {/* TODO search link does not work */}
-            <SearchResultsLink disabled={data.length === 0} buttonText="Variant Search" />
+            <ButtonLink as={NavLink} disabled={!searchHref} target="_blank" to={searchHref}>Variant Search</ButtonLink>
           </Header>
         )}
         <DataTable
