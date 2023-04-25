@@ -6,8 +6,8 @@ import elasticsearch_dsl
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH, VCF_FILE_EXTENSIONS
-from seqr.utils.search.elasticsearch.constants import XPOS_SORT_KEY, MAX_VARIANTS
+from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH, VCF_FILE_EXTENSIONS, XPOS_SORT_KEY
+from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch
 from seqr.utils.gene_utils import parse_locus_list_items
