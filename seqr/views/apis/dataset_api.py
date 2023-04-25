@@ -3,9 +3,9 @@ import json
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, ANVIL_UI_URL, BASE_URL, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
+from seqr.utils.search.utils import validate_index_metadata_and_get_elasticsearch_index_samples
 from seqr.models import Individual, Sample, Family
-from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file, \
-    validate_index_metadata_and_get_elasticsearch_index_samples
+from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, data_manager_required, \

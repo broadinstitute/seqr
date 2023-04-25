@@ -15,12 +15,12 @@ from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from seqr.utils.search.utils import get_es_client, get_index_metadata
+from seqr.utils.search.utils import get_es_client, get_index_metadata, SEQR_DATSETS_GS_PATH
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
 from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file, \
-    SEQR_DATSETS_GS_PATH, load_rna_seq_splice_outlier
+    load_rna_seq_splice_outlier
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
