@@ -64,7 +64,7 @@ def get_index_metadata(index_name, client, include_fields=False, use_cache=True)
     return index_metadata
 
 
-def validate_index_metadata_and_get_elasticsearch_index_samples(elasticsearch_index, **kwargs):
+def validate_index_metadata_and_get_samples(elasticsearch_index, **kwargs):
     es_client = get_es_client()
 
     all_index_metadata = get_index_metadata(elasticsearch_index, es_client, include_fields=True)

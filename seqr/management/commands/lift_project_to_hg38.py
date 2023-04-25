@@ -11,7 +11,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import reset_cached_search_results
 from seqr.utils.search.utils import get_es_variants_for_variant_tuples, get_single_es_variant, \
-    validate_index_metadata_and_get_elasticsearch_index_samples
+    validate_index_metadata_and_get_samples
 from seqr.utils.xpos_utils import get_xpos
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class Command(BaseCommand):
 
         # Validate the provided index
         logger.info('Validating es index {}'.format(elasticsearch_index))
-        sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
+        sample_ids, sample_type = validate_index_metadata_and_get_samples(
             elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
 
         # Get expected saved variants
