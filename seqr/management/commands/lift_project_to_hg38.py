@@ -11,7 +11,7 @@ from seqr.views.utils.dataset_utils import match_and_update_search_samples, \
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import reset_cached_search_results
-from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant
+from seqr.utils.search.utils import get_es_variants_for_variant_tuples, get_single_es_variant
 from seqr.utils.xpos_utils import get_xpos
 
 logger = logging.getLogger(__name__)

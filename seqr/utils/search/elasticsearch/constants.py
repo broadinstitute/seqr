@@ -178,7 +178,7 @@ CLINVAR_SORT = {
 
 
 def _get_phenotype_priority_ranks_by_gene(families, *args):
-    from seqr.utils.elasticsearch.utils import InvalidSearchException
+    from seqr.utils.search.utils import InvalidSearchException
     if len(families) > 1:
         raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
 

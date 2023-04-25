@@ -8,7 +8,7 @@ from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, Project
-from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
+from seqr.utils.search.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \

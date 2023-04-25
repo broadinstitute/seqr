@@ -15,7 +15,7 @@ from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
+from seqr.utils.search.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 

@@ -8,7 +8,7 @@ import random
 
 from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
+from seqr.utils.search.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
