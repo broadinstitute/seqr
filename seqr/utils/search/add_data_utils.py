@@ -32,7 +32,7 @@ def add_new_search_samples(request_json, project, user, summary_template=False, 
     if not sample_ids:
         raise ValueError('No samples found in the index. Make sure the specified caller type is correct')
 
-    samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids = match_and_update_search_samples(
+    num_samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids = match_and_update_search_samples(
         project=project,
         user=user,
         sample_ids=sample_ids,
@@ -63,7 +63,7 @@ def add_new_search_samples(request_json, project, user, summary_template=False, 
             dataset_type='' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}',
         )
 
-    return len(samples), inactivated_sample_guids, updated_family_guids, updated_samples, summary_message
+    return num_samples, inactivated_sample_guids, updated_family_guids, updated_samples, summary_message
 
 
 def _validate_index_metadata_and_get_samples(elasticsearch_index, **kwargs):

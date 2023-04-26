@@ -194,10 +194,7 @@ def match_and_update_search_samples(
     Family.bulk_update(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
-    # refresh sample models to get updated values
-    samples = Sample.objects.filter(id__in=[s.id for s in samples])
-
-    return samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update
+    return len(samples), matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update
 
 
 def _match_and_update_rna_samples(
