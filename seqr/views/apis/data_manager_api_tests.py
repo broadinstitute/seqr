@@ -765,6 +765,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ('ENSG00000106554', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 1, 20)
             ],
             'sample_guid': RNA_SPLICE_SAMPLE_GUID,
+            'row_id': 'ENSG00000106554-7-132885746-132886973-*-psi5',
         },
     }
 
@@ -848,7 +849,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertTrue('errors' in response_json.keys())
                 self.assertEqual(len(response_json['errors']), 1)
                 self.assertTrue(response_json['errors'][0].startswith(
-                    f'Error in {loaded_data_row[0]} data for {mismatch_row[2]}: mismatched entries '))
+                    f'Error in {loaded_data_row[0]} data for {params.get("row_id", mismatch_row[2])}: mismatched entries '))
 
                 missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
                 _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
