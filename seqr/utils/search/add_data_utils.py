@@ -32,11 +32,14 @@ def add_new_search_samples(request_json, project, user, summary_template=False, 
     if not sample_ids:
         raise ValueError('No samples found in the index. Make sure the specified caller type is correct')
 
+    sample_data = {
+        'elasticsearch_index': elasticsearch_index,
+    }
     num_samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids = match_and_update_search_samples(
         project=project,
         user=user,
         sample_ids=sample_ids,
-        elasticsearch_index=elasticsearch_index,
+        sample_data=sample_data,
         sample_type=sample_type,
         dataset_type=dataset_type,
         expected_families=expected_families,

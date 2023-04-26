@@ -128,31 +128,28 @@ def _validate_samples_families(samples, included_families, sample_type, dataset_
                 ))
 
 
-def _update_variant_samples(samples, user, elasticsearch_index, loaded_date, dataset_type, sample_type):
+def _update_variant_samples(samples, user, dataset_type, sample_type, sample_data):
     updated_samples = [sample.id for sample in samples]
 
     activated_sample_guids = Sample.bulk_update(user, {
-        'elasticsearch_index': elasticsearch_index,
         'is_active': True,
-        'loaded_date': loaded_date,
+        **sample_data,
     }, id__in=updated_samples, is_active=False)
 
-    inactivate_sample_guids = []
-    if elasticsearch_index:
-        inactivate_samples = Sample.objects.filter(
-            individual_id__in={sample.individual_id for sample in samples},
-            is_active=True,
-            dataset_type=dataset_type,
-            sample_type=sample_type,
-        ).exclude(id__in=updated_samples)
+    inactivate_samples = Sample.objects.filter(
+        individual_id__in={sample.individual_id for sample in samples},
+        is_active=True,
+        dataset_type=dataset_type,
+        sample_type=sample_type,
+    ).exclude(id__in=updated_samples)
 
-        inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
+    inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
 
     return activated_sample_guids, inactivate_sample_guids
 
 
 def match_and_update_search_samples(
-        project, user, sample_ids, elasticsearch_index, sample_type, dataset_type,
+        project, user, sample_ids, sample_type, dataset_type, sample_data,
         sample_id_to_individual_id_mapping, raise_unmatched_error_template, expected_families=None,
 ):
     def _get_unmatched_error(remaining_sample_ids):
@@ -163,7 +160,7 @@ def match_and_update_search_samples(
         sample_type=sample_type,
         dataset_type=dataset_type,
         sample_id__in=sample_ids,
-        elasticsearch_index=elasticsearch_index,
+        **sample_data,
     )
     loaded_date = timezone.now()
     samples, matched_individual_ids, _ = _find_or_create_missing_sample_records(
@@ -175,10 +172,10 @@ def match_and_update_search_samples(
         remaining_sample_keys=set(sample_ids) - {sample.sample_id for sample in samples},
         raise_no_match_error=not raise_unmatched_error_template,
         get_unmatched_error=_get_unmatched_error if raise_unmatched_error_template else None,
-        elasticsearch_index=elasticsearch_index,
         sample_type=sample_type,
         dataset_type=dataset_type,
         loaded_date=loaded_date,
+        **sample_data,
     )
 
     prefetch_related_objects(samples, 'individual__family')
@@ -186,7 +183,7 @@ def match_and_update_search_samples(
     _validate_samples_families(samples, included_families, sample_type, dataset_type, expected_families=expected_families)
 
     activated_sample_guids, inactivated_sample_guids = _update_variant_samples(
-        samples, user, elasticsearch_index, loaded_date, dataset_type, sample_type)
+        samples, user, dataset_type, sample_type, sample_data={'loaded_date': loaded_date, **sample_data})
 
     family_guids_to_update = [
         family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
