@@ -61,15 +61,13 @@ responses==0.22.0
     # via -r requirements-dev.in
 rjsmin==1.2.1
     # via django-compressor
-sqlparse==0.4.3
+sqlparse==0.4.4
     # via
     #   -c requirements.txt
     #   django
     #   django-debug-toolbar
 toml==0.10.2
     # via responses
-tomli==2.0.1
-    # via build
 types-toml==0.10.8.5
     # via responses
 urllib3==1.26.14
