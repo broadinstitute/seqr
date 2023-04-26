@@ -9,13 +9,13 @@ from django.contrib.auth.models import User
 from django.db.models import prefetch_related_objects
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Individual, Family, RnaSeqOutlier, RnaSeqSpliceOutlier
+from seqr.models import Individual, Family, RnaSeqOutlier, RnaSeqSpliceOutlier, IgvSample
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_individuals, add_individual_hpo_details, \
-    _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
+    _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username, get_json_for_samples
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
@@ -787,44 +787,41 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 
 @login_and_policies_required
 def get_individual_rna_seq_data(request, individual_guid):
-    return _get_rna_seq_data(RnaSeqOutlier, request, individual_guid)
+    expr_data, expr_genes = _get_rna_seq_data(RnaSeqOutlier, request, individual_guid)
+    splice_data, splice_genes = _get_rna_seq_data(RnaSeqSpliceOutlier, request, individual_guid)
 
-
-@login_and_policies_required
-def get_individual_rna_seq_splice_data(request, individual_guid):
-    return _get_rna_seq_data(RnaSeqSpliceOutlier, request, individual_guid)
-
-
-RNA_SEQ_CONFIGS = {
-    RnaSeqOutlier: {
-        'isSignificant': True,
-        'responseKey': 'rnaSeqData',
-        'dataKey': 'outliers'
-    },
-    RnaSeqSpliceOutlier: {
-        'isSignificant': False,
-        'responseKey': 'rnaSeqSpliceData',
-        'dataKey': 'spliceOutliers'
-    }
-}
+    expr_genes.update(splice_genes)
+    data = {'outliers': expr_data} if expr_data else {}
+    data.update({'spliceOutliers': splice_data} if expr_data else {})
+    return create_json_response({
+        'rnaSeqData': {individual_guid: data},
+        'genesById': expr_genes,
+        'familiesByGuid': {
+            family['familyGuid']: family for family in _get_json_for_families(
+                Family.objects.filter(pk=Individual.objects.get(guid=individual_guid).family.pk), request.user)
+        },
+        'igvSamplesByGuid': {
+            igvs['sampleGuid']: igvs for igvs in get_json_for_samples(IgvSample.objects.filter(individual__guid=individual_guid))
+        },
+        'individualsByGuid': {
+            indiv['individualGuid']: indiv for indiv in _get_json_for_individuals(
+                Individual.objects.filter(guid=individual_guid)
+            )
+        },
+    })
 
 
 def _get_rna_seq_data(model_cls, request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     check_project_permissions(individual.family.project, request.user)
     outlier_data = model_cls.objects.filter(sample__individual=individual, sample__is_active=True)
-    model_configs = RNA_SEQ_CONFIGS[model_cls]
-    is_significant = model_configs['isSignificant']
 
     rna_seq_data = {
-        data['geneId']: data for data in get_json_for_rna_seq_outliers(outlier_data, is_significant)
+        data['geneId']: data for data in get_json_for_rna_seq_outliers(outlier_data)
     }
-    genes_to_show = get_genes([gene_id for gene_id, data in rna_seq_data.items() if not is_significant or data['isSignificant']])
+    genes_to_show = get_genes([gene_id for gene_id, data in rna_seq_data.items() if data['isSignificant']])
 
-    return create_json_response({
-        model_configs['responseKey']: {individual_guid: {model_configs['dataKey']: rna_seq_data}},
-        'genesById': genes_to_show,
-    })
+    return rna_seq_data, genes_to_show
 
 
 @login_and_policies_required

@@ -22,7 +22,6 @@ const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 const RECEIVE_MME_MATCHES = 'RECEIVE_MME_MATCHES'
 const REQUEST_RNA_SEQ_DATA = 'REQUEST_RNA_SEQ_DATA'
-const REQUEST_RNA_SEQ_SPLICE_DATA = 'REQUEST_RNA_SEQ_SPLICE_DATA'
 const REQUEST_PHENOTYPE_GENE_SCORES = 'REQUEST_PHENOTYPE_GENE_SCORES'
 const REQUEST_PROJECT_OVERVIEW = 'REQUEST_PROJECT_OVERVIEW'
 const RECEIVE_PROJECT_OVERVIEW = 'RECEIVE_PROJECT_OVERVIEW'
@@ -318,22 +317,6 @@ export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
   }
 }
 
-export const loadRnaSeqSpliceData = individualGuid => (dispatch, getState) => {
-  const data = getState().rnaSeqSpliceDataByIndividual[individualGuid]
-  if (!data?.spliceOutliers) {
-    dispatch({ type: REQUEST_RNA_SEQ_SPLICE_DATA })
-    new HttpRequestHelper(`/api/individual/${individualGuid}/rna_seq_splice_data`,
-      (responseJson) => {
-        dispatch({
-          type: RECEIVE_DATA, updatesById: responseJson,
-        })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-      }).get()
-  }
-}
-
 export const loadPhenotypeGeneScores = individualGuid => (dispatch, getState) => {
   const state = getState()
   const { familyGuid } = state.individualsByGuid[individualGuid]
@@ -396,7 +379,6 @@ export const reducers = {
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_MME_MATCHES),
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
   rnaSeqDataLoading: loadingReducer(REQUEST_RNA_SEQ_DATA, RECEIVE_DATA),
-  rnaSeqSpliceDataLoading: loadingReducer(REQUEST_RNA_SEQ_SPLICE_DATA, RECEIVE_DATA),
   phenotypeDataLoading: loadingReducer(REQUEST_PHENOTYPE_GENE_SCORES, RECEIVE_DATA),
   familyTagTypeCounts: createObjectsByIdReducer(RECEIVE_DATA, 'familyTagTypeCounts'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),

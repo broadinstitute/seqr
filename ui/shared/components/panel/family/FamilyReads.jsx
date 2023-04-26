@@ -254,6 +254,7 @@ class FamilyReads extends React.PureComponent {
     sortedIndividualByFamily: PropTypes.object,
     igvSamplesByFamilySampleIndividual: PropTypes.object,
     genesById: PropTypes.object,
+    defaultSampleTypes: PropTypes.arrayOf(PropTypes.string),
   }
 
   state = {
@@ -266,6 +267,17 @@ class FamilyReads extends React.PureComponent {
       minTotalReads: 0,
     },
     locus: null,
+  }
+
+  componentDidMount() {
+    const { variant, familyGuid, defaultSampleTypes } = this.props
+    if (defaultSampleTypes) {
+      this.setState({
+        openFamily: familyGuid,
+        sampleTypes: defaultSampleTypes,
+        locus: variant && getVariantLocus(variant, this.getProjectForFamily(familyGuid)),
+      })
+    }
   }
 
   getProjectForFamily = (familyGuid) => {

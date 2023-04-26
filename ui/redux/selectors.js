@@ -32,7 +32,6 @@ export const getLocusListsByGuid = state => state.locusListsByGuid
 export const getLocusListsIsLoading = state => state.locusListsLoading.isLoading
 export const getLocusListIsLoading = state => state.locusListLoading.isLoading
 export const getRnaSeqDataByIndividual = state => state.rnaSeqDataByIndividual
-export const getRnaSeqSpliceDataByIndividual = state => state.rnaSeqSpliceDataByIndividual
 export const getPhenotypeGeneScoresByIndividual = state => state.phenotypeGeneScoresByIndividual
 export const getUser = state => state.user
 export const getUserOptionsByUsername = state => state.userOptionsByUsername

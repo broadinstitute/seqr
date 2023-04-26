@@ -622,7 +622,7 @@ class IndividualAPITest(object):
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'rnaSeqData', 'genesById'})
+        self.assertSetEqual(set(response_json.keys()), {'rnaSeqData', 'genesById', 'igvSamplesByGuid', 'familiesByGuid', 'individualsByGuid'})
         self.assertDictEqual(response_json['rnaSeqData'], {
             INDIVIDUAL_GUID: {'outliers': {
                 'ENSG00000135953': {
@@ -636,8 +636,14 @@ class IndividualAPITest(object):
                     'geneId': 'ENSG00000268903', 'zScore': 7.08, 'pValue':0.000000000588, 'pAdjust': 0.00000000139,
                     'isSignificant': True,
                 },
-            }}
-        })
+            },
+            'spliceOutliers': {
+                'ENSG00000106554': {
+                    'chrom': '7', 'deltaPsi': 0.85, 'end': 132886973, 'geneId': 'ENSG00000106554', 'isSignificant': True,
+                    'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1,
+                    'readCount': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'zScore': 12.34}
+            },
+        }})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
 

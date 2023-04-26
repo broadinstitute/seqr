@@ -1105,6 +1105,7 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
 
 
 class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
+    SIGNIFICANCE_THRESHOLD = 0.01
     STRAND_CHOICES = (
         ('+', '5′ to 3′ direction'),
         ('-', '3′ to 5′ direction'),

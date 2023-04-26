@@ -754,10 +754,11 @@ def get_json_for_matchmaker_submission(submission):
         additional_model_fields=['contact_name', 'contact_href', 'submission_id'])
 
 
-def get_json_for_rna_seq_outliers(models, is_significant=True, **kwargs):
+def get_json_for_rna_seq_outliers(models, **kwargs):
+    field_name = 'p_adjust' if getattr(models.model, 'p_adjust', False) else 'p_value'
     additional_values = {
         'isSignificant': Case(
-            When(p_adjust__lt=models.model.SIGNIFICANCE_THRESHOLD, then=Value(True)), default=Value(False)
+            When(then=Value(True), **{f'{field_name}__lt': models.model.SIGNIFICANCE_THRESHOLD}), default=Value(False)
         ),
-    } if is_significant else None
+    }
     return get_json_for_queryset(models, additional_values=additional_values, **kwargs)

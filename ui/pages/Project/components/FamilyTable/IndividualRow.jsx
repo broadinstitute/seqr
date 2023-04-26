@@ -181,7 +181,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
     {(individual.hasRnaOutlierData || individual.hasRnaSpliceOutlierData) && (
       <Link
         target="_blank"
-        to={`/project/${individual.projectGuid}/rnaseq_results/${individual.familyGuid}/${individual.individualGuid}/${!!individual.hasRnaOutlierData}/${!!individual.hasRnaSpliceOutlierData}`}
+        to={`/project/${individual.projectGuid}/rnaseq_results/${individual.familyGuid}/${individual.individualGuid}`}
       >
         RNAseq Results
       </Link>
