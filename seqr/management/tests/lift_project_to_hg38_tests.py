@@ -2,7 +2,7 @@
 import mock
 from copy import deepcopy
 from django.core.management.base import CommandError
-from seqr.models import Family, Sample
+from seqr.models import Family, Sample, Project
 from pyliftover.liftover import LiftOver
 from seqr.views.utils.test_utils import VARIANTS, SINGLE_VARIANT
 
@@ -32,7 +32,7 @@ def mock_convert_coordinate(chrom, pos):
 
 
 @mock.patch('seqr.management.commands.lift_project_to_hg38.logger')
-@mock.patch('seqr.management.commands.lift_project_to_hg38.validate_index_metadata_and_get_samples')
+@mock.patch('seqr.utils.search.add_data_utils.validate_index_metadata_and_get_samples')
 class LiftProjectToHg38Test(TestCase):
     fixtures = ['users', '1kg_project']
 
@@ -62,7 +62,8 @@ class LiftProjectToHg38Test(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION)
+        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION, dataset_type='VARIANTS',
+                                               project=Project.objects.get(guid=PROJECT_GUID))
         self.assertEqual(self._get_num_new_index_samples(), 6)
 
         calls = [
@@ -100,7 +101,7 @@ class LiftProjectToHg38Test(TestCase):
             call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
-        self.assertEqual(str(ce.exception), 'Matches not found for ES sample ids: ID_NOT_EXIST.')
+        self.assertEqual(str(ce.exception), 'Matches not found for ES sample ids: ID_NOT_EXIST. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.')
         self.assertEqual(self._get_num_new_index_samples(), 0)
 
         calls = [
@@ -109,7 +110,8 @@ class LiftProjectToHg38Test(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION)
+        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION, dataset_type='VARIANTS',
+                                               project=Project.objects.get(guid=PROJECT_GUID))
 
     def test_command_error_missing_indvididuals(self, mock_get_es_samples, mock_logger):
         mock_get_es_samples.return_value = ['NA19675_1'], SAMPLE_TYPE
@@ -128,7 +130,8 @@ class LiftProjectToHg38Test(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION)
+        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION, dataset_type='VARIANTS',
+                                               project=Project.objects.get(guid=PROJECT_GUID))
 
     def test_command_error_missing_families(self, mock_get_es_samples, mock_logger):
         mock_get_es_samples.return_value = ['HG00731', 'HG00732', 'HG00733'], SAMPLE_TYPE
@@ -147,7 +150,8 @@ class LiftProjectToHg38Test(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION)
+        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION, dataset_type='VARIANTS',
+                                               project=Project.objects.get(guid=PROJECT_GUID))
 
     @mock.patch('seqr.management.commands.lift_project_to_hg38.input')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.get_es_variants_for_variant_tuples')

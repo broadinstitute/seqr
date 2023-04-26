@@ -11,7 +11,7 @@ SAMPLE_FIELDS_LIST = ['samples', 'samples_num_alt_1']
 DATASET_FILE_EXTENSIONS = VCF_FILE_EXTENSIONS[:-1] + ('.bgz', '.bed', '.mt')
 
 
-def add_new_search_samples(request_json, project, user, summary_template=False):
+def add_new_search_samples(request_json, project, user, summary_template=False, expected_families=None):
     required_fields = ['elasticsearchIndex', 'datasetType']
     if any(field not in request_json for field in required_fields):
         raise ValueError(f'request must contain fields: {", ".join(required_fields)}')
@@ -23,11 +23,12 @@ def add_new_search_samples(request_json, project, user, summary_template=False):
     elasticsearch_index = request_json['elasticsearchIndex'].strip()
     dataset_type = request_json['datasetType']
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
+    genome_version = request_json.get('genomeVersion')
     sample_id_to_individual_id_mapping = load_mapping_file(
         request_json['mappingFilePath'], user) if request_json.get('mappingFilePath') else {}
 
     sample_ids, sample_type = validate_index_metadata_and_get_samples(
-        elasticsearch_index, project=project, dataset_type=dataset_type)
+        elasticsearch_index, project=project, dataset_type=dataset_type, genome_version=genome_version)
     if not sample_ids:
         raise ValueError('No samples found in the index. Make sure the specified caller type is correct')
 
@@ -38,6 +39,7 @@ def add_new_search_samples(request_json, project, user, summary_template=False):
         elasticsearch_index=elasticsearch_index,
         sample_type=sample_type,
         dataset_type=dataset_type,
+        expected_families=expected_families,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
         raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for ES sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
     )

@@ -6,11 +6,10 @@ from pyliftover.liftover import LiftOver
 
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, SavedVariant, Sample
-from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import reset_cached_search_results
-from seqr.utils.search.add_data_utils import validate_index_metadata_and_get_samples
+from seqr.utils.search.add_data_utils import add_new_search_samples
 from seqr.utils.search.utils import get_es_variants_for_variant_tuples, get_single_es_variant
 from seqr.utils.xpos_utils import get_xpos
 
@@ -27,32 +26,20 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """transfer project"""
         project_arg = options['project']
-        elasticsearch_index = options['es_index']
-
         project = Project.objects.get(Q(name=project_arg) | Q(guid=project_arg))
         logger.info('Updating project genome version for {}'.format(project.name))
-
-        # Validate the provided index
-        logger.info('Validating es index {}'.format(elasticsearch_index))
-        sample_ids, sample_type = validate_index_metadata_and_get_samples(
-            elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
 
         # Get expected saved variants
         saved_variant_models = SavedVariant.objects.filter(family__project=project)
         saved_variant_models_by_guid = {v.guid: v for v in saved_variant_models}
         expected_families = {sv.family for sv in saved_variant_models}
 
-        match_and_update_search_samples(
-            project=project,
-            user=None,
-            sample_ids=sample_ids,
-            elasticsearch_index=elasticsearch_index,
-            sample_type=sample_type,
-            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-            expected_families=expected_families,
-            sample_id_to_individual_id_mapping=None,
-            raise_unmatched_error_template='Matches not found for ES sample ids: {sample_ids}.'
-        )
+        logger.info('Validating es index {}'.format(options['es_index']))
+        add_new_search_samples({
+            'elasticsearchIndex': options['es_index'],
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
+            'genomeVersion': GENOME_VERSION_GRCh38,
+        }, project, user=None, expected_families=expected_families)
 
         # Lift-over saved variants
         saved_variants = get_json_for_saved_variants(saved_variant_models, add_details=True)
