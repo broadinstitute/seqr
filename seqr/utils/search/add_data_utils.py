@@ -2,6 +2,7 @@ import elasticsearch_dsl
 
 from seqr.models import Sample
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
+from seqr.utils.search.utils import get_es_client, get_index_metadata
 
 
 SAMPLE_FIELDS_LIST = ['samples', 'samples_num_alt_1']
