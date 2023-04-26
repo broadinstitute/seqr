@@ -27,7 +27,7 @@ def add_new_search_samples(request_json, project, user, summary_template=False, 
     sample_id_to_individual_id_mapping = load_mapping_file(
         request_json['mappingFilePath'], user) if request_json.get('mappingFilePath') else {}
 
-    sample_ids, sample_type = validate_index_metadata_and_get_samples(
+    sample_ids, sample_type = _validate_index_metadata_and_get_samples(
         elasticsearch_index, project=project, dataset_type=dataset_type, genome_version=genome_version)
     if not sample_ids:
         raise ValueError('No samples found in the index. Make sure the specified caller type is correct')
@@ -66,7 +66,7 @@ def add_new_search_samples(request_json, project, user, summary_template=False, 
     return len(samples), inactivated_sample_guids, updated_family_guids, updated_samples, summary_message
 
 
-def validate_index_metadata_and_get_samples(elasticsearch_index, **kwargs):
+def _validate_index_metadata_and_get_samples(elasticsearch_index, **kwargs):
     es_client = get_es_client()
 
     all_index_metadata = get_index_metadata(elasticsearch_index, es_client, include_fields=True)
