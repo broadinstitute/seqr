@@ -66,7 +66,7 @@ class DatasetAPITest(object):
         self.assertFalse(existing_sample.is_active)
         existing_sample_guid = existing_sample.guid
         existing_rna_seq_sample_guids = set(Sample.objects.filter(
-            sample_id='NA19675_D2', sample_type='RNA').values_list('guid', flat=True))
+            individual__id=1, sample_type='RNA').values_list('guid', flat=True))
         self.assertEqual(Sample.objects.filter(sample_id='NA19678_1').count(), 0)
         self.assertEqual(Sample.objects.filter(sample_id='NA20878').count(), 0)
 

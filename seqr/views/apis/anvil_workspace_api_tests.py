@@ -686,6 +686,15 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()['error'], 'Project matching query does not exist.')
 
+        # Test requesting to load data from a workspace with no previously loaded data
+        url = reverse(add_workspace_data, args=['R0002_empty'])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()['error'],
+            'New data cannot be added to this project until the previously requested data is loaded',
+        )
+
         url = reverse(add_workspace_data, args=[PROJECT1_GUID])
         self._test_errors(url, ['uploadedFileId', 'fullDataPath', 'vcfSamples'], TEST_WORKSPACE_NAME)
 

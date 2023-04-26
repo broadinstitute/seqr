@@ -836,6 +836,7 @@ class EsSearch(object):
         if self._genome_version == GENOME_VERSION_GRCh38:
             self._add_liftover(result, hit)
         self._parse_xstop(result)
+        result[CLINVAR_KEY]['version'] = self.index_metadata[index_name].get('clinvar_version')
 
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
         if data_type == Sample.DATASET_TYPE_SV_CALLS and genotypes:
@@ -1206,6 +1207,12 @@ class EsSearch(object):
                 variant['genotypes'][guid] = genotype
         variant['familyGuids'] = sorted(set(variant['familyGuids'] + duplicate_variant['familyGuids']))
 
+        # Always show the most up-to-date clinvar
+        clinvar_version = variant[CLINVAR_KEY]['version'] or '1900-01-01'
+        dup_clinvar_version = duplicate_variant[CLINVAR_KEY]['version'] or '1900-01-01'
+        if dup_clinvar_version > clinvar_version:
+            variant[CLINVAR_KEY] = duplicate_variant[CLINVAR_KEY]
+
     def _deduplicate_compound_het_results(self, compound_het_results):
         duplicates = 0
         results = {}
@@ -1220,14 +1227,8 @@ class EsSearch(object):
                 )
                 if existing_index is not None:
                     existing_compound_het_pair = results[gene][existing_index]
-
-                    def _update_existing_variant(existing_variant, variant):
-                        existing_variant['genotypes'].update(variant['genotypes'])
-                        family_guids = set(existing_variant['familyGuids'])
-                        family_guids.update(variant['familyGuids'])
-                        existing_variant['familyGuids'] = sorted(family_guids)
-                    _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[0])
-                    _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[1])
+                    self._merge_duplicate_variants(existing_compound_het_pair[0], compound_het_pair[0])
+                    self._merge_duplicate_variants(existing_compound_het_pair[1], compound_het_pair[1])
                     duplicates += 1
                 else:
                     results[gene].append(compound_het_pair)

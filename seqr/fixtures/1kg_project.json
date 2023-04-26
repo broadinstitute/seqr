@@ -1256,17 +1256,17 @@
     "model": "seqr.sample",
     "pk": 151,
     "fields": {
-        "guid": "S000151_na20889",
+        "guid": "S000151_na19675_1",
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.744Z",
-        "individual": 17,
+        "individual": 1,
         "sample_type": "RNA",
         "dataset_type": "VARIANTS",
-        "sample_id": "NA20889",
+        "sample_id": "NA19675_1",
         "is_active": true,
         "elasticsearch_index":null,
-        "tissue_type": "M",
+        "tissue_type": "F",
         "data_source": "muscle_samples.tsv.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
@@ -1287,25 +1287,6 @@
         "elasticsearch_index":null,
         "tissue_type": "M",
         "data_source": "muscle_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
-    }
-},
-{
-    "model": "seqr.sample",
-    "pk": 153,
-    "fields": {
-        "guid": "S000153_na19675_d2",
-        "created_date": "2017-02-05T06:42:55.397Z",
-        "created_by": null,
-        "last_modified_date": "2017-03-13T09:07:49.744Z",
-        "individual": 1,
-        "sample_type": "RNA",
-        "dataset_type": "VARIANTS",
-        "sample_id": "NA19675_D2",
-        "is_active": true,
-        "elasticsearch_index":null,
-        "tissue_type": "F",
-        "data_source": "fibroblasts_samples.tsv.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1369,12 +1350,22 @@
     }
 },
 {
-    "model": "seqr.rnaseqtpm",
-    "pk": 6,
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 1,
     "fields": {
-        "sample": 153,
-        "gene_id": "ENSG00000135954",
-        "tpm": 1.02
+        "sample": 151,
+        "gene_id": "ENSG00000106554",
+        "p_value": 1.08E-56,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 132885746,
+        "end": 132886973,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.85,
+        "read_count": 1297,
+        "rare_disease_samples_with_junction": 1,
+        "rare_disease_samples_total": 20
     }
 },
 {

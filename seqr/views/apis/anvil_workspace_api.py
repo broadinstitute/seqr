@@ -229,6 +229,11 @@ def add_workspace_data(request, project_guid):
     previous_samples = Sample.objects.filter(
         individual__family__project=project, is_active=True, elasticsearch_index__isnull=False,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS).prefetch_related('individual')
+    if not previous_samples:
+        return create_json_response({
+            'error': 'New data cannot be added to this project until the previously requested data is loaded',
+        }, status=400)
+
     previous_loaded_individuals = {s.individual.individual_id for s in previous_samples}
     missing_loaded_samples = [individual_id for individual_id in previous_loaded_individuals if
                               individual_id not in request_json['vcfSamples']]
