@@ -627,21 +627,26 @@ class IndividualAPITest(object):
             INDIVIDUAL_GUID: {'outliers': {
                 'ENSG00000135953': {
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
+                    'sampleId': 'NA19675_D2', 'tissueType': None,
                     'isSignificant': True,
                 },
                 'ENSG00000240361': {
                     'geneId': 'ENSG00000240361', 'zScore': -4.08, 'pValue': 5.88, 'pAdjust': 0.09, 'isSignificant': False,
+                    'sampleId': 'NA19675_D2', 'tissueType': None,
                 },
                 'ENSG00000268903': {
                     'geneId': 'ENSG00000268903', 'zScore': 7.08, 'pValue':0.000000000588, 'pAdjust': 0.00000000139,
                     'isSignificant': True,
+                    'sampleId': 'NA19675_D2', 'tissueType': None,
                 },
             },
             'spliceOutliers': {
                 'ENSG00000106554': {
                     'chrom': '7', 'deltaPsi': 0.85, 'end': 132886973, 'geneId': 'ENSG00000106554', 'isSignificant': True,
                     'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1,
-                    'readCount': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'zScore': 12.34}
+                    'readCount': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'zScore': 12.34,
+                    'sampleId': 'NA19675_1', 'tissueType': 'F', 'isSignificant': True,
+                }
             },
         }})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
