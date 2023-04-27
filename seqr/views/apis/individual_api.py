@@ -814,10 +814,16 @@ def get_individual_rna_seq_data(request, individual_guid):
 def _get_rna_seq_data(model_cls, request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     check_project_permissions(individual.family.project, request.user)
-    outlier_data = model_cls.objects.filter(sample__individual=individual, sample__is_active=True)
+    outlier_data = model_cls.objects.filter(sample__individual=individual, sample__is_active=True).prefetch_related('sample')
 
     rna_seq_data = {
-        data['geneId']: data for data in get_json_for_rna_seq_outliers(outlier_data)
+        data['geneId']: data for data in get_json_for_rna_seq_outliers(
+            outlier_data,
+            nested_fields=[
+                {'fields': ('sample', 'sample_id'), 'key': 'sampleId'},
+                {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}
+            ],
+        )
     }
     genes_to_show = get_genes([gene_id for gene_id, data in rna_seq_data.items() if data['isSignificant']])
 

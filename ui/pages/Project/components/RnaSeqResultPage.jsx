@@ -9,44 +9,40 @@ import { loadRnaSeqData } from '../reducers'
 import { getRnaSeqDataLoading } from '../selectors'
 
 const RnaSeqOutliers = React.lazy(() => import('./RnaSeqOutliers'))
-const RnaSeqSpliceOutliers = React.lazy(() => import('./RnaSeqSpliceOutliers'))
 const RnaSeqOutliersTable = React.lazy(() => import('./RnaSeqOutliersTable'))
+
+const OUTLIER_VOLCANO_PLOT_CONFIGS = {
+  outliers: {
+    getLocation: (({ geneId }) => geneId),
+    header: 'OUTRIDER Volcano Plot',
+  },
+  spliceOutliers: {
+    getLocation: (({ chrom, start, end }) => `${chrom}:${start}-${end}`),
+    header: 'FRASER Volcano Plot',
+  },
+}
 
 const BaseRnaSeqResultPage = ({ match, rnaSeqData, genesById, load, loading }) => (
   <DataLoader content={rnaSeqData} contentId={match.params.individualGuid} load={load} loading={loading}>
     <Grid divided>
-      <Grid.Row columns={rnaSeqData?.spliceOutliers && rnaSeqData?.outliers ? 2 : 1}>
-        {rnaSeqData?.outliers && (
-          <Grid.Column>
-            <React.Suspense fallback={<Loader />}>
+      <React.Suspense fallback={<Loader />}>
+        <Grid.Row columns={rnaSeqData?.spliceOutliers && rnaSeqData?.outliers ? 2 : 1}>
+          {Object.entries(rnaSeqData || {}).map(([key, data]) => (
+            <Grid.Column key={key}>
               {React.createElement(
                 RnaSeqOutliers,
                 {
                   familyGuid: match.params.familyGuid,
-                  individualGuid: match.params.individualGuid,
-                  rnaSeqData: rnaSeqData.outliers,
+                  rnaSeqData: data,
                   genesById,
+                  getLocation: OUTLIER_VOLCANO_PLOT_CONFIGS[key].getLocation,
+                  header: OUTLIER_VOLCANO_PLOT_CONFIGS[key].header,
                 },
               )}
-            </React.Suspense>
-          </Grid.Column>
-        )}
-        {rnaSeqData?.spliceOutliers && (
-          <Grid.Column>
-            <React.Suspense fallback={<Loader />}>
-              {React.createElement(
-                RnaSeqSpliceOutliers,
-                {
-                  familyGuid: match.params.familyGuid,
-                  individualGuid: match.params.individualGuid,
-                  rnaSeqData: rnaSeqData.spliceOutliers,
-                  genesById,
-                },
-              )}
-            </React.Suspense>
-          </Grid.Column>
-        )}
-      </Grid.Row>
+            </Grid.Column>
+          ))}
+        </Grid.Row>
+      </React.Suspense>
       {rnaSeqData?.spliceOutliers && (
         <Grid.Row>
           <React.Suspense fallback={<Loader />}>

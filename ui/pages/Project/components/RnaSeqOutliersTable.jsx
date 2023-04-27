@@ -25,6 +25,17 @@ const RNA_SEQ_SPLICE_COLUMNS = [
       />
     ),
   },
+  {
+    content: 'Junction Search',
+    format: row => (
+      <GeneSearchLink
+        buttonText="Search"
+        icon="search"
+        location={`${row.chrom}:${Math.max(0, row.start - 200)}-${row.end + 200}`}
+        familyGuid={row.familyGuid}
+      />
+    ),
+  },
   ...RNA_SEQ_SPLICE_NUM_FIELDS.map(name => (
     {
       name,
@@ -35,6 +46,7 @@ const RNA_SEQ_SPLICE_COLUMNS = [
   ...RNA_SEQ_SPLICE_LOC_FIELDS.map(name => (
     {
       name,
+      content: name,
       format: row => (
         <ButtonLink
           padding="0 0 0 1em"
@@ -101,6 +113,7 @@ class RnaSeqOutliersTable extends React.PureComponent {
             .map(row => ({ familyGuid, setVariant: this.setVariant, ...row }))}
           idField="geneId"
           columns={RNA_SEQ_SPLICE_COLUMNS}
+          defaultSortColumn="pValue"
         />
       </div>
     )
