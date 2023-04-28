@@ -9,13 +9,38 @@ from django.test import TestCase
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 from sys import maxsize
 from urllib3.exceptions import ReadTimeoutError
+from urllib3_mock import Responses
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
-    get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException, InvalidSearchException
+    get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidSearchException
 from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
-from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
+from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
+from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
     PARSED_MITO_VARIANT, TRANSCRIPT_2
+
+
+# The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
+# The urllib3_mock library works for those requests, but it has limited functionality, so this extension adds helper
+# methods for easier usage
+class Urllib3Responses(Responses):
+    def add_json(self, url, json_response, method=None, match_querystring=True, **kwargs):
+        if not method:
+            method = self.GET
+        body = json.dumps(json_response)
+        self.add(method, url, match_querystring=match_querystring, content_type='application/json', body=body, **kwargs)
+
+    def replace_json(self, url, *args, **kwargs):
+        existing_index = next(i for i, match in enumerate(self._urls) if match['url'] == url)
+        self.add_json(url, *args, **kwargs)
+        self._urls[existing_index] = self._urls.pop()
+
+    def call_request_json(self, index=-1):
+        return json.loads(self.calls[index].request.body)
+
+
+urllib3_responses = Urllib3Responses()
+
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'

@@ -1,152 +1,44 @@
-from collections import defaultdict
 from datetime import timedelta
 import elasticsearch
 
-from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch
+from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
+    get_index_metadata, InvalidIndexException, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
-from seqr.views.utils.json_utils import  _to_camel_case
 
-
-class InvalidIndexException(Exception):
-    pass
 
 class InvalidSearchException(Exception):
     pass
 
 
-def get_es_client(timeout=60, **kwargs):
-    client_kwargs = {
-        'hosts': [{'host': ELASTICSEARCH_SERVICE_HOSTNAME, 'port': ELASTICSEARCH_SERVICE_PORT}],
-        'timeout': timeout,
-    }
-    if ELASTICSEARCH_CREDENTIALS:
-        client_kwargs['http_auth'] = ELASTICSEARCH_CREDENTIALS
-    if ELASTICSEARCH_PROTOCOL:
-        client_kwargs['scheme'] = ELASTICSEARCH_PROTOCOL
-    if ES_SSL_CONTEXT:
-        client_kwargs['ssl_context'] = ES_SSL_CONTEXT
-    return elasticsearch.Elasticsearch(**client_kwargs, **kwargs)
+SEARCH_EXCEPTION_ERROR_MAP = {
+    InvalidSearchException: 400,
+}
+SEARCH_EXCEPTION_ERROR_MAP.update(ES_EXCEPTION_ERROR_MAP)
+
+SEARCH_EXCEPTION_MESSAGE_MAP = {}
+SEARCH_EXCEPTION_MESSAGE_MAP.update(ES_EXCEPTION_MESSAGE_MAP)
+
+ERROR_LOG_EXCEPTIONS = set()
+ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
 
 
 def ping_search_backend():
-    if not get_es_client(timeout=3, max_retries=0).ping():
-        raise ValueError('No response from elasticsearch ping')
+    ping_elasticsearch()
 
 
-def get_elasticsearch_status():
-    client = get_es_client()
-
-    disk_status = {
-        disk['node']: disk for disk in
-        _get_es_meta(client, 'allocation', ['node', 'shards', 'disk.avail', 'disk.used', 'disk.percent'])
-    }
-
-    node_stats = {}
-    for node in _get_es_meta(client, 'nodes', ['name', 'heap.percent']):
-        if node['name'] in disk_status:
-            disk_status[node.pop('name')].update(node)
-        else:
-            node_stats[node['name']] = node
-
-    indices, seqr_index_projects = _get_es_indices(client)
-
-    errors = ['{} does not exist and is used by project(s) {}'.format(
-        index, ', '.join(['{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
-    ) for index, project_individuals in seqr_index_projects.items() if project_individuals]
-
-    return {
-        'indices': indices,
-        'diskStats': list(disk_status.values()),
-        'nodeStats': list(node_stats.values()),
-        'errors': errors,
-    }
+def get_search_backend_status():
+    return get_elasticsearch_status()
 
 
-def delete_es_index(index):
-    client = get_es_client()
-    client.indices.delete(index)
-    updated_indices, _ = _get_es_indices(client)
-    return updated_indices
-
-
-def _get_es_meta(client, meta_type, fields, filter_rows=None):
-    return [{
-        _to_camel_case(field.replace('.', '_')): o[field] for field in fields
-    } for o in getattr(client.cat, meta_type)(format="json", h=','.join(fields))
-        if filter_rows is None or filter_rows(o)]
-
-
-def _get_es_indices(client):
-    indices = _get_es_meta(
-        client, 'indices', ['index', 'docs.count', 'store.size', 'creation.date.string'],
-        filter_rows=lambda index: all(
-            not index['index'].startswith(omit_prefix) for omit_prefix in ['.', 'index_operations_log']))
-
-    aliases = defaultdict(list)
-    for alias in _get_es_meta(client, 'aliases', ['alias', 'index']):
-        aliases[alias['alias']].append(alias['index'])
-
-    index_metadata = get_index_metadata('_all', client, use_cache=False)
-
-    active_samples = Sample.objects.filter(is_active=True, elasticsearch_index__isnull=False).select_related('individual__family__project')
-
-    seqr_index_projects = defaultdict(lambda: defaultdict(set))
-    es_projects = set()
-    for sample in active_samples:
-        for index_name in sample.elasticsearch_index.split(','):
-            project = sample.individual.family.project
-            es_projects.add(project)
-            if index_name in aliases:
-                for aliased_index_name in aliases[index_name]:
-                    seqr_index_projects[aliased_index_name][project].add(sample.individual.guid)
-            else:
-                seqr_index_projects[index_name.rstrip('*')][project].add(sample.individual.guid)
-
-    for index in indices:
-        index_name = index['index']
-        index.update(index_metadata[index_name])
-
-        projects_for_index = []
-        for index_prefix in list(seqr_index_projects.keys()):
-            if index_name.startswith(index_prefix):
-                projects_for_index += list(seqr_index_projects.pop(index_prefix).keys())
-        index['projects'] = [
-            {'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
-
-    return indices, seqr_index_projects
-
-
-def get_index_metadata(index_name, client, include_fields=False, use_cache=True):
-    if use_cache:
-        cache_key = 'index_metadata__{}'.format(index_name)
-        cached_metadata = safe_redis_get_json(cache_key)
-        if cached_metadata:
-            return cached_metadata
-
-    try:
-        mappings = client.indices.get_mapping(index=index_name)
-    except Exception as e:
-        raise InvalidIndexException('{} - Error accessing index: {}'.format(
-            index_name, e.error if hasattr(e, 'error') else str(e)))
-    index_metadata = {}
-    for index_name, mapping in mappings.items():
-        variant_mapping = mapping['mappings']
-        index_metadata[index_name] = variant_mapping.get('_meta', {})
-        if include_fields:
-            index_metadata[index_name]['fields'] = {
-                field: field_props.get('type') for field, field_props in variant_mapping['properties'].items()
-            }
-    if use_cache and include_fields:
-        # Only cache metadata with fields
-        safe_redis_set_json(cache_key, index_metadata)
-    return index_metadata
+def delete_search_backend_data(data_id):
+    return delete_es_index(data_id)
 
 
 def get_single_es_variant(families, variant_id, return_all_queried_families=False, user=None):

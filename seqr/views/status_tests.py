@@ -4,7 +4,7 @@ import mock
 from requests import HTTPError
 
 from seqr.views.status import status_view
-from seqr.views.utils.test_utils import urllib3_responses
+from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 
 
 class StatusTest(TestCase):
