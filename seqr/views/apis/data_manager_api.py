@@ -15,7 +15,7 @@ from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from seqr.utils.search.utils import get_elasticsearch_status, delete_es_index
+from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
@@ -36,7 +36,7 @@ logger = SeqrLogger(__name__)
 
 @data_manager_required
 def elasticsearch_status(request):
-    return create_json_response(get_elasticsearch_status())
+    return create_json_response(get_search_backend_status())
 
 
 @data_manager_required
@@ -49,7 +49,7 @@ def delete_index(request):
         }
         return create_json_response({'error': 'Index "{}" is still used by: {}'.format(index, ', '.join(projects))}, status=400)
 
-    updated_indices = delete_es_index(index)
+    updated_indices = delete_search_backend_data(index)
 
     return create_json_response({'indices': updated_indices})
 

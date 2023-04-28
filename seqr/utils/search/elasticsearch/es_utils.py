@@ -1,3 +1,4 @@
+from collections import defaultdict
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConnectionError as EsConnectionError, TransportError
 import elasticsearch_dsl
@@ -5,6 +6,7 @@ import elasticsearch_dsl
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
+from seqr.views.utils.json_utils import  _to_camel_case
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, \
     ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
 
@@ -52,6 +54,11 @@ def get_es_client(timeout=60, **kwargs):
     if ES_SSL_CONTEXT:
         client_kwargs['ssl_context'] = ES_SSL_CONTEXT
     return Elasticsearch(**client_kwargs, **kwargs)
+
+
+def ping_elasticsearch():
+    if not get_es_client(timeout=3, max_retries=0).ping():
+        raise ValueError('No response from elasticsearch ping')
 
 
 SAMPLE_FIELDS_LIST = ['samples', 'samples_num_alt_1']
@@ -140,3 +147,87 @@ def _validate_index_metadata(index_metadata, elasticsearch_index, project=None, 
         raise ValueError('Index "{0}" has dataset type {1} but expects {2}'.format(
             elasticsearch_index, index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS), dataset_type
         ))
+
+
+def delete_es_index(index):
+    client = get_es_client()
+    client.indices.delete(index)
+    updated_indices, _ = _get_es_indices(client)
+    return updated_indices
+
+
+def get_elasticsearch_status():
+    client = get_es_client()
+
+    disk_status = {
+        disk['node']: disk for disk in
+        _get_es_meta(client, 'allocation', ['node', 'shards', 'disk.avail', 'disk.used', 'disk.percent'])
+    }
+
+    node_stats = {}
+    for node in _get_es_meta(client, 'nodes', ['name', 'heap.percent']):
+        if node['name'] in disk_status:
+            disk_status[node.pop('name')].update(node)
+        else:
+            node_stats[node['name']] = node
+
+    indices, seqr_index_projects = _get_es_indices(client)
+
+    errors = ['{} does not exist and is used by project(s) {}'.format(
+        index, ', '.join(['{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
+    ) for index, project_individuals in seqr_index_projects.items() if project_individuals]
+
+    return {
+        'indices': indices,
+        'diskStats': list(disk_status.values()),
+        'nodeStats': list(node_stats.values()),
+        'errors': errors,
+    }
+
+
+def _get_es_meta(client, meta_type, fields, filter_rows=None):
+    return [{
+        _to_camel_case(field.replace('.', '_')): o[field] for field in fields
+    } for o in getattr(client.cat, meta_type)(format="json", h=','.join(fields))
+        if filter_rows is None or filter_rows(o)]
+
+
+def _get_es_indices(client):
+    indices = _get_es_meta(
+        client, 'indices', ['index', 'docs.count', 'store.size', 'creation.date.string'],
+        filter_rows=lambda index: all(
+            not index['index'].startswith(omit_prefix) for omit_prefix in ['.', 'index_operations_log']))
+
+    aliases = defaultdict(list)
+    for alias in _get_es_meta(client, 'aliases', ['alias', 'index']):
+        aliases[alias['alias']].append(alias['index'])
+
+    index_metadata = get_index_metadata('_all', client, use_cache=False)
+
+    active_samples = Sample.objects.filter(is_active=True, elasticsearch_index__isnull=False).select_related('individual__family__project')
+
+    seqr_index_projects = defaultdict(lambda: defaultdict(set))
+    es_projects = set()
+    for sample in active_samples:
+        for index_name in sample.elasticsearch_index.split(','):
+            project = sample.individual.family.project
+            es_projects.add(project)
+            if index_name in aliases:
+                for aliased_index_name in aliases[index_name]:
+                    seqr_index_projects[aliased_index_name][project].add(sample.individual.guid)
+            else:
+                seqr_index_projects[index_name.rstrip('*')][project].add(sample.individual.guid)
+
+    for index in indices:
+        index_name = index['index']
+        index.update(index_metadata[index_name])
+
+        projects_for_index = []
+        for index_prefix in list(seqr_index_projects.keys()):
+            if index_name.startswith(index_prefix):
+                projects_for_index += list(seqr_index_projects.pop(index_prefix).keys())
+        index['projects'] = [
+            {'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
+
+    return indices, seqr_index_projects
+
