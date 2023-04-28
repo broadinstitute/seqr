@@ -10,7 +10,7 @@ def add_new_search_samples(request_json, project, user, summary_template=None, e
 
     sample_ids, sample_type, sample_data = validate_es_index_metadata_and_get_samples(request_json, project=project)
     if not sample_ids:
-        raise ValueError('No samples found in the index. Make sure the specified caller type is correct')
+        raise ValueError('No samples found. Make sure the specified caller type is correct')
 
     sample_id_to_individual_id_mapping = load_mapping_file(
         request_json['mappingFilePath'], user) if request_json.get('mappingFilePath') else {}
@@ -24,7 +24,7 @@ def add_new_search_samples(request_json, project, user, summary_template=None, e
         dataset_type=dataset_type,
         expected_families=expected_families,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-        raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for ES sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
+        raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
     )
 
     updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)

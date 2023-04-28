@@ -104,7 +104,7 @@ class LiftProjectToHg38Test(TestCase):
             call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
-        self.assertEqual(str(ce.exception), 'Matches not found for ES sample ids: ID_NOT_EXIST. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.')
+        self.assertEqual(str(ce.exception), 'Matches not found for sample ids: ID_NOT_EXIST. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.')
         self.assertEqual(self._get_num_new_index_samples(), 0)
 
         calls = [
