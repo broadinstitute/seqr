@@ -30,7 +30,7 @@ class RnaSeqOutliersGraph extends React.PureComponent {
 
     const x = scaleLinear().domain(extent(dataArray.map(d => d.zScore))).range([0, GRAPH_WIDTH])
     const y = scaleLog().domain(extent(dataArray.map(d => d.pValue))).range([0, GRAPH_HEIGHT])
-    const r = scalePow().exponent(4).domain(extent(dataArray.map(d => d.deltaPsi))).range([1, 10])
+    const r = scalePow().exponent(4).domain(extent(dataArray.map(d => Math.abs(d.deltaPsi)))).range([1, 10])
 
     // x-axis
     svg.append('g')
@@ -64,7 +64,7 @@ class RnaSeqOutliersGraph extends React.PureComponent {
     dataPoints.append('circle')
       .attr('cx', d => x(d.zScore))
       .attr('cy', d => y(d.pValue))
-      .attr('r', d => (d.deltaPsi ? r(d.deltaPsi) : 3))
+      .attr('r', d => (d.deltaPsi === undefined ? 3 : r(Math.abs(d.deltaPsi))))
       .style('fill', 'None')
       .style('stroke', d => (d.isSignificant ? 'red' : 'lightgrey'))
 
