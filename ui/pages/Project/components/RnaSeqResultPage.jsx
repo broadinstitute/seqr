@@ -50,6 +50,7 @@ const BaseRnaSeqResultPage = ({ match, rnaSeqData, genesById, load, loading }) =
               {
                 familyGuid: match.params.familyGuid,
                 rnaSeqData: rnaSeqData.spliceOutliers,
+                genesById,
               })}
           </React.Suspense>
         </Grid.Row>

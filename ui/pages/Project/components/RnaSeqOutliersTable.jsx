@@ -15,10 +15,10 @@ const RNA_SEQ_SPLICE_DETAIL_FIELDS = ['type', 'readCount', 'rareDiseaseSamplesWi
 const RNA_SEQ_SPLICE_COLUMNS = [
   {
     name: 'geneId',
-    content: 'Gene-ID',
+    content: 'Gene Symbol',
     format: row => (
       <GeneSearchLink
-        buttonText={row.geneId}
+        buttonText={row.geneSymbol}
         location={row.geneId}
         familyGuid={row.familyGuid}
         floated="right"
@@ -77,6 +77,7 @@ class RnaSeqOutliersTable extends React.PureComponent {
   static propTypes = {
     rnaSeqData: PropTypes.object,
     familyGuid: PropTypes.string,
+    genesById: PropTypes.object,
   }
 
   state = {
@@ -91,7 +92,7 @@ class RnaSeqOutliersTable extends React.PureComponent {
   }
 
   render() {
-    const { rnaSeqData, familyGuid } = this.props
+    const { rnaSeqData, familyGuid, genesById } = this.props
 
     const { variants } = this.state
     return (
@@ -110,7 +111,12 @@ class RnaSeqOutliersTable extends React.PureComponent {
         <DataTable
           data={Object.values(rnaSeqData || {}).filter(({ isSignificant }) => isSignificant)
             .sort((a, b) => a.pValue - b.pValue).splice(0, 50)
-            .map(row => ({ familyGuid, setVariant: this.setVariant, ...row }))}
+            .map(row => ({
+              ...row,
+              familyGuid,
+              setVariant: this.setVariant,
+              geneSymbol: (genesById[row.geneId] || {}).geneSymbol || row.geneId,
+            }))}
           idField="geneId"
           columns={RNA_SEQ_SPLICE_COLUMNS}
           defaultSortColumn="pValue"
