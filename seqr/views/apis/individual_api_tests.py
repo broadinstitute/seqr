@@ -645,7 +645,7 @@ class IndividualAPITest(object):
                     'chrom': '7', 'deltaPsi': 0.85, 'end': 132886973, 'geneId': 'ENSG00000106554', 'isSignificant': True,
                     'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1,
                     'readCount': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'zScore': 12.34,
-                    'sampleId': 'NA19675_1', 'tissueType': 'F', 'isSignificant': True,
+                    'sampleId': 'NA19675_1', 'tissueType': 'F',
                 }
             },
         }})
