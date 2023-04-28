@@ -9,16 +9,27 @@ from seqr.utils.search.constants import XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch
+from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException, ES_EXCEPTION_ERROR_MAP,\
+    ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
 from seqr.views.utils.json_utils import  _to_camel_case
 
 
-class InvalidIndexException(Exception):
-    pass
-
 class InvalidSearchException(Exception):
     pass
+
+
+SEARCH_EXCEPTION_ERROR_MAP = {
+    InvalidSearchException: 400,
+}
+SEARCH_EXCEPTION_ERROR_MAP.update(ES_EXCEPTION_ERROR_MAP)
+
+SEARCH_EXCEPTION_MESSAGE_MAP = {}
+SEARCH_EXCEPTION_MESSAGE_MAP.update(ES_EXCEPTION_MESSAGE_MAP)
+
+ERROR_LOG_EXCEPTIONS = set()
+ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
 
 
 def get_es_client(timeout=60, **kwargs):

@@ -8,9 +8,10 @@ import { getGenesById, getSavedVariantsByGuid } from 'redux/selectors'
 import { GENOME_VERSION_DISPLAY_LOOKUP } from 'shared/utils/constants'
 import ShowGeneModal from '../buttons/ShowGeneModal'
 
-const PhenotypeListItem = styled(({ maxWidth, observed, ...props }) => <List.Item {...props} />)`
+const PhenotypeListItem = styled(({ maxWidth, observed, highlight, ...props }) => <List.Item {...props} />)`
   text-decoration: ${props => (props.observed === 'no' ? 'line-through' : 'none')};
   max-width: ${props => props.maxWidth || 'inherit'};
+  ${props => (props.highlight ? 'font-style: italic' : '')}
 `
 
 const SequenceContainer = styled.div`
@@ -90,10 +91,15 @@ const mapGeneStateToProps = state => ({
 
 export const SubmissionGeneVariants = connect(mapGeneStateToProps)(BaseSubmissionGeneVariants)
 
-export const Phenotypes = React.memo(({ phenotypes, maxWidth, ...listProps }) => (
+export const Phenotypes = React.memo(({ phenotypes, maxWidth, highlightIds, ...listProps }) => (
   <List bulleted {...listProps}>
     {phenotypes.map(phenotype => (
-      <PhenotypeListItem key={phenotype.id} observed={phenotype.observed} maxWidth={maxWidth}>
+      <PhenotypeListItem
+        key={phenotype.id}
+        observed={phenotype.observed}
+        maxWidth={maxWidth}
+        highlight={(highlightIds || []).includes(phenotype.id)}
+      >
         {`${phenotype.label} (${phenotype.id})`}
       </PhenotypeListItem>
     ))}
@@ -102,5 +108,6 @@ export const Phenotypes = React.memo(({ phenotypes, maxWidth, ...listProps }) =>
 
 Phenotypes.propTypes = {
   phenotypes: PropTypes.arrayOf(PropTypes.object),
+  highlightIds: PropTypes.arrayOf(PropTypes.string),
   maxWidth: PropTypes.string,
 }

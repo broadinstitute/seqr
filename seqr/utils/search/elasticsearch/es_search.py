@@ -33,7 +33,8 @@ class EsSearch(object):
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
     def __init__(self, families, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
-        from seqr.utils.search.utils import get_es_client, InvalidIndexException, InvalidSearchException
+        from seqr.utils.search.utils import get_es_client, InvalidSearchException
+        from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
