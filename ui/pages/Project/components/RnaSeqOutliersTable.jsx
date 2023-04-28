@@ -1,5 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
+import { Segment, Header } from 'semantic-ui-react'
 
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import { GeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
@@ -7,6 +9,11 @@ import DataTable from 'shared/components/table/DataTable'
 import FamilyReads from 'shared/components/panel/family/FamilyReads'
 import { COVERAGE_TYPE, JUNCTION_TYPE } from 'shared/components/panel/family/constants'
 import { ButtonLink } from 'shared/components/StyledComponents'
+
+const ScrollableSegment = styled(Segment)`
+  overflow: auto;
+  max-height: 400px;
+`
 
 const RNA_SEQ_SPLICE_NUM_FIELDS = ['zScore', 'pValue', 'deltaPsi']
 const RNA_SEQ_SPLICE_LOC_FIELDS = ['chrom', 'start', 'end', 'strand']
@@ -85,8 +92,8 @@ class RnaSeqOutliersTable extends React.PureComponent {
   }
 
   setVariant = junctionRow => () => {
-    const { chrom, start, end, pValue } = junctionRow || {}
-    const key = `${chrom}-${start}-${end}`
+    const { chrom, start, end, strand, pValue } = junctionRow || {}
+    const key = `${chrom}:${start}-${end} ${strand}`
     const { variants } = this.state
     this.setState({ variants: { ...variants, [key]: variants[key] ? null : { chrom, pos: start, end, pValue } } })
   }
@@ -100,13 +107,19 @@ class RnaSeqOutliersTable extends React.PureComponent {
         {Object.entries(variants).filter(([, variant]) => variant)
           .sort((a, b) => a.pValue - b.pValue)
           .map(([key, variant]) => (
-            <FamilyReads
-              key={key}
-              layout={LayoutReads}
-              variant={variant}
-              familyGuid={familyGuid}
-              defaultSampleTypes={IGV_SAMPLE_TYPES}
-            />
+            <ScrollableSegment>
+              <Header>
+                Splice Junction &nbsp;
+                {key}
+              </Header>
+              <FamilyReads
+                key={key}
+                layout={LayoutReads}
+                variant={variant}
+                familyGuid={familyGuid}
+                defaultSampleTypes={IGV_SAMPLE_TYPES}
+              />
+            </ScrollableSegment>
           ))}
         <DataTable
           data={Object.values(rnaSeqData || {}).filter(({ isSignificant }) => isSignificant)
