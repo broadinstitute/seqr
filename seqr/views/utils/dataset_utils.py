@@ -191,7 +191,8 @@ def match_and_update_search_samples(
     Family.bulk_update(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
-    return len(samples), matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update
+    sample_ids = [s.id for s in samples]
+    return sample_ids, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update
 
 
 def _match_and_update_rna_samples(

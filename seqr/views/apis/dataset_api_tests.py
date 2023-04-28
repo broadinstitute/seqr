@@ -293,12 +293,16 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['request must contain fields: elasticsearchIndex, datasetType']})
+        self.assertDictEqual(response.json(), {'errors': ['Invalid dataset type "None"']})
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME, 'datasetType': 'NOT_A_TYPE'}))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid dataset type "NOT_A_TYPE"']})
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'datasetType': 'SV'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['request must contain field: "elasticsearchIndex"']})
 
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)

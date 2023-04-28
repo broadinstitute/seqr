@@ -1,33 +1,21 @@
 from seqr.models import Sample
-from seqr.utils.search.elasticsearch.es_utils import validate_index_metadata_and_get_samples
+from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_and_get_samples
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 
 
 def add_new_search_samples(request_json, project, user, summary_template=None, expected_families=None):
-    required_fields = ['elasticsearchIndex', 'datasetType']  # TODO
-    if any(field not in request_json for field in required_fields):
-        raise ValueError(f'request must contain fields: {", ".join(required_fields)}')
-
-    dataset_type = request_json['datasetType']
+    dataset_type = request_json.get('datasetType')
     if dataset_type not in Sample.DATASET_TYPE_LOOKUP:
         raise ValueError(f'Invalid dataset type "{dataset_type}"')
 
-    elasticsearch_index = request_json['elasticsearchIndex'].strip()
-    dataset_type = request_json['datasetType']
-    ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
-    genome_version = request_json.get('genomeVersion')
-    sample_id_to_individual_id_mapping = load_mapping_file(
-        request_json['mappingFilePath'], user) if request_json.get('mappingFilePath') else {}
-
-    sample_ids, sample_type = validate_index_metadata_and_get_samples(
-        elasticsearch_index, project=project, dataset_type=dataset_type, genome_version=genome_version)
+    sample_ids, sample_type, sample_data = validate_es_index_metadata_and_get_samples(request_json, project=project)
     if not sample_ids:
         raise ValueError('No samples found in the index. Make sure the specified caller type is correct')
 
-    sample_data = {
-        'elasticsearch_index': elasticsearch_index,
-    }
-    num_samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids = match_and_update_search_samples(
+    sample_id_to_individual_id_mapping = load_mapping_file(
+        request_json['mappingFilePath'], user) if request_json.get('mappingFilePath') else {}
+    ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
+    sample_db_ids, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids = match_and_update_search_samples(
         project=project,
         user=user,
         sample_ids=sample_ids,
@@ -47,7 +35,7 @@ def add_new_search_samples(request_json, project, user, summary_template=None, e
         previous_loaded_individuals = {
             sample.individual_id for sample in Sample.objects.filter(
                 individual__in=updated_individuals, sample_type=sample_type, dataset_type=dataset_type,
-            ).exclude(elasticsearch_index=elasticsearch_index)}
+            ).exclude(id__in=sample_db_ids)}
         previous_loaded_individuals.update(matched_individual_ids)
         new_sample_ids = [
             sample.sample_id for sample in updated_samples if sample.individual_id not in previous_loaded_individuals]
@@ -58,4 +46,4 @@ def add_new_search_samples(request_json, project, user, summary_template=None, e
             dataset_type='' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}',
         )
 
-    return num_samples, inactivated_sample_guids, updated_family_guids, updated_samples, summary_message
+    return len(sample_db_ids), inactivated_sample_guids, updated_family_guids, updated_samples, summary_message
