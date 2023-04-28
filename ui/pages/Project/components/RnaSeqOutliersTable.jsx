@@ -38,7 +38,7 @@ const RNA_SEQ_SPLICE_COLUMNS = [
       <GeneSearchLink
         buttonText="Search"
         icon="search"
-        location={`${row.chrom}:${Math.max(0, row.start - 200)}-${row.end + 200}`}
+        location={`${row.chrom}:${Math.max(0, row.start - 5000)}-${row.end + 5000}`}
         familyGuid={row.familyGuid}
       />
     ),
