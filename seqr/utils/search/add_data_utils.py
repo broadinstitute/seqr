@@ -3,7 +3,7 @@ from seqr.utils.search.elasticsearch.es_utils import validate_index_metadata_and
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 
 
-def add_new_search_samples(request_json, project, user, summary_template=False, expected_families=None):
+def add_new_search_samples(request_json, project, user, summary_template=None, expected_families=None):
     required_fields = ['elasticsearchIndex', 'datasetType']  # TODO
     if any(field not in request_json for field in required_fields):
         raise ValueError(f'request must contain fields: {", ".join(required_fields)}')
