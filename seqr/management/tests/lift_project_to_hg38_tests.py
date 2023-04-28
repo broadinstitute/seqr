@@ -2,7 +2,7 @@
 import mock
 from copy import deepcopy
 from django.core.management.base import CommandError
-from seqr.models import Family, Sample, Project
+from seqr.models import Family, Sample
 from pyliftover.liftover import LiftOver
 from seqr.views.utils.test_utils import VARIANTS, SINGLE_VARIANT
 
