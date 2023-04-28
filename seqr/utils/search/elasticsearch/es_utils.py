@@ -123,13 +123,18 @@ def validate_es_index_metadata_and_get_samples(request_json, project=None):
             if sample_type != metadata['sampleType']:
                 raise ValueError('Found mismatched sample types for indices in alias')
 
+    sample_ids = _get_es_sample_ids(elasticsearch_index, sample_field, es_client)
+    sample_data = {'elasticsearch_index': elasticsearch_index}
+
+    return sample_ids, sample_type, sample_data
+
+
+def _get_es_sample_ids(elasticsearch_index, sample_field, es_client):
     s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
     s = s.params(size=0)
     s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field=sample_field, size=10000))
     response = s.execute()
-
-    sample_data = {'elasticsearch_index': elasticsearch_index}
-    return [agg['key'] for agg in response.aggregations.sample_ids.buckets], sample_type, sample_data
+    return [agg['key'] for agg in response.aggregations.sample_ids.buckets]
 
 
 def _get_samples_field(index_metadata):
