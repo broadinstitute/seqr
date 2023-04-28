@@ -126,7 +126,7 @@ class EsSearch(object):
             self.index_name = alias
 
     def _set_index_metadata(self):
-        from seqr.utils.search.utils import get_index_metadata
+        from seqr.utils.search.elasticsearch.es_utils import get_index_metadata
         self.index_metadata = get_index_metadata(self.index_name, self._client, include_fields=True)
 
     def _update_alias_metadata(self):

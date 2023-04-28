@@ -2,15 +2,14 @@ from collections import defaultdict
 from datetime import timedelta
 import elasticsearch
 
-from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch
-from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException, ES_EXCEPTION_ERROR_MAP,\
-    ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
+from seqr.utils.search.elasticsearch.es_utils import get_es_client, get_index_metadata, InvalidIndexException, \
+    ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
 from seqr.views.utils.json_utils import  _to_camel_case
@@ -30,20 +29,6 @@ SEARCH_EXCEPTION_MESSAGE_MAP.update(ES_EXCEPTION_MESSAGE_MAP)
 
 ERROR_LOG_EXCEPTIONS = set()
 ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
-
-
-def get_es_client(timeout=60, **kwargs):
-    client_kwargs = {
-        'hosts': [{'host': ELASTICSEARCH_SERVICE_HOSTNAME, 'port': ELASTICSEARCH_SERVICE_PORT}],
-        'timeout': timeout,
-    }
-    if ELASTICSEARCH_CREDENTIALS:
-        client_kwargs['http_auth'] = ELASTICSEARCH_CREDENTIALS
-    if ELASTICSEARCH_PROTOCOL:
-        client_kwargs['scheme'] = ELASTICSEARCH_PROTOCOL
-    if ES_SSL_CONTEXT:
-        client_kwargs['ssl_context'] = ES_SSL_CONTEXT
-    return elasticsearch.Elasticsearch(**client_kwargs, **kwargs)
 
 
 def ping_search_backend():
@@ -132,32 +117,6 @@ def _get_es_indices(client):
             {'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
 
     return indices, seqr_index_projects
-
-
-def get_index_metadata(index_name, client, include_fields=False, use_cache=True):
-    if use_cache:
-        cache_key = 'index_metadata__{}'.format(index_name)
-        cached_metadata = safe_redis_get_json(cache_key)
-        if cached_metadata:
-            return cached_metadata
-
-    try:
-        mappings = client.indices.get_mapping(index=index_name)
-    except Exception as e:
-        raise InvalidIndexException('{} - Error accessing index: {}'.format(
-            index_name, e.error if hasattr(e, 'error') else str(e)))
-    index_metadata = {}
-    for index_name, mapping in mappings.items():
-        variant_mapping = mapping['mappings']
-        index_metadata[index_name] = variant_mapping.get('_meta', {})
-        if include_fields:
-            index_metadata[index_name]['fields'] = {
-                field: field_props.get('type') for field, field_props in variant_mapping['properties'].items()
-            }
-    if use_cache and include_fields:
-        # Only cache metadata with fields
-        safe_redis_set_json(cache_key, index_metadata)
-    return index_metadata
 
 
 def get_single_es_variant(families, variant_id, return_all_queried_families=False, user=None):
