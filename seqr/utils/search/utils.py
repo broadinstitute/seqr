@@ -7,43 +7,26 @@ from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.elasticsearch.constants import XPOS_SORT_KEY, MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch
+from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException, ES_EXCEPTION_ERROR_MAP,\
+    ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
 
-
-class InvalidIndexException(Exception):
-    pass
 
 class InvalidSearchException(Exception):
     pass
 
 
 SEARCH_EXCEPTION_ERROR_MAP = {
-    InvalidIndexException: 400,
     InvalidSearchException: 400,
-    elasticsearch.exceptions.ConnectionError: 504,
-    elasticsearch.exceptions.TransportError: lambda e: int(e.status_code) if e.status_code != 'N/A' else 400,
 }
-SEARCH_EXCEPTION_MESSAGE_MAP = {
-    elasticsearch.exceptions.ConnectionError: str,
-    elasticsearch.exceptions.TransportError: lambda e: '{}: {} - {} - {}'.format(e.__class__.__name__, e.status_code, repr(e.error), _get_transport_error_type(e.info)),
-}
-ERROR_LOG_EXCEPTIONS = {InvalidIndexException}
+SEARCH_EXCEPTION_ERROR_MAP.update(ES_EXCEPTION_ERROR_MAP)
 
+SEARCH_EXCEPTION_MESSAGE_MAP = {}
+SEARCH_EXCEPTION_MESSAGE_MAP.update(ES_EXCEPTION_MESSAGE_MAP)
 
-def _get_transport_error_type(error):
-    error_type = 'no detail'
-    if isinstance(error, dict):
-        root_cause = error.get('root_cause')
-        error_info = error.get('error')
-        if (not root_cause) and isinstance(error_info, dict):
-            root_cause = error_info.get('root_cause')
-
-        if root_cause:
-            error_type = root_cause[0].get('type') or root_cause[0].get('reason')
-        elif error_info and not isinstance(error_info, dict):
-            error_type = repr(error_info)
-    return error_type
+ERROR_LOG_EXCEPTIONS = set()
+ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
 
 
 def get_es_client(timeout=60, **kwargs):
