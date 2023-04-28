@@ -1,7 +1,7 @@
 from collections import defaultdict
 
-from seqr.utils.elasticsearch.constants import MAX_COMPOUND_HET_GENES, HAS_ALT_FIELD_KEYS
-from seqr.utils.elasticsearch.es_search import EsSearch
+from seqr.utils.search.elasticsearch.constants import MAX_COMPOUND_HET_GENES, HAS_ALT_FIELD_KEYS
+from seqr.utils.search.elasticsearch.es_search import EsSearch
 
 
 class EsGeneAggSearch(EsSearch):
@@ -59,7 +59,7 @@ class EsGeneAggSearch(EsSearch):
 
     def _parse_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
-            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            from seqr.utils.search.utils import InvalidSearchException
             raise InvalidSearchException('This search returned too many genes')
 
         gene_counts = defaultdict(lambda: {'total': 0, 'families': defaultdict(int), 'sample_ids': set()})

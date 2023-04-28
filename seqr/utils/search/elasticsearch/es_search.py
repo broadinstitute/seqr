@@ -10,7 +10,7 @@ from itertools import combinations
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
-from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, X_LINKED_RECESSIVE, \
+from seqr.utils.search.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, X_LINKED_RECESSIVE, \
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
@@ -32,7 +32,7 @@ class EsSearch(object):
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
     def __init__(self, families, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
-        from seqr.utils.elasticsearch.utils import get_es_client, InvalidIndexException, InvalidSearchException
+        from seqr.utils.search.utils import get_es_client, InvalidIndexException, InvalidSearchException
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
@@ -124,7 +124,7 @@ class EsSearch(object):
             self.index_name = alias
 
     def _set_index_metadata(self):
-        from seqr.utils.elasticsearch.utils import get_index_metadata
+        from seqr.utils.search.utils import get_index_metadata
         self.index_metadata = get_index_metadata(self.index_name, self._client, include_fields=True)
 
     def _update_alias_metadata(self):
@@ -174,7 +174,7 @@ class EsSearch(object):
         self._set_indices(sorted(list(self.samples_by_family_index.keys())))
 
         if len(self._indices) < 1:
-            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            from seqr.utils.search.utils import InvalidSearchException
             raise InvalidSearchException(
                 'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
@@ -191,7 +191,7 @@ class EsSearch(object):
                 error = 'Unable to search against dataset type "{}". This may be because inheritance based search is disabled in families with no loaded affected individuals'.format(
                     dataset_type
                 )
-                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                from seqr.utils.search.utils import InvalidSearchException
                 raise InvalidSearchException(error)
             update_indices = new_indices
 
@@ -484,7 +484,7 @@ class EsSearch(object):
                 inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
             if list(inheritance_filter.keys()) == ['affected']:
-                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                from seqr.utils.search.utils import InvalidSearchException
                 raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
             family_samples_q = _family_genotype_inheritance_filter(
@@ -492,7 +492,7 @@ class EsSearch(object):
             )
 
             if not family_samples_q:
-                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                from seqr.utils.search.utils import InvalidSearchException
                 raise InvalidSearchException('Invalid custom inheritance')
 
         else:
@@ -503,12 +503,12 @@ class EsSearch(object):
 
     def _filter_compound_hets(self, quality_filters_by_family, annotations, annotations_secondary, has_location_filter):
         if not self._allowed_consequences:
-            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            from seqr.utils.search.utils import InvalidSearchException
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
         if not has_location_filter and any(len(family_samples_by_id) > MAX_NO_LOCATION_COMP_HET_FAMILIES
                                            for family_samples_by_id in self.samples_by_family_index.values()):
-            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            from seqr.utils.search.utils import InvalidSearchException
             raise InvalidSearchException(
                 'Location must be specified to search for compound heterozygous variants across many families')
 
@@ -1009,7 +1009,7 @@ class EsSearch(object):
 
     def _parse_compound_het_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
-            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            from seqr.utils.search.utils import InvalidSearchException
             raise InvalidSearchException('This search returned too many compound heterozygous variants. Please add stricter filters')
 
         family_unaffected_individual_guids = {
@@ -1290,7 +1290,7 @@ class EsSearch(object):
                     start_index = end_index - num_results
                 if end_index > MAX_VARIANTS:
                     # ES request size limits are limited by offset + size, which is the same as end_index
-                    from seqr.utils.elasticsearch.utils import InvalidSearchException
+                    from seqr.utils.search.utils import InvalidSearchException
                     raise InvalidSearchException(
                         'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index))
 

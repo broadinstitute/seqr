@@ -11,9 +11,9 @@ from sys import maxsize
 from urllib3.exceptions import ReadTimeoutError
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
-from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
+from seqr.utils.search.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
     get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException, InvalidSearchException
-from seqr.utils.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
+from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
 from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
     PARSED_MITO_VARIANT, TRANSCRIPT_2
 
@@ -1422,10 +1422,10 @@ class EsUtilsTest(TestCase):
             get_single_es_variant(self.families, '10-10334333-A-G')
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_COMPOUND_HET_GENES', 1)
-    @mock.patch('seqr.utils.elasticsearch.es_gene_agg_search.MAX_COMPOUND_HET_GENES', 1)
-    @mock.patch('seqr.utils.elasticsearch.es_search.logger')
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_COMPOUND_HET_GENES', 1)
+    @mock.patch('seqr.utils.search.elasticsearch.es_gene_agg_search.MAX_COMPOUND_HET_GENES', 1)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.logger')
     @urllib3_responses.activate
     def test_invalid_get_es_variants(self, mock_logger):
         setup_responses()
@@ -1573,7 +1573,7 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model)
         self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index_mito_wgs, test_index')
 
-    @mock.patch('seqr.utils.elasticsearch.utils.MAX_VARIANTS')
+    @mock.patch('seqr.utils.search.utils.MAX_VARIANTS')
     @urllib3_responses.activate
     def test_get_es_variants(self, mock_max_variants):
         setup_responses()
@@ -2478,7 +2478,7 @@ class EsUtilsTest(TestCase):
             }}
         ])
 
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_SEARCH_CLAUSES', 1)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_SEARCH_CLAUSES', 1)
     @urllib3_responses.activate
     def test_many_family_inheitance_get_es_variants(self):
         setup_responses()
@@ -2798,7 +2798,7 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=2, index=INDEX_NAME)
         ])
 
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_SEARCHES', 1)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_INDEX_SEARCHES', 1)
     @urllib3_responses.activate
     def test_multi_project_prefilter_indices_get_es_variants(self):
         setup_responses()
@@ -2934,7 +2934,7 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(**prefilter_search)
 
 
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_VARIANTS', 3)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_VARIANTS', 3)
     @urllib3_responses.activate
     def test_skip_genotype_filter(self):
         setup_responses()
@@ -2988,8 +2988,8 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=2, index=INDEX_NAME)
         ])
 
-    @mock.patch('seqr.utils.elasticsearch.es_search.LIFTOVER_GRCH38_TO_GRCH37', None)
-    @mock.patch('seqr.utils.elasticsearch.es_search.LiftOver')
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.LIFTOVER_GRCH38_TO_GRCH37', None)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.LiftOver')
     @urllib3_responses.activate
     def test_get_lifted_grch38_variants(self, mock_liftover):
         setup_responses()
@@ -3023,7 +3023,7 @@ class EsUtilsTest(TestCase):
         self.assertIsNotNone(_liftover_grch38_to_grch37())
         mock_liftover.assert_called_with('hg38', 'hg19')
 
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_NAME_LENGTH', 30)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_INDEX_NAME_LENGTH', 30)
     @urllib3_responses.activate
     def test_get_es_variants_create_index_alias(self):
         search_model = VariantSearch.objects.create(search={})

@@ -2,7 +2,7 @@ import logging
 from django.core.management.base import BaseCommand, CommandError
 
 from seqr.models import SavedVariant
-from seqr.utils.elasticsearch.utils import get_single_es_variant
+from seqr.utils.search.utils import get_single_es_variant
 
 logger = logging.getLogger(__name__)
 
