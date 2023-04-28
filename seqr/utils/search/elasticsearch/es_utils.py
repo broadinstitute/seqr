@@ -1,4 +1,4 @@
-from elasticsearch.exceptions import ConnectionError, TransportError
+from elasticsearch.exceptions import ConnectionError as EsConnectionError, TransportError
 
 
 class InvalidIndexException(Exception):
@@ -7,11 +7,11 @@ class InvalidIndexException(Exception):
 
 ES_EXCEPTION_ERROR_MAP = {
     InvalidIndexException: 400,
-    ConnectionError: 504,
+    EsConnectionError: 504,
     TransportError: lambda e: int(e.status_code) if e.status_code != 'N/A' else 400,
 }
 ES_EXCEPTION_MESSAGE_MAP = {
-    ConnectionError: str,
+    EsConnectionError: str,
     TransportError: lambda e: '{}: {} - {} - {}'.format(e.__class__.__name__, e.status_code, repr(e.error), _get_transport_error_type(e.info)),
 }
 ES_ERROR_LOG_EXCEPTIONS = {InvalidIndexException}
