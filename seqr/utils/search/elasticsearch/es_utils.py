@@ -94,7 +94,7 @@ def get_index_metadata(index_name, client, include_fields=False, use_cache=True)
 
 def validate_es_index_metadata_and_get_samples(request_json, project=None):
     if 'elasticsearchIndex' not in request_json:
-        raise ValueError(f'request must contain field: "elasticsearchIndex"')
+        raise ValueError('request must contain field: "elasticsearchIndex"')
 
     elasticsearch_index = request_json['elasticsearchIndex'].strip()
     kwargs = {
