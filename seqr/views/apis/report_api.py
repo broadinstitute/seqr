@@ -14,7 +14,7 @@ from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.search.add_data_utils import get_search_samples
+from seqr.utils.search.utils import get_search_samples
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import AirtableSession

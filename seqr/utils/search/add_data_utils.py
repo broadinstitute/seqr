@@ -3,12 +3,6 @@ from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 
 
-def get_search_samples(projects):
-    return Sample.objects.filter(
-        individual__family__project__in=projects, is_active=True, elasticsearch_index__isnull=False,
-    )
-
-
 def add_new_search_samples(request_json, project, user, summary_template=None, expected_families=None):
     dataset_type = request_json.get('datasetType')
     if dataset_type not in Sample.DATASET_TYPE_LOOKUP:
