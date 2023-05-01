@@ -42,13 +42,6 @@ def elasticsearch_status(request):
 @data_manager_required
 def delete_index(request):
     index = json.loads(request.body)['index']
-    active_index_samples = Sample.objects.filter(is_active=True, elasticsearch_index=index)
-    if active_index_samples:
-        projects = {
-            sample.individual.family.project.name for sample in active_index_samples.select_related('individual__family__project')
-        }
-        return create_json_response({'error': 'Index "{}" is still used by: {}'.format(index, ', '.join(projects))}, status=400)
-
     updated_indices = delete_search_backend_data(index)
 
     return create_json_response({'indices': updated_indices})

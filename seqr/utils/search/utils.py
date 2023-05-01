@@ -44,6 +44,11 @@ def get_search_samples(projects, active_only=True):
 
 
 def delete_search_backend_data(data_id):
+    active_index_samples = Sample.objects.filter(is_active=True, elasticsearch_index=data_id)
+    if active_index_samples:
+        projects = set(active_index_samples.values_list('individual__family__project__name', flat=True))
+        raise InvalidSearchException(f'"{data_id}" is still used by: {", ".join(projects)}')
+
     return delete_es_index(data_id)
 
 
