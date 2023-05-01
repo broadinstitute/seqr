@@ -36,10 +36,11 @@ def get_search_backend_status():
     return get_elasticsearch_status()
 
 
-def get_search_samples(projects):
-    return Sample.objects.filter(
-        individual__family__project__in=projects, is_active=True, elasticsearch_index__isnull=False,
-    )
+def get_search_samples(projects, active_only=True):
+    samples = Sample.objects.filter(individual__family__project__in=projects, elasticsearch_index__isnull=False)
+    if active_only:
+        samples = sample.filter(is_active=True)
+    return samples
 
 
 def delete_search_backend_data(data_id):
