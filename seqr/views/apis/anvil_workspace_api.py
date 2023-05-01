@@ -22,6 +22,7 @@ from seqr.models import Project, CAN_EDIT, Sample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS, SEQR_DATSETS_GS_PATH
+from seqr.utils.search.add_data_utils import get_search_sample_queryset
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
@@ -226,8 +227,7 @@ def add_workspace_data(request, project_guid):
 
     pedigree_records = _parse_uploaded_pedigree(request_json, request.user)
 
-    previous_samples = Sample.objects.filter(
-        individual__family__project=project, is_active=True, elasticsearch_index__isnull=False,
+    previous_samples = get_search_sample_queryset([project]).filter(
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS).prefetch_related('individual')
     if not previous_samples:
         return create_json_response({
