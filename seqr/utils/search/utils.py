@@ -7,7 +7,7 @@ from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
-    ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
+    get_es_variants_for_variant_ids, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 
@@ -41,19 +41,16 @@ def delete_search_backend_data(data_id):
 
 
 def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
-    variants = EsSearch(
-        families, return_all_queried_families=return_all_queried_families, user=user,
-    ).filter_by_variant_ids([variant_id]).search(num_results=1)
+    variants = get_es_variants_for_variant_ids(
+        families, [variant_id], user, return_all_queried_families=return_all_queried_families,
+    )
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variants[0]
 
 
 def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
-    variants = EsSearch(families, user=user).filter_by_variant_ids(variant_ids)
-    if dataset_type:
-        variants = variants.update_dataset_type(dataset_type)
-    return variants.search(num_results=len(variant_ids))
+    return get_es_variants_for_variant_ids(families, variant_ids, user, dataset_type=dataset_type)
 
 
 def query_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):

@@ -6,6 +6,7 @@ import elasticsearch_dsl
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
+from seqr.utils.search.elasticsearch.es_search import EsSearch
 from seqr.views.utils.json_utils import  _to_camel_case
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, \
     ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
@@ -247,4 +248,13 @@ def _get_es_indices(client):
             {'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
 
     return indices, seqr_index_projects
+
+
+def get_es_variants_for_variant_ids(families, variant_ids, user, dataset_type=None, return_all_queried_families=False):
+    variants = EsSearch(
+        families, user=user, return_all_queried_families=return_all_queried_families,
+    ).filter_by_variant_ids(variant_ids)
+    if dataset_type:
+        variants = variants.update_dataset_type(dataset_type)
+    return variants.search(num_results=len(variant_ids))
 
