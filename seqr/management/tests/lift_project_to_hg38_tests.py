@@ -155,7 +155,7 @@ class LiftProjectToHg38Test(TestCase):
 
     @mock.patch('seqr.management.commands.lift_project_to_hg38.input')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.get_es_variants_for_variant_tuples')
-    @mock.patch('seqr.management.commands.lift_project_to_hg38.get_single_es_variant')
+    @mock.patch('seqr.management.commands.lift_project_to_hg38.get_single_variant')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.LiftOver')
     def test_command_other_exceptions(self, mock_liftover, mock_single_es_variants,
             mock_get_es_variants, mock_input, mock_get_es_samples, mock_logger):

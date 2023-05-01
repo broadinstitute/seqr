@@ -57,6 +57,7 @@ def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=
 
 
 def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
+    # TODO
     variant_ids = []
     for xpos, ref, alt in xpos_ref_alt_tuples:
         chrom, pos = get_chrom_pos(xpos)
