@@ -3,7 +3,7 @@ from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 
 
-def get_search_sample_queryset(projects):
+def get_search_samples(projects):
     return Sample.objects.filter(
         individual__family__project__in=projects, is_active=True, elasticsearch_index__isnull=False,
     )

@@ -14,6 +14,7 @@ from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
+from seqr.utils.search.add_data_utils import get_search_samples
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import AirtableSession
@@ -387,9 +388,7 @@ def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date
     else:
         max_loaded_date = datetime.now() - timedelta(days=365)
 
-    loaded_samples = Sample.objects.filter(
-        individual__family__project__in=projects, elasticsearch_index__isnull=False,
-    ).select_related('individual').order_by('-loaded_date')
+    loaded_samples = get_search_samples(projects).select_related('individual').order_by('-loaded_date')
     if max_loaded_date:
         loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
     #  Only return the oldest sample for each individual

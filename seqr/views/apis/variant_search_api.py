@@ -10,8 +10,8 @@ from django.db.models import Q, F, Value
 from math import ceil
 
 from reference_data.models import GENOME_VERSION_GRCh37
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, \
-    Sample
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
+from seqr.utils.search.add_data_utils import get_search_samples
 from seqr.utils.search.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
 from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
@@ -378,9 +378,8 @@ def search_context_handler(request):
         analysisStatus=F('analysis_status'),
     )}
 
-    project_dataset_types = Sample.objects.filter(
-        individual__family__project__in=projects, is_active=True, elasticsearch_index__isnull=False,
-    ).values('individual__family__project__guid').annotate(dataset_types=ArrayAgg('dataset_type', distinct=True))
+    project_dataset_types = get_search_samples(projects).values('individual__family__project__guid').annotate(
+        dataset_types=ArrayAgg('dataset_type', distinct=True))
     for agg in project_dataset_types:
         response['projectsByGuid'][agg['individual__family__project__guid']]['datasetTypes'] = agg['dataset_types']
 
