@@ -774,12 +774,13 @@ def gregor_export(request):
     if not does_file_exist(file_path, user=request.user):
         raise ErrorsWarningsException(['Invalid Delivery Path: folder not found'])
 
-    projects = get_internal_projects().filter(guid__in=get_project_guids_user_can_view(request.user))
+    projects = get_internal_projects().filter(
+        guid__in=get_project_guids_user_can_view(request.user),
+        consent_code=consent_code[0],
+        projectcategory__name='GREGoR',
+    )
     individuals = Individual.objects.filter(
-        family__project__consent_code=consent_code[0],
-        family__project__in=projects,
-        family__project__projectcategory__name='GREGoR',
-        sample__elasticsearch_index__isnull=False,
+        sample__in=get_search_samples(projects, active_only=False),
     ).distinct().prefetch_related('family__project', 'mother', 'father')
 
     airtable_sample_records, airtable_metadata_by_smid = _get_gregor_airtable_data(individuals, request.user)

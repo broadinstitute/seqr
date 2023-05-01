@@ -39,7 +39,7 @@ def get_search_backend_status():
 def get_search_samples(projects, active_only=True):
     samples = Sample.objects.filter(individual__family__project__in=projects, elasticsearch_index__isnull=False)
     if active_only:
-        samples = sample.filter(is_active=True)
+        samples = samples.filter(is_active=True)
     return samples
 
 
