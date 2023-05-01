@@ -13,8 +13,9 @@ from urllib3_mock import Responses
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
-    get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException, InvalidSearchException
+    get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidSearchException
 from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
+from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
     PARSED_MITO_VARIANT, TRANSCRIPT_2
 
