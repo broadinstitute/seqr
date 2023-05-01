@@ -8,7 +8,7 @@ def add_new_search_samples(request_json, project, user, summary_template=None, e
     if dataset_type not in Sample.DATASET_TYPE_LOOKUP:
         raise ValueError(f'Invalid dataset type "{dataset_type}"')
 
-    sample_ids, sample_type, sample_data = validate_es_index_metadata_and_get_samples(request_json, project=project)
+    sample_ids, sample_type, sample_data = validate_es_index_metadata_and_get_samples(request_json, project)
     if not sample_ids:
         raise ValueError('No samples found. Make sure the specified caller type is correct')
 

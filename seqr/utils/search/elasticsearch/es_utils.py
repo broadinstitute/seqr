@@ -92,7 +92,7 @@ def get_index_metadata(index_name, client, include_fields=False, use_cache=True)
     return index_metadata
 
 
-def validate_es_index_metadata_and_get_samples(request_json, project=None):
+def validate_es_index_metadata_and_get_samples(request_json, project):
     if 'elasticsearchIndex' not in request_json:
         raise ValueError('request must contain field: "elasticsearchIndex"')
 
