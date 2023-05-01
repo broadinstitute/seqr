@@ -27,7 +27,7 @@ class StatusTest(TestCase):
             mock.call('Database "default" connection error: No connection'),
             mock.call('Database "reference_data" connection error: No connection'),
             mock.call('Redis connection error: Bad connection'),
-            mock.call('Elasticsearch connection error: No response from elasticsearch ping'),
+            mock.call('Search backend connection error: No response from elasticsearch ping'),
             mock.call('Kibana connection error: Connection refused: HEAD /status'),
         ])
 

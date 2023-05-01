@@ -10,14 +10,15 @@ from itertools import combinations
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
-from seqr.utils.search.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, X_LINKED_RECESSIVE, \
+from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, MAX_NO_LOCATION_COMP_HET_FAMILIES
+from seqr.utils.search.elasticsearch.constants import X_LINKED_RECESSIVE, \
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
-    PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
+    PATH_FREQ_OVERRIDE_CUTOFF, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
     get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS, SCREEN_KEY, MAX_INDEX_SEARCHES, PREFILTER_SEARCH_SIZE
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
@@ -32,8 +33,8 @@ class EsSearch(object):
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
     def __init__(self, families, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
-        from seqr.utils.search.utils import get_es_client, InvalidSearchException
-        from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
+        from seqr.utils.search.utils import InvalidSearchException
+        from seqr.utils.search.elasticsearch.es_utils import get_es_client, InvalidIndexException
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
@@ -125,7 +126,7 @@ class EsSearch(object):
             self.index_name = alias
 
     def _set_index_metadata(self):
-        from seqr.utils.search.utils import get_index_metadata
+        from seqr.utils.search.elasticsearch.es_utils import get_index_metadata
         self.index_metadata = get_index_metadata(self.index_name, self._client, include_fields=True)
 
     def _update_alias_metadata(self):

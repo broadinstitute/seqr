@@ -32,7 +32,7 @@ def mock_convert_coordinate(chrom, pos):
 
 
 @mock.patch('seqr.management.commands.lift_project_to_hg38.logger')
-@mock.patch('seqr.management.commands.lift_project_to_hg38.validate_index_metadata_and_get_elasticsearch_index_samples')
+@mock.patch('seqr.management.commands.lift_project_to_hg38.get_valid_search_samples')
 class LiftProjectToHg38Test(TestCase):
     fixtures = ['users', '1kg_project']
 

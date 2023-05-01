@@ -13,7 +13,7 @@ from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, \
     Sample
 from seqr.utils.search.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
-from seqr.utils.search.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
