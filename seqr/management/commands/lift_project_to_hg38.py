@@ -10,8 +10,8 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import reset_cached_search_results
 from seqr.utils.search.add_data_utils import add_new_search_samples
-from seqr.utils.search.utils import get_es_variants_for_variant_tuples, get_single_variant
-from seqr.utils.xpos_utils import get_xpos
+from seqr.utils.search.utils import get_variants_for_variant_ids, get_single_variant
+from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
 
 logger = logging.getLogger(__name__)
 
@@ -46,12 +46,18 @@ class Command(BaseCommand):
         saved_variants_to_lift, hg37_to_hg38_xpos, lift_failed = _get_variants_to_lift(saved_variants)
 
         saved_variants_map = defaultdict(list)
+        variant_ids = []
         for v in saved_variants_to_lift:
             if hg37_to_hg38_xpos.get(v['xpos']):
                 variant_model = saved_variant_models_by_guid[v['variantGuid']]
-                saved_variants_map[(hg37_to_hg38_xpos[v['xpos']], v['ref'], v['alt'])].append(variant_model)
+                xpos_38 = hg37_to_hg38_xpos[v['xpos']]
+                saved_variants_map[(xpos_38, v['ref'], v['alt'])].append(variant_model)
 
-        es_variants = get_es_variants_for_variant_tuples(expected_families, list(saved_variants_map.keys()))
+                chrom, pos = get_chrom_pos(xpos_38)
+                variant_ids.append(f"{'MT' if chrom == 'M' else chrom}-{pos}-{v['ref']}-{v['alt']}")
+
+        es_variants = get_variants_for_variant_ids(
+            expected_families, variant_ids, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
 
         missing_variants =_validate_missing_variants(es_variants, saved_variants_map)
 

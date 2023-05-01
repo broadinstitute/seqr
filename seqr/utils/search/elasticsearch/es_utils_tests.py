@@ -12,7 +12,7 @@ from urllib3.exceptions import ReadTimeoutError
 from urllib3_mock import Responses
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
-from seqr.utils.search.utils import get_es_variants_for_variant_tuples, get_single_variant, query_variants, \
+from seqr.utils.search.utils import get_single_variant, query_variants, \
     get_variant_query_gene_counts, get_variants_for_variant_ids, InvalidSearchException
 from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
@@ -1392,25 +1392,6 @@ class EsUtilsTest(TestCase):
         self.assertIn(cache_key, REDIS_CACHE.keys())
         self.assertDictEqual(json.loads(REDIS_CACHE[cache_key]), expected_results)
         MOCK_REDIS.expire.assert_called_with(cache_key, timedelta(weeks=2))
-
-    @urllib3_responses.activate
-    def test_get_es_variants_for_variant_tuples(self):
-        setup_responses()
-
-        variants = get_es_variants_for_variant_tuples(
-            self.families,
-            [(2103343353, 'GAGA', 'G'), (1248367227, 'TC', 'T'), (25138367346, 'A', 'C')]
-        )
-
-        self.assertEqual(len(variants), 2)
-        self.assertDictEqual(variants[0], PARSED_NO_SORT_VARIANTS[0])
-        self.assertDictEqual(variants[1], PARSED_NO_SORT_VARIANTS[1])
-
-        self.assertExecutedSearch(
-            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'MT-138367346-A-C']}}], size=6,
-            unsorted=True,
-            index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME])
-        )
 
     @urllib3_responses.activate
     def test_get_es_variants_for_variant_ids(self):

@@ -9,7 +9,7 @@ from seqr.utils.search.elasticsearch.es_search import EsSearch
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
-from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
+from seqr.utils.xpos_utils import get_xpos
 
 
 class InvalidSearchException(Exception):
@@ -54,17 +54,6 @@ def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=
     if dataset_type:
         variants = variants.update_dataset_type(dataset_type)
     return variants.search(num_results=len(variant_ids))
-
-
-def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
-    # TODO
-    variant_ids = []
-    for xpos, ref, alt in xpos_ref_alt_tuples:
-        chrom, pos = get_chrom_pos(xpos)
-        if chrom == 'M':
-            chrom = 'MT'
-        variant_ids.append('{}-{}-{}-{}'.format(chrom, pos, ref, alt))
-    return get_variants_for_variant_ids(families, variant_ids, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
 
 
 def query_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
