@@ -73,7 +73,7 @@ class EsSearch(object):
             dataset_type = self._get_index_dataset_type(index)
             self.indices_by_dataset_type[dataset_type].append(index)
 
-        self.previous_search_results = previous_search_results or {}
+        self.previous_search_results = {} if previous_search_results is None else previous_search_results
         self._return_all_queried_families = return_all_queried_families
         self._user = user
 

@@ -98,9 +98,9 @@ def _query_variants(search_model, previous_search_results, es_search_cls=EsSearc
     variant_results = es_search.search(page=page, num_results=num_results)
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
-    safe_redis_set_json(cache_key, es_search.previous_search_results, expire=timedelta(weeks=2))
+    safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
 
-    return variant_results, es_search.previous_search_results.get('total_results')
+    return variant_results, previous_search_results.get('total_results')
 
 
 def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
