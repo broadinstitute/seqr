@@ -6,6 +6,7 @@ import elasticsearch_dsl
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
+from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch
 from seqr.views.utils.json_utils import  _to_camel_case
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, \
@@ -257,4 +258,28 @@ def get_es_variants_for_variant_ids(families, variant_ids, user, dataset_type=No
     if dataset_type:
         variants = variants.update_dataset_type(dataset_type)
     return variants.search(num_results=len(variant_ids))
+
+
+def get_es_variants(families, search, user, previous_search_results, sort=None, page=None, num_results=None,
+                    gene_agg=False, skip_genotype_filter=False):
+    es_search_cls = EsGeneAggSearch if gene_agg else EsSearch
+
+    es_search = es_search_cls(
+        families,
+        previous_search_results=previous_search_results,
+        user=user,
+        sort=sort,
+    )
+
+    es_search.filter_variants(
+        inheritance=search.get('inheritance'), frequencies=search.get('freqs'), pathogenicity=search.get('pathogenicity'),
+        annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
+        in_silico=search.get('in_silico'), quality_filter=search.get('qualityFilter'),
+        custom_query=search.get('customQuery'), locus=search.get('locus'), skip_genotype_filter=skip_genotype_filter,
+        **search.get('parsedLocus')
+
+    )
+
+    return es_search.search(page=page, num_results=num_results)
+
 

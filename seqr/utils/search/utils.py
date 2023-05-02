@@ -7,7 +7,7 @@ from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
-    get_es_variants_for_variant_ids, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
+    get_es_variants, get_es_variants_for_variant_ids, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 
@@ -77,8 +77,8 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
         raise InvalidSearchException('Too many variants to load. Please refine your search and try again')
 
     return _query_variants(
-        search_model, previous_search_results, sort=sort, user=user, page=page, num_results=num_results,
-        skip_genotype_filter=skip_genotype_filter, )
+        search_model, user, previous_search_results, sort=sort, page=page, num_results=num_results,
+        skip_genotype_filter=skip_genotype_filter)
 
 
 def get_variant_query_gene_counts(search_model, user):
@@ -87,14 +87,11 @@ def get_variant_query_gene_counts(search_model, user):
     if previously_loaded_results is not None:
         return previously_loaded_results
 
-    gene_counts, _ = _query_variants(
-        search_model, previous_search_results, es_search_cls=EsGeneAggSearch, sort=None, user=user)
+    gene_counts, _ = _query_variants(search_model, user, previous_search_results, gene_agg=True)
     return gene_counts
 
 
-
-
-def _query_variants(search_model, previous_search_results, es_search_cls=EsSearch, sort=None, skip_genotype_filter=False, user=None, page=1, num_results=100):
+def _query_variants(search_model, user, previous_search_results, sort=None, num_results=100, **kwargs):
     search = search_model.variant_search.search
 
     rs_ids = None
@@ -109,26 +106,20 @@ def _query_variants(search_model, previous_search_results, es_search_cls=EsSearc
         if rs_ids and variant_ids:
             raise InvalidSearchException('Invalid variant notation: found both variant IDs and rsIDs')
 
-    es_search = es_search_cls(
-        search_model.families.all(),
-        previous_search_results=previous_search_results,
-        user=user,
-        sort=sort,
-    )
-
-    es_search.filter_variants(
-        inheritance=search.get('inheritance'), frequencies=search.get('freqs'), pathogenicity=search.get('pathogenicity'),
-        annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
-        in_silico=search.get('in_silico'), quality_filter=search.get('qualityFilter'),
-        custom_query=search.get('customQuery'), locus=search.get('locus'),
-        genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids,
-        skip_genotype_filter=skip_genotype_filter,
-    )
-
     if variant_ids:
         num_results = len(variant_ids)
 
-    variant_results = es_search.search(page=page, num_results=num_results)
+    parsed_search = {
+        'parsedLocus': {
+            'genes': genes, 'intervals': intervals, 'rs_ids': rs_ids, 'variant_ids': variant_ids,
+        },
+    }
+    parsed_search.update(search)
+
+    variant_results = get_es_variants(
+        search_model.families.all(), parsed_search, user, previous_search_results, sort=sort, num_results=num_results,
+        **kwargs,
+    )
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
     safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
