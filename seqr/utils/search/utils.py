@@ -88,22 +88,6 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
         skip_genotype_filter=skip_genotype_filter)
 
 
-def get_variant_query_gene_counts(search_model, user):
-    previous_search_results = _get_cached_search_results(search_model)
-    if previous_search_results.get('gene_aggs'):
-        return previous_search_results['gene_aggs']
-
-    if len(previous_search_results.get('all_results', [])) == previous_search_results.get('total_results'):
-        return _get_gene_aggs_for_cached_variants(previous_search_results)
-
-    previously_loaded_results = process_es_previously_loaded_gene_aggs(previous_search_results)
-    if previously_loaded_results is not None:
-        return previously_loaded_results
-
-    gene_counts, _ = _query_variants(search_model, user, previous_search_results, gene_agg=True)
-    return gene_counts
-
-
 def _query_variants(search_model, user, previous_search_results, sort=None, num_results=100, **kwargs):
     search = search_model.variant_search.search
 
@@ -138,6 +122,22 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
 
     return variant_results, previous_search_results.get('total_results')
+
+
+def get_variant_query_gene_counts(search_model, user):
+    previous_search_results = _get_cached_search_results(search_model)
+    if previous_search_results.get('gene_aggs'):
+        return previous_search_results['gene_aggs']
+
+    if len(previous_search_results.get('all_results', [])) == previous_search_results.get('total_results'):
+        return _get_gene_aggs_for_cached_variants(previous_search_results)
+
+    previously_loaded_results = process_es_previously_loaded_gene_aggs(previous_search_results)
+    if previously_loaded_results is not None:
+        return previously_loaded_results
+
+    gene_counts, _ = _query_variants(search_model, user, previous_search_results, gene_agg=True)
+    return gene_counts
 
 
 def _get_gene_aggs_for_cached_variants(previous_search_results):
@@ -175,4 +175,3 @@ def _parse_variant_items(search_json):
                 invalid_items.append(item)
 
     return rs_ids, variant_ids, invalid_items
-
