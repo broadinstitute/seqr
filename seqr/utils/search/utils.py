@@ -1,13 +1,13 @@
+from collections import defaultdict
 from datetime import timedelta
 
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
-from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
-    get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, \
+    get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
@@ -91,7 +91,13 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
 
 def get_variant_query_gene_counts(search_model, user):
     previous_search_results = _get_cached_search_results(search_model)
-    previously_loaded_results = EsGeneAggSearch.process_previous_results(previous_search_results)  # TODO move out of class
+    if previous_search_results.get('gene_aggs'):
+        return previous_search_results['gene_aggs']
+
+    if len(previous_search_results.get('all_results', [])) == previous_search_results.get('total_results'):
+        return _get_gene_aggs_for_cached_variants(previous_search_results)
+
+    previously_loaded_results = process_es_previously_loaded_gene_aggs(previous_search_results)
     if previously_loaded_results is not None:
         return previously_loaded_results
 
@@ -133,6 +139,20 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
 
     return variant_results, previous_search_results.get('total_results')
+
+
+def _get_gene_aggs_for_cached_variants(previous_search_results):
+    gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
+    for var in previous_search_results['all_results']:
+        gene_id = next((
+            gene_id for gene_id, transcripts in var['transcripts'].items()
+            if any(t['transcriptId'] == var['mainTranscriptId'] for t in transcripts)
+        ), None) if var['mainTranscriptId'] else None
+        if gene_id:
+            gene_aggs[gene_id]['total'] += 1
+            for family_guid in var['familyGuids']:
+                gene_aggs[gene_id]['families'][family_guid] += 1
+    return gene_aggs
 
 
 def _parse_variant_items(search_json):

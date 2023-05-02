@@ -292,3 +292,27 @@ def process_es_previously_loaded_results(previous_search_results, start_index, e
     return results
 
 
+def process_es_previously_loaded_gene_aggs(previous_search_results):
+    total_results = previous_search_results.get('total_results')
+    if total_results is None or 'all_results' in previous_search_results or 'grouped_results' not in previous_search_results:
+        return None
+
+    loaded = sum(counts.get('loaded', 0) for counts in previous_search_results.get('loaded_variant_counts', {}).values())
+    if loaded != total_results:
+        return None
+
+    gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
+
+    for group in previous_search_results['grouped_results']:
+        variants = next(iter(group.values()))
+        gene_id = next(iter(group))
+        if not gene_id or gene_id == 'null':
+            gene_id = next((
+                gene_id for gene_id, transcripts in variants[0]['transcripts'].items()
+                if any(t['transcriptId'] == variants[0]['mainTranscriptId'] for t in transcripts)
+            ), None) if variants[0]['mainTranscriptId'] else None
+        if gene_id:
+            gene_aggs[gene_id]['total'] += len(variants)
+            for family_guid in variants[0]['familyGuids']:
+                gene_aggs[gene_id]['families'][family_guid] += len(variants)
+    return gene_aggs
