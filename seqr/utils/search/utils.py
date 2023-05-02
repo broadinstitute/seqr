@@ -5,7 +5,6 @@ from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
-from seqr.utils.search.elasticsearch.es_search import EsSearch
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
@@ -168,10 +167,12 @@ def _parse_variant_items(search_json):
             rs_ids.append(item)
         else:
             try:
-                chrom, pos, _, _ = EsSearch.parse_variant_id(item)
-                get_xpos(chrom, pos)
-                variant_ids.append(item.lstrip('chr'))
+                variant_id = item.lstrip('chr')
+                chrom, pos, _, _ = variant_id.split('-')
+                get_xpos(chrom, int(pos))
+                variant_ids.append(variant_id)
             except (KeyError, ValueError):
                 invalid_items.append(item)
 
     return rs_ids, variant_ids, invalid_items
+

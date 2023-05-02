@@ -1323,13 +1323,6 @@ class EsSearch(object):
                 long_running.append({'task': task, 'parent_task_id': parent_id})
         return long_running
 
-    @classmethod
-    def parse_variant_id(cls, variant_id):
-        var_fields = variant_id.split('-')
-        if len(var_fields) != 4:
-            raise ValueError('Invalid variant id')
-        return var_fields[0].lstrip('chr'), int(var_fields[1]), var_fields[2], var_fields[3]
-
     def _get_quality_filters_by_family(self, quality_filter):
         quality_field_configs = {
             'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_QUERY_FIELDS.items()
