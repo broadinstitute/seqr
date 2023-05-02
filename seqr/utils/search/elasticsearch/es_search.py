@@ -682,7 +682,7 @@ class EsSearch(object):
             variant_results = _sort_compound_hets(variant_results)
             self.previous_search_results['grouped_results'] = variant_results
             end_index = min(results_start_index + num_results, total_results)
-            return _get_compound_het_page(variant_results, results_start_index, end_index)
+            return get_compound_het_page(variant_results, results_start_index, end_index)
 
         if deduplicate:
             variant_results = self._deduplicate_results(variant_results)
@@ -1324,29 +1324,6 @@ class EsSearch(object):
         return long_running
 
     @classmethod
-    def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
-        num_results_to_use = num_results
-        total_results = previous_search_results.get('total_results')
-        if load_all:
-            num_results_to_use = total_results or MAX_VARIANTS
-        start_index = (page - 1) * num_results_to_use
-        end_index = page * num_results_to_use
-        if previous_search_results.get('total_results') is not None:
-            end_index = min(end_index, previous_search_results['total_results'])
-
-        loaded_results = previous_search_results.get('all_results') or []
-        if len(loaded_results) >= end_index:
-            return loaded_results[start_index:end_index], {}
-
-        grouped_results = previous_search_results.get('grouped_results')
-        if grouped_results:
-            results = _get_compound_het_page(grouped_results, start_index, end_index)
-            if results is not None:
-                return results, {}
-
-        return None, {'page': page, 'num_results': num_results_to_use}
-
-    @classmethod
     def parse_variant_id(cls, variant_id):
         var_fields = variant_id.split('-')
         if len(var_fields) != 4:
@@ -1604,7 +1581,7 @@ def _sort_compound_hets(grouped_variants):
     return sorted(grouped_variants, key=lambda variants: next(iter(variants.values()))[0]['_sort'])
 
 
-def _get_compound_het_page(grouped_variants, start_index, end_index):
+def get_compound_het_page(grouped_variants, start_index, end_index):
     skipped = 0
     variant_results = []
     variant_count = 0

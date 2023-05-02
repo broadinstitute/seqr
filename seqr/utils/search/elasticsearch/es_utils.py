@@ -7,7 +7,7 @@ from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
-from seqr.utils.search.elasticsearch.es_search import EsSearch
+from seqr.utils.search.elasticsearch.es_search import EsSearch, get_compound_het_page
 from seqr.views.utils.json_utils import  _to_camel_case
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, \
     ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
@@ -281,5 +281,14 @@ def get_es_variants(families, search, user, previous_search_results, sort=None, 
     )
 
     return es_search.search(page=page, num_results=num_results)
+
+
+def process_es_previously_loaded_results(previous_search_results, start_index, end_index):
+    grouped_results = previous_search_results.get('grouped_results')
+    results = None
+    if grouped_results:
+        results = get_compound_het_page(grouped_results, start_index, end_index)
+
+    return results
 
 

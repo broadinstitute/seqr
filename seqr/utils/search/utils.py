@@ -7,7 +7,8 @@ from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
-    get_es_variants, get_es_variants_for_variant_ids, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
+    get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, \
+    ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 
@@ -65,13 +66,20 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     previous_search_results = _get_cached_search_results(search_model, sort=sort)
     total_results = previous_search_results.get('total_results')
 
-    previously_loaded_results, search_kwargs = EsSearch.process_previous_results(  # TODO move out of class
-        previous_search_results, load_all=load_all, page=page, num_results=num_results)
+    if load_all:
+        num_results = total_results or MAX_VARIANTS
+    start_index = (page - 1) * num_results
+    end_index = page * num_results
+    if total_results is not None:
+        end_index = min(end_index, total_results)
+
+    loaded_results = previous_search_results.get('all_results') or []
+    if len(loaded_results) >= end_index:
+        return loaded_results[start_index:end_index], total_results
+
+    previously_loaded_results = process_es_previously_loaded_results(previous_search_results, start_index, end_index)
     if previously_loaded_results is not None:
         return previously_loaded_results, total_results
-
-    page = search_kwargs.get('page', page)
-    num_results = search_kwargs.get('num_results', num_results)
 
     if load_all and total_results and int(total_results) >= int(MAX_VARIANTS):
         raise InvalidSearchException('Too many variants to load. Please refine your search and try again')
