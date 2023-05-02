@@ -125,7 +125,7 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
 
 def get_variant_query_gene_counts(search_model, user):
     previous_search_results = _get_cached_search_results(search_model)
-    previously_loaded_results, _ = EsGeneAggSearch.process_previous_results(previous_search_results)  # TODO move out of class
+    previously_loaded_results = EsGeneAggSearch.process_previous_results(previous_search_results)  # TODO move out of class
     if previously_loaded_results is not None:
         return previously_loaded_results
 
