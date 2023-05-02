@@ -53,20 +53,15 @@ def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=
     return get_es_variants_for_variant_ids(families, variant_ids, user, dataset_type=dataset_type)
 
 
-def query_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
-    cache_key = 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
-    previous_search_results = safe_redis_get_json(cache_key) or {}
-    total_results = previous_search_results.get('total_results')
+def _get_search_cache_key(search_model, sort=None):
+    return 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
 
-    previously_loaded_results, search_kwargs = es_search_cls.process_previous_results(previous_search_results, load_all=load_all, page=page, num_results=num_results)
-    if previously_loaded_results is not None:
-        return previously_loaded_results, previous_search_results.get('total_results')
-    page = search_kwargs.get('page', page)
-    num_results = search_kwargs.get('num_results', num_results)
 
-    if load_all and total_results and int(total_results) >= int(MAX_VARIANTS):
-        raise InvalidSearchException('Too many variants to load. Please refine your search and try again')
+def _get_cached_search_results(search_model, sort=None):
+    return safe_redis_get_json(_get_search_cache_key(search_model, sort=sort)) or {}
 
+
+def _query_variants(search_model, previous_search_results, es_search_cls=EsSearch, sort=None, skip_genotype_filter=False, user=None, page=1, num_results=100):
     search = search_model.variant_search.search
 
     rs_ids = None
@@ -102,13 +97,40 @@ def query_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, ski
 
     variant_results = es_search.search(page=page, num_results=num_results)
 
+    cache_key = _get_search_cache_key(search_model, sort=sort)
     safe_redis_set_json(cache_key, es_search.previous_search_results, expire=timedelta(weeks=2))
 
     return variant_results, es_search.previous_search_results.get('total_results')
 
 
+def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
+    previous_search_results = _get_cached_search_results(search_model, sort=sort)
+    total_results = previous_search_results.get('total_results')
+
+    previously_loaded_results, search_kwargs = EsSearch.process_previous_results(  # TODO move out of class
+        previous_search_results, load_all=load_all, page=page, num_results=num_results)
+    if previously_loaded_results is not None:
+        return previously_loaded_results, total_results
+
+    page = search_kwargs.get('page', page)
+    num_results = search_kwargs.get('num_results', num_results)
+
+    if load_all and total_results and int(total_results) >= int(MAX_VARIANTS):
+        raise InvalidSearchException('Too many variants to load. Please refine your search and try again')
+
+    return _query_variants(
+        search_model, previous_search_results, sort=sort, user=user, page=page, num_results=num_results,
+        skip_genotype_filter=skip_genotype_filter, )
+
+
 def get_variant_query_gene_counts(search_model, user):
-    gene_counts, _ = query_variants(search_model, es_search_cls=EsGeneAggSearch, sort=None, user=user)
+    previous_search_results = _get_cached_search_results(search_model)
+    previously_loaded_results, _ = EsGeneAggSearch.process_previous_results(previous_search_results)  # TODO move out of class
+    if previously_loaded_results is not None:
+        return previously_loaded_results
+
+    gene_counts, _ = _query_variants(
+        search_model, previous_search_results, es_search_cls=EsGeneAggSearch, sort=None, user=user)
     return gene_counts
 
 
