@@ -30,7 +30,7 @@ ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
 
 
 def _no_backend_error():
-    raise InvalidSearchException('No search backend configured')
+    raise InvalidSearchException('Elasticsearch backend is disabled')
 
 
 def backend_specific_call(es_func, other_func=_no_backend_error):
