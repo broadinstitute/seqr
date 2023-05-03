@@ -7,7 +7,7 @@ from seqr.utils.search.constants import XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
-    ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
+    es_backend_enabled, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME
@@ -29,16 +29,23 @@ ERROR_LOG_EXCEPTIONS = set()
 ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
 
 
-def _es_backend_enabled():
-    return bool(ELASTICSEARCH_SERVICE_HOSTNAME)
+def _no_backend_error():
+    raise InvalidSearchException('No search backend configured')
+
+
+def backend_specific_call(es_func, other_func=_no_backend_error):
+    if es_backend_enabled():
+        return es_func()
+    else:
+        return other_func()
 
 
 def ping_search_backend():
-    ping_elasticsearch()
+    backend_specific_call(ping_elasticsearch)
 
 
 def get_search_backend_status():
-    return get_elasticsearch_status()
+    return backend_specific_call(get_elasticsearch_status)
 
 
 def get_search_samples(projects, active_only=True):
@@ -54,7 +61,7 @@ def delete_search_backend_data(data_id):
         projects = set(active_samples.values_list('individual__family__project__name', flat=True))
         raise InvalidSearchException(f'"{data_id}" is still used by: {", ".join(projects)}')
 
-    return delete_es_index(data_id)
+    return backend_specific_call(lambda: delete_es_index(data_id))
 
 
 def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):

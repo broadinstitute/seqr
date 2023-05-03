@@ -44,6 +44,10 @@ def _get_transport_error_type(error):
     return error_type
 
 
+def es_backend_enabled():
+    return bool(ELASTICSEARCH_SERVICE_HOSTNAME)
+
+
 def get_es_client(timeout=60, **kwargs):
     client_kwargs = {
         'hosts': [{'host': ELASTICSEARCH_SERVICE_HOSTNAME, 'port': ELASTICSEARCH_SERVICE_PORT}],
