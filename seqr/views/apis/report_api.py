@@ -14,6 +14,7 @@ from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
+from seqr.utils.search.utils import get_search_samples
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import AirtableSession
@@ -387,9 +388,7 @@ def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date
     else:
         max_loaded_date = datetime.now() - timedelta(days=365)
 
-    loaded_samples = Sample.objects.filter(
-        individual__family__project__in=projects, elasticsearch_index__isnull=False,
-    ).select_related('individual').order_by('-loaded_date')
+    loaded_samples = get_search_samples(projects, active_only=False).select_related('individual').order_by('-loaded_date')
     if max_loaded_date:
         loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
     #  Only return the oldest sample for each individual
@@ -775,12 +774,13 @@ def gregor_export(request):
     if not does_file_exist(file_path, user=request.user):
         raise ErrorsWarningsException(['Invalid Delivery Path: folder not found'])
 
-    projects = get_internal_projects().filter(guid__in=get_project_guids_user_can_view(request.user))
+    projects = get_internal_projects().filter(
+        guid__in=get_project_guids_user_can_view(request.user),
+        consent_code=consent_code[0],
+        projectcategory__name='GREGoR',
+    )
     individuals = Individual.objects.filter(
-        family__project__consent_code=consent_code[0],
-        family__project__in=projects,
-        family__project__projectcategory__name='GREGoR',
-        sample__elasticsearch_index__isnull=False,
+        sample__in=get_search_samples(projects, active_only=False),
     ).distinct().prefetch_related('family__project', 'mother', 'father')
 
     airtable_sample_records, airtable_metadata_by_smid = _get_gregor_airtable_data(individuals, request.user)
