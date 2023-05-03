@@ -409,12 +409,10 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertListEqual(response_json['diskStats'], EXPECTED_DISK_ALLOCATION)
         self.assertListEqual(response_json['nodeStats'], EXPECTED_NODE_STATS)
 
-    def test_elasticsearch_status_es_disabled(self):
-        url = reverse(elasticsearch_status)
-        self.check_data_manager_login(url)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'No search backend configured')
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['error'], 'No search backend configured')
 
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
@@ -445,12 +443,10 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
 
-    def test_delete_index_es_disabled(self):
-        url = reverse(elasticsearch_status)
-        self.check_data_manager_login(url)
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'No search backend configured')
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['error'], 'No search backend configured')
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_upload_qc_pipeline_output(self, mock_subprocess):
