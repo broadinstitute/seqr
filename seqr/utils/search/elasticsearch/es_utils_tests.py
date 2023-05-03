@@ -1319,6 +1319,8 @@ def setup_responses():
     setup_search_responses()
 
 
+@mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
+@mock.patch('seqr.utils.search.utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
 class EsUtilsTest(TestCase):
     databases = '__all__'
