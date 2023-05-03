@@ -14,7 +14,7 @@ class ReloadSavedVariantJsonTest(TestCase):
     fixtures = ['users', '1kg_project']
 
     @mock.patch('logging.getLogger')
-    @mock.patch('seqr.views.utils.variant_utils.get_es_variants_for_variant_ids')
+    @mock.patch('seqr.views.utils.variant_utils.get_variants_for_variant_ids')
     def test_with_param_command(self, mock_get_variants, mock_get_logger):
         mock_get_variants.side_effect = lambda families, variant_ids, **kwargs: \
             [{'variantId': variant_id, 'familyGuids': [family.guid for family in families]}

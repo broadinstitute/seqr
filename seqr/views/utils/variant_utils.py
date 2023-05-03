@@ -8,7 +8,7 @@ from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, Project
-from seqr.utils.search.utils import get_es_variants_for_variant_ids
+from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
@@ -43,7 +43,7 @@ def update_project_saved_variant_json(project, family_id=None, user=None):
     families = sorted(families, key=lambda f: f.guid)
     variants_json = []
     for sub_var_ids in [variant_ids[i:i+MAX_VARIANTS_FETCH] for i in range(0, len(variant_ids), MAX_VARIANTS_FETCH)]:
-        variants_json += get_es_variants_for_variant_ids(families, sub_var_ids, user=user)
+        variants_json += get_variants_for_variant_ids(families, sub_var_ids, user=user)
 
     updated_saved_variant_guids = []
     for var in variants_json:

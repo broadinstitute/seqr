@@ -44,7 +44,7 @@ class LiftProjectToHg38Test(TestCase):
         return Sample.objects.filter(elasticsearch_index=ELASTICSEARCH_INDEX, is_active=True).count()
 
     @mock.patch('seqr.management.commands.lift_project_to_hg38.input')
-    @mock.patch('seqr.management.commands.lift_project_to_hg38.get_es_variants_for_variant_tuples')
+    @mock.patch('seqr.management.commands.lift_project_to_hg38.get_variants_for_variant_ids')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.LiftOver')
     def test_command(self, mock_liftover, mock_get_es_variants, mock_input, mock_get_es_samples, mock_logger):
         mock_get_es_samples.return_value = SAMPLE_IDS
@@ -79,8 +79,8 @@ class LiftProjectToHg38Test(TestCase):
 
         families = {family for family in Family.objects.filter(pk__in = [1, 2])}
         self.assertSetEqual(families, mock_get_es_variants.call_args.args[0])
-        self.assertSetEqual(set([(1001627057, 'G', 'C'), (21003343400, 'GAGA', 'G'), (1248203925, 'TC', 'T'),
-                                 (1046394160, 'G', 'A')]), set(mock_get_es_variants.call_args.args[1]))
+        self.assertSetEqual({'1-1627057-G-C', '21-3343400-GAGA-G', '1-248203925-TC-T', '1-46394160-G-A'},
+                            set(mock_get_es_variants.call_args.args[1]))
 
         # Test discontinue on lifted variants
         mock_logger.reset_mock()
@@ -154,8 +154,8 @@ class LiftProjectToHg38Test(TestCase):
         mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, 'samples', mock.ANY)
 
     @mock.patch('seqr.management.commands.lift_project_to_hg38.input')
-    @mock.patch('seqr.management.commands.lift_project_to_hg38.get_es_variants_for_variant_tuples')
-    @mock.patch('seqr.management.commands.lift_project_to_hg38.get_single_es_variant')
+    @mock.patch('seqr.management.commands.lift_project_to_hg38.get_variants_for_variant_ids')
+    @mock.patch('seqr.management.commands.lift_project_to_hg38.get_single_variant')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.LiftOver')
     def test_command_other_exceptions(self, mock_liftover, mock_single_es_variants,
             mock_get_es_variants, mock_input, mock_get_es_samples, mock_logger):
@@ -199,7 +199,7 @@ class LiftProjectToHg38Test(TestCase):
         self.assertSetEqual(mock_get_es_variants.call_args.args[0], families)
         self.assertSetEqual(
             set(mock_get_es_variants.call_args.args[1]),
-            {(1001627057, 'G', 'C'), (21003343400, 'GAGA', 'G'), (1248203925, 'TC', 'T'), (1046394160, 'G', 'A')}
+            {'1-1627057-G-C', '21-3343400-GAGA-G', '1-248203925-TC-T', '1-46394160-G-A'}
         )
 
         # Test discontinue on missing family data while updating the saved variants
