@@ -52,6 +52,23 @@ export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownL
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
+export const getRnaSeqSignificantJunctionData = createSelector(
+  getGenesById,
+  getRnaSeqDataByIndividual,
+  (genesById, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
+    (acc, [individualGuid, rnaSeqData]) => (rnaSeqData.spliceOutliers ? {
+      ...acc,
+      [individualGuid]: Object.values(rnaSeqData.spliceOutliers).filter(({ isSignificant }) => isSignificant)
+        .sort((a, b) => a.pValue - b.pValue).splice(0, 50)
+        .map(row => ({
+          geneSymbol: (genesById[row.geneId] || {}).geneSymbol || row.geneId,
+          junctionLocus: `${row.chrom}:${row.start}-${row.end} ${row.strand}`,
+          ...row,
+        })),
+    } : acc), {},
+  ),
+)
+
 const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((acc, [entityGuid, entity]) => {
   if (!(entity.projectGuid in acc)) {
     acc[entity.projectGuid] = {}

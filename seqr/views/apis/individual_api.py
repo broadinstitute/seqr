@@ -787,26 +787,18 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 
 @login_and_policies_required
 def get_individual_rna_seq_data(request, individual_guid):
-    expr_data, expr_genes = _get_rna_seq_data(RnaSeqOutlier, request, individual_guid)
-    splice_data, splice_genes = _get_rna_seq_data(RnaSeqSpliceOutlier, request, individual_guid)
+    outlier_data = {'outliers': _get_rna_seq_data(RnaSeqOutlier, request, individual_guid)}
+    outlier_data.update({'spliceOutliers': _get_rna_seq_data(RnaSeqSpliceOutlier, request, individual_guid)})
 
-    expr_genes.update(splice_genes)
-    data = {'outliers': expr_data} if expr_data else {}
-    data.update({'spliceOutliers': splice_data} if expr_data else {})
+    genes_to_show = get_genes({
+        gene_id for rna_data in outlier_data.values() for gene_id, data in rna_data.items() if data['isSignificant']
+    })
+
     return create_json_response({
-        'rnaSeqData': {individual_guid: data},
-        'genesById': expr_genes,
-        'familiesByGuid': {
-            family['familyGuid']: family for family in _get_json_for_families(
-                Family.objects.filter(pk=Individual.objects.get(guid=individual_guid).family.pk), request.user)
-        },
+        'rnaSeqData': {individual_guid: {outlier_type: data for outlier_type, data in outlier_data.items() if data}},
+        'genesById': genes_to_show,
         'igvSamplesByGuid': {
             igvs['sampleGuid']: igvs for igvs in get_json_for_samples(IgvSample.objects.filter(individual__guid=individual_guid))
-        },
-        'individualsByGuid': {
-            indiv['individualGuid']: indiv for indiv in _get_json_for_individuals(
-                Individual.objects.filter(guid=individual_guid)
-            )
         },
     })
 
@@ -814,20 +806,14 @@ def get_individual_rna_seq_data(request, individual_guid):
 def _get_rna_seq_data(model_cls, request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     check_project_permissions(individual.family.project, request.user)
-    outlier_data = model_cls.objects.filter(sample__individual=individual, sample__is_active=True).prefetch_related('sample')
+    outlier_data = model_cls.objects.filter(sample__individual=individual, sample__is_active=True)
 
-    rna_seq_data = {
+    return {
         data['geneId']: data for data in get_json_for_rna_seq_outliers(
             outlier_data,
-            nested_fields=[
-                {'fields': ('sample', 'sample_id'), 'key': 'sampleId'},
-                {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}
-            ],
+            nested_fields=[{'fields': ('sample', 'guid')}],
         )
     }
-    genes_to_show = get_genes([gene_id for gene_id, data in rna_seq_data.items() if data['isSignificant']])
-
-    return rna_seq_data, genes_to_show
 
 
 @login_and_policies_required

@@ -1,8 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Link } from 'react-router-dom'
-import { Popup, Icon } from 'semantic-ui-react'
+import { Link, Route, Switch } from 'react-router-dom'
+import { Popup, Icon, Loader } from 'semantic-ui-react'
 
 import { loadFamilyDetails } from 'redux/rootReducer'
 import {
@@ -13,6 +13,7 @@ import {
   getHasActiveSearchableSampleByFamily,
 } from 'redux/selectors'
 import { FAMILY_DETAIL_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
+import { Error404 } from 'shared/components/page/Errors'
 import Family from 'shared/components/panel/family/Family'
 import FamilyReads from 'shared/components/panel/family/FamilyReads'
 import DataLoader from 'shared/components/DataLoader'
@@ -26,6 +27,7 @@ import {
 import IndividualRow from './FamilyTable/IndividualRow'
 import CreateVariantButton from './CreateVariantButton'
 import VariantTagTypeBar from './VariantTagTypeBar'
+import RnaSeqResultPage from './RnaSeqResultPage'
 
 const READ_BUTTON_PROPS = { padding: '0.5em 0 1.5em 0' }
 
@@ -201,16 +203,59 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const FamilyDetail = connect(mapStateToProps)(BaseFamilyDetail)
 
-const FamilyPage = ({ match }) => (
+const MyFamilyPage = ({ match }) => (
   <FamilyDetail
-    familyGuid={match.params.familyGuid}
+    familyGuid={match.url.split('/')[4]}
     showVariantDetails
     fields={FAMILY_DETAIL_FIELDS}
   />
 )
 
-FamilyPage.propTypes = {
+MyFamilyPage.propTypes = {
   match: PropTypes.object,
 }
 
-export default FamilyPage
+class FamilyPage extends React.PureComponent {
+
+  static propTypes = {
+    family: PropTypes.object,
+    match: PropTypes.object,
+    loadFamilyDetails: PropTypes.func,
+    loading: PropTypes.bool.isRequired,
+  }
+
+  constructor(props) {
+    super(props)
+
+    props.loadFamilyDetails(props.match.params.familyGuid)
+  }
+
+  render() {
+    const { family, match, loading } = this.props
+    if (family) {
+      return (
+        <Switch>
+          <Route path={`${match.url}/family`} component={MyFamilyPage} />
+          <Route path={`${match.url}/rnaseq_results/:individualGuid`} component={RnaSeqResultPage} />
+          <Route component={Error404} />
+        </Switch>
+      )
+    }
+    if (loading) {
+      return <Loader inline="centered" active />
+    }
+    return <Error404 />
+  }
+
+}
+
+const mapFamilyStateToProps = (state, ownProps) => ({
+  family: getFamiliesByGuid(state)[ownProps.match.params.familyGuid],
+  loading: !!getFamilyDetailsLoading(state)[ownProps.match.params.familyGuid],
+})
+
+const mapFamilyDispatchToProps = {
+  loadFamilyDetails,
+}
+
+export default connect(mapFamilyStateToProps, mapFamilyDispatchToProps)(FamilyPage)

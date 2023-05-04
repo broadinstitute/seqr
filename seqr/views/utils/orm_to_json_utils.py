@@ -758,10 +758,10 @@ def get_json_for_matchmaker_submission(submission):
 
 
 def get_json_for_rna_seq_outliers(models, **kwargs):
-    field_name = 'p_adjust' if getattr(models.model, 'p_adjust', False) else 'p_value'
     additional_values = {
         'isSignificant': Case(
-            When(then=Value(True), **{f'{field_name}__lt': models.model.SIGNIFICANCE_THRESHOLD}), default=Value(False)
+            When(then=Value(True), **{f'{models.model.SIGNIFICANCE_FIELD}__lt': models.model.SIGNIFICANCE_THRESHOLD}),
+            default=Value(False)
         ),
     }
     return get_json_for_queryset(models, additional_values=additional_values, **kwargs)

@@ -187,7 +187,7 @@ class Family extends React.PureComponent {
           key="name"
           size="small"
           content={showFamilyPageLink ?
-            <Link to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
+            <Link to={`/project/${family.projectGuid}/family_page/${family.familyGuid}/family`}>{family.displayName}</Link> :
             family.displayName}
         />
       )

@@ -96,30 +96,33 @@ class RnaSeqOutliersGraph extends React.PureComponent {
 
 }
 
-const RnaSeqOutliers = React.memo(({ rnaSeqData, genesById, familyGuid, getLocation, header }) => {
-  const { sampleId, tissueType } = Object.values(rnaSeqData)[0]
-  const data = rnaSeqData
+const RnaSeqOutliers = React.memo((
+  { rnaSeqData, genesById, familyGuid, samplesByGuid, getLocation, searchType, title },
+) => {
+  const { tissueType } = (samplesByGuid || {})[Object.values(rnaSeqData)[0].sampleGuid] || {}
   return (
     <div>
-      <Header content={`${header}: ${sampleId}(${TISSUE_DISPLAY[tissueType]})`} textAlign="center" />
+      <Header content={`${title}: ${TISSUE_DISPLAY[tissueType]}`} textAlign="center" />
       <GeneSearchLink
-        buttonText="Search for variants in outliers"
+        buttonText={`Search for variants in outlier ${searchType}`}
         icon="search"
-        location={Object.values(data).filter(({ isSignificant }) => isSignificant).map(getLocation).join(',')}
+        location={Object.values(rnaSeqData).filter(({ isSignificant }) => isSignificant).map(getLocation).join(',')}
         familyGuid={familyGuid}
         floated="right"
       />
-      <RnaSeqOutliersGraph data={data} genesById={genesById} />
+      <RnaSeqOutliersGraph data={rnaSeqData} genesById={genesById} />
     </div>
   )
 })
 
 RnaSeqOutliers.propTypes = {
   familyGuid: PropTypes.string.isRequired,
-  rnaSeqData: PropTypes.object,
+  rnaSeqData: PropTypes.object.isRequired,
   genesById: PropTypes.object,
+  samplesByGuid: PropTypes.object,
   getLocation: PropTypes.func,
-  header: PropTypes.string,
+  searchType: PropTypes.string,
+  title: PropTypes.string,
 }
 
 export default RnaSeqOutliers

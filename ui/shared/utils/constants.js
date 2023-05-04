@@ -1590,3 +1590,5 @@ export const TISSUE_DISPLAY = {
   M: 'Muscle',
   L: 'Lymphocyte',
 }
+
+export const RNASEQ_JUNCTION_PADDING = 200

@@ -11,7 +11,6 @@ import { getCurrentProject } from './selectors'
 import ProjectPageUI from './components/ProjectPageUI'
 import CaseReview from './components/CaseReview'
 import FamilyPage from './components/FamilyPage'
-import RnaSeqResultPage from './components/RnaSeqResultPage'
 import Matchmaker from './components/Matchmaker'
 import SavedVariants from './components/SavedVariants'
 
@@ -46,7 +45,6 @@ class Project extends React.PureComponent {
           <Route path={`${match.url}/analysis_group/:analysisGroupGuid`} component={ProjectPageUI} />
           <Route path={`${match.url}/family_page/:familyGuid/matchmaker_exchange`} component={Matchmaker} />
           <Route path={`${match.url}/family_page/:familyGuid`} component={FamilyPage} />
-          <Route path={`${match.url}/rnaseq_results/:familyGuid/:individualGuid`} component={RnaSeqResultPage} />
           <Route path={`${match.url}/saved_variants`} component={SavedVariants} />
           <Route component={Error404} />
         </Switch>
