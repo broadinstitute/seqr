@@ -6,6 +6,8 @@ import elasticsearch_dsl
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
+from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
+from seqr.utils.search.elasticsearch.es_search import EsSearch, get_compound_het_page
 from seqr.views.utils.json_utils import  _to_camel_case
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, \
     ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
@@ -248,3 +250,69 @@ def _get_es_indices(client):
 
     return indices, seqr_index_projects
 
+
+def get_es_variants_for_variant_ids(families, variant_ids, user, dataset_type=None, return_all_queried_families=False):
+    variants = EsSearch(
+        families, user=user, return_all_queried_families=return_all_queried_families,
+    ).filter_by_variant_ids(variant_ids)
+    if dataset_type:
+        variants = variants.update_dataset_type(dataset_type)
+    return variants.search(num_results=len(variant_ids))
+
+
+def get_es_variants(families, search, user, previous_search_results, sort=None, page=None, num_results=None,
+                    gene_agg=False, skip_genotype_filter=False):
+    es_search_cls = EsGeneAggSearch if gene_agg else EsSearch
+
+    es_search = es_search_cls(
+        families,
+        previous_search_results=previous_search_results,
+        user=user,
+        sort=sort,
+    )
+
+    es_search.filter_variants(
+        inheritance=search.get('inheritance'), frequencies=search.get('freqs'), pathogenicity=search.get('pathogenicity'),
+        annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
+        in_silico=search.get('in_silico'), quality_filter=search.get('qualityFilter'),
+        custom_query=search.get('customQuery'), locus=search.get('locus'), skip_genotype_filter=skip_genotype_filter,
+        **search.get('parsedLocus')
+
+    )
+
+    return es_search.search(page=page, num_results=num_results)
+
+
+def process_es_previously_loaded_results(previous_search_results, start_index, end_index):
+    grouped_results = previous_search_results.get('grouped_results')
+    results = None
+    if grouped_results:
+        results = get_compound_het_page(grouped_results, start_index, end_index)
+
+    return results
+
+
+def process_es_previously_loaded_gene_aggs(previous_search_results):
+    total_results = previous_search_results.get('total_results')
+    if total_results is None or 'all_results' in previous_search_results or 'grouped_results' not in previous_search_results:
+        return None
+
+    loaded = sum(counts.get('loaded', 0) for counts in previous_search_results.get('loaded_variant_counts', {}).values())
+    if loaded != total_results:
+        return None
+
+    gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
+
+    for group in previous_search_results['grouped_results']:
+        variants = next(iter(group.values()))
+        gene_id = next(iter(group))
+        if not gene_id or gene_id == 'null':
+            gene_id = next((
+                gene_id for gene_id, transcripts in variants[0]['transcripts'].items()
+                if any(t['transcriptId'] == variants[0]['mainTranscriptId'] for t in transcripts)
+            ), None) if variants[0]['mainTranscriptId'] else None
+        if gene_id:
+            gene_aggs[gene_id]['total'] += len(variants)
+            for family_guid in variants[0]['familyGuids']:
+                gene_aggs[gene_id]['families'][family_guid] += len(variants)
+    return gene_aggs

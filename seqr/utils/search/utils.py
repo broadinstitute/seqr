@@ -1,12 +1,12 @@
+from collections import defaultdict
 from datetime import timedelta
 
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
-from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
-from seqr.utils.search.elasticsearch.es_search import EsSearch
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
+    get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
@@ -53,35 +53,54 @@ def delete_search_backend_data(data_id):
 
 
 def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
-    variants = EsSearch(
-        families, return_all_queried_families=return_all_queried_families, user=user,
-    ).filter_by_variant_ids([variant_id]).search(num_results=1)
+    variants = get_es_variants_for_variant_ids(
+        families, [variant_id], user, return_all_queried_families=return_all_queried_families,
+    )
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variants[0]
 
 
 def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
-    variants = EsSearch(families, user=user).filter_by_variant_ids(variant_ids)
-    if dataset_type:
-        variants = variants.update_dataset_type(dataset_type)
-    return variants.search(num_results=len(variant_ids))
+    return get_es_variants_for_variant_ids(families, variant_ids, user, dataset_type=dataset_type)
 
 
-def query_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
-    cache_key = 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
-    previous_search_results = safe_redis_get_json(cache_key) or {}
+def _get_search_cache_key(search_model, sort=None):
+    return 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
+
+
+def _get_cached_search_results(search_model, sort=None):
+    return safe_redis_get_json(_get_search_cache_key(search_model, sort=sort)) or {}
+
+
+def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
+    previous_search_results = _get_cached_search_results(search_model, sort=sort)
     total_results = previous_search_results.get('total_results')
 
-    previously_loaded_results, search_kwargs = es_search_cls.process_previous_results(previous_search_results, load_all=load_all, page=page, num_results=num_results)
+    if load_all:
+        num_results = total_results or MAX_VARIANTS
+    start_index = (page - 1) * num_results
+    end_index = page * num_results
+    if total_results is not None:
+        end_index = min(end_index, total_results)
+
+    loaded_results = previous_search_results.get('all_results') or []
+    if len(loaded_results) >= end_index:
+        return loaded_results[start_index:end_index], total_results
+
+    previously_loaded_results = process_es_previously_loaded_results(previous_search_results, start_index, end_index)
     if previously_loaded_results is not None:
-        return previously_loaded_results, previous_search_results.get('total_results')
-    page = search_kwargs.get('page', page)
-    num_results = search_kwargs.get('num_results', num_results)
+        return previously_loaded_results, total_results
 
     if load_all and total_results and int(total_results) >= int(MAX_VARIANTS):
         raise InvalidSearchException('Too many variants to load. Please refine your search and try again')
 
+    return _query_variants(
+        search_model, user, previous_search_results, sort=sort, page=page, num_results=num_results,
+        skip_genotype_filter=skip_genotype_filter)
+
+
+def _query_variants(search_model, user, previous_search_results, sort=None, num_results=100, **kwargs):
     search = search_model.variant_search.search
 
     rs_ids = None
@@ -96,35 +115,55 @@ def query_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, ski
         if rs_ids and variant_ids:
             raise InvalidSearchException('Invalid variant notation: found both variant IDs and rsIDs')
 
-    es_search = es_search_cls(
-        search_model.families.all(),
-        previous_search_results=previous_search_results,
-        user=user,
-        sort=sort,
-    )
-
-    es_search.filter_variants(
-        inheritance=search.get('inheritance'), frequencies=search.get('freqs'), pathogenicity=search.get('pathogenicity'),
-        annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
-        in_silico=search.get('in_silico'), quality_filter=search.get('qualityFilter'),
-        custom_query=search.get('customQuery'), locus=search.get('locus'),
-        genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids,
-        skip_genotype_filter=skip_genotype_filter,
-    )
-
     if variant_ids:
         num_results = len(variant_ids)
 
-    variant_results = es_search.search(page=page, num_results=num_results)
+    parsed_search = {
+        'parsedLocus': {
+            'genes': genes, 'intervals': intervals, 'rs_ids': rs_ids, 'variant_ids': variant_ids,
+        },
+    }
+    parsed_search.update(search)
 
-    safe_redis_set_json(cache_key, es_search.previous_search_results, expire=timedelta(weeks=2))
+    variant_results = get_es_variants(
+        search_model.families.all(), parsed_search, user, previous_search_results, sort=sort, num_results=num_results,
+        **kwargs,
+    )
 
-    return variant_results, es_search.previous_search_results.get('total_results')
+    cache_key = _get_search_cache_key(search_model, sort=sort)
+    safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
+
+    return variant_results, previous_search_results.get('total_results')
 
 
 def get_variant_query_gene_counts(search_model, user):
-    gene_counts, _ = query_variants(search_model, es_search_cls=EsGeneAggSearch, sort=None, user=user)
+    previous_search_results = _get_cached_search_results(search_model)
+    if previous_search_results.get('gene_aggs'):
+        return previous_search_results['gene_aggs']
+
+    if len(previous_search_results.get('all_results', [])) == previous_search_results.get('total_results'):
+        return _get_gene_aggs_for_cached_variants(previous_search_results)
+
+    previously_loaded_results = process_es_previously_loaded_gene_aggs(previous_search_results)
+    if previously_loaded_results is not None:
+        return previously_loaded_results
+
+    gene_counts, _ = _query_variants(search_model, user, previous_search_results, gene_agg=True)
     return gene_counts
+
+
+def _get_gene_aggs_for_cached_variants(previous_search_results):
+    gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
+    for var in previous_search_results['all_results']:
+        gene_id = next((
+            gene_id for gene_id, transcripts in var['transcripts'].items()
+            if any(t['transcriptId'] == var['mainTranscriptId'] for t in transcripts)
+        ), None) if var['mainTranscriptId'] else None
+        if gene_id:
+            gene_aggs[gene_id]['total'] += 1
+            for family_guid in var['familyGuids']:
+                gene_aggs[gene_id]['families'][family_guid] += 1
+    return gene_aggs
 
 
 def _parse_variant_items(search_json):
@@ -140,9 +179,10 @@ def _parse_variant_items(search_json):
             rs_ids.append(item)
         else:
             try:
-                chrom, pos, _, _ = EsSearch.parse_variant_id(item)
-                get_xpos(chrom, pos)
-                variant_ids.append(item.lstrip('chr'))
+                variant_id = item.lstrip('chr')
+                chrom, pos, _, _ = variant_id.split('-')
+                get_xpos(chrom, int(pos))
+                variant_ids.append(variant_id)
             except (KeyError, ValueError):
                 invalid_items.append(item)
 
