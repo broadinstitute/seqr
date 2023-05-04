@@ -235,8 +235,8 @@ class FamilyPage extends React.PureComponent {
     if (family) {
       return (
         <Switch>
-          <Route path={`${match.url}/family`} component={MyFamilyPage} />
           <Route path={`${match.url}/rnaseq_results/:individualGuid`} component={RnaSeqResultPage} />
+          <Route exact path={match.url} component={MyFamilyPage} />
           <Route component={Error404} />
         </Switch>
       )
