@@ -682,7 +682,7 @@ class Sample(ModelWithGUID):
     class Meta:
        json_fields = [
            'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date',
-           'elasticsearch_index',
+           'elasticsearch_index', 'tissue_type'
        ]
 
 
