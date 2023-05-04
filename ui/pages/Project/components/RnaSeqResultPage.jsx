@@ -29,9 +29,9 @@ const BaseRnaSeqResultPage = (
   { individual, rnaSeqData, significantJunctionOutliers, genesById, samplesByGuid, load, loading },
 ) => (
   <DataLoader content={rnaSeqData} contentId={individual.individualGuid} load={load} loading={loading}>
-    <Grid divided>
+    <Grid>
       <React.Suspense fallback={<Loader />}>
-        <Grid.Row columns={rnaSeqData?.spliceOutliers && rnaSeqData?.outliers ? 2 : 1}>
+        <Grid.Row divided columns={rnaSeqData?.spliceOutliers && rnaSeqData?.outliers ? 2 : 1}>
           {Object.entries(rnaSeqData || {}).map(([key, data]) => (
             <Grid.Column key={key}>
               <RnaSeqOutliers
@@ -46,7 +46,7 @@ const BaseRnaSeqResultPage = (
         </Grid.Row>
       </React.Suspense>
       {significantJunctionOutliers.length && (
-        <Grid.Row>
+        <Grid.Row centered columns={14}>
           <React.Suspense fallback={<Loader />}>
             <RnaSeqOutliersTable
               familyGuid={individual.familyGuid}

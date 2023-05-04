@@ -54,6 +54,7 @@ class BaseRnaSeqJunctionOutliersTable extends React.PureComponent {
     const junctionColumns = [{
       name: 'junctionLocus',
       content: 'Junction',
+      width: 4,
       format: row => (
         <div>
           <ButtonLink onClick={this.openReads(row)}>
@@ -70,6 +71,7 @@ class BaseRnaSeqJunctionOutliersTable extends React.PureComponent {
     }, {
       name: 'gene',
       content: 'Gene',
+      width: 2,
       format: row => (
         <div>
           <ShowGeneModal gene={row} />
