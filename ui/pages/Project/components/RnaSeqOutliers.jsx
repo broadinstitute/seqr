@@ -99,10 +99,13 @@ class RnaSeqOutliersGraph extends React.PureComponent {
 const RnaSeqOutliers = React.memo((
   { rnaSeqData, genesById, familyGuid, samplesByGuid, getLocation, searchType, title },
 ) => {
-  const { tissueType } = (samplesByGuid || {})[Object.values(rnaSeqData)[0].sampleGuid] || {}
+  const sampleGuids = Object.values(rnaSeqData).reduce((acc, { sampleGuid }) => acc.add(sampleGuid), new Set())
+  const tissueTypes = Array.from(sampleGuids).map(sampleGuid => (samplesByGuid || {})[sampleGuid]?.tissueType)
+    .filter(tissueType => tissueType)
+    .map(tissueType => TISSUE_DISPLAY[tissueType])
   return (
     <div>
-      <Header content={`${title}: ${TISSUE_DISPLAY[tissueType]}`} textAlign="center" />
+      <Header content={`${title}: ${tissueTypes.join(', ')}`} textAlign="center" />
       <GeneSearchLink
         buttonText={`Search for variants in outlier ${searchType}`}
         icon="search"
