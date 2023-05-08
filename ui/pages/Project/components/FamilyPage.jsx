@@ -203,7 +203,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const FamilyDetail = connect(mapStateToProps)(BaseFamilyDetail)
 
-const MyFamilyPage = ({ match }) => (
+const FamilyPage = ({ match }) => (
   <FamilyDetail
     familyGuid={match.url.split('/')[4]}
     showVariantDetails
@@ -211,11 +211,11 @@ const MyFamilyPage = ({ match }) => (
   />
 )
 
-MyFamilyPage.propTypes = {
+FamilyPage.propTypes = {
   match: PropTypes.object,
 }
 
-class FamilyPage extends React.PureComponent {
+class FamilyPageRouter extends React.PureComponent {
 
   static propTypes = {
     family: PropTypes.object,
@@ -236,7 +236,7 @@ class FamilyPage extends React.PureComponent {
       return (
         <Switch>
           <Route path={`${match.url}/rnaseq_results/:individualGuid`} component={RnaSeqResultPage} />
-          <Route exact path={match.url} component={MyFamilyPage} />
+          <Route exact path={match.url} component={FamilyPage} />
           <Route component={Error404} />
         </Switch>
       )
@@ -258,4 +258,4 @@ const mapFamilyDispatchToProps = {
   loadFamilyDetails,
 }
 
-export default connect(mapFamilyStateToProps, mapFamilyDispatchToProps)(FamilyPage)
+export default connect(mapFamilyStateToProps, mapFamilyDispatchToProps)(FamilyPageRouter)
