@@ -318,11 +318,22 @@ const RNA_SEQ_DETAIL_FIELDS = ['zScore', 'pValue', 'pAdjust']
 
 const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', format: ({ individualName }) => (<b>{individualName}</b>) }
 
-const RNA_SEQ_COLUMNS = [
+const RNA_SEQ_EXPRESSION_COLUMNS = [
   INDIVIDUAL_NAME_COLUMN,
   ...RNA_SEQ_DETAIL_FIELDS.map(name => (
     { name, content: camelcaseToTitlecase(name).replace(' ', '-'), format: row => row[name].toPrecision(3) }
   )),
+]
+
+const RNA_SEQ_SPLICE_DETAIL_FIELDS = ['zScore', 'pValue']
+
+const RNA_SEQ_SPLICE_COLUMNS = [
+  INDIVIDUAL_NAME_COLUMN,
+  ...RNA_SEQ_SPLICE_DETAIL_FIELDS.map(name => (
+    { name, content: camelcaseToTitlecase(name).replace(' ', '-'), format: row => row[name].toPrecision(3) }
+  )),
+  { name: 'chrom', content: 'Chromosome' },
+  { name: 'start', content: 'start' },
 ]
 
 const PHENOTYPE_GENE_INFO_COLUMNS = [
@@ -408,15 +419,15 @@ const GENE_DETAIL_SECTIONS = [
     color: 'pink',
     description: 'RNA-Seq OUTRIDER Outlier',
     label: 'RNA Expression',
-    showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqData && indivGeneData.rnaSeqData[gene.geneId],
+    showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqExpData && indivGeneData.rnaSeqExpData[gene.geneId],
     detailsDisplay: (gene, indivGeneData) => (
       <div>
         This gene is flagged as an outlier for RNA-Seq in the following samples
         <DataTable
           {...HOVER_DATA_TABLE_PROPS}
-          data={indivGeneData.rnaSeqData[gene.geneId]}
+          data={indivGeneData.rnaSeqExpData[gene.geneId]}
           idField="individualName"
-          columns={RNA_SEQ_COLUMNS}
+          columns={RNA_SEQ_EXPRESSION_COLUMNS}
         />
       </div>
     ),
@@ -425,15 +436,15 @@ const GENE_DETAIL_SECTIONS = [
     color: 'pink',
     description: 'RNA-Seq FRASER Outlier',
     label: 'RNA Splice',
-    showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqData && indivGeneData.rnaSeqData[gene.geneId],
+    showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqSplData && indivGeneData.rnaSeqSplData[gene.geneId],
     detailsDisplay: (gene, indivGeneData) => (
       <div>
         This gene is flagged as an outlier for RNA-Seq in the following samples
         <DataTable
           {...HOVER_DATA_TABLE_PROPS}
-          data={indivGeneData.rnaSeqData[gene.geneId]}
+          data={indivGeneData.rnaSeqSplData[gene.geneId]}
           idField="individualName"
-          columns={RNA_SEQ_COLUMNS}
+          columns={RNA_SEQ_SPLICE_COLUMNS}
         />
       </div>
     ),

@@ -25,17 +25,20 @@ export const getIndividualGeneDataByFamilyGene = createSelector(
   getPhenotypeGeneScoresByIndividual,
   (individualsByGuid, rnaSeqDataByIndividual = {}, phenotypeGeneScoresByIndividual = {}) => (
     Object.entries(individualsByGuid).reduce((acc, [individualGuid, { familyGuid, displayName }]) => {
-      const rnaSeqData = rnaSeqDataByIndividual[individualGuid]?.outliers
+      const rnaSeqData = {
+        rnaSeqExpData: rnaSeqDataByIndividual[individualGuid]?.outliers,
+        rnaSeqSplData: rnaSeqDataByIndividual[individualGuid]?.spliceOutliers,
+      }
       const phenotypeGeneScores = phenotypeGeneScoresByIndividual[individualGuid]
-      if (rnaSeqData) {
+      Object.entries(rnaSeqData).filter(([, d]) => d).forEach(([name, outliers]) => {
         acc[familyGuid] = acc[familyGuid] || {}
-        acc[familyGuid].rnaSeqData = Object.entries(rnaSeqData).reduce(
+        acc[familyGuid][name] = Object.entries(outliers).reduce(
           (acc2, [geneId, data]) => (data.isSignificant ? {
             ...acc2,
             [geneId]: [...(acc2[geneId] || []), { ...data, individualName: displayName }],
-          } : acc2), acc[familyGuid].rnaSeqData || {},
+          } : acc2), acc[familyGuid][name] || {},
         )
-      }
+      })
       if (phenotypeGeneScores) {
         acc[familyGuid] = acc[familyGuid] || {}
         acc[familyGuid].phenotypeGeneScores = Object.entries(phenotypeGeneScores).reduce(
