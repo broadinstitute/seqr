@@ -7,7 +7,7 @@ import redis
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, Project
+    RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, Project, RnaSeqSpliceOutlier
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -131,15 +131,19 @@ def _add_locus_lists(projects, genes, add_list_detail=False, user=None):
 
 
 def _get_rna_seq_outliers(gene_ids, family_guids):
-    data_by_individual_gene = defaultdict(lambda: {'outliers': {}})
+    data_by_individual_gene = defaultdict(lambda: {'outliers': {}, 'spliceOutliers': {}})
 
-    outlier_data = get_json_for_rna_seq_outliers(
-        RnaSeqOutlier.objects.filter(
-            gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, sample__individual__family__guid__in=family_guids),
-        nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},]
-    )
-    for data in outlier_data:
-        data_by_individual_gene[data.pop('individualGuid')]['outliers'][data['geneId']] = data
+    for outlier, outlier_cls in [('outliers', RnaSeqOutlier), ('spliceOutliers', RnaSeqSpliceOutlier)]:
+        outlier_data = get_json_for_rna_seq_outliers(
+            outlier_cls.objects.filter(
+                gene_id__in=gene_ids,
+                sample__individual__family__guid__in=family_guids,
+                **{f'{outlier_cls.SIGNIFICANCE_FIELD}__lt': outlier_cls.SIGNIFICANCE_THRESHOLD}
+            ),
+            nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'}],
+        )
+        for data in outlier_data:
+            data_by_individual_gene[data.pop('individualGuid')][outlier][data['geneId']] = data
 
     return data_by_individual_gene
 
