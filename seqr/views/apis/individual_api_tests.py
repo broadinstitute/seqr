@@ -625,28 +625,28 @@ class IndividualAPITest(object):
         self.assertSetEqual(set(response_json.keys()), {'rnaSeqData', 'genesById', 'igvSamplesByGuid'})
         self.assertDictEqual(response_json['rnaSeqData'], {
             INDIVIDUAL_GUID: {'outliers': {
-                'ENSG00000135953': {
+                'ENSG00000135953': [{
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'sampleGuid': 'S000150_na19675_d2',
                     'isSignificant': True,
-                },
-                'ENSG00000240361': {
+                }],
+                'ENSG00000240361': [{
                     'geneId': 'ENSG00000240361', 'zScore': -4.08, 'pValue': 5.88, 'pAdjust': 0.09, 'isSignificant': False,
                     'sampleGuid': 'S000150_na19675_d2',
-                },
-                'ENSG00000268903': {
+                }],
+                'ENSG00000268903': [{
                     'geneId': 'ENSG00000268903', 'zScore': 7.08, 'pValue':0.000000000588, 'pAdjust': 0.00000000139,
                     'isSignificant': True,
                     'sampleGuid': 'S000150_na19675_d2',
-                },
+                }],
             },
             'spliceOutliers': {
-                'ENSG00000106554': {
+                'ENSG00000106554': [{
                     'chrom': '7', 'deltaPsi': 0.85, 'end': 132886973, 'geneId': 'ENSG00000106554', 'isSignificant': True,
                     'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1,
                     'readCount': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'zScore': 12.34,
                     'sampleGuid': 'S000151_na19675_1',
-                }
+                }]
             },
         }})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
