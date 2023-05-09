@@ -28,6 +28,9 @@ PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 INDIVIDUAL_GUID = 'I000001_na19675'
 INDIVIDUAL2_GUID = 'I000002_na19678'
+INDIVIDUAL3_GUID = 'I000003_na19679'
+
+INDIVIDUAL_GUIDS = [INDIVIDUAL_GUID, INDIVIDUAL2_GUID, INDIVIDUAL3_GUID]
 
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -63,12 +66,18 @@ class FamilyAPITest(AuthenticationTestCase):
                              'hasPhenotypeGeneScores'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
-        self.assertTrue(response_json['individualsByGuid'][INDIVIDUAL_GUID]['hasPhenotypeGeneScores'])
-        self.assertTrue(response_json['individualsByGuid'][INDIVIDUAL2_GUID]['hasPhenotypeGeneScores'])
+        self.assertListEqual(
+            [True, True, False],
+            [response_json['individualsByGuid'][guid].get('hasPhenotypeGeneScores', False) for guid in INDIVIDUAL_GUIDS]
+        )
+        self.assertListEqual(
+            [True, False, True],
+            [response_json['individualsByGuid'][guid].get('hasRnaOutlierData', False) for guid in INDIVIDUAL_GUIDS]
+        )
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
 
-        self.assertEqual(len(response_json['samplesByGuid']), 6)
+        self.assertEqual(len(response_json['samplesByGuid']), 7)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['samplesByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['samplesByGuid'].values()})
