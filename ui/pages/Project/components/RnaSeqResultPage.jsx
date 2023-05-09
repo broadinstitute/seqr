@@ -16,12 +16,12 @@ const OUTLIER_VOLCANO_PLOT_CONFIGS = {
   outliers: {
     getLocation: (({ geneId }) => geneId),
     searchType: 'genes',
-    title: 'OUTRIDER Outliers',
+    title: 'Expression Outliers',
   },
   spliceOutliers: {
     getLocation: (({ chrom, start, end }) => `${chrom}:${Math.max(1, start - RNASEQ_JUNCTION_PADDING)}-${end + RNASEQ_JUNCTION_PADDING}`),
     searchType: 'regions',
-    title: 'FRASER Outliers',
+    title: 'Splice Junction Outliers',
   },
 }
 
