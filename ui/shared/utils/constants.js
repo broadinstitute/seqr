@@ -1594,6 +1594,6 @@ export const TISSUE_DISPLAY = {
 export const RNASEQ_JUNCTION_PADDING = 200
 
 export const getSpliceId = (row) => {
-  const { geneId, start, end, strand, type } = row
-  return `${geneId}-${start}-${end}-${strand}-${type}`
+  const { geneId, chrom, start, end, strand, type } = row
+  return `${geneId}-${chrom}-${start}-${end}-${strand}-${type}`
 }
