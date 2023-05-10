@@ -91,7 +91,7 @@ class BaseRnaSeqJunctionOutliersTable extends React.PureComponent {
         {reads}
         <DataTable
           data={data}
-          idField="junctionLocus"
+          idField="idField"
           columns={junctionColumns}
           defaultSortColumn="pValue"
           maxHeight="600px"
