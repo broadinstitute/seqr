@@ -68,6 +68,7 @@ class DataTable extends React.PureComponent {
     downloadAlign: PropTypes.string,
     loadingProps: PropTypes.object,
     filterContainer: PropTypes.object,
+    onClick: PropTypes.func,
   }
 
   static defaultProps = {
@@ -127,7 +128,10 @@ class DataTable extends React.PureComponent {
   }
 
   handleSelect = rowId => () => {
-    const { data, selectRows, selectedRows, includeSelectedRowData, idField } = this.props
+    const { data, selectRows, selectedRows, includeSelectedRowData, idField, onClick } = this.props
+    if (onClick) {
+      onClick(rowId)
+    }
     if (!selectRows) {
       return
     }

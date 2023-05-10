@@ -3,7 +3,7 @@ import uniqWith from 'lodash/uniqWith'
 
 import { compHetGene } from 'shared/components/panel/variants/VariantUtils'
 import { compareObjects } from 'shared/utils/sortUtils'
-import { NOTE_TAG_NAME, MME_TAG_NAME } from 'shared/utils/constants'
+import { NOTE_TAG_NAME, MME_TAG_NAME, getSpliceId } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
@@ -63,6 +63,7 @@ export const getRnaSeqSignificantJunctionData = createSelector(
         .map(row => ({
           geneSymbol: (genesById[row.geneId] || {}).geneSymbol || row.geneId,
           junctionLocus: `${row.chrom}:${row.start}-${row.end} ${row.strand}`,
+          idField: getSpliceId(row),
           ...row,
         })),
     } : acc), {},
