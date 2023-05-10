@@ -16,7 +16,7 @@ import VariantGenes, { VariantGene } from './VariantGene'
 import VariantIndividuals from './VariantIndividuals'
 import { compHetGene, has37Coords } from './VariantUtils'
 
-const StyledVariantRow = styled(({ isSV, severity, ...props }) => <Grid.Row {...props} />)`  
+const StyledVariantRow = styled(({ isSV, severity, familyGuid, ...props }) => <Grid.Row {...props} />)`  
   .column {
     margin-top: 0em !important;
     margin-bottom: 0em !important;
@@ -84,7 +84,7 @@ const tagFamily = tag => (
 const VariantLayout = (
   {
     variant, compoundHetToggle, mainGeneId, isCompoundHet, linkToSavedVariants, topContent,
-    bottomContent, children, ...rowProps
+    bottomContent, children, updateReads, ...rowProps
   },
 ) => {
   const coreVariant = Array.isArray(variant) ? variant[0] : variant
@@ -107,9 +107,14 @@ const VariantLayout = (
       {!isCompoundHet && (
         <Grid.Column width={4}>
           {!mainGeneId && coreVariant.svName && <Header size="medium" content={coreVariant.svName} />}
-          {mainGeneId ?
-            <VariantGene geneId={mainGeneId} variant={coreVariant} compoundHetToggle={compoundHetToggle} /> :
-            <VariantGenes variant={variant} />}
+          {mainGeneId ? (
+            <VariantGene
+              geneId={mainGeneId}
+              variant={coreVariant}
+              compoundHetToggle={compoundHetToggle}
+              updateReads={updateReads}
+            />
+          ) : <VariantGenes variant={variant} />}
         </Grid.Column>
       )}
       <Grid.Column width={isCompoundHet ? 16 : 12}>
@@ -131,6 +136,7 @@ VariantLayout.propTypes = {
   topContent: PropTypes.node,
   bottomContent: PropTypes.node,
   children: PropTypes.node,
+  updateReads: PropTypes.func,
 }
 
 const Variant = React.memo(({ variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, ...props }) => {

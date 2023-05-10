@@ -7,9 +7,12 @@ import { Label, Popup, List, Header, Segment, Divider, Table, Button, Loader } f
 
 import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/selectors'
 import DataTable from 'shared/components/table/DataTable'
+import { getLocus } from 'shared/components/panel/variants/VariantUtils'
+import { COVERAGE_TYPE, JUNCTION_TYPE } from 'shared/components/panel/family/constants'
 import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
   MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
+  RNASEQ_JUNCTION_PADDING,
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
@@ -333,7 +336,7 @@ const RNA_SEQ_SPLICE_COLUMNS = [
     { name, content: camelcaseToTitlecase(name).replace(' ', '-'), format: row => row[name].toPrecision(3) }
   )),
   { name: 'chrom', content: 'Chromosome' },
-  { name: 'start', content: 'start' },
+  { name: 'idField', content: 'Row ID' },
 ]
 
 const PHENOTYPE_GENE_INFO_COLUMNS = [
@@ -437,14 +440,15 @@ const GENE_DETAIL_SECTIONS = [
     description: 'RNA-Seq FRASER Outlier',
     label: 'RNA Splice',
     showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqSplData && indivGeneData.rnaSeqSplData[gene.geneId],
-    detailsDisplay: (gene, indivGeneData) => (
+    detailsDisplay: (gene, indivGeneData, onClick) => (
       <div>
         This gene is flagged as an outlier for RNA-Seq in the following samples
         <DataTable
           {...HOVER_DATA_TABLE_PROPS}
           data={indivGeneData.rnaSeqSplData[gene.geneId]}
-          idField="individualName"
+          idField="idField"
           columns={RNA_SEQ_SPLICE_COLUMNS}
+          onClick={onClick}
         />
       </div>
     ),
@@ -494,11 +498,11 @@ const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: tru
   }
 `
 
-const getDetailSections = (configs, gene, compact, labelProps, individualGeneData, noExpand) => configs.map(
+const getDetailSections = (configs, gene, compact, labelProps, individualGeneData, noExpand, onClick) => configs.map(
   ({ showDetails, detailsDisplay, ...sectionConfig }) => (
     {
       ...sectionConfig,
-      detail: showDetails(gene, individualGeneData) && detailsDisplay(gene, individualGeneData),
+      detail: showDetails(gene, individualGeneData) && detailsDisplay(gene, individualGeneData, onClick),
     }),
 ).filter(({ detail }) => detail).reduce((acc, config) => (Array.isArray(config.detail) ?
   [
@@ -527,9 +531,16 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
 ))
 
 export const GeneDetails = React.memo((
-  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, ...labelProps },
+  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, updateReads, ...labelProps },
 ) => {
-  const geneDetails = getDetailSections(GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData)
+  const onClick = (rowId) => {
+    const [chrom, start, end] = rowId.split(':')
+    updateReads({
+      locus: getLocus(chrom, start, RNASEQ_JUNCTION_PADDING, end - start),
+      sampleTypes: [JUNCTION_TYPE, COVERAGE_TYPE],
+    })
+  }
+  const geneDetails = getDetailSections(GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData, onClick)
   const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps, null, noExpand)
   const hasLocusLists = showLocusLists && gene.locusListGuids?.length > 0
   const showDivider = !showInlineDetails && geneDetails.length > 0 && (hasLocusLists || geneDiseaseDetails.length > 0)
@@ -560,6 +571,7 @@ GeneDetails.propTypes = {
   showInlineDetails: PropTypes.bool,
   noExpand: PropTypes.bool,
   individualGeneData: PropTypes.object,
+  updateReads: PropTypes.func,
 }
 
 const GeneSearchLinkWithPopup = props => (
@@ -580,7 +592,7 @@ const getGeneConsequence = (geneId, variant) => {
 
 export const BaseVariantGene = React.memo(({
   geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, tpmGenes, individualGeneData, geneModalId,
-  noExpand, geneSearchFamily,
+  noExpand, geneSearchFamily, updateReads,
 }) => {
   const geneConsequence = variant && getGeneConsequence(geneId, variant)
 
@@ -599,6 +611,7 @@ export const BaseVariantGene = React.memo(({
       margin={showInlineDetails ? '1em .5em 0px 0px' : null}
       horizontal={showInlineDetails}
       individualGeneData={individualGeneData}
+      updateReads={updateReads}
       showLocusLists
     />
   )
@@ -684,6 +697,7 @@ BaseVariantGene.propTypes = {
   compoundHetToggle: PropTypes.func,
   geneModalId: PropTypes.string,
   noExpand: PropTypes.bool,
+  updateReads: PropTypes.func,
   geneSearchFamily: PropTypes.string,
   ...RNA_SEQ_PROP_TYPES,
 }

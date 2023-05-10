@@ -35,7 +35,11 @@ export const getIndividualGeneDataByFamilyGene = createSelector(
         acc[familyGuid][name] = Object.entries(outliers).reduce(
           (acc2, [geneId, data]) => (data.isSignificant ? {
             ...acc2,
-            [geneId]: [...(acc2[geneId] || []), { ...data, individualName: displayName }],
+            [geneId]: [...(acc2[geneId] || []), {
+              ...data,
+              individualName: displayName,
+              idField: name === 'rnaSeqSplData' ? `${data.chrom}:${data.start}:${data.end}:${data.strand}` : null,
+            }],
           } : acc2), acc[familyGuid][name] || {},
         )
       })
