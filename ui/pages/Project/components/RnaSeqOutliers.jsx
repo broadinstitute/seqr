@@ -109,7 +109,11 @@ const RnaSeqOutliers = React.memo((
       <GeneSearchLink
         buttonText={`Search for variants in outlier ${searchType}`}
         icon="search"
-        location={Object.values(rnaSeqData).filter(({ isSignificant }) => isSignificant).map(getLocation).join(',')}
+        location={Object.values(rnaSeqData)
+          .flat()
+          .filter(({ isSignificant }) => isSignificant)
+          .map(getLocation)
+          .join(',')}
         familyGuid={familyGuid}
         floated="right"
       />
