@@ -98,7 +98,10 @@ EXPECTED_SEARCH_RESPONSE = {
         'VFD0000025_1248367227_r0390_10': expected_functional_tag, 'VFD0000026_1248367227_r0390_10': expected_functional_tag,
     },
     'locusListsByGuid': {LOCUS_LIST_GUID: {'intervals': mock.ANY}},
-    'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}}},
+    'rnaSeqData': {
+        'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'spliceOutliers': {}},
+        'I000003_na19679': {'outliers': {}, 'spliceOutliers': {'ENSG00000268903': mock.ANY}},
+    },
     'phenotypeGeneScores': {
         'I000001_na19675': {'ENSG00000268903': {'exomiser': EXPECTED_EXOMISER_DATA}},
         'I000002_na19678': {'ENSG00000268903': {'lirical': EXPECTED_LIRICAL_DATA}},
@@ -506,7 +509,6 @@ class VariantSearchAPITest(object):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
         self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
         self._assert_expected_results_context(response_json)
         self.assertSetEqual(
