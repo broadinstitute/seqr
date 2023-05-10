@@ -113,6 +113,7 @@ const VariantLayout = (
               variant={coreVariant}
               compoundHetToggle={compoundHetToggle}
               updateReads={updateReads}
+              familyGuid={variant.familyGuids[0]}
             />
           ) : <VariantGenes variant={variant} />}
         </Grid.Column>
@@ -137,11 +138,10 @@ VariantLayout.propTypes = {
   bottomContent: PropTypes.node,
   children: PropTypes.node,
   updateReads: PropTypes.func,
+  familyGuid: PropTypes.string,
 }
 
-const Variant = React.memo((
-  { variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, familyGuid, updateReads, ...props },
-) => {
+const Variant = React.memo(({ variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, ...props }) => {
   const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)
   return (
     <VariantLayout

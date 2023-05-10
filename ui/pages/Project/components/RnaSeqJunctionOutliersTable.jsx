@@ -1,8 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
-import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
+import { RNASEQ_JUNCTION_PADDING, RNA_SEQ_SPLICE_COLUMNS } from 'shared/utils/constants'
 import { GeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
 import DataTable from 'shared/components/table/DataTable'
 import FamilyReads from 'shared/components/panel/family/FamilyReads'
@@ -10,25 +9,6 @@ import { COVERAGE_TYPE, JUNCTION_TYPE } from 'shared/components/panel/family/con
 import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { getLocus } from 'shared/components/panel/variants/VariantUtils'
-
-const RNA_SEQ_SPLICE_NUM_FIELDS = ['zScore', 'pValue', 'deltaPsi']
-const RNA_SEQ_SPLICE_DETAIL_FIELDS = ['type', 'readCount', 'rareDiseaseSamplesWithJunction', 'rareDiseaseSamplesTotal']
-
-const RNA_SEQ_SPLICE_COLUMNS = [
-  ...RNA_SEQ_SPLICE_NUM_FIELDS.map(name => (
-    {
-      name,
-      content: camelcaseToTitlecase(name).replace(' ', '-'),
-      format: row => row[name].toPrecision(3),
-    }
-  )),
-  ...RNA_SEQ_SPLICE_DETAIL_FIELDS.map(name => (
-    {
-      name,
-      content: camelcaseToTitlecase(name).replace(' ', '-'),
-    }
-  )),
-]
 
 const getJunctionLocus = (junction) => {
   const size = junction.end && junction.end - junction.start

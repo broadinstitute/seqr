@@ -12,7 +12,7 @@ import { COVERAGE_TYPE, JUNCTION_TYPE } from 'shared/components/panel/family/con
 import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
   MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
-  RNASEQ_JUNCTION_PADDING,
+  RNASEQ_JUNCTION_PADDING, RNA_SEQ_SPLICE_COLUMNS,
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
@@ -328,15 +328,9 @@ const RNA_SEQ_EXPRESSION_COLUMNS = [
   )),
 ]
 
-const RNA_SEQ_SPLICE_DETAIL_FIELDS = ['zScore', 'pValue']
-
-const RNA_SEQ_SPLICE_COLUMNS = [
+const RNA_SEQ_SPLICE_TAB_COLUMNS = [
   INDIVIDUAL_NAME_COLUMN,
-  ...RNA_SEQ_SPLICE_DETAIL_FIELDS.map(name => (
-    { name, content: camelcaseToTitlecase(name).replace(' ', '-'), format: row => row[name].toPrecision(3) }
-  )),
-  { name: 'chrom', content: 'Chromosome' },
-  { name: 'idField', content: 'Row ID' },
+  ...RNA_SEQ_SPLICE_COLUMNS,
 ]
 
 const PHENOTYPE_GENE_INFO_COLUMNS = [
@@ -447,7 +441,7 @@ const GENE_DETAIL_SECTIONS = [
           {...HOVER_DATA_TABLE_PROPS}
           data={indivGeneData.rnaSeqSplData[gene.geneId]}
           idField="idField"
-          columns={RNA_SEQ_SPLICE_COLUMNS}
+          columns={RNA_SEQ_SPLICE_TAB_COLUMNS}
           onClickRow={onClickRow}
         />
       </div>
@@ -530,15 +524,15 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
   )
 ))
 
-export const GeneDetails = React.memo((
-  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, updateReads, ...labelProps },
-) => {
+export const GeneDetails = React.memo(({
+  gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, updateReads, familyGuid,
+  ...labelProps
+}) => {
   const onClickRow = (rowId) => {
-    const [, chrom, start, end] = rowId.split('-')
-    updateReads({
-      locus: getLocus(chrom, start, RNASEQ_JUNCTION_PADDING, end - start),
-      sampleTypes: [JUNCTION_TYPE, COVERAGE_TYPE],
-    })
+    const [chrom, start, end] = rowId.split('-').slice(1, 4).map(s => parseInt(s, 10))
+    updateReads(
+      familyGuid, getLocus(chrom, start, RNASEQ_JUNCTION_PADDING, end - start), [JUNCTION_TYPE, COVERAGE_TYPE],
+    )
   }
   const geneDetails = getDetailSections(
     GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData, null, onClickRow,
@@ -574,6 +568,7 @@ GeneDetails.propTypes = {
   noExpand: PropTypes.bool,
   individualGeneData: PropTypes.object,
   updateReads: PropTypes.func,
+  familyGuid: PropTypes.string,
 }
 
 const GeneSearchLinkWithPopup = props => (
@@ -594,7 +589,7 @@ const getGeneConsequence = (geneId, variant) => {
 
 export const BaseVariantGene = React.memo(({
   geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, tpmGenes, individualGeneData, geneModalId,
-  noExpand, geneSearchFamily, updateReads,
+  noExpand, geneSearchFamily, updateReads, familyGuid,
 }) => {
   const geneConsequence = variant && getGeneConsequence(geneId, variant)
 
@@ -614,6 +609,7 @@ export const BaseVariantGene = React.memo(({
       horizontal={showInlineDetails}
       individualGeneData={individualGeneData}
       updateReads={updateReads}
+      familyGuid={familyGuid}
       showLocusLists
     />
   )
@@ -701,6 +697,7 @@ BaseVariantGene.propTypes = {
   noExpand: PropTypes.bool,
   updateReads: PropTypes.func,
   geneSearchFamily: PropTypes.string,
+  familyGuid: PropTypes.string,
   ...RNA_SEQ_PROP_TYPES,
 }
 
