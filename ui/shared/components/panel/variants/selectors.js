@@ -12,6 +12,7 @@ import {
   VARIANT_SORT_LOOKUP,
   SHOW_ALL,
   VARIANT_EXPORT_DATA,
+  getSpliceId,
 } from 'shared/utils/constants'
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
@@ -38,7 +39,7 @@ export const getIndividualGeneDataByFamilyGene = createSelector(
             [geneId]: [...(acc2[geneId] || []), {
               ...data,
               individualName: displayName,
-              idField: name === 'rnaSeqSplData' ? `${data.chrom}:${data.start}:${data.end}:${data.strand}` : null,
+              idField: name === 'rnaSeqSplData' ? getSpliceId(data) : null,
             }],
           } : acc2), acc[familyGuid][name] || {},
         )

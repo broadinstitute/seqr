@@ -440,7 +440,7 @@ const GENE_DETAIL_SECTIONS = [
     description: 'RNA-Seq FRASER Outlier',
     label: 'RNA Splice',
     showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqSplData && indivGeneData.rnaSeqSplData[gene.geneId],
-    detailsDisplay: (gene, indivGeneData, onClick) => (
+    detailsDisplay: (gene, indivGeneData, onClickRow) => (
       <div>
         This gene is flagged as an outlier for RNA-Seq in the following samples
         <DataTable
@@ -448,7 +448,7 @@ const GENE_DETAIL_SECTIONS = [
           data={indivGeneData.rnaSeqSplData[gene.geneId]}
           idField="idField"
           columns={RNA_SEQ_SPLICE_COLUMNS}
-          onClick={onClick}
+          onClickRow={onClickRow}
         />
       </div>
     ),
@@ -498,11 +498,11 @@ const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: tru
   }
 `
 
-const getDetailSections = (configs, gene, compact, labelProps, individualGeneData, noExpand, onClick) => configs.map(
+const getDetailSections = (configs, gene, compact, labelProps, individualGeneData, noExpand, onClickRow) => configs.map(
   ({ showDetails, detailsDisplay, ...sectionConfig }) => (
     {
       ...sectionConfig,
-      detail: showDetails(gene, individualGeneData) && detailsDisplay(gene, individualGeneData, onClick),
+      detail: showDetails(gene, individualGeneData) && detailsDisplay(gene, individualGeneData, onClickRow),
     }),
 ).filter(({ detail }) => detail).reduce((acc, config) => (Array.isArray(config.detail) ?
   [
@@ -533,14 +533,16 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
 export const GeneDetails = React.memo((
   { gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, updateReads, ...labelProps },
 ) => {
-  const onClick = (rowId) => {
-    const [chrom, start, end] = rowId.split(':')
+  const onClickRow = (rowId) => {
+    const [, chrom, start, end] = rowId.split('-')
     updateReads({
       locus: getLocus(chrom, start, RNASEQ_JUNCTION_PADDING, end - start),
       sampleTypes: [JUNCTION_TYPE, COVERAGE_TYPE],
     })
   }
-  const geneDetails = getDetailSections(GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData, onClick)
+  const geneDetails = getDetailSections(
+    GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData, null, onClickRow,
+  )
   const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps, null, noExpand)
   const hasLocusLists = showLocusLists && gene.locusListGuids?.length > 0
   const showDivider = !showInlineDetails && geneDetails.length > 0 && (hasLocusLists || geneDiseaseDetails.length > 0)

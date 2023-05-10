@@ -68,7 +68,7 @@ class DataTable extends React.PureComponent {
     downloadAlign: PropTypes.string,
     loadingProps: PropTypes.object,
     filterContainer: PropTypes.object,
-    onClick: PropTypes.func,
+    onClickRow: PropTypes.func,
   }
 
   static defaultProps = {
@@ -128,9 +128,9 @@ class DataTable extends React.PureComponent {
   }
 
   handleSelect = rowId => () => {
-    const { data, selectRows, selectedRows, includeSelectedRowData, idField, onClick } = this.props
-    if (onClick) {
-      onClick(rowId)
+    const { data, selectRows, selectedRows, includeSelectedRowData, idField, onClickRow } = this.props
+    if (onClickRow) {
+      onClickRow(rowId)
     }
     if (!selectRows) {
       return
@@ -166,7 +166,8 @@ class DataTable extends React.PureComponent {
     const {
       data = [], defaultSortColumn, defaultSortDescending, idField, columns, selectRows, selectedRows = {},
       loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, downloadAlign,
-      fixedWidth, includeSelectedRowData, filterContainer, getRowFilterVal, loadingProps = {}, maxHeight, ...tableProps
+      fixedWidth, includeSelectedRowData, filterContainer, getRowFilterVal, loadingProps = {}, maxHeight,
+      onClickRow, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
     const sortedDirection = direction || (defaultSortDescending ? DESCENDING : ASCENDING)
