@@ -139,7 +139,9 @@ VariantLayout.propTypes = {
   updateReads: PropTypes.func,
 }
 
-const Variant = React.memo(({ variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, ...props }) => {
+const Variant = React.memo((
+  { variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, familyGuid, updateReads, ...props },
+) => {
   const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)
   return (
     <VariantLayout

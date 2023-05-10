@@ -269,8 +269,7 @@ class FamilyReads extends React.PureComponent {
     locus: null,
   }
 
-  updateReads = ({ locus, sampleTypes }) => {
-    const { familyGuid } = this.props
+  updateReads = (familyGuid, locus, sampleTypes) => {
     this.setState({ openFamily: familyGuid, sampleTypes, locus })
   }
 
