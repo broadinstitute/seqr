@@ -65,7 +65,7 @@ def delete_search_backend_data(data_id):
 
 
 def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
-    variants = get_es_variants_for_variant_ids(
+    variants = backend_specific_call(get_es_variants_for_variant_ids)(
         families, [variant_id], user, return_all_queried_families=return_all_queried_families,
     )
     if not variants:
@@ -74,7 +74,7 @@ def get_single_variant(families, variant_id, return_all_queried_families=False, 
 
 
 def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
-    return get_es_variants_for_variant_ids(families, variant_ids, user, dataset_type=dataset_type)
+    return backend_specific_call(get_es_variants_for_variant_ids)(families, variant_ids, user, dataset_type=dataset_type)
 
 
 def _get_search_cache_key(search_model, sort=None):
@@ -100,7 +100,10 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     if len(loaded_results) >= end_index:
         return loaded_results[start_index:end_index], total_results
 
-    previously_loaded_results = process_es_previously_loaded_results(previous_search_results, start_index, end_index)
+    previously_loaded_results = backend_specific_call(
+        process_es_previously_loaded_results,
+        lambda prev_results, *args: prev_results,  # Other backends need no additional parsing
+    )(previous_search_results, start_index, end_index)
     if previously_loaded_results is not None:
         return previously_loaded_results, total_results
 
@@ -137,7 +140,7 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     }
     parsed_search.update(search)
 
-    variant_results = get_es_variants(
+    variant_results = backend_specific_call(get_es_variants)(
         search_model.families.all(), parsed_search, user, previous_search_results, sort=sort, num_results=num_results,
         **kwargs,
     )
@@ -156,7 +159,10 @@ def get_variant_query_gene_counts(search_model, user):
     if len(previous_search_results.get('all_results', [])) == previous_search_results.get('total_results'):
         return _get_gene_aggs_for_cached_variants(previous_search_results)
 
-    previously_loaded_results = process_es_previously_loaded_gene_aggs(previous_search_results)
+    previously_loaded_results = backend_specific_call(
+        process_es_previously_loaded_gene_aggs,
+        lambda prev_results, *args: prev_results,  # Other backends need no additional parsing
+    )(previous_search_results)
     if previously_loaded_results is not None:
         return previously_loaded_results
 
