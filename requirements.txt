@@ -74,7 +74,7 @@ deprecated==1.2.13
     # via hail
 dill==0.3.6
     # via hail
-django==3.2.18
+django==3.2.19
     # via
     #   -r requirements.in
     #   django-anymail
