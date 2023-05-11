@@ -269,8 +269,10 @@ class FamilyReads extends React.PureComponent {
     locus: null,
   }
 
-  updateReads = (familyGuid, locus, sampleTypes) => {
-    this.setState({ openFamily: familyGuid, sampleTypes, locus })
+  updateReads = (familyGuid, locus, sampleTypes, tissueType) => {
+    const rnaReferenceOptions = [NORM_GTEX_TRACK_OPTIONS, AGG_GTEX_TRACK_OPTIONS].reduce((acc, options) => ([
+      ...acc, options.find(opt => opt.name.include(tissueType))]), [])
+    this.setState({ openFamily: familyGuid, rnaReferences: rnaReferenceOptions, sampleTypes, locus })
   }
 
   getProjectForFamily = (familyGuid) => {

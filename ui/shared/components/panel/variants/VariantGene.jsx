@@ -434,18 +434,29 @@ const GENE_DETAIL_SECTIONS = [
     description: 'RNA-Seq FRASER Outlier',
     label: 'RNA Splice',
     showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqSplData && indivGeneData.rnaSeqSplData[gene.geneId],
-    detailsDisplay: (gene, indivGeneData, onClickRow) => (
-      <div>
-        This gene is flagged as an outlier for RNA-Seq in the following samples
-        <DataTable
-          {...HOVER_DATA_TABLE_PROPS}
-          data={indivGeneData.rnaSeqSplData[gene.geneId]}
-          idField="idField"
-          columns={RNA_SEQ_SPLICE_TAB_COLUMNS}
-          onClickRow={onClickRow}
-        />
-      </div>
-    ),
+    detailsDisplay: (gene, indivGeneData, onClickRow) => {
+      const data = indivGeneData.rnaSeqSplData[gene.geneId]
+      // eslint-disable-next-line react-perf/jsx-no-new-function-as-prop
+      const handleClick = (rowId) => {
+        const row = data.find(r => r.idField === rowId)
+        const { chrom, start, end, tissueType } = row
+        onClickRow(
+          getLocus(chrom, start, RNASEQ_JUNCTION_PADDING, end - start), [JUNCTION_TYPE, COVERAGE_TYPE], tissueType,
+        )
+      }
+      return (
+        <div>
+          This gene is flagged as an outlier for RNA-Seq in the following samples
+          <DataTable
+            {...HOVER_DATA_TABLE_PROPS}
+            data={data}
+            idField="idField"
+            columns={RNA_SEQ_SPLICE_TAB_COLUMNS}
+            onClickRow={handleClick}
+          />
+        </div>
+      )
+    },
   },
   {
     color: 'orange',
@@ -528,11 +539,8 @@ export const GeneDetails = React.memo(({
   gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, updateReads, familyGuid,
   ...labelProps
 }) => {
-  const onClickRow = (rowId) => {
-    const [chrom, start, end] = rowId.split('-').slice(1, 4).map(s => parseInt(s, 10))
-    updateReads(
-      familyGuid, getLocus(chrom, start, RNASEQ_JUNCTION_PADDING, end - start), [JUNCTION_TYPE, COVERAGE_TYPE],
-    )
+  const onClickRow = (locus, trackType, tissueType) => {
+    updateReads(familyGuid, locus, trackType, tissueType)
   }
   const geneDetails = getDetailSections(
     GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData, null, onClickRow,
