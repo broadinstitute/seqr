@@ -34,6 +34,7 @@ def mock_convert_coordinate(chrom, pos):
     return(LIFT_MAP[pos])
 
 
+@mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 @mock.patch('seqr.utils.search.elasticsearch.es_utils.get_index_metadata', lambda index, client, **kwargs: {index: SAMPLE_METADATA})
 @mock.patch('seqr.management.commands.lift_project_to_hg38.logger')
 @mock.patch('seqr.utils.search.elasticsearch.es_utils._get_es_sample_ids')
@@ -160,6 +161,13 @@ class LiftProjectToHg38Test(TestCase):
     def test_command_other_exceptions(self, mock_liftover, mock_single_es_variants,
             mock_get_es_variants, mock_input, mock_get_es_samples, mock_logger):
         mock_get_es_samples.return_value = SAMPLE_IDS
+
+        # Test elasticsearch is disabled
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            with self.assertRaises(Exception) as ce:
+                call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
+                             '--es-index={}'.format(ELASTICSEARCH_INDEX))
+        self.assertEqual(str(ce.exception), 'Elasticsearch backend is disabled')
 
         # Test discontinue on a failed lift
         mock_liftover_to_38 = mock_liftover.return_value

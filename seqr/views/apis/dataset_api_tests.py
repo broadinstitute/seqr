@@ -38,6 +38,7 @@ MOCK_REDIS = mock.MagicMock()
 MOCK_OPEN = mock.MagicMock()
 MOCK_FILE_ITER = MOCK_OPEN.return_value.__enter__.return_value.__iter__
 
+@mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
 @mock.patch('seqr.utils.file_utils.open', MOCK_OPEN)
 class DatasetAPITest(object):
@@ -303,6 +304,11 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         response = self.client.post(url, content_type='application/json', data=json.dumps({'datasetType': 'SV'}))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['request must contain field: "elasticsearchIndex"']})
+
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
 
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
