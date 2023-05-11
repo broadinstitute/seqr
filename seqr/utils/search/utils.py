@@ -29,23 +29,23 @@ ERROR_LOG_EXCEPTIONS = set()
 ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
 
 
-def _no_backend_error():
+def _no_backend_error(*args, **kwargs):
     raise InvalidSearchException('Elasticsearch backend is disabled')
 
 
 def backend_specific_call(es_func, other_func=_no_backend_error):
     if es_backend_enabled():
-        return es_func()
+        return es_func
     else:
-        return other_func()
+        return other_func
 
 
 def ping_search_backend():
-    backend_specific_call(ping_elasticsearch)
+    backend_specific_call(ping_elasticsearch)()
 
 
 def get_search_backend_status():
-    return backend_specific_call(get_elasticsearch_status)
+    return backend_specific_call(get_elasticsearch_status)()
 
 
 def get_search_samples(projects, active_only=True):
@@ -61,7 +61,7 @@ def delete_search_backend_data(data_id):
         projects = set(active_samples.values_list('individual__family__project__name', flat=True))
         raise InvalidSearchException(f'"{data_id}" is still used by: {", ".join(projects)}')
 
-    return backend_specific_call(lambda: delete_es_index(data_id))
+    return backend_specific_call(delete_es_index)(data_id)
 
 
 def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
