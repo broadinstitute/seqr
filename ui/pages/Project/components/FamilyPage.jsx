@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Link, Route, Switch } from 'react-router-dom'
-import { Popup, Icon, Loader } from 'semantic-ui-react'
+import { Popup, Icon } from 'semantic-ui-react'
 
 import { loadFamilyDetails } from 'redux/rootReducer'
 import {
@@ -215,38 +215,21 @@ FamilyPage.propTypes = {
   match: PropTypes.object,
 }
 
-class FamilyPageRouter extends React.PureComponent {
+const FamilyPageRouter = React.memo(({ family, match, load, loading }) => (
+  <DataLoader contentId={match.params.familyGuid} content={family} load={load} loading={loading}>
+    <Switch>
+      <Route path={`${match.url}/rnaseq_results/:individualGuid`} component={RnaSeqResultPage} />
+      <Route exact path={match.url} component={FamilyPage} />
+      <Route component={Error404} />
+    </Switch>
+  </DataLoader>
+))
 
-  static propTypes = {
-    family: PropTypes.object,
-    match: PropTypes.object,
-    loadFamilyDetails: PropTypes.func,
-    loading: PropTypes.bool.isRequired,
-  }
-
-  constructor(props) {
-    super(props)
-
-    props.loadFamilyDetails(props.match.params.familyGuid)
-  }
-
-  render() {
-    const { family, match, loading } = this.props
-    if (family) {
-      return (
-        <Switch>
-          <Route path={`${match.url}/rnaseq_results/:individualGuid`} component={RnaSeqResultPage} />
-          <Route exact path={match.url} component={FamilyPage} />
-          <Route component={Error404} />
-        </Switch>
-      )
-    }
-    if (loading) {
-      return <Loader inline="centered" active />
-    }
-    return <Error404 />
-  }
-
+FamilyPageRouter.propTypes = {
+  family: PropTypes.object,
+  match: PropTypes.object,
+  load: PropTypes.func,
+  loading: PropTypes.bool.isRequired,
 }
 
 const mapFamilyStateToProps = (state, ownProps) => ({
@@ -255,7 +238,7 @@ const mapFamilyStateToProps = (state, ownProps) => ({
 })
 
 const mapFamilyDispatchToProps = {
-  loadFamilyDetails,
+  load: loadFamilyDetails,
 }
 
 export default connect(mapFamilyStateToProps, mapFamilyDispatchToProps)(FamilyPageRouter)
