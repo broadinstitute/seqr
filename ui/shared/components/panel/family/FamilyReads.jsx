@@ -372,7 +372,7 @@ class FamilyReads extends React.PureComponent {
     } = this.props
     const { openFamily, sampleTypes, rnaReferences, junctionTrackOptions, locus } = this.state
 
-    const showReads = noTriggerButton ? (
+    const showReads = noTriggerButton ? null : (
       <ReadButtons
         variant={variant}
         familyGuid={familyGuid}
@@ -381,7 +381,7 @@ class FamilyReads extends React.PureComponent {
         familiesByGuid={familiesByGuid}
         showReads={this.showReads}
       />
-    ) : null
+    )
 
     const igvSampleIndividuals = (
       openFamily && (igvSamplesByFamilySampleIndividual || {})[openFamily]) || {}
