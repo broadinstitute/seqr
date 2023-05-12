@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Loader, Grid, Dropdown } from 'semantic-ui-react'
 
-import { getGenesById, getSamplesByGuid, getIndividualsByGuid, getRnaSeqDataByIndividual } from 'redux/selectors'
+import { getGenesById, getIndividualsByGuid, getRnaSeqDataByIndividual } from 'redux/selectors'
 import { RNASEQ_JUNCTION_PADDING, TISSUE_DISPLAY } from 'shared/utils/constants'
 import DataLoader from 'shared/components/DataLoader'
 import { loadRnaSeqData } from '../reducers'
@@ -23,7 +23,7 @@ const OUTLIER_VOLCANO_PLOT_CONFIGS = {
     getLocation: (({ chrom, start, end }) => `${chrom}:${Math.max(1, start - RNASEQ_JUNCTION_PADDING)}-${end + RNASEQ_JUNCTION_PADDING}`),
     searchType: 'regions',
     title: 'Splice Junction Outliers',
-    formatData: ({ data, sampleGuid }) => data.filter(outlier => outlier.sampleGuid === sampleGuid),
+    formatData: ({ data, tissueType }) => data.filter(outlier => outlier.tissueType === tissueType),
   },
 }
 
@@ -34,50 +34,41 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     rnaSeqData: PropTypes.object,
     significantJunctionOutliers: PropTypes.arrayOf(PropTypes.object),
     genesById: PropTypes.object,
-    samplesByGuid: PropTypes.object,
   }
 
   state = {
-    sampleGuid: null,
+    tissueType: null,
     tissueOptions: null,
   }
 
   componentDidMount() {
-    const tissueOptions = this.getTissueOptions()
+    const { rnaSeqData } = this.props
+    const tissueTypes = Array.from(Object.values(rnaSeqData?.spliceOutliers || {}).flat().reduce(
+      (acc, { tissueType }) => acc.add(tissueType), new Set(),
+    ))
+    const tissueOptions = tissueTypes.map(tissueType => (
+      { key: tissueType, text: TISSUE_DISPLAY[tissueType] || 'No Tissue', value: tissueType }
+    ))
     if (tissueOptions.length) {
-      this.setState({ sampleGuid: tissueOptions[0].value, tissueOptions })
+      this.setState({ tissueType: tissueOptions[0].value, tissueOptions })
     }
   }
 
-  getTissueOptions = () => {
-    const { rnaSeqData, samplesByGuid } = this.props
-    const sampleGuids = Object.values(rnaSeqData?.spliceOutliers || {}).flat().reduce(
-      (acc, { sampleGuid }) => acc.add(sampleGuid), new Set(),
-    )
-    const sampleTissueTypes = Array.from(sampleGuids).map(sampleGuid => ([
-      sampleGuid, TISSUE_DISPLAY[(samplesByGuid || {})[sampleGuid]?.tissueType] || 'No Tissue',
-    ]))
-
-    return sampleTissueTypes.map(([sampleGuid, tissueType]) => ({
-      key: tissueType, text: tissueType, value: sampleGuid,
-    }))
-  }
-
-  onTissueChange = (sampleGuid) => {
-    this.setState({ sampleGuid })
+  onTissueChange = (tissueType) => {
+    this.setState({ tissueType })
   }
 
   render() {
     const { individual, rnaSeqData, significantJunctionOutliers, genesById } = this.props
-    const { sampleGuid, tissueOptions } = this.state
+    const { tissueType, tissueOptions } = this.state
 
     const outlierData = Object.entries(rnaSeqData || {}).map(([key, data]) => [
       key,
-      OUTLIER_VOLCANO_PLOT_CONFIGS[key].formatData({ data: Object.values(data || {}).flat(), sampleGuid }),
+      OUTLIER_VOLCANO_PLOT_CONFIGS[key].formatData({ data: Object.values(data || {}).flat(), tissueType }),
     ]).filter(([, data]) => data.length)
 
     const outlierPlots = outlierData.map(([key, data]) => (
-      <Grid.Column key={key}>
+      <Grid.Column key={key} width={8}>
         <RnaSeqOutliers
           familyGuid={individual.familyGuid}
           rnaSeqData={data}
@@ -95,13 +86,13 @@ class BaseRnaSeqResultPage extends React.PureComponent {
             <Grid.Row>
               <span>
                 Select a tissue type: &nbsp;
-                <Dropdown inline value={sampleGuid} options={tissueOptions} onChange={this.onTissueChange} />
+                <Dropdown inline value={tissueType} options={tissueOptions} onChange={this.onTissueChange} />
               </span>
             </Grid.Row>
           )}
-          {outlierPlots.length > 0 && <Grid.Row divided columns={outlierPlots.length}>{outlierPlots}</Grid.Row>}
+          {(outlierPlots.length > 0) && <Grid.Row divided columns={outlierPlots.length}>{outlierPlots}</Grid.Row>}
         </React.Suspense>
-        {significantJunctionOutliers.length && (
+        {(significantJunctionOutliers.length > 0) && (
           <Grid.Row centered columns={14}>
             <React.Suspense fallback={<Loader />}>
               <RnaSeqOutliersTable
@@ -135,7 +126,6 @@ const mapStateToProps = (state, ownProps) => ({
   rnaSeqData: getRnaSeqDataByIndividual(state)[ownProps.match.params.individualGuid],
   significantJunctionOutliers: getRnaSeqSignificantJunctionData(state)[ownProps.match.params.individualGuid] || [],
   genesById: getGenesById(state),
-  samplesByGuid: getSamplesByGuid(state),
   loading: getRnaSeqDataLoading(state),
 })
 
