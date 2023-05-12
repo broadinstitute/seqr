@@ -76,6 +76,62 @@ class SearchUtilsTests(object):
             search_func(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
 
+    @mock.patch('seqr.utils.search.utils.MAX_VARIANTS', 5)
+    def test_invalid_search_query_variants(self):
+        self._test_invalid_search_params(query_variants)
+
+        self.set_cache({'total_results': 10})
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model, page=1, num_results=2, load_all=True)
+        self.assertEqual(str(cm.exception), 'Too many variants to load. Please refine your search and try again')
+
+    def _test_expected_search_call(self, mock_get_variants, results_cache, **kwargs):
+        mock_get_variants.assert_called_with(
+            mock.ANY, {
+                'inheritance': {'mode': 'recessive'},
+                'parsedLocus': {'genes': None, 'intervals': None, 'rs_ids': None, 'variant_ids': None},
+            }, self.user, results_cache, **kwargs,
+        )
+        self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(self.families))
+
+    def test_query_variants(self, mock_get_variants):
+        def _mock_get_variants(families, search, user, previous_search_results, **kwargs):
+            previous_search_results['all_results'] = PARSED_VARIANTS
+            previous_search_results['total_results'] = 5
+            return PARSED_VARIANTS
+        mock_get_variants.side_effect = _mock_get_variants
+
+        variants, total = query_variants(self.results_model, user=self.user)
+        self.assertListEqual(variants, PARSED_VARIANTS)
+        self.assertEqual(total, 5)
+        results_cache = {'all_results': PARSED_VARIANTS, 'total_results': 5}
+        self.assert_cached_results(results_cache)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+        )
+
+        query_variants(
+            self.results_model, user=self.user, sort='cadd', skip_genotype_filter=True, page=3, num_results=10,
+        )
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='cadd', page=3, num_results=10, skip_genotype_filter=True,
+        )
+
+        query_variants(self.results_model, user=self.user, load_all=True)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=10000, skip_genotype_filter=False,
+        )
+
+        self.set_cache({'total_results': 22})
+        query_variants(self.results_model, user=self.user, load_all=True)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=22, skip_genotype_filter=False,
+        )
+
+    def test_cached_query_variants(self):
+        pass
+        # TODO
+
     def test_invalid_search_get_variant_query_gene_counts(self):
         self._test_invalid_search_params(get_variant_query_gene_counts)
 
@@ -94,13 +150,9 @@ class SearchUtilsTests(object):
         self.assertDictEqual(gene_counts, mock_counts)
         results_cache = {'gene_aggs': gene_counts}
         self.assert_cached_results(results_cache)
-        mock_get_variants.assert_called_with(
-            mock.ANY, {
-                'inheritance': {'mode': 'recessive'},
-                'parsedLocus': {'genes': None, 'intervals': None, 'rs_ids': None, 'variant_ids': None},
-            }, self.user, results_cache, sort=None, num_results=100, gene_agg=True,
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort=None, num_results=100, gene_agg=True,
         )
-        self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(self.families))
 
     def test_cached_get_variant_query_gene_counts(self):
         cached_gene_counts = {
@@ -134,6 +186,10 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
     @mock.patch('seqr.utils.search.utils.get_es_variants_for_variant_ids')
     def test_get_variants_for_variant_ids(self, mock_get_variants_for_ids):
         super(ElasticsearchSearchUtilsTests, self).test_get_variants_for_variant_ids(mock_get_variants_for_ids)
+
+    @mock.patch('seqr.utils.search.utils.get_es_variants')
+    def test_query_variants(self, mock_get_variants):
+        super(ElasticsearchSearchUtilsTests, self).test_query_variants(mock_get_variants)
 
     @mock.patch('seqr.utils.search.utils.get_es_variants')
     def test_get_variant_query_gene_counts(self, mock_get_variants):
@@ -177,6 +233,11 @@ class NoBackendSearchUtilsTests(TestCase, SearchUtilsTests):
     def test_get_variants_for_variant_ids(self):
         with self.assertRaises(InvalidSearchException) as cm:
             super(NoBackendSearchUtilsTests, self).test_get_variants_for_variant_ids(mock.MagicMock())
+        self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
+
+    def test_query_variants(self):
+        with self.assertRaises(InvalidSearchException) as cm:
+            super(NoBackendSearchUtilsTests, self).test_query_variants(mock.MagicMock())
         self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
 
     def test_get_variant_query_gene_counts(self):

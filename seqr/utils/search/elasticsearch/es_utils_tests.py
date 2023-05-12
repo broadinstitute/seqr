@@ -1595,11 +1595,6 @@ class EsUtilsTest(TestCase):
 
         # test load_all
         setup_responses()
-        mock_max_variants.__int__.return_value = 5
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model, page=1, num_results=2, load_all=True)
-        self.assertEqual(str(cm.exception), 'Too many variants to load. Please refine your search and try again')
-
         mock_max_variants.__int__.return_value = 100
         variants, _ = query_variants(results_model, page=1, num_results=2, load_all=True)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], start_index=4, size=1)
