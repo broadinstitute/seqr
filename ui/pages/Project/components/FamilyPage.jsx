@@ -203,23 +203,25 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const FamilyDetail = connect(mapStateToProps)(BaseFamilyDetail)
 
-const FamilyPage = ({ match }) => (
+const FamilyPage = ({ familyGuid }) => (
   <FamilyDetail
-    familyGuid={match.url.split('/')[4]}
+    familyGuid={familyGuid}
     showVariantDetails
     fields={FAMILY_DETAIL_FIELDS}
   />
 )
 
 FamilyPage.propTypes = {
-  match: PropTypes.object,
+  familyGuid: PropTypes.string,
 }
+
+const renderFamilyPage = familyGuid => () => <FamilyPage familyGuid={familyGuid} />
 
 const FamilyPageRouter = React.memo(({ family, match, load, loading }) => (
   <DataLoader contentId={match.params.familyGuid} content={family} load={load} loading={loading}>
     <Switch>
       <Route path={`${match.url}/rnaseq_results/:individualGuid`} component={RnaSeqResultPage} />
-      <Route exact path={match.url} component={FamilyPage} />
+      <Route exact path={match.url} render={renderFamilyPage(match.params.familyGuid)} />
       <Route component={Error404} />
     </Switch>
   </DataLoader>
