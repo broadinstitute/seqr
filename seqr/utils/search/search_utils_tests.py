@@ -20,8 +20,8 @@ class SearchUtilsTests(object):
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
         self.user = User.objects.get(username='test_user')
 
-        search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'recessive'}})
-        self.results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'recessive'}})
+        self.results_model = VariantSearchResults.objects.create(variant_search=self.search_model)
         self.results_model.families.set(self.families)
 
     def set_cache(self, cached):
@@ -60,12 +60,24 @@ class SearchUtilsTests(object):
         mock_get_variants_for_ids.assert_called_with(
             self.families, variant_ids, self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
 
-    def _test_invalid_search_params(self):
-        # TODO
-        pass
+    def _test_invalid_search_params(self, search_func):
+        self.search_model.search['locus'] = {'rawVariantItems': 'chr2-A-C'}
+        with self.assertRaises(InvalidSearchException) as cm:
+            search_func(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
+
+        self.search_model.search['locus']['rawVariantItems'] = 'rs9876,chr2-1234-A-C'
+        with self.assertRaises(InvalidSearchException) as cm:
+            search_func(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'Invalid variant notation: found both variant IDs and rsIDs')
+
+        self.search_model.search['locus']['rawItems'] = 'chr27:1234-5678,2:40-400000000, ENSG00012345'
+        with self.assertRaises(InvalidSearchException) as cm:
+            search_func(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
 
     def test_invalid_search_get_variant_query_gene_counts(self):
-        self._test_invalid_search_params()
+        self._test_invalid_search_params(get_variant_query_gene_counts)
 
     def test_get_variant_query_gene_counts(self, mock_get_variants):
         mock_counts = {
@@ -109,7 +121,8 @@ class SearchUtilsTests(object):
 
 @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
-    fixtures = ['users', '1kg_project']
+    databases = '__all__'
+    fixtures = ['users', '1kg_project', 'reference_data']
 
     def setUp(self):
         self.set_up()
@@ -150,7 +163,8 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
 
 
 class NoBackendSearchUtilsTests(TestCase, SearchUtilsTests):
-    fixtures = ['users', '1kg_project']
+    databases = '__all__'
+    fixtures = ['users', '1kg_project', 'reference_data']
 
     def setUp(self):
         self.set_up()

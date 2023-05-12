@@ -1493,21 +1493,6 @@ class EsUtilsTest(TestCase):
             str(cm.exception),
             'Location must be specified to search for compound heterozygous variants across many families')
 
-        search_model.search['locus'] = {'rawVariantItems': 'chr2-A-C'}
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
-
-        search_model.search['locus']['rawVariantItems'] = 'rs9876,chr2-1234-A-C'
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(str(cm.exception), 'Invalid variant notation: found both variant IDs and rsIDs')
-
-        search_model.search['locus']['rawItems'] = 'chr27:1234-5678,2:40-400000000, ENSG00012345'
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
-
         search_model.search['locus']['rawItems'] = 'DDX11L1'
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
