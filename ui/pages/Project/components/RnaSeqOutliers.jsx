@@ -7,7 +7,6 @@ import { axisBottom, axisLeft } from 'd3-axis'
 import { scaleLinear, scaleLog, scalePow } from 'd3-scale'
 import { select } from 'd3-selection'
 
-import { TISSUE_DISPLAY } from 'shared/utils/constants'
 import { GeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
 
 const GRAPH_HEIGHT = 400
@@ -17,13 +16,12 @@ const GRAPH_MARGIN = { top: 10, bottom: 40, right: 30, left: 45 }
 class RnaSeqOutliersGraph extends React.PureComponent {
 
   static propTypes = {
-    data: PropTypes.object,
+    data: PropTypes.arrayOf(PropTypes.object),
     genesById: PropTypes.object,
   }
 
   componentDidMount() {
-    const { data, genesById } = this.props
-    const dataArray = Object.values(data).flat()
+    const { data: dataArray, genesById } = this.props
 
     const svg = select(this.svg).append('g')
       .attr('transform', `translate(${GRAPH_MARGIN.left},${GRAPH_MARGIN.top})`)
@@ -96,37 +94,24 @@ class RnaSeqOutliersGraph extends React.PureComponent {
 
 }
 
-const RnaSeqOutliers = React.memo((
-  { rnaSeqData, genesById, familyGuid, samplesByGuid, getLocation, searchType, title },
-) => {
-  const sampleGuids = Object.values(rnaSeqData).reduce((acc, { sampleGuid }) => acc.add(sampleGuid), new Set())
-  const tissueTypes = Array.from(sampleGuids).map(sampleGuid => (samplesByGuid || {})[sampleGuid]?.tissueType)
-    .filter(tissueType => tissueType)
-    .map(tissueType => TISSUE_DISPLAY[tissueType])
-  return (
-    <div>
-      <Header content={`${title}: ${tissueTypes.join(', ')}`} textAlign="center" />
-      <GeneSearchLink
-        buttonText={`Search for variants in outlier ${searchType}`}
-        icon="search"
-        location={Object.values(rnaSeqData)
-          .flat()
-          .filter(({ isSignificant }) => isSignificant)
-          .map(getLocation)
-          .join(',')}
-        familyGuid={familyGuid}
-        floated="right"
-      />
-      <RnaSeqOutliersGraph data={rnaSeqData} genesById={genesById} />
-    </div>
-  )
-})
+const RnaSeqOutliers = React.memo(({ rnaSeqData, genesById, familyGuid, getLocation, searchType, title }) => (
+  <div>
+    <Header content={title} textAlign="center" />
+    <GeneSearchLink
+      buttonText={`Search for variants in outlier ${searchType}`}
+      icon="search"
+      location={rnaSeqData.filter(({ isSignificant }) => isSignificant).map(getLocation).join(',')}
+      familyGuid={familyGuid}
+      floated="right"
+    />
+    <RnaSeqOutliersGraph data={rnaSeqData} genesById={genesById} />
+  </div>
+))
 
 RnaSeqOutliers.propTypes = {
   familyGuid: PropTypes.string.isRequired,
-  rnaSeqData: PropTypes.object.isRequired,
+  rnaSeqData: PropTypes.arrayOf(PropTypes.object).isRequired,
   genesById: PropTypes.object,
-  samplesByGuid: PropTypes.object,
   getLocation: PropTypes.func,
   searchType: PropTypes.string,
   title: PropTypes.string,

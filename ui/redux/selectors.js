@@ -3,7 +3,7 @@ import uniqWith from 'lodash/uniqWith'
 
 import { compHetGene } from 'shared/components/panel/variants/VariantUtils'
 import { compareObjects } from 'shared/utils/sortUtils'
-import { NOTE_TAG_NAME, MME_TAG_NAME, getSpliceId } from 'shared/utils/constants'
+import { NOTE_TAG_NAME, MME_TAG_NAME } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
@@ -51,24 +51,6 @@ export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
 export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
-
-export const getRnaSeqSignificantJunctionData = createSelector(
-  getGenesById,
-  getRnaSeqDataByIndividual,
-  (genesById, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
-    (acc, [individualGuid, rnaSeqData]) => (rnaSeqData.spliceOutliers ? {
-      ...acc,
-      [individualGuid]: Object.values(rnaSeqData.spliceOutliers).flat().filter(({ isSignificant }) => isSignificant)
-        .sort((a, b) => a.pValue - b.pValue)
-        .map(row => ({
-          geneSymbol: (genesById[row.geneId] || {}).geneSymbol || row.geneId,
-          junctionLocus: `${row.chrom}:${row.start}-${row.end} ${row.strand}`,
-          idField: getSpliceId(row),
-          ...row,
-        })),
-    } : acc), {},
-  ),
-)
 
 const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((acc, [entityGuid, entity]) => {
   if (!(entity.projectGuid in acc)) {
