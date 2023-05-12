@@ -17,7 +17,7 @@ from seqr.utils.search.utils import get_single_variant, query_variants, \
 from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
-    PARSED_MITO_VARIANT, TRANSCRIPT_2
+    PARSED_MITO_VARIANT, TRANSCRIPT_2, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT
 
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
@@ -715,19 +715,6 @@ PARSED_SV_COMPOUND_HET_VARIANTS[0]['transcripts']['ENSG00000186092'] = [{'geneId
 for gen in PARSED_SV_COMPOUND_HET_VARIANTS[0]['genotypes'].values():
     gen.update({'start': None, 'end': None, 'numExon': None, 'geneIds': None})
 PARSED_SV_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000002_2']
-
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT = deepcopy(PARSED_COMPOUND_HET_VARIANTS)
-for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
-    variant['familyGuids'].append('F000011_11')
-    variant['genotypes'].update({
-        'I000015_na20885': {
-            'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'sampleType': 'WES',
-        },
-    })
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['transcripts']['ENSG00000135953'][0]['majorConsequence'] = 'frameshift_variant'
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['mainTranscriptId'] = TRANSCRIPT_2['transcriptId']
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['selectedMainTranscriptId'] = None
 
 PARSED_COMPOUND_HET_VARIANTS_PROJECT_2 = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
 for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
@@ -3287,44 +3274,6 @@ class EsUtilsTest(TestCase):
         )
 
         self.assertCachedResults(results_model, {'gene_aggs': gene_counts})
-
-    def test_cached_get_es_variant_gene_counts(self):
-        search_model = VariantSearch.objects.create(search={})
-        results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        cache_key = 'search_results__{}__xpos'.format(results_model.guid)
-
-        cached_gene_counts = {
-            'ENSG00000135953': {'total': 5, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 4}},
-            'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000011_11': 4}}
-        }
-        _set_cache(cache_key, json.dumps({'total_results': 5, 'gene_aggs': cached_gene_counts}))
-        gene_counts = get_variant_query_gene_counts(results_model, None)
-        self.assertDictEqual(gene_counts, cached_gene_counts)
-
-        _set_cache(cache_key, json.dumps({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, 'total_results': 2}))
-        gene_counts = get_variant_query_gene_counts(results_model, None)
-        self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}},
-            'ENSG00000228198': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}}
-        })
-
-        _set_cache(cache_key, json.dumps({
-            'grouped_results': [
-                {'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT}, {'null': [PARSED_MULTI_INDEX_VARIANT]}
-            ],
-            'loaded_variant_counts': {
-                SECOND_INDEX_NAME: {'loaded': 1, 'total': 1},
-                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 0, 'loaded': 0},
-                INDEX_NAME: {'loaded': 1, 'total': 1},
-                '{}_compound_het'.format(INDEX_NAME): {'total': 2, 'loaded': 2},
-            },
-            'total_results': 4,
-        }))
-        gene_counts = get_variant_query_gene_counts(results_model, None)
-        self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 2, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 1}},
-            'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}}
-        })
 
     def test_get_family_affected_status(self):
         samples_by_id = {

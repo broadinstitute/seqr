@@ -102,7 +102,7 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
 
     previously_loaded_results = backend_specific_call(
         process_es_previously_loaded_results,
-        lambda prev_results, *args: prev_results,  # Other backends need no additional parsing
+        lambda *args: None,  # Other backends need no additional parsing
     )(previous_search_results, start_index, end_index)
     if previously_loaded_results is not None:
         return previously_loaded_results, total_results
@@ -161,7 +161,7 @@ def get_variant_query_gene_counts(search_model, user):
 
     previously_loaded_results = backend_specific_call(
         process_es_previously_loaded_gene_aggs,
-        lambda prev_results, *args: prev_results,  # Other backends need no additional parsing
+        lambda *args: None,  # Other backends need no additional parsing
     )(previous_search_results)
     if previously_loaded_results is not None:
         return previously_loaded_results
