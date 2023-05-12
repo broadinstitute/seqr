@@ -16,7 +16,7 @@ class LiftVariantToHg38Test(TestCase):
 
     @mock.patch('seqr.management.commands.lift_variant_to_hg38.input')
     @mock.patch('seqr.management.commands.lift_variant_to_hg38.logger')
-    @mock.patch('seqr.management.commands.lift_variant_to_hg38.get_single_es_variant')
+    @mock.patch('seqr.management.commands.lift_variant_to_hg38.get_single_variant')
     def test_command(self, mock_single_es_variants, mock_logger, mock_input):
         # Test user did not confirm.
         mock_input.return_value = 'n'

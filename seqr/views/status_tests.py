@@ -4,7 +4,7 @@ import mock
 from requests import HTTPError
 
 from seqr.views.status import status_view
-from seqr.views.utils.test_utils import urllib3_responses
+from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 
 
 class StatusTest(TestCase):
@@ -27,7 +27,7 @@ class StatusTest(TestCase):
             mock.call('Database "default" connection error: No connection'),
             mock.call('Database "reference_data" connection error: No connection'),
             mock.call('Redis connection error: Bad connection'),
-            mock.call('Elasticsearch connection error: No response from elasticsearch ping'),
+            mock.call('Search backend connection error: No response from elasticsearch ping'),
             mock.call('Kibana connection error: Connection refused: HEAD /status'),
         ])
 

@@ -6,7 +6,8 @@ from io import StringIO
 
 from seqr.models import Sample, Family
 from seqr.views.apis.dataset_api import add_variants_dataset_handler
-from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
+from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 
 SEQR_URL = 'https://seqr.broadinstitute.org'
 PROJECT_GUID = 'R0001_1kg'
@@ -292,12 +293,16 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['request must contain fields: elasticsearchIndex, datasetType']})
+        self.assertDictEqual(response.json(), {'errors': ['Invalid dataset type "None"']})
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME, 'datasetType': 'NOT_A_TYPE'}))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid dataset type "NOT_A_TYPE"']})
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'datasetType': 'SV'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['request must contain field: "elasticsearchIndex"']})
 
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
@@ -391,7 +396,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
-            'errors': ['No samples found in the index. Make sure the specified caller type is correct']})
+            'errors': ['No samples found. Make sure the specified caller type is correct']})
 
         self.assertDictEqual(
             urllib3_responses.call_request_json(),
@@ -403,7 +408,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Matches not found for ES sample ids: NA19678_1. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.']})
+        self.assertDictEqual(response.json(), {'errors': ['Matches not found for sample ids: NA19678_1. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.']})
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,

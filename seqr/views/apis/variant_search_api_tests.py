@@ -7,7 +7,8 @@ from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 
 from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
-from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
+from seqr.utils.search.utils import InvalidSearchException
+from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
@@ -223,8 +224,8 @@ class VariantSearchAPITest(object):
 
 
     @mock.patch('seqr.utils.middleware.logger.error')
-    @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
-    @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
+    @mock.patch('seqr.views.apis.variant_search_api.get_variant_query_gene_counts')
+    @mock.patch('seqr.views.apis.variant_search_api.query_variants')
     def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger):
         url = reverse(query_variants_handler, args=['abc'])
         self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
@@ -460,7 +461,7 @@ class VariantSearchAPITest(object):
         })
         mock_error_logger.assert_not_called()
 
-    @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
+    @mock.patch('seqr.views.apis.variant_search_api.query_variants')
     def test_query_all_projects_variants(self, mock_get_variants):
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
         self.check_require_login(url)
@@ -530,7 +531,7 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
 
-    @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
+    @mock.patch('seqr.views.apis.variant_search_api.query_variants')
     def test_query_all_project_families_variants(self, mock_get_variants):
         url = reverse(query_variants_handler, args=['abc'])
         self.check_collaborator_login(url, request_data={'projectGuids': ['R0003_test']})
@@ -639,7 +640,7 @@ class VariantSearchAPITest(object):
         self._assert_expected_search_context(response_json)
 
 
-    @mock.patch('seqr.views.apis.variant_search_api.get_single_es_variant')
+    @mock.patch('seqr.views.apis.variant_search_api.get_single_variant')
     def test_query_single_variant(self, mock_get_variant):
         single_family_variant = deepcopy(VARIANTS[0])
         single_family_variant['familyGuids'] = ['F000001_1']
