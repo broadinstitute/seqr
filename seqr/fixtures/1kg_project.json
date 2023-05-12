@@ -905,6 +905,25 @@
 },
 {
     "model": "seqr.sample",
+    "pk": 153,
+    "fields": {
+        "guid": "S000153_na19679",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 3,
+        "sample_type": "RNA",
+        "dataset_type": "VARIANTS",
+        "sample_id": "NA19679_S",
+        "is_active": true,
+        "elasticsearch_index":null,
+        "tissue_type": "M",
+        "data_source": "muscle_samples.tsv.gz",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
+    }
+},
+{
+    "model": "seqr.sample",
     "pk": 131,
     "fields": {
         "guid": "S000131_na19679",
@@ -1366,6 +1385,25 @@
         "read_count": 1297,
         "rare_disease_samples_with_junction": 1,
         "rare_disease_samples_total": 20
+    }
+},
+{
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 2,
+    "fields": {
+        "sample": 153,
+        "gene_id": "ENSG00000268903",
+        "p_value": 1.08E-56,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 132885754,
+        "end": 132886934,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.65,
+        "read_count": 234,
+        "rare_disease_samples_with_junction": 2,
+        "rare_disease_samples_total": 23
     }
 },
 {
