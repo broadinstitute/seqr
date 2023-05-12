@@ -2,9 +2,9 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 import mock
 
-from seqr.models import Family
-from seqr.utils.search.utils import get_single_variant, query_variants, \
-    get_variant_query_gene_counts, get_variants_for_variant_ids, InvalidSearchException
+from seqr.models import Family, Sample
+from seqr.utils.search.utils import get_single_variant, get_variants_for_variant_ids, get_variant_query_gene_counts, \
+    query_variants, InvalidSearchException
 from seqr.views.utils.test_utils import PARSED_VARIANTS
 
 
@@ -32,6 +32,16 @@ class SearchUtilsTests(object):
             get_single_variant(self.families, '10-10334333-A-G')
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
+    def test_get_variants_for_variant_ids(self, mock_get_variants_for_ids):
+        variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']
+        get_variants_for_variant_ids(self.families, variant_ids, user=self.user)
+        mock_get_variants_for_ids.assert_called_with(self.families, variant_ids, self.user, dataset_type=None)
+
+        get_variants_for_variant_ids(
+            self.families, variant_ids, user=self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+        mock_get_variants_for_ids.assert_called_with(
+            self.families, variant_ids, self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+
 
 @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
@@ -44,6 +54,10 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
     def test_get_single_variant(self, mock_get_variants_for_ids):
         super(ElasticsearchSearchUtilsTests, self).test_get_single_variant(mock_get_variants_for_ids)
 
+    @mock.patch('seqr.utils.search.utils.get_es_variants_for_variant_ids')
+    def test_get_variants_for_variant_ids(self, mock_get_variants_for_ids):
+        super(ElasticsearchSearchUtilsTests, self).test_get_variants_for_variant_ids(mock_get_variants_for_ids)
+
 
 class NoBackendSearchUtilsTests(TestCase, SearchUtilsTests):
     fixtures = ['users', '1kg_project']
@@ -54,4 +68,9 @@ class NoBackendSearchUtilsTests(TestCase, SearchUtilsTests):
     def test_get_single_variant(self):
         with self.assertRaises(InvalidSearchException) as cm:
             super(NoBackendSearchUtilsTests, self).test_get_single_variant(mock.MagicMock())
+        self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
+
+    def test_get_variants_for_variant_ids(self):
+        with self.assertRaises(InvalidSearchException) as cm:
+            super(NoBackendSearchUtilsTests, self).test_get_variants_for_variant_ids(mock.MagicMock())
         self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
