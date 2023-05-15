@@ -98,6 +98,7 @@ class BaseRnaSeqResultPage extends React.PureComponent {
               <RnaSeqOutliersTable
                 familyGuid={individual.familyGuid}
                 data={significantJunctionOutliers}
+                tissueType={tissueType}
               />
             </React.Suspense>
           </Grid.Row>

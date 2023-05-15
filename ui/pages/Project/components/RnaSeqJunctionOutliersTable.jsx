@@ -42,11 +42,12 @@ class BaseRnaSeqJunctionOutliersTable extends React.PureComponent {
     updateReads: PropTypes.func,
     data: PropTypes.arrayOf(PropTypes.object),
     familyGuid: PropTypes.string,
+    tissueType: PropTypes.string,
   }
 
   openReads = row => () => {
-    const { updateReads, familyGuid } = this.props
-    updateReads(familyGuid, getJunctionLocus(row), [JUNCTION_TYPE, COVERAGE_TYPE])
+    const { updateReads, familyGuid, tissueType } = this.props
+    updateReads(familyGuid, getJunctionLocus(row), [JUNCTION_TYPE, COVERAGE_TYPE], tissueType)
   }
 
   render() {
