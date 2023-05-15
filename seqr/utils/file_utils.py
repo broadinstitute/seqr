@@ -13,6 +13,9 @@ def run_command(command, user=None):
 
 
 def _run_gsutil_command(command, gs_path, gunzip=False, user=None):
+    if not is_google_bucket_file_path(gs_path):
+        raise Exception('A Google Storage path is expected.')
+
     #  Anvil buckets are requester-pays and we bill them to the anvil project
     google_project = get_google_project(gs_path)
     project_arg = '-u {} '.format(google_project) if google_project else ''
@@ -87,22 +90,26 @@ def get_gs_file_list(gs_path, user=None, check_subfolders=True):
 
     if check_subfolders:
         # If a bucket is empty gsutil throws an error when running ls with ** instead of returning an empty list
-        subfolders = _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)
+        subfolders = _run_gsutil_with_stdout(command, gs_path, user)
         if not subfolders:
             return []
         gs_path = f'{gs_path}/**'
 
-    all_lines = _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)
+    all_lines = _run_gsutil_with_stdout(command, gs_path, user)
     return [line for line in all_lines if is_google_bucket_file_path(line)]
 
 
-def _run_gsutil_with_wait(command, gs_path, user=None, get_stdout=False):
-    if not is_google_bucket_file_path(gs_path):
-        raise Exception('A Google Storage path is expected.')
+def _run_gsutil_with_wait(command, gs_path, user=None):
     process = _run_gsutil_command(command, gs_path, user=user)
     if process.wait() != 0:
         errors = [line.decode('utf-8').strip() for line in process.stdout]
         raise Exception('Run command failed: ' + ' '.join(errors))
-    if get_stdout:
-        return [line.decode('utf-8').rstrip('\n') for line in process.stdout]
     return process
+
+
+def _run_gsutil_with_stdout(command, gs_path, user=None):
+    process = _run_gsutil_command(command, gs_path, user=user)
+    output, errors = process.communicate()
+    if errors:
+        raise Exception(f'Run command failed: {errors}')
+    return output.decode('utf-8').rstrip('\n').split('\n')
