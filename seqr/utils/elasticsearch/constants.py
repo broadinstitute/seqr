@@ -426,6 +426,7 @@ SV_GENOTYPE_FIELDS_CONFIG = {
     'prev_call': {'format_value': bool},
     'prev_overlap': {'format_value': bool},
     'new_call': {'format_value': bool},
+    'prev_num_alt': {'format_value': lambda i: None if i is None else int(i)},
 }
 SV_GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
 SV_GENOTYPE_FIELDS_CONFIG.update({field: {} for field in SV_QUALITY_FIELDS.keys()})

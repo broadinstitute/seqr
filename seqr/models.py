@@ -135,7 +135,10 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
     def bulk_update(cls, user, update_json, queryset=None, **filter_kwargs):
         """Helper bulk update method that logs the update"""
         if queryset is None:
-            queryset = cls.objects.filter(**filter_kwargs)
+            queryset = cls.objects.filter(**filter_kwargs).exclude(**update_json)
+
+        if not queryset:
+            return []
 
         entity_ids = log_model_bulk_update(logger, queryset, user, 'update', update_fields=update_json.keys())
         queryset.update(**update_json)
@@ -1038,7 +1041,7 @@ class BulkOperationBase(models.Model):
         prefetch_related_objects(models, cls.PARENT_FIELD)
         parent_ids = {getattr(model, cls.PARENT_FIELD).guid for model in models}
         db_update = {
-            'dbEntity': db_entity, 'numEntities': len(models), 'parentEntityIds': parent_ids,
+            'dbEntity': db_entity, 'numEntities': len(models), 'parentEntityIds': sorted(parent_ids),
             'updateType': 'bulk_{}'.format(update_type),
         }
         logger.info(f'{update_type} {db_entity}s', user, db_update=db_update)
@@ -1068,7 +1071,7 @@ class DeletableSampleMetadataModel(BulkOperationBase):
     PARENT_FIELD = 'sample'
 
     sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
-    gene_id = models.CharField(max_length=20)  # ensembl ID
+    gene_id = models.CharField(max_length=20, db_index=True)  # ensembl ID
 
     def __unicode__(self):
         return "%s:%s" % (self.sample.sample_id, self.gene_id)
@@ -1099,6 +1102,32 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
         unique_together = ('sample', 'gene_id')
 
         json_fields = ['gene_id', 'tpm']
+
+
+class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
+    STRAND_CHOICES = (
+        ('+', '5′ to 3′ direction'),
+        ('-', '3′ to 5′ direction'),
+        ('*', 'Any direction'),
+    )
+
+    p_value = models.FloatField()
+    z_score = models.FloatField()
+    chrom = models.CharField(max_length=2)
+    start = models.IntegerField()
+    end = models.IntegerField()
+    strand = models.CharField(max_length=1, choices=STRAND_CHOICES)  # "+", "-", or "*"
+    type = models.CharField(max_length=12)
+    delta_psi = models.FloatField()
+    read_count = models.IntegerField()  # RNA-seq reads that span the splice junction
+    rare_disease_samples_with_junction = models.IntegerField()
+    rare_disease_samples_total = models.IntegerField()
+
+    class Meta:
+        unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end', 'strand', 'type')
+
+        json_fields = ['gene_id', 'p_value', 'z_score', 'chrom', 'start', 'end', 'strand', 'read_count', 'type',
+                       'delta_psi', 'rare_disease_samples_with_junction', 'rare_disease_samples_total']
 
 
 class PhenotypePrioritization(BulkOperationBase):

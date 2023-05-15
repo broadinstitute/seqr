@@ -40,13 +40,8 @@ CHROM_NUMBER_TO_CHROM = {i: chrom for i, chrom in enumerate(CHROMOSOMES)}
 MIN_POS = 1
 MAX_POS = 3e8
 
-def get_xpos(chrom, pos):
-    """Compute single number representing this chromosome and position.
 
-    Args:
-        chrom (string): examples '1', 'Y', 'M'
-        pos (integer): genomic position on chromosome
-    """
+def format_chrom(chrom):
     if chrom not in CHROM_TO_CHROM_NUMBER:
         fixed_chrom = chrom.replace('chr', '')
         if fixed_chrom.startswith('M'):
@@ -55,6 +50,18 @@ def get_xpos(chrom, pos):
             raise ValueError("Invalid chromosome: %s" % (chrom,))
         else:
             chrom = fixed_chrom
+
+    return chrom
+
+
+def get_xpos(chrom, pos):
+    """Compute single number representing this chromosome and position.
+
+    Args:
+        chrom (string): examples '1', 'Y', 'M'
+        pos (integer): genomic position on chromosome
+    """
+    chrom = format_chrom(chrom)
 
     if pos < MIN_POS or pos > MAX_POS:
         raise ValueError("Invalid position: %s" % (pos,))

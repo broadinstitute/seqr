@@ -122,7 +122,7 @@ from seqr.views.apis.users_api import \
     forgot_password
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
-    update_rna_seq, load_rna_seq_sample_data, proxy_to_kibana, load_phenotype_prioritization_data
+    update_rna_seq, load_rna_seq_sample_data, proxy_to_kibana, load_phenotype_prioritization_data, write_pedigree
 from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
@@ -323,6 +323,7 @@ api_endpoints = {
     'data_management/update_rna_seq': update_rna_seq,
     'data_management/load_rna_seq_sample/(?P<sample_guid>[^/]+)': load_rna_seq_sample_data,
     'data_management/load_phenotype_prioritization_data': load_phenotype_prioritization_data,
+    'data_management/write_pedigree/(?P<project_guid>[^/]+)': write_pedigree,
 
     'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,

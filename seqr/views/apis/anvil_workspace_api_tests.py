@@ -5,7 +5,7 @@ import mock
 from django.urls.base import reverse
 import responses
 
-from seqr.models import Project
+from seqr.models import Project, Family, Individual
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     validate_anvil_vcf, grant_workspace_access, add_workspace_data, get_anvil_vcf_list
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, TEST_WORKSPACE_NAMESPACE,\
@@ -18,9 +18,11 @@ LOAD_SAMPLE_DATA = [
      "Notes", "familyNotes"],
     ["1", "NA19675", "NA19675_1", "NA19678", "", "Female", "Affected", "A affected individual, test1-zsf", ""],
     ["1", "NA19678", "", "", "", "Male", "Unaffected", "a individual note", ""],
-    ["21", "HG00735", "", "", "", "", "", "", "a new family"]]
+    ["21", "HG00735", "", "", "", "Unknown", "Unknown", "", "a new family"]]
 
 BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "A affected individual, test1-zsf", ""]]
+
+MISSING_REQUIRED_SAMPLE_DATA = [["21", "HG00736", "", "", "", "", "", "", ""]]
 
 LOAD_SAMPLE_DATA_EXTRA_SAMPLE = LOAD_SAMPLE_DATA + [["1", "NA19679", "", "", "", "Male", "Affected", "", ""]]
 
@@ -669,7 +671,8 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             ['HG00735', 'NA19675', 'NA19678'], 'GRCh38', REQUEST_BODY)
 
     @responses.activate
-    def test_add_workspace_data(self):
+    @mock.patch('seqr.views.utils.individual_utils.Individual._compute_guid')
+    def test_add_workspace_data(self, mock_compute_indiv_guid):
         # Test insufficient Anvil workspace permission
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
@@ -682,6 +685,15 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()['error'], 'Project matching query does not exist.')
+
+        # Test requesting to load data from a workspace with no previously loaded data
+        url = reverse(add_workspace_data, args=['R0002_empty'])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()['error'],
+            'New data cannot be added to this project until the previously requested data is loaded',
+        )
 
         url = reverse(add_workspace_data, args=[PROJECT1_GUID])
         self._test_errors(url, ['uploadedFileId', 'fullDataPath', 'vcfSamples'], TEST_WORKSPACE_NAME)
@@ -697,6 +709,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             ' HG00731, HG00732, HG00733, NA19675_1, NA20870, NA20874')
 
         # Test a valid operation
+        mock_compute_indiv_guid.return_value = 'I0000020_hg00735'
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_ADD_DATA))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -707,6 +720,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
 
         self._assert_valid_operation(Project.objects.get(guid=PROJECT1_GUID))
 
+        mock_compute_indiv_guid.side_effect = ['I0000021_na19675_1', 'I0000022_na19678', 'I0000023_hg00735']
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
         self._test_mv_file_and_triggering_dag_exception(url, {'guid': PROJECT2_GUID}, PROJECT2_SAMPLES, 'GRCh37', REQUEST_BODY_ADD_DATA2)
 
@@ -723,8 +737,13 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
-        self.assertListEqual(response_json['errors'], [
-            'Error while converting uploaded pedigree file rows to json: Sex, Affected not specified in row #1'])
+        self.assertListEqual(response_json['errors'], ['Missing required columns: Affected, Sex'])
+
+        self.mock_load_file.return_value = LOAD_SAMPLE_DATA + MISSING_REQUIRED_SAMPLE_DATA
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        response_json = response.json()
+        self.assertListEqual(response_json['errors'], ['Missing Sex in row #4', 'Missing Affected in row #4'])
 
         # test sample data error
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA + BAD_SAMPLE_DATA
@@ -832,6 +851,32 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
                    project_name=project.name)
         self.mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
         self.mock_send_email.assert_not_called()
+
+        # test database models
+        family_model_data = list(Family.objects.filter(project=project).values('family_id', 'familynote__note'))
+        self.assertEqual(len(family_model_data), 14 if test_add_data else 2)
+        self.assertIn({
+            'family_id': '1',
+            'familynote__note':  '*\r\n                        Fåmily analysis nøtes\r\n*' if test_add_data else None,
+        }, family_model_data)
+        self.assertIn({'family_id': '21', 'familynote__note': 'a new family'}, family_model_data)
+
+        individual_model_data = list(Individual.objects.filter(family__project=project).values(
+            'family__family_id', 'individual_id', 'mother__individual_id', 'father__individual_id', 'sex', 'affected', 'notes',
+        ))
+        self.assertEqual(len(individual_model_data), 15 if test_add_data else 3)
+        self.assertIn({
+            'family__family_id': '21', 'individual_id': 'HG00735', 'mother__individual_id': None,
+            'father__individual_id': None, 'sex': 'U', 'affected': 'U', 'notes': None,
+        }, individual_model_data)
+        self.assertIn({
+            'family__family_id': '1', 'individual_id': 'NA19675', 'mother__individual_id': None,
+            'father__individual_id': 'NA19678', 'sex': 'F', 'affected': 'A', 'notes': 'A affected individual, test1-zsf',
+        }, individual_model_data)
+        self.assertIn({
+            'family__family_id': '1', 'individual_id': 'NA19678', 'mother__individual_id': None,
+            'father__individual_id': None, 'sex': 'M', 'affected': 'N', 'notes': 'a individual note'
+        }, individual_model_data)
 
     def _test_mv_file_and_triggering_dag_exception(self, url, workspace, samples, genome_version, request_body):
         # Test saving ID file exception

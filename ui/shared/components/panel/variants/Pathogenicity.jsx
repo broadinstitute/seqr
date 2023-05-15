@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
-import { Label, Icon } from 'semantic-ui-react'
+import { Label, Icon, Popup } from 'semantic-ui-react'
 
 import { getUser, getFamiliesByGuid, getProjectsByGuid } from 'redux/selectors'
 import { CLINSIG_SEVERITY, getPermissionedHgmdClass } from '../../../utils/constants'
@@ -57,15 +57,19 @@ PathogenicityLabel.propTypes = {
   goldStars: PropTypes.number,
 }
 
-const PathogenicityLink = React.memo(({ href, ...labelProps }) => (
-  <a href={href} target="_blank" rel="noreferrer">
-    <PathogenicityLabel {...labelProps} />
-    <HorizontalSpacer width={5} />
-  </a>
-))
+const PathogenicityLink = React.memo(({ href, popup, ...labelProps }) => {
+  const link = (
+    <a href={href} target="_blank" rel="noreferrer">
+      <PathogenicityLabel {...labelProps} />
+      <HorizontalSpacer width={5} />
+    </a>
+  )
+  return popup ? <Popup trigger={link} content={popup} /> : link
+})
 
 PathogenicityLink.propTypes = {
   href: PropTypes.string.isRequired,
+  popup: PropTypes.string,
 }
 
 const clinvarUrl = (clinvar) => {
@@ -83,6 +87,7 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
       href: clinvarUrl(clinvar),
       formatName: snakecaseToTitlecase,
       goldStars: clinvar.goldStars,
+      popup: clinvar.version && `Last Updated: ${new Date(clinvar.version).toLocaleDateString()}`,
     }])
   }
   if (showHgmd) {
