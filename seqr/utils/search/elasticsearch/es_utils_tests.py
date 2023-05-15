@@ -1493,7 +1493,7 @@ class EsUtilsTest(TestCase):
             str(cm.exception),
             'Location must be specified to search for compound heterozygous variants across many families')
 
-        search_model.search['locus']['rawItems'] = 'DDX11L1'
+        search_model.search['locus'] = {'rawItems': 'DDX11L1'}
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(results_model)

@@ -10,7 +10,6 @@ from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_
     es_backend_enabled, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
-from settings import ELASTICSEARCH_SERVICE_HOSTNAME
 
 
 class InvalidSearchException(Exception):

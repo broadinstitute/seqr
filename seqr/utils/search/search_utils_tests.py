@@ -284,22 +284,30 @@ class NoBackendSearchUtilsTests(TestCase, SearchUtilsTests):
     def setUp(self):
         self.set_up()
 
-    def test_get_single_variant(self):
+    @mock.patch('seqr.utils.search.utils.ping_elasticsearch')
+    def test_get_single_variant(self, mock_call):
         with self.assertRaises(InvalidSearchException) as cm:
-            super(NoBackendSearchUtilsTests, self).test_get_single_variant(mock.MagicMock())
+            super(NoBackendSearchUtilsTests, self).test_get_single_variant(mock_call)
         self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
+        mock_call.assert_not_called()
 
-    def test_get_variants_for_variant_ids(self):
+    @mock.patch('seqr.utils.search.utils.ping_elasticsearch')
+    def test_get_variants_for_variant_ids(self, mock_call):
         with self.assertRaises(InvalidSearchException) as cm:
-            super(NoBackendSearchUtilsTests, self).test_get_variants_for_variant_ids(mock.MagicMock())
+            super(NoBackendSearchUtilsTests, self).test_get_variants_for_variant_ids(mock_call)
         self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
+        mock_call.assert_not_called()
 
-    def test_query_variants(self):
+    @mock.patch('seqr.utils.search.utils.ping_elasticsearch')
+    def test_query_variants(self, mock_call):
         with self.assertRaises(InvalidSearchException) as cm:
-            super(NoBackendSearchUtilsTests, self).test_query_variants(mock.MagicMock())
+            super(NoBackendSearchUtilsTests, self).test_query_variants(mock_call)
         self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
+        mock_call.assert_not_called()
 
-    def test_get_variant_query_gene_counts(self):
+    @mock.patch('seqr.utils.search.utils.ping_elasticsearch')
+    def test_get_variant_query_gene_counts(self, mock_call):
         with self.assertRaises(InvalidSearchException) as cm:
-            super(NoBackendSearchUtilsTests, self).test_get_variant_query_gene_counts(mock.MagicMock())
+            super(NoBackendSearchUtilsTests, self).test_get_variant_query_gene_counts(mock_call)
         self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
+        mock_call.assert_not_called()
