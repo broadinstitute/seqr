@@ -7,7 +7,7 @@ import mock
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.utils import get_single_variant, get_variants_for_variant_ids, get_variant_query_gene_counts, \
     query_variants, InvalidSearchException
-from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT
+from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
 
 
 class SearchUtilsTests(object):
@@ -156,10 +156,21 @@ class SearchUtilsTests(object):
                 {'chrom': '7', 'start': 100, 'end': 10100, 'offset': 0.1},
             ],
         )
+        parsed_genes = mock_get_variants.call_args.args[1]['parsedLocus']['genes']
+        for gene in parsed_genes.values():
+            self.assertSetEqual(set(gene.keys()), GENE_FIELDS)
+        self.assertEqual(parsed_genes['ENSG00000223972']['geneSymbol'], 'DDX11L1')
+        self.assertEqual(parsed_genes['ENSG00000186092']['geneSymbol'], 'OR4F5')
 
     def test_cached_query_variants(self):
-        pass
-        # TODO
+        self.set_cache({'total_results': 4, 'all_results': PARSED_VARIANTS + PARSED_VARIANTS})
+        variants, total = query_variants(self.results_model, user=self.user)
+        self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS)
+        self.assertEqual(total, 4)
+
+        variants, total = query_variants(self.results_model, user=self.user, num_results=2)
+        self.assertListEqual(variants, PARSED_VARIANTS)
+        self.assertEqual(total, 4)
 
     def test_invalid_search_get_variant_query_gene_counts(self):
         self._test_invalid_search_params(get_variant_query_gene_counts)
@@ -219,6 +230,25 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
     @mock.patch('seqr.utils.search.utils.get_es_variants')
     def test_query_variants(self, mock_get_variants):
         super(ElasticsearchSearchUtilsTests, self).test_query_variants(mock_get_variants)
+
+    def test_cached_query_variants(self):
+        super(ElasticsearchSearchUtilsTests, self).test_cached_query_variants()
+
+        self.set_cache({
+            'grouped_results': [
+                {'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT},
+                {'null': [PARSED_VARIANTS[1]]}
+            ],
+            'total_results': 3,
+        })
+
+        variants, total = query_variants(self.results_model, user=self.user)
+        self.assertListEqual(variants, [PARSED_VARIANTS[0]] + [PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT] + [PARSED_VARIANTS[1]])
+        self.assertEqual(total, 3)
+
+        variants, total = query_variants(self.results_model, user=self.user, num_results=2)
+        self.assertListEqual(variants, [PARSED_VARIANTS[0]] + [PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT])
+        self.assertEqual(total, 3)
 
     @mock.patch('seqr.utils.search.utils.get_es_variants')
     def test_get_variant_query_gene_counts(self, mock_get_variants):
