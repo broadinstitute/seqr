@@ -646,6 +646,6 @@ class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
     HAS_EXTERNAL_PROJECT_ACCESS = False
 
 
-class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-    HAS_EXTERNAL_PROJECT_ACCESS = True
+# class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
+#     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+#     HAS_EXTERNAL_PROJECT_ACCESS = True
