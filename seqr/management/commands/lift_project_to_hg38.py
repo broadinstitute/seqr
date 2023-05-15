@@ -6,13 +6,12 @@ from pyliftover.liftover import LiftOver
 
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, SavedVariant, Sample
-from seqr.views.utils.dataset_utils import match_and_update_search_samples, \
-    validate_index_metadata_and_get_elasticsearch_index_samples
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import reset_cached_search_results
-from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant
-from seqr.utils.xpos_utils import get_xpos
+from seqr.utils.search.add_data_utils import add_new_search_samples
+from seqr.utils.search.utils import get_variants_for_variant_ids, get_single_variant
+from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
 
 logger = logging.getLogger(__name__)
 
@@ -27,44 +26,38 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """transfer project"""
         project_arg = options['project']
-        elasticsearch_index = options['es_index']
-
         project = Project.objects.get(Q(name=project_arg) | Q(guid=project_arg))
         logger.info('Updating project genome version for {}'.format(project.name))
-
-        # Validate the provided index
-        logger.info('Validating es index {}'.format(elasticsearch_index))
-        sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
-            elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
 
         # Get expected saved variants
         saved_variant_models = SavedVariant.objects.filter(family__project=project)
         saved_variant_models_by_guid = {v.guid: v for v in saved_variant_models}
         expected_families = {sv.family for sv in saved_variant_models}
 
-        match_and_update_search_samples(
-            project=project,
-            user=None,
-            sample_ids=sample_ids,
-            elasticsearch_index=elasticsearch_index,
-            sample_type=sample_type,
-            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-            expected_families=expected_families,
-            sample_id_to_individual_id_mapping=None,
-            raise_unmatched_error_template='Matches not found for ES sample ids: {sample_ids}.'
-        )
+        logger.info('Validating es index {}'.format(options['es_index']))
+        add_new_search_samples({
+            'elasticsearchIndex': options['es_index'],
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
+            'genomeVersion': GENOME_VERSION_GRCh38,
+        }, project, user=None, expected_families=expected_families)
 
         # Lift-over saved variants
         saved_variants = get_json_for_saved_variants(saved_variant_models, add_details=True)
         saved_variants_to_lift, hg37_to_hg38_xpos, lift_failed = _get_variants_to_lift(saved_variants)
 
         saved_variants_map = defaultdict(list)
+        variant_ids = []
         for v in saved_variants_to_lift:
             if hg37_to_hg38_xpos.get(v['xpos']):
                 variant_model = saved_variant_models_by_guid[v['variantGuid']]
-                saved_variants_map[(hg37_to_hg38_xpos[v['xpos']], v['ref'], v['alt'])].append(variant_model)
+                xpos_38 = hg37_to_hg38_xpos[v['xpos']]
+                saved_variants_map[(xpos_38, v['ref'], v['alt'])].append(variant_model)
 
-        es_variants = get_es_variants_for_variant_tuples(expected_families, list(saved_variants_map.keys()))
+                chrom, pos = get_chrom_pos(xpos_38)
+                variant_ids.append(f"{'MT' if chrom == 'M' else chrom}-{pos}-{v['ref']}-{v['alt']}")
+
+        es_variants = get_variants_for_variant_ids(
+            expected_families, variant_ids, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
 
         missing_variants =_validate_missing_variants(es_variants, saved_variants_map)
 
@@ -144,7 +137,7 @@ def _update_saved_variants(es_variants, saved_variants_map):
                 variant_id, missing_saved_variants[0].xpos,
                 ', '.join(['{} ({})'.format(v.family.guid, v.guid) for v in missing_saved_variants]))
             )) == 'y':
-                var = get_single_es_variant([v.family for v in saved_variant_models], variant_id, return_all_queried_families=True)
+                var = get_single_variant([v.family for v in saved_variant_models], variant_id, return_all_queried_families=True)
                 missing_family_count += len(missing_saved_variants)
             else:
                 raise CommandError('Error: unable to find family data for lifted over variant')

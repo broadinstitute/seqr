@@ -10,7 +10,6 @@ import logging
 import mock
 import re
 from urllib.parse import quote_plus, urlparse
-from urllib3_mock import Responses
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
@@ -529,28 +528,6 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_groups.assert_not_called()
         self.mock_get_group_members.assert_not_called()
-
-
-# The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
-# The urllib3_mock library works for those requests, but it has limited functionality, so this extension adds helper
-# methods for easier usage
-class Urllib3Responses(Responses):
-    def add_json(self, url, json_response, method=None, match_querystring=True, **kwargs):
-        if not method:
-            method = self.GET
-        body = json.dumps(json_response)
-        self.add(method, url, match_querystring=match_querystring, content_type='application/json', body=body, **kwargs)
-
-    def replace_json(self, url, *args, **kwargs):
-        existing_index = next(i for i, match in enumerate(self._urls) if match['url'] == url)
-        self.add_json(url, *args, **kwargs)
-        self._urls[existing_index] = self._urls.pop()
-
-    def call_request_json(self, index=-1):
-        return json.loads(self.calls[index].request.body)
-
-
-urllib3_responses = Urllib3Responses()
 
 
 USER_FIELDS = {

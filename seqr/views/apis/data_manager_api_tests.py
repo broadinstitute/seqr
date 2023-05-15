@@ -8,7 +8,8 @@ import responses
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree
 from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _get_json_for_models
-from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
+from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
 
 
@@ -414,8 +415,8 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'test_index'}))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(
-            response.json(), ({'error': 'Index "test_index" is still used by: 1kg project n\xe5me with uni\xe7\xf8de'}))
+        self.assertEqual(
+            response.json()['error'], '"test_index" is still used by: 1kg project n\xe5me with uni\xe7\xf8de')
         self.assertEqual(len(urllib3_responses.calls), 0)
 
         urllib3_responses.add_json(

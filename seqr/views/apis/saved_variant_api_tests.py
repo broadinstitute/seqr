@@ -877,7 +877,7 @@ class SavedVariantAPITest(object):
 
     @mock.patch('seqr.views.utils.variant_utils.MAX_VARIANTS_FETCH', 3)
     @mock.patch('seqr.views.apis.saved_variant_api.logger')
-    @mock.patch('seqr.views.utils.variant_utils.get_es_variants_for_variant_ids')
+    @mock.patch('seqr.views.utils.variant_utils.get_variants_for_variant_ids')
     def test_update_saved_variant_json(self, mock_get_variants, mock_logger):
         mock_get_variants.side_effect = lambda families, variant_ids, **kwargs: \
             [{'variantId': variant_id, 'familyGuids': [family.guid for family in families]}

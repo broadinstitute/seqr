@@ -791,14 +791,16 @@ def get_individual_rna_seq_data(request, individual_guid):
     check_project_permissions(individual.family.project, request.user)
 
     outlier_data = {'outliers': _get_rna_seq_data(RnaSeqOutlier, individual)}
-    outlier_data.update({'spliceOutliers': _get_rna_seq_data(RnaSeqSpliceOutlier, individual, max_significant=50)})
+    outlier_data.update({
+        'spliceOutliers': _get_rna_seq_data(RnaSeqSpliceOutlier, individual, max_significant_per_tissue=50)
+    })
 
     genes_to_show = get_genes({
         gene_id for rna_data in outlier_data.values() for gene_id, data in rna_data.items() if any([d['isSignificant'] for d in data])
     })
 
     return create_json_response({
-        'rnaSeqData': {individual_guid: {outlier_type: data for outlier_type, data in outlier_data.items() if data}},
+        'rnaSeqData': {individual_guid: outlier_data},
         'genesById': genes_to_show,
         'igvSamplesByGuid': {
             igvs['sampleGuid']: igvs for igvs in get_json_for_samples(IgvSample.objects.filter(individual__guid=individual_guid))
@@ -810,7 +812,10 @@ def _get_rna_seq_data(model_cls, individual, **kwargs):
     outlier_data = model_cls.objects.filter(sample__individual=individual, sample__is_active=True).order_by('p_value')
 
     outliers_by_gene = defaultdict(list)
-    for data in get_json_for_rna_seq_outliers(outlier_data, nested_fields=[{'fields': ('sample', 'guid')}], **kwargs):
+    for data in get_json_for_rna_seq_outliers(
+            outlier_data,
+            nested_fields=[{'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
+            **kwargs):
         outliers_by_gene[data['geneId']].append(data)
 
     return outliers_by_gene

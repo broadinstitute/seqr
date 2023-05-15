@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Link, Route, Switch } from 'react-router-dom'
-import { Popup, Icon, Loader } from 'semantic-ui-react'
+import { Popup, Icon } from 'semantic-ui-react'
 
 import { loadFamilyDetails } from 'redux/rootReducer'
 import {
@@ -203,50 +203,35 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const FamilyDetail = connect(mapStateToProps)(BaseFamilyDetail)
 
-const FamilyPage = ({ match }) => (
+const FamilyPage = ({ familyGuid }) => (
   <FamilyDetail
-    familyGuid={match.url.split('/')[4]}
+    familyGuid={familyGuid}
     showVariantDetails
     fields={FAMILY_DETAIL_FIELDS}
   />
 )
 
 FamilyPage.propTypes = {
-  match: PropTypes.object,
+  familyGuid: PropTypes.string,
 }
 
-class FamilyPageRouter extends React.PureComponent {
+const renderFamilyPage = familyGuid => () => <FamilyPage familyGuid={familyGuid} />
 
-  static propTypes = {
-    family: PropTypes.object,
-    match: PropTypes.object,
-    loadFamilyDetails: PropTypes.func,
-    loading: PropTypes.bool.isRequired,
-  }
+const FamilyPageRouter = React.memo(({ family, match, load, loading }) => (
+  <DataLoader contentId={match.params.familyGuid} content={family} load={load} loading={loading}>
+    <Switch>
+      <Route path={`${match.url}/rnaseq_results/:individualGuid`} component={RnaSeqResultPage} />
+      <Route exact path={match.url} render={renderFamilyPage(match.params.familyGuid)} />
+      <Route component={Error404} />
+    </Switch>
+  </DataLoader>
+))
 
-  constructor(props) {
-    super(props)
-
-    props.loadFamilyDetails(props.match.params.familyGuid)
-  }
-
-  render() {
-    const { family, match, loading } = this.props
-    if (family) {
-      return (
-        <Switch>
-          <Route path={`${match.url}/rnaseq_results/:individualGuid`} component={RnaSeqResultPage} />
-          <Route exact path={match.url} component={FamilyPage} />
-          <Route component={Error404} />
-        </Switch>
-      )
-    }
-    if (loading) {
-      return <Loader inline="centered" active />
-    }
-    return <Error404 />
-  }
-
+FamilyPageRouter.propTypes = {
+  family: PropTypes.object,
+  match: PropTypes.object,
+  load: PropTypes.func,
+  loading: PropTypes.bool.isRequired,
 }
 
 const mapFamilyStateToProps = (state, ownProps) => ({
@@ -255,7 +240,7 @@ const mapFamilyStateToProps = (state, ownProps) => ({
 })
 
 const mapFamilyDispatchToProps = {
-  loadFamilyDetails,
+  load: loadFamilyDetails,
 }
 
 export default connect(mapFamilyStateToProps, mapFamilyDispatchToProps)(FamilyPageRouter)

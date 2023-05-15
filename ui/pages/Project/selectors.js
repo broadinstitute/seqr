@@ -12,6 +12,7 @@ import {
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HAS_DATA_FIELD,
   MME_TAG_NAME,
+  getSpliceId,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -21,6 +22,7 @@ import {
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchableSampleByFamily, getSelectableTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
   getSamplesGroupedByProjectGuid, getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual,
+  getRnaSeqDataByIndividual,
 } from 'redux/selectors'
 
 import {
@@ -872,5 +874,23 @@ export const getIndividualPhenotypeGeneScores = createSelector(
         ]), []),
       ]), []),
     }), {})
+  ),
+)
+
+export const getRnaSeqSignificantJunctionData = createSelector(
+  getGenesById,
+  getRnaSeqDataByIndividual,
+  (genesById, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
+    (acc, [individualGuid, rnaSeqData]) => (rnaSeqData.spliceOutliers ? {
+      ...acc,
+      [individualGuid]: Object.values(rnaSeqData.spliceOutliers).flat().filter(({ isSignificant }) => isSignificant)
+        .sort((a, b) => a.pValue - b.pValue)
+        .map(row => ({
+          geneSymbol: (genesById[row.geneId] || {}).geneSymbol || row.geneId,
+          junctionLocus: `${row.chrom}:${row.start}-${row.end} ${row.strand}`,
+          idField: getSpliceId(row),
+          ...row,
+        })),
+    } : acc), {},
   ),
 )
