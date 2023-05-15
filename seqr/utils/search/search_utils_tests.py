@@ -85,13 +85,16 @@ class SearchUtilsTests(object):
             query_variants(self.results_model, page=1, num_results=2, load_all=True)
         self.assertEqual(str(cm.exception), 'Too many variants to load. Please refine your search and try again')
 
-    def _test_expected_search_call(self, mock_get_variants, results_cache, **kwargs):
-        mock_get_variants.assert_called_with(
-            mock.ANY, {
-                'inheritance': {'mode': 'recessive'},
-                'parsedLocus': {'genes': None, 'intervals': None, 'rs_ids': None, 'variant_ids': None},
-            }, self.user, results_cache, **kwargs,
-        )
+    def _test_expected_search_call(self, mock_get_variants, results_cache, locus=None, genes=None, intervals=None,
+                                   rs_ids=None, variant_ids=None, **kwargs):
+        expected_search = {
+            'inheritance': {'mode': 'recessive'},
+            'parsedLocus': {'genes': genes, 'intervals': intervals, 'rs_ids': rs_ids, 'variant_ids': variant_ids},
+        }
+        if locus:
+            expected_search['locus'] = locus
+
+        mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, **kwargs)
         self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(self.families))
 
     def test_query_variants(self, mock_get_variants):
@@ -126,6 +129,32 @@ class SearchUtilsTests(object):
         query_variants(self.results_model, user=self.user, load_all=True)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=22, skip_genotype_filter=False,
+        )
+
+        self.search_model.search['locus'] = {'rawVariantItems': '1-248367227-TC-T,2-103343353-GAGA-G'}
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=2, skip_genotype_filter=False,
+            locus=self.search_model.search['locus'], rs_ids=[],  variant_ids=['1-248367227-TC-T', '2-103343353-GAGA-G'],
+        )
+
+        self.search_model.search['locus']['rawVariantItems'] = 'rs9876'
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            locus=self.search_model.search['locus'], rs_ids=['rs9876'], variant_ids=[],
+        )
+
+        self.search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            locus=self.search_model.search['locus'], genes={
+                'ENSG00000223972': mock.ANY, 'ENSG00000186092': mock.ANY,
+            }, intervals=[
+                {'chrom': '2', 'start': 1234, 'end': 5678, 'offset': None},
+                {'chrom': '7', 'start': 100, 'end': 10100, 'offset': 0.1},
+            ],
         )
 
     def test_cached_query_variants(self):
