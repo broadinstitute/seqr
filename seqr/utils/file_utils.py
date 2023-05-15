@@ -109,7 +109,8 @@ def _run_gsutil_with_wait(command, gs_path, user=None):
 
 def _run_gsutil_with_stdout(command, gs_path, user=None):
     process = _run_gsutil_command(command, gs_path, user=user)
-    output, errors = process.communicate()
-    if errors:
+    output, errs = process.communicate()
+    if errs:
+        errors = errs.decode('utf-8').strip().replace('\n', ' ')
         raise Exception(f'Run command failed: {errors}')
-    return output.decode('utf-8').rstrip('\n').split('\n')
+    return [line for line in output.decode('utf-8').split('\n') if line]
