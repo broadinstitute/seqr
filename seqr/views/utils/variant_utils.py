@@ -141,7 +141,7 @@ def _get_rna_seq_outliers(gene_ids, family_guids):
                 **{f'{outlier_cls.SIGNIFICANCE_FIELD}__lt': outlier_cls.SIGNIFICANCE_THRESHOLD}
             ),
             nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
-                           {'fields': ('sample', 'tissue_type')}],
+                           {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
         )
         for data in outlier_data:
             data_by_individual_gene[data.pop('individualGuid')][outlier][data['geneId']] = data

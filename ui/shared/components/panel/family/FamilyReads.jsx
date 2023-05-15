@@ -242,6 +242,13 @@ IgvPanel.propTypes = {
   locus: PropTypes.string,
 }
 
+const TISSUE_REFERENCE_KEY = {
+  WB: 'Blood',
+  F: 'Fibs',
+  M: 'Muscle',
+  L: 'Lymph',
+}
+
 class FamilyReads extends React.PureComponent {
 
   static propTypes = {
@@ -270,8 +277,9 @@ class FamilyReads extends React.PureComponent {
   }
 
   updateReads = (familyGuid, locus, sampleTypes, tissueType) => {
-    const rnaReferenceOptions = [NORM_GTEX_TRACK_OPTIONS, AGG_GTEX_TRACK_OPTIONS].reduce((acc, options) => ([
-      ...acc, options.find(opt => opt.name.include(tissueType))]), [])
+    const rnaReferenceOptions = [NORM_GTEX_TRACK_OPTIONS, AGG_GTEX_TRACK_OPTIONS].map(options => (
+      options.find(opt => opt.value.name.includes(TISSUE_REFERENCE_KEY[tissueType]))?.value
+    )).filter(o => o)
     this.setState({ openFamily: familyGuid, rnaReferences: rnaReferenceOptions, sampleTypes, locus })
   }
 
