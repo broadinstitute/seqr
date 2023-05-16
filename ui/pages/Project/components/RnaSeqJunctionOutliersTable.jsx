@@ -103,8 +103,6 @@ class BaseRnaSeqJunctionOutliersTable extends React.PureComponent {
 
 }
 
-const RnaSeqJunctionOutliersTable = props => (
-  <FamilyReads layout={BaseRnaSeqJunctionOutliersTable} noTriggerButton {...props} />
+export default props => (
+  <FamilyReads layout={RnaSeqJunctionOutliersTable} noTriggerButton {...props} />
 )
-
-export default RnaSeqJunctionOutliersTable
