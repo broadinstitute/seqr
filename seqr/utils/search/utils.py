@@ -7,7 +7,7 @@ from seqr.utils.search.constants import XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
-    ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
+    es_backend_enabled, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 
@@ -28,12 +28,23 @@ ERROR_LOG_EXCEPTIONS = set()
 ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
 
 
+def _no_backend_error(*args, **kwargs):
+    raise InvalidSearchException('Elasticsearch backend is disabled')
+
+
+def backend_specific_call(es_func, other_func=_no_backend_error):
+    if es_backend_enabled():
+        return es_func
+    else:
+        return other_func
+
+
 def ping_search_backend():
-    ping_elasticsearch()
+    backend_specific_call(ping_elasticsearch)()
 
 
 def get_search_backend_status():
-    return get_elasticsearch_status()
+    return backend_specific_call(get_elasticsearch_status)()
 
 
 def get_search_samples(projects, active_only=True):
@@ -49,11 +60,11 @@ def delete_search_backend_data(data_id):
         projects = set(active_samples.values_list('individual__family__project__name', flat=True))
         raise InvalidSearchException(f'"{data_id}" is still used by: {", ".join(projects)}')
 
-    return delete_es_index(data_id)
+    return backend_specific_call(delete_es_index)(data_id)
 
 
 def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
-    variants = get_es_variants_for_variant_ids(
+    variants = backend_specific_call(get_es_variants_for_variant_ids)(
         families, [variant_id], user, return_all_queried_families=return_all_queried_families,
     )
     if not variants:
@@ -62,7 +73,7 @@ def get_single_variant(families, variant_id, return_all_queried_families=False, 
 
 
 def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
-    return get_es_variants_for_variant_ids(families, variant_ids, user, dataset_type=dataset_type)
+    return backend_specific_call(get_es_variants_for_variant_ids)(families, variant_ids, user, dataset_type=dataset_type)
 
 
 def _get_search_cache_key(search_model, sort=None):
@@ -88,7 +99,10 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     if len(loaded_results) >= end_index:
         return loaded_results[start_index:end_index], total_results
 
-    previously_loaded_results = process_es_previously_loaded_results(previous_search_results, start_index, end_index)
+    previously_loaded_results = backend_specific_call(
+        process_es_previously_loaded_results,
+        lambda *args: None,  # Other backends need no additional parsing
+    )(previous_search_results, start_index, end_index)
     if previously_loaded_results is not None:
         return previously_loaded_results, total_results
 
@@ -125,7 +139,7 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     }
     parsed_search.update(search)
 
-    variant_results = get_es_variants(
+    variant_results = backend_specific_call(get_es_variants)(
         search_model.families.all(), parsed_search, user, previous_search_results, sort=sort, num_results=num_results,
         **kwargs,
     )
@@ -144,7 +158,10 @@ def get_variant_query_gene_counts(search_model, user):
     if len(previous_search_results.get('all_results', [])) == previous_search_results.get('total_results'):
         return _get_gene_aggs_for_cached_variants(previous_search_results)
 
-    previously_loaded_results = process_es_previously_loaded_gene_aggs(previous_search_results)
+    previously_loaded_results = backend_specific_call(
+        process_es_previously_loaded_gene_aggs,
+        lambda *args: None,  # Other backends need no additional parsing
+    )(previous_search_results)
     if previously_loaded_results is not None:
         return previously_loaded_results
 

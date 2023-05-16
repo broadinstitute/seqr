@@ -9,6 +9,21 @@ from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 
 class StatusTest(TestCase):
 
+    def _test_status_error(self, url, mock_logger, es_error):
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(
+            response.json(), {'version': 'v1.0', 'dependent_services_ok': False, 'secondary_services_ok': False})
+        mock_logger.error.assert_has_calls([
+            mock.call('Database "default" connection error: No connection'),
+            mock.call('Database "reference_data" connection error: No connection'),
+            mock.call('Redis connection error: Bad connection'),
+            mock.call(f'Search backend connection error: {es_error}'),
+            mock.call('Kibana connection error: Connection refused: HEAD /status'),
+        ])
+        mock_logger.reset_mock()
+
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @mock.patch('seqr.views.status.redis.StrictRedis')
     @mock.patch('seqr.views.status.connections')
     @mock.patch('seqr.views.status.logger')
@@ -19,19 +34,11 @@ class StatusTest(TestCase):
         mock_db_connections.__getitem__.return_value.cursor.side_effect = Exception('No connection')
         mock_redis.return_value.ping.side_effect = HTTPError('Bad connection')
 
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(
-            response.json(), {'version': 'v1.0', 'dependent_services_ok': False, 'secondary_services_ok': False})
-        mock_logger.error.assert_has_calls([
-            mock.call('Database "default" connection error: No connection'),
-            mock.call('Database "reference_data" connection error: No connection'),
-            mock.call('Redis connection error: Bad connection'),
-            mock.call('Search backend connection error: No response from elasticsearch ping'),
-            mock.call('Kibana connection error: Connection refused: HEAD /status'),
-        ])
+        self._test_status_error(url, mock_logger, es_error='No response from elasticsearch ping')
 
-        mock_logger.reset_mock()
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            self._test_status_error(url, mock_logger, es_error='Elasticsearch backend is disabled')
+
         mock_db_connections.__getitem__.return_value.cursor.side_effect = None
         mock_redis.return_value.ping.side_effect = None
         urllib3_responses.add(urllib3_responses.HEAD, '/', status=200)
