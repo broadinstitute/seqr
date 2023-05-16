@@ -153,7 +153,7 @@ This is expected to take a while
    Periodically, you may want to update the reference data in order to get the latest versions of these annotations. 
 To do this, run the following commands to update the data. All subsequently loaded data will then have the updated 
 annotations, but you will need to re-load previously loaded projects to get the updated annotations.
-    ```bash
+   ```bash
    BUILD_VERSION=38                 # can be 37 or 38
    
    # Update clinvar 
