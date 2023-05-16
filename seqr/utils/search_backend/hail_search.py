@@ -9,8 +9,6 @@ from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.es_search import EsSearch
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 
-from seqr.utils.logging_utils import SeqrLogger
-logger = SeqrLogger(__name__)
 
 class HailSearch(object):
 
@@ -136,8 +134,7 @@ class HailSearch(object):
         end_offset = num_results * page
         self._search_body['num_results'] = end_offset
 
-        logger.info(self._search_body, None)
-        response = requests.post('http://hail-search:5000/search', json=self._search_body)  # TODO from settings
+        response = requests.post('http://hail-search:5000/search', json=self._search_body)
         response.raise_for_status()
         response_json = response.json()
 
