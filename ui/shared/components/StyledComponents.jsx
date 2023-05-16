@@ -5,7 +5,7 @@ import { Button, Header, Icon, Label, Table } from 'semantic-ui-react'
 import { NavLink } from 'react-router-dom'
 
 const BaseButtonLink = styled(({ color, padding, ...props }) => <Button {...props} />).attrs(
-  props => (props.as ? {} : { basic: true }),
+  props => (props.as ? { className: `ui button basic${props.disabled ? ' disabled' : ''}` } : { basic: true }),
 )`
   &.ui.button.basic {
     white-space: nowrap;

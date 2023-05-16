@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
 
-import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
+import { CLINSIG_SEVERITY, GENOME_VERSION_37, getVariantMainGeneId } from 'shared/utils/constants'
 import { VerticalSpacer } from '../../Spacers'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
 import FamilyReads from '../family/FamilyReads'
@@ -14,7 +14,7 @@ import Predictions from './Predictions'
 import Frequencies from './Frequencies'
 import VariantGenes, { VariantGene } from './VariantGene'
 import VariantIndividuals from './VariantIndividuals'
-import { compHetGene } from './VariantUtils'
+import { compHetGene, has37Coords } from './VariantUtils'
 
 const StyledVariantRow = styled(({ isSV, severity, ...props }) => <Grid.Row {...props} />)`  
   .column {
@@ -214,6 +214,25 @@ const nestedVariantPanes = (variants, mainGeneId, props) => ([
   pane: { key: `pane${i}`, attached: false, basic: true, content },
 })))
 
+const getValidCompHetLinkVariantId = (variant) => {
+  if (!has37Coords(variant) || !variant.populations.gnomad_exomes?.af || variant.svType) {
+    return null
+  }
+  const { chrom, pos, ref, alt, genomeVersion, liftedOverPos } = variant
+  return `${chrom}-${genomeVersion === GENOME_VERSION_37 ? pos : liftedOverPos}-${ref}-${alt}`
+}
+
+const CompHetLink = ({ variants }) => {
+  const varaintId1 = getValidCompHetLinkVariantId(variants[0])
+  const varaintId2 = getValidCompHetLinkVariantId(variants[1])
+  const href = `https://gnomad.broadinstitute.org/variant-cooccurrence?dataset=gnomad_r2_1&variant=${varaintId1}&variant=${varaintId2}`
+  return varaintId1 && varaintId2 && <a href={href} target="_blank" rel="noreferrer">gnomAD Variant Co-Occurrence</a>
+}
+
+CompHetLink.propTypes = {
+  variants: PropTypes.arrayOf(PropTypes.object),
+}
+
 const CompoundHets = React.memo(({ variants, compoundHetToggle, ...props }) => {
   // If linked variants are complex and not comp-het (more than 2 variants) and the first variant is a manual variant,
   // display associated variants nested under the manual variant
@@ -231,6 +250,11 @@ const CompoundHets = React.memo(({ variants, compoundHetToggle, ...props }) => {
       }
     >
       <StyledCompoundHetRows>
+        {variants.length === 2 && (
+          <Grid.Row>
+            <Grid.Column textAlign="right"><CompHetLink variants={variants} /></Grid.Column>
+          </Grid.Row>
+        )}
         {compHetRows(mainVariants || variants, mainGeneId, props)}
       </StyledCompoundHetRows>
     </VariantLayout>

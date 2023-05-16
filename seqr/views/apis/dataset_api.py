@@ -3,9 +3,8 @@ import json
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, ANVIL_UI_URL, BASE_URL, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
-from seqr.models import Individual, Sample, Family
-from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file, \
-    validate_index_metadata_and_get_elasticsearch_index_samples
+from seqr.utils.search.add_data_utils import add_new_search_samples
+from seqr.models import Individual, Family
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, data_manager_required, \
@@ -35,66 +34,25 @@ def add_variants_dataset_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     request_json = json.loads(request.body)
 
-    required_fields = ['elasticsearchIndex', 'datasetType']
-    if any(field not in request_json for field in required_fields):
-        return create_json_response(
-            {'errors': ['request must contain fields: {}'.format(', '.join(required_fields))]}, status=400)
-
-    elasticsearch_index = request_json['elasticsearchIndex'].strip()
-    dataset_type = request_json['datasetType']
-    if dataset_type not in Sample.DATASET_TYPE_LOOKUP:
-        return create_json_response({'errors': ['Invalid dataset type "{}"'.format(dataset_type)]}, status=400)
-
-    try:
-        # sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
-        #     elasticsearch_index, project=project, dataset_type=dataset_type)
-        # if not sample_ids:
-        #     raise ValueError('No samples found in the index. Make sure the specified caller type is correct')
-        sample_type = Sample.SAMPLE_TYPE_WES
-        sample_ids = list(Individual.objects.filter(family__project=project).values_list('individual_id', flat=True))
-
-        sample_id_to_individual_id_mapping = load_mapping_file(
-            request_json['mappingFilePath'], request.user) if request_json.get('mappingFilePath') else {}
-    except ValueError as e:
-        return create_json_response({'errors': [str(e)]}, status=400)
-
-    ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
-    try:
-        samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids = match_and_update_search_samples(
-            project=project,
-            user=request.user,
-            sample_ids=sample_ids,
-            elasticsearch_index=elasticsearch_index,
-            sample_type=sample_type,
-            dataset_type=dataset_type,
-            sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-            raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for ES sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
-        )
-    except ValueError as e:
-        return create_json_response({'errors': [str(e)]}, status=400)
-
-    updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
-
     is_internal = is_internal_anvil_project(project)
     has_anvil = project_has_anvil(project)
+    summary_template = None
     if has_anvil:
-        updated_individuals = {sample.individual_id for sample in updated_samples}
-        previous_loaded_individuals = {
-            sample.individual_id for sample in Sample.objects.filter(
-                individual__in=updated_individuals, sample_type=sample_type, dataset_type=dataset_type,
-            ).exclude(elasticsearch_index=elasticsearch_index)}
-        previous_loaded_individuals.update(matched_individual_ids)
-        new_sample_ids = [
-            sample.sample_id for sample in updated_samples if sample.individual_id not in previous_loaded_individuals]
-
-        dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
         url = f'{BASE_URL}project/{project.guid}/project_page'
-        message = f'{len(new_sample_ids)} new {sample_type}{dataset_type} samples are loaded in {url}'
+        summary_template = '{num_new_samples} new {sample_type}{dataset_type} samples are loaded in ' + url
         if is_internal:
-            message = f'{message}\n```{", ".join(new_sample_ids)}```'
+            summary_template += '\n```{new_sample_id_list}```'
+
+    try:
+        num_sample, inactivated_sample_guids, updated_family_guids, updated_samples, summary_message = add_new_search_samples(
+            request_json, project, request.user, summary_template=summary_template)
+    except ValueError as e:
+        return create_json_response({'errors': [str(e)]}, status=400)
+
+    if summary_message:
         safe_post_to_slack(
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL if is_internal else SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL,
-            message)
+            summary_message)
 
     if has_anvil and not is_internal:
         user = project.created_by
@@ -111,7 +69,7 @@ We have loaded {num_sample} samples from the AnVIL workspace <a href={anvil_url}
                 base_url=BASE_URL,
                 guid=project.guid,
                 project_name=project.name,
-                num_sample=len(samples),
+                num_sample=num_sample,
             ),
             subject='New data available in seqr',
             to=sorted([user.email]),

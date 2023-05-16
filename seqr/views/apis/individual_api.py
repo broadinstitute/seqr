@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.db.models import prefetch_related_objects
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Individual, Family, Sample, RnaSeqOutlier
+from seqr.models import Individual, Family, RnaSeqOutlier
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
@@ -789,10 +789,10 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 def get_individual_rna_seq_data(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     check_project_permissions(individual.family.project, request.user)
-    sample = Sample.objects.get(individual=individual, is_active=True, sample_type=Sample.SAMPLE_TYPE_RNA)
+    outlier_data = RnaSeqOutlier.objects.filter(sample__individual=individual, sample__is_active=True)
 
     rna_seq_data = {
-        data['geneId']: data for data in get_json_for_rna_seq_outliers(RnaSeqOutlier.objects.filter(sample=sample))
+        data['geneId']: data for data in get_json_for_rna_seq_outliers(outlier_data)
     }
     genes_to_show = get_genes([gene_id for gene_id, data in rna_seq_data.items() if data['isSignificant']])
 

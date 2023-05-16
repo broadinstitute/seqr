@@ -10,14 +10,15 @@ from itertools import combinations
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
-from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, X_LINKED_RECESSIVE, \
+from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, MAX_NO_LOCATION_COMP_HET_FAMILIES
+from seqr.utils.search.elasticsearch.constants import X_LINKED_RECESSIVE, \
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
-    PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
+    PATH_FREQ_OVERRIDE_CUTOFF, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
     get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS, SCREEN_KEY, MAX_INDEX_SEARCHES, PREFILTER_SEARCH_SIZE
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
@@ -32,7 +33,8 @@ class EsSearch(object):
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
     def __init__(self, families, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
-        from seqr.utils.elasticsearch.utils import get_es_client, InvalidIndexException, InvalidSearchException
+        from seqr.utils.search.utils import InvalidSearchException
+        from seqr.utils.search.elasticsearch.es_utils import get_es_client, InvalidIndexException
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
@@ -71,7 +73,7 @@ class EsSearch(object):
             dataset_type = self._get_index_dataset_type(index)
             self.indices_by_dataset_type[dataset_type].append(index)
 
-        self.previous_search_results = previous_search_results or {}
+        self.previous_search_results = {} if previous_search_results is None else previous_search_results
         self._return_all_queried_families = return_all_queried_families
         self._user = user
 
@@ -124,7 +126,7 @@ class EsSearch(object):
             self.index_name = alias
 
     def _set_index_metadata(self):
-        from seqr.utils.elasticsearch.utils import get_index_metadata
+        from seqr.utils.search.elasticsearch.es_utils import get_index_metadata
         self.index_metadata = get_index_metadata(self.index_name, self._client, include_fields=True)
 
     def _update_alias_metadata(self):
@@ -174,7 +176,7 @@ class EsSearch(object):
         self._set_indices(sorted(list(self.samples_by_family_index.keys())))
 
         if len(self._indices) < 1:
-            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            from seqr.utils.search.utils import InvalidSearchException
             raise InvalidSearchException(
                 'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
@@ -191,7 +193,7 @@ class EsSearch(object):
                 error = 'Unable to search against dataset type "{}". This may be because inheritance based search is disabled in families with no loaded affected individuals'.format(
                     dataset_type
                 )
-                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                from seqr.utils.search.utils import InvalidSearchException
                 raise InvalidSearchException(error)
             update_indices = new_indices
 
@@ -484,7 +486,7 @@ class EsSearch(object):
                 inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
             if list(inheritance_filter.keys()) == ['affected']:
-                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                from seqr.utils.search.utils import InvalidSearchException
                 raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
             family_samples_q = _family_genotype_inheritance_filter(
@@ -492,7 +494,7 @@ class EsSearch(object):
             )
 
             if not family_samples_q:
-                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                from seqr.utils.search.utils import InvalidSearchException
                 raise InvalidSearchException('Invalid custom inheritance')
 
         else:
@@ -503,12 +505,12 @@ class EsSearch(object):
 
     def _filter_compound_hets(self, quality_filters_by_family, annotations, annotations_secondary, has_location_filter):
         if not self._allowed_consequences:
-            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            from seqr.utils.search.utils import InvalidSearchException
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
         if not has_location_filter and any(len(family_samples_by_id) > MAX_NO_LOCATION_COMP_HET_FAMILIES
                                            for family_samples_by_id in self.samples_by_family_index.values()):
-            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            from seqr.utils.search.utils import InvalidSearchException
             raise InvalidSearchException(
                 'Location must be specified to search for compound heterozygous variants across many families')
 
@@ -680,7 +682,7 @@ class EsSearch(object):
             variant_results = _sort_compound_hets(variant_results)
             self.previous_search_results['grouped_results'] = variant_results
             end_index = min(results_start_index + num_results, total_results)
-            return _get_compound_het_page(variant_results, results_start_index, end_index)
+            return get_compound_het_page(variant_results, results_start_index, end_index)
 
         if deduplicate:
             variant_results = self._deduplicate_results(variant_results)
@@ -836,6 +838,7 @@ class EsSearch(object):
         if self._genome_version == GENOME_VERSION_GRCh38:
             self._add_liftover(result, hit)
         self._parse_xstop(result)
+        result[CLINVAR_KEY]['version'] = self.index_metadata[index_name].get('clinvar_version')
 
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
         if data_type == Sample.DATASET_TYPE_SV_CALLS and genotypes:
@@ -971,7 +974,7 @@ class EsSearch(object):
                     t.get('majorConsequence') in self._allowed_consequences), None)
                 if not consequence_transcript_id and self._allowed_consequences_secondary:
                     consequence_transcript_id = next((
-                        t for t in gene_transcripts if t.get('majorConsequence') in self._allowed_consequences_secondary
+                        t.get('transcriptId') for t in gene_transcripts if t.get('majorConsequence') in self._allowed_consequences_secondary
                     ), None)
                 selected_main_transcript_id = consequence_transcript_id or selected_main_transcript_id
             if selected_main_transcript_id == main_transcript_id:
@@ -1008,7 +1011,7 @@ class EsSearch(object):
 
     def _parse_compound_het_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
-            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            from seqr.utils.search.utils import InvalidSearchException
             raise InvalidSearchException('This search returned too many compound heterozygous variants. Please add stricter filters')
 
         family_unaffected_individual_guids = {
@@ -1206,6 +1209,12 @@ class EsSearch(object):
                 variant['genotypes'][guid] = genotype
         variant['familyGuids'] = sorted(set(variant['familyGuids'] + duplicate_variant['familyGuids']))
 
+        # Always show the most up-to-date clinvar
+        clinvar_version = variant[CLINVAR_KEY]['version'] or '1900-01-01'
+        dup_clinvar_version = duplicate_variant[CLINVAR_KEY]['version'] or '1900-01-01'
+        if dup_clinvar_version > clinvar_version:
+            variant[CLINVAR_KEY] = duplicate_variant[CLINVAR_KEY]
+
     def _deduplicate_compound_het_results(self, compound_het_results):
         duplicates = 0
         results = {}
@@ -1220,14 +1229,8 @@ class EsSearch(object):
                 )
                 if existing_index is not None:
                     existing_compound_het_pair = results[gene][existing_index]
-
-                    def _update_existing_variant(existing_variant, variant):
-                        existing_variant['genotypes'].update(variant['genotypes'])
-                        family_guids = set(existing_variant['familyGuids'])
-                        family_guids.update(variant['familyGuids'])
-                        existing_variant['familyGuids'] = sorted(family_guids)
-                    _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[0])
-                    _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[1])
+                    self._merge_duplicate_variants(existing_compound_het_pair[0], compound_het_pair[0])
+                    self._merge_duplicate_variants(existing_compound_het_pair[1], compound_het_pair[1])
                     duplicates += 1
                 else:
                     results[gene].append(compound_het_pair)
@@ -1289,7 +1292,7 @@ class EsSearch(object):
                     start_index = end_index - num_results
                 if end_index > MAX_VARIANTS:
                     # ES request size limits are limited by offset + size, which is the same as end_index
-                    from seqr.utils.elasticsearch.utils import InvalidSearchException
+                    from seqr.utils.search.utils import InvalidSearchException
                     raise InvalidSearchException(
                         'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index))
 
@@ -1319,36 +1322,6 @@ class EsSearch(object):
             if task['running_time_in_nanos'] > 10 ** 11:
                 long_running.append({'task': task, 'parent_task_id': parent_id})
         return long_running
-
-    @classmethod
-    def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
-        num_results_to_use = num_results
-        total_results = previous_search_results.get('total_results')
-        if load_all:
-            num_results_to_use = total_results or MAX_VARIANTS
-        start_index = (page - 1) * num_results_to_use
-        end_index = page * num_results_to_use
-        if previous_search_results.get('total_results') is not None:
-            end_index = min(end_index, previous_search_results['total_results'])
-
-        loaded_results = previous_search_results.get('all_results') or []
-        if len(loaded_results) >= end_index:
-            return loaded_results[start_index:end_index], {}
-
-        grouped_results = previous_search_results.get('grouped_results')
-        if grouped_results:
-            results = _get_compound_het_page(grouped_results, start_index, end_index)
-            if results is not None:
-                return results, {}
-
-        return None, {'page': page, 'num_results': num_results_to_use}
-
-    @classmethod
-    def parse_variant_id(cls, variant_id):
-        var_fields = variant_id.split('-')
-        if len(var_fields) != 4:
-            raise ValueError('Invalid variant id')
-        return var_fields[0].lstrip('chr'), int(var_fields[1]), var_fields[2], var_fields[3]
 
     def _get_quality_filters_by_family(self, quality_filter):
         quality_field_configs = {
@@ -1601,7 +1574,7 @@ def _sort_compound_hets(grouped_variants):
     return sorted(grouped_variants, key=lambda variants: next(iter(variants.values()))[0]['_sort'])
 
 
-def _get_compound_het_page(grouped_variants, start_index, end_index):
+def get_compound_het_page(grouped_variants, start_index, end_index):
     skipped = 0
     variant_results = []
     variant_count = 0

@@ -1,7 +1,8 @@
 import base64
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from datetime import datetime
 import gzip
+import itertools
 import json
 import os
 import re
@@ -9,21 +10,24 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max
+from django.db.models import Max, Value, F
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
+from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
+from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file
+from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file, \
+    load_rna_seq_splice_outlier
+from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
-from seqr.views.utils.json_utils import create_json_response, _to_camel_case
+from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import data_manager_required, get_internal_projects
 
-from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization
+from seqr.models import Sample, Individual, Project, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, RnaSeqSpliceOutlier
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
@@ -32,93 +36,13 @@ logger = SeqrLogger(__name__)
 
 @data_manager_required
 def elasticsearch_status(request):
-    client = get_es_client()
-
-    disk_status = {
-        disk['node']: disk for disk in
-        _get_es_meta(client, 'allocation', ['node', 'shards', 'disk.avail', 'disk.used', 'disk.percent'])
-    }
-
-    node_stats = {}
-    for node in  _get_es_meta(client, 'nodes', ['name', 'heap.percent']):
-        if node['name'] in disk_status:
-            disk_status[node.pop('name')].update(node)
-        else:
-            node_stats[node['name'] ] = node
-
-    indices, seqr_index_projects = _get_es_indices(client)
-
-    errors = ['{} does not exist and is used by project(s) {}'.format(
-        index, ', '.join(['{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
-    ) for index, project_individuals in seqr_index_projects.items() if project_individuals]
-
-    return create_json_response({
-        'indices': indices,
-        'diskStats': list(disk_status.values()),
-        'nodeStats': list(node_stats.values()),
-        'errors': errors,
-    })
-
-
-def _get_es_meta(client, meta_type, fields, filter_rows=None):
-    return [{
-        _to_camel_case(field.replace('.', '_')): o[field] for field in fields
-    } for o in getattr(client.cat, meta_type)(format="json", h=','.join(fields))
-        if filter_rows is None or filter_rows(o)]
-
-def _get_es_indices(client):
-    indices = _get_es_meta(
-        client, 'indices', ['index', 'docs.count', 'store.size', 'creation.date.string'],
-        filter_rows=lambda index: all(
-            not index['index'].startswith(omit_prefix) for omit_prefix in ['.', 'index_operations_log']))
-
-    aliases = defaultdict(list)
-    for alias in _get_es_meta(client, 'aliases', ['alias', 'index']):
-        aliases[alias['alias']].append(alias['index'])
-
-    index_metadata = get_index_metadata('_all', client, use_cache=False)
-
-    active_samples = Sample.objects.filter(is_active=True, elasticsearch_index__isnull=False).select_related('individual__family__project')
-
-    seqr_index_projects = defaultdict(lambda: defaultdict(set))
-    es_projects = set()
-    for sample in active_samples:
-        for index_name in sample.elasticsearch_index.split(','):
-            project = sample.individual.family.project
-            es_projects.add(project)
-            if index_name in aliases:
-                for aliased_index_name in aliases[index_name]:
-                    seqr_index_projects[aliased_index_name][project].add(sample.individual.guid)
-            else:
-                seqr_index_projects[index_name.rstrip('*')][project].add(sample.individual.guid)
-
-    for index in indices:
-        index_name = index['index']
-        index.update(index_metadata[index_name])
-
-        projects_for_index = []
-        for index_prefix in list(seqr_index_projects.keys()):
-            if index_name.startswith(index_prefix):
-                projects_for_index += list(seqr_index_projects.pop(index_prefix).keys())
-        index['projects'] = [
-            {'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
-
-    return indices, seqr_index_projects
+    return create_json_response(get_search_backend_status())
 
 
 @data_manager_required
 def delete_index(request):
     index = json.loads(request.body)['index']
-    active_index_samples = Sample.objects.filter(is_active=True, elasticsearch_index=index)
-    if active_index_samples:
-        projects = {
-            sample.individual.family.project.name for sample in active_index_samples.select_related('individual__family__project')
-        }
-        return create_json_response({'error': 'Index "{}" is still used by: {}'.format(index, ', '.join(projects))}, status=400)
-
-    client = get_es_client()
-    client.indices.delete(index)
-    updated_indices, _ = _get_es_indices(client)
+    updated_indices = delete_search_backend_data(index)
 
     return create_json_response({'indices': updated_indices})
 
@@ -337,6 +261,7 @@ EXCLUDE_PROJECTS = [
 RNA_DATA_TYPE_CONFIGS = {
     'outlier': {'load_func': load_rna_seq_outlier, 'model_class': RnaSeqOutlier},
     'tpm': {'load_func': load_rna_seq_tpm, 'model_class': RnaSeqTpm},
+    'splice_outlier': {'load_func': load_rna_seq_splice_outlier, 'model_class': RnaSeqSpliceOutlier}
 }
 
 @data_manager_required
@@ -401,7 +326,7 @@ def load_phenotype_prioritization_data(request):
         return create_json_response({'error': 'File not found: {}'.format(file_path)}, status=400)
 
     try:
-        tool, data_by_project_indiv_id = load_phenotype_prioritization_data_file(file_path)
+        tool, data_by_project_indiv_id = load_phenotype_prioritization_data_file(file_path, request.user)
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
 
@@ -456,6 +381,32 @@ def load_phenotype_prioritization_data(request):
         'info': info,
         'success': True
     })
+
+
+@data_manager_required
+def write_pedigree(request, project_guid):
+    project = Project.objects.get(guid=project_guid)
+
+    possible_file_paths = [
+        f'{SEQR_DATSETS_GS_PATH}/{project.get_genome_version_display()}/RDG_{sample_type}_Broad_{callset}/base/projects/{project.guid}'
+        for callset, sample_type in itertools.product(['Internal', 'External'], ['WGS', 'WES'])
+    ]
+    file_path = next((path for path in possible_file_paths if does_file_exist(path)), None)
+    if not file_path:
+        return create_json_response(
+            {'error': f'No {SEQR_DATSETS_GS_PATH} project directory found for {project.guid}'}, status=400,
+        )
+
+    annotations = OrderedDict({
+        'Project_GUID': Value(project.guid), 'Family_ID': F('family__family_id'), 'Individual_ID': F('individual_id'),
+        'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
+    })
+    data = Individual.objects.filter(family__project=project).order_by('family_id', 'individual_id').values(**dict(annotations))
+    write_multiple_files_to_gs(
+        [(f'{project.guid}_pedigree', annotations.keys(), data)],
+        file_path, request.user, file_format='tsv')
+
+    return create_json_response({'success': True})
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

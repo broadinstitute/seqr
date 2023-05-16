@@ -11,6 +11,7 @@ import RnaSeq from './components/RnaSeq'
 import SampleQc from './components/SampleQc'
 import Users from './components/Users'
 import PhenotypePrioritization from './components/PhenotypePrioritization'
+import WritePedigree from './components/WritePedigree'
 
 const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
@@ -23,6 +24,7 @@ export const DATA_MANAGEMENT_PAGES = [
   { path: 'sample_qc', component: SampleQc },
   { path: 'rna_seq', component: RnaSeq },
   { path: 'users', component: Users },
+  { path: 'write_pedigree', component: WritePedigree },
   { path: 'phenotype_prioritization', component: PhenotypePrioritization },
 ]
 
