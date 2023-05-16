@@ -4,12 +4,22 @@ from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 
 
+def _get_sample_placeholder(request_json, project):
+    # Temporary function to allow adding sample models, in production will implement for real with correct data
+    sample_ids = list(Individual.objects.filter(family__project=project).values_list('individual_id', flat=True))
+    sample_data = {'elasticsearch_index': elasticsearch_index}
+    return sample_ids, Sample.SAMPLE_TYPE_WES, sample_data
+
+
 def add_new_search_samples(request_json, project, user, summary_template=None, expected_families=None):
     dataset_type = request_json.get('datasetType')
     if dataset_type not in Sample.DATASET_TYPE_LOOKUP:
         raise ValueError(f'Invalid dataset type "{dataset_type}"')
 
-    sample_ids, sample_type, sample_data = backend_specific_call(validate_es_index_metadata_and_get_samples)(request_json, project)
+    sample_ids, sample_type, sample_data = backend_specific_call(
+        validate_es_index_metadata_and_get_samples,
+        _get_sample_placeholder,
+    )(request_json, project)
     if not sample_ids:
         raise ValueError('No samples found. Make sure the specified caller type is correct')
 
