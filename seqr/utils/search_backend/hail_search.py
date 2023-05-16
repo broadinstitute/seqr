@@ -1,7 +1,7 @@
 from collections import defaultdict
 from django.db.models import F
 
-from hail_search.search import search_hail_backend
+import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
 from seqr.models import Individual, Sample, PhenotypePrioritization
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, MAX_NO_LOCATION_COMP_HET_FAMILIES
@@ -133,11 +133,11 @@ class HailSearch(object):
     def search(self, page=1, num_results=100):
         end_offset = num_results * page
         self._search_body['num_results'] = end_offset
-        try:
-            hail_results, total_results = search_hail_backend(self._search_body)
-        except Exception as e:
-            # TODO use raise_for_response
-            raise InvalidSearchException(str(e))
-        self.previous_search_results['total_results'] = total_results
-        self.previous_search_results['all_results'] = hail_results
-        return hail_results[end_offset - num_results:end_offset]
+
+        response = requests.post('http://hail-search:5000', data=self._search_body)  # TODO from settings
+        response.raise_for_status()
+        response_json = response.json()
+
+        self.previous_search_results['total_results'] = response_json['total']
+        self.previous_search_results['all_results'] = response_json['results']
+        return response_json['results'][end_offset - num_results:end_offset]
