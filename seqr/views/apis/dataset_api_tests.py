@@ -6,7 +6,8 @@ from io import StringIO
 
 from seqr.models import Sample, Family
 from seqr.views.apis.dataset_api import add_variants_dataset_handler
-from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
+from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 
 SEQR_URL = 'https://seqr.broadinstitute.org'
 PROJECT_GUID = 'R0001_1kg'
@@ -37,6 +38,7 @@ MOCK_REDIS = mock.MagicMock()
 MOCK_OPEN = mock.MagicMock()
 MOCK_FILE_ITER = MOCK_OPEN.return_value.__enter__.return_value.__iter__
 
+@mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
 @mock.patch('seqr.utils.file_utils.open', MOCK_OPEN)
 class DatasetAPITest(object):
@@ -65,7 +67,8 @@ class DatasetAPITest(object):
         self.assertEqual(existing_sample.elasticsearch_index, INDEX_NAME)
         self.assertFalse(existing_sample.is_active)
         existing_sample_guid = existing_sample.guid
-        existing_rna_seq_sample_guid = Sample.objects.get(sample_id='NA19675_D2', sample_type='RNA').guid
+        existing_rna_seq_sample_guids = set(Sample.objects.filter(
+            individual__id=1, sample_type='RNA').values_list('guid', flat=True))
         self.assertEqual(Sample.objects.filter(sample_id='NA19678_1').count(), 0)
         self.assertEqual(Sample.objects.filter(sample_id='NA20878').count(), 0)
 
@@ -91,7 +94,7 @@ class DatasetAPITest(object):
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
 
         new_sample_guid = 'S98765432101234567890_NA20878'
-        replaced_sample_guid = 'S98765432101234567890_NA19678_'
+        replaced_sample_guid = 'S98765432101234567890_NA19678'
         self.assertSetEqual(
             set(response_json['samplesByGuid'].keys()),
             {existing_sample_guid, existing_old_index_sample_guid, replaced_sample_guid, new_sample_guid}
@@ -181,12 +184,13 @@ class DatasetAPITest(object):
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
         self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
-                            {sv_sample_guid, existing_index_sample_guid, existing_rna_seq_sample_guid})
+                            {sv_sample_guid, existing_index_sample_guid} | existing_rna_seq_sample_guids)
 
         # Regular variant sample should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
-        self.assertEqual(len(sample_models), 3)
-        self.assertSetEqual({sv_sample_guid, existing_index_sample_guid, existing_rna_seq_sample_guid}, {sample.guid for sample in sample_models})
+        self.assertEqual(len(sample_models), 5)
+        self.assertSetEqual({sv_sample_guid, existing_index_sample_guid} | existing_rna_seq_sample_guids,
+                            {sample.guid for sample in sample_models})
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
         mock_send_email.assert_not_called()
@@ -231,7 +235,9 @@ class DatasetAPITest(object):
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
         self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
-                            {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid, existing_rna_seq_sample_guid})
+                            {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid} |
+                            existing_rna_seq_sample_guids)
+        self.assertTrue(new_sample_type_sample_guid not in existing_rna_seq_sample_guids)
 
         mock_send_email.assert_not_called()
         if self.SLACK_MESSAGE_TEMPLATE:
@@ -242,9 +248,9 @@ class DatasetAPITest(object):
 
         # Previous variant samples should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
-        self.assertEqual(len(sample_models), 4)
+        self.assertEqual(len(sample_models), 6)
         self.assertSetEqual(
-            {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid, existing_rna_seq_sample_guid},
+            {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid} | existing_rna_seq_sample_guids,
             {sample.guid for sample in sample_models})
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
@@ -288,12 +294,21 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['request must contain fields: elasticsearchIndex, datasetType']})
+        self.assertDictEqual(response.json(), {'errors': ['Invalid dataset type "None"']})
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME, 'datasetType': 'NOT_A_TYPE'}))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid dataset type "NOT_A_TYPE"']})
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'datasetType': 'SV'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['request must contain field: "elasticsearchIndex"']})
+
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
 
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
@@ -387,7 +402,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
-            'errors': ['No samples found in the index. Make sure the specified caller type is correct']})
+            'errors': ['No samples found. Make sure the specified caller type is correct']})
 
         self.assertDictEqual(
             urllib3_responses.call_request_json(),
@@ -399,7 +414,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Matches not found for ES sample ids: NA19678_1. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.']})
+        self.assertDictEqual(response.json(), {'errors': ['Matches not found for sample ids: NA19678_1. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.']})
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,

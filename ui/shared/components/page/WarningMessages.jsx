@@ -1,10 +1,12 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Grid, Message } from 'semantic-ui-react'
+import { Grid, Loader, Message } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import { getWarningMessages } from 'redux/selectors'
+
+const ReactMarkdown = React.lazy(() => import('react-markdown'))
 
 class WarningMessages extends React.PureComponent {
 
@@ -25,7 +27,12 @@ class WarningMessages extends React.PureComponent {
     return warningMessages.length > 0 && warningMessages.map(({ header, message }) => (
       <Grid.Row>
         <Grid.Column textAlign="center">
-          <Message key={message} header={header} content={message} warning compact onDismiss={this.hide(message)} />
+          <Message key={message} warning compact onDismiss={this.hide(message)}>
+            <Message.Header>{header}</Message.Header>
+            <React.Suspense fallback={<Loader />}>
+              <ReactMarkdown linkTarget="_blank">{message}</ReactMarkdown>
+            </React.Suspense>
+          </Message>
         </Grid.Column>
       </Grid.Row>
     ))

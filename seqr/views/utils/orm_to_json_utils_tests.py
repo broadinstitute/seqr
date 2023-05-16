@@ -130,7 +130,7 @@ class JSONUtilsTest(object):
         variant_guid_2 = 'SV0000002_1248367227_r0390_100'
         v1_tag_guids = {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'}
         v2_tag_guids = {'VT1726945_2103343353_r0390_100', 'VT1726970_2103343353_r0004_tes'}
-        v2_note_guids = ['VN0714935_2103343353_r0390_100']
+        v2_note_guids = ['VN0714935_2103343353_r0390_100', 'VN0714937_2103343353_r0390_100']
         v1_functional_guids = {
             'VFD0000023_1248367227_r0390_10', 'VFD0000024_1248367227_r0390_10', 'VFD0000025_1248367227_r0390_10',
             'VFD0000026_1248367227_r0390_10'}
@@ -152,7 +152,7 @@ class JSONUtilsTest(object):
         var_2 = json['savedVariantsByGuid'][variant_guid_2]
         self.assertEqual(var_2['variantId'], '12-48367227-TC-T')
         self.assertSetEqual(set(var_2['tagGuids']), v2_tag_guids)
-        self.assertListEqual(var_2['noteGuids'], v2_note_guids)
+        self.assertSetEqual(set(var_2['noteGuids']), set(v2_note_guids))
 
         self.assertSetEqual(set(json['variantTagsByGuid'].keys()), v1_tag_guids | v2_tag_guids)
         self.assertSetEqual(set(next(iter(json['variantTagsByGuid'].values())).keys()), TAG_FIELDS)

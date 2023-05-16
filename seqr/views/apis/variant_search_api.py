@@ -10,11 +10,9 @@ from django.db.models import Q, F, Value
 from math import ceil
 
 from reference_data.models import GENOME_VERSION_GRCh37
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, \
-    Sample
-from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
-from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
-from seqr.utils.search_backend.hail_search import HailSearch
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
+from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples
+from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
@@ -59,8 +57,8 @@ def query_variants_handler(request, search_hash):
     _check_results_permission(results_model, request.user)
     skip_genotype_filter = bool(_all_project_family_search_genome(search_context))
 
-    variants, total_results = get_es_variants(results_model, es_search_cls=HailSearch, sort=sort, page=page, num_results=per_page,
-                                              skip_genotype_filter=skip_genotype_filter, user=request.user)
+    variants, total_results = query_variants(results_model, sort=sort, page=page, num_results=per_page,
+                                             skip_genotype_filter=skip_genotype_filter, user=request.user)
 
     response = _process_variants(variants or [], results_model.families.all(), request)
     response['search'] = _get_search_context(results_model)
@@ -125,7 +123,7 @@ def query_single_variant_handler(request, variant_id):
     families = Family.objects.filter(guid=request.GET.get('familyGuid'))
     check_project_permissions(families.first().project, request.user)
 
-    variant = get_single_es_variant(families, variant_id, user=request.user)
+    variant = get_single_variant(families, variant_id, user=request.user)
 
     response = _process_variants([variant], families, request, add_all_context=True, add_locus_list_detail=True)
 
@@ -196,7 +194,7 @@ VARIANT_EXPORT_DATA = [
     {'header': 'alt'},
     {'header': 'gene', 'value_path': '{transcripts: transcripts.*[].{value: geneSymbol, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
     {'header': 'worst_consequence', 'value_path': '{transcripts: transcripts.*[].{value: majorConsequence, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
-    {'header': '1kg_freq', 'value_path': 'populations.g1k.af'},
+    {'header': 'callset_freq', 'value_path': 'populations.callset.af'},
     {'header': 'exac_freq', 'value_path': 'populations.exac.af'},
     {'header': 'gnomad_genomes_freq', 'value_path': 'populations.gnomad_genomes.af'},
     {'header': 'gnomad_exomes_freq', 'value_path': 'populations.gnomad_exomes.af'},
@@ -244,7 +242,7 @@ def get_variant_gene_breakdown(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
     _check_results_permission(results_model, request.user)
 
-    gene_counts = get_es_variant_gene_counts(results_model, user=request.user)
+    gene_counts = get_variant_query_gene_counts(results_model, user=request.user)
     return create_json_response({
         'searchGeneBreakdown': {search_hash: gene_counts},
         'genesById': get_genes_for_variant_display(list(gene_counts.keys())),
@@ -261,7 +259,7 @@ def export_variants_handler(request, search_hash):
     families = results_model.families.all()
     family_ids_by_guid = {family.guid: family.family_id for family in families}
 
-    variants, _ = get_es_variants(results_model, page=1, load_all=True, user=request.user)
+    variants, _ = query_variants(results_model, page=1, load_all=True, user=request.user)
     variants = _flatten_variants(variants)
 
     saved_variants, variants_by_id = _get_saved_variant_models(variants, families)
@@ -379,9 +377,8 @@ def search_context_handler(request):
         analysisStatus=F('analysis_status'),
     )}
 
-    project_dataset_types = Sample.objects.filter(
-        individual__family__project__in=projects, is_active=True, elasticsearch_index__isnull=False,
-    ).values('individual__family__project__guid').annotate(dataset_types=ArrayAgg('dataset_type', distinct=True))
+    project_dataset_types = get_search_samples(projects).values('individual__family__project__guid').annotate(
+        dataset_types=ArrayAgg('dataset_type', distinct=True))
     for agg in project_dataset_types:
         response['projectsByGuid'][agg['individual__family__project__guid']]['datasetTypes'] = agg['dataset_types']
 

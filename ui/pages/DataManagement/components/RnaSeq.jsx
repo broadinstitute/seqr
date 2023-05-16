@@ -20,7 +20,7 @@ const mapStateToProps = state => ({
       name: 'dataType',
       label: 'Data Type',
       component: Select,
-      options: ['Outlier', 'TPM'].map(text => ({ text, value: text.toLowerCase() })),
+      options: ['Outlier', 'TPM', 'Splice Outlier'].map(text => ({ text, value: text.toLowerCase().replace(' ', '_') })),
       validate: validators.required,
     },
     {
