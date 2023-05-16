@@ -134,6 +134,7 @@ class HailSearch(object):
         end_offset = num_results * page
         self._search_body['num_results'] = end_offset
 
+        print(self._search_body)
         response = requests.post('http://hail-search:5000/search', json=self._search_body)  # TODO from settings
         response.raise_for_status()
         response_json = response.json()
