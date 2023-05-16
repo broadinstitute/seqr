@@ -38,7 +38,7 @@ django==3.2.19
     #   social-auth-app-django
 django-anymail==10.0
     # via -r requirements.in
-django-cors-headers==4.0.0
+django-cors-headers==3.14.0
     # via -r requirements.in
 django-csp==3.7
     # via -r requirements.in
