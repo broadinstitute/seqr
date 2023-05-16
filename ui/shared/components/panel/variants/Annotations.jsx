@@ -14,6 +14,7 @@ import Transcripts from './Transcripts'
 import VariantGenes, { LocusListLabels } from './VariantGene'
 import { getLocus, has37Coords, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
 import { GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS } from '../../../utils/constants'
+import SpliceOutlierLabel from './SpliceOutlierLabel'
 
 const LargeText = styled.div`
   font-size: 1.2em;
@@ -341,7 +342,7 @@ const svSizeDisplay = (size) => {
   return `${(size / 1000000).toFixed(2) / 1}Mb`
 }
 
-const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
+const Annotations = React.memo(({ variant, mainGeneId, showMainGene, updateReads }) => {
   const {
     rsid, svType, numExon, pos, end, svTypeDetail, svSourceDetail, cpxIntervals, algorithms, bothsidesSupport,
     endChrom,
@@ -510,6 +511,7 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
       ).map(e => <div key={e}>{e}</div>)]}
       <VerticalSpacer height={5} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
+      <SpliceOutlierLabel variant={variant} updateReads={updateReads} />
       <VerticalSpacer height={5} />
       <SearchLinks variant={variant} mainTranscript={mainTranscript} />
     </div>
@@ -520,6 +522,7 @@ Annotations.propTypes = {
   variant: PropTypes.object,
   mainGeneId: PropTypes.string,
   showMainGene: PropTypes.bool,
+  updateReads: PropTypes.func,
 }
 
 export default Annotations

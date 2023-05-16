@@ -84,7 +84,7 @@ const tagFamily = tag => (
 const VariantLayout = (
   {
     variant, compoundHetToggle, mainGeneId, isCompoundHet, linkToSavedVariants, topContent,
-    bottomContent, children, updateReads, ...rowProps
+    bottomContent, children, ...rowProps
   },
 ) => {
   const coreVariant = Array.isArray(variant) ? variant[0] : variant
@@ -107,15 +107,9 @@ const VariantLayout = (
       {!isCompoundHet && (
         <Grid.Column width={4}>
           {!mainGeneId && coreVariant.svName && <Header size="medium" content={coreVariant.svName} />}
-          {mainGeneId ? (
-            <VariantGene
-              geneId={mainGeneId}
-              variant={coreVariant}
-              compoundHetToggle={compoundHetToggle}
-              updateReads={updateReads}
-              familyGuid={variant.familyGuids[0]}
-            />
-          ) : <VariantGenes variant={variant} />}
+          {mainGeneId ?
+            <VariantGene geneId={mainGeneId} variant={coreVariant} compoundHetToggle={compoundHetToggle} /> :
+            <VariantGenes variant={variant} />}
         </Grid.Column>
       )}
       <Grid.Column width={isCompoundHet ? 16 : 12}>
@@ -137,11 +131,11 @@ VariantLayout.propTypes = {
   topContent: PropTypes.node,
   bottomContent: PropTypes.node,
   children: PropTypes.node,
-  updateReads: PropTypes.func,
-  familyGuid: PropTypes.string,
 }
 
-const Variant = React.memo(({ variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, ...props }) => {
+const Variant = React.memo((
+  { variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, updateReads, ...props },
+) => {
   const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)
   return (
     <VariantLayout
@@ -174,7 +168,12 @@ const Variant = React.memo(({ variant, mainGeneId, reads, showReads, dispatch, i
       <Grid columns="equal">
         <Grid.Row>
           <Grid.Column>
-            <Annotations variant={variant} mainGeneId={variantMainGeneId} showMainGene={isCompoundHet} />
+            <Annotations
+              variant={variant}
+              mainGeneId={variantMainGeneId}
+              showMainGene={isCompoundHet}
+              updateReads={updateReads}
+            />
           </Grid.Column>
           <Grid.Column><Predictions variant={variant} /></Grid.Column>
           <Grid.Column><Frequencies variant={variant} /></Grid.Column>

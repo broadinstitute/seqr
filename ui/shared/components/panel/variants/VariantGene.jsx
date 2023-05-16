@@ -7,12 +7,9 @@ import { Label, Popup, List, Header, Segment, Divider, Table, Button, Loader } f
 
 import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/selectors'
 import DataTable from 'shared/components/table/DataTable'
-import { getLocus } from 'shared/components/panel/variants/VariantUtils'
-import { COVERAGE_TYPE, JUNCTION_TYPE } from 'shared/components/panel/family/constants'
 import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
   MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
-  RNASEQ_JUNCTION_PADDING, RNA_SEQ_SPLICE_COLUMNS,
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
@@ -89,7 +86,7 @@ const LocusListsContainer = styled.div`
   overflow-y: auto;
 `
 
-const GeneLabel = React.memo(({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
+export const GeneLabel = React.memo(({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
   const content = <GeneLabelContent {...labelProps} />
   return (popupContent || showEmpty) ?
     <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide hoverable /> : content
@@ -328,11 +325,6 @@ const RNA_SEQ_EXPRESSION_COLUMNS = [
   )),
 ]
 
-const RNA_SEQ_SPLICE_TAB_COLUMNS = [
-  INDIVIDUAL_NAME_COLUMN,
-  ...RNA_SEQ_SPLICE_COLUMNS,
-]
-
 const PHENOTYPE_GENE_INFO_COLUMNS = [
   INDIVIDUAL_NAME_COLUMN,
   {
@@ -414,7 +406,7 @@ const GENE_DETAIL_SECTIONS = [
   },
   {
     color: 'pink',
-    description: 'RNA-Seq OUTRIDER Outlier',
+    description: 'RNA-Seq Expression Outlier',
     label: 'RNA Expression',
     showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqExpData && indivGeneData.rnaSeqExpData[gene.geneId],
     detailsDisplay: (gene, indivGeneData) => (
@@ -428,35 +420,6 @@ const GENE_DETAIL_SECTIONS = [
         />
       </div>
     ),
-  },
-  {
-    color: 'pink',
-    description: 'RNA-Seq FRASER Outlier',
-    label: 'RNA Splice',
-    showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqSplData && indivGeneData.rnaSeqSplData[gene.geneId],
-    detailsDisplay: (gene, indivGeneData, onClickRow) => {
-      const data = indivGeneData.rnaSeqSplData[gene.geneId]
-      // eslint-disable-next-line react-perf/jsx-no-new-function-as-prop
-      const handleClick = (rowId) => {
-        const row = data.find(r => r.idField === rowId)
-        const { chrom, start, end, tissueType } = row
-        onClickRow(
-          getLocus(chrom, start, RNASEQ_JUNCTION_PADDING, end - start), [JUNCTION_TYPE, COVERAGE_TYPE], tissueType,
-        )
-      }
-      return (
-        <div>
-          This gene is flagged as an outlier for RNA-Seq in the following samples
-          <DataTable
-            {...HOVER_DATA_TABLE_PROPS}
-            data={data}
-            idField="idField"
-            columns={RNA_SEQ_SPLICE_TAB_COLUMNS}
-            onClickRow={handleClick}
-          />
-        </div>
-      )
-    },
   },
   {
     color: 'orange',
@@ -503,11 +466,11 @@ const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: tru
   }
 `
 
-const getDetailSections = (configs, gene, compact, labelProps, individualGeneData, noExpand, onClickRow) => configs.map(
+const getDetailSections = (configs, gene, compact, labelProps, individualGeneData, noExpand) => configs.map(
   ({ showDetails, detailsDisplay, ...sectionConfig }) => (
     {
       ...sectionConfig,
-      detail: showDetails(gene, individualGeneData) && detailsDisplay(gene, individualGeneData, onClickRow),
+      detail: showDetails(gene, individualGeneData) && detailsDisplay(gene, individualGeneData),
     }),
 ).filter(({ detail }) => detail).reduce((acc, config) => (Array.isArray(config.detail) ?
   [
@@ -535,16 +498,10 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
   )
 ))
 
-export const GeneDetails = React.memo(({
-  gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, updateReads, familyGuid,
-  ...labelProps
-}) => {
-  const onClickRow = (locus, trackType, tissueType) => {
-    updateReads(familyGuid, locus, trackType, tissueType)
-  }
-  const geneDetails = getDetailSections(
-    GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData, null, onClickRow,
-  )
+export const GeneDetails = React.memo((
+  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, ...labelProps },
+) => {
+  const geneDetails = getDetailSections(GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData)
   const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps, null, noExpand)
   const hasLocusLists = showLocusLists && gene.locusListGuids?.length > 0
   const showDivider = !showInlineDetails && geneDetails.length > 0 && (hasLocusLists || geneDiseaseDetails.length > 0)
@@ -575,8 +532,6 @@ GeneDetails.propTypes = {
   showInlineDetails: PropTypes.bool,
   noExpand: PropTypes.bool,
   individualGeneData: PropTypes.object,
-  updateReads: PropTypes.func,
-  familyGuid: PropTypes.string,
 }
 
 const GeneSearchLinkWithPopup = props => (
@@ -597,7 +552,7 @@ const getGeneConsequence = (geneId, variant) => {
 
 export const BaseVariantGene = React.memo(({
   geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, tpmGenes, individualGeneData, geneModalId,
-  noExpand, geneSearchFamily, updateReads, familyGuid,
+  noExpand, geneSearchFamily,
 }) => {
   const geneConsequence = variant && getGeneConsequence(geneId, variant)
 
@@ -616,8 +571,6 @@ export const BaseVariantGene = React.memo(({
       margin={showInlineDetails ? '1em .5em 0px 0px' : null}
       horizontal={showInlineDetails}
       individualGeneData={individualGeneData}
-      updateReads={updateReads}
-      familyGuid={familyGuid}
       showLocusLists
     />
   )
@@ -703,9 +656,7 @@ BaseVariantGene.propTypes = {
   compoundHetToggle: PropTypes.func,
   geneModalId: PropTypes.string,
   noExpand: PropTypes.bool,
-  updateReads: PropTypes.func,
   geneSearchFamily: PropTypes.string,
-  familyGuid: PropTypes.string,
   ...RNA_SEQ_PROP_TYPES,
 }
 
