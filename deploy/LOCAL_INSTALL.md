@@ -94,7 +94,7 @@ This is expected to take a while
    Periodically, you may want to update the reference data in order to get the latest versions of these annotations. 
 To do this, run the following commands to update the data. All subsequently loaded data will then have the updated 
 annotations, but you will need to re-load previously loaded projects to get the updated annotations.
-    ```bash
+   ```bash
    GS_BUCKET=gs://your-bucket       # your google bucket
    BUILD_VERSION=38                 # can be 37 or 38
    
@@ -106,6 +106,7 @@ annotations, but you will need to re-load previously loaded projects to get the 
    gsutil rm -r "${GS_BUCKET}/reference_data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
    gsutil rsync -r "gs://seqr-reference-data/GRCh${BUILD_VERSION}/all_reference_data/combined_reference_data_grch${BUILD_VERSION}.ht" "${GS_BUCKET}/reference_data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
     ```
+
 1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
    ```bash
    BUILD_VERSION=38                 # can be 37 or 38
@@ -149,7 +150,7 @@ This is expected to take a while
    docker-compose exec pipeline-runner download_reference_data.sh $BUILD_VERSION
    
    ``` 
-    Periodically, you may want to update the reference data in order to get the latest versions of these annotations. 
+   Periodically, you may want to update the reference data in order to get the latest versions of these annotations. 
 To do this, run the following commands to update the data. All subsequently loaded data will then have the updated 
 annotations, but you will need to re-load previously loaded projects to get the updated annotations.
     ```bash
