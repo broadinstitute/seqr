@@ -68,7 +68,7 @@ The steps below describe how to annotate a callset and then load it into your on
    gcloud auth application-default login  
    ```
 
-1upload your .vcf.gz callset to a google bucket
+1. upload your .vcf.gz callset to a google bucket
    ```bash
    GS_BUCKET=gs://your-bucket       # your google bucket
    GS_FILE_PATH=data/GRCh38         # the desired file path. Good to include build version and/ or sample type to directory structure
