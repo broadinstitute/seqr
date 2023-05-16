@@ -124,7 +124,7 @@ class HailSearch(object):
 
         self._search_body.update(dict(
             intervals=parsed_intervals, exclude_intervals=exclude_locations,
-            gene_ids=None if exclude_locations else set(genes.keys()), variant_ids=variant_ids,
+            gene_ids=None if exclude_locations else list(genes.keys()), variant_ids=variant_ids,
             inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, annotations=annotations,
             **kwargs,
         ))
