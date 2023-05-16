@@ -299,7 +299,8 @@ const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, us
     }
   }).sort((a, b) => a.title.localeCompare(b.title))
 
-  if (!datasetSections.length) {
+  const noLoadedData = !datasetSections.length
+  if (noLoadedData) {
     datasetSections.push({
       title: 'Datasets',
       content: (
@@ -332,7 +333,7 @@ const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, us
     <DetailSection
       {...sectionProps}
       button={(datasetSections.length - 1 === i) ?
-        <EditDatasetsButton showLoadWorkspaceData={showLoadWorkspaceData} user={user} /> : null}
+        <EditDatasetsButton showLoadWorkspaceData={showLoadWorkspaceData && !noLoadedData} user={user} /> : null}
     />
   ))
 })

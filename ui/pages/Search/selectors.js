@@ -11,6 +11,7 @@ import {
   getUser,
   getProjectDatasetTypes,
 } from 'redux/selectors'
+import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
 
 export const getSearchContextIsLoading = state => state.searchContextLoading.isLoading
@@ -159,7 +160,12 @@ export const getFamilyOptions = createSelector(
   getFamiliesGroupedByProjectGuid,
   (state, props) => props.value.projectGuid,
   (familesGroupedByProjectGuid, projectGuid) => Object.values(familesGroupedByProjectGuid[projectGuid] || {}).map(
-    family => ({ value: family.familyGuid, text: family.displayName }),
+    ({ familyGuid, displayName, analysisStatus }) => ({
+      value: familyGuid,
+      text: displayName,
+      analysisStatus,
+      color: FAMILY_ANALYSIS_STATUS_LOOKUP[analysisStatus].color,
+    }),
   ),
 )
 

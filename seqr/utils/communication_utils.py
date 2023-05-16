@@ -1,10 +1,10 @@
 import logging
 from slacker import Slacker
-from settings import SLACK_TOKEN, BASE_URL, ANVIL_UI_URL
+from settings import SLACK_TOKEN, BASE_URL
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
 
-from seqr.views.utils.terra_api_utils import anvil_enabled, google_auth_enabled
+from seqr.views.utils.terra_api_utils import google_auth_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +31,6 @@ def _post_to_slack(channel, message):
 def send_welcome_email(user, referrer):
     if google_auth_enabled():
         setup_message = 'You can now log into seqr using your Google account:\n    {}login/google-oauth2'.format(BASE_URL)
-    elif anvil_enabled():
-        setup_message = 'Please make sure this account is registered in AnVIL by signing in to {} and registering.'.format(
-            ANVIL_UI_URL
-        )
-        setup_message += ' Once you are registered in AnVIL, you will be able to access seqr at {}'.format(BASE_URL)
     else:
         setup_message = 'Please click this link to set up your account:\n    {}login/set_password/{}'.format(
             BASE_URL, user.password)

@@ -6,23 +6,27 @@
 #
 asgiref==3.6.0
     # via django
+async-timeout==4.0.2
+    # via redis
 cachetools==5.3.0
     # via google-auth
-certifi==2022.12.7
+certifi==2023.5.7
     # via
     #   elasticsearch
     #   requests
 cffi==1.15.1
     # via cryptography
-charset-normalizer==3.0.1
+charset-normalizer==3.1.0
     # via requests
-cryptography==39.0.1
-    # via social-auth-core
+cryptography==40.0.2
+    # via
+    #   django-anymail
+    #   social-auth-core
 defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
-django==3.2.18
+django==3.2.19
     # via
     #   -r requirements.in
     #   django-anymail
@@ -31,7 +35,8 @@ django==3.2.18
     #   django-guardian
     #   django-hijack
     #   django-storages
-django-anymail==9.0
+    #   social-auth-app-django
+django-anymail==10.0
     # via -r requirements.in
 django-cors-headers==3.14.0
     # via -r requirements.in
@@ -39,7 +44,7 @@ django-csp==3.7
     # via -r requirements.in
 django-guardian==2.4.0
     # via -r requirements.in
-django-hijack==3.2.6
+django-hijack==3.3.0
     # via -r requirements.in
 django-storages[google]==1.11.1
     # via -r requirements.in
@@ -57,7 +62,7 @@ google-api-core[grpc]==2.11.0
     #   google-cloud-core
     #   google-cloud-logging
     #   google-cloud-storage
-google-auth==2.16.1
+google-auth==2.18.0
     # via
     #   google-api-core
     #   google-cloud-core
@@ -78,18 +83,18 @@ google-cloud-storage==1.44.0
     #   django-storages
 google-crc32c==1.5.0
     # via google-resumable-media
-google-resumable-media==2.4.1
+google-resumable-media==2.5.0
     # via google-cloud-storage
-googleapis-common-protos==1.58.0
+googleapis-common-protos==1.59.0
     # via
     #   google-api-core
     #   google-cloud-audit-log
     #   grpcio-status
-grpcio==1.51.3
+grpcio==1.54.2
     # via
     #   google-api-core
     #   grpcio-status
-grpcio-status==1.51.3
+grpcio-status==1.54.2
     # via google-api-core
 gunicorn==20.1.0
     # via -r requirements.in
@@ -101,19 +106,19 @@ oauthlib==3.2.2
     # via
     #   requests-oauthlib
     #   social-auth-core
-openpyxl==3.1.1
+openpyxl==3.1.2
     # via -r requirements.in
-packaging==23.0
+packaging==23.1
     # via
     #   google-cloud-appengine-logging
     #   google-cloud-logging
-pillow==9.4.0
+pillow==9.5.0
     # via -r requirements.in
 proto-plus==1.22.2
     # via
     #   google-cloud-appengine-logging
     #   google-cloud-logging
-protobuf==4.22.0
+protobuf==4.23.0
     # via
     #   google-api-core
     #   google-cloud-audit-log
@@ -121,17 +126,17 @@ protobuf==4.22.0
     #   googleapis-common-protos
     #   grpcio-status
     #   proto-plus
-psycopg2-binary==2.9.5
+psycopg2-binary==2.9.6
     # via -r requirements.in
-pyasn1==0.4.8
+pyasn1==0.5.0
     # via
     #   pyasn1-modules
     #   rsa
-pyasn1-modules==0.2.8
+pyasn1-modules==0.3.0
     # via google-auth
 pycparser==2.21
     # via cffi
-pyjwt==2.6.0
+pyjwt==2.7.0
     # via social-auth-core
 pyliftover==0.4
     # via -r requirements.in
@@ -139,11 +144,11 @@ python-dateutil==2.8.2
     # via elasticsearch-dsl
 python3-openid==3.2.0
     # via social-auth-core
-pytz==2022.7.1
+pytz==2023.3
     # via django
-redis==3.3.11
+redis==4.5.5
     # via -r requirements.in
-requests==2.28.2
+requests==2.30.0
     # via
     #   -r requirements.in
     #   django-anymail
@@ -155,7 +160,7 @@ requests==2.28.2
     #   social-auth-core
 requests-oauthlib==1.3.1
     # via social-auth-core
-requests-toolbelt==0.10.1
+requests-toolbelt==1.0.0
     # via -r requirements.in
 rsa==4.9
     # via google-auth
@@ -169,19 +174,21 @@ slacker==0.14.0
     # via -r requirements.in
 slugify==0.0.1
     # via -r requirements.in
-social-auth-app-django==5.0.0
+social-auth-app-django==5.2.0
     # via -r requirements.in
-social-auth-core==4.3.0
+social-auth-core==4.4.2
     # via
     #   -r requirements.in
     #   social-auth-app-django
-sqlparse==0.4.3
+sqlparse==0.4.4
     # via django
-tqdm==4.64.1
+tqdm==4.65.0
     # via -r requirements.in
-urllib3==1.26.14
+urllib3==1.26.15
     # via
+    #   django-anymail
     #   elasticsearch
+    #   google-auth
     #   requests
 whitenoise==6.4.0
     # via -r requirements.in

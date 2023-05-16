@@ -1,35 +1,28 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import { Input } from 'semantic-ui-react'
 
-import AwesomeBar from 'shared/components/page/AwesomeBar'
+import ProjectSelector from 'shared/components/page/ProjectSelector'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { InlineHeader } from 'shared/components/StyledComponents'
 
-const SEARCH_CATEGORIES = ['projects']
+class AnvilDownload extends React.PureComponent {
 
-class Anvil extends React.PureComponent {
+  static propTypes = {
+    project: PropTypes.object,
+  }
 
   state = {}
-
-  onResultSelect = ({ title, key }) => {
-    this.setState({ project: { title, guid: key } })
-  }
 
   onDataChange = (e, { value }) => {
     this.setState({ loadedBefore: value })
   }
 
   render() {
-    const { project, loadedBefore } = this.state
+    const { project } = this.props
+    const { loadedBefore } = this.state
     return (
-      <div>
-        <InlineHeader size="medium" content="Project:" />
-        <AwesomeBar
-          categories={SEARCH_CATEGORIES}
-          placeholder="Enter project name"
-          inputwidth="350px"
-          onResultSelect={this.onResultSelect}
-        />
+      <span>
         <HorizontalSpacer width={20} />
         <InlineHeader size="medium" content="Loaded Before:" />
         <Input type="date" onChange={this.onDataChange} />
@@ -40,10 +33,10 @@ class Anvil extends React.PureComponent {
             </a>
           </div>
         )}
-      </div>
+      </span>
     )
   }
 
 }
 
-export default Anvil
+export default () => <ProjectSelector layout={AnvilDownload} />

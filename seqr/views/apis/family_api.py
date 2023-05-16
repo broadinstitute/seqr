@@ -51,8 +51,6 @@ def family_page_data(request, family_guid):
     for sample in outlier_samples:
         individual_guid = response['samplesByGuid'][sample.guid]['individualGuid']
         response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
-    if sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA).exclude(rnaseqtpm=None):
-        response['familiesByGuid'][family_guid]['hasRnaTpmData'] = True
 
     has_phentoype_score_indivs = PhenotypePrioritization.objects.filter(individual__family=family).values_list(
         'individual__guid', flat=True)

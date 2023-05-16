@@ -48,7 +48,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['familiesByGuid']), 1)
         family = response_json['familiesByGuid'][FAMILY_GUID]
-        family_fields = {'individualGuids', 'hasRnaTpmData', 'detailsLoaded'}
+        family_fields = {'individualGuids', 'detailsLoaded'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(family.keys()), family_fields)
         self.assertEqual(family['projectGuid'], PROJECT_GUID)
@@ -68,11 +68,11 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
 
-        self.assertEqual(len(response_json['samplesByGuid']), 4)
+        self.assertEqual(len(response_json['samplesByGuid']), 6)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['samplesByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['samplesByGuid'].values()})
-        self.assertEqual(len(individual['sampleGuids']), 2)
+        self.assertEqual(len(individual['sampleGuids']), 4)
         self.assertTrue(set(individual['sampleGuids']).issubset(set(response_json['samplesByGuid'].keys())))
 
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
@@ -488,10 +488,8 @@ class FamilyAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
-            'M': {
-                'individualData': {'NA19675_1': 8.38},
-                'rdgData': [1.01, 8.38],
-            }
+            'F': {'individualData': {'NA19675_1': 1.01}, 'rdgData': [1.01]},
+            'M': {'individualData': {'NA19675_1': 8.38}, 'rdgData': [8.38]}
         })
 
     def test_get_family_phenotype_gene_scores(self):

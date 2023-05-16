@@ -429,6 +429,7 @@ ES_SV_WGS_VARIANT = {
           'gq': 33,
           'sample_id': 'NA21234',
           'num_alt': 1,
+          'prev_num_alt': 2,
         }
       ],
       'xpos': 2049045387,
@@ -714,6 +715,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
         'genomeVersion': '37',
         'selectedMainTranscriptId': None,
     })
+    variant['clinvar']['version'] = None
 
 PARSED_NO_CONSEQUENCE_FILTER_VARIANTS = deepcopy(PARSED_VARIANTS)
 PARSED_NO_CONSEQUENCE_FILTER_VARIANTS[1]['selectedMainTranscriptId'] = None
@@ -750,6 +752,7 @@ PARSED_HG38_VARIANT.update({
     ),
     '_sort': [PARSED_MULTI_INDEX_VARIANT['_sort'][0] + 10],
 })
+PARSED_HG38_VARIANT['clinvar']['version'] = None
 
 PARSED_MULTI_SAMPLE_MULTI_INDEX_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
 for guid, genotype in PARSED_MULTI_SAMPLE_MULTI_INDEX_VARIANT['genotypes'].items():
@@ -762,6 +765,11 @@ for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT['genotypes'].items():
 PARSED_MULTI_SAMPLE_VARIANT_0 = deepcopy(PARSED_VARIANTS[0])
 for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'].items():
     PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+
+PARSED_MULTI_SAMPLE_COMPOUND_HET_VARIANTS = deepcopy(PARSED_COMPOUND_HET_VARIANTS)
+for variant in PARSED_MULTI_SAMPLE_COMPOUND_HET_VARIANTS:
+    for guid, genotype in variant['genotypes'].items():
+        variant['genotypes'][guid] = dict(otherSample=genotype, **genotype)
 
 
 PARSED_ANY_AFFECTED_MULTI_INDEX_VERSION_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
@@ -989,7 +997,7 @@ MAPPING_PROPERTIES = {field: FIELD_TYPE_MAP.get(field, {'type': 'keyword'}) for 
 
 CORE_INDEX_METADATA = {
     INDEX_NAME: {
-        '_meta': {'genomeVersion': '37'},
+        '_meta': {'genomeVersion': '37', 'clinvar_version': '2023-03-05'},
         'properties': MAPPING_PROPERTIES,
     },
     SECOND_INDEX_NAME: {
@@ -2348,21 +2356,25 @@ class EsUtilsTest(TestCase):
     def test_multi_datatype_secondary_annotations_recessive_get_es_variants(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'structural': ['gCNV_DEL']},
+            'annotations': {'structural': ['DEL']},
             'annotations_secondary': {'frameshift': ['frameshift_variant']},
             'inheritance': {'mode': 'recessive'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        get_es_variants(results_model, num_results=10)
+        variants, _ = get_es_variants(results_model, num_results=10)
+        self.assertEqual(len(variants), 2)
+        self.assertDictEqual(variants[0], PARSED_SV_VARIANT)
+        self.assertDictEqual(variants[1][0], PARSED_SV_COMPOUND_HET_VARIANTS[0])
+        self.assertDictEqual(variants[1][1], PARSED_SV_COMPOUND_HET_VARIANTS[1])
 
-        annotation_secondary_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'gCNV_DEL']}}
+        annotation_secondary_query = {'terms': {'transcriptConsequenceTerms': ['DEL', 'frameshift_variant']}}
 
         self.assertExecutedSearches([
             dict(
                 filters=[
-                    {'terms': {'transcriptConsequenceTerms': ['gCNV_DEL']}},
+                    {'terms': {'transcriptConsequenceTerms': ['DEL']}},
                     {'bool': {
                         '_name': 'F000002_2',
                         'must': [{
@@ -2481,12 +2493,12 @@ class EsUtilsTest(TestCase):
         self.assertEqual(len(variants), 2)
         self.assertEqual(total_results, 9)
         self.assertDictEqual(variants[0], PARSED_MULTI_SAMPLE_VARIANT_0)
-        self.assertListEqual(variants[1], PARSED_COMPOUND_HET_VARIANTS)
+        self.assertListEqual(variants[1], PARSED_MULTI_SAMPLE_COMPOUND_HET_VARIANTS)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
             'variant_results': [PARSED_MULTI_SAMPLE_VARIANT],
-            'grouped_results': [{'null': [PARSED_MULTI_SAMPLE_VARIANT_0]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
+            'grouped_results': [{'null': [PARSED_MULTI_SAMPLE_VARIANT_0]}, {'ENSG00000228198': PARSED_MULTI_SAMPLE_COMPOUND_HET_VARIANTS}],
             'duplicate_doc_count': 3,
             'loaded_variant_counts': {'test_index_compound_het': {'total': 2, 'loaded': 2},
                                       INDEX_NAME: {'loaded': 4, 'total': 10}},

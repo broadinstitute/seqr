@@ -179,6 +179,11 @@ export const FAMILY_ANALYSIS_STATUS_LOOKUP = ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.
   (acc, tag) => ({ [tag.value]: tag, ...acc }), {},
 )
 
+export const SOLVED_FAMILY_STATUS_OPTIONS = new Set([
+  FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE, FAMILY_STATUS_SOLVED_KNOWN_GENE_DIFFERENT_PHENOTYPE,
+  FAMILY_STATUS_SOLVED_NOVEL_GENE, FAMILY_STATUS_EXTERNAL_SOLVE, FAMILY_STATUS_SOLVED,
+])
+
 export const SNP_DATA_TYPE = 'SNP'
 export const FAMILY_ANALYSED_BY_DATA_TYPES = [
   [SNP_DATA_TYPE, 'WES/WGS'],
@@ -1263,6 +1268,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'alt' },
   { header: 'gene', getVal: variant => getVariantMainTranscript(variant).geneSymbol },
   { header: 'worst_consequence', getVal: variant => getVariantMainTranscript(variant).majorConsequence },
+  { header: 'callset_freq', getVal: getPopAf('callset') },
   { header: 'exac_freq', getVal: getPopAf('exac') },
   { header: 'gnomad_genomes_freq', getVal: getPopAf('gnomad_genomes') },
   { header: 'gnomad_exomes_freq', getVal: getPopAf('gnomad_exomes') },
