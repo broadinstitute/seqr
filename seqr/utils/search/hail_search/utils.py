@@ -4,9 +4,9 @@ from django.db.models import F
 from hail_search.search import search_hail_backend
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
 from seqr.models import Individual, Sample, PhenotypePrioritization
-from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, MAX_NO_LOCATION_COMP_HET_FAMILIES
-from seqr.utils.elasticsearch.utils import InvalidSearchException
-from seqr.utils.elasticsearch.es_search import EsSearch
+from seqr.utils.search.constants import RECESSIVE, COMPOUND_HET, MAX_NO_LOCATION_COMP_HET_FAMILIES
+from seqr.utils.search.utils import InvalidSearchException
+from seqr.utils.search.es_search import EsSearch
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 
 
