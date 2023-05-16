@@ -104,10 +104,6 @@ spec:
           value: "4"
         - name: POSTGRES_SERVICE_HOSTNAME
           value: "127.0.0.1"
-        - name: ELASTICSEARCH_SERVICE_HOSTNAME
-          value: "elasticsearch-es-http"
-        - name: KIBANA_SERVICE_HOSTNAME
-          value: "kibana-kb-http"
         - name: REDIS_SERVICE_HOSTNAME
           value: "redis"
         - name: POSTGRES_SERVICE_PORT
