@@ -76,7 +76,7 @@ class HailSearch(object):
         return EsSearch.process_previous_results(*args, **kwargs)
 
     def filter_variants(self, inheritance=None, genes=None, intervals=None, variant_ids=None, locus=None,
-                        annotations=None, skip_genotype_filter=False, **kwargs):
+                        annotations=None, **kwargs):
         parsed_intervals = None
         if variant_ids:
             variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
@@ -141,3 +141,30 @@ class HailSearch(object):
         self.previous_search_results['total_results'] = total_results
         self.previous_search_results['all_results'] = hail_results
         return hail_results[end_offset - num_results:end_offset]
+
+
+def get_hail_variants(families, search, user, previous_search_results, sort=None, page=None, num_results=None,
+                      gene_agg=False, skip_genotype_filter=False):
+    if gene_agg:
+        raise NotImplementedError
+    if skip_genotype_filter:
+        raise NotImplementedError
+
+    search_cls = HailSearch(
+        families,
+        previous_search_results=previous_search_results,
+        user=user,
+        sort=sort,
+    )
+
+    search_cls.filter_variants(
+        inheritance=search.get('inheritance'), frequencies=search.get('freqs'),
+        pathogenicity=search.get('pathogenicity'),
+        annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
+        in_silico=search.get('in_silico'), quality_filter=search.get('qualityFilter'),
+        custom_query=search.get('customQuery'), locus=search.get('locus'),
+        **search.get('parsedLocus')
+
+    )
+
+    return search_cls.search(page=page, num_results=num_results)

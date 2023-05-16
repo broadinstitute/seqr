@@ -8,6 +8,7 @@ from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
+from seqr.utils.search.hail_search.utils import get_hail_variants
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 
@@ -139,7 +140,7 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     }
     parsed_search.update(search)
 
-    variant_results = backend_specific_call(get_es_variants)(
+    variant_results = backend_specific_call(get_es_variants, get_hail_variants)(
         search_model.families.all(), parsed_search, user, previous_search_results, sort=sort, num_results=num_results,
         **kwargs,
     )
