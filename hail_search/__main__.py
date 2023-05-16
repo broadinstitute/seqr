@@ -1,4 +1,5 @@
 from aiohttp import web
+import logging
 
 from hail_search.search import search_hail_backend
 
@@ -9,6 +10,7 @@ async def search(request: web.Request) -> web.Response:
 
 
 def run():
+    logging.basicConfig(level=logging.INFO)
     app = web.Application()
     app.add_routes([web.post("/search", search)])
     web.run_app(
