@@ -436,7 +436,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
 
     # 2022-04-05 mfranklin: disabled because we don't have access to gs://seqr-datasets/
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    # @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     # def test_upload_sv_qc(self, mock_subprocess):
     #     url = reverse(upload_qc_pipeline_output, )
     #     self.check_data_manager_login(url)
