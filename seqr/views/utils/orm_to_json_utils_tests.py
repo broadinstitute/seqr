@@ -152,7 +152,7 @@ class JSONUtilsTest(object):
         var_2 = json['savedVariantsByGuid'][variant_guid_2]
         self.assertEqual(var_2['variantId'], '12-48367227-TC-T')
         self.assertSetEqual(set(var_2['tagGuids']), v2_tag_guids)
-        self.assertListEqual(sorted(var_2['noteGuids']), v2_note_guids)
+        self.assertSetEqual(set(var_2['noteGuids']), set(v2_note_guids))
 
         self.assertSetEqual(set(json['variantTagsByGuid'].keys()), v1_tag_guids | v2_tag_guids)
         self.assertSetEqual(set(next(iter(json['variantTagsByGuid'].values())).keys()), TAG_FIELDS)
