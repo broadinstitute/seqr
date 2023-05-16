@@ -68,7 +68,7 @@ The steps below describe how to annotate a callset and then load it into your on
    gcloud auth application-default login  
    ```
 
-2. upload your .vcf.gz callset to a google bucket
+1upload your .vcf.gz callset to a google bucket
    ```bash
    GS_BUCKET=gs://your-bucket       # your google bucket
    GS_FILE_PATH=data/GRCh38         # the desired file path. Good to include build version and/ or sample type to directory structure
@@ -77,12 +77,12 @@ The steps below describe how to annotate a callset and then load it into your on
    gsutil cp $FILENAME $GS_BUCKET/$GS_FILE_PATH
    ```
    
-3. start a pipeline-runner container which has the necessary tools and environment for starting and submitting jobs to a Dataproc cluster.
+1. start a pipeline-runner container which has the necessary tools and environment for starting and submitting jobs to a Dataproc cluster.
    ```bash
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
    ```
    
-4. if you haven't already, upload reference data to your own google bucket. 
+1. if you haven't already, upload reference data to your own google bucket. 
 This should be done once per build version, and does not need to be repeated for subsequent loading jobs.
 This is expected to take a while
    ```bash
@@ -106,7 +106,7 @@ annotations, but you will need to re-load previously loaded projects to get the 
    gsutil rm -r "${GS_BUCKET}/reference_data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
    gsutil rsync -r "gs://seqr-reference-data/GRCh${BUILD_VERSION}/all_reference_data/combined_reference_data_grch${BUILD_VERSION}.ht" "${GS_BUCKET}/reference_data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
     ```
-5. run the loading command in the pipeline-runner container. Adjust the arguments as needed
+1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
    ```bash
    BUILD_VERSION=38                 # can be 37 or 38
    SAMPLE_TYPE=WES                  # can be WES or WGS
