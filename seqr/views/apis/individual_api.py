@@ -790,10 +790,10 @@ def get_individual_rna_seq_data(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     check_project_permissions(individual.family.project, request.user)
 
-    outlier_data = {'outliers': _get_rna_seq_data(RnaSeqOutlier, individual)}
-    outlier_data.update({
-        'spliceOutliers': _get_rna_seq_data(RnaSeqSpliceOutlier, individual, max_significant_per_tissue=50)
-    })
+    outlier_data = {
+        'outliers': _get_rna_seq_data(RnaSeqOutlier, individual),
+        'spliceOutliers': _get_rna_seq_data(RnaSeqSpliceOutlier, individual, max_significant_per_tissue=50),
+    }
 
     genes_to_show = get_genes({
         gene_id for rna_data in outlier_data.values() for gene_id, data in rna_data.items() if any([d['isSignificant'] for d in data])
