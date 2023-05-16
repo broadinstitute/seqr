@@ -161,7 +161,7 @@ annotations, but you will need to re-load previously loaded projects to get the 
   
    # Update all other reference data
    docker-compose exec pipeline-runner rm -rf "/seqr-reference-data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
-   gsutil rsync -r "gs://seqr-reference-data/GRCh${BUILD_VERSION}/all_reference_data/combined_reference_data_grch${BUILD_VERSION}.ht" "/seqr-reference-data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
+   docker-compose exec pipeline-runner gsutil rsync -r "gs://seqr-reference-data/GRCh${BUILD_VERSION}/all_reference_data/combined_reference_data_grch${BUILD_VERSION}.ht" "/seqr-reference-data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
     ```
 
 1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
