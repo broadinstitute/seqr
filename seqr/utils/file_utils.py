@@ -7,12 +7,12 @@ from seqr.utils.logging_utils import SeqrLogger
 logger = SeqrLogger(__name__)
 
 
-def run_command(command, user=None):
+def run_command(command, user=None, pipe_errors=False):
     logger.info('==> {}'.format(command), user)
-    return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True) # nosec
+    return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE if pipe_errors else subprocess.STDOUT, shell=True) # nosec
 
 
-def _run_gsutil_command(command, gs_path, gunzip=False, user=None):
+def _run_gsutil_command(command, gs_path, gunzip=False, user=None, pipe_errors=False):
     if not is_google_bucket_file_path(gs_path):
         raise Exception('A Google Storage path is expected.')
 
@@ -25,7 +25,7 @@ def _run_gsutil_command(command, gs_path, gunzip=False, user=None):
     if gunzip:
         command += " | gunzip -c -q - "
 
-    return run_command(command, user=user)
+    return run_command(command, user=user, pipe_errors=pipe_errors)
 
 
 def is_google_bucket_file_path(file_path):
@@ -108,7 +108,7 @@ def _run_gsutil_with_wait(command, gs_path, user=None):
 
 
 def _run_gsutil_with_stdout(command, gs_path, user=None):
-    process = _run_gsutil_command(command, gs_path, user=user)
+    process = _run_gsutil_command(command, gs_path, user=user, pipe_errors=True)
     output, errs = process.communicate()
     if errs:
         errors = errs.decode('utf-8').strip().replace('\n', ' ')
