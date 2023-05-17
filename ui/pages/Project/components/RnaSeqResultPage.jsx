@@ -62,10 +62,10 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     const { individual, rnaSeqData, significantJunctionOutliers, genesById } = this.props
     const { tissueType, tissueOptions } = this.state
 
-    const outlierData = Object.entries(rnaSeqData || {}).map(([key, data]) => [
-      key,
-      OUTLIER_VOLCANO_PLOT_CONFIGS[key].formatData({ data: Object.values(data || {}).flat(), tissueType }),
-    ]).filter(([, data]) => data.length)
+    const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map(({ formatData, ...config }) => ({
+      data: formatData(((rnaSeqData || {})[config.key] || {}).flat(), tissueType),
+      ...config,
+    }).filter(({ data }) => data.length)
 
     const outlierPlots = outlierData.map(([key, data]) => (
       <Grid.Column key={key} width={8}>
