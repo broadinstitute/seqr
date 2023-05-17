@@ -80,30 +80,26 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     const hasSpliceOutliers = outlierData.map(([key]) => key).includes('spliceOutliers')
 
     return (
-      <Grid>
-        <React.Suspense fallback={<Loader />}>
-          {hasSpliceOutliers && (
-            <Grid.Row>
-              <span>
-                Select a tissue type: &nbsp;
-                <Dropdown inline value={tissueType} options={tissueOptions} onChange={this.onTissueChange} />
-              </span>
-            </Grid.Row>
-          )}
-          {(outlierPlots.length > 0) && <Grid.Row divided columns={outlierPlots.length}>{outlierPlots}</Grid.Row>}
-        </React.Suspense>
-        {(significantJunctionOutliers.length > 0) && (
-          <Grid.Row centered columns={14}>
-            <React.Suspense fallback={<Loader />}>
-              <RnaSeqOutliersTable
-                familyGuid={individual.familyGuid}
-                data={significantJunctionOutliers}
-                tissueType={tissueType}
-              />
-            </React.Suspense>
-          </Grid.Row>
+      <React.Suspense fallback={<Loader />}>
+        {hasSpliceOutliers && (
+          <span>
+            Select a tissue type: &nbsp;
+            <Dropdown inline value={tissueType} options={tissueOptions} onChange={this.onTissueChange} />
+          </span>
         )}
-      </Grid>
+        {(outlierPlots.length > 0) && (
+          <Grid>
+            <Grid.Row divided columns={outlierPlots.length}>{outlierPlots}</Grid.Row>
+          </Grid>
+        )}
+        {(significantJunctionOutliers.length > 0) && (
+          <RnaSeqOutliersTable
+            familyGuid={individual.familyGuid}
+            data={significantJunctionOutliers}
+            tissueType={tissueType}
+          />
+        )}
+      </React.Suspense>
     )
   }
 
