@@ -241,7 +241,7 @@ def _get_genome_version(samples):
         project_versions[genome_version].add(project_name)
 
     if len(project_versions) > 1:
-        summary = '; '.join([f"{build} - {', '.join(sorted(projects))}" for build, projects in versions.items()])
+        summary = '; '.join([f"{build} - {', '.join(sorted(projects))}" for build, projects in project_versions.items()])
         raise InvalidSearchException(
             f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
 

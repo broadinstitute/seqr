@@ -1,5 +1,6 @@
 import json
 import mock
+from copy import deepcopy
 from datetime import datetime
 from django.urls.base import reverse
 from io import StringIO
@@ -32,7 +33,8 @@ MAPPING_JSON = {
             },
             "properties": MAPPING_PROPS_SAMPLES_NUM_ALT_1
         }}}
-
+MAPPING_JSON_38 = deepcopy(MAPPING_JSON)
+MAPPING_JSON_38[INDEX_NAME]['mappings']['_meta']['genomeVersion'] = '38'
 
 MOCK_REDIS = mock.MagicMock()
 MOCK_OPEN = mock.MagicMock()
@@ -257,6 +259,7 @@ class DatasetAPITest(object):
         # Test sending email for adding dataset to a non-analyst project
         url = reverse(add_variants_dataset_handler, args=[NON_ANALYST_PROJECT_GUID])
 
+        urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), MAPPING_JSON_38)
         urllib3_responses.replace_json('/{}/_search?size=0'.format(INDEX_NAME), {'aggregations': {
             'sample_ids': {'buckets': [{'key': 'NA21234'}]}
         }}, method=urllib3_responses.POST)
