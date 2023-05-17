@@ -36,21 +36,19 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     genesById: PropTypes.object,
   }
 
-  state = {
-    tissueType: null,
-    tissueOptions: null,
-  }
-
-  componentDidMount() {
-    const { rnaSeqData } = this.props
+  constructor(props) {
+    super(props)
+    const { rnaSeqData } = props
     const tissueTypes = Array.from(Object.values(rnaSeqData?.spliceOutliers || {}).flat().reduce(
       (acc, { tissueType }) => acc.add(tissueType), new Set(),
     ))
     const tissueOptions = tissueTypes.map(tissueType => (
       { key: tissueType, text: TISSUE_DISPLAY[tissueType] || 'No Tissue', value: tissueType }
     ))
-    if (tissueOptions.length) {
-      this.setState({ tissueType: tissueOptions[0].value, tissueOptions })
+    // eslint-disable-next-line react/state-in-constructor
+    this.state = {
+      tissueType: tissueOptions.length > 0 ? tissueOptions[0].value : null,
+      tissueOptions,
     }
   }
 
@@ -62,12 +60,12 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     const { individual, rnaSeqData, significantJunctionOutliers, genesById } = this.props
     const { tissueType, tissueOptions } = this.state
 
-    const outlierData = Object.entries(rnaSeqData || {}).map(([key, data]) => [
-      key,
-      OUTLIER_VOLCANO_PLOT_CONFIGS[key].formatData({ data: Object.values(data || {}).flat(), tissueType }),
-    ]).filter(([, data]) => data.length)
+    const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map(({ formatData, ...config }) => ({
+      data: formatData(((rnaSeqData || {})[config.key] || {}).flat(), tissueType),
+      ...config,
+    }).filter(({ data }) => data.length))
 
-    const outlierPlots = outlierData.map(([key, data]) => (
+    const outlierPlots = outlierPlotConfigs.map(([key, data]) => (
       <Grid.Column key={key} width={8}>
         <RnaSeqOutliers
           familyGuid={individual.familyGuid}
@@ -77,33 +75,34 @@ class BaseRnaSeqResultPage extends React.PureComponent {
         />
       </Grid.Column>
     ))
-    const hasSpliceOutliers = outlierData.map(([key]) => key).includes('spliceOutliers')
+    const hasSpliceOutliers = outlierPlotConfigs.map(([key]) => key).includes('spliceOutliers')
 
     return (
-      <Grid>
-        <React.Suspense fallback={<Loader />}>
-          {hasSpliceOutliers && (
-            <Grid.Row>
-              <span>
-                Select a tissue type: &nbsp;
-                <Dropdown inline value={tissueType} options={tissueOptions} onChange={this.onTissueChange} />
-              </span>
-            </Grid.Row>
-          )}
-          {(outlierPlots.length > 0) && <Grid.Row divided columns={outlierPlots.length}>{outlierPlots}</Grid.Row>}
-        </React.Suspense>
-        {(significantJunctionOutliers.length > 0) && (
-          <Grid.Row centered columns={14}>
-            <React.Suspense fallback={<Loader />}>
-              <RnaSeqOutliersTable
-                familyGuid={individual.familyGuid}
-                data={significantJunctionOutliers}
-                tissueType={tissueType}
-              />
-            </React.Suspense>
-          </Grid.Row>
+      <React.Suspense fallback={<Loader />}>
+        {hasSpliceOutliers && (tissueOptions.length > 1 ? (
+          <span>
+            Select a tissue type: &nbsp;
+            <Dropdown inline value={tissueType} options={tissueOptions} onChange={this.onTissueChange} />
+          </span>
+        ) : (
+          <span>
+            Tissue type: &nbsp;
+            {tissueType}
+          </span>
+        ))}
+        {(outlierPlots.length > 0) && (
+          <Grid>
+            <Grid.Row divided columns={outlierPlots.length}>{outlierPlots}</Grid.Row>
+          </Grid>
         )}
-      </Grid>
+        {(significantJunctionOutliers.length > 0) && (
+          <RnaSeqOutliersTable
+            familyGuid={individual.familyGuid}
+            data={significantJunctionOutliers}
+            tissueType={tissueType}
+          />
+        )}
+      </React.Suspense>
     )
   }
 

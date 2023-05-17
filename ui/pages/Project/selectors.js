@@ -12,7 +12,6 @@ import {
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HAS_DATA_FIELD,
   MME_TAG_NAME,
-  getSpliceId,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -876,6 +875,11 @@ export const getIndividualPhenotypeGeneScores = createSelector(
     }), {})
   ),
 )
+
+const getSpliceId = (row) => {
+  const { geneId, chrom, start, end, strand, type } = row
+  return `${geneId}-${chrom}-${start}-${end}-${strand}-${type}`
+}
 
 export const getRnaSeqSignificantJunctionData = createSelector(
   getGenesById,

@@ -622,7 +622,7 @@ class IndividualAPITest(object):
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'rnaSeqData', 'genesById', 'igvSamplesByGuid'})
+        self.assertSetEqual(set(response_json.keys()), {'rnaSeqData', 'genesById'})
         self.assertDictEqual(response_json['rnaSeqData'], {
             INDIVIDUAL_GUID: {'outliers': {
                 'ENSG00000135953': [{
@@ -651,6 +651,45 @@ class IndividualAPITest(object):
         }})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
+    @mock.patch('seqr.views.utils.orm_to_json_utils.get_json_for_queryset')
+    @mock.patch('seqr.views.apis.individual_api.MAX_SIGNIFICANT_NUM', 3)
+    def test_get_individual_rna_seq_data_is_significant(self, mock_get_json):
+        url = reverse(get_individual_rna_seq_data, args=[INDIVIDUAL_GUID])
+        self.check_collaborator_login(url)
+
+        splice_outliers = [
+            {'start': pos+1, 'end': pos + 100, 'tissueType': tissue, 'pValue': p_value} for pos, (tissue, p_value) in enumerate([
+                ('F', 0.0001), ('F', 0.001), ('M', 0.001), ('F', 0.002), ('M', 0.002), ('F', 0.003), ('M', 0.01), ('F', 0.1),
+                ('M', 0.1), ('M', 0.1),
+            ])
+        ]
+        for outlier in splice_outliers:
+            outlier.update({'chrom': '7', 'deltaPsi': 0.85, 'geneId': 'ENSG00000106554', 'rareDiseaseSamplesTotal': 20,
+            'rareDiseaseSamplesWithJunction': 1, 'readCount': 1297, 'strand': '*', 'type': 'psi5', 'zScore': 12.34})
+        mock_get_json.side_effect = [
+            [{
+                'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
+                'isSignificant': True, 'tissueType': None,
+            }],
+            splice_outliers
+        ]
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        response_rnaseq_data = response.json()['rnaSeqData'][INDIVIDUAL_GUID]
+        self.assertTrue(response_rnaseq_data['outliers']['ENSG00000135953'][0]['isSignificant'])
+        self.assertListEqual(
+            [[outlier['tissueType'], outlier['isSignificant']] for outlier in response_rnaseq_data['spliceOutliers']['ENSG00000106554']],
+            [['F', True], ['F', True], ['F', True], ['F', False], ['F', False],
+             ['M', True], ['M', True], ['M', False], ['M', False], ['M', False]]
+        )
+        mock_get_json.assert_has_calls([
+            mock.call(mock.ANY, additional_values={'isSignificant': mock.ANY},
+                nested_fields=[{'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
+            ),
+            mock.call(mock.ANY, additional_values=None,
+                nested_fields=[{'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
+            ),
+        ])
 
 class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
