@@ -202,7 +202,8 @@ def _parse_variant_items(search_json):
             try:
                 variant_id = item.lstrip('chr')
                 chrom, pos, ref, alt = variant_id.split('-')
-                get_xpos(chrom, int(pos))
+                pos = int(pos)
+                get_xpos(chrom, pos)
                 variant_ids.append(variant_id)
                 parsed_variant_ids.append((chrom, pos, ref, alt))
             except (KeyError, ValueError):
