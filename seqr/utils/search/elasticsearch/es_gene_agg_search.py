@@ -1,7 +1,7 @@
 from collections import defaultdict
 
-from seqr.utils.elasticsearch.constants import MAX_COMPOUND_HET_GENES, HAS_ALT_FIELD_KEYS
-from seqr.utils.elasticsearch.es_search import EsSearch
+from seqr.utils.search.elasticsearch.constants import MAX_COMPOUND_HET_GENES, HAS_ALT_FIELD_KEYS
+from seqr.utils.search.elasticsearch.es_search import EsSearch
 
 
 class EsGeneAggSearch(EsSearch):
@@ -59,7 +59,7 @@ class EsGeneAggSearch(EsSearch):
 
     def _parse_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
-            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            from seqr.utils.search.utils import InvalidSearchException
             raise InvalidSearchException('This search returned too many genes')
 
         gene_counts = defaultdict(lambda: {'total': 0, 'families': defaultdict(int), 'sample_ids': set()})
@@ -104,42 +104,3 @@ class EsGeneAggSearch(EsSearch):
                 gene_counts[gene_id]['total'] += len(variants)
                 for family_guid in variants[0]['familyGuids']:
                     gene_counts[gene_id]['families'][family_guid] += len(variants)
-
-    @classmethod
-    def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
-        if previous_search_results.get('gene_aggs'):
-            return previous_search_results['gene_aggs'], {}
-
-        total_results = previous_search_results.get('total_results')
-        if total_results is not None:
-            gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
-            if 'all_results' in previous_search_results:
-                if len(previous_search_results['all_results']) == total_results:
-                    for var in previous_search_results['all_results']:
-                        gene_id = next((
-                            gene_id for gene_id, transcripts in var['transcripts'].items()
-                            if any(t['transcriptId'] == var['mainTranscriptId'] for t in transcripts)
-                        ), None) if var['mainTranscriptId'] else None
-                        if gene_id:
-                            gene_aggs[gene_id]['total'] += 1
-                            for family_guid in var['familyGuids']:
-                                gene_aggs[gene_id]['families'][family_guid] += 1
-                    return gene_aggs, {}
-            elif 'grouped_results' in previous_search_results:
-                loaded = sum(counts.get('loaded', 0) for counts in previous_search_results.get('loaded_variant_counts', {}).values())
-                if loaded == total_results:
-                    for group in previous_search_results['grouped_results']:
-                        variants = next(iter(group.values()))
-                        gene_id = next(iter(group))
-                        if not gene_id or gene_id == 'null':
-                            gene_id = next((
-                                gene_id for gene_id, transcripts in variants[0]['transcripts'].items()
-                                if any(t['transcriptId'] == variants[0]['mainTranscriptId'] for t in transcripts)
-                            ), None) if variants[0]['mainTranscriptId'] else None
-                        if gene_id:
-                            gene_aggs[gene_id]['total'] += len(variants)
-                            for family_guid in variants[0]['familyGuids']:
-                                gene_aggs[gene_id]['families'][family_guid] += len(variants)
-                    return gene_aggs, {}
-
-        return None, {}

@@ -240,9 +240,9 @@ const getPanels = (hasHgmdPermission, inheritance, datasetTypes) => (
   (PANEL_MAP[datasetTypes] || PANEL_MAP[ALL_DATASET_TYPE])[hasHgmdPermission][hasSecondaryAnnotation(inheritance)]
 )
 
-const VariantSearchFormContent = React.memo(({ hasHgmdPermission, inheritance, datasetTypes }) => (
+const VariantSearchFormContent = React.memo(({ hasHgmdPermission, inheritance, datasetTypes, noEditProjects }) => (
   <div>
-    <ProjectFamiliesField />
+    {!noEditProjects && <ProjectFamiliesField />}
     <Header size="huge" block>
       <Grid padded="horizontally" relaxed>
         <Grid.Row>
@@ -262,6 +262,7 @@ VariantSearchFormContent.propTypes = {
   hasHgmdPermission: PropTypes.bool,
   inheritance: PropTypes.object,
   datasetTypes: PropTypes.string,
+  noEditProjects: PropTypes.bool,
 }
 
 const mapStateToProps = (state, ownProps) => ({

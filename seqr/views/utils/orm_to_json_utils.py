@@ -256,6 +256,9 @@ def get_json_for_family_note(note):
     return _get_json_for_model(note, **FAMILY_NOTE_KWARGS)
 
 
+INDIVIDUAL_DISPLAY_NAME_EXPR = Coalesce(NullIf('display_name', Value('')), 'individual_id', output_field=CharField())
+
+
 def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
                               family_fields=None, add_hpo_details=False, is_analyst=None, has_case_review_perm=False):
     """Returns a JSON representation for the given list of Individuals.
@@ -288,7 +291,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         'paternalGuid': F('father__guid'),
         'maternalId': F('mother__individual_id'),
         'paternalId': F('father__individual_id'),
-        'displayName': Coalesce(NullIf('display_name', Value('')), 'individual_id', output_field=CharField()),
+        'displayName': INDIVIDUAL_DISPLAY_NAME_EXPR,
     }
     if add_sample_guids_field:
         additional_values.update({

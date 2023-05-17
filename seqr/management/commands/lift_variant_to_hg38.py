@@ -2,7 +2,7 @@ import logging
 from django.core.management.base import BaseCommand, CommandError
 
 from seqr.models import SavedVariant
-from seqr.utils.elasticsearch.utils import get_single_es_variant
+from seqr.utils.search.utils import get_single_variant
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class Command(BaseCommand):
                 saved_variant.xpos, saved_variant.ref, saved_variant.alt, variant_id)) != 'y':
             raise CommandError('Error: user did not confirm')
 
-        es_variant = get_single_es_variant([saved_variant.family], variant_id, return_all_queried_families=True)
+        es_variant = get_single_variant([saved_variant.family], variant_id, return_all_queried_families=True)
 
         saved_variant.xpos = es_variant['xpos']
         saved_variant.ref = es_variant['ref']
