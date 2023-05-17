@@ -757,26 +757,27 @@ def get_json_for_matchmaker_submission(submission):
         additional_model_fields=['contact_name', 'contact_href', 'submission_id'])
 
 
-def get_json_for_rna_seq_outliers(models, max_significant_per_tissue=None, **kwargs):
-    additional_values = {
+def get_json_for_rna_seq_outliers(models, max_significant_num_per_tissue=None, **kwargs):
+    significant_field = models.model.SIGNIFICANCE_FIELD
+    significant_threshold = models.model.SIGNIFICANCE_THRESHOLD
+    additional_values = None if max_significant_num_per_tissue else {
         'isSignificant': Case(
-            When(then=Value(True), **{f'{models.model.SIGNIFICANCE_FIELD}__lt': models.model.SIGNIFICANCE_THRESHOLD}),
+            When(then=Value(True), **{f'{significant_field}__lt': significant_threshold}),
             default=Value(False)
         ),
     }
     outliers = get_json_for_queryset(models, additional_values=additional_values, **kwargs)
 
-    if max_significant_per_tissue:
+    if max_significant_num_per_tissue:
         outliers_per_tissue_type = defaultdict(list)
         for outlier in outliers:
             outliers_per_tissue_type[outlier['tissueType']].append(outlier)
         outliers = []
+        significant_field = _to_camel_case(significant_field)
         for tissue_outliers in outliers_per_tissue_type.values():
-            for outlier in tissue_outliers[max_significant_per_tissue:]:
-                if outlier['isSignificant']:
-                    outlier['isSignificant'] = False
-                else:
-                    break
+            for index, outlier in enumerate(tissue_outliers):
+                outlier['isSignificant'] = (index < max_significant_num_per_tissue) and\
+                                           (outlier[significant_field] < significant_threshold)
             outliers += tissue_outliers
 
     return outliers
