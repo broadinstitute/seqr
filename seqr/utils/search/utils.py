@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.search.constants import XPOS_SORT_KEY
+from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
@@ -141,8 +141,11 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     }
     parsed_search.update(search)
 
+    families = search_model.families.all()
+    _validate_sort(sort, families)
+
     variant_results = backend_specific_call(get_es_variants)(
-        search_model.families.all(), parsed_search, user, previous_search_results, sort=sort, num_results=num_results,
+        families, parsed_search, user, previous_search_results, sort=sort, num_results=num_results,
         **kwargs,
     )
 
@@ -209,3 +212,9 @@ def _parse_variant_items(search_json):
                 invalid_items.append(item)
 
     return rs_ids, variant_ids, parsed_variant_ids, invalid_items
+
+
+def _validate_sort(sort, families):
+    if sort == PRIORITIZED_GENE_SORT and len(families) > 1:
+        raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
+

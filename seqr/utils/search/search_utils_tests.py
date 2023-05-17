@@ -80,6 +80,11 @@ class SearchUtilsTests(object):
     def test_invalid_search_query_variants(self):
         self._test_invalid_search_params(query_variants)
 
+        self.search_model.search['locus'] = {}
+        with self.assertRaises(InvalidSearchException) as se:
+            query_variants(self.results_model, sort='prioritized_gene', num_results=2)
+        self.assertEqual(str(se.exception), 'Phenotype sort is only supported for single-family search.')
+
         self.set_cache({'total_results': 10})
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model, page=1, num_results=2, load_all=True)

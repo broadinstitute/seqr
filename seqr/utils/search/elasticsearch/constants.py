@@ -3,7 +3,7 @@ from django.db.models import Min
 from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual, Sample, PhenotypePrioritization
 from seqr.utils.search.constants import COMPOUND_HET, RECESSIVE, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, \
-    PATHOGENICTY_HGMD_SORT_KEY
+    PATHOGENICTY_HGMD_SORT_KEY, PRIORITIZED_GENE_SORT
 
 
 MAX_VARIANTS = 10000
@@ -174,10 +174,6 @@ CLINVAR_SORT = {
 
 
 def _get_phenotype_priority_ranks_by_gene(families, *args):
-    from seqr.utils.search.utils import InvalidSearchException
-    if len(families) > 1:
-        raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
-
     family_ranks = PhenotypePrioritization.objects.filter(
         individual__family=families[0], rank__lte=100).values('gene_id').annotate(min_rank=Min('rank'))
     return {agg['gene_id']: agg['min_rank'] for agg in family_ranks}
@@ -219,7 +215,7 @@ SORT_FIELDS = {
             }
         }
     }],
-    'prioritized_gene': [{
+    PRIORITIZED_GENE_SORT: [{
         '_script': {
             'type': 'number',
             'script': {

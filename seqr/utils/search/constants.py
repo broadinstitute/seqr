@@ -7,6 +7,7 @@ MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
 XPOS_SORT_KEY = 'xpos'
 PATHOGENICTY_SORT_KEY = 'pathogenicity'
 PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
+PRIORITIZED_GENE_SORT = 'prioritized_gene'
 
 COMPOUND_HET = 'compound_het'
 RECESSIVE = 'recessive'

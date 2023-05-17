@@ -3328,10 +3328,6 @@ class EsUtilsTest(TestCase):
                 }
             }, 'xpos', 'variantId'])
 
-        with self.assertRaises(InvalidSearchException) as se:
-            query_variants(results_model, sort='prioritized_gene', num_results=2)
-        self.assertEqual(str(se.exception), 'Phenotype sort is only supported for single-family search.')
-
         results_model.families.set(Family.objects.filter(guid='F000001_1'))
         query_variants(results_model, sort='prioritized_gene', num_results=2)
         family_sample_filter = {'bool': {'_name': 'F000001_1', 'must': mock.ANY}}
