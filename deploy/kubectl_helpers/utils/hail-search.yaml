@@ -1,0 +1,66 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: hail-search
+  namespace: seqr-prototype
+  labels:
+    name: hail-search
+    deployment: prototype
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 5000
+  selector:
+    name: hail-search
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name:  hail-search
+  namespace: seqr-prototype
+  labels:
+    app.kubernetes.io/name:  hail-search
+    name:  hail-search
+    deployment: prototype
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      name: hail-search
+  template:
+    metadata:
+      labels:
+        name: hail-search
+        app.kubernetes.io/name: hail-search
+        deployment: prototype
+    spec:
+      volumes:
+      - name: hail-datasets
+        gcePersistentDisk:
+          # This disk must already exist.
+          pdName: hail-datasets-disk-2
+          fsType: ext4
+          readOnly: true
+      containers:
+      - name: hail-search-pod
+        ports:
+        - containerPort: 5000
+          protocol: TCP
+        imagePullPolicy: Always
+        image: gcr.io/seqr-project/seqr:prototype-hail-search
+        volumeMounts:
+        - name: hail-datasets
+          mountPath: /hail_datasets
+          readOnly: true
+        resources:
+          requests:
+            memory: "12Gi"
+            cpu: "1"
+          limits:
+            memory: "16Gi"
+            cpu: "2"
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'spark-nodes'
+---

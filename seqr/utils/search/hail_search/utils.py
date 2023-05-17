@@ -1,7 +1,7 @@
 from collections import defaultdict
 from django.db.models import F
 
-from hail_search.search import search_hail_backend
+import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
 from seqr.models import Individual, Sample, PhenotypePrioritization
 from seqr.utils.search.constants import RECESSIVE, COMPOUND_HET, MAX_NO_LOCATION_COMP_HET_FAMILIES
@@ -125,14 +125,14 @@ def _parse_inheritance_search(search, families):
 def _search(search, previous_search_results, page=1, num_results=100):
     end_offset = num_results * page
     search['num_results'] = end_offset
-    try:
-        hail_results, total_results = search_hail_backend(search)
-    except Exception as e:
-        # TODO use raise_for_response
-        raise InvalidSearchException(str(e))
-    previous_search_results['total_results'] = total_results
-    previous_search_results['all_results'] = hail_results
-    return hail_results[end_offset - num_results:end_offset]
+
+    response = requests.post('http://hail-search:5000/search', json=self._search_body)
+    response.raise_for_status()
+    response_json = response.json()
+
+    previous_search_results['total_results'] = response_json['total']
+    previous_search_results['all_results'] = response_json['results']
+    return response_json['results'][end_offset - num_results:end_offset]
 
 
 def get_hail_variants(families, search, user, previous_search_results, sort=None, page=None, num_results=None,

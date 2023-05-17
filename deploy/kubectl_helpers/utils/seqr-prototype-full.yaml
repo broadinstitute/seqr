@@ -54,6 +54,7 @@ spec:
           # This disk must already exist.
           pdName: hail-datasets-disk-2
           fsType: ext4
+          readOnly: true
       containers:
       - name: seqr-pod
         ports:
@@ -67,6 +68,7 @@ spec:
           readOnly: true
         - name: hail-datasets
           mountPath: /hail_datasets
+          readOnly: true
         resources:
           requests:
             memory: "0.5Gi"
