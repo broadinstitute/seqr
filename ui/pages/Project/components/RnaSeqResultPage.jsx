@@ -36,9 +36,13 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     genesById: PropTypes.object,
   }
 
-  state = {
-    tissueType: null,
-    tissueOptions: null,
+  constructor(props) {
+    super(props)
+    // eslint-disable-next-line react/state-in-constructor
+    this.state = {
+      tissueType: null,
+      tissueOptions: null,
+    }
   }
 
   componentDidMount() {
@@ -62,12 +66,12 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     const { individual, rnaSeqData, significantJunctionOutliers, genesById } = this.props
     const { tissueType, tissueOptions } = this.state
 
-    const outlierData = Object.entries(rnaSeqData || {}).map(([key, data]) => [
-      key,
-      OUTLIER_VOLCANO_PLOT_CONFIGS[key].formatData({ data: Object.values(data || {}).flat(), tissueType }),
-    ]).filter(([, data]) => data.length)
+    const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map(({ formatData, ...config }) => ({
+      data: formatData(((rnaSeqData || {})[config.key] || {}).flat(), tissueType),
+      ...config,
+    }).filter(({ data }) => data.length))
 
-    const outlierPlots = outlierData.map(([key, data]) => (
+    const outlierPlots = outlierPlotConfigs.map(([key, data]) => (
       <Grid.Column key={key} width={8}>
         <RnaSeqOutliers
           familyGuid={individual.familyGuid}
@@ -77,16 +81,21 @@ class BaseRnaSeqResultPage extends React.PureComponent {
         />
       </Grid.Column>
     ))
-    const hasSpliceOutliers = outlierData.map(([key]) => key).includes('spliceOutliers')
+    const hasSpliceOutliers = outlierPlotConfigs.map(([key]) => key).includes('spliceOutliers')
 
     return (
       <React.Suspense fallback={<Loader />}>
-        {hasSpliceOutliers && (
+        {hasSpliceOutliers && (tissueOptions.length > 1 ? (
           <span>
             Select a tissue type: &nbsp;
             <Dropdown inline value={tissueType} options={tissueOptions} onChange={this.onTissueChange} />
           </span>
-        )}
+        ) : (
+          <span>
+            Tissue type: &nbsp;
+            {tissueType}
+          </span>
+        ))}
         {(outlierPlots.length > 0) && (
           <Grid>
             <Grid.Row divided columns={outlierPlots.length}>{outlierPlots}</Grid.Row>
