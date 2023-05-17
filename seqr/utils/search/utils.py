@@ -47,8 +47,8 @@ def get_search_backend_status():
     return backend_specific_call(get_elasticsearch_status)()
 
 
-def _get_filtered_search_samples(filter, active_only=True):
-    samples = Sample.objects.filter(elasticsearch_index__isnull=False, **filter)
+def _get_filtered_search_samples(search_filter, active_only=True):
+    samples = Sample.objects.filter(elasticsearch_index__isnull=False, **search_filter)
     if active_only:
         samples = samples.filter(is_active=True)
     return samples
