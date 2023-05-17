@@ -6,7 +6,6 @@ from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
 from seqr.models import Individual, Sample, PhenotypePrioritization
 from seqr.utils.search.constants import RECESSIVE, COMPOUND_HET, MAX_NO_LOCATION_COMP_HET_FAMILIES
 from seqr.utils.search.utils import InvalidSearchException
-from seqr.utils.search.elasticsearch.es_search import EsSearch
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 
 
@@ -58,8 +57,6 @@ def _parse_location_search(search, families):
     locus = search.pop('locus', None) or {}
     parsed_locus = search.pop('parsedLocus')
 
-    variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in (parsed_locus.get('variant_ids') or [])]
-
     genes = parsed_locus.get('genes') or {}
     intervals = parsed_locus.get('intervals')
     parsed_intervals = None
@@ -81,7 +78,7 @@ def _parse_location_search(search, families):
         'intervals': parsed_intervals,
         'exclude_intervals': exclude_locations,
         'gene_ids': None if exclude_locations else list(genes.keys()),
-        'variant_ids': variant_ids,
+        'variant_ids': parsed_locus.get('parsed_variant_ids'),
         'rs_ids': parsed_locus.get('rs_ids'),
     })
 
