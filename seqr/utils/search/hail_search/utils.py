@@ -156,7 +156,7 @@ def get_hail_variants(families, search, user, previous_search_results, sort=None
         'sort_metadata': _get_sort_metadata(sort, families),
     }
     search_body.update(search)
-    search_body.update({  # TODO do not reformat
+    search_body.update({
         'frequencies': search_body.pop('freqs', None),
         'quality_filter': search_body.pop('qualityFilter', None),
         'custom_query': search_body.pop('customQuery', None),
