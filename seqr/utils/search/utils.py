@@ -119,11 +119,12 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
 
     rs_ids = None
     variant_ids = None
+    parsed_variant_ids = None
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
     if invalid_items:
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
     if not (genes or intervals):
-        rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
+        rs_ids, variant_ids, parsed_variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
         if invalid_items:
             raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
         if rs_ids and variant_ids:
@@ -135,6 +136,7 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     parsed_search = {
         'parsedLocus': {
             'genes': genes, 'intervals': intervals, 'rs_ids': rs_ids, 'variant_ids': variant_ids,
+            'parsed_variant_ids': parsed_variant_ids,
         },
     }
     parsed_search.update(search)
@@ -186,10 +188,11 @@ def _get_gene_aggs_for_cached_variants(previous_search_results):
 def _parse_variant_items(search_json):
     raw_items = search_json.get('rawVariantItems')
     if not raw_items:
-        return None, None, None
+        return None, None, None, None
 
     invalid_items = []
     variant_ids = []
+    parsed_variant_ids = []
     rs_ids = []
     for item in raw_items.replace(',', ' ').split():
         if item.startswith('rs'):
@@ -197,10 +200,12 @@ def _parse_variant_items(search_json):
         else:
             try:
                 variant_id = item.lstrip('chr')
-                chrom, pos, _, _ = variant_id.split('-')
-                get_xpos(chrom, int(pos))
+                chrom, pos, ref, alt = variant_id.split('-')
+                pos = int(pos)
+                get_xpos(chrom, pos)
                 variant_ids.append(variant_id)
+                parsed_variant_ids.append((chrom, pos, ref, alt))
             except (KeyError, ValueError):
                 invalid_items.append(item)
 
-    return rs_ids, variant_ids, invalid_items
+    return rs_ids, variant_ids, parsed_variant_ids, invalid_items

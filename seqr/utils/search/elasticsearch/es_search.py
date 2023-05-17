@@ -241,7 +241,7 @@ class EsSearch(object):
 
     def filter_variants(self, inheritance=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
                         frequencies=None, pathogenicity=None, in_silico=None, annotations=None, annotations_secondary=None,
-                        quality_filter=None, custom_query=None, skip_genotype_filter=False):
+                        quality_filter=None, custom_query=None, skip_genotype_filter=False, **kwargs):
 
         self._filter_custom(custom_query)
 
