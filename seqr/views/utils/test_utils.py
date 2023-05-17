@@ -4,7 +4,9 @@ from copy import deepcopy
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
+from io import StringIO
 import json
+import logging
 import mock
 import re
 from urllib.parse import quote_plus, urlparse
@@ -51,6 +53,9 @@ class AuthenticationTestCase(TestCase):
         self.mock_analyst_group.resolve_expression.return_value = 'analysts'
         self.addCleanup(patcher.stop)
 
+        self._log_stream = StringIO()
+        logging.getLogger().handlers[0].stream = self._log_stream
+
     @classmethod
     def setUpTestData(cls):
         cls.super_user = User.objects.get(username='test_superuser')
@@ -62,6 +67,7 @@ class AuthenticationTestCase(TestCase):
         cls.no_access_user = User.objects.get(username='test_user_no_access')
         cls.inactive_user = User.objects.get(username='test_user_inactive')
         cls.no_policy_user = User.objects.get(username='test_user_no_policies')
+        cls.local_user = User.objects.get(username='test_local_user')
 
         edit_group = Group.objects.get(pk=2)
         view_group = Group.objects.get(pk=3)
@@ -223,6 +229,20 @@ class AuthenticationTestCase(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
+    def reset_logs(self):
+        self._log_stream.truncate(0)
+        self._log_stream.seek(0)
+
+    def assert_json_logs(self, user, expected):
+        logs = self._log_stream.getvalue().split('\n')
+        for i, (message, extra) in enumerate(expected):
+            self.assertDictEqual(json.loads(logs[i]), {
+                'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, 'message': message, **(extra or {}),
+            })
+
+    def assert_no_logs(self):
+        self.assertEqual(self._log_stream.getvalue(), '')
+
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
 TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
 TEST_WORKSPACE_NAME1 = 'anvil-project 1000 Genomes Demo'
@@ -337,6 +357,12 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": False
         },
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
     },
 }, {
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
@@ -360,7 +386,23 @@ ANVIL_WORKSPACES = [{
         'authorizationDomain': [{'membersGroupName': 'AUTH_restricted_group'}],
         'bucketName': 'test_bucket'
     },
-}
+}, {
+    'workspace_namespace': 'ext-data',
+    'workspace_name': 'anvil-non-analyst-project 1000 Genomes Demo',
+    'public': True,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+    },
+    'workspace': {
+        'authorizationDomain': [],
+        'bucketName': 'test_bucket'
+    },
+},
 ]
 
 
@@ -684,6 +726,10 @@ VARIANTS = [
             ]
         },
         'familyGuids': ['F000001_1', 'F000002_2'],
+        'populations': {
+            'callset': {'af': 0.13, 'ac': 4192, 'an': '32588'},
+            'gnomad_genomes': {'af': 0.007},
+        },
         'genotypes': {
             'NA19675': {
                 'sampleId': 'NA19675',
@@ -849,7 +895,7 @@ PARSED_VARIANTS = [
         'alt': 'T',
         'chrom': '1',
         'bothsidesSupport': None,
-        'clinvar': {'clinicalSignificance': 'Pathogenic/Likely_pathogenic', 'alleleId': None, 'variationId': None, 'goldStars': None},
+        'clinvar': {'clinicalSignificance': 'Pathogenic/Likely_pathogenic', 'alleleId': None, 'variationId': None, 'goldStars': None, 'version': '2023-03-05'},
         'commonLowHeteroplasmy': None,
         'highConstraintRegion': None,
         'mitomapPathogenic': None,
@@ -919,7 +965,7 @@ PARSED_VARIANTS = [
         'alt': 'G',
         'chrom': '2',
         'bothsidesSupport': None,
-        'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
+        'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None, 'version': '2023-03-05'},
         'commonLowHeteroplasmy': None,
         'highConstraintRegion': None,
         'mitomapPathogenic': None,
@@ -1015,20 +1061,20 @@ PARSED_SV_VARIANT = {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'numAlt': -1, 'geneIds': ['ENSG00000228198'],
             'cn': 1, 'end': None, 'start': None, 'numExon': None, 'defragged': False, 'qs': 33, 'gq': None,
-            'prevCall': False, 'prevOverlap': False, 'newCall': True,
+            'prevCall': False, 'prevOverlap': False, 'newCall': True, 'prevNumAlt': None,
         },
         'I000005_hg00732': {
             'sampleId': 'HG00732', 'numAlt': -1, 'sampleType': None,  'geneIds': None, 'gq': None,
             'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'isRef': True,
-            'prevCall': None, 'prevOverlap': None, 'newCall': None,
+            'prevCall': None, 'prevOverlap': None, 'newCall': None, 'prevNumAlt': None,
         },
         'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WES', 'numAlt': -1,  'geneIds': None, 'gq': None,
             'cn': 2, 'end': 49045890, 'start': 49045987, 'numExon': 1, 'defragged': False, 'qs': 80,
-            'prevCall': False, 'prevOverlap': True, 'newCall': False,
+            'prevCall': False, 'prevOverlap': True, 'newCall': False, 'prevNumAlt': None,
         },
     },
-    'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
+    'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None, 'version': None},
     'hgmd': {'accession': None, 'class': None},
     'genomeVersion': '37',
     'genotypeFilters': '',
@@ -1107,10 +1153,10 @@ PARSED_SV_WGS_VARIANT = {
         'I000018_na21234': {
             'gq': 33, 'sampleId': 'NA21234', 'numAlt': 1, 'geneIds': None,
             'cn': -1, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WGS',
-            'prevCall': None, 'prevOverlap': None, 'newCall': None,
+            'prevCall': None, 'prevOverlap': None, 'newCall': None, 'prevNumAlt': 2,
         },
     },
-    'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
+    'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None, 'version': None},
     'hgmd': {'accession': None, 'class': None},
     'genomeVersion': '38',
     'genotypeFilters': '',
@@ -1194,7 +1240,7 @@ PARSED_MITO_VARIANT = {
     'alt': 'A',
     'bothsidesSupport': None,
     'chrom': 'M',
-    'clinvar': {'alleleId': None, 'clinicalSignificance': 'Likely_pathogenic', 'goldStars': None, 'variationId': None},
+    'clinvar': {'alleleId': None, 'clinicalSignificance': 'Likely_pathogenic', 'goldStars': None, 'variationId': None, 'version': None},
     'commonLowHeteroplasmy': False,
     'cpxIntervals': None,
     'end': 10195,

@@ -156,7 +156,7 @@ class SummaryDataAPITest(object):
             {'dataType': 'RNA', 'familiesFile': {'uploadedFileId': 'abc123'}}))
         self.assertDictEqual(response.json(), {
             'warnings': [
-                'No match found for the following families: 2 (not_a_project), not_a_family (Test Reprocessed Project)'
+                'No match found for the following families: not_a_family (Test Reprocessed Project), 2 (not_a_project)'
             ],
             'info': ['Updated "analysed by" for 2 families'],
         })
@@ -165,6 +165,7 @@ class SummaryDataAPITest(object):
         self.assertEqual(len(models), 2)
         self.assertSetEqual({fab.data_type for fab in models}, {'RNA'})
         self.assertSetEqual({fab.created_by for fab in models}, {self.analyst_user})
+        self.assertSetEqual({fab.family.family_id for fab in models}, {'1', '12'})
 
         self.check_no_analyst_no_access(url)
 
@@ -188,7 +189,7 @@ def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
 # class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
 #     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 #     NUM_MANAGER_SUBMISSIONS = 3
-#     MANAGER_VARIANT_GUID = None
+#     MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
 #
 #     def test_mme_details(self, *args):
 #         super(AnvilSummaryDataAPITest, self).test_mme_details(*args)

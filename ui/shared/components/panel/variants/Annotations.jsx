@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Popup, Label, Icon } from 'semantic-ui-react'
 
-import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid } from 'redux/selectors'
+import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid, getUser } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
@@ -12,7 +12,7 @@ import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts from './Transcripts'
 import VariantGenes, { LocusListLabels } from './VariantGene'
-import { getLocus, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
+import { getLocus, has37Coords, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
 import { GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS } from '../../../utils/constants'
 
 const LargeText = styled.div`
@@ -131,10 +131,7 @@ const getLitSearch = (genes, variations) => {
 const VARIANT_LINKS = [
   {
     name: 'gnomAD',
-    shouldShow: ({ svType, genomeVersion, liftedOverGenomeVersion, liftedOverPos }) => (
-      !!svType && (
-        genomeVersion === GENOME_VERSION_37 || (liftedOverGenomeVersion === GENOME_VERSION_37 && liftedOverPos))
-    ),
+    shouldShow: variant => !!variant.svType && has37Coords(variant),
     getHref: variant => `https://gnomad.broadinstitute.org/region/${getSvRegion(variant, '-', GENOME_VERSION_37)}?dataset=gnomad_sv_r2_1`,
   },
   {
@@ -184,9 +181,16 @@ const VARIANT_LINKS = [
     shouldShow: ({ svType, hgvsc }) => !svType && hgvsc,
     getHref: ({ genes, hgvsc }) => `https://mastermind.genomenon.com/detail?gene=${genes[0].geneSymbol}&mutation=${genes[0].geneSymbol}:${hgvsc}`,
   },
+  {
+    name: 'BCH',
+    shouldShow: (variant, user) => has37Coords(variant) && user.isAnalyst,
+    getHref: ({ chrom, pos, ref, alt, genomeVersion, liftedOverPos }) => (
+      `https://aggregator.bchresearch.org/variant.html?variant=${chrom}:${genomeVersion === GENOME_VERSION_37 ? pos : liftedOverPos}:${ref}:${alt}`
+    ),
+  },
 ]
 
-const variantSearchLinks = (variant, mainTranscript, genesById) => {
+const variantSearchLinks = (variant, mainTranscript, genesById, user) => {
   const { chrom, endChrom, pos, end, ref, alt, genomeVersion, svType, variantId, transcripts } = variant
 
   const mainGene = genesById[mainTranscript.geneId]
@@ -237,7 +241,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById) => {
       content={`Search for this variant across all your seqr projects${svType ? '. Any structural variant with ≥20% reciprocal overlap will be returned.' : ''}`}
       size="tiny"
     />,
-    ...VARIANT_LINKS.filter(({ shouldShow }) => shouldShow(linkVariant)).map(
+    ...VARIANT_LINKS.filter(({ shouldShow }) => shouldShow(linkVariant, user)).map(
       ({ name, getHref }) => <DividedLink key={name} href={getHref(linkVariant)}>{name}</DividedLink>,
     ),
   ]
@@ -249,6 +253,7 @@ class BaseSearchLinks extends React.PureComponent {
     variant: PropTypes.object,
     mainTranscript: PropTypes.object,
     genesById: PropTypes.object,
+    user: PropTypes.object,
   }
 
   state = { showAll: false }
@@ -258,10 +263,10 @@ class BaseSearchLinks extends React.PureComponent {
   }
 
   render() {
-    const { variant, mainTranscript, genesById } = this.props
+    const { variant, mainTranscript, genesById, user } = this.props
     const { showAll } = this.state
 
-    const links = variantSearchLinks(variant, mainTranscript, genesById)
+    const links = variantSearchLinks(variant, mainTranscript, genesById, user)
     if (links.length < 5) {
       return links
     }
@@ -279,6 +284,7 @@ class BaseSearchLinks extends React.PureComponent {
 
 const mapStateToProps = state => ({
   genesById: getGenesById(state),
+  user: getUser(state),
 })
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)

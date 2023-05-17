@@ -2,6 +2,10 @@
 
 ## dev
 
+## 4/26/23
+* Add RnaSeqSpliceOutlier model (REQUIRES DB MIGRATION)
+* Add db index to improve Rna Sample Metadata performance (REQUIRES DB MIGRATION)
+
 ## 2/24/23
 * Updated Gregor sample manifest (REQUIRES DB MIGRATION)
 * Bumps python to 3.9

@@ -10,14 +10,14 @@ from django.utils import timezone
 import json
 import requests
 
-from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist, mv_file_to_gs
+from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import AirtableSession
-from seqr.views.utils.export_utils import export_multiple_files, write_multiple_temp_files
+from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
@@ -843,8 +843,7 @@ def gregor_export(request):
         ('aligned_dna_short_read_set', airtable_rows),
         ('called_variants_dna_short_read', airtable_rows),
     ])
-    with write_multiple_temp_files(files, file_format='tsv') as temp_dir_name:
-        mv_file_to_gs(f'{temp_dir_name}/*', file_path, request.user)
+    write_multiple_files_to_gs(files, file_path, request.user, file_format='tsv')
 
     return create_json_response({
         'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families'],

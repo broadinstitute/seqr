@@ -706,28 +706,29 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
         'familiesCount': {'non_demo': 12, 'demo': 2},
-        'individualsCount': {'non_demo': 15, 'demo': 3},
+        'individualsCount': {'non_demo': 16, 'demo': 4},
         'sampleCountsByType': {
             'WES__VARIANTS': {'demo': 1, 'non_demo': 7},
             'WGS__MITO': {'non_demo': 1},
             'WES__SV': {'non_demo': 3},
             'WGS__SV': {'non_demo': 1},
-            'RNA__VARIANTS': {'demo': 1, 'non_demo': 1},
+            'RNA__VARIANTS': {'non_demo': 3},
         },
     }
 
 
 # class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
 #     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
+#     ADDITIONAL_SAMPLES = []
 #     STATS_DATA = {
 #         'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
 #         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},
-#         'individualsCount': {'internal': 14, 'external': 1, 'no_anvil': 0, 'demo': 3},
+#         'individualsCount': {'internal': 14, 'external': 2, 'no_anvil': 0, 'demo': 4},
 #         'sampleCountsByType': {
 #             'WES__VARIANTS': {'internal': 7, 'demo': 1},
 #             'WGS__MITO': {'internal': 1},
 #             'WES__SV': {'internal': 3},
 #             'WGS__SV': {'external': 1},
-#             'RNA__VARIANTS': {'internal': 1, 'demo': 1},
+#             'RNA__VARIANTS': {'internal': 3},
 #         },
 #     }

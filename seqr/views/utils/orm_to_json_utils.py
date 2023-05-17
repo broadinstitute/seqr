@@ -213,6 +213,9 @@ def _get_case_review_fields(model_cls, has_case_review_perm):
     return [field.name for field in model_cls._meta.fields if field.name.startswith('case_review')]
 
 
+FAMILY_DISPLAY_NAME_EXPR = Coalesce(NullIf('display_name', Value('')), 'family_id')
+
+
 def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None,
                            has_case_review_perm=False, additional_values=None):
 
@@ -227,13 +230,13 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 fullName=_full_name_expr('assigned_analyst'), email=F('assigned_analyst__email'),
             )), default=Value(None),
         ),
-        'displayName': Coalesce(NullIf('display_name', Value('')), 'family_id'),
+        'displayName': FAMILY_DISPLAY_NAME_EXPR,
         'pedigreeImage': NullIf(Concat(Value(MEDIA_URL), 'pedigree_image', output_field=CharField()), Value(MEDIA_URL)),
     }
     if additional_values:
         family_additional_values.update(additional_values)
     if add_individual_guids_field:
-        family_additional_values['individualGuids'] = ArrayAgg('individual__guid', filter=Q(individual__isnull=False))
+        family_additional_values['individualGuids'] = ArrayAgg('individual__guid', filter=Q(individual__isnull=False), distinct=True)
 
     additional_model_fields = _get_case_review_fields(families.model, has_case_review_perm)
     nested_fields = [{'fields': ('project', 'guid'), 'value': project_guid}]
@@ -689,7 +692,8 @@ def get_project_collaborators_by_username(user, project, fields, include_permiss
             collaborator_json = _get_collaborator_json(
                 collaborator or email, fields, include_permissions, can_edit=permission == CAN_EDIT,
                 get_json_func=get_json_for_user if collaborator else _get_anvil_user_json)
-            collaborators[collaborator_json['username']] = collaborator_json
+            username = collaborator.username if collaborator else collaborator_json['username']
+            collaborators[username] = collaborator_json
 
     return collaborators
 

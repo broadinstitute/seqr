@@ -65,7 +65,8 @@ class DatasetAPITest(object):
         self.assertEqual(existing_sample.elasticsearch_index, INDEX_NAME)
         self.assertFalse(existing_sample.is_active)
         existing_sample_guid = existing_sample.guid
-        existing_rna_seq_sample_guid = Sample.objects.get(sample_id='NA19675_D2', sample_type='RNA').guid
+        existing_rna_seq_sample_guids = set(Sample.objects.filter(
+            individual__id=1, sample_type='RNA').values_list('guid', flat=True))
         self.assertEqual(Sample.objects.filter(sample_id='NA19678_1').count(), 0)
         self.assertEqual(Sample.objects.filter(sample_id='NA20878').count(), 0)
 
@@ -91,7 +92,7 @@ class DatasetAPITest(object):
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
 
         new_sample_guid = 'S98765432101234567890_NA20878'
-        replaced_sample_guid = 'S98765432101234567890_NA19678_'
+        replaced_sample_guid = 'S98765432101234567890_NA19678'
         self.assertSetEqual(
             set(response_json['samplesByGuid'].keys()),
             {existing_sample_guid, existing_old_index_sample_guid, replaced_sample_guid, new_sample_guid}
@@ -181,12 +182,13 @@ class DatasetAPITest(object):
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
         self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
-                            {sv_sample_guid, existing_index_sample_guid, existing_rna_seq_sample_guid})
+                            {sv_sample_guid, existing_index_sample_guid} | existing_rna_seq_sample_guids)
 
         # Regular variant sample should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
-        self.assertEqual(len(sample_models), 3)
-        self.assertSetEqual({sv_sample_guid, existing_index_sample_guid, existing_rna_seq_sample_guid}, {sample.guid for sample in sample_models})
+        self.assertEqual(len(sample_models), 5)
+        self.assertSetEqual({sv_sample_guid, existing_index_sample_guid} | existing_rna_seq_sample_guids,
+                            {sample.guid for sample in sample_models})
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
         mock_send_email.assert_not_called()
@@ -231,7 +233,9 @@ class DatasetAPITest(object):
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
         self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
-                            {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid, existing_rna_seq_sample_guid})
+                            {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid} |
+                            existing_rna_seq_sample_guids)
+        self.assertTrue(new_sample_type_sample_guid not in existing_rna_seq_sample_guids)
 
         mock_send_email.assert_not_called()
         if self.SLACK_MESSAGE_TEMPLATE:
@@ -242,9 +246,9 @@ class DatasetAPITest(object):
 
         # Previous variant samples should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
-        self.assertEqual(len(sample_models), 4)
+        self.assertEqual(len(sample_models), 6)
         self.assertSetEqual(
-            {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid, existing_rna_seq_sample_guid},
+            {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid} | existing_rna_seq_sample_guids,
             {sample.guid for sample in sample_models})
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 

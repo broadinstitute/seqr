@@ -130,14 +130,21 @@ const copyNumberGenotype = (cn, newline, isHemiX) => (isCalled(cn) && (
   </span>
 ))
 
+const svNumAltGenotype = (numAlt, isHemiX) => (
+  <span>
+    {isHemiX || numAlt < 2 ? 'ref' : <b><i>alt</i></b>}
+    /
+    {numAlt > 0 ? <b><i>alt</i></b> : 'ref'}
+  </span>
+)
+
 const svGenotype = (genotype, isHemiX) => {
   if (!isCalled(genotype.numAlt)) {
     return copyNumberGenotype(genotype.cn, false, isHemiX)
   }
   return (
     <span>
-      {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
-      {isHemiX || genotype.numAlt < 2 ? 'ref' : <b><i>alt</i></b>}/{genotype.numAlt > 0 ? <b><i>alt</i></b> : 'ref'}
+      {svNumAltGenotype(genotype.numAlt, isHemiX)}
       {copyNumberGenotype(genotype.cn, true, isHemiX)}
     </span>
   )
@@ -291,6 +298,21 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     previousCall = { content: 'Identical Call', hover: 'Identical call in previous callset', color: 'blue' }
   } else if (genotype.prevOverlap) {
     previousCall = { content: 'Overlapping Call', hover: 'Overlapping call in previous callset', color: 'teal' }
+  } else if (Number.isInteger(genotype.prevNumAlt)) {
+    const hasSameHemiXGenotype = isHemiX && (genotype.numAlt === 1 || genotype.numAlt === 2) &&
+      (genotype.prevNumAlt === 1 || genotype.prevNumAlt === 2)
+    previousCall = {
+      content: 'New Genotype',
+      color: 'olive',
+      hover: (
+        <span>
+          Previous callset:
+          <AlleleContainer>{svNumAltGenotype(genotype.prevNumAlt, isHemiX)}</AlleleContainer>
+          {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
+          {hasSameHemiXGenotype && <i>Hemi alt allele change: {genotype.prevNumAlt} to {genotype.numAlt}</i>}
+        </span>
+      ),
+    }
   }
 
   const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
@@ -323,6 +345,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
       {previousCall && (
         <Popup
           content={previousCall.hover}
+          position="bottom"
           trigger={<Label horizontal size="mini" content={previousCall.content} color={previousCall.color} />}
         />
       )}
