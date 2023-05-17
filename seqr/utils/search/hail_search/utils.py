@@ -126,7 +126,7 @@ def _search(search, previous_search_results, page=1, num_results=100):
     end_offset = num_results * page
     search['num_results'] = end_offset
 
-    response = requests.post('http://hail-search:5000/search', json=self._search_body)
+    response = requests.post('http://hail-search:5000/search', json=search)
     response.raise_for_status()
     response_json = response.json()
 
