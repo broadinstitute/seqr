@@ -71,8 +71,16 @@ class SearchUtilsTests(object):
     def _test_invalid_search_params(self, search_func):
         self.results_model.families.set(Family.objects.filter(family_id='no_individuals'))
         with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(self.results_model)
+            query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'No search data found for families no_individuals')
+
+        self.results_model.families.set(Family.objects.all())
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model, user=self.user)
+        self.assertEqual(
+            str(cm.exception),
+            'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde, Test Reprocessed Project; 38 - Non-Analyst Project',
+        )
 
         self.search_model.search['locus'] = {'rawVariantItems': 'chr2-A-C'}
         with self.assertRaises(InvalidSearchException) as cm:
@@ -114,11 +122,11 @@ class SearchUtilsTests(object):
         if locus:
             expected_search['locus'] = locus
 
-        mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, **kwargs)
+        mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, '37', **kwargs)
         self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(self.search_samples))
 
     def test_query_variants(self, mock_get_variants):
-        def _mock_get_variants(families, search, user, previous_search_results, **kwargs):
+        def _mock_get_variants(families, search, user, previous_search_results, genome_version, **kwargs):
             previous_search_results['all_results'] = PARSED_VARIANTS
             previous_search_results['total_results'] = 5
             return PARSED_VARIANTS
@@ -202,7 +210,7 @@ class SearchUtilsTests(object):
             'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1}},
             'ENSG00000240361': {'total': 2, 'families': {'F000003_3': 2}},
         }
-        def _mock_get_variants(families, search, user, previous_search_results, **kwargs):
+        def _mock_get_variants(families, search, user, previous_search_results, genome_version, **kwargs):
             previous_search_results['gene_aggs'] = mock_counts
             return mock_counts
         mock_get_variants.side_effect = _mock_get_variants

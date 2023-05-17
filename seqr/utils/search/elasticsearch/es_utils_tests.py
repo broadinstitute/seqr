@@ -1425,13 +1425,7 @@ class EsUtilsTest(TestCase):
         setup_responses()
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.all())
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model)
-        self.assertEqual(
-            str(cm.exception),
-            'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde, Test Reprocessed Project; 38 - Non-Analyst Project',
-        )
+        # TODO test indices do not have the expected genome version
 
         search_model.search = {'inheritance': {'mode': 'recessive'}, 'locus': {'rawItems': 'DDX11L1'}}
         search_model.save()
