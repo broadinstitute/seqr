@@ -165,4 +165,4 @@ def get_hail_variants(families, search, user, previous_search_results, sort=None
     _parse_location_search(search_body, families)
     _parse_inheritance_search(search_body, families)
 
-    return _search(search, previous_search_results, page=page, num_results=num_results)
+    return _search(search_body, previous_search_results, page=page, num_results=num_results)
