@@ -41,8 +41,8 @@ const StyledDataTable = styled(Table)`
 const ASCENDING = 'ascending'
 const DESCENDING = 'descending'
 
-const getRowColumnContent = (row, isExport) => col => (
-  (col.format && !(isExport && col.noFormatExport)) ? col.format(row, isExport) : row[col.name])
+const getRowColumnContent = (row, isExport) => (col, formatProps) => (
+  (col.format && !(isExport && col.noFormatExport)) ? col.format(row, isExport, formatProps) : row[col.name])
 
 class DataTable extends React.PureComponent {
 
@@ -68,7 +68,7 @@ class DataTable extends React.PureComponent {
     downloadAlign: PropTypes.string,
     loadingProps: PropTypes.object,
     filterContainer: PropTypes.object,
-    onClick: PropTypes.func,
+    formatProps: PropTypes.object,
   }
 
   static defaultProps = {
@@ -128,10 +128,7 @@ class DataTable extends React.PureComponent {
   }
 
   handleSelect = rowId => () => {
-    const { data, selectRows, selectedRows, includeSelectedRowData, idField, onClick } = this.props
-    if (onClick) {
-      onClick(rowId)
-    }
+    const { data, selectRows, selectedRows, includeSelectedRowData, idField } = this.props
     if (!selectRows) {
       return
     }
@@ -166,7 +163,8 @@ class DataTable extends React.PureComponent {
     const {
       data = [], defaultSortColumn, defaultSortDescending, idField, columns, selectRows, selectedRows = {},
       loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, downloadAlign,
-      fixedWidth, includeSelectedRowData, filterContainer, getRowFilterVal, loadingProps = {}, maxHeight, ...tableProps
+      fixedWidth, includeSelectedRowData, filterContainer, getRowFilterVal, loadingProps = {}, maxHeight,
+      formatProps, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
     const sortedDirection = direction || (defaultSortDescending ? DESCENDING : ASCENDING)
@@ -208,7 +206,7 @@ class DataTable extends React.PureComponent {
           {processedColumns.map(({ name, format, textAlign, verticalAlign }) => (
             <Table.Cell
               key={name}
-              content={getRowColumnContent(row)({ format, name })}
+              content={getRowColumnContent(row)({ format, name }, formatProps)}
               textAlign={textAlign}
               verticalAlign={verticalAlign}
             />
