@@ -58,14 +58,6 @@ def get_search_samples(projects, active_only=True):
     return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
-def _get_families_search_samples(families):
-    samples = _get_filtered_search_samples({'individual__family__in': families})
-    if len(samples) < 1:
-        raise InvalidSearchException('No search data found for families {}'.format(
-            ', '.join([f.family_id for f in families])))
-    return samples
-
-
 def delete_search_backend_data(data_id):
     active_samples = Sample.objects.filter(is_active=True, elasticsearch_index=data_id)
     if active_samples:
@@ -77,7 +69,7 @@ def delete_search_backend_data(data_id):
 
 def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
     variants = backend_specific_call(get_es_variants_for_variant_ids)(
-        _get_families_search_samples(families), [variant_id], user, return_all_queried_families=return_all_queried_families,
+        *_get_families_search_data(families), [variant_id], user, return_all_queried_families=return_all_queried_families,
     )
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
@@ -86,7 +78,7 @@ def get_single_variant(families, variant_id, return_all_queried_families=False, 
 
 def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
     return backend_specific_call(get_es_variants_for_variant_ids)(
-        _get_families_search_samples(families), variant_ids, user, dataset_type=dataset_type,
+        *_get_families_search_data(families), variant_ids, user, dataset_type=dataset_type,
     )
 
 
@@ -156,11 +148,11 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     parsed_search.update(search)
 
     families = search_model.families.all()
-    samples = _get_families_search_samples(families)
     _validate_sort(sort, families)
+    samples, genome_version = _get_families_search_data(families)
 
     variant_results = backend_specific_call(get_es_variants)(
-        samples, parsed_search, user, previous_search_results, _get_genome_version(samples),
+        samples, parsed_search, user, previous_search_results, genome_version,
         sort=sort, num_results=num_results, **kwargs,
     )
 
@@ -234,16 +226,21 @@ def _validate_sort(sort, families):
         raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
 
 
-def _get_genome_version(samples):
+def _get_families_search_data(families):
+    samples = _get_filtered_search_samples({'individual__family__in': families})
+    if len(samples) < 1:
+        raise InvalidSearchException('No search data found for families {}'.format(
+            ', '.join([f.family_id for f in families])))
+
     projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name')
     project_versions = defaultdict(set)
     for genome_version, project_name in projects:
         project_versions[genome_version].add(project_name)
 
     if len(project_versions) > 1:
-        summary = '; '.join([f"{build} - {', '.join(sorted(projects))}" for build, projects in project_versions.items()])
+        summary = '; '.join(
+            [f"{build} - {', '.join(sorted(projects))}" for build, projects in project_versions.items()])
         raise InvalidSearchException(
             f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
 
-    return next(iter(project_versions.keys()))
-
+    return samples, next(iter(project_versions.keys()))

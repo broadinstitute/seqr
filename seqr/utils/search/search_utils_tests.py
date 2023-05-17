@@ -41,13 +41,13 @@ class SearchUtilsTests(object):
         variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
         self.assertDictEqual(variant, PARSED_VARIANTS[0])
         mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, ['2-103343353-GAGA-G'], self.user, return_all_queried_families=False,
+            mock.ANY, '37', ['2-103343353-GAGA-G'], self.user, return_all_queried_families=False,
         )
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
 
         get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
         mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, ['2-103343353-GAGA-G'], self.user, return_all_queried_families=True,
+            mock.ANY, '37', ['2-103343353-GAGA-G'], self.user, return_all_queried_families=True,
         )
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
 
@@ -59,13 +59,13 @@ class SearchUtilsTests(object):
     def test_get_variants_for_variant_ids(self, mock_get_variants_for_ids):
         variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']
         get_variants_for_variant_ids(self.families, variant_ids, user=self.user)
-        mock_get_variants_for_ids.assert_called_with(mock.ANY, variant_ids, self.user, dataset_type=None)
+        mock_get_variants_for_ids.assert_called_with(mock.ANY, '37', variant_ids, self.user, dataset_type=None)
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
 
         get_variants_for_variant_ids(
             self.families, variant_ids, user=self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
         mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, variant_ids, self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+            mock.ANY, '37', variant_ids, self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
 
     def _test_invalid_search_params(self, search_func):

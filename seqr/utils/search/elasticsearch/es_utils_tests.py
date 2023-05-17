@@ -11,7 +11,7 @@ from sys import maxsize
 from urllib3.exceptions import ReadTimeoutError
 from urllib3_mock import Responses
 
-from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
+from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.utils import get_single_variant, query_variants, \
     get_variant_query_gene_counts, get_variants_for_variant_ids, InvalidSearchException
 from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
@@ -1425,7 +1425,15 @@ class EsUtilsTest(TestCase):
         setup_responses()
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        # TODO test indices do not have the expected genome version
+
+        results_model.families.set(self.families)
+        Sample.objects.filter(elasticsearch_index=INDEX_NAME).update(elasticsearch_index=HG38_INDEX_NAME)
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(results_model)
+        self.assertEqual(
+            str(cm.exception), 'The following indices do not have the expected genome version 37: test_index_hg38 (38)',
+        )
+        Sample.objects.filter(elasticsearch_index=HG38_INDEX_NAME).update(elasticsearch_index=INDEX_NAME)
 
         search_model.search = {'inheritance': {'mode': 'recessive'}, 'locus': {'rawItems': 'DDX11L1'}}
         search_model.save()
@@ -2961,6 +2969,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(guid__in=['F000011_11']))
 
+        Project.objects.filter(guid='R0003_test').update(genome_version='38')
         Sample.objects.filter(elasticsearch_index=SECOND_INDEX_NAME).update(elasticsearch_index=HG38_INDEX_NAME)
 
         mock_liftover.side_effect = Exception()
