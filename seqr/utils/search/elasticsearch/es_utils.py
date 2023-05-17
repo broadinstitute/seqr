@@ -264,12 +264,13 @@ def get_es_variants_for_variant_ids(samples, variant_ids, user, dataset_type=Non
     return variants.search(num_results=len(variant_ids))
 
 
-def get_es_variants(samples, search, user, previous_search_results, sort=None, page=None, num_results=None,
+def get_es_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=None, num_results=None,
                     gene_agg=False, skip_genotype_filter=False):
     es_search_cls = EsGeneAggSearch if gene_agg else EsSearch
 
     es_search = es_search_cls(
         samples,
+        genome_version,
         previous_search_results=previous_search_results,
         user=user,
         sort=sort,

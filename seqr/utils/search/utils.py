@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import timedelta
 
-from seqr.models import Sample
+from seqr.models import Sample, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
@@ -156,10 +156,11 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     parsed_search.update(search)
 
     families = search_model.families.all()
+    samples = _get_families_search_samples(families)
     _validate_sort(sort, families)
 
     variant_results = backend_specific_call(get_es_variants)(
-        _get_families_search_samples(families), parsed_search, user, previous_search_results,
+        samples, parsed_search, user, previous_search_results, _get_genome_version(samples),
         sort=sort, num_results=num_results, **kwargs,
     )
 
@@ -231,4 +232,18 @@ def _parse_variant_items(search_json):
 def _validate_sort(sort, families):
     if sort == PRIORITIZED_GENE_SORT and len(families) > 1:
         raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
+
+
+def _get_genome_version(samples):
+    projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name')
+    project_versions = defaultdict(set)
+    for genome_version, project_name in projects:
+        project_versions[genome_version].add(project_name)
+
+    if len(project_versions) > 1:
+        summary = '; '.join([f"{build} - {', '.join(sorted(projects))}" for build, projects in versions.items()])
+        raise InvalidSearchException(
+            f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
+
+    return next(iter(project_versions.keys()))
 

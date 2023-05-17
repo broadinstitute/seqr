@@ -32,7 +32,7 @@ class EsSearch(object):
     AGGREGATION_NAME = 'compound het'
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
-    def __init__(self, samples, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
+    def __init__(self, samples, genome_version, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
         from seqr.utils.search.utils import InvalidSearchException
         from seqr.utils.search.elasticsearch.es_utils import get_es_client, InvalidIndexException
         self._client = get_es_client()
@@ -52,16 +52,14 @@ class EsSearch(object):
             # Some of the indices are an alias
             self._update_alias_metadata()
 
-        genome_versions = {meta['genomeVersion'] for meta in self.index_metadata.values()}
-        if len(genome_versions) > 1:
-            versions = defaultdict(set)
-            for s in samples.select_related('individual__family__project'):
-                versions[self.index_metadata[s.elasticsearch_index]['genomeVersion']].add(s.individual.family.project.name)
+        invalid_genome_indices = [
+            f"{index} ({meta['genomeVersion']})" for index, meta in self.index_metadata.items()
+            if meta['genomeVersion'] != genome_version
+        ]
+        if invalid_genome_indices:
             raise InvalidSearchException(
-                'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {}'.format(
-                    '; '.join(['{} - {}'.format(build, ', '.join(sorted(projects))) for build, projects in versions.items()])
-                ))
-        self._genome_version = genome_versions.pop()
+                f'The following indices do not have the expected genome version {genome_version}: {", ".join(invalid_genome_indices)}')
+        self._genome_version = genome_version
 
         self.indices_by_dataset_type = defaultdict(list)
         for index in self._indices:
