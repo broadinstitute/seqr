@@ -255,21 +255,21 @@ def _get_es_indices(client):
     return indices, seqr_index_projects
 
 
-def get_es_variants_for_variant_ids(families, variant_ids, user, dataset_type=None, return_all_queried_families=False):
+def get_es_variants_for_variant_ids(samples, variant_ids, user, dataset_type=None, return_all_queried_families=False):
     variants = EsSearch(
-        families, user=user, return_all_queried_families=return_all_queried_families,
+        samples, user=user, return_all_queried_families=return_all_queried_families,
     ).filter_by_variant_ids(variant_ids)
     if dataset_type:
         variants = variants.update_dataset_type(dataset_type)
     return variants.search(num_results=len(variant_ids))
 
 
-def get_es_variants(families, search, user, previous_search_results, sort=None, page=None, num_results=None,
+def get_es_variants(samples, search, user, previous_search_results, sort=None, page=None, num_results=None,
                     gene_agg=False, skip_genotype_filter=False):
     es_search_cls = EsGeneAggSearch if gene_agg else EsSearch
 
     es_search = es_search_cls(
-        families,
+        samples,
         previous_search_results=previous_search_results,
         user=user,
         sort=sort,
