@@ -12,20 +12,22 @@ import { getRnaSeqDataLoading, getRnaSeqSignificantJunctionData } from '../selec
 const RnaSeqOutliers = React.lazy(() => import('./RnaSeqOutliers'))
 const RnaSeqOutliersTable = React.lazy(() => import('./RnaSeqJunctionOutliersTable'))
 
-const OUTLIER_VOLCANO_PLOT_CONFIGS = {
-  outliers: {
+const OUTLIER_VOLCANO_PLOT_CONFIGS = [
+  {
+    key: 'outliers',
     getLocation: (({ geneId }) => geneId),
     searchType: 'genes',
     title: 'Expression Outliers',
-    formatData: ({ data }) => data,
+    formatData: data => data,
   },
-  spliceOutliers: {
+  {
+    key: 'spliceOutliers',
     getLocation: (({ chrom, start, end }) => `${chrom}:${Math.max(1, start - RNASEQ_JUNCTION_PADDING)}-${end + RNASEQ_JUNCTION_PADDING}`),
     searchType: 'regions',
     title: 'Splice Junction Outliers',
-    formatData: ({ data, tissueType }) => data.filter(outlier => outlier.tissueType === tissueType),
+    formatData: (data, tissueType) => data.filter(outlier => outlier.tissueType === tissueType),
   },
-}
+]
 
 class BaseRnaSeqResultPage extends React.PureComponent {
 
@@ -61,21 +63,21 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     const { tissueType, tissueOptions } = this.state
 
     const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map(({ formatData, ...config }) => ({
-      data: formatData(((rnaSeqData || {})[config.key] || {}).flat(), tissueType),
+      data: formatData(Object.values((rnaSeqData || {})[config.key] || {}).flat(), tissueType),
       ...config,
-    }).filter(({ data }) => data.length))
+    })).filter(({ data }) => data.length)
 
-    const outlierPlots = outlierPlotConfigs.map(([key, data]) => (
+    const outlierPlots = outlierPlotConfigs.map(({ key, data, ...config }) => (
       <Grid.Column key={key} width={8}>
         <RnaSeqOutliers
           familyGuid={individual.familyGuid}
           rnaSeqData={data}
           genesById={genesById}
-          {...OUTLIER_VOLCANO_PLOT_CONFIGS[key]}
+          {...config}
         />
       </Grid.Column>
     ))
-    const hasSpliceOutliers = outlierPlotConfigs.map(([key]) => key).includes('spliceOutliers')
+    const hasSpliceOutliers = outlierPlotConfigs.some(({ key }) => key === 'spliceOutliers')
 
     return (
       <React.Suspense fallback={<Loader />}>
