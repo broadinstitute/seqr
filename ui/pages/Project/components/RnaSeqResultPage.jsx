@@ -38,23 +38,17 @@ class BaseRnaSeqResultPage extends React.PureComponent {
 
   constructor(props) {
     super(props)
-    // eslint-disable-next-line react/state-in-constructor
-    this.state = {
-      tissueType: null,
-      tissueOptions: null,
-    }
-  }
-
-  componentDidMount() {
-    const { rnaSeqData } = this.props
+    const { rnaSeqData } = props
     const tissueTypes = Array.from(Object.values(rnaSeqData?.spliceOutliers || {}).flat().reduce(
       (acc, { tissueType }) => acc.add(tissueType), new Set(),
     ))
     const tissueOptions = tissueTypes.map(tissueType => (
       { key: tissueType, text: TISSUE_DISPLAY[tissueType] || 'No Tissue', value: tissueType }
     ))
-    if (tissueOptions.length) {
-      this.setState({ tissueType: tissueOptions[0].value, tissueOptions })
+    // eslint-disable-next-line react/state-in-constructor
+    this.state = {
+      tissueType: tissueOptions.length > 0 ? tissueOptions[0].value : null,
+      tissueOptions,
     }
   }
 
