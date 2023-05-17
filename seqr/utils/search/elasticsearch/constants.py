@@ -173,9 +173,10 @@ CLINVAR_SORT = {
 }
 
 
-def _get_phenotype_priority_ranks_by_gene(families, *args):
+def _get_phenotype_priority_ranks_by_gene(samples, *args):
+    families = {s.individual.family for s in samples}
     family_ranks = PhenotypePrioritization.objects.filter(
-        individual__family=families[0], rank__lte=100).values('gene_id').annotate(min_rank=Min('rank'))
+        individual__family=list(families)[0], rank__lte=100).values('gene_id').annotate(min_rank=Min('rank'))
     return {agg['gene_id']: agg['min_rank'] for agg in family_ranks}
 
 

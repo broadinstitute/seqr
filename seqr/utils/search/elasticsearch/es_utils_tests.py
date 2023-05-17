@@ -1425,12 +1425,6 @@ class EsUtilsTest(TestCase):
         setup_responses()
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.filter(family_id='no_individuals'))
-
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model)
-        self.assertEqual(str(cm.exception), 'No es index found for families no_individuals')
-
         results_model.families.set(Family.objects.all())
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(results_model)

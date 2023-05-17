@@ -32,19 +32,14 @@ class EsSearch(object):
     AGGREGATION_NAME = 'compound het'
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
-    def __init__(self, families, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
+    def __init__(self, samples, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
         from seqr.utils.search.utils import InvalidSearchException
         from seqr.utils.search.elasticsearch.es_utils import get_es_client, InvalidIndexException
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
-        samples = Sample.objects.filter(is_active=True, individual__family__in=families, elasticsearch_index__isnull=False)
         for s in samples.select_related('individual__family'):
             self.samples_by_family_index[s.elasticsearch_index][s.individual.family.guid][s.sample_id] = s
-
-        if len(self.samples_by_family_index) < 1:
-            raise InvalidSearchException('No es index found for families {}'.format(
-                ', '.join([f.family_id for f in families])))
 
         self._set_indices(sorted(list(self.samples_by_family_index.keys())))
         self._set_index_metadata()
@@ -90,7 +85,7 @@ class EsSearch(object):
 
         self._sort = deepcopy(SORT_FIELDS.get(sort, [])) if sort else None
         if self._sort:
-            self._sort_variants(families)
+            self._sort_variants(samples)
 
     @staticmethod
     def _parse_xstop(result):
@@ -200,7 +195,7 @@ class EsSearch(object):
         self._set_indices(update_indices)
         return self
 
-    def _sort_variants(self, families):
+    def _sort_variants(self, sample_data):
         main_sort_dict = self._sort[0] if len(self._sort) and isinstance(self._sort[0], dict) else None
 
         # Add parameters to scripts
@@ -208,7 +203,7 @@ class EsSearch(object):
             called_params = None
             for key, val_func in self._sort[0]['_script']['script']['params'].items():
                 if callable(val_func):
-                    self._sort[0]['_script']['script']['params'][key] = val_func(families)
+                    self._sort[0]['_script']['script']['params'][key] = val_func(sample_data)
                     called_params = self._sort[0]['_script']['script']['params']
             if called_params:
                 for sort_dict in self._sort[1:]:

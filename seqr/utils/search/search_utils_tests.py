@@ -18,6 +18,10 @@ class SearchUtilsTests(object):
         self.addCleanup(patcher.stop)
 
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
+        self.search_samples =Sample.objects.filter(guid__in=[
+            'S000132_hg00731', 'S000133_hg00732', 'S000134_hg00733', 'S000135_na20870', 'S000137_na20874',
+            'S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733', 'S000149_hg00733',
+        ])
         self.user = User.objects.get(username='test_user')
 
         self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'recessive'}})
@@ -37,13 +41,15 @@ class SearchUtilsTests(object):
         variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
         self.assertDictEqual(variant, PARSED_VARIANTS[0])
         mock_get_variants_for_ids.assert_called_with(
-            self.families, ['2-103343353-GAGA-G'], self.user, return_all_queried_families=False,
+            mock.ANY, ['2-103343353-GAGA-G'], self.user, return_all_queried_families=False,
         )
+        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
 
         get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
         mock_get_variants_for_ids.assert_called_with(
-            self.families, ['2-103343353-GAGA-G'], self.user, return_all_queried_families=True,
+            mock.ANY, ['2-103343353-GAGA-G'], self.user, return_all_queried_families=True,
         )
+        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
 
         mock_get_variants_for_ids.return_value = []
         with self.assertRaises(InvalidSearchException) as cm:
@@ -53,14 +59,21 @@ class SearchUtilsTests(object):
     def test_get_variants_for_variant_ids(self, mock_get_variants_for_ids):
         variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']
         get_variants_for_variant_ids(self.families, variant_ids, user=self.user)
-        mock_get_variants_for_ids.assert_called_with(self.families, variant_ids, self.user, dataset_type=None)
+        mock_get_variants_for_ids.assert_called_with(mock.ANY, variant_ids, self.user, dataset_type=None)
+        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
 
         get_variants_for_variant_ids(
             self.families, variant_ids, user=self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
         mock_get_variants_for_ids.assert_called_with(
-            self.families, variant_ids, self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+            mock.ANY, variant_ids, self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
 
     def _test_invalid_search_params(self, search_func):
+        self.results_model.families.set(Family.objects.filter(family_id='no_individuals'))
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model)
+        self.assertEqual(str(cm.exception), 'No search data found for families no_individuals')
+
         self.search_model.search['locus'] = {'rawVariantItems': 'chr2-A-C'}
         with self.assertRaises(InvalidSearchException) as cm:
             search_func(self.results_model, user=self.user)
@@ -78,9 +91,6 @@ class SearchUtilsTests(object):
 
     @mock.patch('seqr.utils.search.utils.MAX_VARIANTS', 5)
     def test_invalid_search_query_variants(self):
-        self._test_invalid_search_params(query_variants)
-
-        self.search_model.search['locus'] = {}
         with self.assertRaises(InvalidSearchException) as se:
             query_variants(self.results_model, sort='prioritized_gene', num_results=2)
         self.assertEqual(str(se.exception), 'Phenotype sort is only supported for single-family search.')
@@ -89,6 +99,8 @@ class SearchUtilsTests(object):
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model, page=1, num_results=2, load_all=True)
         self.assertEqual(str(cm.exception), 'Too many variants to load. Please refine your search and try again')
+
+        self._test_invalid_search_params(query_variants)
 
     def _test_expected_search_call(self, mock_get_variants, results_cache, locus=None, genes=None, intervals=None,
                                    rs_ids=None, variant_ids=None, parsed_variant_ids=None, **kwargs):
@@ -103,7 +115,7 @@ class SearchUtilsTests(object):
             expected_search['locus'] = locus
 
         mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, **kwargs)
-        self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(self.families))
+        self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(self.search_samples))
 
     def test_query_variants(self, mock_get_variants):
         def _mock_get_variants(families, search, user, previous_search_results, **kwargs):
