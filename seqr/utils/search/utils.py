@@ -309,8 +309,6 @@ def _filter_affected_family_samples(samples, inheritance_filter):
         raise InvalidSearchException(
             'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
-    skipped_samples = [
+    return [
         s for s in samples if getattr(s, sample_group_field) not in affected_family_groups[s.individual.family_id]
     ]
-
-    return skipped_samples
