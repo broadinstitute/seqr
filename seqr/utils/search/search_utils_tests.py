@@ -112,6 +112,11 @@ class SearchUtilsTests(object):
             query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Inheritance must be specified if custom affected status is set')
 
+        self.search_model.search['inheritance']['filter'] = {'genotype': {'I000004_hg00731': 'ref_ref'}}
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model)
+        self.assertEqual(str(cm.exception), 'Invalid custom inheritance')
+
         self.results_model.families.set(Family.objects.filter(family_id='no_individuals'))
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model, user=self.user)

@@ -454,11 +454,6 @@ class EsSearch(object):
             family_samples_q = _family_genotype_inheritance_filter(
                 inheritance_mode, inheritance_filter, samples_by_id, affected_status, index_fields,
             )
-
-            if not family_samples_q:
-                from seqr.utils.search.utils import InvalidSearchException  # TODO
-                raise InvalidSearchException('Invalid custom inheritance')
-
         else:
             # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
             family_samples_q = _any_affected_sample_filter(list(samples_by_id.keys()))

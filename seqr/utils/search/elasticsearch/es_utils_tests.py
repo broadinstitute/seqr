@@ -1435,13 +1435,6 @@ class EsUtilsTest(TestCase):
         Sample.objects.filter(elasticsearch_index=HG38_INDEX_NAME).update(elasticsearch_index=INDEX_NAME)
 
         results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
-        search_model.search = {'inheritance': {'filter': {'genotype': {'I000004_hg00731': 'ref_ref'}}}}
-        search_model.save()
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model)
-        self.assertEqual(str(cm.exception), 'Invalid custom inheritance')
-
-        search_model.search['inheritance']['filter'] = {}
         search_model.search['annotations'] = {'structural': ['DEL']}
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
