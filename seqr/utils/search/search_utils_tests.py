@@ -18,10 +18,14 @@ class SearchUtilsTests(object):
         self.addCleanup(patcher.stop)
 
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
-        self.search_samples =Sample.objects.filter(guid__in=[
-            'S000132_hg00731', 'S000133_hg00732', 'S000134_hg00733', 'S000135_na20870', 'S000137_na20874',
-            'S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733', 'S000149_hg00733',
+        self.non_affected_search_samples = Sample.objects.filter(guid__in=[
+             'S000149_hg00733',  'S000137_na20874',
         ])
+        self.affected_search_samples = Sample.objects.filter(guid__in=[
+            'S000132_hg00731', 'S000133_hg00732', 'S000134_hg00733', 'S000135_na20870',
+            'S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733',
+        ])
+        self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
         self.user = User.objects.get(username='test_user')
 
         self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}})
@@ -86,7 +90,24 @@ class SearchUtilsTests(object):
             str(cm.exception),
             'Location must be specified to search for compound heterozygous variants across many families')
 
-        self.search_model.search['inheritance'] = {'filter': {'affected': {'I000004_hg00731': 'N', 'I000005_hg00732': 'A'}}}
+        self.results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model)
+        self.assertEqual(
+            str(cm.exception),
+            'Inheritance based search is disabled in families with no data loaded for affected individuals',
+        )
+
+        self.search_model.search['inheritance']['filter'] = {'affected': {'I000007_na20870': 'N'}}
+        self.results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model)
+        self.assertEqual(
+            str(cm.exception),
+            'Inheritance based search is disabled in families with no data loaded for affected individuals',
+        )
+
+        self.search_model.search['inheritance']['mode'] = None
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Inheritance must be specified if custom affected status is set')
@@ -140,12 +161,14 @@ class SearchUtilsTests(object):
                 'genes': genes, 'intervals': intervals, 'rs_ids': rs_ids, 'variant_ids': variant_ids,
                 'parsed_variant_ids': parsed_variant_ids,
             },
+            'skipped_samples': mock.ANY,
         }
         if locus:
             expected_search['locus'] = locus
 
         mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, '37', **kwargs)
-        self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(self.search_samples))
+        self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(self.affected_search_samples))
+        self.assertSetEqual(set(mock_get_variants.call_args.args[1]['skipped_samples']), set(self.non_affected_search_samples))
 
     def test_query_variants(self, mock_get_variants):
         def _mock_get_variants(families, search, user, previous_search_results, genome_version, **kwargs):

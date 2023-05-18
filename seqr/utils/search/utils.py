@@ -265,28 +265,24 @@ def _parse_inheritance(search, samples, previous_search_results):
     if not inheritance_mode and list(inheritance_filter.keys()) == ['affected']:
         raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
-    family_ids = set()
-    affected_family_ids = set()
+    affected_family_groups = defaultdict(set)
+    sample_group_field = backend_specific_call('elasticsearch_index', 'dataset_type')
     individual_affected_status = inheritance_filter.get('affected') or {}
     for sample in samples.select_related('individual'):
         family_id = sample.individual.family_id
-        family_ids.add(family_id)
         affected_status = individual_affected_status.get(sample.individual.guid) or sample.individual.affected
         if affected_status == Individual.AFFECTED_STATUS_AFFECTED:
-            affected_family_ids.add(family_id)
+            affected_family_groups[family_id].add(getattr(sample, sample_group_field))
 
-    if not affected_family_ids:
+    if not affected_family_groups:
         raise InvalidSearchException(
             'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
-    if affected_family_ids != family_ids:
-        search.update(backend_specific_call(
-            lambda: {'skipped_samples': samples.exclude(individual__family_id__in=affected_family_ids)},
-            lambda: {},
-        )())
-        samples = samples.filter(individual__family_id__in=affected_family_ids)
-        family_ids = affected_family_ids
-
+    skipped_samples = [
+        s for s in samples if getattr(s, sample_group_field) not in affected_family_groups[s.individual.family_id]]
+    if skipped_samples:
+        search['skipped_samples'] = skipped_samples
+        samples = samples.exclude(id__in=[s.id for s in skipped_samples])
 
     has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
     if has_comp_het_search:
@@ -294,6 +290,7 @@ def _parse_inheritance(search, samples, previous_search_results):
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
         has_location_filter = bool(search['parsedLocus']['genes'] or search['parsedLocus']['intervals'])
+        family_ids = set(affected_family_groups.keys())
         if not has_location_filter and len(family_ids) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
             raise InvalidSearchException(
                 'Location must be specified to search for compound heterozygous variants across many families')

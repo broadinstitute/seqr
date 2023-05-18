@@ -402,7 +402,7 @@ class EsSearch(object):
             index_fields = self.index_metadata[index]['fields']
 
             if all_sample_search:
-                index_skipped_sample_count = self._skipped_samples.filter(elasticsearch_index=index).count() if self._skipped_samples else 0
+                index_skipped_sample_count = sum([s.elasticsearch_index == index for s in self._skipped_samples or []])
                 search_sample_count = sum(len(samples) for samples in family_samples_by_id.values()) + index_skipped_sample_count
                 index_sample_count = Sample.objects.filter(elasticsearch_index=index, is_active=True).count()
                 if search_sample_count == index_sample_count:
@@ -456,7 +456,7 @@ class EsSearch(object):
             )
 
             if not family_samples_q:
-                from seqr.utils.search.utils import InvalidSearchException
+                from seqr.utils.search.utils import InvalidSearchException  # TODO
                 raise InvalidSearchException('Invalid custom inheritance')
 
         else:
