@@ -24,7 +24,7 @@ class SearchUtilsTests(object):
         ])
         self.user = User.objects.get(username='test_user')
 
-        self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'recessive'}})
+        self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}})
         self.results_model = VariantSearchResults.objects.create(variant_search=self.search_model)
         self.results_model.families.set(self.families)
 
@@ -74,13 +74,14 @@ class SearchUtilsTests(object):
             query_variants(self.results_model, user=self.user, page=200)
         self.assertEqual(str(cm.exception), 'Unable to load more than 10000 variants (20000 requested)')
 
+        self.search_model.search['inheritance'] = {'mode': 'recessive'}
         with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model)
+            query_variants(self.results_model)
         self.assertEqual(str(cm.exception), 'Annotations must be specified to search for compound heterozygous variants')
 
         self.search_model.search['annotations'] = {'frameshift': ['frameshift_variant']}
         with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model)
+            query_variants(self.results_model)
         self.assertEqual(
             str(cm.exception),
             'Location must be specified to search for compound heterozygous variants across many families')
@@ -118,23 +119,23 @@ class SearchUtilsTests(object):
             search_func(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
 
-    @mock.patch('seqr.utils.search.utils.MAX_VARIANTS', 5)
     def test_invalid_search_query_variants(self):
         with self.assertRaises(InvalidSearchException) as se:
             query_variants(self.results_model, sort='prioritized_gene', num_results=2)
         self.assertEqual(str(se.exception), 'Phenotype sort is only supported for single-family search.')
 
-        self.set_cache({'total_results': 10})
+        self.set_cache({'total_results': 20000})
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model, page=1, num_results=2, load_all=True)
-        self.assertEqual(str(cm.exception), 'Too many variants to load. Please refine your search and try again')
+        self.assertEqual(str(cm.exception), 'Unable to load more than 10000 variants (20000 requested)')
 
         self._test_invalid_search_params(query_variants)
 
     def _test_expected_search_call(self, mock_get_variants, results_cache, locus=None, genes=None, intervals=None,
                                    rs_ids=None, variant_ids=None, parsed_variant_ids=None, **kwargs):
         expected_search = {
-            'inheritance': {'mode': 'recessive'},
+            'inheritance_mode': 'de_novo',
+            'inheritance_filter': {},
             'parsedLocus': {
                 'genes': genes, 'intervals': intervals, 'rs_ids': rs_ids, 'variant_ids': variant_ids,
                 'parsed_variant_ids': parsed_variant_ids,
