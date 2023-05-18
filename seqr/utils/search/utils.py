@@ -59,6 +59,26 @@ def get_search_samples(projects, active_only=True):
     return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
+def _get_families_search_data(families):
+    samples = _get_filtered_search_samples({'individual__family__in': families})
+    if len(samples) < 1:
+        raise InvalidSearchException('No search data found for families {}'.format(
+            ', '.join([f.family_id for f in families])))
+
+    projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name')
+    project_versions = defaultdict(set)
+    for genome_version, project_name in projects:
+        project_versions[genome_version].add(project_name)
+
+    if len(project_versions) > 1:
+        summary = '; '.join(
+            [f"{build} - {', '.join(sorted(projects))}" for build, projects in project_versions.items()])
+        raise InvalidSearchException(
+            f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
+
+    return samples, next(iter(project_versions.keys()))
+
+
 def delete_search_backend_data(data_id):
     active_samples = Sample.objects.filter(is_active=True, elasticsearch_index=data_id)
     if active_samples:
@@ -113,8 +133,8 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     if previously_loaded_results is not None:
         return previously_loaded_results, total_results
 
-    if load_all and total_results and int(total_results) >= int(MAX_VARIANTS):
-        raise InvalidSearchException('Too many variants to load. Please refine your search and try again')
+    if end_index > MAX_VARIANTS:
+        raise InvalidSearchException(f'Unable to load more than {MAX_VARIANTS} variants ({end_index} requested)')
 
     return _query_variants(
         search_model, user, previous_search_results, sort=sort, page=page, num_results=num_results,
@@ -230,26 +250,6 @@ def _validate_sort(sort, families):
         raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
 
 
-def _get_families_search_data(families):
-    samples = _get_filtered_search_samples({'individual__family__in': families})
-    if len(samples) < 1:
-        raise InvalidSearchException('No search data found for families {}'.format(
-            ', '.join([f.family_id for f in families])))
-
-    projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name')
-    project_versions = defaultdict(set)
-    for genome_version, project_name in projects:
-        project_versions[genome_version].add(project_name)
-
-    if len(project_versions) > 1:
-        summary = '; '.join(
-            [f"{build} - {', '.join(sorted(projects))}" for build, projects in project_versions.items()])
-        raise InvalidSearchException(
-            f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
-
-    return samples, next(iter(project_versions.keys()))
-
-
 def _parse_inheritance(search, samples, previous_search_results):
     inheritance = search.pop('inheritance')
     inheritance_mode = inheritance.get('mode')
@@ -262,7 +262,7 @@ def _parse_inheritance(search, samples, previous_search_results):
     if not (inheritance_mode or inheritance_filter):
         return samples
 
-    if not inheritance_mode and inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
+    if not inheritance_mode and list(inheritance_filter.keys()) == ['affected']:
         raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
     family_ids = set()

@@ -1242,11 +1242,6 @@ class EsSearch(object):
                 end_index = page * num_results
                 if start_index is None:
                     start_index = end_index - num_results
-                if end_index > MAX_VARIANTS:
-                    # ES request size limits are limited by offset + size, which is the same as end_index
-                    from seqr.utils.search.utils import InvalidSearchException
-                    raise InvalidSearchException(
-                        'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index))
 
                 search = search[start_index:end_index]
                 search = search.source(QUERY_FIELD_NAMES)
