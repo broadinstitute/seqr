@@ -113,6 +113,9 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     if previously_loaded_results is not None:
         return previously_loaded_results, total_results
 
+    if end_index > MAX_VARIANTS:
+        raise InvalidSearchException(f'Unable to load more than {MAX_VARIANTS} variants ({end_index} requested)')
+
     if load_all and total_results and int(total_results) >= int(MAX_VARIANTS):
         raise InvalidSearchException('Too many variants to load. Please refine your search and try again')
 

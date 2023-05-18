@@ -169,7 +169,7 @@ class EsSearch(object):
         self._set_indices(sorted(list(self.samples_by_family_index.keys())))
 
         if len(self._indices) < 1:
-            from seqr.utils.search.utils import InvalidSearchException # TODO
+            from seqr.utils.search.utils import InvalidSearchException
             raise InvalidSearchException(
                 'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
@@ -186,7 +186,7 @@ class EsSearch(object):
                 error = 'Unable to search against dataset type "{}". This may be because inheritance based search is disabled in families with no loaded affected individuals'.format(
                     dataset_type
                 )
-                from seqr.utils.search.utils import InvalidSearchException
+                from seqr.utils.search.utils import InvalidSearchException  # TODO
                 raise InvalidSearchException(error)
             update_indices = new_indices
 
@@ -480,7 +480,7 @@ class EsSearch(object):
             )
 
             if not family_samples_q:
-                from seqr.utils.search.utils import InvalidSearchException
+                from seqr.utils.search.utils import InvalidSearchException  # TODO
                 raise InvalidSearchException('Invalid custom inheritance')
 
         else:
@@ -1266,11 +1266,6 @@ class EsSearch(object):
                 end_index = page * num_results
                 if start_index is None:
                     start_index = end_index - num_results
-                if end_index > MAX_VARIANTS:
-                    # ES request size limits are limited by offset + size, which is the same as end_index
-                    from seqr.utils.search.utils import InvalidSearchException
-                    raise InvalidSearchException(
-                        'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index))
 
                 search = search[start_index:end_index]
                 search = search.source(QUERY_FIELD_NAMES)
