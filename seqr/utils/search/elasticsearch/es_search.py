@@ -10,7 +10,7 @@ from itertools import combinations
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
-from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, MAX_NO_LOCATION_COMP_HET_FAMILIES
+from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE
 from seqr.utils.search.elasticsearch.constants import X_LINKED_RECESSIVE, \
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
@@ -232,7 +232,7 @@ class EsSearch(object):
         self._search = self._search.filter(new_filter)
         return self
 
-    def filter_variants(self, inheritance=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
+    def filter_variants(self, inheritance_mode=None, inheritance_filter=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
                         frequencies=None, pathogenicity=None, in_silico=None, annotations=None, annotations_secondary=None,
                         quality_filter=None, custom_query=None, skip_genotype_filter=False, **kwargs):
 
@@ -249,13 +249,10 @@ class EsSearch(object):
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self._filter(~Q('exists', field='filters'))
 
-        inheritance_mode = (inheritance or {}).get('mode')
-        inheritance_filter = (inheritance or {}).get('filter') or {}
-        if inheritance_filter.get('genotype'):
-            inheritance_mode = None
+        inheritance_filter = inheritance_filter or {}
 
         skipped_sample_count = defaultdict(int)
-        if inheritance:
+        if inheritance_mode or inheritance_filter:
             self._filter_families_for_inheritance(inheritance_filter, skipped_sample_count)
 
         quality_filters_by_family = self._get_quality_filters_by_family(quality_filter)
@@ -263,7 +260,7 @@ class EsSearch(object):
         has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not self.previous_search_results.get('grouped_results')
         if has_comp_het_search:
             comp_het_dataset_type = self._filter_compound_hets(
-                quality_filters_by_family, annotations, annotations_secondary, bool(genes or intervals))
+                quality_filters_by_family, annotations, annotations_secondary)
             if inheritance_mode == COMPOUND_HET:
                 if comp_het_dataset_type:
                     self.update_dataset_type(comp_het_dataset_type)
@@ -478,10 +475,6 @@ class EsSearch(object):
             if inheritance_mode:
                 inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
-            if list(inheritance_filter.keys()) == ['affected']:
-                from seqr.utils.search.utils import InvalidSearchException
-                raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
-
             family_samples_q = _family_genotype_inheritance_filter(
                 inheritance_mode, inheritance_filter, samples_by_id, affected_status, index_fields,
             )
@@ -496,17 +489,7 @@ class EsSearch(object):
 
         return _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
 
-    def _filter_compound_hets(self, quality_filters_by_family, annotations, annotations_secondary, has_location_filter):
-        if not self._allowed_consequences:
-            from seqr.utils.search.utils import InvalidSearchException
-            raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
-
-        if not has_location_filter and any(len(family_samples_by_id) > MAX_NO_LOCATION_COMP_HET_FAMILIES
-                                           for family_samples_by_id in self.samples_by_family_index.values()):
-            from seqr.utils.search.utils import InvalidSearchException
-            raise InvalidSearchException(
-                'Location must be specified to search for compound heterozygous variants across many families')
-
+    def _filter_compound_hets(self, quality_filters_by_family, annotations, annotations_secondary):
         comp_het_consequences = set(self._allowed_consequences)
         dataset_type = _dataset_type_for_annotations(annotations)
         annotation_override_filter = self._get_annotation_override_filter()

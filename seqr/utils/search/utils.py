@@ -3,7 +3,8 @@ from datetime import timedelta
 
 from seqr.models import Sample, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT
+from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
+    MAX_NO_LOCATION_COMP_HET_FAMILIES
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
@@ -151,6 +152,9 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     _validate_sort(sort, families)
     samples, genome_version = _get_families_search_data(families)
 
+    if parsed_search.get('inheritance'):
+        _parse_inheritance(parsed_search, samples, previous_search_results)
+
     variant_results = backend_specific_call(get_es_variants)(
         samples, parsed_search, user, previous_search_results, genome_version,
         sort=sort, num_results=num_results, **kwargs,
@@ -244,3 +248,28 @@ def _get_families_search_data(families):
             f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
 
     return samples, next(iter(project_versions.keys()))
+
+
+def _parse_inheritance(search, samples, previous_search_results):
+    inheritance = search.pop('inheritance')
+    inheritance_mode = inheritance.get('mode')
+    inheritance_filter = inheritance.get('filter') or {}
+
+    if inheritance_filter.get('genotype'):
+        inheritance_mode = None
+
+    if not inheritance_mode and inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
+        raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
+
+    has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
+    if has_comp_het_search:
+        if not search.get('annotations'):
+            raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
+
+        has_location_filter = bool(search['parsedLocus']['genes'] or search['parsedLocus']['intervals'])
+        family_ids = {s.individual.family_id for s in samples.prefetch_related('individual')}
+        if not has_location_filter and len(family_ids) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
+            raise InvalidSearchException(
+                'Location must be specified to search for compound heterozygous variants across many families')
+
+    search.update({'inheritance_mode': inheritance_mode, 'inheritance_filter': inheritance_filter})

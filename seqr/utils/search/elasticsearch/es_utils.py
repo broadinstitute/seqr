@@ -277,7 +277,8 @@ def get_es_variants(samples, search, user, previous_search_results, genome_versi
     )
 
     es_search.filter_variants(
-        inheritance=search.get('inheritance'), frequencies=search.get('freqs'), pathogenicity=search.get('pathogenicity'),
+        inheritance_mode=search.get('inheritance_mode'), inheritance_filter=search.get('inheritance_filter'),
+        frequencies=search.get('freqs'), pathogenicity=search.get('pathogenicity'),
         annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
         in_silico=search.get('in_silico'), quality_filter=search.get('qualityFilter'),
         custom_query=search.get('customQuery'), locus=search.get('locus'), skip_genotype_filter=skip_genotype_filter,
