@@ -186,7 +186,7 @@ class EsSearch(object):
                 error = 'Unable to search against dataset type "{}". This may be because inheritance based search is disabled in families with no loaded affected individuals'.format(
                     dataset_type
                 )
-                from seqr.utils.search.utils import InvalidSearchException  # TODO
+                from seqr.utils.search.utils import InvalidSearchException
                 raise InvalidSearchException(error)
             update_indices = new_indices
 
@@ -480,7 +480,7 @@ class EsSearch(object):
             )
 
             if not family_samples_q:
-                from seqr.utils.search.utils import InvalidSearchException  # TODO
+                from seqr.utils.search.utils import InvalidSearchException
                 raise InvalidSearchException('Invalid custom inheritance')
 
         else:

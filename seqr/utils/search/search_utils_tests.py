@@ -68,7 +68,28 @@ class SearchUtilsTests(object):
             mock.ANY, '37', variant_ids, self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
 
+    @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     def _test_invalid_search_params(self, search_func):
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model, user=self.user, page=200)
+        self.assertEqual(str(cm.exception), 'Unable to load more than 10000 variants (20000 requested)')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(results_model)
+        self.assertEqual(str(cm.exception), 'Annotations must be specified to search for compound heterozygous variants')
+
+        self.search_model.search['annotations'] = {'frameshift': ['frameshift_variant']}
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(results_model)
+        self.assertEqual(
+            str(cm.exception),
+            'Location must be specified to search for compound heterozygous variants across many families')
+
+        self.search_model.search['inheritance'] = {'filter': {'affected': {'I000004_hg00731': 'N', 'I000005_hg00732': 'A'}}}
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'Inheritance must be specified if custom affected status is set')
+
         self.results_model.families.set(Family.objects.filter(family_id='no_individuals'))
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model, user=self.user)
