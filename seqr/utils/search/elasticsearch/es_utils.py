@@ -274,6 +274,7 @@ def get_es_variants(samples, search, user, previous_search_results, genome_versi
         previous_search_results=previous_search_results,
         user=user,
         sort=sort,
+        skipped_samples=search.get('skipped_samples'),
     )
 
     es_search.filter_variants(

@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import timedelta
 
-from seqr.models import Sample, Project
+from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
     MAX_NO_LOCATION_COMP_HET_FAMILIES
@@ -153,7 +153,7 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     samples, genome_version = _get_families_search_data(families)
 
     if parsed_search.get('inheritance'):
-        _parse_inheritance(parsed_search, samples, previous_search_results)
+        samples = _parse_inheritance(parsed_search, samples, previous_search_results)
 
     variant_results = backend_specific_call(get_es_variants)(
         samples, parsed_search, user, previous_search_results, genome_version,
@@ -258,8 +258,35 @@ def _parse_inheritance(search, samples, previous_search_results):
     if inheritance_filter.get('genotype'):
         inheritance_mode = None
 
+    search.update({'inheritance_mode': inheritance_mode, 'inheritance_filter': inheritance_filter})
+    if not (inheritance_mode or inheritance_filter):
+        return samples
+
     if not inheritance_mode and inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
         raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
+
+    family_ids = set()
+    affected_family_ids = set()
+    individual_affected_status = inheritance_filter.get('affected') or {}
+    for sample in samples.select_related('individual'):
+        family_id = sample.individual.family_id
+        family_ids.add(family_id)
+        affected_status = individual_affected_status.get(sample.individual.guid) or sample.individual.affected
+        if affected_status == Individual.AFFECTED_STATUS_AFFECTED:
+            affected_family_ids.add(family_id)
+
+    if not affected_family_ids:
+        raise InvalidSearchException(
+            'Inheritance based search is disabled in families with no data loaded for affected individuals')
+
+    if affected_family_ids != family_ids:
+        search.update(backend_specific_call(
+            lambda: {'skipped_samples': samples.exclude(individual__family_id__in=affected_family_ids)},
+            lambda: {},
+        )())
+        samples = samples.filter(individual__family_id__in=affected_family_ids)
+        family_ids = affected_family_ids
+
 
     has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
     if has_comp_het_search:
@@ -267,9 +294,8 @@ def _parse_inheritance(search, samples, previous_search_results):
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
         has_location_filter = bool(search['parsedLocus']['genes'] or search['parsedLocus']['intervals'])
-        family_ids = {s.individual.family_id for s in samples.prefetch_related('individual')}
         if not has_location_filter and len(family_ids) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
             raise InvalidSearchException(
                 'Location must be specified to search for compound heterozygous variants across many families')
 
-    search.update({'inheritance_mode': inheritance_mode, 'inheritance_filter': inheritance_filter})
+    return samples
