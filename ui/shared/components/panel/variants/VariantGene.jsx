@@ -408,13 +408,13 @@ const GENE_DETAIL_SECTIONS = [
     color: 'pink',
     description: 'RNA-Seq Expression Outlier',
     label: 'RNA Expression',
-    showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqExpData && indivGeneData.rnaSeqExpData[gene.geneId],
+    showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqData && indivGeneData.rnaSeqData[gene.geneId],
     detailsDisplay: (gene, indivGeneData) => (
       <div>
         This gene is flagged as an outlier for RNA-Seq in the following samples
         <DataTable
           {...HOVER_DATA_TABLE_PROPS}
-          data={indivGeneData.rnaSeqExpData[gene.geneId]}
+          data={indivGeneData.rnaSeqData[gene.geneId]}
           idField="individualName"
           columns={RNA_SEQ_EXPRESSION_COLUMNS}
         />

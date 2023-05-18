@@ -13,7 +13,7 @@ import {
   BaseSemanticInput,
 } from '../components/form/Inputs'
 
-import { stripMarkdown, camelcaseToTitlecase } from './stringUtils'
+import { stripMarkdown } from './stringUtils'
 import { ColoredIcon } from '../components/StyledComponents'
 
 export const ANVIL_URL = 'https://anvil.terra.bio'
@@ -1590,24 +1590,5 @@ export const TISSUE_DISPLAY = {
   M: 'Muscle',
   L: 'Lymphocyte',
 }
-
-const RNA_SEQ_SPLICE_NUM_FIELDS = ['zScore', 'pValue', 'deltaPsi']
-const RNA_SEQ_SPLICE_DETAIL_FIELDS = ['type', 'readCount', 'rareDiseaseSamplesWithJunction', 'rareDiseaseSamplesTotal']
-
-export const RNA_SEQ_SPLICE_COLUMNS = [
-  ...RNA_SEQ_SPLICE_NUM_FIELDS.map(name => (
-    {
-      name,
-      content: camelcaseToTitlecase(name).replace(' ', '-'),
-      format: row => row[name].toPrecision(3),
-    }
-  )),
-  ...RNA_SEQ_SPLICE_DETAIL_FIELDS.map(name => (
-    {
-      name,
-      content: camelcaseToTitlecase(name).replace(' ', '-'),
-    }
-  )),
-]
 
 export const RNASEQ_JUNCTION_PADDING = 200

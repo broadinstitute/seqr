@@ -16,6 +16,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_
     get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
+from seqr.views.utils.individual_utils import MAX_SIGNIFICANT_OUTLIER_NUM
 from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
 
 logger = logging.getLogger(__name__)
@@ -133,15 +134,17 @@ def _add_locus_lists(projects, genes, add_list_detail=False, user=None):
 def _get_rna_seq_outliers(gene_ids, family_guids):
     data_by_individual_gene = defaultdict(lambda: {'outliers': {}, 'spliceOutliers': {}})
 
-    for outlier, outlier_cls in [('outliers', RnaSeqOutlier), ('spliceOutliers', RnaSeqSpliceOutlier)]:
+    for outlier, outlier_cls, max_sign in [('outliers', RnaSeqOutlier, None),
+                                           ('spliceOutliers', RnaSeqSpliceOutlier, MAX_SIGNIFICANT_OUTLIER_NUM)]:
         outlier_data = get_json_for_rna_seq_outliers(
             outlier_cls.objects.filter(
                 gene_id__in=gene_ids,
                 sample__individual__family__guid__in=family_guids,
-                **{f'{outlier_cls.SIGNIFICANCE_FIELD}__lt': outlier_cls.SIGNIFICANCE_THRESHOLD}
-            ),
+                sample__is_active=True,
+            ).order_by('p_value'),
             nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
                            {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
+            max_significant_num_per_tissue=max_sign,
         )
         for data in outlier_data:
             data_by_individual_gene[data.pop('individualGuid')][outlier][data['geneId']] = data

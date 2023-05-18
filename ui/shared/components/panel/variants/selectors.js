@@ -12,7 +12,6 @@ import {
   VARIANT_SORT_LOOKUP,
   SHOW_ALL,
   VARIANT_EXPORT_DATA,
-  getSpliceId,
 } from 'shared/utils/constants'
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
@@ -26,24 +25,17 @@ export const getIndividualGeneDataByFamilyGene = createSelector(
   getPhenotypeGeneScoresByIndividual,
   (individualsByGuid, rnaSeqDataByIndividual = {}, phenotypeGeneScoresByIndividual = {}) => (
     Object.entries(individualsByGuid).reduce((acc, [individualGuid, { familyGuid, displayName }]) => {
-      const rnaSeqData = {
-        rnaSeqExpData: rnaSeqDataByIndividual[individualGuid]?.outliers,
-        rnaSeqSplData: rnaSeqDataByIndividual[individualGuid]?.spliceOutliers,
-      }
+      const rnaSeqData = rnaSeqDataByIndividual[individualGuid]?.outliers
       const phenotypeGeneScores = phenotypeGeneScoresByIndividual[individualGuid]
-      Object.entries(rnaSeqData).filter(([, d]) => d).forEach(([name, outliers]) => {
+      if (rnaSeqData) {
         acc[familyGuid] = acc[familyGuid] || {}
-        acc[familyGuid][name] = Object.entries(outliers).reduce(
+        acc[familyGuid].rnaSeqData = Object.entries(rnaSeqData).reduce(
           (acc2, [geneId, data]) => (data.isSignificant ? {
             ...acc2,
-            [geneId]: [...(acc2[geneId] || []), {
-              ...data,
-              individualName: displayName,
-              idField: name === 'rnaSeqSplData' ? getSpliceId(data) : null,
-            }],
-          } : acc2), acc[familyGuid][name] || {},
+            [geneId]: [...(acc2[geneId] || []), { ...data, individualName: displayName }],
+          } : acc2), acc[familyGuid].rnaSeqData || {},
         )
-      })
+      }
       if (phenotypeGeneScores) {
         acc[familyGuid] = acc[familyGuid] || {}
         acc[familyGuid].phenotypeGeneScores = Object.entries(phenotypeGeneScores).reduce(

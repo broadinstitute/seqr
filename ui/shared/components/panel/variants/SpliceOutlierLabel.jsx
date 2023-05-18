@@ -2,38 +2,25 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import DataTable from 'shared/components/table/DataTable'
-import { RNASEQ_JUNCTION_PADDING, RNA_SEQ_SPLICE_COLUMNS } from 'shared/utils/constants'
-import { getLocus } from 'shared/components/panel/variants/VariantUtils'
-import { COVERAGE_TYPE, JUNCTION_TYPE } from 'shared/components/panel/family/constants'
-import { getIndividualGeneDataByFamilyGene } from './selectors'
+import { getSortedIndividualsByFamily } from 'redux/selectors'
+import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
+import RnaSeqJunctionOutliersTable from 'pages/Project/components/RnaSeqJunctionOutliersTable'
+import { getRnaSeqSignificantJunctionData } from 'pages/Project/selectors'
 import { GeneLabel } from './VariantGene'
 
 const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: true }
 
-const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', format: ({ individualName }) => (<b>{individualName}</b>) }
+const BaseSpliceOutlierLabels = React.memo((
+  { variant, updateReads, significantJunctionOutliers, individualsByFamilyGuid },
+) => {
+  const { pos, end, familyGuids } = variant
+  const individualGuids = familyGuids.reduce((acc, fGuid) => (
+    [...acc, ...individualsByFamilyGuid[fGuid].map(individual => individual.individualGuid)]
+  ), [])
 
-const RNA_SEQ_SPLICE_TAB_COLUMNS = [
-  INDIVIDUAL_NAME_COLUMN,
-  ...RNA_SEQ_SPLICE_COLUMNS,
-]
-
-const handleClick = (intersectedOutliers, updateReads, familyGuid) => (rowId) => {
-  const row = intersectedOutliers.find(r => r.idField === rowId)
-  const { chrom, start, end, tissueType } = row
-  updateReads(familyGuid, getLocus(chrom, start, RNASEQ_JUNCTION_PADDING, end - start),
-    [JUNCTION_TYPE, COVERAGE_TYPE], tissueType)
-}
-
-const BaseSpliceOutlierLabels = React.memo(({ individualGeneData, variant, updateReads }) => {
-  const { pos, end } = variant
-  const outliers = Object.values(individualGeneData?.rnaSeqSplData || {}).flat()
-
-  if (outliers.length < 1) {
-    return null
-  }
-
-  const intersectedOutliers = outliers.filter((outlier) => {
+  const overlappedOutliers = individualGuids.reduce((acc, iGuid) => (
+    [...acc, ...(significantJunctionOutliers[iGuid] || [])]
+  ), []).filter((outlier) => {
     if ((pos >= outlier.start - RNASEQ_JUNCTION_PADDING) && (pos <= outlier.end + RNASEQ_JUNCTION_PADDING)) {
       return true
     }
@@ -43,17 +30,15 @@ const BaseSpliceOutlierLabels = React.memo(({ individualGeneData, variant, updat
     return false
   })
 
-  if (intersectedOutliers.length < 1) {
+  if (overlappedOutliers.length < 1) {
     return null
   }
 
   const details = (
-    <DataTable
+    <RnaSeqJunctionOutliersTable
       {...HOVER_DATA_TABLE_PROPS}
-      data={intersectedOutliers}
-      idField="idField"
-      columns={RNA_SEQ_SPLICE_TAB_COLUMNS}
-      onClickRow={handleClick(intersectedOutliers, updateReads, variant.familyGuids[0])}
+      data={overlappedOutliers}
+      updateReads={updateReads}
     />
   )
   return (
@@ -62,13 +47,15 @@ const BaseSpliceOutlierLabels = React.memo(({ individualGeneData, variant, updat
 })
 
 BaseSpliceOutlierLabels.propTypes = {
-  individualGeneData: PropTypes.object,
+  significantJunctionOutliers: PropTypes.object,
+  individualsByFamilyGuid: PropTypes.object,
   variant: PropTypes.object,
   updateReads: PropTypes.func,
 }
 
-const mapLocusListStateToProps = (state, ownProps) => ({
-  individualGeneData: getIndividualGeneDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
+const mapLocusListStateToProps = state => ({
+  significantJunctionOutliers: getRnaSeqSignificantJunctionData(state),
+  individualsByFamilyGuid: getSortedIndividualsByFamily(state),
 })
 
 export default connect(mapLocusListStateToProps)(BaseSpliceOutlierLabels)
