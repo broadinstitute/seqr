@@ -59,6 +59,26 @@ def get_search_samples(projects, active_only=True):
     return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
+def _get_families_search_data(families):
+    samples = _get_filtered_search_samples({'individual__family__in': families})
+    if len(samples) < 1:
+        raise InvalidSearchException('No search data found for families {}'.format(
+            ', '.join([f.family_id for f in families])))
+
+    projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name')
+    project_versions = defaultdict(set)
+    for genome_version, project_name in projects:
+        project_versions[genome_version].add(project_name)
+
+    if len(project_versions) > 1:
+        summary = '; '.join(
+            [f"{build} - {', '.join(sorted(projects))}" for build, projects in project_versions.items()])
+        raise InvalidSearchException(
+            f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
+
+    return samples, next(iter(project_versions.keys()))
+
+
 def delete_search_backend_data(data_id):
     active_samples = Sample.objects.filter(is_active=True, elasticsearch_index=data_id)
     if active_samples:
@@ -230,26 +250,6 @@ def _validate_sort(sort, families):
         raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
 
 
-def _get_families_search_data(families):
-    samples = _get_filtered_search_samples({'individual__family__in': families})
-    if len(samples) < 1:
-        raise InvalidSearchException('No search data found for families {}'.format(
-            ', '.join([f.family_id for f in families])))
-
-    projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name')
-    project_versions = defaultdict(set)
-    for genome_version, project_name in projects:
-        project_versions[genome_version].add(project_name)
-
-    if len(project_versions) > 1:
-        summary = '; '.join(
-            [f"{build} - {', '.join(sorted(projects))}" for build, projects in project_versions.items()])
-        raise InvalidSearchException(
-            f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
-
-    return samples, next(iter(project_versions.keys()))
-
-
 def _parse_inheritance(search, samples, previous_search_results):
     inheritance = search.pop('inheritance')
     inheritance_mode = inheritance.get('mode')
@@ -258,7 +258,11 @@ def _parse_inheritance(search, samples, previous_search_results):
     if inheritance_filter.get('genotype'):
         inheritance_mode = None
 
-    if not inheritance_mode and inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
+    search.update({'inheritance_mode': inheritance_mode, 'inheritance_filter': inheritance_filter})
+    if not (inheritance_mode or inheritance_filter):
+        return
+
+    if not inheritance_mode and list(inheritance_filter.keys()) == ['affected']:
         raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
     has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
@@ -271,5 +275,3 @@ def _parse_inheritance(search, samples, previous_search_results):
         if not has_location_filter and len(family_ids) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
             raise InvalidSearchException(
                 'Location must be specified to search for compound heterozygous variants across many families')
-
-    search.update({'inheritance_mode': inheritance_mode, 'inheritance_filter': inheritance_filter})
