@@ -1,9 +1,10 @@
 from collections import defaultdict
 from datetime import timedelta
 
-from seqr.models import Sample
+from seqr.models import Sample, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.search.constants import XPOS_SORT_KEY
+from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
+    MAX_NO_LOCATION_COMP_HET_FAMILIES
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
@@ -58,12 +59,24 @@ def get_search_samples(projects, active_only=True):
     return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
-def _get_families_search_samples(families):
+def _get_families_search_data(families):
     samples = _get_filtered_search_samples({'individual__family__in': families})
     if len(samples) < 1:
         raise InvalidSearchException('No search data found for families {}'.format(
             ', '.join([f.family_id for f in families])))
-    return samples
+
+    projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name')
+    project_versions = defaultdict(set)
+    for genome_version, project_name in projects:
+        project_versions[genome_version].add(project_name)
+
+    if len(project_versions) > 1:
+        summary = '; '.join(
+            [f"{build} - {', '.join(sorted(projects))}" for build, projects in project_versions.items()])
+        raise InvalidSearchException(
+            f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
+
+    return samples, next(iter(project_versions.keys()))
 
 
 def delete_search_backend_data(data_id):
@@ -77,7 +90,7 @@ def delete_search_backend_data(data_id):
 
 def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
     variants = backend_specific_call(get_es_variants_for_variant_ids)(
-        _get_families_search_samples(families), [variant_id], user, return_all_queried_families=return_all_queried_families,
+        *_get_families_search_data(families), [variant_id], user, return_all_queried_families=return_all_queried_families,
     )
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
@@ -86,7 +99,7 @@ def get_single_variant(families, variant_id, return_all_queried_families=False, 
 
 def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
     return backend_specific_call(get_es_variants_for_variant_ids)(
-        _get_families_search_samples(families), variant_ids, user, dataset_type=dataset_type,
+        *_get_families_search_data(families), variant_ids, user, dataset_type=dataset_type,
     )
 
 
@@ -120,8 +133,8 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     if previously_loaded_results is not None:
         return previously_loaded_results, total_results
 
-    if load_all and total_results and int(total_results) >= int(MAX_VARIANTS):
-        raise InvalidSearchException('Too many variants to load. Please refine your search and try again')
+    if end_index > MAX_VARIANTS:
+        raise InvalidSearchException(f'Unable to load more than {MAX_VARIANTS} variants ({end_index} requested)')
 
     return _query_variants(
         search_model, user, previous_search_results, sort=sort, page=page, num_results=num_results,
@@ -133,11 +146,12 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
 
     rs_ids = None
     variant_ids = None
+    parsed_variant_ids = None
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
     if invalid_items:
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
     if not (genes or intervals):
-        rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
+        rs_ids, variant_ids, parsed_variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
         if invalid_items:
             raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
         if rs_ids and variant_ids:
@@ -149,12 +163,20 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     parsed_search = {
         'parsedLocus': {
             'genes': genes, 'intervals': intervals, 'rs_ids': rs_ids, 'variant_ids': variant_ids,
+            'parsed_variant_ids': parsed_variant_ids,
         },
     }
     parsed_search.update(search)
 
+    families = search_model.families.all()
+    _validate_sort(sort, families)
+    samples, genome_version = _get_families_search_data(families)
+
+    if parsed_search.get('inheritance'):
+        _parse_inheritance(parsed_search, samples, previous_search_results)
+
     variant_results = backend_specific_call(get_es_variants)(
-        _get_families_search_samples(search_model.families.all()), parsed_search, user, previous_search_results,
+        samples, parsed_search, user, previous_search_results, genome_version,
         sort=sort, num_results=num_results, **kwargs,
     )
 
@@ -200,10 +222,11 @@ def _get_gene_aggs_for_cached_variants(previous_search_results):
 def _parse_variant_items(search_json):
     raw_items = search_json.get('rawVariantItems')
     if not raw_items:
-        return None, None, None
+        return None, None, None, None
 
     invalid_items = []
     variant_ids = []
+    parsed_variant_ids = []
     rs_ids = []
     for item in raw_items.replace(',', ' ').split():
         if item.startswith('rs'):
@@ -211,10 +234,44 @@ def _parse_variant_items(search_json):
         else:
             try:
                 variant_id = item.lstrip('chr')
-                chrom, pos, _, _ = variant_id.split('-')
-                get_xpos(chrom, int(pos))
+                chrom, pos, ref, alt = variant_id.split('-')
+                pos = int(pos)
+                get_xpos(chrom, pos)
                 variant_ids.append(variant_id)
+                parsed_variant_ids.append((chrom, pos, ref, alt))
             except (KeyError, ValueError):
                 invalid_items.append(item)
 
-    return rs_ids, variant_ids, invalid_items
+    return rs_ids, variant_ids, parsed_variant_ids, invalid_items
+
+
+def _validate_sort(sort, families):
+    if sort == PRIORITIZED_GENE_SORT and len(families) > 1:
+        raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
+
+
+def _parse_inheritance(search, samples, previous_search_results):
+    inheritance = search.pop('inheritance')
+    inheritance_mode = inheritance.get('mode')
+    inheritance_filter = inheritance.get('filter') or {}
+
+    if inheritance_filter.get('genotype'):
+        inheritance_mode = None
+
+    search.update({'inheritance_mode': inheritance_mode, 'inheritance_filter': inheritance_filter})
+    if not (inheritance_mode or inheritance_filter):
+        return
+
+    if not inheritance_mode and list(inheritance_filter.keys()) == ['affected']:
+        raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
+
+    has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
+    if has_comp_het_search:
+        if not search.get('annotations'):
+            raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
+
+        has_location_filter = bool(search['parsedLocus']['genes'] or search['parsedLocus']['intervals'])
+        family_ids = {s.individual.family_id for s in samples.prefetch_related('individual')}
+        if not has_location_filter and len(family_ids) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
+            raise InvalidSearchException(
+                'Location must be specified to search for compound heterozygous variants across many families')

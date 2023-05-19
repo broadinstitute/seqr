@@ -11,7 +11,7 @@ from sys import maxsize
 from urllib3.exceptions import ReadTimeoutError
 from urllib3_mock import Responses
 
-from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
+from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.utils import get_single_variant, query_variants, \
     get_variant_query_gene_counts, get_variants_for_variant_ids, InvalidSearchException
 from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
@@ -1416,7 +1416,6 @@ class EsUtilsTest(TestCase):
             get_single_variant(self.families, '10-10334333-A-G')
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
-    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_COMPOUND_HET_GENES', 1)
     @mock.patch('seqr.utils.search.elasticsearch.es_gene_agg_search.MAX_COMPOUND_HET_GENES', 1)
     @mock.patch('seqr.utils.search.elasticsearch.es_search.logger')
@@ -1425,15 +1424,18 @@ class EsUtilsTest(TestCase):
         setup_responses()
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.all())
+
+        results_model.families.set(self.families)
+        Sample.objects.filter(elasticsearch_index=INDEX_NAME).update(elasticsearch_index=HG38_INDEX_NAME)
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(results_model)
         self.assertEqual(
-            str(cm.exception),
-            'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde, Test Reprocessed Project; 38 - Non-Analyst Project',
+            str(cm.exception), 'The following indices do not have the expected genome version 37: test_index_hg38 (38)',
         )
+        Sample.objects.filter(elasticsearch_index=HG38_INDEX_NAME).update(elasticsearch_index=INDEX_NAME)
 
-        search_model.search = {'inheritance': {'mode': 'recessive'}, 'locus': {'rawItems': 'DDX11L1'}}
+        search_model.search = {'inheritance': {'mode': 'recessive'}, 'locus': {'rawItems': 'DDX11L1'},
+                               'annotations': {'frameshift': ['frameshift_variant']}}
         search_model.save()
         results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
         with self.assertRaises(InvalidSearchException) as cm:
@@ -1467,27 +1469,11 @@ class EsUtilsTest(TestCase):
         self.assertEqual(str(cm.exception), error)
 
         results_model.families.set(self.families)
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model, page=200)
-        self.assertEqual(str(cm.exception), 'Unable to load more than 10000 variants (20000 requested)')
-
-        search_model.search = {'inheritance': {'mode': 'compound_het'}}
-        search_model.save()
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model)
-        self.assertEqual(
-            str(cm.exception),
-            'Annotations must be specified to search for compound heterozygous variants')
-
-        search_model.search['annotations'] = {'frameshift': ['frameshift_variant']}
-        search_model.save()
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model)
-        self.assertEqual(
-            str(cm.exception),
-            'Location must be specified to search for compound heterozygous variants across many families')
-
-        search_model.search['locus'] = {'rawItems': 'DDX11L1'}
+        search_model.search = {
+            'inheritance': {'mode': 'compound_het'},
+            'locus': {'rawItems': 'DDX11L1'},
+            'annotations': {'frameshift': ['frameshift_variant']},
+        }
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(results_model)
@@ -1546,9 +1532,8 @@ class EsUtilsTest(TestCase):
             query_variants(results_model)
         self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index_mito_wgs, test_index')
 
-    @mock.patch('seqr.utils.search.utils.MAX_VARIANTS')
     @urllib3_responses.activate
-    def test_get_es_variants(self, mock_max_variants):
+    def test_get_es_variants(self):
         setup_responses()
         # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
         Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
@@ -1589,16 +1574,16 @@ class EsUtilsTest(TestCase):
 
         # test load_all
         setup_responses()
-        mock_max_variants.__int__.return_value = 100
-        variants, _ = query_variants(results_model, page=1, num_results=2, load_all=True)
+        with mock.patch('seqr.utils.search.utils.MAX_VARIANTS', 100):
+            variants, _ = query_variants(results_model, page=1, num_results=2, load_all=True)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], start_index=4, size=1)
         self.assertEqual(len(variants), 5)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])
 
         # test does not re-fetch once all loaded
         urllib3_responses.reset()
-        mock_max_variants.__int__.return_value = 1
-        variants, _ = query_variants(results_model, page=1, num_results=2, load_all=True)
+        with mock.patch('seqr.utils.search.utils.MAX_VARIANTS', 1):
+            variants, _ = query_variants(results_model, page=1, num_results=2, load_all=True)
         self.assertEqual(len(variants), 5)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])
 
@@ -2967,6 +2952,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(guid__in=['F000011_11']))
 
+        Project.objects.filter(guid='R0003_test').update(genome_version='38')
         Sample.objects.filter(elasticsearch_index=SECOND_INDEX_NAME).update(elasticsearch_index=HG38_INDEX_NAME)
 
         mock_liftover.side_effect = Exception()
@@ -3322,10 +3308,6 @@ class EsUtilsTest(TestCase):
                 }
             }, 'xpos', 'variantId'])
 
-        with self.assertRaises(InvalidSearchException) as se:
-            query_variants(results_model, sort='prioritized_gene', num_results=2)
-        self.assertEqual(str(se.exception), 'Phenotype sort is only supported for single-family search.')
-
         results_model.families.set(Family.objects.filter(guid='F000001_1'))
         query_variants(results_model, sort='prioritized_gene', num_results=2)
         family_sample_filter = {'bool': {'_name': 'F000001_1', 'must': mock.ANY}}
@@ -3639,8 +3621,3 @@ class EsUtilsTest(TestCase):
                 ]
             }
         })
-
-        # Affected specified with no other inheritance
-        with self.assertRaises(InvalidSearchException) as cm:
-            _execute_inheritance_search(inheritance_filter={'affected': custom_affected})
-        self.assertEqual(str(cm.exception), 'Inheritance must be specified if custom affected status is set')

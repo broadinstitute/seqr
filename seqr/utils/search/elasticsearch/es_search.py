@@ -10,7 +10,7 @@ from itertools import combinations
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
-from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, MAX_NO_LOCATION_COMP_HET_FAMILIES
+from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE
 from seqr.utils.search.elasticsearch.constants import X_LINKED_RECESSIVE, \
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
@@ -32,7 +32,7 @@ class EsSearch(object):
     AGGREGATION_NAME = 'compound het'
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
-    def __init__(self, samples, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
+    def __init__(self, samples, genome_version, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
         from seqr.utils.search.utils import InvalidSearchException
         from seqr.utils.search.elasticsearch.es_utils import get_es_client, InvalidIndexException
         self._client = get_es_client()
@@ -52,16 +52,14 @@ class EsSearch(object):
             # Some of the indices are an alias
             self._update_alias_metadata()
 
-        genome_versions = {meta['genomeVersion'] for meta in self.index_metadata.values()}
-        if len(genome_versions) > 1:
-            versions = defaultdict(set)
-            for s in samples.select_related('individual__family__project'):
-                versions[self.index_metadata[s.elasticsearch_index]['genomeVersion']].add(s.individual.family.project.name)
+        invalid_genome_indices = [
+            f"{index} ({meta['genomeVersion']})" for index, meta in self.index_metadata.items()
+            if meta['genomeVersion'] != genome_version
+        ]
+        if invalid_genome_indices:
             raise InvalidSearchException(
-                'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {}'.format(
-                    '; '.join(['{} - {}'.format(build, ', '.join(sorted(projects))) for build, projects in versions.items()])
-                ))
-        self._genome_version = genome_versions.pop()
+                f'The following indices do not have the expected genome version {genome_version}: {", ".join(invalid_genome_indices)}')
+        self._genome_version = genome_version
 
         self.indices_by_dataset_type = defaultdict(list)
         for index in self._indices:
@@ -234,9 +232,9 @@ class EsSearch(object):
         self._search = self._search.filter(new_filter)
         return self
 
-    def filter_variants(self, inheritance=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
+    def filter_variants(self, inheritance_mode=None, inheritance_filter=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
                         frequencies=None, pathogenicity=None, in_silico=None, annotations=None, annotations_secondary=None,
-                        quality_filter=None, custom_query=None, skip_genotype_filter=False):
+                        quality_filter=None, custom_query=None, skip_genotype_filter=False, **kwargs):
 
         self._filter_custom(custom_query)
 
@@ -251,13 +249,10 @@ class EsSearch(object):
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self._filter(~Q('exists', field='filters'))
 
-        inheritance_mode = (inheritance or {}).get('mode')
-        inheritance_filter = (inheritance or {}).get('filter') or {}
-        if inheritance_filter.get('genotype'):
-            inheritance_mode = None
+        inheritance_filter = inheritance_filter or {}
 
         skipped_sample_count = defaultdict(int)
-        if inheritance:
+        if inheritance_mode or inheritance_filter:
             self._filter_families_for_inheritance(inheritance_filter, skipped_sample_count)
 
         quality_filters_by_family = self._get_quality_filters_by_family(quality_filter)
@@ -265,7 +260,7 @@ class EsSearch(object):
         has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not self.previous_search_results.get('grouped_results')
         if has_comp_het_search:
             comp_het_dataset_type = self._filter_compound_hets(
-                quality_filters_by_family, annotations, annotations_secondary, bool(genes or intervals))
+                quality_filters_by_family, annotations, annotations_secondary)
             if inheritance_mode == COMPOUND_HET:
                 if comp_het_dataset_type:
                     self.update_dataset_type(comp_het_dataset_type)
@@ -480,10 +475,6 @@ class EsSearch(object):
             if inheritance_mode:
                 inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
-            if list(inheritance_filter.keys()) == ['affected']:
-                from seqr.utils.search.utils import InvalidSearchException
-                raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
-
             family_samples_q = _family_genotype_inheritance_filter(
                 inheritance_mode, inheritance_filter, samples_by_id, affected_status, index_fields,
             )
@@ -498,17 +489,7 @@ class EsSearch(object):
 
         return _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
 
-    def _filter_compound_hets(self, quality_filters_by_family, annotations, annotations_secondary, has_location_filter):
-        if not self._allowed_consequences:
-            from seqr.utils.search.utils import InvalidSearchException
-            raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
-
-        if not has_location_filter and any(len(family_samples_by_id) > MAX_NO_LOCATION_COMP_HET_FAMILIES
-                                           for family_samples_by_id in self.samples_by_family_index.values()):
-            from seqr.utils.search.utils import InvalidSearchException
-            raise InvalidSearchException(
-                'Location must be specified to search for compound heterozygous variants across many families')
-
+    def _filter_compound_hets(self, quality_filters_by_family, annotations, annotations_secondary):
         comp_het_consequences = set(self._allowed_consequences)
         dataset_type = _dataset_type_for_annotations(annotations)
         annotation_override_filter = self._get_annotation_override_filter()
@@ -1285,11 +1266,6 @@ class EsSearch(object):
                 end_index = page * num_results
                 if start_index is None:
                     start_index = end_index - num_results
-                if end_index > MAX_VARIANTS:
-                    # ES request size limits are limited by offset + size, which is the same as end_index
-                    from seqr.utils.search.utils import InvalidSearchException
-                    raise InvalidSearchException(
-                        'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index))
 
                 search = search[start_index:end_index]
                 search = search.source(QUERY_FIELD_NAMES)
