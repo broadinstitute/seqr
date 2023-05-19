@@ -187,14 +187,7 @@ class SearchUtilsTests(object):
         }
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
 
-        if mock_get_variants.call_args.args[1] != expected_search:
-            diff_k = {k for k, v in expected_search.items() if v != expected_search[k]}
-            import pdb; pdb.set_trace()
-
-        try:
-            mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, '37', **kwargs)
-        except Exception as e:
-            import pdb; pdb.set_trace()
+        mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, '37', **kwargs)
         searched_samples = self.affected_search_samples
         if omitted_sample_guids:
             searched_samples = searched_samples.exclude(guid__in=omitted_sample_guids)
