@@ -68,7 +68,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
 
-        self.assertEqual(len(response_json['samplesByGuid']), 6)
+        self.assertEqual(len(response_json['samplesByGuid']), 7)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['samplesByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['samplesByGuid'].values()})

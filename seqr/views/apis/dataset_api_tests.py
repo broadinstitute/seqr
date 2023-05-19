@@ -101,7 +101,7 @@ class DatasetAPITest(object):
         )
         self.assertDictEqual(response_json['individualsByGuid'], {
             'I000002_na19678': {'sampleGuids': mock.ANY},
-            'I000003_na19679': {'sampleGuids': [existing_sample_guid]},
+            'I000003_na19679': {'sampleGuids': ['S000153_na19679', existing_sample_guid]},
             'I000013_na20878': {'sampleGuids': [new_sample_guid]},
         })
         self.assertSetEqual(
