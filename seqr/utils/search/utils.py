@@ -47,10 +47,22 @@ def get_search_backend_status():
     return backend_specific_call(get_elasticsearch_status)()
 
 
-def get_search_samples(projects, active_only=True):
-    samples = Sample.objects.filter(individual__family__project__in=projects, elasticsearch_index__isnull=False)
+def _get_filtered_search_samples(search_filter, active_only=True):
+    samples = Sample.objects.filter(elasticsearch_index__isnull=False, **search_filter)
     if active_only:
         samples = samples.filter(is_active=True)
+    return samples
+
+
+def get_search_samples(projects, active_only=True):
+    return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
+
+
+def _get_families_search_samples(families):
+    samples = _get_filtered_search_samples({'individual__family__in': families})
+    if len(samples) < 1:
+        raise InvalidSearchException('No search data found for families {}'.format(
+            ', '.join([f.family_id for f in families])))
     return samples
 
 
@@ -65,7 +77,7 @@ def delete_search_backend_data(data_id):
 
 def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
     variants = backend_specific_call(get_es_variants_for_variant_ids)(
-        families, [variant_id], user, return_all_queried_families=return_all_queried_families,
+        _get_families_search_samples(families), [variant_id], user, return_all_queried_families=return_all_queried_families,
     )
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
@@ -73,7 +85,9 @@ def get_single_variant(families, variant_id, return_all_queried_families=False, 
 
 
 def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
-    return backend_specific_call(get_es_variants_for_variant_ids)(families, variant_ids, user, dataset_type=dataset_type)
+    return backend_specific_call(get_es_variants_for_variant_ids)(
+        _get_families_search_samples(families), variant_ids, user, dataset_type=dataset_type,
+    )
 
 
 def _get_search_cache_key(search_model, sort=None):
@@ -140,8 +154,8 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     parsed_search.update(search)
 
     variant_results = backend_specific_call(get_es_variants)(
-        search_model.families.all(), parsed_search, user, previous_search_results, sort=sort, num_results=num_results,
-        **kwargs,
+        _get_families_search_samples(search_model.families.all()), parsed_search, user, previous_search_results,
+        sort=sort, num_results=num_results, **kwargs,
     )
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
