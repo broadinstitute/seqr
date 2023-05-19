@@ -379,6 +379,7 @@ EXPECTED_UPDATED_LIRICAL_DATA = [
 class DataManagerAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
     def test_elasticsearch_status(self):
         url = reverse(elasticsearch_status)
@@ -408,6 +409,12 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertListEqual(response_json['diskStats'], EXPECTED_DISK_ALLOCATION)
         self.assertListEqual(response_json['nodeStats'], EXPECTED_NODE_STATS)
 
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
     def test_delete_index(self):
         url = reverse(delete_index)
@@ -435,6 +442,11 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertDictEqual(response_json['indices'][4], TEST_SV_INDEX_EXPECTED_DICT)
 
         self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
+
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_upload_qc_pipeline_output(self, mock_subprocess):

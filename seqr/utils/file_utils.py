@@ -7,12 +7,15 @@ from seqr.utils.logging_utils import SeqrLogger
 logger = SeqrLogger(__name__)
 
 
-def run_command(command, user=None):
+def run_command(command, user=None, pipe_errors=False):
     logger.info('==> {}'.format(command), user)
-    return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True) # nosec
+    return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE if pipe_errors else subprocess.STDOUT, shell=True) # nosec
 
 
-def _run_gsutil_command(command, gs_path, gunzip=False, user=None):
+def _run_gsutil_command(command, gs_path, gunzip=False, user=None, pipe_errors=False):
+    if not is_google_bucket_file_path(gs_path):
+        raise Exception('A Google Storage path is expected.')
+
     #  Anvil buckets are requester-pays and we bill them to the anvil project
     google_project = get_google_project(gs_path)
     project_arg = '-u {} '.format(google_project) if google_project else ''
@@ -22,7 +25,7 @@ def _run_gsutil_command(command, gs_path, gunzip=False, user=None):
     if gunzip:
         command += " | gunzip -c -q - "
 
-    return run_command(command, user=user)
+    return run_command(command, user=user, pipe_errors=pipe_errors)
 
 
 def is_google_bucket_file_path(file_path):
@@ -81,28 +84,36 @@ def mv_file_to_gs(local_path, gs_path, user=None):
     _run_gsutil_with_wait(command, gs_path, user)
 
 
-def get_gs_file_list(gs_path, user=None, check_subfolders=True):
+def get_gs_file_list(gs_path, user=None, check_subfolders=True, allow_missing=False):
     gs_path = gs_path.rstrip('/')
     command = 'ls'
 
     if check_subfolders:
         # If a bucket is empty gsutil throws an error when running ls with ** instead of returning an empty list
-        subfolders = _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)
+        subfolders = _run_gsutil_with_stdout(command, gs_path, user)
         if not subfolders:
             return []
         gs_path = f'{gs_path}/**'
 
-    all_lines = _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)
+    all_lines = _run_gsutil_with_stdout(command, gs_path, user, allow_missing=allow_missing)
     return [line for line in all_lines if is_google_bucket_file_path(line)]
 
 
-def _run_gsutil_with_wait(command, gs_path, user=None, get_stdout=False):
-    if not is_google_bucket_file_path(gs_path):
-        raise Exception('A Google Storage path is expected.')
+def _run_gsutil_with_wait(command, gs_path, user=None):
     process = _run_gsutil_command(command, gs_path, user=user)
     if process.wait() != 0:
         errors = [line.decode('utf-8').strip() for line in process.stdout]
         raise Exception('Run command failed: ' + ' '.join(errors))
-    if get_stdout:
-        return [line.decode('utf-8').rstrip('\n') for line in process.stdout]
     return process
+
+
+def _run_gsutil_with_stdout(command, gs_path, user=None, allow_missing=False):
+    process = _run_gsutil_command(command, gs_path, user=user, pipe_errors=True)
+    output, errs = process.communicate()
+    if errs:
+        errors = errs.decode('utf-8').strip().replace('\n', ' ')
+        if allow_missing:
+            logger.info(errors, user)
+        else:
+            raise Exception(f'Run command failed: {errors}')
+    return [line for line in output.decode('utf-8').split('\n') if line]
