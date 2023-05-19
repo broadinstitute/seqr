@@ -80,16 +80,15 @@ class BaseRnaSeqResultPage extends React.PureComponent {
         />
       </Grid.Column>
     ))
-    const hasSpliceOutliers = outlierPlotConfigs.some(({ key }) => key === 'spliceOutliers')
 
     return (
       <div>
-        {hasSpliceOutliers && (
+        {tissueType && (
           <span>
             Tissue type: &nbsp;
             {tissueOptions.length > 1 ? (
               <Dropdown inline value={tissueType} options={tissueOptions} onChange={this.onTissueChange} />
-            ) : tissueType }
+            ) : tissueOptions[0].text }
           </span>
         )}
         <React.Suspense fallback={<Loader />}>
