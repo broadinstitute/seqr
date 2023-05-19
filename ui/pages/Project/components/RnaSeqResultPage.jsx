@@ -3,14 +3,15 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Loader, Grid, Dropdown } from 'semantic-ui-react'
 
-import { getGenesById, getIndividualsByGuid, getRnaSeqDataByIndividual } from 'redux/selectors'
+import { getGenesById, getIndividualsByGuid, getRnaSeqDataByIndividual, getRnaSeqSignificantJunctionData } from 'redux/selectors'
 import { RNASEQ_JUNCTION_PADDING, TISSUE_DISPLAY } from 'shared/utils/constants'
 import DataLoader from 'shared/components/DataLoader'
+import FamilyReads from 'shared/components/panel/family/FamilyReads'
+import RnaSeqJunctionOutliersTable from 'shared/components/table/RnaSeqJunctionOutliersTable'
 import { loadRnaSeqData } from '../reducers'
-import { getRnaSeqDataLoading, getRnaSeqSignificantJunctionData } from '../selectors'
+import { getRnaSeqDataLoading } from '../selectors'
 
 const RnaSeqOutliers = React.lazy(() => import('./RnaSeqOutliers'))
-const RnaSeqOutliersTable = React.lazy(() => import('./RnaSeqJunctionOutliersTable'))
 
 const OUTLIER_VOLCANO_PLOT_CONFIGS = [
   {
@@ -28,6 +29,8 @@ const OUTLIER_VOLCANO_PLOT_CONFIGS = [
     formatData: (data, tissueType) => data.filter(outlier => outlier.tissueType === tissueType),
   },
 ]
+
+const OutliersTableWithReads = props => <FamilyReads layout={RnaSeqJunctionOutliersTable} noTriggerButton {...props} />
 
 class BaseRnaSeqResultPage extends React.PureComponent {
 
@@ -77,34 +80,33 @@ class BaseRnaSeqResultPage extends React.PureComponent {
         />
       </Grid.Column>
     ))
-    const hasSpliceOutliers = outlierPlotConfigs.some(({ key }) => key === 'spliceOutliers')
 
     return (
-      <React.Suspense fallback={<Loader />}>
-        {hasSpliceOutliers && (tissueOptions.length > 1 ? (
-          <span>
-            Select a tissue type: &nbsp;
-            <Dropdown inline value={tissueType} options={tissueOptions} onChange={this.onTissueChange} />
-          </span>
-        ) : (
+      <div>
+        {tissueType && (
           <span>
             Tissue type: &nbsp;
-            {tissueType}
+            {tissueOptions.length > 1 ? (
+              <Dropdown inline value={tissueType} options={tissueOptions} onChange={this.onTissueChange} />
+            ) : tissueOptions[0].text }
           </span>
-        ))}
-        {(outlierPlots.length > 0) && (
-          <Grid>
-            <Grid.Row divided columns={outlierPlots.length}>{outlierPlots}</Grid.Row>
-          </Grid>
         )}
+        <React.Suspense fallback={<Loader />}>
+          {(outlierPlots.length > 0) && (
+            <Grid>
+              <Grid.Row divided columns={outlierPlots.length}>{outlierPlots}</Grid.Row>
+            </Grid>
+          )}
+        </React.Suspense>
         {(significantJunctionOutliers.length > 0) && (
-          <RnaSeqOutliersTable
-            familyGuid={individual.familyGuid}
+          <OutliersTableWithReads
             data={significantJunctionOutliers}
-            tissueType={tissueType}
+            familyGuidForFormat={individual.familyGuid}
+            defaultSortColumn="pValue"
+            maxHeight="600px"
           />
         )}
-      </React.Suspense>
+      </div>
     )
   }
 

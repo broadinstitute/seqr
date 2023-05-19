@@ -17,6 +17,8 @@ _SEX_TO_EXPORTED_VALUE['U'] = ''
 __AFFECTED_TO_EXPORTED_VALUE = dict(Individual.AFFECTED_STATUS_LOOKUP)
 __AFFECTED_TO_EXPORTED_VALUE['U'] = ''
 
+MAX_SIGNIFICANT_OUTLIER_NUM = 50
+
 
 def _get_record_family_id(record):
     # family id will be in different places in the json depending on whether it comes from a flat uploaded file or from the nested individual object

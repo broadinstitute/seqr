@@ -588,7 +588,7 @@ INTERNAL_INDIVIDUAL_FIELDS.update(CORE_INTERNAL_INDIVIDUAL_FIELDS)
 
 SAMPLE_FIELDS = {
     'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
-    'loadedDate', 'datasetType', 'elasticsearchIndex', 'tissueType'
+    'loadedDate', 'datasetType', 'elasticsearchIndex',
 }
 
 IGV_SAMPLE_FIELDS = {
@@ -1285,6 +1285,23 @@ PARSED_MITO_VARIANT = {
     'variantId': 'M-10195-C-A',
     'xpos': 25000010195
 }
+
+PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT = deepcopy(PARSED_VARIANTS)
+PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1].update({
+    'familyGuids': ['F000003_3'],
+    'mainTranscriptId': TRANSCRIPT_2['transcriptId'],
+    'selectedMainTranscriptId': None,
+})
+PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['transcripts']['ENSG00000135953'][0]['majorConsequence'] = 'frameshift_variant'
+for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
+    variant['_sort'][0] += 100
+    variant['familyGuids'].append('F000011_11')
+    variant['genotypes'].update({
+        'I000015_na20885': {
+            'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
+            'sampleType': 'WES',
+        },
+    })
 
 GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'

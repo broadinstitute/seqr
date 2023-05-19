@@ -9,18 +9,19 @@ from django.contrib.auth.models import User
 from django.db.models import prefetch_related_objects
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Individual, Family, RnaSeqOutlier, RnaSeqSpliceOutlier, IgvSample
+from seqr.models import Individual, Family, RnaSeqOutlier, RnaSeqSpliceOutlier
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_individuals, add_individual_hpo_details, \
-    _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username, get_json_for_samples
+    _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
     is_internal_anvil_project
-from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
+from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families, \
+    MAX_SIGNIFICANT_OUTLIER_NUM
 
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
@@ -785,7 +786,6 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 
     return create_json_response(response)
 
-MAX_SIGNIFICANT_NUM = 50
 
 @login_and_policies_required
 def get_individual_rna_seq_data(request, individual_guid):
@@ -795,7 +795,7 @@ def get_individual_rna_seq_data(request, individual_guid):
     outlier_data = {
         'outliers': _get_rna_seq_data(RnaSeqOutlier, individual),
         'spliceOutliers': _get_rna_seq_data(RnaSeqSpliceOutlier, individual,
-                                            max_significant_num_per_tissue=MAX_SIGNIFICANT_NUM),
+                                            max_significant_num_per_tissue=MAX_SIGNIFICANT_OUTLIER_NUM),
     }
 
     genes_to_show = get_genes({

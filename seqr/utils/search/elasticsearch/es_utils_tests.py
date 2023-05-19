@@ -17,7 +17,7 @@ from seqr.utils.search.utils import get_single_variant, query_variants, \
 from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
-    PARSED_MITO_VARIANT, TRANSCRIPT_2
+    PARSED_MITO_VARIANT, TRANSCRIPT_2, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT
 
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
@@ -716,19 +716,6 @@ for gen in PARSED_SV_COMPOUND_HET_VARIANTS[0]['genotypes'].values():
     gen.update({'start': None, 'end': None, 'numExon': None, 'geneIds': None})
 PARSED_SV_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000002_2']
 
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT = deepcopy(PARSED_COMPOUND_HET_VARIANTS)
-for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
-    variant['familyGuids'].append('F000011_11')
-    variant['genotypes'].update({
-        'I000015_na20885': {
-            'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'sampleType': 'WES',
-        },
-    })
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['transcripts']['ENSG00000135953'][0]['majorConsequence'] = 'frameshift_variant'
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['mainTranscriptId'] = TRANSCRIPT_2['transcriptId']
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['selectedMainTranscriptId'] = None
-
 PARSED_COMPOUND_HET_VARIANTS_PROJECT_2 = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
 for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
     variant.update({
@@ -1319,6 +1306,7 @@ def setup_responses():
     setup_search_responses()
 
 
+@mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
 class EsUtilsTest(TestCase):
     databases = '__all__'
@@ -1437,12 +1425,6 @@ class EsUtilsTest(TestCase):
         setup_responses()
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.filter(family_id='no_individuals'))
-
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model)
-        self.assertEqual(str(cm.exception), 'No es index found for families no_individuals')
-
         results_model.families.set(Family.objects.all())
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(results_model)
@@ -1505,22 +1487,7 @@ class EsUtilsTest(TestCase):
             str(cm.exception),
             'Location must be specified to search for compound heterozygous variants across many families')
 
-        search_model.search['locus'] = {'rawVariantItems': 'chr2-A-C'}
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
-
-        search_model.search['locus']['rawVariantItems'] = 'rs9876,chr2-1234-A-C'
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(str(cm.exception), 'Invalid variant notation: found both variant IDs and rsIDs')
-
-        search_model.search['locus']['rawItems'] = 'chr27:1234-5678,2:40-400000000, ENSG00012345'
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
-
-        search_model.search['locus']['rawItems'] = 'DDX11L1'
+        search_model.search['locus'] = {'rawItems': 'DDX11L1'}
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(results_model)
@@ -1622,11 +1589,6 @@ class EsUtilsTest(TestCase):
 
         # test load_all
         setup_responses()
-        mock_max_variants.__int__.return_value = 5
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model, page=1, num_results=2, load_all=True)
-        self.assertEqual(str(cm.exception), 'Too many variants to load. Please refine your search and try again')
-
         mock_max_variants.__int__.return_value = 100
         variants, _ = query_variants(results_model, page=1, num_results=2, load_all=True)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], start_index=4, size=1)
@@ -3286,44 +3248,6 @@ class EsUtilsTest(TestCase):
         )
 
         self.assertCachedResults(results_model, {'gene_aggs': gene_counts})
-
-    def test_cached_get_es_variant_gene_counts(self):
-        search_model = VariantSearch.objects.create(search={})
-        results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        cache_key = 'search_results__{}__xpos'.format(results_model.guid)
-
-        cached_gene_counts = {
-            'ENSG00000135953': {'total': 5, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 4}},
-            'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000011_11': 4}}
-        }
-        _set_cache(cache_key, json.dumps({'total_results': 5, 'gene_aggs': cached_gene_counts}))
-        gene_counts = get_variant_query_gene_counts(results_model, None)
-        self.assertDictEqual(gene_counts, cached_gene_counts)
-
-        _set_cache(cache_key, json.dumps({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, 'total_results': 2}))
-        gene_counts = get_variant_query_gene_counts(results_model, None)
-        self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}},
-            'ENSG00000228198': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}}
-        })
-
-        _set_cache(cache_key, json.dumps({
-            'grouped_results': [
-                {'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT}, {'null': [PARSED_MULTI_INDEX_VARIANT]}
-            ],
-            'loaded_variant_counts': {
-                SECOND_INDEX_NAME: {'loaded': 1, 'total': 1},
-                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 0, 'loaded': 0},
-                INDEX_NAME: {'loaded': 1, 'total': 1},
-                '{}_compound_het'.format(INDEX_NAME): {'total': 2, 'loaded': 2},
-            },
-            'total_results': 4,
-        }))
-        gene_counts = get_variant_query_gene_counts(results_model, None)
-        self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 2, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 1}},
-            'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}}
-        })
 
     def test_get_family_affected_status(self):
         samples_by_id = {
