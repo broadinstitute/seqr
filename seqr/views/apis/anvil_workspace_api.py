@@ -149,11 +149,18 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     if not data_path.endswith(VCF_FILE_EXTENSIONS):
         error = 'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
         return create_json_response({'error': error}, status=400, reason=error)
-    if not does_file_exist(data_path, user=request.user):
+
+    file_to_check = None
+    if '*' in data_path:
+        files = get_gs_file_list(data_path, request.user, check_subfolders=False, allow_missing=True)
+        if files:
+            file_to_check = files[0]
+    elif does_file_exist(data_path, user=request.user):
+        file_to_check = data_path
+
+    if not file_to_check:
         error = 'Data file or path {} is not found.'.format(path)
         return create_json_response({'error': error}, status=400, reason=error)
-
-    file_to_check = get_gs_file_list(data_path, request.user, check_subfolders=False)[0] if '*' in data_path else data_path
 
     # Validate the VCF to see if it contains all the required samples
     samples = validate_vcf_and_get_samples(file_to_check)
