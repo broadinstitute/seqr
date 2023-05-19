@@ -32,7 +32,7 @@ class EsSearch(object):
     AGGREGATION_NAME = 'compound het'
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
-    def __init__(self, samples, genome_version, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
+    def __init__(self, samples, genome_version, previous_search_results=None, return_all_queried_families=False, user=None, sort=None, skipped_samples=None):
         from seqr.utils.search.utils import InvalidSearchException
         from seqr.utils.search.elasticsearch.es_utils import get_es_client, InvalidIndexException
         self._client = get_es_client()
@@ -60,6 +60,7 @@ class EsSearch(object):
             raise InvalidSearchException(
                 f'The following indices do not have the expected genome version {genome_version}: {", ".join(invalid_genome_indices)}')
         self._genome_version = genome_version
+        self._skipped_samples = skipped_samples
 
         self.indices_by_dataset_type = defaultdict(list)
         for index in self._indices:
@@ -140,38 +141,13 @@ class EsSearch(object):
                     self.samples_by_family_index[alias_index] = {}
                 self.samples_by_family_index[alias_index].update(alias_samples)
 
-    def _filter_families_for_inheritance(self, inheritance_filter, skipped_sample_count):
+    def _filter_families_for_inheritance(self, inheritance_filter):
         for index, family_samples in list(self.samples_by_family_index.items()):
-            index_skipped_families = []
             for family_guid, samples_by_id in family_samples.items():
                 individual_affected_status = _get_family_affected_status(samples_by_id, inheritance_filter)
-
-                has_affected_samples = any(
-                    aftd == Individual.AFFECTED_STATUS_AFFECTED for aftd in individual_affected_status.values()
-                )
-                if not has_affected_samples:
-                    index_skipped_families.append(family_guid)
-
-                    skipped_sample_count[index] += len(samples_by_id)
-
                 if family_guid not in self._family_individual_affected_status:
                     self._family_individual_affected_status[family_guid] = {}
                 self._family_individual_affected_status[family_guid].update(individual_affected_status)
-
-            for family_guid in index_skipped_families:
-                del self.samples_by_family_index[index][family_guid]
-
-            if not self.samples_by_family_index[index]:
-                del self.samples_by_family_index[index]
-                dataset_type = self._get_index_dataset_type(index)
-                self.indices_by_dataset_type[dataset_type].remove(index)
-
-        self._set_indices(sorted(list(self.samples_by_family_index.keys())))
-
-        if len(self._indices) < 1:
-            from seqr.utils.search.utils import InvalidSearchException
-            raise InvalidSearchException(
-                'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
     def update_dataset_type(self, dataset_type, keep_previous=False):
         new_indices = self.indices_by_dataset_type[dataset_type]
@@ -251,9 +227,8 @@ class EsSearch(object):
 
         inheritance_filter = inheritance_filter or {}
 
-        skipped_sample_count = defaultdict(int)
         if inheritance_mode or inheritance_filter:
-            self._filter_families_for_inheritance(inheritance_filter, skipped_sample_count)
+            self._filter_families_for_inheritance(inheritance_filter)
 
         quality_filters_by_family = self._get_quality_filters_by_family(quality_filter)
 
@@ -271,7 +246,7 @@ class EsSearch(object):
         if skip_genotype_filter and not inheritance_mode:
             return
 
-        self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filters_by_family, skipped_sample_count)
+        self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filters_by_family)
 
         if has_comp_het_search and annotations_secondary and dataset_type and comp_het_dataset_type != dataset_type:
             self.update_dataset_type(_dataset_type_for_annotations(annotations_secondary), keep_previous=True)
@@ -417,7 +392,7 @@ class EsSearch(object):
         self._filter(Q('terms', variantId=variant_ids))
         return self
 
-    def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filters_by_family, skipped_sample_count):
+    def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filters_by_family):
         has_inheritance_filter = inheritance_filter or inheritance_mode
         all_sample_search = (not quality_filters_by_family) and (inheritance_mode == ANY_AFFECTED or not has_inheritance_filter)
         no_filter_indices = set()
@@ -427,7 +402,8 @@ class EsSearch(object):
             index_fields = self.index_metadata[index]['fields']
 
             if all_sample_search:
-                search_sample_count = sum(len(samples) for samples in family_samples_by_id.values()) + skipped_sample_count[index]
+                index_skipped_sample_count = sum([s.elasticsearch_index == index for s in self._skipped_samples or []])
+                search_sample_count = sum(len(samples) for samples in family_samples_by_id.values()) + index_skipped_sample_count
                 index_sample_count = Sample.objects.filter(elasticsearch_index=index, is_active=True).count()
                 if search_sample_count == index_sample_count:
                     if inheritance_mode == ANY_AFFECTED:
@@ -478,11 +454,6 @@ class EsSearch(object):
             family_samples_q = _family_genotype_inheritance_filter(
                 inheritance_mode, inheritance_filter, samples_by_id, affected_status, index_fields,
             )
-
-            if not family_samples_q:
-                from seqr.utils.search.utils import InvalidSearchException
-                raise InvalidSearchException('Invalid custom inheritance')
-
         else:
             # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
             family_samples_q = _any_affected_sample_filter(list(samples_by_id.keys()))

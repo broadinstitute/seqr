@@ -1434,33 +1434,7 @@ class EsUtilsTest(TestCase):
         )
         Sample.objects.filter(elasticsearch_index=HG38_INDEX_NAME).update(elasticsearch_index=INDEX_NAME)
 
-        search_model.search = {'inheritance': {'mode': 'recessive'}, 'locus': {'rawItems': 'DDX11L1'},
-                               'annotations': {'frameshift': ['frameshift_variant']}}
-        search_model.save()
-        results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model)
-        self.assertEqual(
-            str(cm.exception), 'Inheritance based search is disabled in families with no data loaded for affected individuals',
-        )
-
-        search_model.search['inheritance']['filter'] = {'affected': {'I000007_na20870': 'N'}}
-        search_model.save()
         results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model)
-        self.assertEqual(
-            str(cm.exception),
-            'Inheritance based search is disabled in families with no data loaded for affected individuals',
-        )
-
-        search_model.search['inheritance']['filter'] = {'genotype': {'I000004_hg00731': 'ref_ref'}}
-        search_model.save()
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model)
-        self.assertEqual(str(cm.exception), 'Invalid custom inheritance')
-
-        search_model.search['inheritance']['filter'] = {}
         search_model.search['annotations'] = {'structural': ['DEL']}
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
