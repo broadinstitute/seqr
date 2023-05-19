@@ -588,7 +588,7 @@ INTERNAL_INDIVIDUAL_FIELDS.update(CORE_INTERNAL_INDIVIDUAL_FIELDS)
 
 SAMPLE_FIELDS = {
     'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
-    'loadedDate', 'datasetType', 'elasticsearchIndex', 'tissueType'
+    'loadedDate', 'datasetType', 'elasticsearchIndex',
 }
 
 IGV_SAMPLE_FIELDS = {
