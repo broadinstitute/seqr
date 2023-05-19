@@ -283,6 +283,7 @@ def get_es_variants(samples, search, user, previous_search_results, genome_versi
         annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
         in_silico=search.get('in_silico'), quality_filter=search.get('qualityFilter'),
         custom_query=search.get('customQuery'), locus=search.get('locus'), skip_genotype_filter=skip_genotype_filter,
+        datset_type=search.get('datset_type'), secondary_dataset_type=search.get('secondary_dataset_type'),
         **search.get('parsedLocus')
 
     )

@@ -10,7 +10,7 @@ from itertools import combinations
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
-from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, NEW_SV_FIELD
+from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, NEW_SV_FIELD, ALL_DATA_TYPES
 from seqr.utils.search.elasticsearch.constants import X_LINKED_RECESSIVE, \
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
@@ -149,20 +149,11 @@ class EsSearch(object):
                     self._family_individual_affected_status[family_guid] = {}
                 self._family_individual_affected_status[family_guid].update(individual_affected_status)
 
-    def update_dataset_type(self, dataset_type, keep_previous=False):
+    def _dataset_type_indices(self, dataset_type):
         new_indices = self.indices_by_dataset_type[dataset_type]
         if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
             new_indices += self.indices_by_dataset_type[Sample.DATASET_TYPE_MITO_CALLS]
-        if keep_previous:
-            indices = set(self._indices)
-            indices.update(new_indices)
-            update_indices = list(indices)
-        else:
-            # TODO get dataset types from function params
-            update_indices = new_indices
-
-        self._set_indices(update_indices)
-        return self
+        return new_indices
 
     def _sort_variants(self, sample_data):
         main_sort_dict = self._sort[0] if len(self._sort) and isinstance(self._sort[0], dict) else None
@@ -205,13 +196,13 @@ class EsSearch(object):
 
     def filter_variants(self, inheritance_mode=None, inheritance_filter=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
                         frequencies=None, pathogenicity=None, in_silico=None, annotations=None, annotations_secondary=None,
-                        quality_filter=None, custom_query=None, skip_genotype_filter=False, **kwargs):
+                        quality_filter=None, custom_query=None, skip_genotype_filter=False, dataset_type=None, secondary_dataset_type=None, **kwargs):
 
         self._filter_custom(custom_query)
 
         self._filter_by_location(genes, intervals, variant_ids, rs_ids, locus)
 
-        annotations = self._parse_annotation_overrides(annotations, pathogenicity)
+        self._parse_annotation_overrides(annotations, pathogenicity)
 
         self._filter_by_frequency(frequencies)
 
@@ -227,24 +218,23 @@ class EsSearch(object):
 
         quality_filters_by_family = self._get_quality_filters_by_family(quality_filter)
 
+        comp_het_dataset_type = dataset_type
+        if dataset_type and dataset_type != secondary_dataset_type:
+            comp_het_dataset_type = None
+        if dataset_type == ALL_DATA_TYPES:
+            comp_het_dataset_type = None
+
         has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not self.previous_search_results.get('grouped_results')
         if has_comp_het_search:
-            comp_het_dataset_type = self._filter_compound_hets(
-                quality_filters_by_family, annotations, annotations_secondary)
+            self._filter_compound_hets(quality_filters_by_family, annotations_secondary, comp_het_dataset_type)
             if inheritance_mode == COMPOUND_HET:
-                if comp_het_dataset_type:
-                    self.update_dataset_type(comp_het_dataset_type)
                 return
 
-        dataset_type = self._filter_by_annotations(annotations)
-
+        self._filter_by_annotations()
         if skip_genotype_filter and not inheritance_mode:
             return
 
-        self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filters_by_family)
-
-        if has_comp_het_search and annotations_secondary and dataset_type and comp_het_dataset_type != dataset_type:
-            self.update_dataset_type(_dataset_type_for_annotations(annotations_secondary), keep_previous=True)
+        self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filters_by_family, dataset_type)
 
     def _parse_annotation_overrides(self, annotations, pathogenicity):
         clinvar_terms, hgmd_classes = _parse_pathogenicity_filter(pathogenicity or {})
@@ -272,8 +262,6 @@ class EsSearch(object):
             self._consequence_overrides[SCREEN_KEY] = screen
         if new_svs:
             self._consequence_overrides[NEW_SV_FIELD] = new_svs
-
-        return annotations
 
     def _filter_by_location(self, genes, intervals, variant_ids, rs_ids, locus):
         if genes or intervals:
@@ -358,8 +346,7 @@ class EsSearch(object):
             return None
         return _or_filters(filters)
 
-    def _filter_by_annotations(self, annotations):
-        dataset_type = None
+    def _filter_by_annotations(self):
         annotation_override_filter = self._get_annotation_override_filter()
         new_svs = self._consequence_overrides.get(NEW_SV_FIELD)
 
@@ -370,29 +357,20 @@ class EsSearch(object):
                 # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
                 consequences_filter |= annotation_override_filter
             self._filter(consequences_filter)
-            dataset_type = _dataset_type_for_annotations(
-                annotations, new_svs=new_svs, screen=self._consequence_overrides.get(SCREEN_KEY)
-            )
-        elif new_svs:
-            dataset_type = Sample.DATASET_TYPE_SV_CALLS
-        elif annotation_override_filter:
+        elif annotation_override_filter and not new_svs:
             self._filter(annotation_override_filter)
-
-        if dataset_type:
-            self.update_dataset_type(dataset_type)
-
-        return dataset_type
 
     def filter_by_variant_ids(self, variant_ids):
         self._filter(Q('terms', variantId=variant_ids))
         return self
 
-    def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filters_by_family):
+    def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filters_by_family, dataset_type):
         has_inheritance_filter = inheritance_filter or inheritance_mode
         all_sample_search = (not quality_filters_by_family) and (inheritance_mode == ANY_AFFECTED or not has_inheritance_filter)
         no_filter_indices = set()
 
-        for index in self._indices:
+        indices = self._dataset_type_indices(dataset_type) if dataset_type else self._indices
+        for index in indices:
             family_samples_by_id = self.samples_by_family_index[index]
             index_fields = self.index_metadata[index]['fields']
 
@@ -455,16 +433,12 @@ class EsSearch(object):
 
         return _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
 
-    def _filter_compound_hets(self, quality_filters_by_family, annotations, annotations_secondary):
+    def _filter_compound_hets(self, quality_filters_by_family, annotations_secondary, dataset_type):
         comp_het_consequences = set(self._allowed_consequences)
-        dataset_type = _dataset_type_for_annotations(annotations)
         annotation_override_filter = self._get_annotation_override_filter()
         if annotations_secondary:
             self._allowed_consequences_secondary = sorted({ann for anns in annotations_secondary.values() for ann in anns})
             comp_het_consequences.update(self._allowed_consequences_secondary)
-            secondary_dataset_type = _dataset_type_for_annotations(annotations_secondary)
-            if dataset_type and dataset_type != secondary_dataset_type:
-                dataset_type = None
 
         annotation_filter = _annotations_filter(comp_het_consequences)
         if annotation_override_filter:
@@ -500,8 +474,6 @@ class EsSearch(object):
                     'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
                 )
                 self._index_searches[index].append(compound_het_search)
-
-        return dataset_type
 
     def _get_paired_indices_comp_het_queries(self, comp_het_qs_by_index, quality_filters_by_family):
         paired_index_families = defaultdict(dict)
@@ -1463,16 +1435,6 @@ def _annotations_filter(vep_consequences):
         consequences_filter |= ~Q('exists', field='transcriptConsequenceTerms')
 
     return consequences_filter
-
-
-def _dataset_type_for_annotations(annotations, new_svs=False, screen=False):
-    sv = new_svs or bool(annotations.get('structural')) or bool(annotations.get('structural_consequence'))
-    non_sv = bool(screen) or any(v for k, v in annotations.items() if k != 'structural' and k != 'structural_consequence')
-    if sv and not non_sv:
-        return Sample.DATASET_TYPE_SV_CALLS
-    elif not sv and non_sv:
-        return Sample.DATASET_TYPE_VARIANT_CALLS
-    return None
 
 
 def _in_silico_filter(in_silico_filters, require_score):

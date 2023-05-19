@@ -13,5 +13,5 @@ COMPOUND_HET = 'compound_het'
 RECESSIVE = 'recessive'
 
 NEW_SV_FIELD = 'new_structural_variants'
-
 SV_ANNOTATION_TYPES = {'structural_consequence', 'structural', NEW_SV_FIELD}
+ALL_DATA_TYPES = 'ALL'
