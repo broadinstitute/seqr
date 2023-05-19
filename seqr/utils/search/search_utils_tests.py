@@ -261,11 +261,17 @@ class SearchUtilsTests(object):
         self.assertEqual(parsed_genes['ENSG00000223972']['geneSymbol'], 'DDX11L1')
         self.assertEqual(parsed_genes['ENSG00000186092']['geneSymbol'], 'OR4F5')
 
-        del self.search_model.search['locus']
-        self.search_model.search.update({
+        self.search_model.search = {
             'inheritance': {'mode': 'recessive'}, 'annotations': {'frameshift': ['frameshift_variant']},
-            'annotations_secondary': {'structural_consequence': ['LOF']},
-        })
+        }
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type=None,
+            search_fields=['annotations'], omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
+        )
+
+        self.search_model.search['annotations_secondary'] = {'structural_consequence': ['LOF']}
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
