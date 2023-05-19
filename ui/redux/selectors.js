@@ -413,3 +413,27 @@ export const getUserOptions = createSelector(
     user => ({ key: user.username, value: user.username, text: user.displayName ? `${user.displayName} (${user.email})` : user.email }),
   ),
 )
+
+const getSpliceId = (row) => {
+  const { geneId, chrom, start, end, strand, type } = row
+  return `${geneId}-${chrom}-${start}-${end}-${strand}-${type}`
+}
+
+export const getRnaSeqSignificantJunctionData = createSelector(
+  getGenesById,
+  getRnaSeqDataByIndividual,
+  (genesById, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
+    (acc, [individualGuid, rnaSeqData]) => (rnaSeqData.spliceOutliers ? {
+      ...acc,
+      [individualGuid]: Object.values(rnaSeqData.spliceOutliers).flat().filter(({ isSignificant }) => isSignificant)
+        .sort((a, b) => a.pValue - b.pValue)
+        .map(row => ({
+          geneSymbol: (genesById[row.geneId] || {}).geneSymbol || row.geneId,
+          junctionLocus: `${row.chrom}:${row.start}-${row.end} ${row.strand}`,
+          idField: getSpliceId(row),
+          individualGuid,
+          ...row,
+        })),
+    } : acc), {},
+  ),
+)

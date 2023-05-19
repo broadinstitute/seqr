@@ -652,7 +652,7 @@ class IndividualAPITest(object):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
     @mock.patch('seqr.views.utils.orm_to_json_utils.get_json_for_queryset')
-    @mock.patch('seqr.views.apis.individual_api.MAX_SIGNIFICANT_NUM', 3)
+    @mock.patch('seqr.views.apis.individual_api.MAX_SIGNIFICANT_OUTLIER_NUM', 3)
     def test_get_individual_rna_seq_data_is_significant(self, mock_get_json):
         url = reverse(get_individual_rna_seq_data, args=[INDIVIDUAL_GUID])
         self.check_collaborator_login(url)

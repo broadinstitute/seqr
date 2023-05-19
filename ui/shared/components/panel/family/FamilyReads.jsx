@@ -478,10 +478,7 @@ class FamilyReads extends React.PureComponent {
       </Segment.Group>
     ) : null
 
-    return React.createElement(
-      layout,
-      { variant, reads, showReads, updateReads: this.updateReads, familyGuid, ...props },
-    )
+    return React.createElement(layout, { variant, reads, showReads, updateReads: this.updateReads, ...props })
   }
 
 }
