@@ -219,9 +219,11 @@ class EsSearch(object):
         quality_filters_by_family = self._get_quality_filters_by_family(quality_filter)
 
         comp_het_dataset_type = dataset_type
-        if dataset_type and dataset_type != secondary_dataset_type:
+        if dataset_type != secondary_dataset_type:
             comp_het_dataset_type = None
         if dataset_type == ALL_DATA_TYPES:
+            dataset_type = None
+        if comp_het_dataset_type == ALL_DATA_TYPES:
             comp_het_dataset_type = None
 
         has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not self.previous_search_results.get('grouped_results')

@@ -1514,7 +1514,7 @@ class EsUtilsTest(TestCase):
         self.assertEqual(total_results, 5)
 
         self.assertCachedResults(results_model, {'all_results': variants, 'total_results': 5})
-        self.assertTrue('index_metadata__{},{},{}'.format(INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME) in REDIS_CACHE)
+        self.assertTrue('index_metadata__{},{}'.format(INDEX_NAME, MITO_WGS_INDEX_NAME) in REDIS_CACHE)
 
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY])
 
@@ -2731,6 +2731,7 @@ class EsUtilsTest(TestCase):
 
         _, total_results = query_variants(results_model, num_results=2)
         self.assertEqual(total_results, 14)
+        self.assertTrue('index_metadata__{},{},{}'.format(INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME) in REDIS_CACHE)
 
         gene_filter = {'terms': {'geneIds': ['ENSG00000228198']}}
         prefilter_search = dict(
@@ -2760,8 +2761,9 @@ class EsUtilsTest(TestCase):
                     '_name': 'F000002_2'
                 }}
             ], start_index=0, size=2, index=SV_INDEX_NAME)
-        self.assertEqual(len(urllib3_responses.calls), 2)
-        self.assertExecutedSearch(call_index=0, **prefilter_search)
+        num_calls = 3
+        self.assertEqual(len(urllib3_responses.calls), num_calls)
+        self.assertExecutedSearch(call_index=num_calls-2, **prefilter_search)
         # Search total is greater than returned hits, so proceed with regular multi-search
         self.assertExecutedSearches([
             sv_search,
@@ -2835,8 +2837,9 @@ class EsUtilsTest(TestCase):
 
         _, total_results = query_variants(results_model, num_results=2)
         self.assertEqual(total_results, 1)
-        self.assertEqual(len(urllib3_responses.calls), 4)
-        self.assertExecutedSearch(call_index=2, **prefilter_search)
+        num_calls += 2
+        self.assertEqual(len(urllib3_responses.calls), num_calls)
+        self.assertExecutedSearch(call_index=num_calls-2, **prefilter_search)
         sv_search['query'] = [{'ids': {'values': ['prefix_19107_DEL']}}]
         self.assertExecutedSearches([sv_search])
 
@@ -2849,7 +2852,7 @@ class EsUtilsTest(TestCase):
         _, total_results = query_variants(results_model, num_results=2)
         self.assertEqual(total_results, 0)
         # Only the prefliter search is run, no multi-search
-        self.assertEqual(len(urllib3_responses.calls), 5)
+        self.assertEqual(len(urllib3_responses.calls), num_calls + 1)
         self.assertExecutedSearch(**prefilter_search)
 
 
