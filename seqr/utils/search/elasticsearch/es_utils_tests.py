@@ -1434,14 +1434,6 @@ class EsUtilsTest(TestCase):
         )
         Sample.objects.filter(elasticsearch_index=HG38_INDEX_NAME).update(elasticsearch_index=INDEX_NAME)
 
-        results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
-        search_model.search['annotations'] = {'structural': ['DEL']}
-        search_model.save()
-        with self.assertRaises(InvalidSearchException) as cm:
-            query_variants(results_model)
-        error = 'Unable to search against dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals'
-        self.assertEqual(str(cm.exception), error)
-
         results_model.families.set(self.families)
         search_model.search = {
             'inheritance': {'mode': 'compound_het'},

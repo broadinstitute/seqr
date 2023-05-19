@@ -117,12 +117,18 @@ class SearchUtilsTests(object):
             query_variants(self.results_model)
         self.assertEqual(str(cm.exception), 'Invalid custom inheritance')
 
+        self.search_model.search['annotations'] = {'structural': ['DEL']}
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model)
+        self.assertEqual(str(cm.exception), 'Unable to search against dataset type "SV"')
+
         self.results_model.families.set(Family.objects.filter(family_id='no_individuals'))
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'No search data found for families no_individuals')
 
         self.results_model.families.set(Family.objects.all())
+        self.search_model.search['annotations'] = None
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model, user=self.user)
         self.assertEqual(
@@ -158,7 +164,8 @@ class SearchUtilsTests(object):
         self._test_invalid_search_params(query_variants)
 
     def _test_expected_search_call(self, mock_get_variants, results_cache, locus=None, genes=None, intervals=None,
-                                   rs_ids=None, variant_ids=None, parsed_variant_ids=None, **kwargs):
+                                   rs_ids=None, variant_ids=None, parsed_variant_ids=None, dataset_type=None,
+                                   omitted_sample_guids=None, **kwargs):
         expected_search = {
             'inheritance_mode': 'de_novo',
             'inheritance_filter': {},
@@ -167,12 +174,17 @@ class SearchUtilsTests(object):
                 'parsed_variant_ids': parsed_variant_ids,
             },
             'skipped_samples': mock.ANY,
+            'dataset_type': dataset_type,
+            'secondary_dataset_type': None,
         }
         if locus:
             expected_search['locus'] = locus
 
         mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, '37', **kwargs)
-        self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(self.affected_search_samples))
+        searched_samples = self.affected_search_samples
+        if omitted_sample_guids:
+            searched_samples = searched_samples.exclude(guid__in=omitted_sample_guids)
+        self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(searched_samples))
         self.assertSetEqual(set(mock_get_variants.call_args.args[1]['skipped_samples']), set(self.non_affected_search_samples))
 
     def test_query_variants(self, mock_get_variants):
@@ -214,7 +226,8 @@ class SearchUtilsTests(object):
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=2, skip_genotype_filter=False,
             locus=self.search_model.search['locus'], rs_ids=[],  variant_ids=['1-248367227-TC-T', '2-103343353-GAGA-G'],
-            parsed_variant_ids=[('1', 248367227, 'TC', 'T'), ('2', 103343353, 'GAGA', 'G')],
+            parsed_variant_ids=[('1', 248367227, 'TC', 'T'), ('2', 103343353, 'GAGA', 'G')], dataset_type='VARIANTS',
+            omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
         )
 
         self.search_model.search['locus']['rawVariantItems'] = 'rs9876'

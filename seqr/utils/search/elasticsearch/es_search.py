@@ -10,7 +10,7 @@ from itertools import combinations
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
-from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE
+from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, NEW_SV_FIELD
 from seqr.utils.search.elasticsearch.constants import X_LINKED_RECESSIVE, \
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
@@ -18,7 +18,7 @@ from seqr.utils.search.elasticsearch.constants import X_LINKED_RECESSIVE, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
-    PATH_FREQ_OVERRIDE_CUTOFF, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
+    PATH_FREQ_OVERRIDE_CUTOFF, AFFECTED, UNAFFECTED, HAS_ALT, \
     get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS, SCREEN_KEY, MAX_INDEX_SEARCHES, PREFILTER_SEARCH_SIZE
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
@@ -158,12 +158,7 @@ class EsSearch(object):
             indices.update(new_indices)
             update_indices = list(indices)
         else:
-            if not new_indices:
-                error = 'Unable to search against dataset type "{}". This may be because inheritance based search is disabled in families with no loaded affected individuals'.format(
-                    dataset_type
-                )
-                from seqr.utils.search.utils import InvalidSearchException
-                raise InvalidSearchException(error)
+            # TODO get dataset types from function params
             update_indices = new_indices
 
         self._set_indices(update_indices)

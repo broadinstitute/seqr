@@ -4,7 +4,7 @@ from datetime import timedelta
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
-    MAX_NO_LOCATION_COMP_HET_FAMILIES
+    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
@@ -27,6 +27,15 @@ SEARCH_EXCEPTION_MESSAGE_MAP.update(ES_EXCEPTION_MESSAGE_MAP)
 
 ERROR_LOG_EXCEPTIONS = set()
 ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
+
+ALL_DATA_TYPES = 'ALL'
+DATASET_TYPES_LOOKUP = {
+    data_types[0]: data_types for data_types in [
+        [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS],
+        [Sample.DATASET_TYPE_SV_CALLS],
+    ]
+}
+DATASET_TYPES_LOOKUP[ALL_DATA_TYPES] = [dt for dts in DATASET_TYPES_LOOKUP.values() for dt in dts]
 
 
 def _no_backend_error(*args, **kwargs):
@@ -59,11 +68,16 @@ def get_search_samples(projects, active_only=True):
     return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
-def _get_families_search_data(families):
+def _get_families_search_data(families, dataset_types=None):
     samples = _get_filtered_search_samples({'individual__family__in': families})
     if len(samples) < 1:
         raise InvalidSearchException('No search data found for families {}'.format(
             ', '.join([f.family_id for f in families])))
+
+    if dataset_types:
+        samples = samples.filter(dataset_type__in=dataset_types)
+        if not samples:
+            raise InvalidSearchException(f'Unable to search against dataset type "{dataset_types[0]}"')
 
     projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name')
     project_versions = defaultdict(set)
@@ -170,8 +184,15 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
 
     families = search_model.families.all()
     _validate_sort(sort, families)
-    samples, genome_version = _get_families_search_data(families)
 
+    dataset_type, secondary_dataset_type = _search_dataset_type(parsed_search)
+    parsed_search.update({'dataset_type': dataset_type, 'secondary_dataset_type': secondary_dataset_type})
+    dataset_types = None
+    if dataset_type and dataset_type != ALL_DATA_TYPES and (secondary_dataset_type is None or secondary_dataset_type == dataset_type):
+        # TODO test passes dataset-type specific samples for comp het searches
+        dataset_types = DATASET_TYPES_LOOKUP[dataset_type]
+
+    samples, genome_version = _get_families_search_data(families, dataset_types=dataset_types)
     if parsed_search.get('inheritance'):
         samples = _parse_inheritance(parsed_search, samples, previous_search_results)
 
@@ -250,6 +271,27 @@ def _validate_sort(sort, families):
         raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
 
 
+def _search_dataset_type(search):
+    if search['parsedLocus']['variant_ids']:
+        return Sample.DATASET_TYPE_VARIANT_CALLS, None
+
+    dataset_type = _annotation_dataset_type(search.get('annotations'))
+    secondary_dataset_type = _annotation_dataset_type(search.get('annotations_secondary'))
+    return dataset_type, secondary_dataset_type
+
+
+def _annotation_dataset_type(annotations):
+    if not annotations:
+        return None
+
+    annotation_types = {k for k, v in annotations.items() if v}
+    if annotation_types.issubset(SV_ANNOTATION_TYPES):
+        return Sample.DATASET_TYPE_SV_CALLS
+    elif annotation_types.isdisjoint(SV_ANNOTATION_TYPES):
+        return Sample.DATASET_TYPE_VARIANT_CALLS
+    return ALL_DATA_TYPES
+
+
 def _parse_inheritance(search, samples, previous_search_results):
     inheritance = search.pop('inheritance')
     inheritance_mode = inheritance.get('mode')
@@ -284,6 +326,17 @@ def _parse_inheritance(search, samples, previous_search_results):
         if not has_location_filter and len(family_ids) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
             raise InvalidSearchException(
                 'Location must be specified to search for compound heterozygous variants across many families')
+
+        if search['secondary_dataset_type']:
+            invalid_type = next((
+                dt for dt in [search['dataset_type'], search['secondary_dataset_type']]
+                if dt and dt != ALL_DATA_TYPES and samples.filter(dataset_type__in=DATASET_TYPES_LOOKUP[dt]).count() < 1
+            ), None)
+            if invalid_type:
+                # TODO add test
+                raise InvalidSearchException(
+                    f'Unable to search for comp-het pairs with dataset type "{invalid_type}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
+                )
 
     return samples
 
