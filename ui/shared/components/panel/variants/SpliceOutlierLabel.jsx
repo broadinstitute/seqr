@@ -2,10 +2,9 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { getSortedIndividualsByFamily } from 'redux/selectors'
+import { getSortedIndividualsByFamily, getRnaSeqSignificantJunctionData } from 'redux/selectors'
 import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
-import RnaSeqJunctionOutliersTable from 'pages/Project/components/RnaSeqJunctionOutliersTable'
-import { getRnaSeqSignificantJunctionData } from 'pages/Project/selectors'
+import RnaSeqJunctionOutliersTable from 'shared/components/table/RnaSeqJunctionOutliersTable'
 import { GeneLabel } from './VariantGene'
 
 const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: true }
