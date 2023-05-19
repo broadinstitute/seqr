@@ -188,7 +188,6 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     parsed_search.update({'dataset_type': dataset_type, 'secondary_dataset_type': secondary_dataset_type})
     dataset_types = None
     if dataset_type and dataset_type != ALL_DATA_TYPES and (secondary_dataset_type is None or secondary_dataset_type == dataset_type):
-        # TODO test passes dataset-type specific samples for comp het searches
         dataset_types = DATASET_TYPES_LOOKUP[dataset_type]
 
     samples, genome_version = _get_families_search_data(families, dataset_types=dataset_types)
@@ -332,7 +331,6 @@ def _parse_inheritance(search, samples, previous_search_results):
                 if dt and dt != ALL_DATA_TYPES and samples.filter(dataset_type__in=DATASET_TYPES_LOOKUP[dt]).count() < 1
             ), None)
             if invalid_type:
-                # TODO add test
                 raise InvalidSearchException(
                     f'Unable to search for comp-het pairs with dataset type "{invalid_type}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
                 )
