@@ -19,7 +19,7 @@ const openReads = (updateReads, row) => () => {
     [JUNCTION_TYPE, COVERAGE_TYPE], tissueType)
 }
 
-const RNA_SEQ_SPLICE_COLUMNS = [
+export const RNA_SEQ_SPLICE_COLUMNS = [
   {
     name: 'junctionLocus',
     content: 'Junction',
@@ -70,12 +70,12 @@ const RNA_SEQ_SPLICE_COLUMNS = [
 ]
 
 const RnaSeqJunctionOutliersTable = React.memo(
-  ({ variant, reads, showReads, updateReads, data, dispatch, ...props }) => (
+  ({ variant, reads, showReads, updateReads, data, columns, dispatch, ...props }) => (
     <div>
       {reads}
       <DataTable
         idField="idField"
-        columns={RNA_SEQ_SPLICE_COLUMNS}
+        columns={columns || RNA_SEQ_SPLICE_COLUMNS}
         data={data}
         formatProps={updateReads}
         {...props}
@@ -90,6 +90,7 @@ RnaSeqJunctionOutliersTable.propTypes = {
   showReads: PropTypes.object,
   updateReads: PropTypes.func,
   data: PropTypes.arrayOf(PropTypes.object),
+  columns: PropTypes.arrayOf(PropTypes.object),
   dispatch: PropTypes.func,
 }
 

@@ -4,8 +4,15 @@ import { connect } from 'react-redux'
 
 import { getSortedIndividualsByFamily, getRnaSeqSignificantJunctionData } from 'redux/selectors'
 import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
-import RnaSeqJunctionOutliersTable from 'shared/components/table/RnaSeqJunctionOutliersTable'
+import RnaSeqJunctionOutliersTable, { RNA_SEQ_SPLICE_COLUMNS } from 'shared/components/table/RnaSeqJunctionOutliersTable'
 import { GeneLabel } from './VariantGene'
+
+const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', format: ({ individualName }) => (<b>{individualName}</b>) }
+
+const RNA_SEQ_SPLICE_POPUP_COLUMNS = [
+  INDIVIDUAL_NAME_COLUMN,
+  ...RNA_SEQ_SPLICE_COLUMNS,
+]
 
 const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: true }
 
@@ -37,6 +44,7 @@ const BaseSpliceOutlierLabels = React.memo((
     <RnaSeqJunctionOutliersTable
       {...HOVER_DATA_TABLE_PROPS}
       data={overlappedOutliers}
+      columns={RNA_SEQ_SPLICE_POPUP_COLUMNS}
       updateReads={updateReads}
     />
   )
