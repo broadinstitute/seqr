@@ -19,7 +19,7 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     search_body = {
         'requester_email': user.email,
         'sample_data': sample_data,
-        'genome_version': genome_version,
+        'genome_version': GENOME_VERSION_LOOKUP[genome_version],
         'sort': sort,
         'sort_metadata': _get_sort_metadata(sort, sample_data),
         'num_results': end_offset,
