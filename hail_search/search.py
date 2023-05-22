@@ -1,6 +1,6 @@
 from hail_search.constants import SV_DATASET
 from hail_search.hail_search_query import AllSvHailTableQuery, AllVariantHailTableQuery, AllDataTypeHailTableQuery, \
-    SearchException, QUERY_CLASS_MAP
+    QUERY_CLASS_MAP
 
 
 def search_hail_backend(request):
