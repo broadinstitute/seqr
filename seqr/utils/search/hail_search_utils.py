@@ -9,9 +9,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 
 
 def get_hail_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100,
-                      gene_agg=False, skip_genotype_filter=False):
-    if skip_genotype_filter:
-        raise NotImplementedError
+                      gene_agg=False, **kwargs):
 
     sample_data = _get_sample_data(samples, search.get('inheritance_filter'))
 
