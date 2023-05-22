@@ -4,12 +4,12 @@ import { connect } from 'react-redux'
 import { Loader, Grid, Dropdown } from 'semantic-ui-react'
 
 import { getGenesById, getIndividualsByGuid, getRnaSeqDataByIndividual, getRnaSeqSignificantJunctionData } from 'redux/selectors'
-import { RNASEQ_JUNCTION_PADDING, TISSUE_DISPLAY } from 'shared/utils/constants'
+import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
 import DataLoader from 'shared/components/DataLoader'
 import FamilyReads from 'shared/components/panel/family/FamilyReads'
 import RnaSeqJunctionOutliersTable from 'shared/components/table/RnaSeqJunctionOutliersTable'
 import { loadRnaSeqData } from '../reducers'
-import { getRnaSeqDataLoading } from '../selectors'
+import { getRnaSeqDataLoading, getTissueOptionsByIndividualGuid } from '../selectors'
 
 const RnaSeqOutliers = React.lazy(() => import('./RnaSeqOutliers'))
 
@@ -30,26 +30,20 @@ const OUTLIER_VOLCANO_PLOT_CONFIGS = [
   },
 ]
 
-const OutliersTableWithReads = props => <FamilyReads layout={RnaSeqJunctionOutliersTable} noTriggerButton {...props} />
-
 class BaseRnaSeqResultPage extends React.PureComponent {
 
   static propTypes = {
-    individual: PropTypes.object,
+    familyGuid: PropTypes.string,
     rnaSeqData: PropTypes.object,
     significantJunctionOutliers: PropTypes.arrayOf(PropTypes.object),
     genesById: PropTypes.object,
+    tissueOptions: PropTypes.arrayOf(PropTypes.object),
   }
 
   constructor(props) {
     super(props)
-    const { rnaSeqData } = props
-    const tissueTypes = Array.from(Object.values(rnaSeqData?.spliceOutliers || {}).flat().reduce(
-      (acc, { tissueType }) => acc.add(tissueType), new Set(),
-    ))
-    const tissueOptions = tissueTypes.map(tissueType => (
-      { key: tissueType, text: TISSUE_DISPLAY[tissueType] || 'No Tissue', value: tissueType }
-    ))
+    const { tissueOptions } = props
+
     // eslint-disable-next-line react/state-in-constructor
     this.state = {
       tissueType: tissueOptions.length > 0 ? tissueOptions[0].value : null,
@@ -62,7 +56,7 @@ class BaseRnaSeqResultPage extends React.PureComponent {
   }
 
   render() {
-    const { individual, rnaSeqData, significantJunctionOutliers, genesById } = this.props
+    const { familyGuid, rnaSeqData, significantJunctionOutliers, genesById } = this.props
     const { tissueType, tissueOptions } = this.state
 
     const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map(({ formatData, ...config }) => ({
@@ -73,7 +67,7 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     const outlierPlots = outlierPlotConfigs.map(({ key, data, ...config }) => (
       <Grid.Column key={key} width={8}>
         <RnaSeqOutliers
-          familyGuid={individual.familyGuid}
+          familyGuid={familyGuid}
           rnaSeqData={data}
           genesById={genesById}
           {...config}
@@ -99,9 +93,10 @@ class BaseRnaSeqResultPage extends React.PureComponent {
           )}
         </React.Suspense>
         {(significantJunctionOutliers.length > 0) && (
-          <OutliersTableWithReads
+          <FamilyReads
+            layout={RnaSeqJunctionOutliersTable}
+            noTriggerButton
             data={significantJunctionOutliers}
-            familyGuidForFormat={individual.familyGuid}
             defaultSortColumn="pValue"
             maxHeight="600px"
           />
@@ -114,7 +109,7 @@ class BaseRnaSeqResultPage extends React.PureComponent {
 
 const RnaSeqResultPage = React.memo(({ individual, rnaSeqData, load, loading, ...props }) => (
   <DataLoader content={rnaSeqData} contentId={individual.individualGuid} load={load} loading={loading}>
-    <BaseRnaSeqResultPage individual={individual} rnaSeqData={rnaSeqData} {...props} />
+    <BaseRnaSeqResultPage familyGuid={individual.familyGuid} rnaSeqData={rnaSeqData} {...props} />
   </DataLoader>
 ))
 
@@ -130,6 +125,7 @@ const mapStateToProps = (state, ownProps) => ({
   rnaSeqData: getRnaSeqDataByIndividual(state)[ownProps.match.params.individualGuid],
   significantJunctionOutliers: getRnaSeqSignificantJunctionData(state)[ownProps.match.params.individualGuid] || [],
   genesById: getGenesById(state),
+  tissueOptions: getTissueOptionsByIndividualGuid(state)[ownProps.match.params.individualGuid],
   loading: getRnaSeqDataLoading(state),
 })
 
