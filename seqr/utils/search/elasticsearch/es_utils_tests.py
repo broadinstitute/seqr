@@ -2338,8 +2338,67 @@ class EsUtilsTest(TestCase):
                             ]
                         }},
                     ]
-                    }},
-                 ],
+                }},
+                         ],
+                gene_aggs=True,
+                start_index=0,
+                size=1,
+                index=','.join([INDEX_NAME, SV_INDEX_NAME]),
+            ),
+            dict(
+                filters=[
+                    annotation_secondary_query,
+                    {'bool': {'_name': 'F000003_3', 'must': [{'term': {'samples_num_alt_1': 'NA20870'}}]}},
+                ],
+                gene_aggs=True,
+                start_index=0,
+                size=1
+            ),
+        ])
+
+    @urllib3_responses.activate
+    def test_multi_datatype_secondary_annotations_comp_het_get_es_variants(self):
+        setup_responses()
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'structural': ['DEL'], 'SCREEN': ['dELS']},
+            'annotations_secondary': {'structural_consequence': ['LOF']},
+            'inheritance': {'mode': 'compound_het'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        query_variants(results_model, num_results=10)
+
+        annotation_secondary_query = {'bool': {'should': [
+            {'terms': {'transcriptConsequenceTerms': ['DEL', 'LOF']}},
+            {'terms': {'screen_region_type': ['dELS']}}]}}
+
+        self.assertExecutedSearches([
+            dict(
+                filters=[annotation_secondary_query, {'bool': {
+                    '_name': 'F000002_2',
+                    'must': [
+                        {'bool': {
+                            'should': [
+                                {'bool': {
+                                    'minimum_should_match': 1,
+                                    'must_not': [
+                                        {'term': {'samples_no_call': 'HG00732'}},
+                                        {'term': {'samples_num_alt_2': 'HG00732'}},
+                                        {'term': {'samples_no_call': 'HG00733'}},
+                                        {'term': {'samples_num_alt_2': 'HG00733'}}
+                                    ],
+                                    'should': [
+                                        {'term': {'samples_num_alt_1': 'HG00731'}},
+                                        {'term': {'samples_num_alt_2': 'HG00731'}},
+                                    ]
+                                }},
+                                {'term': {'samples': 'HG00731'}},
+                            ]
+                        }},
+                    ]
+                }},
+                         ],
                 gene_aggs=True,
                 start_index=0,
                 size=1,
