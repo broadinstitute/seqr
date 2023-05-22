@@ -68,7 +68,8 @@ class DataTable extends React.PureComponent {
     downloadAlign: PropTypes.string,
     loadingProps: PropTypes.object,
     filterContainer: PropTypes.object,
-    formatProps: PropTypes.object,
+    // eslint-disable-next-line react/forbid-prop-types
+    formatProps: PropTypes.any,
   }
 
   static defaultProps = {

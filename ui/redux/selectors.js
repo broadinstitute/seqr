@@ -421,8 +421,9 @@ const getSpliceId = (row) => {
 
 export const getRnaSeqSignificantJunctionData = createSelector(
   getGenesById,
+  getIndividualsByGuid,
   getRnaSeqDataByIndividual,
-  (genesById, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
+  (genesById, individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
     (acc, [individualGuid, rnaSeqData]) => (rnaSeqData.spliceOutliers ? {
       ...acc,
       [individualGuid]: Object.values(rnaSeqData.spliceOutliers).flat().filter(({ isSignificant }) => isSignificant)
@@ -431,6 +432,7 @@ export const getRnaSeqSignificantJunctionData = createSelector(
           geneSymbol: (genesById[row.geneId] || {}).geneSymbol || row.geneId,
           junctionLocus: `${row.chrom}:${row.start}-${row.end} ${row.strand}`,
           idField: getSpliceId(row),
+          familyGuid: individualsByGuid[individualGuid].familyGuid,
           individualGuid,
           ...row,
         })),
