@@ -30,7 +30,7 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
         'quality_filter': search_body.pop('qualityFilter', None),
         'custom_query': search_body.pop('customQuery', None),
     })
-    del search_body['skipped_samples']
+    search_body.pop('skipped_samples', None)
 
     _parse_location_search(search_body, sample_data)
 
