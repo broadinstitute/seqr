@@ -686,7 +686,7 @@ class IndividualAPITest(object):
             mock.call(mock.ANY, additional_values={'isSignificant': mock.ANY},
                 nested_fields=[{'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
             ),
-            mock.call(mock.ANY, additional_values=None,
+            mock.call(mock.ANY, additional_values={'isSignificant': mock.ANY},
                 nested_fields=[{'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
             ),
         ])
