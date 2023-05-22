@@ -8,21 +8,21 @@ from seqr.utils.search.constants import RECESSIVE, COMPOUND_HET, MAX_NO_LOCATION
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 
 
-def get_hail_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=None, num_results=None,
+def get_hail_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100,
                       gene_agg=False, skip_genotype_filter=False):
-    if gene_agg:
-        raise NotImplementedError
     if skip_genotype_filter:
         raise NotImplementedError
 
     sample_data = _get_sample_data(samples, search.get('inheritance_filter'))
 
+    end_offset = num_results * page
     search_body = {
         'requester_email': user.email,
         'sample_data': sample_data,
         'genome_version': genome_version,
         'sort': sort,
         'sort_metadata': _get_sort_metadata(sort, sample_data),
+        'num_results': end_offset,
     }
     search_body.update(search)
     search_body.update({
@@ -34,7 +34,14 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
 
     _parse_location_search(search_body, sample_data)
 
-    return _search(search_body, previous_search_results, page=page, num_results=num_results)
+    path = 'gene_counts' if gene_agg else 'search'
+    response = requests.post(f'http://hail-search:5000/{path}', json=search_body)
+    response.raise_for_status()
+    response_json = response.json()
+
+    previous_search_results['total_results'] = response_json['total']
+    previous_search_results['all_results'] = response_json['results']
+    return response_json['results'][end_offset - num_results:end_offset]
 
 
 def _get_sample_data(samples, inheritance_filter):
@@ -113,16 +120,3 @@ def _parse_location_search(search, sample_data):
         'variant_ids': parsed_locus.get('parsed_variant_ids'),
         'rs_ids': parsed_locus.get('rs_ids'),
     })
-
-
-def _search(search, previous_search_results, page=1, num_results=100):
-    end_offset = num_results * page
-    search['num_results'] = end_offset
-
-    response = requests.post('http://hail-search:5000/search', json=search)
-    response.raise_for_status()
-    response_json = response.json()
-
-    previous_search_results['total_results'] = response_json['total']
-    previous_search_results['all_results'] = response_json['results']
-    return response_json['results'][end_offset - num_results:end_offset]

@@ -13,6 +13,7 @@ def run():
     logging.basicConfig(level=logging.INFO)
     app = web.Application()
     app.add_routes([web.post("/search", search)])
+    # TODO add gene_counts route
     web.run_app(
         app,
         host="0.0.0.0",
