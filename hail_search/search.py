@@ -23,7 +23,7 @@ def _search_data_type(variant_ids=None, annotations=None, annotations_secondary=
 def search_hail_backend(request):
     sample_data = request.pop('sample_data', {})
 
-    data_type = _search_data_type(**request)
+    data_type = _search_data_type(**request)  # TODO
     data_types = list(sample_data.keys())
 
     if data_type == VARIANT_DATASET:
