@@ -9,6 +9,7 @@ import DataTable from 'shared/components/table/DataTable'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { GENOME_VERSION_LOOKUP } from 'shared/utils/constants'
 
 const SEARCH_CATEGORIES = ['hpo_terms']
 const MAX_SEARCH_FAMILIES = 750
@@ -70,20 +71,32 @@ class Hpo extends React.PureComponent {
 
   render() {
     const { terms, data, loading, error } = this.state
-    const familyProjects = Object.entries(data.reduce(
-      (acc, { familyData }) => ({ ...acc, [familyData.familyGuid]: familyData.projectGuid }), {},
-    ))
-    let searchHref = ''
-    if (familyProjects.length && familyProjects.length < MAX_SEARCH_FAMILIES) {
-      const projectFamilies = Object.entries(familyProjects.reduce((acc, [familyGuid, projectGuid]) => {
-        if (!acc[projectGuid]) {
-          acc[projectGuid] = []
-        }
-        acc[projectGuid].push(familyGuid)
-        return acc
-      }, {})).map(([projectGuid, familyGuids]) => `${projectGuid};${familyGuids.join(',')}`)
-      searchHref = `/variant_search/families/${projectFamilies.join(':')}`
-    }
+
+    const familiesByGenomeVersion = data.reduce((acc, { familyData }) => {
+      if (!acc[familyData.genomeVersion]) {
+        acc[familyData.genomeVersion] = {}
+      }
+      acc[familyData.genomeVersion][familyData.familyGuid] = familyData.projectGuid
+      return acc
+    }, {})
+
+    const numFamilies = Object.values(familiesByGenomeVersion).reduce(
+      (acc, families) => acc + Object.keys(families).length, 0,
+    )
+
+    const genomeSearchPaths = Object.entries(familiesByGenomeVersion).map(([genomeVersion, familyAcc]) => {
+      const families = Object.entries(familyAcc)
+      const searchPath = families.length < MAX_SEARCH_FAMILIES ? Object.entries(families.reduce(
+        (acc, [familyGuid, projectGuid]) => {
+          if (!acc[projectGuid]) {
+            acc[projectGuid] = []
+          }
+          acc[projectGuid].push(familyGuid)
+          return acc
+        }, {},
+      )).map(([projectGuid, familyGuids]) => `${projectGuid};${familyGuids.join(',')}`).join(':') : ''
+      return [genomeVersion, searchPath]
+    })
 
     return (
       <div>
@@ -108,10 +121,23 @@ class Hpo extends React.PureComponent {
         ))}
         <Divider />
         {terms.length > 0 && (
-          <Header size="small">
-            <Header.Content>{`${familyProjects.length} Families, ${data.length} Individuals: `}</Header.Content>
-            <HorizontalSpacer width={10} />
-            <ButtonLink as={NavLink} disabled={!searchHref} target="_blank" to={searchHref}>Variant Search</ButtonLink>
+          <Header size="medium">
+            <Header.Content>{`${numFamilies} Families, ${data.length} Individuals`}</Header.Content>
+            <Header.Subheader>
+              {genomeSearchPaths.map(([genomeVersion, searchPath]) => (
+                <span key={genomeVersion}>
+                  {`${GENOME_VERSION_LOOKUP[genomeVersion]}: `}
+                  <ButtonLink
+                    as={NavLink}
+                    disabled={!searchPath}
+                    target="_blank"
+                    to={`/variant_search/families/${searchPath}`}
+                  >
+                    {`Variant Search - ${Object.keys(familiesByGenomeVersion[genomeVersion]).length} Families`}
+                  </ButtonLink>
+                </span>
+              ))}
+            </Header.Subheader>
           </Header>
         )}
         <DataTable
