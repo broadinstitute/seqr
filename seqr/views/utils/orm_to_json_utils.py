@@ -760,7 +760,7 @@ def get_json_for_matchmaker_submission(submission):
 def get_json_for_rna_seq_outliers(models, max_significant_num_per_tissue=None, **kwargs):
     significant_field = models.model.SIGNIFICANCE_FIELD
     significant_threshold = models.model.SIGNIFICANCE_THRESHOLD
-    additional_values = None if max_significant_num_per_tissue else {
+    additional_values = {
         'isSignificant': Case(
             When(then=Value(True), **{f'{significant_field}__lt': significant_threshold}),
             default=Value(False)

@@ -249,6 +249,12 @@ const TISSUE_REFERENCE_KEY = {
   L: 'Lymph',
 }
 
+const TISSUE_REFERENCES_LOOKUP = Object.entries(TISSUE_REFERENCE_KEY).reduce((acc, [tissueType, key]) => ({
+  ...acc,
+  [tissueType]: [NORM_GTEX_TRACK_OPTIONS, AGG_GTEX_TRACK_OPTIONS].flat().filter(track => track.text.includes(key))
+    .map(track => track.value),
+}), {})
+
 class FamilyReads extends React.PureComponent {
 
   static propTypes = {
@@ -277,10 +283,7 @@ class FamilyReads extends React.PureComponent {
   }
 
   updateReads = (familyGuid, locus, sampleTypes, tissueType) => {
-    const rnaReferenceOptions = [NORM_GTEX_TRACK_OPTIONS, AGG_GTEX_TRACK_OPTIONS].map(options => (
-      options.find(opt => opt.value.name.includes(TISSUE_REFERENCE_KEY[tissueType]))?.value
-    )).filter(o => o)
-    this.setState({ openFamily: familyGuid, rnaReferences: rnaReferenceOptions, sampleTypes, locus })
+    this.setState({ openFamily: familyGuid, sampleTypes, locus, rnaReferences: TISSUE_REFERENCES_LOOKUP[tissueType] })
   }
 
   getProjectForFamily = (familyGuid) => {

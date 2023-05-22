@@ -12,6 +12,7 @@ import {
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HAS_DATA_FIELD,
   MME_TAG_NAME,
+  TISSUE_DISPLAY,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -21,6 +22,7 @@ import {
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchableSampleByFamily, getSelectableTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
   getSamplesGroupedByProjectGuid, getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual,
+  getRnaSeqDataByIndividual,
 } from 'redux/selectors'
 
 import {
@@ -873,4 +875,26 @@ export const getIndividualPhenotypeGeneScores = createSelector(
       ]), []),
     }), {})
   ),
+)
+
+export const getTissueOptionsByIndividualGuid = createSelector(
+  getRnaSeqDataByIndividual,
+  (rnaSeqDataByIndividualGuid) => {
+    const tissueTypesByIndividualGuid = Object.entries(rnaSeqDataByIndividualGuid || {}).map(
+      ([individualGuid, rnaSeqData]) => ([
+        individualGuid,
+        Array.from(Object.values(rnaSeqData?.spliceOutliers || {}).flat().reduce(
+          (acc2, { tissueType }) => acc2.add(tissueType), new Set(),
+        )),
+      ]),
+    )
+    return tissueTypesByIndividualGuid.reduce((acc, [individualGuid, tissueTypes]) => (
+      tissueTypes.length > 0 ? {
+        ...acc,
+        [individualGuid]: tissueTypes.map(tissueType => (
+          { key: tissueType, text: TISSUE_DISPLAY[tissueType] || 'No Tissue', value: tissueType }
+        )),
+      } : acc
+    ), {})
+  },
 )
