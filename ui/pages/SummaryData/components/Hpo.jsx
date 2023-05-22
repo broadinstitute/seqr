@@ -70,9 +70,21 @@ class Hpo extends React.PureComponent {
 
   render() {
     const { terms, data, loading, error } = this.state
-    const families = new Set(data.map(({ familyData }) => `${familyData.familyGuid}:${familyData.projectGuid}`))
-    const searchHref = (families.size && families.size < MAX_SEARCH_FAMILIES) ?
-      `/variant_search/families/${[...families].join(',')}` : ''
+    const familyProjects = Object.entries(data.reduce(
+      (acc, { familyData }) => ({ ...acc, [familyData.familyGuid]: familyData.projectGuid }), {},
+    ))
+    let searchHref = ''
+    if (familyProjects.length && familyProjects.length < MAX_SEARCH_FAMILIES) {
+      const projectFamilies = Object.entries(familyProjects.reduce((acc, [familyGuid, projectGuid]) => {
+        if (!acc[projectGuid]) {
+          acc[projectGuid] = []
+        }
+        acc[projectGuid].push(familyGuid)
+        return acc
+      }, {})).map(([projectGuid, familyGuids]) => `${projectGuid};${familyGuids.join(',')}`)
+      searchHref = `/variant_search/families/${projectFamilies.join(':')}`
+    }
+
     return (
       <div>
         <AwesomeBar
@@ -97,7 +109,7 @@ class Hpo extends React.PureComponent {
         <Divider />
         {terms.length > 0 && (
           <Header size="small">
-            <Header.Content>{`${families.size} Families, ${data.length} Individuals: `}</Header.Content>
+            <Header.Content>{`${familyProjects.length} Families, ${data.length} Individuals: `}</Header.Content>
             <HorizontalSpacer width={10} />
             <ButtonLink as={NavLink} disabled={!searchHref} target="_blank" to={searchHref}>Variant Search</ButtonLink>
           </Header>
