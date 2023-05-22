@@ -1,3 +1,4 @@
+from aiohttp.web import HTTPBadRequest
 from copy import deepcopy
 from collections import defaultdict
 import hail as hl
@@ -20,10 +21,6 @@ logger = logging.getLogger(__name__)
 def _to_camel_case(snake_case_str):
     converted = snake_case_str.replace('_', ' ').title().replace(' ', '')
     return converted[0].lower() + converted[1:]
-
-
-class SearchException(Exception):
-    pass
 
 
 class BaseHailTableQuery(object):
@@ -195,12 +192,12 @@ class BaseHailTableQuery(object):
                 try:
                     filtered_project_hts.append(cls._filter_entries_table(
                         project_ht, sample_data=project_sample_data, table_name=project_guid, **family_filter_kwargs))
-                except SearchException as e:
+                except HTTPBadRequest as e:
                     logger.info(f'Skipped {project_guid}: {e}')
                     exception_messages.add(str(e))
 
             if len(filtered_project_hts) < 1:
-                raise SearchException('; '.join(exception_messages))
+                raise HTTPBadRequest(text='; '.join(exception_messages))
 
             families_ht = filtered_project_hts[0]
             for project_ht in filtered_project_hts[1:]:
@@ -303,8 +300,8 @@ class BaseHailTableQuery(object):
         sample_individual_map = {s['sample_id']: s['individual_guid'] for s in sample_data}
         missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
         if missing_samples:
-            raise SearchException(
-                f'The following samples are available in seqr but missing the loaded data: {", ".join(missing_samples)}'
+            raise HTTPBadRequest(
+                text=f'The following samples are available in seqr but missing the loaded data: {", ".join(missing_samples)}'
             )
         sample_index_individual_map = {
             sample_id_index_map[sample_id]: i_guid for sample_id, i_guid in sample_individual_map.items()
@@ -449,7 +446,7 @@ class BaseHailTableQuery(object):
             ) for interval in intervals]
             invalid_intervals = [raw_intervals[i] for i, interval in enumerate(intervals) if interval is None]
             if invalid_intervals:
-                raise SearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
+                raise HTTPBadRequest(text=f'Invalid intervals: {", ".join(invalid_intervals)}')
         return intervals
 
     def _parse_overrides(self, pathogenicity, annotations, annotations_secondary):

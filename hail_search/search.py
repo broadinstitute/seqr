@@ -52,8 +52,4 @@ def search_hail_backend(request):
         else:
             query_cls = AllDataTypeHailTableQuery
 
-    try:
-        return query_cls(data_type, sample_data=sample_data, **request).search()
-    except SearchException as e:
-        # TODO return 400 response
-        raise e
+    return query_cls(data_type, sample_data=sample_data, **request).search()
