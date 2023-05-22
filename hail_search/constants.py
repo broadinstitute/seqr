@@ -20,7 +20,6 @@ CLINVAR_KEY = 'clinvar'
 HGMD_KEY = 'hgmd'
 
 STRUCTURAL_ANNOTATION_FIELD = 'structural'
-SV_ANNOTATION_TYPES = {'structural_consequence', STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD}
 
 POPULATION_SORTS = {
     'gnomad': [GNOMAD_GENOMES_FIELD, 'gnomad_mito'],
