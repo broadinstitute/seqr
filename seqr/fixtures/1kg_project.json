@@ -76,6 +76,7 @@
 	    "can_view_group": 2,
 	    "last_accessed_date": "2017-09-15T18:15:50.827Z",
         "consent_code": "H",
+        "genome_version": "38",
     "workspace_name": "anvil-non-analyst-project 1000 Genomes Demo",
     "workspace_namespace": "ext-data"
     }
