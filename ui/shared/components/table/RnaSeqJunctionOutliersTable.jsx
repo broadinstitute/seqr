@@ -1,4 +1,5 @@
 import React from 'react'
+import { Popup, Icon } from 'semantic-ui-react'
 import PropTypes from 'prop-types'
 
 import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
@@ -11,7 +12,7 @@ import { ButtonLink } from 'shared/components/StyledComponents'
 import { getLocus } from 'shared/components/panel/variants/VariantUtils'
 
 const RNA_SEQ_SPLICE_NUM_FIELDS = ['zScore', 'pValue', 'deltaPsi']
-const RNA_SEQ_SPLICE_DETAIL_FIELDS = ['type', 'readCount', 'rareDiseaseSamplesWithJunction', 'rareDiseaseSamplesTotal']
+const RNA_SEQ_SPLICE_DETAIL_FIELDS = ['type', 'readCount']
 
 const openReads = (updateReads, row) => () => {
   const { chrom, start, end, tissueType, familyGuid } = row
@@ -19,41 +20,44 @@ const openReads = (updateReads, row) => () => {
     [JUNCTION_TYPE, COVERAGE_TYPE], tissueType)
 }
 
-const RNA_SEQ_SPLICE_COLUMNS = [
-  {
-    name: 'junctionLocus',
-    content: 'Junction',
-    width: 4,
-    format: (row, isExport, updateReads) => (
-      <div>
-        <ButtonLink onClick={openReads(updateReads, row)}>
-          {row.junctionLocus}
-        </ButtonLink>
-        <GeneSearchLink
-          buttonText=""
-          icon="search"
-          location={`${row.chrom}:${Math.max(1, row.start - RNASEQ_JUNCTION_PADDING)}-${row.end + RNASEQ_JUNCTION_PADDING}`}
-          familyGuid={row.familyGuid}
-        />
-      </div>
-    ),
-  }, {
-    name: 'gene',
-    content: 'Gene',
-    width: 2,
-    format: row => (
-      <div>
-        <ShowGeneModal gene={row} />
-        <GeneSearchLink
-          buttonText=""
-          icon="search"
-          location={row.geneId}
-          familyGuid={row.familyGuid}
-          floated="right"
-        />
-      </div>
-    ),
-  },
+const JUNCTION_COLUMN = {
+  name: 'junctionLocus',
+  content: 'Junction',
+  width: 4,
+  format: (row, isExport, updateReads) => (
+    <div>
+      <ButtonLink onClick={openReads(updateReads, row)}>
+        {row.junctionLocus}
+      </ButtonLink>
+      <GeneSearchLink
+        buttonText=""
+        icon="search"
+        location={`${row.chrom}:${Math.max(1, row.start - RNASEQ_JUNCTION_PADDING)}-${row.end + RNASEQ_JUNCTION_PADDING}`}
+        familyGuid={row.familyGuid}
+      />
+    </div>
+  ),
+}
+
+const GENE_COLUMN = {
+  name: 'gene',
+  content: 'Gene',
+  width: 2,
+  format: row => (
+    <div>
+      <ShowGeneModal gene={row} />
+      <GeneSearchLink
+        buttonText=""
+        icon="search"
+        location={row.geneId}
+        familyGuid={row.familyGuid}
+        floated="right"
+      />
+    </div>
+  ),
+}
+
+const OTHER_SPLICE_COLUMNS = [
   ...RNA_SEQ_SPLICE_NUM_FIELDS.map(name => (
     {
       name,
@@ -67,6 +71,42 @@ const RNA_SEQ_SPLICE_COLUMNS = [
       content: camelcaseToTitlecase(name).replace(' ', '-'),
     }
   )),
+  {
+    name: 'rareDiseaseSamplesWithJunction',
+    content: (
+      <Popup
+        content="Rare-Disease Samples With Junction"
+        position="right"
+        trigger={
+          <span>
+            RD Junctions
+            <Icon name="info circle" />
+          </span>
+        }
+      />
+    ),
+  },
+  {
+    name: 'rareDiseaseSamplesTotal',
+    content: (
+      <Popup
+        content="Rare-Disease Samples Total"
+        position="top right"
+        trigger={
+          <span>
+            RD Total
+            <Icon name="info circle" />
+          </span>
+        }
+      />
+    ),
+  },
+]
+
+const RNA_SEQ_SPLICE_COLUMNS = [
+  JUNCTION_COLUMN,
+  GENE_COLUMN,
+  ...OTHER_SPLICE_COLUMNS,
 ]
 
 const RnaSeqJunctionOutliersTable = React.memo(
