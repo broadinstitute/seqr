@@ -67,7 +67,7 @@ class UpdateGencodeTest(TestCase):
         # Test required argument out-of-range
         with self.assertRaises(CommandError) as ce:
             call_command('update_gencode', '--gencode-release=18')
-        self.assertEqual(str(ce.exception), 'Error: argument --gencode-release: invalid choice: 18 (choose from 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31)')
+        self.assertEqual(str(ce.exception), f'Error: argument --gencode-release: invalid choice: 18 (choose from {", ".join([str(i) for i in range(19, 40)])})')
 
         # Test genome_version out-of-range
         with self.assertRaises(CommandError) as ce:
@@ -158,7 +158,7 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(trans_info.strand_grch37, '-')
         self.assertEqual(trans_info.chrom_grch37, '1')
         self.assertEqual(trans_info.gene.gene_id, 'ENSG00000284662')
-        self.assertEqual(trans_info.gene.gencode_release, 31)
+        self.assertEqual(trans_info.gene.gencode_release, 39 if expected_release == 39 else 31)
         self.assertTrue(trans_info.is_mane_select)
 
     @responses.activate
@@ -197,7 +197,7 @@ class UpdateGencodeTest(TestCase):
 
         # Test normal command function with a --reset option
         mock_logger.reset_mock()
-        call_command('update_gencode', '--reset', '--gencode-release=31', self.temp_file_path, '37')
+        call_command('update_gencode', '--reset', '--gencode-release=39', self.temp_file_path, '37')
         mock_utils_logger.info.assert_has_calls([
             mock.call('Loading {} (genome version: 37)'.format(self.temp_file_path)),
             mock.call('Creating 2 TranscriptInfo records'),
@@ -215,12 +215,12 @@ class UpdateGencodeTest(TestCase):
 
         self.assertEqual(GeneInfo.objects.all().count(), 2)
         gene_info = GeneInfo.objects.get(gene_id = 'ENSG00000223972')
-        self.assertEqual(gene_info.gencode_release, 31)
+        self.assertEqual(gene_info.gencode_release, 39)
         gene_info = GeneInfo.objects.get(gene_id = 'ENSG00000284662')
         self.assertEqual(gene_info.start_grch37, 621059)
         self.assertEqual(gene_info.chrom_grch37, '1')
         self.assertEqual(gene_info.coding_region_size_grch37, 936)
-        self.assertEqual(gene_info.gencode_release, 31)
+        self.assertEqual(gene_info.gencode_release, 39)
         self.assertEqual(gene_info.gencode_gene_type, 'protein_coding')
         self.assertEqual(gene_info.gene_id, 'ENSG00000284662')
         self.assertEqual(gene_info.gene_symbol, 'OR4F16')
@@ -228,10 +228,10 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(gene_info.strand_grch37, '-')
 
         # Test only reloading transcripts
-        url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_31/gencode.v31.annotation.gtf.gz'
+        url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.annotation.gtf.gz'
         responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, url, body=self.gzipped_gtf_data, stream=True)
-        url_lift = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_31/GRCh37_mapping/gencode.v31lift37.annotation.gtf.gz'
+        url_lift = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/GRCh37_mapping/gencode.v39lift37.annotation.gtf.gz'
         responses.add(responses.HEAD, url_lift, headers={"Content-Length": "1024"})
         responses.add(responses.GET, url_lift, body=self.gzipped_gtf_data, stream=True)
 
@@ -239,7 +239,7 @@ class UpdateGencodeTest(TestCase):
 
         self.assertEqual(GeneInfo.objects.all().count(), 2)
         self.assertEqual(TranscriptInfo.objects.all().count(), 2)
-        self._has_expected_new_transcripts(expected_release=31)
+        self._has_expected_new_transcripts(expected_release=39)
         mock_utils_logger.info.assert_has_calls([
             mock.call('Loading {} (genome version: 37)'.format(self.temp_file_path)),
             mock.call('Creating 2 TranscriptInfo records'),
