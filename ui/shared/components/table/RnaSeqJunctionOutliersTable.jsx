@@ -76,7 +76,7 @@ export const OTHER_SPLICE_COLUMNS = [
     content: (
       <Popup
         content="Rare-Disease Samples With Junction"
-        position="right"
+        position="top center"
         trigger={
           <span>
             RD Junctions
