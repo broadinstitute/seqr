@@ -98,8 +98,21 @@ class SearchUtilsTests(object):
             'Inheritance based search is disabled in families with no data loaded for affected individuals',
         )
 
-        self.search_model.search['inheritance']['filter'] = {'affected': {'I000007_na20870': 'N'}}
         self.results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
+        self.search_model.search['annotations'] = {'structural': ['DEL']}
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model)
+        self.assertEqual(str(cm.exception), 'Unable to search against dataset type "SV"')
+
+        self.search_model.search['annotations_secondary'] = {'frameshift': ['frameshift_variant']}
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model)
+        self.assertEqual(
+            str(cm.exception),
+            'Unable to search for comp-het pairs with dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals',
+        )
+
+        self.search_model.search['inheritance']['filter'] = {'affected': {'I000007_na20870': 'N'}}
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model)
         self.assertEqual(
@@ -123,6 +136,7 @@ class SearchUtilsTests(object):
         self.assertEqual(str(cm.exception), 'No search data found for families no_individuals')
 
         self.results_model.families.set(Family.objects.all())
+        self.search_model.search['annotations'] = None
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model, user=self.user)
         self.assertEqual(
@@ -157,22 +171,27 @@ class SearchUtilsTests(object):
 
         self._test_invalid_search_params(query_variants)
 
-    def _test_expected_search_call(self, mock_get_variants, results_cache, locus=None, genes=None, intervals=None,
-                                   rs_ids=None, variant_ids=None, parsed_variant_ids=None, **kwargs):
+    def _test_expected_search_call(self, mock_get_variants, results_cache, search_fields=None, genes=None, intervals=None,
+                                   rs_ids=None, variant_ids=None, parsed_variant_ids=None, inheritance_mode='de_novo',
+                                   dataset_type=None, secondary_dataset_type=None, omitted_sample_guids=None,  **kwargs):
         expected_search = {
-            'inheritance_mode': 'de_novo',
+            'inheritance_mode': inheritance_mode,
             'inheritance_filter': {},
             'parsedLocus': {
                 'genes': genes, 'intervals': intervals, 'rs_ids': rs_ids, 'variant_ids': variant_ids,
                 'parsed_variant_ids': parsed_variant_ids,
             },
             'skipped_samples': mock.ANY,
+            'dataset_type': dataset_type,
+            'secondary_dataset_type': secondary_dataset_type,
         }
-        if locus:
-            expected_search['locus'] = locus
+        expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
 
         mock_get_variants.assert_called_with(mock.ANY, expected_search, self.user, results_cache, '37', **kwargs)
-        self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(self.affected_search_samples))
+        searched_samples = self.affected_search_samples
+        if omitted_sample_guids:
+            searched_samples = searched_samples.exclude(guid__in=omitted_sample_guids)
+        self.assertSetEqual(set(mock_get_variants.call_args.args[0]), set(searched_samples))
         self.assertSetEqual(set(mock_get_variants.call_args.args[1]['skipped_samples']), set(self.non_affected_search_samples))
 
     def test_query_variants(self, mock_get_variants):
@@ -213,22 +232,23 @@ class SearchUtilsTests(object):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=2, skip_genotype_filter=False,
-            locus=self.search_model.search['locus'], rs_ids=[],  variant_ids=['1-248367227-TC-T', '2-103343353-GAGA-G'],
-            parsed_variant_ids=[('1', 248367227, 'TC', 'T'), ('2', 103343353, 'GAGA', 'G')],
+            search_fields=['locus'], rs_ids=[],  variant_ids=['1-248367227-TC-T', '2-103343353-GAGA-G'],
+            parsed_variant_ids=[('1', 248367227, 'TC', 'T'), ('2', 103343353, 'GAGA', 'G')], dataset_type='VARIANTS',
+            omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
         )
 
         self.search_model.search['locus']['rawVariantItems'] = 'rs9876'
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            locus=self.search_model.search['locus'], rs_ids=['rs9876'], variant_ids=[], parsed_variant_ids=[],
+            search_fields=['locus'], rs_ids=['rs9876'], variant_ids=[], parsed_variant_ids=[],
         )
 
         self.search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            locus=self.search_model.search['locus'], genes={
+            search_fields=['locus'], genes={
                 'ENSG00000223972': mock.ANY, 'ENSG00000186092': mock.ANY,
             }, intervals=[
                 {'chrom': '2', 'start': 1234, 'end': 5678, 'offset': None},
@@ -240,6 +260,41 @@ class SearchUtilsTests(object):
             self.assertSetEqual(set(gene.keys()), GENE_FIELDS)
         self.assertEqual(parsed_genes['ENSG00000223972']['geneSymbol'], 'DDX11L1')
         self.assertEqual(parsed_genes['ENSG00000186092']['geneSymbol'], 'OR4F5')
+
+        self.search_model.search = {
+            'inheritance': {'mode': 'recessive'}, 'annotations': {'frameshift': ['frameshift_variant']},
+        }
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type=None,
+            search_fields=['annotations'], omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
+        )
+
+        self.search_model.search['annotations_secondary'] = {'structural_consequence': ['LOF']}
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='SV',
+            search_fields=['annotations', 'annotations_secondary']
+        )
+
+        self.search_model.search['annotations_secondary'].update({'SCREEN': ['dELS', 'DNase-only']})
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='ALL',
+            search_fields=['annotations', 'annotations_secondary']
+        )
+
+        self.search_model.search['annotations_secondary']['structural_consequence'] = []
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='VARIANTS',
+            search_fields=['annotations', 'annotations_secondary'],
+            omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
+        )
 
     def test_cached_query_variants(self):
         self.set_cache({'total_results': 4, 'all_results': PARSED_VARIANTS + PARSED_VARIANTS})
