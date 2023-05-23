@@ -9,7 +9,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.core.management.base import CommandError
 
-from reference_data.models import GeneInfo, TranscriptInfo
+from reference_data.models import GeneInfo, TranscriptInfo, RefseqTranscript
 
 BAD_FIELDS_GTF_DATA = [
     'gene	11869	14412	.	+	.	gene_id "ENSG00000223972.4";\n',
@@ -35,6 +35,11 @@ GTF_DATA = [
     'chr1	HAVANA	CDS	621099	622034	.	-	0	gene_id "ENSG00000284662.1_2"; transcript_id "ENST00000332831.4_2"; gene_type "protein_coding"; gene_name "OR4F16"; transcript_type "protein_coding"; transcript_name "OR4F16-201"; exon_number 1; exon_id "ENSE00002324228.3"; level 2; protein_id "ENSP00000329982.2"; transcript_support_level "NA"; hgnc_id "HGNC:15079"; tag "basic"; tag "appris_principal_1"; tag "CCDS"; ccdsid "CCDS41221.1"; havana_gene "OTTHUMG00000002581.3_2"; havana_transcript "OTTHUMT00000007334.3_2"; remap_original_location "chr1:-:685719-686654"; remap_status "full_contig";\n',
     # len(record["chrom"]) > 2
     'GL000193.1	HAVANA	gene	77815	78162	.	+	.	gene_id "ENSG00000279783.1_5"; gene_type "processed_pseudogene"; gene_name "AC018692.2"; level 2; havana_gene "OTTHUMG00000189459.1_5"; remap_status "full_contig"; remap_num_mappings 1; remap_target_status "new";\n',
+]
+
+REFSEQ_DATA = [
+    'ENST00000258436.1	NR_026874.2	\n',
+    'ENST00000624735.7	NM_015658.4	NP_056473.3\n',
 ]
 
 
@@ -258,28 +263,46 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(responses.calls[2].request.url, url)
 
     @responses.activate
+    @mock.patch('reference_data.management.commands.utils.update_utils.logger')
     @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
     @mock.patch('reference_data.management.commands.update_gencode_latest.logger')
-    def test_update_gencode_latest_command(self, mock_logger, mock_utils_logger):
+    def test_update_gencode_latest_command(self, mock_logger, mock_gencode_utils_logger, mock_update_utils_logger):
         self._add_latest_responses()
+        refseq_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.metadata.RefSeq.gz'
+        responses.add(responses.HEAD, refseq_url, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, refseq_url, body=gzip.compress(''.join(REFSEQ_DATA).encode()))
+
         call_command('update_gencode_latest', '--track-symbol-change', f'--output-dir={self.test_dir}')
-        mock_utils_logger.info.assert_called_with('Creating 1 TranscriptInfo records')
+        mock_gencode_utils_logger.info.assert_called_with('Creating 2 TranscriptInfo records')
         mock_logger.info.assert_has_calls([
             mock.call('Updating 1 previously loaded GeneInfo records'),
             mock.call('Creating 1 GeneInfo records'),
-            mock.call('Updating 1 previously loaded TranscriptInfo records'),
+            mock.call('Dropping 1 existing TranscriptInfo entries'),
             mock.call('Done'),
             mock.call('Stats: '),
             mock.call('  geneinfo_updated: 1'),
-            mock.call('  geneinfo_created: 1'),
-            mock.call('  transcriptinfo_updated: 1'),
-            mock.call('  transcriptinfo_created: 1'),
+            mock.call('  genes_created: 1'),
+            mock.call('  transcripts_replaced: 1'),
+            mock.call('  transcripts_created: 1'),
+        ])
+        mock_update_utils_logger.info.assert_has_calls([
+            mock.call('Parsing file'),
+            mock.call('Deleting 1 existing RefseqTranscript records'),
+            mock.call('Creating 2 RefseqTranscript records'),
+            mock.call('Done'),
         ])
 
         self._has_expected_new_genes(expected_release=39)
 
         self.assertEqual(TranscriptInfo.objects.all().count(), 3)
         self._has_expected_new_transcripts(expected_release=39)
+
+        self.assertEqual(RefseqTranscript.objects.count(), 2)
+        self.assertListEqual(
+            list(RefseqTranscript.objects.order_by('transcript_id').values('transcript__transcript_id', 'refseq_id')), [
+                {'transcript__transcript_id': 'ENST00000258436', 'refseq_id': 'NR_026874.2'},
+                {'transcript__transcript_id': 'ENST00000624735', 'refseq_id': 'NM_015658.4'}
+            ])
 
         with open(f'{self.test_dir}/gene_symbol_changes.csv') as f:
             self.assertListEqual(f.readlines(), ['ENSG00000223972,DDX11L1,DDX11L1A\n'])

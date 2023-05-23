@@ -3,7 +3,9 @@ import logging
 from django.core.management.base import BaseCommand
 
 from reference_data.management.commands.utils.gencode_utils import load_gencode_records, create_transcript_info, \
-    map_transcript_gene_ids, LATEST_GENCODE_RELEASE
+    LATEST_GENCODE_RELEASE
+from reference_data.management.commands.utils.update_utils import update_records
+from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
 from reference_data.models import GeneInfo, TranscriptInfo, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 
 logger = logging.getLogger(__name__)
@@ -27,14 +29,18 @@ class Command(BaseCommand):
         )
 
         logger.info('Creating {} GeneInfo records'.format(len(genes)))
-        counters['geneinfo_created'] = len(genes)
+        counters['genes_created'] = len(genes)
         GeneInfo.objects.bulk_create([GeneInfo(**record) for record in genes.values()], batch_size=BATCH_SIZE)
 
-        map_transcript_gene_ids(transcripts)
-        self.update_existing_models(transcripts, TranscriptInfo, counters, 'transcript_id')
+        # Transcript records child models are also from gencode, so better to reset all data and then repopulate
+        existing_transcripts = TranscriptInfo.objects.filter(transcript_id__in=transcripts.keys())
+        counters['transcripts_replaced'] = len(existing_transcripts)
+        counters['transcripts_created'] = len(transcripts) - len(existing_transcripts)
+        logger.info(f'Dropping {len(existing_transcripts)} existing TranscriptInfo entries')
+        existing_transcripts.delete()
+        create_transcript_info(transcripts)
 
-        counters['transcriptinfo_created'] = len(transcripts)
-        create_transcript_info(transcripts, skip_gene_id_mapping=True)
+        update_records(RefseqReferenceDataHandler())
 
         logger.info('Done')
         logger.info('Stats: ')
@@ -43,6 +49,7 @@ class Command(BaseCommand):
 
     @staticmethod
     def update_existing_models(new_data, model_cls, counters, id_field, track_change_field=None, output_directory='.'):
+        # TODO cleanup
         models_to_update = model_cls.objects.filter(**{f'{id_field}__in': new_data.keys()})
         fields = set()
         changes = []
