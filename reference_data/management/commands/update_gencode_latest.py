@@ -6,7 +6,7 @@ from reference_data.management.commands.utils.gencode_utils import load_gencode_
     LATEST_GENCODE_RELEASE
 from reference_data.management.commands.utils.update_utils import update_records
 from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
-from reference_data.models import GeneInfo, TranscriptInfo, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
+from reference_data.models import GeneInfo, TranscriptInfo
 
 logger = logging.getLogger(__name__)
 
