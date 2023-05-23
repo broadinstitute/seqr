@@ -20,7 +20,7 @@ const PAGE_CONFIGS = {
     entity: analysisGroupsByGuid[entityGuid],
     entityUrlPath: `analysis_group/${entityGuid}`,
   }),
-  families: entityGuid => ({ description: `Searching in ${entityGuid.split(',').length} Families` }),
+  families: entityGuid => ({ description: `Searching in ${entityGuid.split(/[,:]/).length} Families` }),
   results: (entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash) => {
     const { projectFamilies } = searchesByHash[entityGuid] || {}
     let pageType
