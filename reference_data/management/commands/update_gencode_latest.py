@@ -16,12 +16,14 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--track-symbol-change', action='store_true')
+        parser.add_argument('--output-directory')
 
     def handle(self, *args, **options):
         genes, transcripts, counters = load_gencode_records(LATEST_GENCODE_RELEASE)
 
         self.update_existing_models(
-            genes, GeneInfo, counters, 'gene_id', track_change_field='gene_symbol' if options['track_symbol_change'] else None,
+            genes, GeneInfo, counters, 'gene_id', output_directory=options.get('output_directory'),
+            track_change_field='gene_symbol' if options['track_symbol_change'] else None,
         )
 
         logger.info('Creating {} GeneInfo records'.format(len(genes)))
@@ -40,7 +42,7 @@ class Command(BaseCommand):
             logger.info('  %s: %s' % (k, v))
 
     @staticmethod
-    def update_existing_models(new_data, model_cls, counters, id_field, track_change_field=None):
+    def update_existing_models(new_data, model_cls, counters, id_field, track_change_field=None, output_directory='.'):
         models_to_update = model_cls.objects.filter(**{f'{id_field}__in': new_data.keys()})
         fields = set()
         changes = []
@@ -55,8 +57,10 @@ class Command(BaseCommand):
 
         logger.info(f'Updating {len(models_to_update)} previously loaded {model_cls.__name__} records')
         counters[f'{model_cls.__name__.lower()}_updated'] = len(models_to_update)
+        if not fields:
+            import pdb; pdb.set_trace()
         model_cls.objects.bulk_update(models_to_update, fields, batch_size=BATCH_SIZE)
 
         if changes:
-            with open(f'{track_change_field}_changes.csv', 'w') as f:
+            with open(f'{output_directory}/{track_change_field}_changes.csv', 'w') as f:
                 f.writelines(sorted([f'{",".join(change)}\n' for change in changes]))
