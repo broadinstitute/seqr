@@ -1,11 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Label, Popup } from 'semantic-ui-react'
 
 import { getSortedIndividualsByFamily, getRnaSeqSignificantJunctionData } from 'redux/selectors'
 import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
 import RnaSeqJunctionOutliersTable, { RNA_SEQ_SPLICE_COLUMNS } from 'shared/components/table/RnaSeqJunctionOutliersTable'
-import { GeneLabel } from './VariantGene'
 
 const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', format: ({ individualName }) => (<b>{individualName}</b>) }
 
@@ -17,7 +17,7 @@ const RNA_SEQ_SPLICE_POPUP_COLUMNS = [
 const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: true }
 
 const BaseSpliceOutlierLabels = React.memo((
-  { variant, updateReads, significantJunctionOutliers, individualsByFamilyGuid },
+  { variant, significantJunctionOutliers, individualsByFamilyGuid },
 ) => {
   const { pos, end, familyGuids } = variant
   const individualGuids = familyGuids.reduce((acc, fGuid) => (
@@ -40,16 +40,18 @@ const BaseSpliceOutlierLabels = React.memo((
     return null
   }
 
+  const content = (
+    <Label size="mini" content={<span>RNA splice</span>} color="pink" />
+  )
   const details = (
     <RnaSeqJunctionOutliersTable
       {...HOVER_DATA_TABLE_PROPS}
       data={overlappedOutliers}
       columns={RNA_SEQ_SPLICE_POPUP_COLUMNS}
-      updateReads={updateReads}
     />
   )
   return (
-    <GeneLabel popupHeader="The variant is within these outliers" popupContent={details} color="teal" label="RNA splice" />
+    <Popup trigger={content} content={details} size="tiny" wide hoverable />
   )
 })
 
@@ -57,7 +59,6 @@ BaseSpliceOutlierLabels.propTypes = {
   significantJunctionOutliers: PropTypes.object,
   individualsByFamilyGuid: PropTypes.object,
   variant: PropTypes.object,
-  updateReads: PropTypes.func,
 }
 
 const mapLocusListStateToProps = state => ({

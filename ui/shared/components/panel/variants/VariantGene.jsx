@@ -86,7 +86,7 @@ const LocusListsContainer = styled.div`
   overflow-y: auto;
 `
 
-export const GeneLabel = React.memo(({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
+const GeneLabel = React.memo(({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
   const content = <GeneLabelContent {...labelProps} />
   return (popupContent || showEmpty) ?
     <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide hoverable /> : content
@@ -318,7 +318,7 @@ const RNA_SEQ_DETAIL_FIELDS = ['zScore', 'pValue', 'pAdjust']
 
 const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', format: ({ individualName }) => (<b>{individualName}</b>) }
 
-const RNA_SEQ_EXPRESSION_COLUMNS = [
+const RNA_SEQ_COLUMNS = [
   INDIVIDUAL_NAME_COLUMN,
   ...RNA_SEQ_DETAIL_FIELDS.map(name => (
     { name, content: camelcaseToTitlecase(name).replace(' ', '-'), format: row => row[name].toPrecision(3) }
@@ -416,7 +416,7 @@ const GENE_DETAIL_SECTIONS = [
           {...HOVER_DATA_TABLE_PROPS}
           data={indivGeneData.rnaSeqData[gene.geneId]}
           idField="individualName"
-          columns={RNA_SEQ_EXPRESSION_COLUMNS}
+          columns={RNA_SEQ_COLUMNS}
         />
       </div>
     ),

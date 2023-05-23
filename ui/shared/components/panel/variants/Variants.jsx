@@ -168,12 +168,7 @@ const Variant = React.memo((
       <Grid columns="equal">
         <Grid.Row>
           <Grid.Column>
-            <Annotations
-              variant={variant}
-              mainGeneId={variantMainGeneId}
-              showMainGene={isCompoundHet}
-              updateReads={updateReads}
-            />
+            <Annotations variant={variant} mainGeneId={variantMainGeneId} showMainGene={isCompoundHet} />
           </Grid.Column>
           <Grid.Column><Predictions variant={variant} /></Grid.Column>
           <Grid.Column><Frequencies variant={variant} /></Grid.Column>
