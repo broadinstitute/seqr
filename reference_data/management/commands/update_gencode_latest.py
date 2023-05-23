@@ -23,10 +23,24 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         genes, transcripts, counters = load_gencode_records(LATEST_GENCODE_RELEASE)
 
-        self.update_existing_models(
-            genes, GeneInfo, counters, 'gene_id', output_directory=options.get('output_directory'),
-            track_change_field='gene_symbol' if options['track_symbol_change'] else None,
-        )
+        genes_to_update = GeneInfo.objects.filter(gene_id__in=genes.keys())
+        fields = set()
+        symbol_changes = []
+        for existing in genes_to_update:
+            new_gene = genes.pop(existing.gene_id)
+            if options['track_symbol_change'] and new_gene['gene_symbol'] != existing.gene_symbol:
+                symbol_changes.append((existing.gene_id, existing.gene_symbol, new_gene['gene_symbol']))
+            fields.update(new_gene.keys())
+            for key, value in new_gene.items():
+                setattr(existing, key, value)
+
+        if symbol_changes:
+            with open(f'{options.get("output_directory", ".")}/gene_symbol_changes.csv', 'w') as f:
+                f.writelines(sorted([f'{",".join(change)}\n' for change in symbol_changes]))
+
+        logger.info(f'Updating {len(genes_to_update)} previously loaded GeneInfo records')
+        counters['genes_updated'] = len(genes_to_update)
+        GeneInfo.objects.bulk_update(genes_to_update, fields, batch_size=BATCH_SIZE)
 
         logger.info('Creating {} GeneInfo records'.format(len(genes)))
         counters['genes_created'] = len(genes)
@@ -46,26 +60,3 @@ class Command(BaseCommand):
         logger.info('Stats: ')
         for k, v in counters.items():
             logger.info('  %s: %s' % (k, v))
-
-    @staticmethod
-    def update_existing_models(new_data, model_cls, counters, id_field, track_change_field=None, output_directory='.'):
-        # TODO cleanup
-        models_to_update = model_cls.objects.filter(**{f'{id_field}__in': new_data.keys()})
-        fields = set()
-        changes = []
-        for existing in models_to_update:
-            model_id = getattr(existing, id_field)
-            new = new_data.pop(model_id)
-            if track_change_field and new[track_change_field] != getattr(existing, track_change_field):
-                changes.append((model_id, getattr(existing, track_change_field), new[track_change_field]))
-            fields.update(new.keys())
-            for key, value in new.items():
-                setattr(existing, key, value)
-
-        logger.info(f'Updating {len(models_to_update)} previously loaded {model_cls.__name__} records')
-        counters[f'{model_cls.__name__.lower()}_updated'] = len(models_to_update)
-        model_cls.objects.bulk_update(models_to_update, fields, batch_size=BATCH_SIZE)
-
-        if changes:
-            with open(f'{output_directory}/{track_change_field}_changes.csv', 'w') as f:
-                f.writelines(sorted([f'{",".join(change)}\n' for change in changes]))
