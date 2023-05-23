@@ -8,7 +8,7 @@ from reference_data.models import GeneInfo, TranscriptInfo, GENOME_VERSION_GRCh3
 
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 10000
+BATCH_SIZE = 5000
 
 
 class Command(BaseCommand):
@@ -25,13 +25,13 @@ class Command(BaseCommand):
         )
 
         logger.info('Creating {} GeneInfo records'.format(len(genes)))
-        counters['genes_created'] = len(genes)
+        counters['geneinfo_created'] = len(genes)
         GeneInfo.objects.bulk_create([GeneInfo(**record) for record in genes.values()], batch_size=BATCH_SIZE)
 
         map_transcript_gene_ids(transcripts)
         self.update_existing_models(transcripts, TranscriptInfo, counters, 'transcript_id')
 
-        counters['transcripts_created'] = len(transcripts)
+        counters['transcriptinfo_created'] = len(transcripts)
         create_transcript_info(transcripts, skip_gene_id_mapping=True)
 
         logger.info('Done')
@@ -43,11 +43,12 @@ class Command(BaseCommand):
     def update_existing_models(new_data, model_cls, counters, id_field, track_change_field=None):
         models_to_update = model_cls.objects.filter(**{f'{id_field}__in': new_data.keys()})
         fields = set()
-        changes = {}
+        changes = []
         for existing in models_to_update:
-            new = new_data.pop(getattr(existing, id_field))
+            model_id = getattr(existing, id_field)
+            new = new_data.pop(model_id)
             if track_change_field and new[track_change_field] != getattr(existing, track_change_field):
-                changes[new[track_change_field]] = getattr(existing, track_change_field)
+                changes.append((model_id, getattr(existing, track_change_field), new[track_change_field]))
             fields.update(new.keys())
             for key, value in new.items():
                 setattr(existing, key, value)
@@ -57,5 +58,5 @@ class Command(BaseCommand):
         model_cls.objects.bulk_update(models_to_update, fields, batch_size=BATCH_SIZE)
 
         if changes:
-            with open(f'{track_change_field}_changes.tsv', 'w') as f:
-                f.writelines(sorted([f'{v}\t{k}\n' for k, v in changes.items()]))
+            with open(f'{track_change_field}_changes.csv', 'w') as f:
+                f.writelines(sorted([f'{",".join(change)}\n' for change in changes]))
