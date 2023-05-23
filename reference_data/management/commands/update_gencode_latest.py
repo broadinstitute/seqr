@@ -12,7 +12,7 @@ BATCH_SIZE = 5000
 
 
 class Command(BaseCommand):
-    help = 'Loads the GRCh37 and/or GRCh38 versions of the Gencode GTF from a particular Gencode release, updating previously loaded gencode data'
+    help = 'Loads genes and transcripts from the latest supported Gencode release, updating previously loaded gencode data'
 
     def add_arguments(self, parser):
         parser.add_argument('--track-symbol-change', action='store_true')
@@ -57,8 +57,6 @@ class Command(BaseCommand):
 
         logger.info(f'Updating {len(models_to_update)} previously loaded {model_cls.__name__} records')
         counters[f'{model_cls.__name__.lower()}_updated'] = len(models_to_update)
-        if not fields:
-            import pdb; pdb.set_trace()
         model_cls.objects.bulk_update(models_to_update, fields, batch_size=BATCH_SIZE)
 
         if changes:
