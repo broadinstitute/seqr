@@ -3,7 +3,7 @@ import logging
 from django.core.management.base import BaseCommand
 
 from reference_data.management.commands.utils.gencode_utils import load_gencode_records, create_transcript_info, \
-    LATEST_GENCODE_RELEASE
+    map_transcript_gene_ids, LATEST_GENCODE_RELEASE
 from reference_data.models import GeneInfo, TranscriptInfo, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 
 logger = logging.getLogger(__name__)
@@ -20,38 +20,42 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         genes, transcripts, counters = load_gencode_records(LATEST_GENCODE_RELEASE)
 
-        genes_to_update = GeneInfo.objects.filter(gene_id__in=genes.keys())
-        fields = set()
-        symbol_changes = {}
-        for existing_gene in genes_to_update:
-            new_gene = genes.pop(existing_gene.gene_id)
-            if options['track_symbol_change'] and new_gene['gene_symbol'] != existing_gene.gene_symbol:
-                symbol_changes[new_gene['gene_symbol']] = f'{existing_gene.gene_symbol} (release {existing_gene.gencode_release})'
-            fields.update(new_gene.keys())
-            for key, value in new_gene.items():
-                setattr(existing_gene, key, value)
-
-        logger.info('Updating {} previously loaded GeneInfo records'.format(len(genes_to_update)))
-        counters['genes_updated'] = len(genes_to_update)
-        GeneInfo.objects.bulk_update(genes_to_update, fields, batch_size=BATCH_SIZE)
+        self.update_existing_models(
+            genes, GeneInfo, counters, 'gene_id', track_change_field='gene_symbol' if options['track_symbol_change'] else None,
+        )
 
         logger.info('Creating {} GeneInfo records'.format(len(genes)))
         counters['genes_created'] = len(genes)
         GeneInfo.objects.bulk_create([GeneInfo(**record) for record in genes.values()], batch_size=BATCH_SIZE)
 
-        # Transcript records have no child models, so safe to delete and recreate
-        existing_transcripts = TranscriptInfo.objects.filter(transcript_id__in=transcripts.keys())
-        counters['transcripts_recreated'] = len(existing_transcripts)
-        counters['transcripts_created'] = len(transcripts) - len(existing_transcripts)
-        existing_transcripts.delete()
-        create_transcript_info(transcripts)
+        map_transcript_gene_ids(transcripts)
+        self.update_existing_models(transcripts, TranscriptInfo, counters, 'transcript_id')
+
+        counters['transcripts_created'] = len(transcripts)
+        create_transcript_info(transcripts, skip_gene_id_mapping=True)
 
         logger.info('Done')
-        if options['track_symbol_change']:
-            logger.info('Gene Symbol Changes:')
-            changes = sorted([f'{v}: k' for k, v in symbol_changes.items()])
-            for change in changes:
-                logger.info(change)
         logger.info('Stats: ')
         for k, v in counters.items():
             logger.info('  %s: %s' % (k, v))
+
+    @staticmethod
+    def update_existing_models(new_data, model_cls, counters, id_field, track_change_field=None):
+        models_to_update = model_cls.objects.filter(**{f'{id_field}__in': new_data.keys()})
+        fields = set()
+        changes = {}
+        for existing in models_to_update:
+            new = new_data.pop(getattr(existing, id_field))
+            if track_change_field and new[track_change_field] != getattr(existing, track_change_field):
+                changes[new[track_change_field]] = getattr(existing, track_change_field)
+            fields.update(new.keys())
+            for key, value in new.items():
+                setattr(existing, key, value)
+
+        logger.info(f'Updating {len(models_to_update)} previously loaded {model_cls.__name__} records')
+        counters[f'{model_cls.__name__.lower()}_updated'] = len(models_to_update)
+        model_cls.objects.bulk_update(models_to_update, fields, batch_size=BATCH_SIZE)
+
+        if changes:
+            with open(f'{track_change_field}_changes.tsv', 'w') as f:
+                f.writelines(sorted([f'{v}\t{k}\n' for k, v in changes.items()]))

@@ -72,12 +72,18 @@ def load_gencode_records(gencode_release, gencode_gtf_path=None, genome_version=
     return new_genes, new_transcripts, counters
 
 
-def create_transcript_info(new_transcripts):
+def map_transcript_gene_ids(transcripts):
     gene_id_to_gene_info = {g.gene_id: g for g in GeneInfo.objects.all().only('gene_id')}
+    for record in transcripts.values():
+        record['gene'] = gene_id_to_gene_info[record.pop('gene_id')]
+
+
+def create_transcript_info(new_transcripts, skip_gene_id_mapping=False):
+    if not skip_gene_id_mapping:
+        map_transcript_gene_ids(new_transcripts)
     logger.info('Creating {} TranscriptInfo records'.format(len(new_transcripts)))
     TranscriptInfo.objects.bulk_create([
-        TranscriptInfo(gene=gene_id_to_gene_info[record.pop('gene_id')], **record) for record in
-        new_transcripts.values()
+        TranscriptInfo(**record) for record in new_transcripts.values()
     ], batch_size=50000)
 
 
