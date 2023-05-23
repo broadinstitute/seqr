@@ -11,7 +11,7 @@ const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', format: ({
 
 const RNA_SEQ_SPLICE_POPUP_COLUMNS = [
   INDIVIDUAL_NAME_COLUMN,
-  JUNCTION_COLUMN,
+  { ...JUNCTION_COLUMN, format: null },
   ...OTHER_SPLICE_COLUMNS,
 ]
 
