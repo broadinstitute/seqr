@@ -71,9 +71,10 @@ class HailSearchUtilsTests(TestCase):
         self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
-    def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, rs_ids=None, variant_ids=None,
-                                   inheritance_mode='de_novo',  dataset_type=None, secondary_dataset_type=None,
-                                   sort='xpos', sort_metadata=None, num_results=100, sample_data=None, omit_sample_type=None):
+    def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
+                                   rs_ids=None, variant_ids=None, dataset_type=None, secondary_dataset_type=None,
+                                   inheritance_mode='de_novo', sort='xpos', sort_metadata=None, num_results=100,
+                                   sample_data=None, omit_sample_type=None):
         sample_data = sample_data or EXPECTED_SAMPLE_DATA
         if omit_sample_type:
             sample_data = {k: v for k, v in sample_data.items() if k != omit_sample_type}
@@ -93,7 +94,7 @@ class HailSearchUtilsTests(TestCase):
             'quality_filter': None,
             'custom_query': None,
             'intervals': intervals,
-            'exclude_intervals': None,
+            'exclude_intervals': exclude_intervals,
             'gene_ids': gene_ids,
             'variant_ids': variant_ids,
             'rs_ids': rs_ids,
@@ -143,6 +144,12 @@ class HailSearchUtilsTests(TestCase):
             gene_ids=['ENSG00000223972', 'ENSG00000186092'], intervals=[
                 '2:1234-5678', '7:1-11100', '1:11869-14409', '1:65419-71585'
             ],
+        )
+
+        self.search_model.search['locus']['excludeLocations'] = True
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            intervals=['2:1234-5678', '7:1-11100', '1:11869-14409', '1:65419-71585'], exclude_intervals=True,
         )
 
         self.search_model.search = {
