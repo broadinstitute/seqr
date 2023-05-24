@@ -1,17 +1,14 @@
 from copy import deepcopy
-from datetime import timedelta
-from django.contrib.auth.models import User
 from django.test import TestCase
 import json
 import mock
 from requests import HTTPError
 import responses
 
-from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
-from seqr.utils.search.utils import get_single_variant, get_variants_for_variant_ids, get_variant_query_gene_counts, \
-    query_variants, InvalidSearchException
-from seqr.utils.search.search_utils_tests import MOCK_COUNTS
-from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
+from seqr.models import Family
+from seqr.utils.search.utils import get_variant_query_gene_counts, query_variants
+from seqr.utils.search.search_utils_tests import SearchTestHelper, MOCK_COUNTS
+from seqr.views.utils.test_utils import PARSED_VARIANTS
 
 MOCK_HOST = 'http://test-hail-host'
 
@@ -41,36 +38,12 @@ FAMILY_1_SAMPLE_DATA = {
 
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HOST)
-class HailSearchUtilsTests(TestCase):
+class HailSearchUtilsTests(SearchTestHelper, TestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
 
     def setUp(self):
-        patcher = mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
-        self.mock_redis = patcher.start().return_value
-        self.addCleanup(patcher.stop)
-
-        # TODO cleanup
-        self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
-        self.non_affected_search_samples = Sample.objects.filter(guid__in=[
-             'S000149_hg00733',  'S000137_na20874',
-        ])
-        self.affected_search_samples = Sample.objects.filter(guid__in=[
-            'S000132_hg00731', 'S000133_hg00732', 'S000134_hg00733', 'S000135_na20870',
-            'S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733',
-        ])
-        self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
-        self.user = User.objects.get(username='test_user')
-
-        self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}})
-        self.results_model = VariantSearchResults.objects.create(variant_search=self.search_model)
-        self.results_model.families.set(self.families)
-
-    def assert_cached_results(self, expected_results, sort='xpos'):
-        cache_key = f'search_results__{self.results_model.guid}__{sort}'
-        self.mock_redis.set.assert_called_with(cache_key, mock.ANY)
-        self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
-        self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
+        super(HailSearchUtilsTests, self).set_up()
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
                                    rs_ids=None, variant_ids=None, dataset_type=None, secondary_dataset_type=None,
@@ -103,9 +76,6 @@ class HailSearchUtilsTests(TestCase):
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
 
         request_body = json.loads(responses.calls[-1].request.body)
-        if request_body != expected_search:
-            diff_k = {k for k, v in request_body.items() if v != expected_search[k]}
-            import pdb; pdb.set_trace()
         self.assertDictEqual(request_body, expected_search)
 
     @responses.activate

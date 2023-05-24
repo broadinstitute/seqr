@@ -16,7 +16,7 @@ MOCK_COUNTS = {
 }
 
 
-class SearchUtilsTests(object):
+class SearchTestHelper(object):
 
     def set_up(self):
         patcher = mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
@@ -24,14 +24,6 @@ class SearchUtilsTests(object):
         self.addCleanup(patcher.stop)
 
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
-        self.non_affected_search_samples = Sample.objects.filter(guid__in=[
-             'S000149_hg00733',  'S000137_na20874',
-        ])
-        self.affected_search_samples = Sample.objects.filter(guid__in=[
-            'S000132_hg00731', 'S000133_hg00732', 'S000134_hg00733', 'S000135_na20870',
-            'S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733',
-        ])
-        self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
         self.user = User.objects.get(username='test_user')
 
         self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}})
@@ -43,8 +35,24 @@ class SearchUtilsTests(object):
 
     def assert_cached_results(self, expected_results, sort='xpos'):
         cache_key = f'search_results__{self.results_model.guid}__{sort}'
-        self.mock_redis.set.assert_called_with(cache_key, json.dumps(expected_results))
+        self.mock_redis.set.assert_called_with(cache_key, mock.ANY)
+        self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
+
+
+class SearchUtilsTests(SearchTestHelper):
+
+    def set_up(self):
+        super(SearchUtilsTests, self).set_up()
+
+        self.non_affected_search_samples = Sample.objects.filter(guid__in=[
+             'S000149_hg00733',  'S000137_na20874',
+        ])
+        self.affected_search_samples = Sample.objects.filter(guid__in=[
+            'S000132_hg00731', 'S000133_hg00732', 'S000134_hg00733', 'S000135_na20870',
+            'S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733',
+        ])
+        self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
 
     def test_get_single_variant(self, mock_get_variants_for_ids):
         mock_get_variants_for_ids.return_value = [PARSED_VARIANTS[0]]
