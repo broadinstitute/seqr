@@ -21,6 +21,8 @@ class Command(BaseCommand):
         parser.add_argument('--output-directory')
 
     def handle(self, *args, **options):
+        track_symbol_change = options['track_symbol_change']
+
         genes, transcripts, counters = load_gencode_records(LATEST_GENCODE_RELEASE)
 
         genes_to_update = GeneInfo.objects.filter(gene_id__in=genes.keys())
@@ -28,7 +30,7 @@ class Command(BaseCommand):
         symbol_changes = []
         for existing in genes_to_update:
             new_gene = genes.pop(existing.gene_id)
-            if options['track_symbol_change'] and new_gene['gene_symbol'] != existing.gene_symbol:
+            if track_symbol_change and new_gene['gene_symbol'] != existing.gene_symbol:
                 symbol_changes.append((existing.gene_id, existing.gene_symbol, new_gene['gene_symbol']))
             fields.update(new_gene.keys())
             for key, value in new_gene.items():
@@ -59,4 +61,4 @@ class Command(BaseCommand):
         logger.info('Done')
         logger.info('Stats: ')
         for k, v in counters.items():
-            logger.info('  %s: %s' % (k, v))
+            logger.info(f'  {k}: {v}')
