@@ -16,27 +16,27 @@ MOCK_HOST = 'http://test-hail-host'
 
 EXPECTED_SAMPLE_DATA = {
     'VARIANTS': [
-        {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2',
-         'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
-        {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2',
-         'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
-        {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2',
-         'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
-        {'sample_id': 'NA20870', 'individual_guid': 'I000007_na20870', 'family_guid': 'F000003_3',
-         'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M'},
+        {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
+        {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
+        {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
+        {'sample_id': 'NA20870', 'individual_guid': 'I000007_na20870', 'family_guid': 'F000003_3', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M'},
     ], 'SV_WES': [
-        {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2',
-         'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
-        {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2',
-         'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
-        {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2',
-         'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'}
+        {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
+        {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
+        {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'}
     ],
 }
 CUSTOM_AFFECTED_SAMPLE_DATA = {'VARIANTS': deepcopy(EXPECTED_SAMPLE_DATA['VARIANTS'])}
 CUSTOM_AFFECTED_SAMPLE_DATA['VARIANTS'][0]['affected'] = 'N'
 CUSTOM_AFFECTED_SAMPLE_DATA['VARIANTS'][1]['affected'] = 'A'
 CUSTOM_AFFECTED_SAMPLE_DATA['VARIANTS'][2]['affected'] = 'U'
+
+FAMILY_1_SAMPLE_DATA = {
+    'VARIANTS': [
+        {'sample_id': 'NA19675', 'individual_guid': 'I000001_na19675', 'family_guid': 'F000001_1', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M'},
+        {'sample_id': 'NA19678', 'individual_guid': 'I000002_na19678', 'family_guid': 'F000001_1', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
+    ],
+}
 
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HOST)
@@ -49,6 +49,7 @@ class HailSearchUtilsTests(TestCase):
         self.mock_redis = patcher.start().return_value
         self.addCleanup(patcher.stop)
 
+        # TODO cleanup
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
         self.non_affected_search_samples = Sample.objects.filter(guid__in=[
              'S000149_hg00733',  'S000137_na20874',
@@ -72,7 +73,7 @@ class HailSearchUtilsTests(TestCase):
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, rs_ids=None, variant_ids=None,
                                    inheritance_mode='de_novo',  dataset_type=None, secondary_dataset_type=None,
-                                   sort='xpos', num_results=100, sample_data=None, omit_sample_type=None):
+                                   sort='xpos', sort_metadata=None, num_results=100, sample_data=None, omit_sample_type=None):
         sample_data = sample_data or EXPECTED_SAMPLE_DATA
         if omit_sample_type:
             sample_data = {k: v for k, v in sample_data.items() if k != omit_sample_type}
@@ -82,7 +83,7 @@ class HailSearchUtilsTests(TestCase):
             'sample_data': sample_data,
             'genome_version': 'GRCh37',
             'sort': sort,
-            'sort_metadata': None,
+            'sort_metadata': sort_metadata,
             'num_results': num_results,
             'inheritance_mode': inheritance_mode,
             'inheritance_filter': {},
@@ -100,6 +101,9 @@ class HailSearchUtilsTests(TestCase):
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
 
         request_body = json.loads(responses.calls[-1].request.body)
+        if request_body != expected_search:
+            diff_k = {k for k, v in request_body.items() if v != expected_search[k]}
+            import pdb; pdb.set_trace()
         self.assertDictEqual(request_body, expected_search)
 
     @responses.activate
@@ -120,15 +124,18 @@ class HailSearchUtilsTests(TestCase):
         self._test_expected_search_call(sort='cadd', num_results=30)
 
         self.search_model.search['locus'] = {'rawVariantItems': '1-248367227-TC-T,2-103343353-GAGA-G'}
-        query_variants(self.results_model, user=self.user)
+        query_variants(self.results_model, user=self.user, sort='in_omim')
         self._test_expected_search_call(
             num_results=2,  dataset_type='VARIANTS', omit_sample_type='SV_WES', rs_ids=[],
             variant_ids=[['1', 248367227, 'TC', 'T'], ['2', 103343353, 'GAGA', 'G']],
+            sort='in_omim', sort_metadata=['ENSG00000223972', 'ENSG00000243485', 'ENSG00000268020'],
         )
 
         self.search_model.search['locus']['rawVariantItems'] = 'rs9876'
-        query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(rs_ids=['rs9876'], variant_ids=[])
+        query_variants(self.results_model, user=self.user, sort='constraint')
+        self._test_expected_search_call(
+            rs_ids=['rs9876'], variant_ids=[], sort='constraint', sort_metadata={'ENSG00000223972': 2},
+        )
 
         self.search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'
         query_variants(self.results_model, user=self.user)
@@ -169,6 +176,14 @@ class HailSearchUtilsTests(TestCase):
         self._test_expected_search_call(
             inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='VARIANTS',
             search_fields=['annotations', 'annotations_secondary'], omit_sample_type='SV_WES',
+        )
+
+        self.search_model.search = {'inheritance': {'mode': 'any_affected'}}
+        self.results_model.families.set(Family.objects.filter(guid='F000001_1'))
+        query_variants(self.results_model, user=self.user, sort='prioritized_gene')
+        self._test_expected_search_call(
+            inheritance_mode='any_affected', sample_data=FAMILY_1_SAMPLE_DATA,
+            sort='prioritized_gene', sort_metadata={'ENSG00000268903': 1, 'ENSG00000268904': 11},
         )
 
     @responses.activate

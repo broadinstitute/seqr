@@ -1,5 +1,5 @@
 from collections import defaultdict
-from django.db.models import F
+from django.db.models import F, Min
 
 import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
@@ -75,7 +75,7 @@ def _get_sample_data(samples, inheritance_filter):
 def _get_sort_metadata(sort, samples):
     sort_metadata = None
     if sort == 'in_omim':
-        sort_metadata = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True)
+        sort_metadata = list(Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True))
     elif sort == 'constraint':
         sort_metadata = {
             agg['gene__gene_id']: agg['mis_z_rank'] + agg['pLI_rank'] for agg in
