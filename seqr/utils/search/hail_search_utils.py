@@ -5,6 +5,7 @@ import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
 from seqr.models import Individual, Sample, PhenotypePrioritization
 from seqr.utils.search.constants import RECESSIVE, COMPOUND_HET, MAX_NO_LOCATION_COMP_HET_FAMILIES, PRIORITIZED_GENE_SORT
+from seqr.utils.xpos_utils import MIN_POS, MAX_POS
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
 
@@ -101,7 +102,7 @@ def _parse_location_search(search):
             {field: gene[f'{field}{search["genome_version"].title()}'] for field in ['chrom', 'start', 'end']}
             for gene in genes.values()
         ]
-        parsed_intervals = ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
+        parsed_intervals = [_format_interval(**interval) for interval in intervals or []] + [
             '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
 
     exclude_locations = locus.get('excludeLocations')
@@ -113,3 +114,11 @@ def _parse_location_search(search):
         'variant_ids': parsed_locus.get('parsed_variant_ids'),
         'rs_ids': parsed_locus.get('rs_ids'),
     })
+
+
+def _format_interval(chrom=None, start=None, end=None, offset=None, **kwargs):
+    if offset:
+        offset_pos = int((end - start) * offset)
+        start = max(start - offset_pos, MIN_POS)
+        end = min(end + offset_pos, MAX_POS)
+    return f'{chrom}:{start}-{end}'

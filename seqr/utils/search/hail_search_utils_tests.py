@@ -41,37 +41,42 @@ class HailSearchUtilsTests(TestCase):
 
     def assert_cached_results(self, expected_results, sort='xpos'):
         cache_key = f'search_results__{self.results_model.guid}__{sort}'
-        self.mock_redis.set.assert_called_with(cache_key, json.dumps(expected_results))
+        self.mock_redis.set.assert_called_with(cache_key, mock.ANY)
+        self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, rs_ids=None, variant_ids=None,
-                                   inheritance_mode='de_novo',  dataset_type=None, secondary_dataset_type=None, sort='xpos'):
-        request_body = json.loads(responses.calls[-1].request.body)
+                                   inheritance_mode='de_novo',  dataset_type=None, secondary_dataset_type=None,
+                                   sort='xpos', num_results=100, omit_sample_type=None):
+        sample_data = {
+            'VARIANTS': [
+                {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2',
+                 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
+                {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2',
+                 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
+                {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2',
+                 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
+                {'sample_id': 'NA20870', 'individual_guid': 'I000007_na20870', 'family_guid': 'F000003_3',
+                 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M'},
+            ], 'SV_WES': [
+                {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2',
+                 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
+                {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2',
+                 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
+                {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2',
+                 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'}
+            ],
+        }
+        if omit_sample_type:
+            sample_data.pop(omit_sample_type)
+
         expected_search = {
             'requester_email': 'test_user@broadinstitute.org',
-            'sample_data': {
-                'VARIANTS': [
-                    {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2',
-                     'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
-                    {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2',
-                     'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
-                    {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2',
-                     'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
-                    {'sample_id': 'NA20870', 'individual_guid': 'I000007_na20870', 'family_guid': 'F000003_3',
-                     'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M'},
-                ], 'SV_WES': [
-                    {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2',
-                     'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
-                    {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2',
-                     'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
-                    {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2',
-                     'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'}
-                ],
-            },
+            'sample_data': sample_data,
             'genome_version': 'GRCh37',
             'sort': sort,
             'sort_metadata': None,
-            'num_results': 100,
+            'num_results': num_results,
             'inheritance_mode': inheritance_mode,
             'inheritance_filter': {},
             'dataset_type': dataset_type,
@@ -86,99 +91,78 @@ class HailSearchUtilsTests(TestCase):
             'rs_ids': rs_ids,
         }
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
+
+        request_body = json.loads(responses.calls[-1].request.body)
+        if request_body != expected_search:
+            diff_k = {k for k, v in request_body.items() if v != expected_search.get(k)}
+            import pdb; pdb.set_trace()
         self.assertDictEqual(request_body, expected_search)
 
+    @responses.activate
     def test_query_variants(self):
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/gene_counts', status=200, json={
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={
             'results': PARSED_VARIANTS, 'total': 5,
         })
 
         variants, total = query_variants(self.results_model, user=self.user)
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total, 5)
-        results_cache = {'all_results': PARSED_VARIANTS, 'total_results': 5}
-        self.assert_cached_results(results_cache)
+        self.assert_cached_results({'all_results': PARSED_VARIANTS, 'total_results': 5})
         self._test_expected_search_call()
 
-        # query_variants(
-        #     self.results_model, user=self.user, sort='cadd', skip_genotype_filter=True, page=3, num_results=10,
-        # )
-        # self._test_expected_search_call(
-        #     mock_get_variants, results_cache, sort='cadd', page=3, num_results=10, skip_genotype_filter=True,
-        # )
-        #
-        # query_variants(self.results_model, user=self.user, load_all=True)
-        # self._test_expected_search_call(
-        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=10000, skip_genotype_filter=False,
-        # )
-        #
-        # self.search_model.search['locus'] = {'rawVariantItems': '1-248367227-TC-T,2-103343353-GAGA-G'}
-        # query_variants(self.results_model, user=self.user)
-        # self._test_expected_search_call(
-        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=2, skip_genotype_filter=False,
-        #     search_fields=['locus'], rs_ids=[],  variant_ids=['1-248367227-TC-T', '2-103343353-GAGA-G'],
-        #     parsed_variant_ids=[('1', 248367227, 'TC', 'T'), ('2', 103343353, 'GAGA', 'G')], dataset_type='VARIANTS',
-        #     omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
-        # )
-        #
-        # self.search_model.search['locus']['rawVariantItems'] = 'rs9876'
-        # query_variants(self.results_model, user=self.user)
-        # self._test_expected_search_call(
-        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-        #     search_fields=['locus'], rs_ids=['rs9876'], variant_ids=[], parsed_variant_ids=[],
-        # )
-        #
-        # self.search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'
-        # query_variants(self.results_model, user=self.user)
-        # self._test_expected_search_call(
-        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-        #     search_fields=['locus'], genes={
-        #         'ENSG00000223972': mock.ANY, 'ENSG00000186092': mock.ANY,
-        #     }, intervals=[
-        #         {'chrom': '2', 'start': 1234, 'end': 5678, 'offset': None},
-        #         {'chrom': '7', 'start': 100, 'end': 10100, 'offset': 0.1},
-        #     ],
-        # )
-        # parsed_genes = mock_get_variants.call_args.args[1]['parsedLocus']['genes']
-        # for gene in parsed_genes.values():
-        #     self.assertSetEqual(set(gene.keys()), GENE_FIELDS)
-        # self.assertEqual(parsed_genes['ENSG00000223972']['geneSymbol'], 'DDX11L1')
-        # self.assertEqual(parsed_genes['ENSG00000186092']['geneSymbol'], 'OR4F5')
-        #
-        # self.search_model.search = {
-        #     'inheritance': {'mode': 'recessive'}, 'annotations': {'frameshift': ['frameshift_variant']},
-        # }
-        # query_variants(self.results_model, user=self.user)
-        # self._test_expected_search_call(
-        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-        #     inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type=None,
-        #     search_fields=['annotations'], omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
-        # )
-        #
-        # self.search_model.search['annotations_secondary'] = {'structural_consequence': ['LOF']}
-        # query_variants(self.results_model, user=self.user)
-        # self._test_expected_search_call(
-        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-        #     inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='SV',
-        #     search_fields=['annotations', 'annotations_secondary']
-        # )
-        #
-        # self.search_model.search['annotations_secondary'].update({'SCREEN': ['dELS', 'DNase-only']})
-        # query_variants(self.results_model, user=self.user)
-        # self._test_expected_search_call(
-        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-        #     inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='ALL',
-        #     search_fields=['annotations', 'annotations_secondary']
-        # )
-        #
-        # self.search_model.search['annotations_secondary']['structural_consequence'] = []
-        # query_variants(self.results_model, user=self.user)
-        # self._test_expected_search_call(
-        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-        #     inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='VARIANTS',
-        #     search_fields=['annotations', 'annotations_secondary'],
-        #     omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
-        # )
+        query_variants(
+            self.results_model, user=self.user, sort='cadd', skip_genotype_filter=True, page=3, num_results=10,
+        )
+        self._test_expected_search_call(sort='cadd', num_results=30)
+
+        self.search_model.search['locus'] = {'rawVariantItems': '1-248367227-TC-T,2-103343353-GAGA-G'}
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            num_results=2,  dataset_type='VARIANTS', omit_sample_type='SV_WES', rs_ids=[],
+            variant_ids=[['1', 248367227, 'TC', 'T'], ['2', 103343353, 'GAGA', 'G']],
+        )
+
+        self.search_model.search['locus']['rawVariantItems'] = 'rs9876'
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(rs_ids=['rs9876'], variant_ids=[])
+
+        self.search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            gene_ids=['ENSG00000223972', 'ENSG00000186092'], intervals=[
+                '2:1234-5678', '7:1-11100', '1:11869-14409', '1:65419-71585'
+            ],
+        )
+
+        self.search_model.search = {
+            'inheritance': {'mode': 'recessive'}, 'annotations': {'frameshift': ['frameshift_variant']},
+        }
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type=None,
+            search_fields=['annotations'], omit_sample_type='SV_WES',
+        )
+
+        self.search_model.search['annotations_secondary'] = {'structural_consequence': ['LOF']}
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='SV',
+            search_fields=['annotations', 'annotations_secondary']
+        )
+
+        self.search_model.search['annotations_secondary'].update({'SCREEN': ['dELS', 'DNase-only']})
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='ALL',
+            search_fields=['annotations', 'annotations_secondary']
+        )
+
+        self.search_model.search['annotations_secondary']['structural_consequence'] = []
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='VARIANTS',
+            search_fields=['annotations', 'annotations_secondary'], omit_sample_type='SV_WES',
+        )
 
     @responses.activate
     def test_get_variant_query_gene_counts(self):
@@ -186,6 +170,5 @@ class HailSearchUtilsTests(TestCase):
 
         gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
         self.assertDictEqual(gene_counts, MOCK_COUNTS)
-        results_cache = {'gene_aggs': gene_counts}
-        self.assert_cached_results(results_cache)
+        self.assert_cached_results({'gene_aggs': gene_counts})
         self._test_expected_search_call(sort=None)
