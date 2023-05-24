@@ -30,7 +30,7 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     })
     search_body.pop('skipped_samples', None)
 
-    _parse_location_search(search_body, sample_data)
+    _parse_location_search(search_body)
 
     path = 'gene_counts' if gene_agg else 'search'
     response = requests.post(f'http://hail-search:5000/{path}', json=search_body)
@@ -84,7 +84,7 @@ def _get_sort_metadata(sort, sample_data):
     return sort_metadata
 
 
-def _parse_location_search(search, sample_data):
+def _parse_location_search(search):
     locus = search.pop('locus', None) or {}
     parsed_locus = search.pop('parsedLocus')
 
@@ -103,7 +103,7 @@ def _parse_location_search(search, sample_data):
     has_location_search = bool(parsed_intervals) and not exclude_locations
     if not has_location_search:
         projects = set()
-        for samples in sample_data.values():
+        for samples in search['sample_data'].values():
             projects.update({s['project_guid'] for s in samples})
             if len(projects) > 1:
                 break
