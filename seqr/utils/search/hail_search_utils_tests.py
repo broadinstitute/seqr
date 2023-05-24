@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import timedelta
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -12,6 +13,30 @@ from seqr.utils.search.search_utils_tests import MOCK_COUNTS
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
 
 MOCK_HOST = 'http://test-hail-host'
+
+EXPECTED_SAMPLE_DATA = {
+    'VARIANTS': [
+        {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2',
+         'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
+        {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2',
+         'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
+        {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2',
+         'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
+        {'sample_id': 'NA20870', 'individual_guid': 'I000007_na20870', 'family_guid': 'F000003_3',
+         'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M'},
+    ], 'SV_WES': [
+        {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2',
+         'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
+        {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2',
+         'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
+        {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2',
+         'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'}
+    ],
+}
+CUSTOM_AFFECTED_SAMPLE_DATA = {'VARIANTS': deepcopy(EXPECTED_SAMPLE_DATA['VARIANTS'])}
+CUSTOM_AFFECTED_SAMPLE_DATA['VARIANTS'][0]['affected'] = 'N'
+CUSTOM_AFFECTED_SAMPLE_DATA['VARIANTS'][1]['affected'] = 'A'
+CUSTOM_AFFECTED_SAMPLE_DATA['VARIANTS'][2]['affected'] = 'U'
 
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HOST)
@@ -47,28 +72,10 @@ class HailSearchUtilsTests(TestCase):
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, rs_ids=None, variant_ids=None,
                                    inheritance_mode='de_novo',  dataset_type=None, secondary_dataset_type=None,
-                                   sort='xpos', num_results=100, omit_sample_type=None):
-        sample_data = {
-            'VARIANTS': [
-                {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2',
-                 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
-                {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2',
-                 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
-                {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2',
-                 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
-                {'sample_id': 'NA20870', 'individual_guid': 'I000007_na20870', 'family_guid': 'F000003_3',
-                 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M'},
-            ], 'SV_WES': [
-                {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2',
-                 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
-                {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2',
-                 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
-                {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2',
-                 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'}
-            ],
-        }
+                                   sort='xpos', num_results=100, sample_data=None, omit_sample_type=None):
+        sample_data = sample_data or EXPECTED_SAMPLE_DATA
         if omit_sample_type:
-            sample_data.pop(omit_sample_type)
+            sample_data = {k: v for k, v in sample_data.items() if k != omit_sample_type}
 
         expected_search = {
             'requester_email': 'test_user@broadinstitute.org',
@@ -93,9 +100,6 @@ class HailSearchUtilsTests(TestCase):
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
 
         request_body = json.loads(responses.calls[-1].request.body)
-        if request_body != expected_search:
-            diff_k = {k for k, v in request_body.items() if v != expected_search.get(k)}
-            import pdb; pdb.set_trace()
         self.assertDictEqual(request_body, expected_search)
 
     @responses.activate
@@ -135,14 +139,17 @@ class HailSearchUtilsTests(TestCase):
         )
 
         self.search_model.search = {
-            'inheritance': {'mode': 'recessive'}, 'annotations': {'frameshift': ['frameshift_variant']},
+            'inheritance': {'mode': 'recessive', 'filter': {'affected': {
+                'I000004_hg00731': 'N', 'I000005_hg00732': 'A', 'I000006_hg00733': 'U',
+            }}}, 'annotations': {'frameshift': ['frameshift_variant']},
         }
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type=None,
-            search_fields=['annotations'], omit_sample_type='SV_WES',
+            search_fields=['annotations'], sample_data=CUSTOM_AFFECTED_SAMPLE_DATA,
         )
 
+        self.search_model.search['inheritance']['filter'] = {}
         self.search_model.search['annotations_secondary'] = {'structural_consequence': ['LOF']}
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(

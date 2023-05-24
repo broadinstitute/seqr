@@ -13,15 +13,12 @@ from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
 def get_hail_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100,
                       gene_agg=False, **kwargs):
 
-    sample_data = _get_sample_data(samples, search.get('inheritance_filter'))
-
     end_offset = num_results * page
     search_body = {
         'requester_email': user.email,
-        'sample_data': sample_data,
         'genome_version': GENOME_VERSION_LOOKUP[genome_version],
         'sort': sort,
-        'sort_metadata': _get_sort_metadata(sort, sample_data),
+        'sort_metadata': _get_sort_metadata(sort, samples),
         'num_results': end_offset,
     }
     search_body.update(search)
@@ -31,6 +28,8 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
         'custom_query': search_body.pop('customQuery', None),
     })
     search_body.pop('skipped_samples', None)
+
+    search_body['sample_data'] = _get_sample_data(samples, search_body.get('inheritance_filter'))
 
     _parse_location_search(search_body)
 
@@ -58,9 +57,10 @@ def _get_sample_data(samples, inheritance_filter):
         sex=F('individual__sex'),
     )
 
-    if (inheritance_filter or {}).get('affected'):
+    custom_affected = (inheritance_filter or {}).pop('affected', None)
+    if custom_affected:
         for s in sample_data:
-            s['affected'] = inheritance_filter['affected'].get(s['individual_guid']) or s['affected']
+            s['affected'] = custom_affected.get(s['individual_guid']) or s['affected']
 
     sample_data_by_data_type = defaultdict(list)
     for s in sample_data:
@@ -72,7 +72,7 @@ def _get_sample_data(samples, inheritance_filter):
     return sample_data_by_data_type
 
 
-def _get_sort_metadata(sort, sample_data):
+def _get_sort_metadata(sort, samples):
     sort_metadata = None
     if sort == 'in_omim':
         sort_metadata = Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True)
@@ -84,7 +84,7 @@ def _get_sort_metadata(sort, sample_data):
     elif sort == PRIORITIZED_GENE_SORT:
         sort_metadata = {
             agg['gene_id']: agg['min_rank'] for agg in PhenotypePrioritization.objects.filter(
-                individual__family__guid=next(sample_data.values())[0]['family_guid'], rank__lte=100,
+                individual__family_id=samples[0].individual.family_id, rank__lte=100,
             ).values('gene_id').annotate(min_rank=Min('rank'))
         }
     return sort_metadata
