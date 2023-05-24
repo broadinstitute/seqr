@@ -38,13 +38,17 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     response.raise_for_status()
     response_json = response.json()
 
+    if gene_agg:
+        previous_search_results['gene_aggs'] = response_json
+        return response_json
+
     previous_search_results['total_results'] = response_json['total']
     previous_search_results['all_results'] = response_json['results']
     return response_json['results'][end_offset - num_results:end_offset]
 
 
 def _get_sample_data(samples, inheritance_filter):
-    sample_data = samples.values(
+    sample_data = samples.order_by('id').values(
         'sample_id', 'dataset_type', 'sample_type',
         individual_guid=F('individual__guid'),
         family_guid=F('individual__family__guid'),
@@ -105,7 +109,7 @@ def _parse_location_search(search):
     search.update({
         'intervals': parsed_intervals,
         'exclude_intervals': exclude_locations,
-        'gene_ids': None if exclude_locations else list(genes.keys()),
+        'gene_ids': None if (exclude_locations or not genes) else list(genes.keys()),
         'variant_ids': parsed_locus.get('parsed_variant_ids'),
         'rs_ids': parsed_locus.get('rs_ids'),
     })

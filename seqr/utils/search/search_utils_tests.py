@@ -9,6 +9,12 @@ from seqr.utils.search.utils import get_single_variant, get_variants_for_variant
     query_variants, InvalidSearchException
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
 
+MOCK_COUNTS = {
+    'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000005_5': 1}},
+    'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1}},
+    'ENSG00000240361': {'total': 2, 'families': {'F000003_3': 2}},
+}
+
 
 class SearchUtilsTests(object):
 
@@ -310,18 +316,13 @@ class SearchUtilsTests(object):
         self._test_invalid_search_params(get_variant_query_gene_counts)
 
     def test_get_variant_query_gene_counts(self, mock_get_variants):
-        mock_counts = {
-            'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000005_5': 1}},
-            'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1}},
-            'ENSG00000240361': {'total': 2, 'families': {'F000003_3': 2}},
-        }
         def _mock_get_variants(families, search, user, previous_search_results, genome_version, **kwargs):
-            previous_search_results['gene_aggs'] = mock_counts
-            return mock_counts
+            previous_search_results['gene_aggs'] = MOCK_COUNTS
+            return MOCK_COUNTS
         mock_get_variants.side_effect = _mock_get_variants
 
         gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
-        self.assertDictEqual(gene_counts, mock_counts)
+        self.assertDictEqual(gene_counts, MOCK_COUNTS)
         results_cache = {'gene_aggs': gene_counts}
         self.assert_cached_results(results_cache)
         self._test_expected_search_call(
@@ -411,7 +412,6 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
         })
 
 
-@mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', 'test-hail-host')
 class HailSearchUtilsTests(TestCase, SearchUtilsTests):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
