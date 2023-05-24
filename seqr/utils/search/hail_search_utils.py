@@ -3,10 +3,9 @@ from django.db.models import F, Min
 
 import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
-from seqr.models import Individual, Sample, PhenotypePrioritization
-from seqr.utils.search.constants import RECESSIVE, COMPOUND_HET, MAX_NO_LOCATION_COMP_HET_FAMILIES, PRIORITIZED_GENE_SORT
+from seqr.models import Sample, PhenotypePrioritization
+from seqr.utils.search.constants import PRIORITIZED_GENE_SORT
 from seqr.utils.xpos_utils import MIN_POS, MAX_POS
-from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
 
 
