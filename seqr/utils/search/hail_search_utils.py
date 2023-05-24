@@ -6,6 +6,7 @@ from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
 from seqr.models import Individual, Sample, PhenotypePrioritization
 from seqr.utils.search.constants import RECESSIVE, COMPOUND_HET, MAX_NO_LOCATION_COMP_HET_FAMILIES, PRIORITIZED_GENE_SORT
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
+from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
 
 
 def get_hail_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100,
@@ -33,7 +34,7 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     _parse_location_search(search_body)
 
     path = 'gene_counts' if gene_agg else 'search'
-    response = requests.post(f'http://hail-search:5000/{path}', json=search_body)
+    response = requests.post(f'{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}', json=search_body)
     response.raise_for_status()
     response_json = response.json()
 
