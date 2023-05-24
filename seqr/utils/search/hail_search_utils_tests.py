@@ -45,7 +45,7 @@ class HailSearchUtilsTests(TestCase):
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, rs_ids=None, variant_ids=None,
-                                   inheritance_mode='de_novo',  dataset_type=None, secondary_dataset_type=None):
+                                   inheritance_mode='de_novo',  dataset_type=None, secondary_dataset_type=None, sort='xpos'):
         request_body = json.loads(responses.calls[-1].request.body)
         expected_search = {
             'requester_email': 'test_user@broadinstitute.org',
@@ -69,7 +69,7 @@ class HailSearchUtilsTests(TestCase):
                 ],
             },
             'genome_version': 'GRCh37',
-            'sort': None,
+            'sort': sort,
             'sort_metadata': None,
             'num_results': 100,
             'inheritance_mode': inheritance_mode,
@@ -88,101 +88,97 @@ class HailSearchUtilsTests(TestCase):
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
         self.assertDictEqual(request_body, expected_search)
 
-    # def test_query_variants(self):
-    #     def _mock_get_variants(families, search, user, previous_search_results, genome_version, **kwargs):
-    #         previous_search_results['all_results'] = PARSED_VARIANTS
-    #         previous_search_results['total_results'] = 5
-    #         return PARSED_VARIANTS
-    #     mock_get_variants.side_effect = _mock_get_variants
-    #
-    #     variants, total = query_variants(self.results_model, user=self.user)
-    #     self.assertListEqual(variants, PARSED_VARIANTS)
-    #     self.assertEqual(total, 5)
-    #     results_cache = {'all_results': PARSED_VARIANTS, 'total_results': 5}
-    #     self.assert_cached_results(results_cache)
-    #     self._test_expected_search_call(
-    #         mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-    #     )
-    #
-    #     query_variants(
-    #         self.results_model, user=self.user, sort='cadd', skip_genotype_filter=True, page=3, num_results=10,
-    #     )
-    #     self._test_expected_search_call(
-    #         mock_get_variants, results_cache, sort='cadd', page=3, num_results=10, skip_genotype_filter=True,
-    #     )
-    #
-    #     query_variants(self.results_model, user=self.user, load_all=True)
-    #     self._test_expected_search_call(
-    #         mock_get_variants, results_cache, sort='xpos', page=1, num_results=10000, skip_genotype_filter=False,
-    #     )
-    #
-    #     self.search_model.search['locus'] = {'rawVariantItems': '1-248367227-TC-T,2-103343353-GAGA-G'}
-    #     query_variants(self.results_model, user=self.user)
-    #     self._test_expected_search_call(
-    #         mock_get_variants, results_cache, sort='xpos', page=1, num_results=2, skip_genotype_filter=False,
-    #         search_fields=['locus'], rs_ids=[],  variant_ids=['1-248367227-TC-T', '2-103343353-GAGA-G'],
-    #         parsed_variant_ids=[('1', 248367227, 'TC', 'T'), ('2', 103343353, 'GAGA', 'G')], dataset_type='VARIANTS',
-    #         omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
-    #     )
-    #
-    #     self.search_model.search['locus']['rawVariantItems'] = 'rs9876'
-    #     query_variants(self.results_model, user=self.user)
-    #     self._test_expected_search_call(
-    #         mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-    #         search_fields=['locus'], rs_ids=['rs9876'], variant_ids=[], parsed_variant_ids=[],
-    #     )
-    #
-    #     self.search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'
-    #     query_variants(self.results_model, user=self.user)
-    #     self._test_expected_search_call(
-    #         mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-    #         search_fields=['locus'], genes={
-    #             'ENSG00000223972': mock.ANY, 'ENSG00000186092': mock.ANY,
-    #         }, intervals=[
-    #             {'chrom': '2', 'start': 1234, 'end': 5678, 'offset': None},
-    #             {'chrom': '7', 'start': 100, 'end': 10100, 'offset': 0.1},
-    #         ],
-    #     )
-    #     parsed_genes = mock_get_variants.call_args.args[1]['parsedLocus']['genes']
-    #     for gene in parsed_genes.values():
-    #         self.assertSetEqual(set(gene.keys()), GENE_FIELDS)
-    #     self.assertEqual(parsed_genes['ENSG00000223972']['geneSymbol'], 'DDX11L1')
-    #     self.assertEqual(parsed_genes['ENSG00000186092']['geneSymbol'], 'OR4F5')
-    #
-    #     self.search_model.search = {
-    #         'inheritance': {'mode': 'recessive'}, 'annotations': {'frameshift': ['frameshift_variant']},
-    #     }
-    #     query_variants(self.results_model, user=self.user)
-    #     self._test_expected_search_call(
-    #         mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-    #         inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type=None,
-    #         search_fields=['annotations'], omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
-    #     )
-    #
-    #     self.search_model.search['annotations_secondary'] = {'structural_consequence': ['LOF']}
-    #     query_variants(self.results_model, user=self.user)
-    #     self._test_expected_search_call(
-    #         mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-    #         inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='SV',
-    #         search_fields=['annotations', 'annotations_secondary']
-    #     )
-    #
-    #     self.search_model.search['annotations_secondary'].update({'SCREEN': ['dELS', 'DNase-only']})
-    #     query_variants(self.results_model, user=self.user)
-    #     self._test_expected_search_call(
-    #         mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-    #         inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='ALL',
-    #         search_fields=['annotations', 'annotations_secondary']
-    #     )
-    #
-    #     self.search_model.search['annotations_secondary']['structural_consequence'] = []
-    #     query_variants(self.results_model, user=self.user)
-    #     self._test_expected_search_call(
-    #         mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-    #         inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='VARIANTS',
-    #         search_fields=['annotations', 'annotations_secondary'],
-    #         omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
-    #     )
+    def test_query_variants(self):
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/gene_counts', status=200, json={
+            'results': PARSED_VARIANTS, 'total': 5,
+        })
+
+        variants, total = query_variants(self.results_model, user=self.user)
+        self.assertListEqual(variants, PARSED_VARIANTS)
+        self.assertEqual(total, 5)
+        results_cache = {'all_results': PARSED_VARIANTS, 'total_results': 5}
+        self.assert_cached_results(results_cache)
+        self._test_expected_search_call()
+
+        # query_variants(
+        #     self.results_model, user=self.user, sort='cadd', skip_genotype_filter=True, page=3, num_results=10,
+        # )
+        # self._test_expected_search_call(
+        #     mock_get_variants, results_cache, sort='cadd', page=3, num_results=10, skip_genotype_filter=True,
+        # )
+        #
+        # query_variants(self.results_model, user=self.user, load_all=True)
+        # self._test_expected_search_call(
+        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=10000, skip_genotype_filter=False,
+        # )
+        #
+        # self.search_model.search['locus'] = {'rawVariantItems': '1-248367227-TC-T,2-103343353-GAGA-G'}
+        # query_variants(self.results_model, user=self.user)
+        # self._test_expected_search_call(
+        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=2, skip_genotype_filter=False,
+        #     search_fields=['locus'], rs_ids=[],  variant_ids=['1-248367227-TC-T', '2-103343353-GAGA-G'],
+        #     parsed_variant_ids=[('1', 248367227, 'TC', 'T'), ('2', 103343353, 'GAGA', 'G')], dataset_type='VARIANTS',
+        #     omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
+        # )
+        #
+        # self.search_model.search['locus']['rawVariantItems'] = 'rs9876'
+        # query_variants(self.results_model, user=self.user)
+        # self._test_expected_search_call(
+        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+        #     search_fields=['locus'], rs_ids=['rs9876'], variant_ids=[], parsed_variant_ids=[],
+        # )
+        #
+        # self.search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'
+        # query_variants(self.results_model, user=self.user)
+        # self._test_expected_search_call(
+        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+        #     search_fields=['locus'], genes={
+        #         'ENSG00000223972': mock.ANY, 'ENSG00000186092': mock.ANY,
+        #     }, intervals=[
+        #         {'chrom': '2', 'start': 1234, 'end': 5678, 'offset': None},
+        #         {'chrom': '7', 'start': 100, 'end': 10100, 'offset': 0.1},
+        #     ],
+        # )
+        # parsed_genes = mock_get_variants.call_args.args[1]['parsedLocus']['genes']
+        # for gene in parsed_genes.values():
+        #     self.assertSetEqual(set(gene.keys()), GENE_FIELDS)
+        # self.assertEqual(parsed_genes['ENSG00000223972']['geneSymbol'], 'DDX11L1')
+        # self.assertEqual(parsed_genes['ENSG00000186092']['geneSymbol'], 'OR4F5')
+        #
+        # self.search_model.search = {
+        #     'inheritance': {'mode': 'recessive'}, 'annotations': {'frameshift': ['frameshift_variant']},
+        # }
+        # query_variants(self.results_model, user=self.user)
+        # self._test_expected_search_call(
+        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+        #     inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type=None,
+        #     search_fields=['annotations'], omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
+        # )
+        #
+        # self.search_model.search['annotations_secondary'] = {'structural_consequence': ['LOF']}
+        # query_variants(self.results_model, user=self.user)
+        # self._test_expected_search_call(
+        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+        #     inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='SV',
+        #     search_fields=['annotations', 'annotations_secondary']
+        # )
+        #
+        # self.search_model.search['annotations_secondary'].update({'SCREEN': ['dELS', 'DNase-only']})
+        # query_variants(self.results_model, user=self.user)
+        # self._test_expected_search_call(
+        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+        #     inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='ALL',
+        #     search_fields=['annotations', 'annotations_secondary']
+        # )
+        #
+        # self.search_model.search['annotations_secondary']['structural_consequence'] = []
+        # query_variants(self.results_model, user=self.user)
+        # self._test_expected_search_call(
+        #     mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+        #     inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='VARIANTS',
+        #     search_fields=['annotations', 'annotations_secondary'],
+        #     omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
+        # )
 
     @responses.activate
     def test_get_variant_query_gene_counts(self):
@@ -192,4 +188,4 @@ class HailSearchUtilsTests(TestCase):
         self.assertDictEqual(gene_counts, MOCK_COUNTS)
         results_cache = {'gene_aggs': gene_counts}
         self.assert_cached_results(results_cache)
-        self._test_expected_search_call()
+        self._test_expected_search_call(sort=None)
