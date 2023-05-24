@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 import json
 import mock
+from requests import HTTPError
 import responses
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
@@ -73,8 +74,8 @@ class HailSearchUtilsTests(TestCase):
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
                                    rs_ids=None, variant_ids=None, dataset_type=None, secondary_dataset_type=None,
-                                   inheritance_mode='de_novo', sort='xpos', sort_metadata=None, num_results=100,
-                                   sample_data=None, omit_sample_type=None):
+                                   frequencies=None, custom_query=None, quality_filter=None, inheritance_mode='de_novo',
+                                   sort='xpos', sort_metadata=None, num_results=100, sample_data=None, omit_sample_type=None):
         sample_data = sample_data or EXPECTED_SAMPLE_DATA
         if omit_sample_type:
             sample_data = {k: v for k, v in sample_data.items() if k != omit_sample_type}
@@ -90,9 +91,9 @@ class HailSearchUtilsTests(TestCase):
             'inheritance_filter': {},
             'dataset_type': dataset_type,
             'secondary_dataset_type': secondary_dataset_type,
-            'frequencies': None,
-            'quality_filter': None,
-            'custom_query': None,
+            'frequencies': frequencies,
+            'quality_filter': quality_filter,
+            'custom_query': custom_query,
             'intervals': intervals,
             'exclude_intervals': exclude_intervals,
             'gene_ids': gene_ids,
@@ -109,6 +110,12 @@ class HailSearchUtilsTests(TestCase):
 
     @responses.activate
     def test_query_variants(self):
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=400, body='Bad Search Error')
+        with self.assertRaises(HTTPError) as cm:
+            query_variants(self.results_model, user=self.user)
+        self.assertEqual(cm.exception.response.status_code, 400)
+        self.assertEqual(cm.exception.response.text, 'Bad Search Error')
+
         responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={
             'results': PARSED_VARIANTS, 'total': 5,
         })
@@ -119,10 +126,11 @@ class HailSearchUtilsTests(TestCase):
         self.assert_cached_results({'all_results': PARSED_VARIANTS, 'total_results': 5})
         self._test_expected_search_call()
 
-        query_variants(
-            self.results_model, user=self.user, sort='cadd', skip_genotype_filter=True, page=3, num_results=10,
+        variants, _ = query_variants(
+            self.results_model, user=self.user, sort='cadd', skip_genotype_filter=True, page=2, num_results=1,
         )
-        self._test_expected_search_call(sort='cadd', num_results=30)
+        self.assertListEqual(variants, PARSED_VARIANTS[1:])
+        self._test_expected_search_call(sort='cadd', num_results=2)
 
         self.search_model.search['locus'] = {'rawVariantItems': '1-248367227-TC-T,2-103343353-GAGA-G'}
         query_variants(self.results_model, user=self.user, sort='in_omim')
@@ -185,11 +193,21 @@ class HailSearchUtilsTests(TestCase):
             search_fields=['annotations', 'annotations_secondary'], omit_sample_type='SV_WES',
         )
 
-        self.search_model.search = {'inheritance': {'mode': 'any_affected'}}
+        quality_filter = {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'}
+        freq_filter = {'callset': {'af': 0.1}, 'gnomad_genomes': {'af': 0.01, 'ac': 3, 'hh': 3}}
+        custom_query = {'term': {'customFlag': 'flagVal'}}
+        self.search_model.search = {
+            'inheritance': {'mode': 'any_affected'},
+            'freqs': freq_filter,
+            'qualityFilter': quality_filter,
+            'in_silico': {'cadd': '11.5', 'sift': 'D'},
+            'customQuery': custom_query,
+        }
         self.results_model.families.set(Family.objects.filter(guid='F000001_1'))
         query_variants(self.results_model, user=self.user, sort='prioritized_gene')
         self._test_expected_search_call(
-            inheritance_mode='any_affected', sample_data=FAMILY_1_SAMPLE_DATA,
+            inheritance_mode='any_affected', sample_data=FAMILY_1_SAMPLE_DATA, search_fields=['in_silico'],
+            frequencies=freq_filter, quality_filter=quality_filter, custom_query=custom_query,
             sort='prioritized_gene', sort_metadata={'ENSG00000268903': 1, 'ENSG00000268904': 11},
         )
 
