@@ -251,7 +251,7 @@ const TISSUE_REFERENCE_KEY = {
 
 const TISSUE_REFERENCES_LOOKUP = Object.entries(TISSUE_REFERENCE_KEY).reduce((acc, [tissueType, key]) => ({
   ...acc,
-  [tissueType]: [NORM_GTEX_TRACK_OPTIONS, AGG_GTEX_TRACK_OPTIONS].flat().filter(track => track.text.includes(key))
+  [tissueType]: [...NORM_GTEX_TRACK_OPTIONS, ...AGG_GTEX_TRACK_OPTIONS].filter(track => track.text.includes(key))
     .map(track => track.value),
 }), {})
 

@@ -883,7 +883,8 @@ export const getTissueOptionsByIndividualGuid = createSelector(
     const tissueTypesByIndividualGuid = Object.entries(rnaSeqDataByIndividualGuid || {}).map(
       ([individualGuid, rnaSeqData]) => ([
         individualGuid,
-        [...new Set(Object.values(rnaSeqData?.spliceOutliers || {}).flat().map(({ tissueType }) => tissueType)]
+        [...new Set(Object.values(rnaSeqData?.spliceOutliers || {}).flat().map(({ tissueType }) => tissueType))],
+      ]),
     )
     return tissueTypesByIndividualGuid.reduce((acc, [individualGuid, tissueTypes]) => (
       tissueTypes.length > 0 ? {
