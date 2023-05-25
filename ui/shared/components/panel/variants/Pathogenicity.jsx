@@ -32,7 +32,6 @@ const HGMD_CLASS_NAMES = {
   DFP: 'Disease-associated polymorphism with additional supporting functional evidence (DFP)',
   DP: 'Disease-associated polymorphism (DP)',
 }
-const hgmdName = hgmdClass => HGMD_CLASS_NAMES[hgmdClass]
 
 const ClinvarStars = React.memo(({ goldStars }) => goldStars != null && (
   <StarsContainer>
@@ -44,16 +43,16 @@ ClinvarStars.propTypes = {
   goldStars: PropTypes.number,
 }
 
-const PathogenicityLabel = React.memo(({ significance, formatName, goldStars }) => (
+const PathogenicityLabel = React.memo(({ significance, significanceDisplay, goldStars }) => (
   <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[significance.toLowerCase()]] || 'grey'} size="medium" horizontal basic>
-    {formatName ? formatName(significance) : significance}
+    {significanceDisplay || significance}
     <ClinvarStars goldStars={goldStars} />
   </Label>
 ))
 
 PathogenicityLabel.propTypes = {
   significance: PropTypes.string.isRequired,
-  formatName: PropTypes.func,
+  significanceDisplay: PropTypes.string,
   goldStars: PropTypes.number,
 }
 
@@ -72,29 +71,29 @@ PathogenicityLink.propTypes = {
   popup: PropTypes.string,
 }
 
-const clinvarUrl = (clinvar) => {
-  const baseUrl = 'http://www.ncbi.nlm.nih.gov/clinvar'
+const clinvarConfig = (clinvar) => {
   const variantPath = clinvar.alleleId ? `?term=${clinvar.alleleId}[alleleid]` : `/variation/${clinvar.variationId}`
-  return baseUrl + variantPath
+
+  return {
+    significance: clinvar.clinicalSignificance,
+    significanceDisplay: snakecaseToTitlecase(clinvar.clinicalSignificance),
+    href: `http://www.ncbi.nlm.nih.gov/clinvar${variantPath}`,
+    goldStars: clinvar.goldStars,
+    popup: clinvar.version && `Last Updated: ${new Date(clinvar.version).toLocaleDateString()}`,
+  }
 }
 
 const Pathogenicity = React.memo(({ variant, showHgmd }) => {
   const clinvar = variant.clinvar || {}
   const pathogenicity = []
-  if (clinvar.clinicalSignificance && (clinvar.variationId || clinvar.alleleId)) {
-    pathogenicity.push(['ClinVar', {
-      significance: clinvar.clinicalSignificance,
-      href: clinvarUrl(clinvar),
-      formatName: snakecaseToTitlecase,
-      goldStars: clinvar.goldStars,
-      popup: clinvar.version && `Last Updated: ${new Date(clinvar.version).toLocaleDateString()}`,
-    }])
+  if ((clinvar.clinicalSignificance || clinvar.pathogenicity) && (clinvar.variationId || clinvar.alleleId)) {
+    pathogenicity.push(['ClinVar', clinvarConfig(clinvar)])
   }
   if (showHgmd) {
     pathogenicity.push(['HGMD', {
       significance: variant.hgmd.class,
       href: `https://my.qiagendigitalinsights.com/bbp/view/hgmd/pro/mut.php?acc=${variant.hgmd.accession}`,
-      formatName: hgmdName,
+      significanceDisplay: HGMD_CLASS_NAMES[variant.hgmd.class],
     }])
   }
   if (variant.mitomapPathogenic) {
