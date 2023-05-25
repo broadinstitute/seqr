@@ -71,23 +71,37 @@ PathogenicityLink.propTypes = {
   popup: PropTypes.string,
 }
 
-const clinvarConfig = (clinvar) => {
+const clinvarUrl = (clinvar) => {
+  const baseUrl = 'http://www.ncbi.nlm.nih.gov/clinvar'
   const variantPath = clinvar.alleleId ? `?term=${clinvar.alleleId}[alleleid]` : `/variation/${clinvar.variationId}`
+  return baseUrl + variantPath
+}
 
-  return {
-    significance: clinvar.clinicalSignificance,
-    significanceDisplay: snakecaseToTitlecase(clinvar.clinicalSignificance),
-    href: `http://www.ncbi.nlm.nih.gov/clinvar${variantPath}`,
-    goldStars: clinvar.goldStars,
-    popup: clinvar.version && `Last Updated: ${new Date(clinvar.version).toLocaleDateString()}`,
+const clinvarSignificance = (clinvar) => {
+  let { pathogenicity, assertions } = clinvar
+  if (!pathogenicity) {
+    [pathogenicity, ...assertions] = clinvar.clinicalSignificance.split(/[,|]/)
+    assertions = assertions.map(a => a.replace(/^_/, ''))
   }
+
+  let significanceDisplay = snakecaseToTitlecase(pathogenicity)
+  if (assertions && assertions.length) {
+    significanceDisplay = `${significanceDisplay} (${assertions.map(snakecaseToTitlecase).join(', ')})`
+  }
+
+  return { significance: pathogenicity, significanceDisplay }
 }
 
 const Pathogenicity = React.memo(({ variant, showHgmd }) => {
   const clinvar = variant.clinvar || {}
   const pathogenicity = []
   if ((clinvar.clinicalSignificance || clinvar.pathogenicity) && (clinvar.variationId || clinvar.alleleId)) {
-    pathogenicity.push(['ClinVar', clinvarConfig(clinvar)])
+    pathogenicity.push(['ClinVar', {
+      ...clinvarSignificance(clinvar),
+      href: clinvarUrl(clinvar),
+      goldStars: clinvar.goldStars,
+      popup: clinvar.version && `Last Updated: ${new Date(clinvar.version).toLocaleDateString()}`,
+    }])
   }
   if (showHgmd) {
     pathogenicity.push(['HGMD', {
