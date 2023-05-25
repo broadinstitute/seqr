@@ -40,15 +40,8 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     tissueOptions: PropTypes.arrayOf(PropTypes.object),
   }
 
-  constructor(props) {
-    super(props)
-    const { tissueOptions } = props
-
-    // eslint-disable-next-line react/state-in-constructor
-    this.state = {
-      tissueType: tissueOptions.length > 0 ? tissueOptions[0].value : null,
-      tissueOptions,
-    }
+  state = {
+    tissueType: null,
   }
 
   onTissueChange = (tissueType) => {
@@ -56,8 +49,9 @@ class BaseRnaSeqResultPage extends React.PureComponent {
   }
 
   render() {
-    const { familyGuid, rnaSeqData, significantJunctionOutliers, genesById } = this.props
-    const { tissueType, tissueOptions } = this.state
+    const { familyGuid, rnaSeqData, significantJunctionOutliers, genesById, tissueOptions } = this.props
+    const { tissueType: tissueTypeState } = this.state
+    const tissueType = tissueTypeState || tissueOptions?.length > 0 ? tissueOptions[0].value : null
 
     const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map(({ formatData, ...config }) => ({
       data: formatData(Object.values((rnaSeqData || {})[config.key] || {}).flat(), tissueType),
