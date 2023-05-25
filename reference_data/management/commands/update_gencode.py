@@ -2,7 +2,8 @@ import logging
 
 from django.core.management.base import BaseCommand
 
-from reference_data.management.commands.utils.gencode_utils import load_gencode_records, create_transcript_info
+from reference_data.management.commands.utils.gencode_utils import load_gencode_records, create_transcript_info, \
+    LATEST_GENCODE_RELEASE
 from reference_data.models import GeneInfo, TranscriptInfo, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 
 logger = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--reset', help="First drop any existing records from GeneInfo and TranscriptInfo", action="store_true")
-        parser.add_argument('--gencode-release', help="gencode release number (eg. 28)", type=int, required=True, choices=range(19, 32))
+        parser.add_argument('--gencode-release', help="gencode release number (eg. 28)", type=int, required=True, choices=range(19, LATEST_GENCODE_RELEASE+1))
         parser.add_argument('gencode_gtf_path', nargs="?", help="(optional) gencode GTF file path. If not specified, it will be downloaded.")
         parser.add_argument('genome_version', nargs="?", help="gencode GTF file genome version", choices=[GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38])
 
