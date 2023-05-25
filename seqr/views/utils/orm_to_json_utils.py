@@ -4,8 +4,8 @@ Utility functions for converting Django ORM object to JSON
 
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharField, Case, When
-from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JSONObject
+from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharField, Case, When, Window
+from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JSONObject, DenseRank
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 
@@ -759,25 +759,16 @@ def get_json_for_matchmaker_submission(submission):
 
 def get_json_for_rna_seq_outliers(models, max_significant_num_per_tissue=None, **kwargs):
     significant_field = models.model.SIGNIFICANCE_FIELD
-    significant_threshold = models.model.SIGNIFICANCE_THRESHOLD
-    additional_values = {
-        'isSignificant': Case(
-            When(then=Value(True), **{f'{significant_field}__lt': significant_threshold}),
-            default=Value(False)
-        ),
-    }
-    outliers = get_json_for_queryset(models, additional_values=additional_values, **kwargs)
 
+    significant_filter = {f'{significant_field}__lt': models.model.SIGNIFICANCE_THRESHOLD}
     if max_significant_num_per_tissue:
-        outliers_per_tissue_type = defaultdict(list)
-        for outlier in outliers:
-            outliers_per_tissue_type[outlier['tissueType']].append(outlier)
-        outliers = []
-        significant_field = _to_camel_case(significant_field)
-        for tissue_outliers in outliers_per_tissue_type.values():
-            for index, outlier in enumerate(tissue_outliers):
-                outlier['isSignificant'] = (index < max_significant_num_per_tissue) and\
-                                           (outlier[significant_field] < significant_threshold)
-            outliers += tissue_outliers
+        models = models.annotate(place=Window(
+            expression=DenseRank(),
+            partition_by=[F("sample__tissue_type")],
+            order_by=[F('id'), F(significant_field)],  # Adding `id` to the sorting key to remove duplications
+        ))
+        significant_filter['place__lt'] = max_significant_num_per_tissue
 
-    return outliers
+    additional_values = {'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))}
+
+    return get_json_for_queryset(models, additional_values=additional_values, **kwargs)

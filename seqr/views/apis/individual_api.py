@@ -809,7 +809,7 @@ def get_individual_rna_seq_data(request, individual_guid):
 
 
 def _get_rna_seq_data(model_cls, individual, **kwargs):
-    outlier_data = model_cls.objects.filter(sample__individual=individual, sample__is_active=True).order_by('p_value')
+    outlier_data = model_cls.objects.filter(sample__individual=individual, sample__is_active=True)
 
     outliers_by_gene = defaultdict(list)
     for data in get_json_for_rna_seq_outliers(
