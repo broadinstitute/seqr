@@ -1,4 +1,3 @@
-import elasticsearch_dsl
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import prefetch_related_objects, Q
@@ -8,7 +7,6 @@ import random
 
 from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
@@ -19,70 +17,6 @@ from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL
 
 logger = SeqrLogger(__name__)
-
-SAMPLE_FIELDS_LIST = ['samples', 'samples_num_alt_1']
-VCF_FILE_EXTENSIONS = ('.vcf', '.vcf.gz', '.vcf.bgz')
-#  support .bgz instead of requiring .vcf.bgz due to issues with DSP delivery of large callsets
-DATASET_FILE_EXTENSIONS = VCF_FILE_EXTENSIONS[:-1] + ('.bgz', '.bed', '.mt')
-
-SEQR_DATSETS_GS_PATH = 'gs://seqr-datasets/v02'
-
-
-def validate_index_metadata_and_get_elasticsearch_index_samples(elasticsearch_index, **kwargs):
-    es_client = get_es_client()
-
-    all_index_metadata = get_index_metadata(elasticsearch_index, es_client, include_fields=True)
-    if elasticsearch_index in all_index_metadata:
-        index_metadata = all_index_metadata.get(elasticsearch_index)
-        validate_index_metadata(index_metadata, elasticsearch_index, **kwargs)
-        sample_field = _get_samples_field(index_metadata)
-        sample_type = index_metadata['sampleType']
-    else:
-        # Aliases return the mapping for all indices in the alias
-        metadatas = list(all_index_metadata.values())
-        sample_field = _get_samples_field(metadatas[0])
-        sample_type = metadatas[0]['sampleType']
-        for metadata in metadatas[1:]:
-            validate_index_metadata(metadata, elasticsearch_index, **kwargs)
-            if sample_field != _get_samples_field(metadata):
-                raise ValueError('Found mismatched sample fields for indices in alias')
-            if sample_type != metadata['sampleType']:
-                raise ValueError('Found mismatched sample types for indices in alias')
-
-    s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
-    s = s.params(size=0)
-    s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field=sample_field, size=10000))
-    response = s.execute()
-    return [agg['key'] for agg in response.aggregations.sample_ids.buckets], sample_type
-
-
-def _get_samples_field(index_metadata):
-    return next((field for field in SAMPLE_FIELDS_LIST if field in index_metadata['fields'].keys()))
-
-
-def validate_index_metadata(index_metadata, elasticsearch_index, project=None, genome_version=None,
-                            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
-    metadata_fields = ['genomeVersion', 'sampleType', 'sourceFilePath']
-    if any(field not in (index_metadata or {}) for field in metadata_fields):
-        raise ValueError("Index metadata must contain fields: {}".format(', '.join(metadata_fields)))
-
-    sample_type = index_metadata['sampleType']
-    if sample_type not in {choice[0] for choice in Sample.SAMPLE_TYPE_CHOICES}:
-        raise ValueError("Sample type not supported: {}".format(sample_type))
-
-    if index_metadata['genomeVersion'] != (genome_version or project.genome_version):
-        raise ValueError('Index "{0}" has genome version {1} but this project uses version {2}'.format(
-            elasticsearch_index, index_metadata['genomeVersion'], project.genome_version
-        ))
-
-    dataset_path = index_metadata['sourceFilePath']
-    if not dataset_path.endswith(DATASET_FILE_EXTENSIONS):
-        raise ValueError("Variant call dataset path must end with {}".format(' or '.join(DATASET_FILE_EXTENSIONS)))
-
-    if index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS) != dataset_type:
-        raise ValueError('Index "{0}" has dataset type {1} but expects {2}'.format(
-            elasticsearch_index, index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS), dataset_type
-        ))
 
 
 def load_mapping_file(mapping_file_path, user):
@@ -196,31 +130,28 @@ def _validate_samples_families(samples, included_families, sample_type, dataset_
                 ))
 
 
-def _update_variant_samples(samples, user, elasticsearch_index, loaded_date, dataset_type, sample_type):
+def _update_variant_samples(samples, user, dataset_type, sample_type, sample_data):
     updated_samples = [sample.id for sample in samples]
 
     activated_sample_guids = Sample.bulk_update(user, {
-        'elasticsearch_index': elasticsearch_index,
         'is_active': True,
-        'loaded_date': loaded_date,
+        **sample_data,
     }, id__in=updated_samples, is_active=False)
 
-    inactivate_sample_guids = []
-    if elasticsearch_index:
-        inactivate_samples = Sample.objects.filter(
-            individual_id__in={sample.individual_id for sample in samples},
-            is_active=True,
-            dataset_type=dataset_type,
-            sample_type=sample_type,
-        ).exclude(id__in=updated_samples)
+    inactivate_samples = Sample.objects.filter(
+        individual_id__in={sample.individual_id for sample in samples},
+        is_active=True,
+        dataset_type=dataset_type,
+        sample_type=sample_type,
+    ).exclude(id__in=updated_samples)
 
-        inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
+    inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
 
     return activated_sample_guids, inactivate_sample_guids
 
 
 def match_and_update_search_samples(
-        project, user, sample_ids, elasticsearch_index, sample_type, dataset_type,
+        project, user, sample_ids, sample_type, dataset_type, sample_data,
         sample_id_to_individual_id_mapping, raise_unmatched_error_template, expected_families=None,
 ):
     def _get_unmatched_error(remaining_sample_ids):
@@ -231,7 +162,7 @@ def match_and_update_search_samples(
         sample_type=sample_type,
         dataset_type=dataset_type,
         sample_id__in=sample_ids,
-        elasticsearch_index=elasticsearch_index,
+        **sample_data,
     )
     loaded_date = timezone.now()
     samples, matched_individual_ids, _ = _find_or_create_missing_sample_records(
@@ -243,10 +174,10 @@ def match_and_update_search_samples(
         remaining_sample_keys=set(sample_ids) - {sample.sample_id for sample in samples},
         raise_no_match_error=not raise_unmatched_error_template,
         get_unmatched_error=_get_unmatched_error if raise_unmatched_error_template else None,
-        elasticsearch_index=elasticsearch_index,
         sample_type=sample_type,
         dataset_type=dataset_type,
         loaded_date=loaded_date,
+        **sample_data,
     )
 
     prefetch_related_objects(samples, 'individual__family')
@@ -254,7 +185,7 @@ def match_and_update_search_samples(
     _validate_samples_families(samples, included_families, sample_type, dataset_type, expected_families=expected_families)
 
     activated_sample_guids, inactivated_sample_guids = _update_variant_samples(
-        samples, user, elasticsearch_index, loaded_date, dataset_type, sample_type)
+        samples, user, dataset_type, sample_type, sample_data={'loaded_date': loaded_date, **sample_data})
 
     family_guids_to_update = [
         family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
@@ -262,10 +193,8 @@ def match_and_update_search_samples(
     Family.bulk_update(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
-    # refresh sample models to get updated values
-    samples = Sample.objects.filter(id__in=[s.id for s in samples])
-
-    return samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update
+    sample_ids = [s.id for s in samples]
+    return sample_ids, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update
 
 
 def _match_and_update_rna_samples(

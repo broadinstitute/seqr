@@ -130,7 +130,7 @@ from seqr.views.apis.report_api import \
     sample_metadata_export, \
     gregor_export, \
     seqr_stats
-from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, \
+from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, hpo_summary_data, \
     bulk_update_family_analysed_by
 from seqr.views.apis.superuser_api import get_all_users
 
@@ -326,6 +326,7 @@ api_endpoints = {
     'data_management/write_pedigree/(?P<project_guid>[^/]+)': write_pedigree,
 
     'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
+    'summary_data/hpo/(?P<hpo_id>[^/]+)': hpo_summary_data,
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
     'summary_data/matchmaker': mme_details,
     'summary_data/update_analysed_by': bulk_update_family_analysed_by,

@@ -9,13 +9,38 @@ from django.test import TestCase
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 from sys import maxsize
 from urllib3.exceptions import ReadTimeoutError
+from urllib3_mock import Responses
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
-from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
-    get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException, InvalidSearchException
-from seqr.utils.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
-from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
-    PARSED_MITO_VARIANT, TRANSCRIPT_2
+from seqr.utils.search.utils import get_single_variant, query_variants, \
+    get_variant_query_gene_counts, get_variants_for_variant_ids, InvalidSearchException
+from seqr.utils.search.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
+from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
+from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
+    PARSED_MITO_VARIANT, TRANSCRIPT_2, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT
+
+
+# The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
+# The urllib3_mock library works for those requests, but it has limited functionality, so this extension adds helper
+# methods for easier usage
+class Urllib3Responses(Responses):
+    def add_json(self, url, json_response, method=None, match_querystring=True, **kwargs):
+        if not method:
+            method = self.GET
+        body = json.dumps(json_response)
+        self.add(method, url, match_querystring=match_querystring, content_type='application/json', body=body, **kwargs)
+
+    def replace_json(self, url, *args, **kwargs):
+        existing_index = next(i for i, match in enumerate(self._urls) if match['url'] == url)
+        self.add_json(url, *args, **kwargs)
+        self._urls[existing_index] = self._urls.pop()
+
+    def call_request_json(self, index=-1):
+        return json.loads(self.calls[index].request.body)
+
+
+urllib3_responses = Urllib3Responses()
+
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
@@ -691,19 +716,6 @@ for gen in PARSED_SV_COMPOUND_HET_VARIANTS[0]['genotypes'].values():
     gen.update({'start': None, 'end': None, 'numExon': None, 'geneIds': None})
 PARSED_SV_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000002_2']
 
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT = deepcopy(PARSED_COMPOUND_HET_VARIANTS)
-for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
-    variant['familyGuids'].append('F000011_11')
-    variant['genotypes'].update({
-        'I000015_na20885': {
-            'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'sampleType': 'WES',
-        },
-    })
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['transcripts']['ENSG00000135953'][0]['majorConsequence'] = 'frameshift_variant'
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['mainTranscriptId'] = TRANSCRIPT_2['transcriptId']
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['selectedMainTranscriptId'] = None
-
 PARSED_COMPOUND_HET_VARIANTS_PROJECT_2 = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
 for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
     variant.update({
@@ -1294,6 +1306,7 @@ def setup_responses():
     setup_search_responses()
 
 
+@mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
 class EsUtilsTest(TestCase):
     databases = '__all__'
@@ -1369,28 +1382,9 @@ class EsUtilsTest(TestCase):
         MOCK_REDIS.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
     @urllib3_responses.activate
-    def test_get_es_variants_for_variant_tuples(self):
-        setup_responses()
-
-        variants = get_es_variants_for_variant_tuples(
-            self.families,
-            [(2103343353, 'GAGA', 'G'), (1248367227, 'TC', 'T'), (25138367346, 'A', 'C')]
-        )
-
-        self.assertEqual(len(variants), 2)
-        self.assertDictEqual(variants[0], PARSED_NO_SORT_VARIANTS[0])
-        self.assertDictEqual(variants[1], PARSED_NO_SORT_VARIANTS[1])
-
-        self.assertExecutedSearch(
-            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'MT-138367346-A-C']}}], size=6,
-            unsorted=True,
-            index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME])
-        )
-
-    @urllib3_responses.activate
     def test_get_es_variants_for_variant_ids(self):
         setup_responses()
-        get_es_variants_for_variant_ids(self.families, ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL'])
+        get_variants_for_variant_ids(self.families, ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL'])
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']}}],
             size=9, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
@@ -1399,14 +1393,14 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_get_single_es_variant(self):
         setup_responses()
-        variant = get_single_es_variant(self.families, '2-103343353-GAGA-G')
+        variant = get_single_variant(self.families, '2-103343353-GAGA-G')
         self.assertDictEqual(variant, PARSED_NO_SORT_VARIANTS[1])
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}],
             size=3, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
         )
 
-        variant = get_single_es_variant(self.families, '1-248367227-TC-T', return_all_queried_families=True)
+        variant = get_single_variant(self.families, '1-248367227-TC-T', return_all_queried_families=True)
         all_family_variant = deepcopy(PARSED_NO_SORT_VARIANTS[0])
         all_family_variant['familyGuids'] = ['F000002_2', 'F000003_3', 'F000005_5']
         all_family_variant['genotypes']['I000004_hg00731'] = {
@@ -1419,27 +1413,21 @@ class EsUtilsTest(TestCase):
         )
 
         with self.assertRaises(InvalidSearchException) as cm:
-            get_single_es_variant(self.families, '10-10334333-A-G')
+            get_single_variant(self.families, '10-10334333-A-G')
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_COMPOUND_HET_GENES', 1)
-    @mock.patch('seqr.utils.elasticsearch.es_gene_agg_search.MAX_COMPOUND_HET_GENES', 1)
-    @mock.patch('seqr.utils.elasticsearch.es_search.logger')
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_COMPOUND_HET_GENES', 1)
+    @mock.patch('seqr.utils.search.elasticsearch.es_gene_agg_search.MAX_COMPOUND_HET_GENES', 1)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.logger')
     @urllib3_responses.activate
     def test_invalid_get_es_variants(self, mock_logger):
         setup_responses()
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.filter(family_id='no_individuals'))
-
-        with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model)
-        self.assertEqual(str(cm.exception), 'No es index found for families no_individuals')
-
         results_model.families.set(Family.objects.all())
         with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model)
+            query_variants(results_model)
         self.assertEqual(
             str(cm.exception),
             'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde, Test Reprocessed Project; 38 - Non-Analyst Project',
@@ -1449,7 +1437,7 @@ class EsUtilsTest(TestCase):
         search_model.save()
         results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
         with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model)
+            query_variants(results_model)
         self.assertEqual(
             str(cm.exception), 'Inheritance based search is disabled in families with no data loaded for affected individuals',
         )
@@ -1458,7 +1446,7 @@ class EsUtilsTest(TestCase):
         search_model.save()
         results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
         with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model)
+            query_variants(results_model)
         self.assertEqual(
             str(cm.exception),
             'Inheritance based search is disabled in families with no data loaded for affected individuals',
@@ -1467,26 +1455,26 @@ class EsUtilsTest(TestCase):
         search_model.search['inheritance']['filter'] = {'genotype': {'I000004_hg00731': 'ref_ref'}}
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model)
+            query_variants(results_model)
         self.assertEqual(str(cm.exception), 'Invalid custom inheritance')
 
         search_model.search['inheritance']['filter'] = {}
         search_model.search['annotations'] = {'structural': ['DEL']}
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model)
+            query_variants(results_model)
         error = 'Unable to search against dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals'
         self.assertEqual(str(cm.exception), error)
 
         results_model.families.set(self.families)
         with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model, page=200)
+            query_variants(results_model, page=200)
         self.assertEqual(str(cm.exception), 'Unable to load more than 10000 variants (20000 requested)')
 
         search_model.search = {'inheritance': {'mode': 'compound_het'}}
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model)
+            query_variants(results_model)
         self.assertEqual(
             str(cm.exception),
             'Annotations must be specified to search for compound heterozygous variants')
@@ -1494,42 +1482,27 @@ class EsUtilsTest(TestCase):
         search_model.search['annotations'] = {'frameshift': ['frameshift_variant']}
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model)
+            query_variants(results_model)
         self.assertEqual(
             str(cm.exception),
             'Location must be specified to search for compound heterozygous variants across many families')
 
-        search_model.search['locus'] = {'rawVariantItems': 'chr2-A-C'}
-        with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
-
-        search_model.search['locus']['rawVariantItems'] = 'rs9876,chr2-1234-A-C'
-        with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(str(cm.exception), 'Invalid variant notation: found both variant IDs and rsIDs')
-
-        search_model.search['locus']['rawItems'] = 'chr27:1234-5678,2:40-400000000, ENSG00012345'
-        with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
-
-        search_model.search['locus']['rawItems'] = 'DDX11L1'
+        search_model.search['locus'] = {'rawItems': 'DDX11L1'}
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model)
+            query_variants(results_model)
         self.assertEqual(
             str(cm.exception),
             'This search returned too many compound heterozygous variants. Please add stricter filters')
 
         with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variant_gene_counts(results_model, None)
+            get_variant_query_gene_counts(results_model, None)
         self.assertEqual(str(cm.exception), 'This search returned too many genes')
 
         search_model.search = {'qualityFilter': {'min_gq': 7}}
         search_model.save()
         with self.assertRaises(Exception) as cm:
-            get_es_variants(results_model)
+            query_variants(results_model)
         self.assertEqual(str(cm.exception), 'Invalid gq filter 7')
 
         search_model.search = {}
@@ -1542,7 +1515,7 @@ class EsUtilsTest(TestCase):
             456: {'running_time_in_nanos': 10 ** 12},
         }})
         with self.assertRaises(ConnectionTimeout):
-            get_es_variants(results_model)
+            query_variants(results_model)
         self.assertListEqual(
             [call.request.url for call in urllib3_responses.calls],
             ['/_msearch', '/_tasks?actions=%2Asearch&group_by=parents'])
@@ -1556,7 +1529,7 @@ class EsUtilsTest(TestCase):
         ]}, method=urllib3_responses.POST)
 
         with self.assertRaises(TransportError) as cm:
-            get_es_variants(results_model)
+            query_variants(results_model)
         self.assertDictEqual(
             cm.exception.info,
             {'type': 'search_phase_execution_exception', 'root_cause': [{'type': 'too_many_clauses'}]})
@@ -1565,15 +1538,15 @@ class EsUtilsTest(TestCase):
         urllib3_responses.add(
             urllib3_responses.GET, f'/{INDEX_NAME},{MITO_WGS_INDEX_NAME},{SV_INDEX_NAME}/_mapping', body=Exception('Connection error'))
         with self.assertRaises(InvalidIndexException) as cm:
-            get_es_variants(results_model)
+            query_variants(results_model)
         self.assertEqual(str(cm.exception), 'test_index,test_index_mito_wgs,test_index_sv - Error accessing index: Connection error')
 
         urllib3_responses.replace_json(f'/{INDEX_NAME},{MITO_WGS_INDEX_NAME},{SV_INDEX_NAME}/_mapping', {})
         with self.assertRaises(InvalidIndexException) as cm:
-            get_es_variants(results_model)
+            query_variants(results_model)
         self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index_mito_wgs, test_index')
 
-    @mock.patch('seqr.utils.elasticsearch.utils.MAX_VARIANTS')
+    @mock.patch('seqr.utils.search.utils.MAX_VARIANTS')
     @urllib3_responses.activate
     def test_get_es_variants(self, mock_max_variants):
         setup_responses()
@@ -1583,7 +1556,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, total_results = query_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[1], PARSED_VARIANTS[1])
@@ -1595,13 +1568,13 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY])
 
         # does not save non-consecutive pages
-        variants, total_results = get_es_variants(results_model, page=3, num_results=2)
+        variants, total_results = query_variants(results_model, page=3, num_results=2)
         self.assertEqual(total_results, 5)
         self.assertCachedResults(results_model, {'all_results': variants, 'total_results': 5})
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], start_index=4, size=2)
 
         # test pagination
-        variants, total_results = get_es_variants(results_model, page=2, num_results=2)
+        variants, total_results = query_variants(results_model, page=2, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertEqual(total_results, 5)
         self.assertCachedResults(results_model, {'all_results': PARSED_VARIANTS + PARSED_VARIANTS, 'total_results': 5})
@@ -1609,20 +1582,15 @@ class EsUtilsTest(TestCase):
 
         # test does not re-fetch page
         urllib3_responses.reset()
-        variants, total_results = get_es_variants(results_model, page=1, num_results=3)
+        variants, total_results = query_variants(results_model, page=1, num_results=3)
         self.assertEqual(len(variants), 3)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS[:1])
         self.assertEqual(total_results, 5)
 
         # test load_all
         setup_responses()
-        mock_max_variants.__int__.return_value = 5
-        with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model, page=1, num_results=2, load_all=True)
-        self.assertEqual(str(cm.exception), 'Too many variants to load. Please refine your search and try again')
-
         mock_max_variants.__int__.return_value = 100
-        variants, _ = get_es_variants(results_model, page=1, num_results=2, load_all=True)
+        variants, _ = query_variants(results_model, page=1, num_results=2, load_all=True)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], start_index=4, size=1)
         self.assertEqual(len(variants), 5)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])
@@ -1630,7 +1598,7 @@ class EsUtilsTest(TestCase):
         # test does not re-fetch once all loaded
         urllib3_responses.reset()
         mock_max_variants.__int__.return_value = 1
-        variants, _ = get_es_variants(results_model, page=1, num_results=2, load_all=True)
+        variants, _ = query_variants(results_model, page=1, num_results=2, load_all=True)
         self.assertEqual(len(variants), 5)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])
 
@@ -1665,7 +1633,7 @@ class EsUtilsTest(TestCase):
 
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
-        variants, total_results = get_es_variants(results_model, sort='cadd', num_results=2)
+        variants, total_results = query_variants(results_model, sort='cadd', num_results=2)
 
         self.assertListEqual(variants, PARSED_CADD_VARIANTS)
         self.assertEqual(total_results, 5)
@@ -1919,7 +1887,7 @@ class EsUtilsTest(TestCase):
         ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'keyword'}}, 'xpos', 'variantId'])
 
         # Test sort does not error on pagination
-        get_es_variants(results_model, sort='cadd', num_results=2, page=2)
+        query_variants(results_model, sort='cadd', num_results=2, page=2)
 
     @urllib3_responses.activate
     def test_sv_get_es_variants(self):
@@ -1934,7 +1902,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants, _ = get_es_variants(results_model, num_results=2)
+        variants, _ = query_variants(results_model, num_results=2)
 
         self.assertListEqual(variants, [PARSED_SV_VARIANT])
         self.assertExecutedSearch(filters=[
@@ -1980,7 +1948,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants, _ = get_es_variants(results_model, num_results=2)
+        variants, _ = query_variants(results_model, num_results=2)
         self.assertListEqual(variants, [PARSED_SV_WGS_VARIANT])
 
         self.assertExecutedSearch(filters=[
@@ -2009,7 +1977,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants, _ = get_es_variants(results_model, num_results=5)
+        variants, _ = query_variants(results_model, num_results=5)
         self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_NO_CONSEQUENCE_FILTER_VARIANTS + [PARSED_MITO_VARIANT])
         path_filter = {'terms': {
             'clinvar_clinical_significance': [
@@ -2027,7 +1995,7 @@ class EsUtilsTest(TestCase):
         search_model.save()
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
 
-        get_es_variants(results_model, num_results=5)
+        query_variants(results_model, num_results=5)
         filter = {'bool': {'should': [{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}, path_filter]}}
         self.assertExecutedSearches([
             dict(filters=[filter], start_index=0, size=5, index=MITO_WGS_INDEX_NAME),
@@ -2039,7 +2007,7 @@ class EsUtilsTest(TestCase):
         search_model.save()
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
 
-        get_es_variants(results_model, num_results=5)
+        query_variants(results_model, num_results=5)
         self.assertExecutedSearch(
             filters=[{'bool': {'should': [{'terms': {
                 'transcriptConsequenceTerms': ['DEL', 'DUP_LOF', 'INTRAGENIC_EXON_DUP', 'MSV_EXON_OVERLAP', 'MSV_EXON_OVR']
@@ -2056,7 +2024,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(guid='F000002_2'))
 
-        get_es_variants(results_model, num_results=2)
+        query_variants(results_model, num_results=2)
         self.assertExecutedSearch(filters=[{'bool': {
             'must': [{'bool': {
                 'minimum_should_match': 1,
@@ -2086,7 +2054,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, total_results = query_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 1)
         self.assertListEqual(variants, [PARSED_COMPOUND_HET_VARIANTS])
         self.assertEqual(total_results, 1)
@@ -2105,7 +2073,7 @@ class EsUtilsTest(TestCase):
 
         # test pagination does not fetch
         urllib3_responses.reset()
-        get_es_variants(results_model, page=2, num_results=2)
+        query_variants(results_model, page=2, num_results=2)
 
     @urllib3_responses.activate
     def test_compound_het_get_es_variants_secondary_annotation(self):
@@ -2120,7 +2088,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, total_results = query_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 1)
         self.assertListEqual(variants, [PARSED_COMPOUND_HET_VARIANTS])
         self.assertEqual(total_results, 1)
@@ -2146,7 +2114,7 @@ class EsUtilsTest(TestCase):
 
         # test pagination does not fetch
         urllib3_responses.reset()
-        get_es_variants(results_model, page=2, num_results=2)
+        query_variants(results_model, page=2, num_results=2)
 
         # variants require both primary and secondary annotations
         setup_responses()
@@ -2155,7 +2123,7 @@ class EsUtilsTest(TestCase):
         search_model.save()
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, total_results = query_variants(results_model, num_results=2)
         self.assertIsNone(variants)
         self.assertEqual(total_results, 0)
 
@@ -2179,7 +2147,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, total_results = query_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS[0])
@@ -2211,7 +2179,7 @@ class EsUtilsTest(TestCase):
 
         # test pagination
 
-        variants, total_results = get_es_variants(results_model, page=3, num_results=2)
+        variants, total_results = query_variants(results_model, page=3, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[1], PARSED_MULTI_SAMPLE_VARIANT)
@@ -2231,7 +2199,7 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearches([dict(filters=[pass_filter_query, ANNOTATION_QUERY, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4)])
 
         urllib3_responses.reset()
-        get_es_variants(results_model, page=2, num_results=2)
+        query_variants(results_model, page=2, num_results=2)
 
     @urllib3_responses.activate
     def test_multi_datatype_recessive_get_es_variants(self):
@@ -2243,7 +2211,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants, _ = get_es_variants(results_model, num_results=10)
+        variants, _ = query_variants(results_model, num_results=10)
         self.assertEqual(len(variants), 4)
         self.assertDictEqual(variants[0], PARSED_SV_VARIANT)
         self.assertDictEqual(variants[1], PARSED_VARIANTS[0])
@@ -2363,7 +2331,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants, _ = get_es_variants(results_model, num_results=10)
+        variants, _ = query_variants(results_model, num_results=10)
         self.assertEqual(len(variants), 2)
         self.assertDictEqual(variants[0], PARSED_SV_VARIANT)
         self.assertDictEqual(variants[1][0], PARSED_SV_COMPOUND_HET_VARIANTS[0])
@@ -2447,7 +2415,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, total_results = query_variants(results_model, num_results=2)
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
 
@@ -2463,7 +2431,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, total_results = query_variants(results_model, num_results=2)
         self.assertListEqual(variants, PARSED_ANY_AFFECTED_VARIANTS)
         self.assertEqual(total_results, 5)
 
@@ -2478,7 +2446,7 @@ class EsUtilsTest(TestCase):
             }}
         ])
 
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_SEARCH_CLAUSES', 1)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_SEARCH_CLAUSES', 1)
     @urllib3_responses.activate
     def test_many_family_inheitance_get_es_variants(self):
         setup_responses()
@@ -2488,7 +2456,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, total_results = query_variants(results_model, num_results=2)
 
         self.assertEqual(len(variants), 2)
         self.assertEqual(total_results, 9)
@@ -2595,7 +2563,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(guid__in=['F000011_11', 'F000003_3', 'F000002_2']))
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, total_results = query_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[0])
@@ -2665,7 +2633,7 @@ class EsUtilsTest(TestCase):
         ])
 
         # test pagination
-        variants, total_results = get_es_variants(results_model, num_results=2, page=2)
+        variants, total_results = query_variants(results_model, num_results=2, page=2)
         self.assertEqual(len(variants), 2)
         self.assertListEqual(variants, [PARSED_VARIANTS[0], PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT])
         self.assertEqual(total_results, 9)
@@ -2698,7 +2666,7 @@ class EsUtilsTest(TestCase):
         # If one project is fully loaded, only query the second project
         cache_results['loaded_variant_counts'][INDEX_NAME]['total'] = 4
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps(cache_results))
-        get_es_variants(results_model, num_results=2, page=3)
+        query_variants(results_model, num_results=2, page=3)
         project_2_search['start_index'] = 2
         project_2_search['size'] = 4
         self.assertExecutedSearches([project_2_search])
@@ -2712,7 +2680,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, total_results = query_variants(results_model, num_results=2)
         expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_INDEX_VARIANT]
         self.assertListEqual(variants, expected_variants)
         self.assertEqual(total_results, 4)
@@ -2731,7 +2699,7 @@ class EsUtilsTest(TestCase):
         )
 
         # test pagination
-        variants, total_results = get_es_variants(results_model, num_results=2, page=2)
+        variants, total_results = query_variants(results_model, num_results=2, page=2)
         expected_variants = [PARSED_MITO_VARIANT, PARSED_VARIANTS[0]]
         self.assertListEqual(variants, expected_variants)
         self.assertEqual(total_results, 3)
@@ -2751,7 +2719,7 @@ class EsUtilsTest(TestCase):
 
         # test skipping page fetches all consecutively
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
-        get_es_variants(results_model, num_results=2, page=2)
+        query_variants(results_model, num_results=2, page=2)
         self.assertExecutedSearch(
             index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SECOND_INDEX_NAME]),
             filters=[ANNOTATION_QUERY],
@@ -2768,7 +2736,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, total_results = query_variants(results_model, num_results=2)
         expected_variants = [PARSED_VARIANTS[0], PARSED_ANY_AFFECTED_MULTI_INDEX_VERSION_VARIANT]
         self.assertListEqual(variants, expected_variants)
         self.assertEqual(total_results, 9)
@@ -2798,7 +2766,7 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=2, index=INDEX_NAME)
         ])
 
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_SEARCHES', 1)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_INDEX_SEARCHES', 1)
     @urllib3_responses.activate
     def test_multi_project_prefilter_indices_get_es_variants(self):
         setup_responses()
@@ -2810,7 +2778,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
-        _, total_results = get_es_variants(results_model, num_results=2)
+        _, total_results = query_variants(results_model, num_results=2)
         self.assertEqual(total_results, 14)
 
         gene_filter = {'terms': {'geneIds': ['ENSG00000228198']}}
@@ -2914,7 +2882,7 @@ class EsUtilsTest(TestCase):
         search_model.search['locus']['rawItems'] = 'ENSG00000186092'
         search_model.save()
 
-        _, total_results = get_es_variants(results_model, num_results=2)
+        _, total_results = query_variants(results_model, num_results=2)
         self.assertEqual(total_results, 1)
         self.assertEqual(len(urllib3_responses.calls), 4)
         self.assertExecutedSearch(call_index=2, **prefilter_search)
@@ -2927,14 +2895,14 @@ class EsUtilsTest(TestCase):
         search_model.search['locus']['rawItems'] = 'ENSG00000269732'
         search_model.save()
 
-        _, total_results = get_es_variants(results_model, num_results=2)
+        _, total_results = query_variants(results_model, num_results=2)
         self.assertEqual(total_results, 0)
         # Only the prefliter search is run, no multi-search
         self.assertEqual(len(urllib3_responses.calls), 5)
         self.assertExecutedSearch(**prefilter_search)
 
 
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_VARIANTS', 3)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_VARIANTS', 3)
     @urllib3_responses.activate
     def test_skip_genotype_filter(self):
         setup_responses()
@@ -2945,7 +2913,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
-        variants, _ = get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+        variants, _ = query_variants(results_model, num_results=2, skip_genotype_filter=True)
         expected_transcript_variant = deepcopy(PARSED_VARIANTS[0])
         expected_transcript_variant['selectedMainTranscriptId'] = PARSED_VARIANTS[1]['selectedMainTranscriptId']
         self.assertListEqual(variants, [expected_transcript_variant, PARSED_MULTI_INDEX_VARIANT])
@@ -2959,7 +2927,7 @@ class EsUtilsTest(TestCase):
         search_model.search['inheritance'] = {'mode': 'any_affected'}
         search_model.save()
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
-        get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+        query_variants(results_model, num_results=2, skip_genotype_filter=True)
 
         self.assertExecutedSearches([
             dict(
@@ -2988,8 +2956,8 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=2, index=INDEX_NAME)
         ])
 
-    @mock.patch('seqr.utils.elasticsearch.es_search.LIFTOVER_GRCH38_TO_GRCH37', None)
-    @mock.patch('seqr.utils.elasticsearch.es_search.LiftOver')
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.LIFTOVER_GRCH38_TO_GRCH37', None)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.LiftOver')
     @urllib3_responses.activate
     def test_get_lifted_grch38_variants(self, mock_liftover):
         setup_responses()
@@ -3008,7 +2976,7 @@ class EsUtilsTest(TestCase):
             'liftedOverChrom': None,
             'liftedOverPos': None,
         })
-        variants, _ = get_es_variants(results_model, num_results=2)
+        variants, _ = query_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertListEqual(variants, [PARSED_HG38_VARIANT, expected_no_lift_grch38_variant])
         self.assertIsNone(_liftover_grch38_to_grch37())
@@ -3017,13 +2985,13 @@ class EsUtilsTest(TestCase):
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
         mock_liftover.side_effect = None
         mock_liftover.return_value.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
-        variants, _ = get_es_variants(results_model, num_results=2)
+        variants, _ = query_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertListEqual(variants, [PARSED_HG38_VARIANT, PARSED_HG38_VARIANT])
         self.assertIsNotNone(_liftover_grch38_to_grch37())
         mock_liftover.assert_called_with('hg38', 'hg19')
 
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_NAME_LENGTH', 30)
+    @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_INDEX_NAME_LENGTH', 30)
     @urllib3_responses.activate
     def test_get_es_variants_create_index_alias(self):
         search_model = VariantSearch.objects.create(search={})
@@ -3035,7 +3003,7 @@ class EsUtilsTest(TestCase):
             '/{}/_mapping'.format(INDEX_ALIAS), {k: {'mappings': v} for k, v in CORE_INDEX_METADATA.items()})
         urllib3_responses.add_json('/_aliases', {'success': True}, method=urllib3_responses.POST)
 
-        get_es_variants(results_model, num_results=2)
+        query_variants(results_model, num_results=2)
 
         self.assertExecutedSearch(index=INDEX_ALIAS, size=8)
         self.assertDictEqual(urllib3_responses.call_request_json(index=0), {
@@ -3054,7 +3022,7 @@ class EsUtilsTest(TestCase):
         urllib3_responses.add_json('/{}/_mapping'.format(SECOND_INDEX_NAME), {
             k: {'mappings': INDEX_METADATA[SECOND_INDEX_NAME]} for k in SUB_INDICES})
 
-        get_es_variants(results_model, num_results=2)
+        query_variants(results_model, num_results=2)
 
         expected_search = {
             'start_index': 0, 'size': 2, 'filters': [ANNOTATION_QUERY, {
@@ -3090,7 +3058,7 @@ class EsUtilsTest(TestCase):
         aliases.update({k: {'aliases': {SECOND_INDEX_NAME: {}, INDEX_ALIAS: {}}} for k in SECOND_SUB_INDICES})
         urllib3_responses.add_json('/{},{}/_alias'.format(INDEX_NAME, SECOND_INDEX_NAME), aliases)
 
-        get_es_variants(results_model, num_results=2)
+        query_variants(results_model, num_results=2)
 
         second_alias_expected_search = {
             'start_index': 0, 'size': 2, 'filters': [ANNOTATION_QUERY, {
@@ -3144,7 +3112,7 @@ class EsUtilsTest(TestCase):
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps(initial_cached_results))
 
         #  Test gene counts
-        gene_counts = get_es_variant_gene_counts(results_model, None)
+        gene_counts = get_variant_query_gene_counts(results_model, None)
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000005_5': 1}},
             'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1}},
@@ -3186,7 +3154,7 @@ class EsUtilsTest(TestCase):
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps(initial_cached_results))
 
         #  Test gene counts
-        gene_counts = get_es_variant_gene_counts(results_model, None)
+        gene_counts = get_variant_query_gene_counts(results_model, None)
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 6, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000005_5': 1, 'F000011_11': 4}},
             'ENSG00000228198': {'total': 4, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1, 'F000011_11': 4}}
@@ -3225,7 +3193,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps({'total_results': 5}))
-        gene_counts = get_es_variant_gene_counts(results_model, None)
+        gene_counts = get_variant_query_gene_counts(results_model, None)
 
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 6, 'families': {'F000003_3': 2, 'F000002_2': 2, 'F000011_11': 2}},
@@ -3253,7 +3221,7 @@ class EsUtilsTest(TestCase):
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
-        gene_counts = get_es_variant_gene_counts(results_model, None)
+        gene_counts = get_variant_query_gene_counts(results_model, None)
 
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 5, 'families': {'F000003_3': 3, 'F000002_2': 2}},
@@ -3280,44 +3248,6 @@ class EsUtilsTest(TestCase):
         )
 
         self.assertCachedResults(results_model, {'gene_aggs': gene_counts})
-
-    def test_cached_get_es_variant_gene_counts(self):
-        search_model = VariantSearch.objects.create(search={})
-        results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        cache_key = 'search_results__{}__xpos'.format(results_model.guid)
-
-        cached_gene_counts = {
-            'ENSG00000135953': {'total': 5, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 4}},
-            'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000011_11': 4}}
-        }
-        _set_cache(cache_key, json.dumps({'total_results': 5, 'gene_aggs': cached_gene_counts}))
-        gene_counts = get_es_variant_gene_counts(results_model, None)
-        self.assertDictEqual(gene_counts, cached_gene_counts)
-
-        _set_cache(cache_key, json.dumps({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, 'total_results': 2}))
-        gene_counts = get_es_variant_gene_counts(results_model, None)
-        self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}},
-            'ENSG00000228198': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}}
-        })
-
-        _set_cache(cache_key, json.dumps({
-            'grouped_results': [
-                {'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT}, {'null': [PARSED_MULTI_INDEX_VARIANT]}
-            ],
-            'loaded_variant_counts': {
-                SECOND_INDEX_NAME: {'loaded': 1, 'total': 1},
-                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 0, 'loaded': 0},
-                INDEX_NAME: {'loaded': 1, 'total': 1},
-                '{}_compound_het'.format(INDEX_NAME): {'total': 2, 'loaded': 2},
-            },
-            'total_results': 4,
-        }))
-        gene_counts = get_es_variant_gene_counts(results_model, None)
-        self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 2, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 1}},
-            'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}}
-        })
 
     def test_get_family_affected_status(self):
         samples_by_id = {
@@ -3347,14 +3277,14 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
 
-        variants, _ = get_es_variants(results_model, sort='primate_ai', num_results=2)
+        variants, _ = query_variants(results_model, sort='primate_ai', num_results=2)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
             {'primate_ai_score': {'order': 'desc', 'unmapped_type': 'double', 'numeric_type': 'double'}}, 'xpos', 'variantId'],
                                   index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), size=4)
         self.assertEqual(variants[0]['_sort'][0], maxsize)
         self.assertEqual(variants[1]['_sort'][0], -1)
 
-        variants, _ = get_es_variants(results_model, sort='gnomad', num_results=2)
+        variants, _ = query_variants(results_model, sort='gnomad', num_results=2)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY], index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), size=4, sort=[
             {
                 '_script': {
@@ -3368,7 +3298,7 @@ class EsUtilsTest(TestCase):
         self.assertEqual(variants[0]['_sort'][0], 0.00012925741614425127)
         self.assertEqual(variants[1]['_sort'][0], maxsize)
 
-        variants, _ = get_es_variants(results_model, sort='in_omim', num_results=2)
+        variants, _ = query_variants(results_model, sort='in_omim', num_results=2)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY], index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), size=4, sort=[
             {
                 '_script': {
@@ -3393,11 +3323,11 @@ class EsUtilsTest(TestCase):
             }, 'xpos', 'variantId'])
 
         with self.assertRaises(InvalidSearchException) as se:
-            get_es_variants(results_model, sort='prioritized_gene', num_results=2)
+            query_variants(results_model, sort='prioritized_gene', num_results=2)
         self.assertEqual(str(se.exception), 'Phenotype sort is only supported for single-family search.')
 
         results_model.families.set(Family.objects.filter(guid='F000001_1'))
-        get_es_variants(results_model, sort='prioritized_gene', num_results=2)
+        query_variants(results_model, sort='prioritized_gene', num_results=2)
         family_sample_filter = {'bool': {'_name': 'F000001_1', 'must': mock.ANY}}
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, family_sample_filter], index=INDEX_NAME, size=2, sort=[
             {
@@ -3434,7 +3364,7 @@ class EsUtilsTest(TestCase):
                 'annotations': annotations,
             }
             search_model.save()
-            get_es_variants(results_model, num_results=2)
+            query_variants(results_model, num_results=2)
 
             index = INDEX_NAME if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else SV_INDEX_NAME
             annotation_query = {'terms': {'transcriptConsequenceTerms': next(iter(annotations.values()))}}

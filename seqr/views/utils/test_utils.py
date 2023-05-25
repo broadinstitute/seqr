@@ -10,7 +10,6 @@ import logging
 import mock
 import re
 from urllib.parse import quote_plus, urlparse
-from urllib3_mock import Responses
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
@@ -529,28 +528,6 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_groups.assert_not_called()
         self.mock_get_group_members.assert_not_called()
-
-
-# The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
-# The urllib3_mock library works for those requests, but it has limited functionality, so this extension adds helper
-# methods for easier usage
-class Urllib3Responses(Responses):
-    def add_json(self, url, json_response, method=None, match_querystring=True, **kwargs):
-        if not method:
-            method = self.GET
-        body = json.dumps(json_response)
-        self.add(method, url, match_querystring=match_querystring, content_type='application/json', body=body, **kwargs)
-
-    def replace_json(self, url, *args, **kwargs):
-        existing_index = next(i for i, match in enumerate(self._urls) if match['url'] == url)
-        self.add_json(url, *args, **kwargs)
-        self._urls[existing_index] = self._urls.pop()
-
-    def call_request_json(self, index=-1):
-        return json.loads(self.calls[index].request.body)
-
-
-urllib3_responses = Urllib3Responses()
 
 
 USER_FIELDS = {
@@ -1308,6 +1285,23 @@ PARSED_MITO_VARIANT = {
     'variantId': 'M-10195-C-A',
     'xpos': 25000010195
 }
+
+PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT = deepcopy(PARSED_VARIANTS)
+PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1].update({
+    'familyGuids': ['F000003_3'],
+    'mainTranscriptId': TRANSCRIPT_2['transcriptId'],
+    'selectedMainTranscriptId': None,
+})
+PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['transcripts']['ENSG00000135953'][0]['majorConsequence'] = 'frameshift_variant'
+for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
+    variant['_sort'][0] += 100
+    variant['familyGuids'].append('F000011_11')
+    variant['genotypes'].update({
+        'I000015_na20885': {
+            'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
+            'sampleType': 'WES',
+        },
+    })
 
 GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'

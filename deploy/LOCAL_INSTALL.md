@@ -50,6 +50,11 @@ docker-compose up -d seqr
 
 docker-compose logs -f seqr  # (optional) continuously print seqr logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs. 
 ```
+
+To update reference data in seqr, such as OMIM, HPO, etc., run the following
+```bash
+docker-compose exec seqr manage.py update_all_reference_data --use-cached-omim --skip-gencode
+```
    
 #### Annotating and loading VCF callsets 
 
@@ -85,8 +90,23 @@ This is expected to take a while
     
    docker-compose exec pipeline-runner copy_reference_data_to_gs.sh $BUILD_VERSION $GS_BUCKET
    
-   ``` 
+   ```
+   Periodically, you may want to update the reference data in order to get the latest versions of these annotations. 
+To do this, run the following commands to update the data. All subsequently loaded data will then have the updated 
+annotations, but you will need to re-load previously loaded projects to get the updated annotations.
+   ```bash
+   GS_BUCKET=gs://your-bucket       # your google bucket
+   BUILD_VERSION=38                 # can be 37 or 38
    
+   # Update clinvar 
+   gsutil rm -r "${GS_BUCKET}/reference_data/GRCh${BUILD_VERSION}/clinvar.GRCh${BUILD_VERSION}.ht"
+   gsutil rsync -r "gs://seqr-reference-data/GRCh${BUILD_VERSION}/clinvar/clinvar.GRCh${BUILD_VERSION}.ht" "${GS_BUCKET}/reference_data/GRCh${BUILD_VERSION}/clinvar.GRCh${BUILD_VERSION}.ht"
+  
+   # Update all other reference data
+   gsutil rm -r "${GS_BUCKET}/reference_data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
+   gsutil rsync -r "gs://seqr-reference-data/GRCh${BUILD_VERSION}/all_reference_data/combined_reference_data_grch${BUILD_VERSION}.ht" "${GS_BUCKET}/reference_data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
+    ```
+
 1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
    ```bash
    BUILD_VERSION=38                 # can be 37 or 38
@@ -130,6 +150,20 @@ This is expected to take a while
    docker-compose exec pipeline-runner download_reference_data.sh $BUILD_VERSION
    
    ``` 
+   Periodically, you may want to update the reference data in order to get the latest versions of these annotations. 
+To do this, run the following commands to update the data. All subsequently loaded data will then have the updated 
+annotations, but you will need to re-load previously loaded projects to get the updated annotations.
+   ```bash
+   BUILD_VERSION=38                 # can be 37 or 38
+   
+   # Update clinvar 
+   docker-compose exec pipeline-runner rm -rf "/seqr-reference-data/GRCh${BUILD_VERSION}/clinvar.GRCh${BUILD_VERSION}.ht"
+   docker-compose exec pipeline-runner gsutil rsync -r "gs://seqr-reference-data/GRCh${BUILD_VERSION}/clinvar/clinvar.GRCh${BUILD_VERSION}.ht" "/seqr-reference-data/GRCh${BUILD_VERSION}/clinvar.GRCh${BUILD_VERSION}.ht"
+  
+   # Update all other reference data
+   docker-compose exec pipeline-runner rm -rf "/seqr-reference-data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
+   docker-compose exec pipeline-runner gsutil rsync -r "gs://seqr-reference-data/GRCh${BUILD_VERSION}/all_reference_data/combined_reference_data_grch${BUILD_VERSION}.ht" "/seqr-reference-data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
+    ```
 
 1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
    ```bash

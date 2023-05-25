@@ -23,20 +23,29 @@ const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_SUMMARY },
 ]
 
+export const NoHoverFamilyLink = React.memo(({ family, path, target = '_blank', ...props }) => (
+  <ColoredLink
+    to={`/project/${family.projectGuid}/${path || `family_page/${family.familyGuid}`}`}
+    color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
+    target={target}
+    {...props} // passing through props allows refs to work for popup trigger
+  >
+    {family.displayName}
+  </ColoredLink>
+))
+
+NoHoverFamilyLink.propTypes = {
+  family: PropTypes.object.isRequired,
+  path: PropTypes.string,
+  target: PropTypes.string,
+}
+
 const FamilyLink = React.memo(({ family, path, target, disableEdit, PopupClass = Popup }) => React.createElement(
   PopupClass, {
     hoverable: true,
     wide: 'very',
     position: 'right center',
-    trigger: (
-      <ColoredLink
-        to={`/project/${family.projectGuid}/${path || `family_page/${family.familyGuid}`}`}
-        color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
-        target={target}
-      >
-        {family.displayName}
-      </ColoredLink>
-    ),
+    trigger: <NoHoverFamilyLink family={family} path={path} target={target} />,
     content: (
       <Family
         family={family}

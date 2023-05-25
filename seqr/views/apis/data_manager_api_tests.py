@@ -8,7 +8,8 @@ import responses
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree
 from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _get_json_for_models
-from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
+from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
 
 
@@ -378,6 +379,7 @@ EXPECTED_UPDATED_LIRICAL_DATA = [
 class DataManagerAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
     def test_elasticsearch_status(self):
         url = reverse(elasticsearch_status)
@@ -407,6 +409,12 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertListEqual(response_json['diskStats'], EXPECTED_DISK_ALLOCATION)
         self.assertListEqual(response_json['nodeStats'], EXPECTED_NODE_STATS)
 
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
     def test_delete_index(self):
         url = reverse(delete_index)
@@ -414,8 +422,8 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'test_index'}))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(
-            response.json(), ({'error': 'Index "test_index" is still used by: 1kg project n\xe5me with uni\xe7\xf8de'}))
+        self.assertEqual(
+            response.json()['error'], '"test_index" is still used by: 1kg project n\xe5me with uni\xe7\xf8de')
         self.assertEqual(len(urllib3_responses.calls), 0)
 
         urllib3_responses.add_json(
@@ -435,54 +443,12 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
 
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+
     # 2022-04-05 mfranklin: disabled because we don't have access to gs://seqr-datasets/
-    # @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    # def test_upload_sv_qc(self, mock_subprocess):
-    #     url = reverse(upload_qc_pipeline_output, )
-    #     self.check_data_manager_login(url)
-    #
-    #     request_data = json.dumps({
-    #         'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/sv/sv_sample_metadata.tsv'
-    #     })
-    #
-    #     mock_does_file_exist = mock.MagicMock()
-    #     mock_does_file_exist.wait.return_value = 0
-    #     mock_file_iter = mock.MagicMock()
-    #     mock_file_iter.stdout = SAMPLE_SV_WES_QC_DATA
-    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
-    #     response = self.client.post(url, content_type='application/json', data=request_data)
-    #     self.assertEqual(response.status_code, 200)
-    #     response_json = response.json()
-    #     self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
-    #     self.assertListEqual(response_json['info'], [
-    #         'Parsed 6 SV samples',
-    #         'Found and updated matching seqr individuals for 4 samples'
-    #     ])
-    #     self.assertListEqual(response_json['warnings'], ['The following 2 samples were skipped: MANZ_1169_DNA, NA'])
-    #
-    #     self.assertIsNone(Individual.objects.get(individual_id='NA19675_1').sv_flags)
-    #     self.assertListEqual(Individual.objects.get(individual_id='NA19678').sv_flags, ['high_QS_rare_calls:_>10'])
-    #     self.assertListEqual(Individual.objects.get(individual_id='HG00732').sv_flags, ['raw_calls:_>100'])
-    #     self.assertListEqual(
-    #         Individual.objects.get(individual_id='HG00733').sv_flags,
-    #         ['high_QS_rare_calls:_>10', 'raw_calls:_>100'])
-    #
-    #     # Test genome data
-    #     mock_file_iter.stdout = SAMPLE_SV_WGS_QC_DATA
-    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
-    #     response = self.client.post(url, content_type='application/json', data=request_data)
-    #     self.assertEqual(response.status_code, 200)
-    #     response_json = response.json()
-    #     self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
-    #     self.assertListEqual(response_json['info'], [
-    #         'Parsed 2 SV samples',
-    #         'Found and updated matching seqr individuals for 1 samples'
-    #     ])
-    #     self.assertListEqual(response_json['warnings'], ['The following 1 samples were skipped: NA19678'])
-    #     self.assertListEqual(Individual.objects.get(individual_id='NA21234').sv_flags, ['outlier_num._calls'])
-    #     # Should not overwrite existing QC flags
-    #     self.assertListEqual(Individual.objects.get(individual_id='NA19678').sv_flags, ['high_QS_rare_calls:_>10'])
-    #
     # @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     # def test_upload_qc_pipeline_output(self, mock_subprocess):
     #     url = reverse(upload_qc_pipeline_output,)
@@ -582,220 +548,267 @@ class DataManagerAPITest(AuthenticationTestCase):
     #     self.assertDictEqual(indiv.filter_flags, {'contamination': '2.79E+00'})
     #     self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '38051', 'r_insertion_deletion': '1.8064E+00'})
     #     self.assertEqual(indiv.population, 'OTH')
-
-    @mock.patch('seqr.views.apis.data_manager_api.KIBANA_ELASTICSEARCH_PASSWORD', 'abc123')
-    @responses.activate
-    def test_kibana_proxy(self):
-        url = '/api/kibana/random/path'
-        self.check_data_manager_login(url)
-
-        response_args = {
-            'stream': True,
-            'body': 'Test response',
-            'content_type': 'text/custom',
-            'headers': {'x-test-header': 'test', 'keep-alive': 'true'},
-        }
-        proxy_url = 'http://localhost:5601{}'.format(url)
-        responses.add(responses.GET, proxy_url, status=200, **response_args)
-        responses.add(responses.POST, proxy_url, status=201, **response_args)
-        responses.add(responses.GET, '{}/bad_response'.format(proxy_url), body=HTTPError())
-
-        response = self.client.get(url, HTTP_TEST_HEADER='some/value')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, b'Test response')
-        self.assertEqual(response.get('content-type'), 'text/custom')
-        self.assertEqual(response.get('x-test-header'), 'test')
-        self.assertIsNone(response.get('keep-alive'))
-
-        data = json.dumps([{'content': 'Test Body'}])
-        response = self.client.post(url, content_type='application/json', data=data)
-        self.assertEqual(response.status_code, 201)
-
-        self.assertEqual(len(responses.calls), 2)
-
-        get_request = responses.calls[0].request
-        self.assertEqual(get_request.headers['Host'], 'localhost:5601')
-        self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
-        self.assertEqual(get_request.headers['Test-Header'], 'some/value')
-
-        post_request = responses.calls[1].request
-        self.assertEqual(post_request.headers['Host'], 'localhost:5601')
-        self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
-        self.assertEqual(post_request.headers['Content-Type'], 'application/json')
-        self.assertEqual(post_request.headers['Content-Length'], '26')
-        self.assertEqual(post_request.body, data.encode('utf-8'))
-
-        # Test with error response
-        response = self.client.get('{}/bad_response'.format(url))
-        self.assertEqual(response.status_code, 500)
-
-        # Test with connection error
-        response = self.client.get('{}/bad_path'.format(url))
-        self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
-
-    RNA_DATA_TYPE_PARAMS = {
-        'outlier': {
-            'model_cls': RnaSeqOutlier,
-            'message_data_type': 'Expression Outlier',
-            'header': ['sampleID', 'project', 'geneID', 'detail', 'pValue', 'padjust', 'zScore'],
-            'optional_headers': ['detail'],
-            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-            'duplicated_indiv_id_data': [
-                ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
-            ],
-            'write_data': {
-                'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "p_value": "0.064", "p_adjust": "0.0000057", "z_score": "7.8"}}\n',
-                'NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "p_value": "0.01", "p_adjust": "0.13", "z_score": "-3.1"}}\n'
-            },
-            'new_data': [
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.13, -3.1],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA19675_D3', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
-            ],
-            'skipped_samples': 'NA19675_D3',
-            'num_parsed_samples': 3,
-            'initial_model_count': 3,
-            'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
-            'get_models_json': get_json_for_rna_seq_outliers,
-            'expected_models_json': [
-                {'geneId': 'ENSG00000240361', 'pAdjust': 0.13, 'pValue': 0.01, 'zScore': -3.1, 'isSignificant': False},
-                {'geneId': 'ENSG00000233750', 'pAdjust': 0.0000057, 'pValue': 0.064, 'zScore': 7.8,
-                 'isSignificant': True},
-            ],
-            'sample_guid': RNA_SAMPLE_GUID,
-        },
-        'tpm': {
-            'model_cls': RnaSeqTpm,
-            'message_data_type': 'Expression',
-            'header': ['sample_id', 'project', 'gene_id', 'individual_id', 'tissue', 'TPM'],
-            'optional_headers': ['individual_id'],
-            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D3', 'muscle', 1.34],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 0.064],
-            'duplicated_indiv_id_data': [
-                ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'muscle', 7.8],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.064],
-            ],
-            'write_data': {'NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}\n',
-                           'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.064"}}\n'},
-            'new_data': [
-                # existing sample NA19675_D2
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
-                # no matched individual NA19675_D3
-                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
-                # skip GTEX samples
-                ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
-                # a different project sample NA20888
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'muscle', 0.112],
-                # a project mismatched sample NA20878
-                ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
-                # conflict tissue types samples
-                ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 1.34],
-                ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19678', 'fibroblasts', 0.05],
-            ],
-            'skipped_samples': 'NA19675_D3, NA20878',
-            'sample_tissue_type': 'M',
-            'num_parsed_samples': 4,
-            'initial_model_count': 3,
-            'deleted_count': 1,
-            'extra_warnings': [
-                'Skipped data loading for the following 1 sample(s) due to mismatched tissue type: NA19678 (fibroblasts, muscle)',
-            ],
-            'parsed_file_data': RNA_TPM_SAMPLE_DATA,
-            'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
-            'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
-            'sample_guid': RNA_TPM_SAMPLE_GUID,
-        },
-        'splice_outlier': {
-            'model_cls': RnaSeqSpliceOutlier,
-            'message_data_type': 'Splice Outlier',
-            'header': ['individualId', 'project', 'geneId', 'chrom', 'start', 'end', 'strand', 'geneName', 'type', 'pValue', 'zScore',
-                       'deltaPsi', 'readCount', 'tissue', 'dotSize', 'rareDiseaseSamplesWithJunction',
-                       'rareDiseaseSamplesTotal'],
-            'optional_headers': ['geneName', 'dotSize'],
-            'loaded_data_row': ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
-                                'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
-                                'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
-            'duplicated_indiv_id_data': [
-                ['NA20870', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
-                 'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000163093', 'chr2', 167258096, 167258349, '*', 'XIRP2',
-                 'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
-            ],
-            'write_data': {'NA20870\t\t{"ENSG00000163092-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
-                           ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
-                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163092",'
-                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
-                           'NA20870\t\t{"ENSG00000163093-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
-                           ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
-                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163093",'
-                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
-            },
-            'new_data': [
-                # existing sample NA19675_1
-                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000163092', 'chr2', 167254166, 167258349, '*', 'XIRP2', 'psi3',
-                 1.56E-25, -4.9, -0.46, 166, 'fibroblasts', 0.03850364, 1, 20],
-                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132975168, '*', 'CHCHD3', 'psi5',
-                 1.08E-56, -6.53, -0.85, 231, 'fibroblasts', 0.53953638, 1, 20],
-                # no matched individual NA19675_D3
-                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
-                 'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
-                # a new sample NA20888
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
-                 'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
-                # a project mismatched sample NA20878
-                ['NA20878', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3',
-                 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
-            ],
-            'skipped_samples': 'NA19675_D3, NA20878',
-            'sample_tissue_type': 'F',
-            'num_parsed_samples': 4,
-            'initial_model_count': 1,
-            'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
-            'get_models_json': lambda models: list(
-                models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'type', 'p_value', 'z_score', 'delta_psi',
-                                   'read_count', 'rare_disease_samples_with_junction', 'rare_disease_samples_total')),
-            'expected_models_json': [
-                ('ENSG00000163092', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
-                ('ENSG00000106554', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 1, 20)
-            ],
-            'sample_guid': RNA_SPLICE_SAMPLE_GUID,
-            'row_id': 'ENSG00000106554-7-132885746-132886973-*-psi5',
-        },
-    }
-
-    def _has_expected_file_loading_logs(self, file, info=None, warnings=None, additional_logs=None, additional_logs_offset=None):
-        expected_logs = [
-            (f'==> gsutil ls {file}', None),
-            (f'==> gsutil cat {file} | gunzip -c -q - ', None),
-        ] + [(info_log, None) for info_log in info or []] + [
-            (warn_log, {'severity': 'WARNING'}) for warn_log in warnings or []
-        ]
-        if additional_logs:
-            if additional_logs_offset:
-                for log in reversed(additional_logs):
-                    expected_logs.insert(additional_logs_offset, log)
-            else:
-                expected_logs += additional_logs
-
-        self.assert_json_logs(self.data_manager_user, expected_logs)
-
-    def _check_rna_sample_model(self, individual_id, data_source, tissue_type):
-        rna_samples = Sample.objects.filter(individual_id=individual_id, sample_type='RNA', tissue_type=tissue_type)
-        self.assertEqual(len(rna_samples), 1)
-        sample = rna_samples.first()
-        self.assertTrue(sample.is_active)
-        self.assertIsNone(sample.elasticsearch_index)
-        self.assertEqual(sample.sample_type, 'RNA')
-        self.assertEqual(sample.tissue_type, tissue_type)
-        self.assertEqual(sample.data_source, data_source)
-        return sample.guid
+    #
+    # @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    # def test_upload_sv_qc(self, mock_subprocess):
+    #     url = reverse(upload_qc_pipeline_output, )
+    #     self.check_data_manager_login(url)
+    #
+    #     request_data = json.dumps({
+    #         'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/sv/sv_sample_metadata.tsv'
+    #     })
+    #
+    #     mock_does_file_exist = mock.MagicMock()
+    #     mock_does_file_exist.wait.return_value = 0
+    #     mock_file_iter = mock.MagicMock()
+    #     mock_file_iter.stdout = SAMPLE_SV_WES_QC_DATA
+    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+    #     response = self.client.post(url, content_type='application/json', data=request_data)
+    #     self.assertEqual(response.status_code, 200)
+    #     response_json = response.json()
+    #     self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
+    #     self.assertListEqual(response_json['info'], [
+    #         'Parsed 6 SV samples',
+    #         'Found and updated matching seqr individuals for 4 samples'
+    #     ])
+    #     self.assertListEqual(response_json['warnings'], ['The following 2 samples were skipped: MANZ_1169_DNA, NA'])
+    #
+    #     self.assertIsNone(Individual.objects.get(individual_id='NA19675_1').sv_flags)
+    #     self.assertListEqual(Individual.objects.get(individual_id='NA19678').sv_flags, ['high_QS_rare_calls:_>10'])
+    #     self.assertListEqual(Individual.objects.get(individual_id='HG00732').sv_flags, ['raw_calls:_>100'])
+    #     self.assertListEqual(
+    #         Individual.objects.get(individual_id='HG00733').sv_flags,
+    #         ['high_QS_rare_calls:_>10', 'raw_calls:_>100'])
+    #
+    #     # Test genome data
+    #     mock_file_iter.stdout = SAMPLE_SV_WGS_QC_DATA
+    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+    #     response = self.client.post(url, content_type='application/json', data=request_data)
+    #     self.assertEqual(response.status_code, 200)
+    #     response_json = response.json()
+    #     self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
+    #     self.assertListEqual(response_json['info'], [
+    #         'Parsed 2 SV samples',
+    #         'Found and updated matching seqr individuals for 1 samples'
+    #     ])
+    #     self.assertListEqual(response_json['warnings'], ['The following 1 samples were skipped: NA19678'])
+    #     self.assertListEqual(Individual.objects.get(individual_id='NA21234').sv_flags, ['outlier_num._calls'])
+    #     # Should not overwrite existing QC flags
+    #     self.assertListEqual(Individual.objects.get(individual_id='NA19678').sv_flags, ['high_QS_rare_calls:_>10'])
+    #
+    # @mock.patch('seqr.views.apis.data_manager_api.KIBANA_ELASTICSEARCH_PASSWORD', 'abc123')
+    # @responses.activate
+    # def test_kibana_proxy(self):
+    #     url = '/api/kibana/random/path'
+    #     self.check_data_manager_login(url)
+    #
+    #     response_args = {
+    #         'stream': True,
+    #         'body': 'Test response',
+    #         'content_type': 'text/custom',
+    #         'headers': {'x-test-header': 'test', 'keep-alive': 'true'},
+    #     }
+    #     proxy_url = 'http://localhost:5601{}'.format(url)
+    #     responses.add(responses.GET, proxy_url, status=200, **response_args)
+    #     responses.add(responses.POST, proxy_url, status=201, **response_args)
+    #     responses.add(responses.GET, '{}/bad_response'.format(proxy_url), body=HTTPError())
+    #
+    #     response = self.client.get(url, HTTP_TEST_HEADER='some/value')
+    #     self.assertEqual(response.status_code, 200)
+    #     self.assertEqual(response.content, b'Test response')
+    #     self.assertEqual(response.get('content-type'), 'text/custom')
+    #     self.assertEqual(response.get('x-test-header'), 'test')
+    #     self.assertIsNone(response.get('keep-alive'))
+    #
+    #     data = json.dumps([{'content': 'Test Body'}])
+    #     response = self.client.post(url, content_type='application/json', data=data)
+    #     self.assertEqual(response.status_code, 201)
+    #
+    #     self.assertEqual(len(responses.calls), 2)
+    #
+    #     get_request = responses.calls[0].request
+    #     self.assertEqual(get_request.headers['Host'], 'localhost:5601')
+    #     self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
+    #     self.assertEqual(get_request.headers['Test-Header'], 'some/value')
+    #
+    #     post_request = responses.calls[1].request
+    #     self.assertEqual(post_request.headers['Host'], 'localhost:5601')
+    #     self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
+    #     self.assertEqual(post_request.headers['Content-Type'], 'application/json')
+    #     self.assertEqual(post_request.headers['Content-Length'], '26')
+    #     self.assertEqual(post_request.body, data.encode('utf-8'))
+    #
+    #     # Test with error response
+    #     response = self.client.get('{}/bad_response'.format(url))
+    #     self.assertEqual(response.status_code, 500)
+    #
+    #     # Test with connection error
+    #     response = self.client.get('{}/bad_path'.format(url))
+    #     self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
+    #
+    # RNA_DATA_TYPE_PARAMS = {
+    #     'outlier': {
+    #         'model_cls': RnaSeqOutlier,
+    #         'message_data_type': 'Expression Outlier',
+    #         'header': ['sampleID', 'project', 'geneID', 'detail', 'pValue', 'padjust', 'zScore'],
+    #         'optional_headers': ['detail'],
+    #         'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
+    #         'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+    #         'duplicated_indiv_id_data': [
+    #             ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+    #             ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
+    #         ],
+    #         'write_data': {
+    #             'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "p_value": "0.064", "p_adjust": "0.0000057", "z_score": "7.8"}}\n',
+    #             'NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "p_value": "0.01", "p_adjust": "0.13", "z_score": "-3.1"}}\n'
+    #         },
+    #         'new_data': [
+    #             ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.13, -3.1],
+    #             ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
+    #             ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+    #             ['NA19675_D3', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+    #             ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
+    #         ],
+    #         'skipped_samples': 'NA19675_D3',
+    #         'num_parsed_samples': 3,
+    #         'initial_model_count': 3,
+    #         'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
+    #         'get_models_json': get_json_for_rna_seq_outliers,
+    #         'expected_models_json': [
+    #             {'geneId': 'ENSG00000240361', 'pAdjust': 0.13, 'pValue': 0.01, 'zScore': -3.1, 'isSignificant': False},
+    #             {'geneId': 'ENSG00000233750', 'pAdjust': 0.0000057, 'pValue': 0.064, 'zScore': 7.8,
+    #              'isSignificant': True},
+    #         ],
+    #         'sample_guid': RNA_SAMPLE_GUID,
+    #     },
+    #     'tpm': {
+    #         'model_cls': RnaSeqTpm,
+    #         'message_data_type': 'Expression',
+    #         'header': ['sample_id', 'project', 'gene_id', 'individual_id', 'tissue', 'TPM'],
+    #         'optional_headers': ['individual_id'],
+    #         'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D3', 'muscle', 1.34],
+    #         'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 0.064],
+    #         'duplicated_indiv_id_data': [
+    #             ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'muscle', 7.8],
+    #             ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.064],
+    #         ],
+    #         'write_data': {'NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}\n',
+    #                        'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.064"}}\n'},
+    #         'new_data': [
+    #             # existing sample NA19675_D2
+    #             ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
+    #             ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
+    #             ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
+    #             # no matched individual NA19675_D3
+    #             ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
+    #             # skip GTEX samples
+    #             ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
+    #             # a different project sample NA20888
+    #             ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'muscle', 0.112],
+    #             # a project mismatched sample NA20878
+    #             ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
+    #             # conflict tissue types samples
+    #             ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 1.34],
+    #             ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19678', 'fibroblasts', 0.05],
+    #         ],
+    #         'skipped_samples': 'NA19675_D3, NA20878',
+    #         'sample_tissue_type': 'M',
+    #         'num_parsed_samples': 4,
+    #         'initial_model_count': 3,
+    #         'deleted_count': 1,
+    #         'extra_warnings': [
+    #             'Skipped data loading for the following 1 sample(s) due to mismatched tissue type: NA19678 (fibroblasts, muscle)',
+    #         ],
+    #         'parsed_file_data': RNA_TPM_SAMPLE_DATA,
+    #         'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
+    #         'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
+    #         'sample_guid': RNA_TPM_SAMPLE_GUID,
+    #     },
+    #     'splice_outlier': {
+    #         'model_cls': RnaSeqSpliceOutlier,
+    #         'message_data_type': 'Splice Outlier',
+    #         'header': ['individualId', 'project', 'geneId', 'chrom', 'start', 'end', 'strand', 'geneName', 'type', 'pValue', 'zScore',
+    #                    'deltaPsi', 'readCount', 'tissue', 'dotSize', 'rareDiseaseSamplesWithJunction',
+    #                    'rareDiseaseSamplesTotal'],
+    #         'optional_headers': ['geneName', 'dotSize'],
+    #         'loaded_data_row': ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
+    #                             'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
+    #         'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
+    #                             'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
+    #         'duplicated_indiv_id_data': [
+    #             ['NA20870', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+    #              'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
+    #             ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000163093', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+    #              'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
+    #         ],
+    #         'write_data': {'NA20870\t\t{"ENSG00000163092-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
+    #                        ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
+    #                        ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163092",'
+    #                        ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
+    #                        'NA20870\t\t{"ENSG00000163093-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
+    #                        ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
+    #                        ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163093",'
+    #                        ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
+    #         },
+    #         'new_data': [
+    #             # existing sample NA19675_1
+    #             ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000163092', 'chr2', 167254166, 167258349, '*', 'XIRP2', 'psi3',
+    #              1.56E-25, -4.9, -0.46, 166, 'fibroblasts', 0.03850364, 1, 20],
+    #             ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132975168, '*', 'CHCHD3', 'psi5',
+    #              1.08E-56, -6.53, -0.85, 231, 'fibroblasts', 0.53953638, 1, 20],
+    #             # no matched individual NA19675_D3
+    #             ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+    #              'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
+    #             # a new sample NA20888
+    #             ['NA20888', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+    #              'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
+    #             # a project mismatched sample NA20878
+    #             ['NA20878', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3',
+    #              1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
+    #         ],
+    #         'skipped_samples': 'NA19675_D3, NA20878',
+    #         'sample_tissue_type': 'F',
+    #         'num_parsed_samples': 4,
+    #         'initial_model_count': 1,
+    #         'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
+    #         'get_models_json': lambda models: list(
+    #             models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'type', 'p_value', 'z_score', 'delta_psi',
+    #                                'read_count', 'rare_disease_samples_with_junction', 'rare_disease_samples_total')),
+    #         'expected_models_json': [
+    #             ('ENSG00000163092', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
+    #             ('ENSG00000106554', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 1, 20)
+    #         ],
+    #         'sample_guid': RNA_SPLICE_SAMPLE_GUID,
+    #         'row_id': 'ENSG00000106554-7-132885746-132886973-*-psi5',
+    #     },
+    # }
+    #
+    # def _has_expected_file_loading_logs(self, file, info=None, warnings=None, additional_logs=None, additional_logs_offset=None):
+    #     expected_logs = [
+    #         (f'==> gsutil ls {file}', None),
+    #         (f'==> gsutil cat {file} | gunzip -c -q - ', None),
+    #     ] + [(info_log, None) for info_log in info or []] + [
+    #         (warn_log, {'severity': 'WARNING'}) for warn_log in warnings or []
+    #     ]
+    #     if additional_logs:
+    #         if additional_logs_offset:
+    #             for log in reversed(additional_logs):
+    #                 expected_logs.insert(additional_logs_offset, log)
+    #         else:
+    #             expected_logs += additional_logs
+    #
+    #     self.assert_json_logs(self.data_manager_user, expected_logs)
+    #
+    # def _check_rna_sample_model(self, individual_id, data_source, tissue_type):
+    #     rna_samples = Sample.objects.filter(individual_id=individual_id, sample_type='RNA', tissue_type=tissue_type)
+    #     self.assertEqual(len(rna_samples), 1)
+    #     sample = rna_samples.first()
+    #     self.assertTrue(sample.is_active)
+    #     self.assertIsNone(sample.elasticsearch_index)
+    #     self.assertEqual(sample.sample_type, 'RNA')
+    #     self.assertEqual(sample.tissue_type, tissue_type)
+    #     self.assertEqual(sample.data_source, data_source)
+    #     return sample.guid
 
     # 2022-05-30 mfranklin: Commenting out this test as our ranged gsutil optimisation
     #       is causing conflicts when patching subprocess (when creating the GSClient)
