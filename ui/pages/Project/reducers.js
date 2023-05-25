@@ -190,14 +190,14 @@ export const addVariantsDataset = values => (dispatch, getState) => new HttpRequ
   },
 ).post(values)
 
-export const addIGVDataset = ({ mappingFile, ...values }) => (dispatch, getState) => {
+export const addIGVDataset = ({ mappingFile, ...values }) => (dispatch) => {
   const errors = []
 
   return Promise.all(mappingFile.updates.map(
-    ({ individualGuid, ...update }) => new HttpRequestHelper(
+    ({ individualGuid, individualId, ...update }) => new HttpRequestHelper(
       `/api/individual/${individualGuid}/update_igv_sample`,
       responseJson => dispatch({ type: RECEIVE_DATA, updatesById: responseJson }),
-      e => errors.push(`Error updating ${getState().individualsByGuid[individualGuid].individualId}: ${e.body && e.body.error ? e.body.error : e.message}`),
+      e => errors.push(`Error updating ${individualId}: ${e.body && e.body.error ? e.body.error : e.message}`),
     ).post({ ...update, ...values }),
   )).then(() => {
     if (errors.length) {
