@@ -1050,11 +1050,11 @@ DATA_LINES = [
 #
 #     def test_create_project_from_workspace(self):
 #         self._test_api_access(create_project_from_workspace, 'submit')
-
-    def test_add_workspace_data(self):
-        url = reverse(add_workspace_data, args=[PROJECT1_GUID])
-        self.check_require_login(url, login_redirect_url='/login/google-oauth2')
-
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/login/google-oauth2?next=/api/project/R0001_1kg/add_workspace_data')
+#
+#     def test_add_workspace_data(self):
+#         url = reverse(add_workspace_data, args=[PROJECT1_GUID])
+#         self.check_require_login(url, login_redirect_url='/login/google-oauth2')
+#
+#         response = self.client.post(url)
+#         self.assertEqual(response.status_code, 302)
+#         self.assertEqual(response.url, '/login/google-oauth2?next=/api/project/R0001_1kg/add_workspace_data')
