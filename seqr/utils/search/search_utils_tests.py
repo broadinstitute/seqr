@@ -9,8 +9,14 @@ from seqr.utils.search.utils import get_single_variant, get_variants_for_variant
     query_variants, InvalidSearchException
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
 
+MOCK_COUNTS = {
+    'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000005_5': 1}},
+    'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1}},
+    'ENSG00000240361': {'total': 2, 'families': {'F000003_3': 2}},
+}
 
-class SearchUtilsTests(object):
+
+class SearchTestHelper(object):
 
     def set_up(self):
         patcher = mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
@@ -18,14 +24,6 @@ class SearchUtilsTests(object):
         self.addCleanup(patcher.stop)
 
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
-        self.non_affected_search_samples = Sample.objects.filter(guid__in=[
-             'S000149_hg00733',  'S000137_na20874',
-        ])
-        self.affected_search_samples = Sample.objects.filter(guid__in=[
-            'S000132_hg00731', 'S000133_hg00732', 'S000134_hg00733', 'S000135_na20870',
-            'S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733',
-        ])
-        self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
         self.user = User.objects.get(username='test_user')
 
         self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}})
@@ -37,8 +35,24 @@ class SearchUtilsTests(object):
 
     def assert_cached_results(self, expected_results, sort='xpos'):
         cache_key = f'search_results__{self.results_model.guid}__{sort}'
-        self.mock_redis.set.assert_called_with(cache_key, json.dumps(expected_results))
+        self.mock_redis.set.assert_called_with(cache_key, mock.ANY)
+        self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
+
+
+class SearchUtilsTests(SearchTestHelper):
+
+    def set_up(self):
+        super(SearchUtilsTests, self).set_up()
+
+        self.non_affected_search_samples = Sample.objects.filter(guid__in=[
+             'S000149_hg00733',  'S000137_na20874',
+        ])
+        self.affected_search_samples = Sample.objects.filter(guid__in=[
+            'S000132_hg00731', 'S000133_hg00732', 'S000134_hg00733', 'S000135_na20870',
+            'S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733',
+        ])
+        self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
 
     def test_get_single_variant(self, mock_get_variants_for_ids):
         mock_get_variants_for_ids.return_value = [PARSED_VARIANTS[0]]
@@ -310,18 +324,13 @@ class SearchUtilsTests(object):
         self._test_invalid_search_params(get_variant_query_gene_counts)
 
     def test_get_variant_query_gene_counts(self, mock_get_variants):
-        mock_counts = {
-            'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000005_5': 1}},
-            'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1}},
-            'ENSG00000240361': {'total': 2, 'families': {'F000003_3': 2}},
-        }
         def _mock_get_variants(families, search, user, previous_search_results, genome_version, **kwargs):
-            previous_search_results['gene_aggs'] = mock_counts
-            return mock_counts
+            previous_search_results['gene_aggs'] = MOCK_COUNTS
+            return MOCK_COUNTS
         mock_get_variants.side_effect = _mock_get_variants
 
         gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
-        self.assertDictEqual(gene_counts, mock_counts)
+        self.assertDictEqual(gene_counts, MOCK_COUNTS)
         results_cache = {'gene_aggs': gene_counts}
         self.assert_cached_results(results_cache)
         self._test_expected_search_call(
@@ -411,7 +420,7 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
         })
 
 
-class NoBackendSearchUtilsTests(TestCase, SearchUtilsTests):
+class HailSearchUtilsTests(TestCase, SearchUtilsTests):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
 
@@ -421,27 +430,21 @@ class NoBackendSearchUtilsTests(TestCase, SearchUtilsTests):
     @mock.patch('seqr.utils.search.utils.ping_elasticsearch')
     def test_get_single_variant(self, mock_call):
         with self.assertRaises(InvalidSearchException) as cm:
-            super(NoBackendSearchUtilsTests, self).test_get_single_variant(mock_call)
+            super(HailSearchUtilsTests, self).test_get_single_variant(mock_call)
         self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
         mock_call.assert_not_called()
 
     @mock.patch('seqr.utils.search.utils.ping_elasticsearch')
     def test_get_variants_for_variant_ids(self, mock_call):
         with self.assertRaises(InvalidSearchException) as cm:
-            super(NoBackendSearchUtilsTests, self).test_get_variants_for_variant_ids(mock_call)
+            super(HailSearchUtilsTests, self).test_get_variants_for_variant_ids(mock_call)
         self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
         mock_call.assert_not_called()
 
-    @mock.patch('seqr.utils.search.utils.ping_elasticsearch')
+    @mock.patch('seqr.utils.search.utils.get_hail_variants')
     def test_query_variants(self, mock_call):
-        with self.assertRaises(InvalidSearchException) as cm:
-            super(NoBackendSearchUtilsTests, self).test_query_variants(mock_call)
-        self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
-        mock_call.assert_not_called()
+        super(HailSearchUtilsTests, self).test_query_variants(mock_call)
 
-    @mock.patch('seqr.utils.search.utils.ping_elasticsearch')
+    @mock.patch('seqr.utils.search.utils.get_hail_variants')
     def test_get_variant_query_gene_counts(self, mock_call):
-        with self.assertRaises(InvalidSearchException) as cm:
-            super(NoBackendSearchUtilsTests, self).test_get_variant_query_gene_counts(mock_call)
-        self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
-        mock_call.assert_not_called()
+        super(HailSearchUtilsTests, self).test_get_variant_query_gene_counts(mock_call)
