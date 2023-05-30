@@ -5,8 +5,9 @@ import mock
 from copy import deepcopy
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
+from django.utils import timezone
 
-from seqr.models import Individual
+from seqr.models import Individual, Sample, RnaSeqSpliceOutlier, RnaSeqOutlier
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
@@ -651,45 +652,63 @@ class IndividualAPITest(object):
         }})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
-    @mock.patch('seqr.views.utils.orm_to_json_utils.get_json_for_queryset')
     @mock.patch('seqr.views.apis.individual_api.MAX_SIGNIFICANT_OUTLIER_NUM', 3)
-    def test_get_individual_rna_seq_data_is_significant(self, mock_get_json):
+    def test_get_individual_rna_seq_data_is_significant(self):
         url = reverse(get_individual_rna_seq_data, args=[INDIVIDUAL_GUID])
         self.check_collaborator_login(url)
 
-        splice_outliers = [
-            {'start': pos+1, 'end': pos + 100, 'tissueType': tissue, 'pValue': p_value} for pos, (tissue, p_value) in enumerate([
-                ('F', 0.0001), ('F', 0.001), ('M', 0.001), ('F', 0.002), ('M', 0.002), ('F', 0.003), ('M', 0.01), ('F', 0.1),
-                ('M', 0.1), ('M', 0.1),
+        fibs_sample = Sample.objects.get(individual__guid=INDIVIDUAL_GUID, tissue_type='F')
+        muscle_sample = Sample(
+            individual=Individual.objects.get(guid=INDIVIDUAL_GUID),
+            sample_type='RNA',
+            dataset_type='VARIANTS',
+            sample_id='NA19675_1_1',
+            tissue_type='M',
+            data_source='muscle_samples.tsv.gz',
+            loaded_date=timezone.now(),
+            is_active=True,
+        )
+        muscle_sample.save()
+        test_splice_outliers = [
+            {'start': pos*1000 + 1, 'end': pos*1000 + 100, 'sample': sample, 'p_value': p_value}
+            for pos, (sample, p_value) in enumerate([
+                (fibs_sample, 0.001), (fibs_sample, 0.0003), (fibs_sample, 0.0003), (fibs_sample, 1e-05), (fibs_sample, 0.1),
+                (muscle_sample, 0.1), (muscle_sample, 0.001), (muscle_sample, 0.002), (muscle_sample, 0.2), (muscle_sample, 0.1),
             ])
         ]
-        for outlier in splice_outliers:
-            outlier.update({'chrom': '7', 'deltaPsi': 0.85, 'geneId': 'ENSG00000106554', 'rareDiseaseSamplesTotal': 20,
-            'rareDiseaseSamplesWithJunction': 1, 'readCount': 1297, 'strand': '*', 'type': 'psi5', 'zScore': 12.34})
-        mock_get_json.side_effect = [
-            [{
-                'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
-                'isSignificant': True, 'tissueType': None,
-            }],
-            splice_outliers
-        ]
+        for outlier in test_splice_outliers:
+            outlier.update({
+                'chrom': '7', 'delta_psi': 0.85, 'gene_id': 'ENSG00000106554', 'rare_disease_samples_total': 20,
+                'rare_disease_samples_with_junction': 1, 'read_count': 1297, 'strand': '*', 'type': 'psi5', 'z_score': 12.34
+            })
+            RnaSeqSpliceOutlier(**outlier).save()
+        outlier_sample = Sample.objects.get(individual__guid=INDIVIDUAL_GUID, sample_type='RNA', tissue_type=None)
+        for gene_id in ['ENSG00000135954', 'ENSG00000135955', 'ENSG00000135956']:
+            outlier = {'sample': outlier_sample, 'gene_id': gene_id, 'z_score': 7.1, 'p_value': 0.0048, 'p_adjust': 0.001}
+            RnaSeqOutlier(**outlier).save()
+
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         response_rnaseq_data = response.json()['rnaSeqData'][INDIVIDUAL_GUID]
         self.assertTrue(response_rnaseq_data['outliers']['ENSG00000135953'][0]['isSignificant'])
+        significant_outliers = [outlier for outlier in response_rnaseq_data['outliers'].values() if outlier[0]['isSignificant']]
+        self.assertEqual(5, len(significant_outliers))
         self.assertListEqual(
-            [[outlier['tissueType'], outlier['isSignificant']] for outlier in response_rnaseq_data['spliceOutliers']['ENSG00000106554']],
-            [['F', True], ['F', True], ['F', True], ['F', False], ['F', False],
-             ['M', True], ['M', True], ['M', False], ['M', False], ['M', False]]
+            [{field: outlier[field] for field in ['start', 'end', 'pValue', 'tissueType', 'isSignificant']}
+             for outlier in response_rnaseq_data['spliceOutliers']['ENSG00000106554']],
+            [{'start': 132885746, 'end': 132886973, 'pValue': 1.08e-56, 'tissueType': 'F', 'isSignificant': True},
+             {'start': 3001, 'end': 3100, 'pValue': 1e-05, 'tissueType': 'F', 'isSignificant': True},
+             {'start': 1001, 'end': 1100, 'pValue': 0.0003, 'tissueType': 'F', 'isSignificant': True},
+             {'start': 2001, 'end': 2100, 'pValue': 0.0003, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 1, 'end': 100, 'pValue': 0.001, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 4001, 'end': 4100, 'pValue': 0.1, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 6001, 'end': 6100, 'pValue': 0.001, 'tissueType': 'M', 'isSignificant': True},
+             {'start': 7001, 'end': 7100, 'pValue': 0.002, 'tissueType': 'M', 'isSignificant': True},
+             {'start': 5001, 'end': 5100, 'pValue': 0.1, 'tissueType': 'M', 'isSignificant': False},
+             {'start': 9001, 'end': 9100, 'pValue': 0.1, 'tissueType': 'M', 'isSignificant': False},
+             {'start': 8001, 'end': 8100, 'pValue': 0.2, 'tissueType': 'M', 'isSignificant': False}]
         )
-        mock_get_json.assert_has_calls([
-            mock.call(mock.ANY, additional_values={'isSignificant': mock.ANY},
-                nested_fields=[{'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
-            ),
-            mock.call(mock.ANY, additional_values={'isSignificant': mock.ANY},
-                nested_fields=[{'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
-            ),
-        ])
+
 
 class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
