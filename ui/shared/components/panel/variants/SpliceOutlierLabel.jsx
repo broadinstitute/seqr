@@ -20,7 +20,7 @@ const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: tru
 const BaseSpliceOutlierLabels = React.memo((
   { variant, significantJunctionOutliers, individualsByFamilyGuid },
 ) => {
-  const { pos, end, familyGuids } = variant
+  const { pos, end, familyGuids, endChrom } = variant
   const individualGuids = familyGuids.reduce((acc, fGuid) => (
     [...acc, ...individualsByFamilyGuid[fGuid].map(individual => individual.individualGuid)]
   ), [])
@@ -28,11 +28,12 @@ const BaseSpliceOutlierLabels = React.memo((
   const overlappedOutliers = individualGuids.reduce((acc, iGuid) => (
     [...acc, ...(significantJunctionOutliers[iGuid] || [])]
   ), []).filter((outlier) => {
-    if ((pos >= outlier.start - RNASEQ_JUNCTION_PADDING) && (pos <= outlier.end + RNASEQ_JUNCTION_PADDING)) {
+    const { junctionStart, end: junctionEnd } = outlier
+    if ((pos >= junctionStart - RNASEQ_JUNCTION_PADDING) && (pos <= junctionEnd + RNASEQ_JUNCTION_PADDING)) {
       return true
     }
-    if (end && !variant.endChrom) {
-      return (end >= outlier.start - RNASEQ_JUNCTION_PADDING) && (end <= outlier.end + RNASEQ_JUNCTION_PADDING)
+    if (end && !endChrom) {
+      return (end >= junctionStart - RNASEQ_JUNCTION_PADDING) && (end <= junctionEnd + RNASEQ_JUNCTION_PADDING)
     }
     return false
   })

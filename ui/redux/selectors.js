@@ -433,7 +433,7 @@ export const getRnaSeqSignificantJunctionData = createSelector(
           junctionLocus: `${row.chrom}:${row.start}-${row.end} ${row.strand}`,
           idField: getSpliceId(row),
           familyGuid: individualsByGuid[individualGuid].familyGuid,
-          individualName: individualsByGuid[individualGuid].displayName,
+          individualName: individualsByGuid[individualGuid].displayName || individualGuid,
           individualGuid,
           ...row,
         })),

@@ -141,7 +141,7 @@ def _get_rna_seq_outliers(gene_ids, family_guids):
                 gene_id__in=gene_ids,
                 sample__individual__family__guid__in=family_guids,
                 sample__is_active=True,
-            ).order_by('p_value'),
+            ),
             nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
                            {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
             max_significant_num_per_tissue=max_sign,
