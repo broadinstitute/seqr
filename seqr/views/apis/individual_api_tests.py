@@ -5,9 +5,8 @@ import mock
 from copy import deepcopy
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
-from django.utils import timezone
 
-from seqr.models import Individual, Sample, RnaSeqSpliceOutlier, RnaSeqOutlier
+from seqr.models import Individual
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
