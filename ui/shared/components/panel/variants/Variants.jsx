@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
 
-import { CLINSIG_SEVERITY, GENOME_VERSION_37, getVariantMainGeneId } from 'shared/utils/constants'
+import { GENOME_VERSION_37, clinvarSignificance, getVariantMainGeneId } from 'shared/utils/constants'
 import { VerticalSpacer } from '../../Spacers'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
 import FamilyReads from '../family/FamilyReads'
@@ -135,9 +135,10 @@ VariantLayout.propTypes = {
 
 const Variant = React.memo(({ variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, ...props }) => {
   const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)
+  const { severity } = clinvarSignificance(variant.clinvar)
   return (
     <VariantLayout
-      severity={CLINSIG_SEVERITY[((variant.clinvar || {}).clinicalSignificance || '').toLowerCase()]}
+      severity={severity}
       isSV={!!variant.svType}
       variant={variant}
       mainGeneId={variantMainGeneId}

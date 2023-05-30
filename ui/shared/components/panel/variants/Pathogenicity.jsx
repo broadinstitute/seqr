@@ -5,7 +5,7 @@ import styled from 'styled-components'
 import { Label, Icon, Popup } from 'semantic-ui-react'
 
 import { getUser, getFamiliesByGuid, getProjectsByGuid } from 'redux/selectors'
-import { CLINSIG_SEVERITY, getPermissionedHgmdClass } from '../../../utils/constants'
+import { clinvarSignificance, getPermissionedHgmdClass } from '../../../utils/constants'
 import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 
@@ -43,16 +43,16 @@ ClinvarStars.propTypes = {
   goldStars: PropTypes.number,
 }
 
-const PathogenicityLabel = React.memo(({ significance, significanceDisplay, goldStars }) => (
-  <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[significance.toLowerCase()]] || 'grey'} size="medium" horizontal basic>
-    {significanceDisplay || significance}
+const PathogenicityLabel = React.memo(({ label, color, goldStars }) => (
+  <Label color={color || 'grey'} size="medium" horizontal basic>
+    {label}
     <ClinvarStars goldStars={goldStars} />
   </Label>
 ))
 
 PathogenicityLabel.propTypes = {
-  significance: PropTypes.string.isRequired,
-  significanceDisplay: PropTypes.string,
+  label: PropTypes.string.isRequired,
+  color: PropTypes.string,
   goldStars: PropTypes.number,
 }
 
@@ -77,27 +77,22 @@ const clinvarUrl = (clinvar) => {
   return baseUrl + variantPath
 }
 
-const clinvarSignificance = (clinvar) => {
-  let { pathogenicity, assertions } = clinvar
-  if (!pathogenicity) {
-    [pathogenicity, ...assertions] = clinvar.clinicalSignificance.split(/[,|]/)
-    assertions = assertions.map(a => a.replace(/^_/, ''))
-  }
-
-  let significanceDisplay = snakecaseToTitlecase(pathogenicity)
+const clinvarLabel = (pathogenicity, assertions) => {
+  let label = snakecaseToTitlecase(pathogenicity)
   if (assertions && assertions.length) {
-    significanceDisplay = `${significanceDisplay} (${assertions.map(snakecaseToTitlecase).join(', ')})`
+    label = `${label} (${assertions.map(snakecaseToTitlecase).join(', ')})`
   }
-
-  return { significance: pathogenicity, significanceDisplay }
+  return label
 }
 
 const Pathogenicity = React.memo(({ variant, showHgmd }) => {
   const clinvar = variant.clinvar || {}
   const pathogenicity = []
   if ((clinvar.clinicalSignificance || clinvar.pathogenicity) && (clinvar.variationId || clinvar.alleleId)) {
+    const { pathogenicity: clinvarPathogenicity, assertions, severity } = clinvarSignificance(clinvar)
     pathogenicity.push(['ClinVar', {
-      ...clinvarSignificance(clinvar),
+      label: clinvarLabel(clinvarPathogenicity, assertions),
+      color: CLINSIG_COLOR[severity],
       href: clinvarUrl(clinvar),
       goldStars: clinvar.goldStars,
       popup: clinvar.version && `Last Updated: ${new Date(clinvar.version).toLocaleDateString()}`,
@@ -105,14 +100,13 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
   }
   if (showHgmd) {
     pathogenicity.push(['HGMD', {
-      significance: variant.hgmd.class,
+      label: HGMD_CLASS_NAMES[variant.hgmd.class],
       href: `https://my.qiagendigitalinsights.com/bbp/view/hgmd/pro/mut.php?acc=${variant.hgmd.accession}`,
-      significanceDisplay: HGMD_CLASS_NAMES[variant.hgmd.class],
     }])
   }
   if (variant.mitomapPathogenic) {
     pathogenicity.push(['MITOMAP', {
-      significance: 'pathogenic',
+      label: 'pathogenic',
       href: 'https://www.mitomap.org/foswiki/bin/view/MITOMAP/ConfirmedMutations',
     }])
   }

@@ -442,8 +442,7 @@ export const INDIVIDUAL_EXPORT_DATA = [].concat(
 
 // CLINVAR
 
-export const CLINSIG_SEVERITY = {
-  // clinvar
+const CLINSIG_SEVERITY = {
   pathogenic: 1,
   'risk factor': 0,
   risk_factor: 0,
@@ -455,7 +454,9 @@ export const CLINSIG_SEVERITY = {
   'benign/likely_benign': -1,
   likely_benign: -1,
   protective: -1,
-  // hgmd
+}
+
+const HGMD_SEVERITY = {
   DM: 1,
   'DM?': 0,
   FPV: 0,
@@ -997,16 +998,25 @@ export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectB
     familyGuid => projectByGuid[familiesByGuid[familyGuid].projectGuid].enableHgmd,
   )) && variant.hgmd && variant.hgmd.class
 
-const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
-  const { clinvar = {} } = variant
-  const clinvarSignificance = clinvar.clinicalSignificance && clinvar.clinicalSignificance.split('/')[0].toLowerCase()
-  const hgmdSignificance = getPermissionedHgmdClass(variant, user, familiesByGuid, projectByGuid)
-  if (!clinvarSignificance && !hgmdSignificance) return -10
-  let clinvarSeverity = 0.1
-  if (clinvarSignificance) {
-    clinvarSeverity = clinvarSignificance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[clinvarSignificance] + 1 : 0.5
+export const clinvarSignificance = (clinvar) => {
+  let { pathogenicity, assertions } = clinvar || {}
+  if (!pathogenicity) {
+    [pathogenicity, ...assertions] = (clinvar.clinicalSignificance || '').split(/[,|]/)
+    assertions = assertions.map(a => a.replace(/^_/, ''))
   }
-  const hgmdSeverity = hgmdSignificance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[hgmdSignificance] + 0.5 : 0
+
+  return { pathogenicity, assertions, severity: CLINSIG_SEVERITY[pathogenicity.toLowerCase()] }
+}
+
+const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
+  const { pathogenicity, severity } = clinvarSignificance(variant.clinvar)
+  const hgmdSignificance = getPermissionedHgmdClass(variant, user, familiesByGuid, projectByGuid)
+  if (!pathogenicity && !hgmdSignificance) return -10
+  let clinvarSeverity = 0.1
+  if (pathogenicity) {
+    clinvarSeverity = severity === undefined ? 0.5 : severity + 1
+  }
+  const hgmdSeverity = hgmdSignificance in HGMD_SEVERITY ? HGMD_SEVERITY[hgmdSignificance] + 0.5 : 0
   return clinvarSeverity + hgmdSeverity
 }
 
