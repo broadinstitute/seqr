@@ -3573,7 +3573,7 @@ class EsUtilsTest(TestCase):
                     {'term': {'samples_num_alt_2': 'HG00733'}}
                 ],
                 'must': [
-                    {'match': {'contig': 'X'}},
+                    {'range': {'xpos': {'gte': 23000000001, 'lte': 24000000001}}},
                     {'term': {'samples_num_alt_2': 'HG00731'}},
                 ]
             }
@@ -3592,7 +3592,7 @@ class EsUtilsTest(TestCase):
                     {'term': {'samples_cn_0': 'HG00733'}},
                     {'term': {'samples_cn_gte_4': 'HG00733'}},
                 ],
-                'must': [{'match': {'contig': 'X'}}],
+                'must': [{'range': {'xpos': {'gte': 23000000001, 'lte': 24000000001}}},],
             }
         }
 
@@ -3605,7 +3605,7 @@ class EsUtilsTest(TestCase):
                     {'term': {'samples_num_alt_2': 'HG00733'}}
                 ],
                 'must': [
-                    {'match': {'contig': 'X'}},
+                    {'range': {'xpos': {'gte': 23000000001, 'lte': 24000000001}}},
                     {'term': {'samples_num_alt_2': 'HG00732'}},
                 ]
             }
