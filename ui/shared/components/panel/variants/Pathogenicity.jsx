@@ -5,7 +5,7 @@ import styled from 'styled-components'
 import { Label, Icon, Popup } from 'semantic-ui-react'
 
 import { getUser, getFamiliesByGuid, getProjectsByGuid } from 'redux/selectors'
-import { clinvarSignificance, getPermissionedHgmdClass } from '../../../utils/constants'
+import { clinvarSignificance, clinvarColor, getPermissionedHgmdClass } from '../../../utils/constants'
 import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 
@@ -17,12 +17,6 @@ const StarIcon = styled(Icon).attrs({ name: 'star' })`
   color: ${props => (props.goldstar ? '#FFB70A' : '#D5D5D5')};
   margin: 0em 0.2em 0em 0em !important;
 `
-
-const CLINSIG_COLOR = {
-  1: 'red',
-  0: 'orange',
-  [-1]: 'green',
-}
 
 const HGMD_CLASS_NAMES = {
   DM: 'Disease Causing (DM)',
@@ -92,7 +86,7 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
     const { pathogenicity: clinvarPathogenicity, assertions, severity } = clinvarSignificance(clinvar)
     pathogenicity.push(['ClinVar', {
       label: clinvarLabel(clinvarPathogenicity, assertions),
-      color: CLINSIG_COLOR[severity],
+      color: clinvarColor(severity, 'red', 'orange', 'green'),
       href: clinvarUrl(clinvar),
       goldStars: clinvar.goldStars,
       popup: clinvar.version && `Last Updated: ${new Date(clinvar.version).toLocaleDateString()}`,
