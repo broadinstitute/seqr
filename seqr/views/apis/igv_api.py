@@ -64,7 +64,7 @@ def receive_igv_table_handler(request, project_guid):
         all_updates = []
         for i in matched_individuals:
             all_updates += [
-                dict(individualGuid=i.guid, **update) for update in individual_dataset_mapping[i.individual_id]
+                dict(individualGuid=i.guid, individualId=i.individual_id, **update) for update in individual_dataset_mapping[i.individual_id]
                 if (i.individual_id, update['filePath']) not in unchanged_rows
             ]
 
