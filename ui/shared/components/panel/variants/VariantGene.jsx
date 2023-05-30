@@ -407,7 +407,7 @@ const GENE_DETAIL_SECTIONS = [
   {
     color: 'pink',
     description: 'RNA-Seq Expression Outlier',
-    label: 'RNA Expression',
+    label: 'RNA expression',
     showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqData && indivGeneData.rnaSeqData[gene.geneId],
     detailsDisplay: (gene, indivGeneData) => (
       <div>

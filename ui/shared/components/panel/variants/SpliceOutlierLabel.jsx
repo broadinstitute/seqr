@@ -28,7 +28,7 @@ const BaseSpliceOutlierLabels = React.memo((
   const overlappedOutliers = individualGuids.reduce((acc, iGuid) => (
     [...acc, ...(significantJunctionOutliers[iGuid] || [])]
   ), []).filter((outlier) => {
-    const { junctionStart, end: junctionEnd } = outlier
+    const { start: junctionStart, end: junctionEnd } = outlier
     if ((pos >= junctionStart - RNASEQ_JUNCTION_PADDING) && (pos <= junctionEnd + RNASEQ_JUNCTION_PADDING)) {
       return true
     }
