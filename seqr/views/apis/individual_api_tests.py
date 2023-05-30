@@ -672,7 +672,7 @@ class IndividualAPITest(object):
         test_splice_outliers = [
             {'start': pos*1000 + 1, 'end': pos*1000 + 100, 'sample': sample, 'p_value': p_value}
             for pos, (sample, p_value) in enumerate([
-                (fibs_sample, 0.001), (fibs_sample, 0.0003), (fibs_sample, 0.0001), (fibs_sample, 1e-05), (fibs_sample, 0.1),
+                (fibs_sample, 0.001), (fibs_sample, 0.0003), (fibs_sample, 0.0003), (fibs_sample, 1e-05), (fibs_sample, 0.1),
                 (muscle_sample, 0.1), (muscle_sample, 0.001), (muscle_sample, 0.002), (muscle_sample, 0.2), (muscle_sample, 0.1),
             ])
         ]
@@ -698,8 +698,8 @@ class IndividualAPITest(object):
              for outlier in response_rnaseq_data['spliceOutliers']['ENSG00000106554']],
             [{'start': 132885746, 'end': 132886973, 'pValue': 1.08e-56, 'tissueType': 'F', 'isSignificant': True},
              {'start': 3001, 'end': 3100, 'pValue': 1e-05, 'tissueType': 'F', 'isSignificant': True},
-             {'start': 2001, 'end': 2100, 'pValue': 0.0001, 'tissueType': 'F', 'isSignificant': True},
-             {'start': 1001, 'end': 1100, 'pValue': 0.0003, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 1001, 'end': 1100, 'pValue': 0.0003, 'tissueType': 'F', 'isSignificant': True},
+             {'start': 2001, 'end': 2100, 'pValue': 0.0003, 'tissueType': 'F', 'isSignificant': False},
              {'start': 1, 'end': 100, 'pValue': 0.001, 'tissueType': 'F', 'isSignificant': False},
              {'start': 4001, 'end': 4100, 'pValue': 0.1, 'tissueType': 'F', 'isSignificant': False},
              {'start': 6001, 'end': 6100, 'pValue': 0.001, 'tissueType': 'M', 'isSignificant': True},
