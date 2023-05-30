@@ -652,7 +652,7 @@ class IndividualAPITest(object):
         }})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
-    @mock.patch('seqr.views.apis.individual_api.MAX_SIGNIFICANT_OUTLIER_NUM', 4)
+    @mock.patch('seqr.views.apis.individual_api.MAX_SIGNIFICANT_OUTLIER_NUM', 3)
     def test_get_individual_rna_seq_data_is_significant(self):
         url = reverse(get_individual_rna_seq_data, args=[INDIVIDUAL_GUID])
         self.check_collaborator_login(url)
@@ -672,8 +672,8 @@ class IndividualAPITest(object):
         test_splice_outliers = [
             {'start': pos*1000 + 1, 'end': pos*1000 + 100, 'sample': sample, 'p_value': p_value}
             for pos, (sample, p_value) in enumerate([
-                (fibs_sample, 0.0001), (fibs_sample, 0.001), (fibs_sample, 0.001), (fibs_sample, 0.003), (fibs_sample, 0.1),
-                (muscle_sample, 0.001), (muscle_sample, 0.002), (muscle_sample, 0.2), (muscle_sample, 0.1), (muscle_sample, 0.1),
+                (fibs_sample, 0.001), (fibs_sample, 0.0003), (fibs_sample, 0.0001), (fibs_sample, 1e-05), (fibs_sample, 0.1),
+                (muscle_sample, 0.1), (muscle_sample, 0.001), (muscle_sample, 0.002), (muscle_sample, 0.2), (muscle_sample, 0.1),
             ])
         ]
         for outlier in test_splice_outliers:
@@ -694,9 +694,19 @@ class IndividualAPITest(object):
         significant_outliers = [outlier for outlier in response_rnaseq_data['outliers'].values() if outlier[0]['isSignificant']]
         self.assertEqual(5, len(significant_outliers))
         self.assertListEqual(
-            [[outlier['tissueType'], outlier['isSignificant']] for outlier in response_rnaseq_data['spliceOutliers']['ENSG00000106554']],
-            [['F', True], ['F', True], ['F', True], ['F', False], ['F', False], ['F', False],
-             ['M', True], ['M', True], ['M', False], ['M', False], ['M', False]]
+            [{field: outlier[field] for field in ['start', 'end', 'pValue', 'tissueType', 'isSignificant']}
+             for outlier in response_rnaseq_data['spliceOutliers']['ENSG00000106554']],
+            [{'start': 132885746, 'end': 132886973, 'pValue': 1.08e-56, 'tissueType': 'F', 'isSignificant': True},
+             {'start': 3001, 'end': 3100, 'pValue': 1e-05, 'tissueType': 'F', 'isSignificant': True},
+             {'start': 2001, 'end': 2100, 'pValue': 0.0001, 'tissueType': 'F', 'isSignificant': True},
+             {'start': 1001, 'end': 1100, 'pValue': 0.0003, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 1, 'end': 100, 'pValue': 0.001, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 4001, 'end': 4100, 'pValue': 0.1, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 6001, 'end': 6100, 'pValue': 0.001, 'tissueType': 'M', 'isSignificant': True},
+             {'start': 7001, 'end': 7100, 'pValue': 0.002, 'tissueType': 'M', 'isSignificant': True},
+             {'start': 5001, 'end': 5100, 'pValue': 0.1, 'tissueType': 'M', 'isSignificant': False},
+             {'start': 9001, 'end': 9100, 'pValue': 0.1, 'tissueType': 'M', 'isSignificant': False},
+             {'start': 8001, 'end': 8100, 'pValue': 0.2, 'tissueType': 'M', 'isSignificant': False}]
         )
 
 
