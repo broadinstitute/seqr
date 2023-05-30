@@ -14,7 +14,7 @@ from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, 
 from seqr.utils.search.elasticsearch.constants import X_LINKED_RECESSIVE, \
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
-    QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
+    QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
@@ -1027,7 +1027,7 @@ class EsSearch(object):
             all_gene_consequences = []
             if variant.get('svType'):
                 all_gene_consequences.append(variant['svType'])
-            if variant.get(CLINVAR_KEY, {}).get('clinicalSignificance') in self._consequence_overrides.get(CLINVAR_KEY, []):
+            if _is_matched_clinvar_significance(variant.get(CLINVAR_KEY, {}).get('clinicalSignificance'), self._consequence_overrides.get(CLINVAR_KEY)):
                 all_gene_consequences.append(CLINVAR_KEY)
             if variant.get(HGMD_KEY, {}).get('class') in self._consequence_overrides.get(HGMD_KEY, []):
                 all_gene_consequences.append(HGMD_KEY)
@@ -1403,29 +1403,47 @@ def _parse_pathogenicity_filter(pathogenicity):
     clinvar_filters = pathogenicity.get(CLINVAR_KEY, [])
     hgmd_filters = pathogenicity.get(HGMD_KEY, [])
 
-    clinvar_clinical_significance_terms = set()
-    if clinvar_filters:
-        for clinvar_filter in clinvar_filters:
-            clinvar_clinical_significance_terms.update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
-
     hgmd_class = set()
     if hgmd_filters:
         for hgmd_filter in hgmd_filters:
             hgmd_class.update(HGMD_CLASS_MAP.get(hgmd_filter, []))
 
-    return sorted(clinvar_clinical_significance_terms), sorted(hgmd_class)
+    return sorted(clinvar_filters), sorted(hgmd_class)
 
 
-def _pathogenicity_filter(clinvar_terms, hgmd_classes=None):
+VUS_FILTER = 'vus_or_conflicting'
+VUS_REGEX = 'Conflicting_interpretations_of_pathogenicity.*|~((.*[Bb]enign.*)|(.*[Pp]athogenic.*))'
+
+
+def _pathogenicity_filter(clinvar_filters, hgmd_classes=None):
     pathogenicity_filter = None
-    if clinvar_terms:
-        pathogenicity_filter = Q('terms', clinvar_clinical_significance=clinvar_terms)
+
+    path_regex = '|'.join([
+        VUS_REGEX if clinvar_filter == VUS_FILTER else f'.*{clinvar_filter.capitalize()}.*'
+        for clinvar_filter in clinvar_filters or []
+    ])
+    if path_regex:
+        pathogenicity_filter = Q('regexp', clinvar_clinical_significance=path_regex)
 
     if hgmd_classes:
         hgmd_q = Q('terms', hgmd_class=hgmd_classes)
         pathogenicity_filter = pathogenicity_filter | hgmd_q if pathogenicity_filter else hgmd_q
 
     return pathogenicity_filter
+
+
+def _is_matched_clinvar_significance(clinical_significance, clinvar_filters):
+    if not (clinical_significance and clinvar_filters):
+        return False
+
+    if VUS_FILTER in clinvar_filters:
+        exclude = [
+            path.capitalize() for path in ['pathogenic',  'likely_pathogenic', 'likely_benign',  'benign']
+            if path not in clinvar_filters
+        ]
+        return all(substring not in clinical_significance for substring in exclude)
+
+    return any(clinvar_filter.capitalize() in clinical_significance for clinvar_filter in clinvar_filters)
 
 
 def _annotations_filter(vep_consequences):
