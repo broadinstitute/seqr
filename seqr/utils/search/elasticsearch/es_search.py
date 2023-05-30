@@ -1307,7 +1307,7 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
     individual_genotype_filter = inheritance_filter.get('genotype') or {}
 
     if inheritance_mode == X_LINKED_RECESSIVE:
-        samples_q = Q('match', contig='X')
+        samples_q = Q('range', xpos={'gte': get_xpos('X', 1), 'lte': get_xpos('Y', 1)})
         for individual in individuals:
             if individual_affected_status[individual.guid] == Individual.AFFECTED_STATUS_UNAFFECTED \
                     and individual.sex == Individual.SEX_MALE:
