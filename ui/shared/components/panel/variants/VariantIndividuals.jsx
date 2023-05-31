@@ -70,6 +70,8 @@ const AlleleContainer = styled(Header).attrs({ size: 'medium' })`
   }
 `
 
+const WarningIcon = styled(Icon).attrs({ name: 'warning sign', color: 'yellow' })``
+
 const PAR_REGIONS = {
   37: {
     X: [[60001, 2699521], [154931044, 155260561]],
@@ -162,7 +164,7 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
     {warning && (
       <Popup
         wide
-        trigger={<Icon name="warning sign" color="yellow" />}
+        trigger={<WarningIcon />}
         content={
           <div>
             <b>Warning: </b>
@@ -410,7 +412,12 @@ const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet
         <PedigreeIcon
           sex={individual.sex}
           affected={individual.affected}
-          label={<small>{individual.displayName}</small>}
+          label={(
+            <small>
+              {individual.displayName}
+              {variant.svType && individual[INDIVIDUAL_FIELD_SV_FLAGS] && <WarningIcon />}
+            </small>
+          )}
           popupHeader={individual.displayName}
           popupContent={(variant.svType ? SV_INDIVIDUAL_DETAIL_FIELDS : VARIANT_INDIVIDUAL_DETAIL_FIELDS).map(field => (
             <IndividualDetailField key={field} field={field} individual={individual} />
