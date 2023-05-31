@@ -709,10 +709,14 @@ TABLE_COLUMNS = {
 WARN_MISSING_TABLE_COLUMNS = {
     'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
 }
+WARN_MISSING_SECONDARY_COLUMNS = {
+    'reported_race': 'ancestry_detail',
+}
 
 GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
 GREGOR_ANCESTRY_DETAIL_MAP.pop(MIDDLE_EASTERN)
 GREGOR_ANCESTRY_DETAIL_MAP.update({
+    HISPANIC: 'Other',
     OTHER_POPULATION: 'Other',
 })
 GREGOR_ANCESTRY_MAP = deepcopy(ANCESTRY_MAP)
@@ -1015,10 +1019,11 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
         if not value:
             if required:
                 missing.append(_get_row_id(row))
-            elif recommended:
-                warn_missing.append(_get_row_id(row))
-            elif enum:
-                row[column] = 'NA'
+            else:
+                if recommended and not row.get(WARN_MISSING_SECONDARY_COLUMNS.get(column)):
+                    warn_missing.append(_get_row_id(row))
+                if enum:
+                    row[column] = 'NA'
         elif enum and value not in enum:
             invalid.append(f'{_get_row_id(row)} ({value})')
     if missing or warn_missing or invalid:
