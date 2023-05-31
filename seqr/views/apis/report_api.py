@@ -709,8 +709,9 @@ TABLE_COLUMNS = {
 WARN_MISSING_TABLE_COLUMNS = {
     'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
 }
-WARN_MISSING_SECONDARY_COLUMNS = {
-    'reported_race': 'ancestry_detail',
+WARN_MISSING_CONDITIONAL_COLUMNS = {
+    'reported_race': lambda row: not row['ancestry_detail'],
+    'age_at_enrollment': lambda row: row['affected_status'] == 'Affected'
 }
 
 GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
@@ -1020,8 +1021,10 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
             if required:
                 missing.append(_get_row_id(row))
             else:
-                if recommended and not row.get(WARN_MISSING_SECONDARY_COLUMNS.get(column)):
-                    warn_missing.append(_get_row_id(row))
+                if recommended:
+                    check_recommend_condition = WARN_MISSING_CONDITIONAL_COLUMNS.get(column)
+                    if not check_recommend_condition or check_recommend_condition(row):
+                        warn_missing.append(_get_row_id(row))
                 if enum:
                     row[column] = 'NA'
         elif enum and value not in enum:
