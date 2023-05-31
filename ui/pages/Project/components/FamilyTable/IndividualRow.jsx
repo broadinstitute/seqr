@@ -23,13 +23,11 @@ import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import {
   AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
-  INDIVIDUAL_FIELD_AFFECTED, INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_FILTER_FLAGS, INDIVIDUAL_FIELD_POP_FILTERS,
-  INDIVIDUAL_FIELD_SV_FLAGS, INDIVIDUAL_FIELD_LOOKUP,
+  INDIVIDUAL_FIELD_AFFECTED, INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_LOOKUP,
 } from 'shared/utils/constants'
 
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid, getMmeSubmissionsByGuid } from 'redux/selectors'
-import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HPO_FORM_FIELDS } from '../HpoTerms'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
@@ -64,13 +62,6 @@ const IndividualContainer = styled.div`
 const PaddedRadioButtonGroup = styled(RadioButtonGroup)`
   padding: 10px;
 `
-
-const FLAG_TITLE = {
-  chimera: '% Chimera',
-  contamination: '% Contamination',
-  coverage_exome: '% 20X Coverage',
-  coverage_genome: 'Mean Coverage',
-}
 
 const POPULATION_MAP = {
   AFR: 'African',
@@ -107,11 +98,6 @@ const ETHNICITY_OPTIONS = [
   'South Asian',
   'Western European',
 ].map(title => ({ title }))
-
-const ratioLabel = (flag) => {
-  const words = snakecaseToTitlecase(flag).split(' ')
-  return `Ratio ${words[1]}/${words[2]}`
-}
 
 const CaseReviewStatus = React.memo(({ individual }) => (
   <CaseReviewDropdownContainer>
@@ -375,39 +361,6 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   paternalEthnicity: ETHNICITY_FIELD,
   population: {
     fieldDisplay: population => POPULATION_MAP[population] || population || 'Not Loaded',
-  },
-  [INDIVIDUAL_FIELD_FILTER_FLAGS]: {
-    fieldDisplay: filterFlags => Object.entries(filterFlags).map(([flag, val]) => (
-      <Label
-        key={flag}
-        basic
-        horizontal
-        color="orange"
-        content={`${FLAG_TITLE[flag] || snakecaseToTitlecase(flag)}: ${parseFloat(val).toFixed(2)}`}
-      />
-    )),
-  },
-  [INDIVIDUAL_FIELD_POP_FILTERS]: {
-    fieldDisplay: filterFlags => Object.keys(filterFlags).map(flag => (
-      <Label
-        key={flag}
-        basic
-        horizontal
-        color="orange"
-        content={flag.startsWith('r_') ? ratioLabel(flag) : snakecaseToTitlecase(flag.replace('n_', 'num._'))}
-      />
-    )),
-  },
-  [INDIVIDUAL_FIELD_SV_FLAGS]: {
-    fieldDisplay: filterFlags => filterFlags.map(flag => (
-      <Label
-        key={flag}
-        basic
-        horizontal
-        color="orange"
-        content={snakecaseToTitlecase(flag)}
-      />
-    )),
   },
   [INDIVIDUAL_FIELD_FEATURES]: { formFields: HPO_FORM_FIELDS },
   disorders: {
