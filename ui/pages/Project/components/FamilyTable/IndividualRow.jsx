@@ -23,7 +23,8 @@ import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import {
   AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
-  INDIVIDUAL_FIELD_AFFECTED, INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_DISPLAY_LOOKUP,
+  INDIVIDUAL_FIELD_AFFECTED, INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_FILTER_FLAGS, INDIVIDUAL_FIELD_POP_FILTERS,
+  INDIVIDUAL_FIELD_SV_FLAGS, INDIVIDUAL_FIELD_DISPLAY_LOOKUP,
 } from 'shared/utils/constants'
 
 import { updateIndividual } from 'redux/rootReducer'
@@ -375,7 +376,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   population: {
     fieldDisplay: population => POPULATION_MAP[population] || population || 'Not Loaded',
   },
-  filterFlags: {
+  [INDIVIDUAL_FIELD_FILTER_FLAGS]: {
     fieldDisplay: filterFlags => Object.entries(filterFlags).map(([flag, val]) => (
       <Label
         key={flag}
@@ -386,7 +387,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       />
     )),
   },
-  popPlatformFilters: {
+  [INDIVIDUAL_FIELD_POP_FILTERS]: {
     fieldDisplay: filterFlags => Object.keys(filterFlags).map(flag => (
       <Label
         key={flag}
@@ -397,7 +398,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       />
     )),
   },
-  svFlags: {
+  [INDIVIDUAL_FIELD_SV_FLAGS]: {
     fieldDisplay: filterFlags => filterFlags.map(flag => (
       <Label
         key={flag}

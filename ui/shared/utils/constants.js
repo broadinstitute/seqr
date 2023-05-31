@@ -364,6 +364,9 @@ export const INDIVIDUAL_FIELD_AFFECTED = 'affected'
 export const INDIVIDUAL_FIELD_NOTES = 'notes'
 export const INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP = 'probandRelationship'
 export const INDIVIDUAL_FIELD_FEATURES = 'features'
+export const INDIVIDUAL_FIELD_FILTER_FLAGS = 'filterFlags'
+export const INDIVIDUAL_FIELD_POP_FILTERS = 'popPlatformFilters'
+export const INDIVIDUAL_FIELD_SV_FLAGS = 'svFlags'
 
 export const INDIVIDUAL_FIELD_CONFIGS = {
   [FAMILY_FIELD_ID]: { label: 'Family ID' },
