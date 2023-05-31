@@ -7,7 +7,7 @@ import { Form, Header, Accordion, Icon, Tab } from 'semantic-ui-react'
 
 import { RadioGroup } from 'shared/components/form/Inputs'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
-import HpoPanel, { getHpoTermsForCategory, CATEGORY_NAMES } from 'shared/components/panel/HpoPanel'
+import { getHpoTermsForCategory, CATEGORY_NAMES } from 'shared/components/panel/HpoPanel'
 import DataLoader from 'shared/components/DataLoader'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
@@ -276,7 +276,6 @@ class HpoTermsEditor extends React.PureComponent {
 }
 
 export const HPO_FIELD_RENDER = { // eslint-disable-line import/prefer-default-export
-  fieldDisplay: individual => <HpoPanel individual={individual} />,
   formFields: [
     {
       name: 'nonstandardFeatures',

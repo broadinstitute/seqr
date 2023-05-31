@@ -23,7 +23,7 @@ import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import {
   AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
-  INDIVIDUAL_FIELD_AFFECTED,
+  INDIVIDUAL_FIELD_AFFECTED, INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_DISPLAY_LOOKUP,
 } from 'shared/utils/constants'
 
 import { updateIndividual } from 'redux/rootReducer'
@@ -408,7 +408,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       />
     )),
   },
-  features: HPO_FIELD_RENDER,
+  [INDIVIDUAL_FIELD_FEATURES]: HPO_FIELD_RENDER,
   disorders: {
     component: ListFieldView,
     formFieldProps: {
@@ -428,9 +428,11 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
 const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(
   ({ field, header, subFields, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate }) => {
     const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field]
-    const formattedField = {
-      field, fieldName: header, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate, ...fieldProps,
+    const fieldDisplay = INDIVIDUAL_FIELD_DISPLAY_LOOKUP[field]
+    const coreField = {
+      field, fieldName: header, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate, fieldDisplay,
     }
+    const formattedField = { ...coreField, ...fieldProps }
     if (subFields) {
       formattedField.formFields = subFields.map(subField => (
         { name: subField.field, label: subField.header, ...subFieldProps, ...(subFieldsLookup || {})[subField.field] }

@@ -5,9 +5,9 @@ import { connect } from 'react-redux'
 import { Popup, Icon, Header, Divider, Label } from 'semantic-ui-react'
 
 import { getSortedIndividualsByFamily, getGenesById } from 'redux/selectors'
+import { INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_DISPLAY_LOOKUP } from 'shared/utils/constants'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { VerticalSpacer } from '../../Spacers'
-import HpoPanel from '../HpoPanel'
 import { ColoredDiv } from '../../StyledComponents'
 
 const IndividualsContainer = styled.div`
@@ -379,9 +379,9 @@ const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet
           affected={individual.affected}
           label={<small>{individual.displayName}</small>}
           popupHeader={individual.displayName}
-          popupContent={
-            individual.features ? <HpoPanel individual={individual} /> : null
-          }
+          popupContent={[
+            INDIVIDUAL_FIELD_FEATURES,
+          ].map(field => individual[field] && INDIVIDUAL_FIELD_DISPLAY_LOOKUP[field](individual))}
         />
         <br />
         <Genotype variant={variant} individual={individual} isCompoundHet={isCompoundHet} genesById={genesById} />

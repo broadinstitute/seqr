@@ -15,6 +15,7 @@ import {
 
 import { stripMarkdown } from './stringUtils'
 import { ColoredIcon } from '../components/StyledComponents'
+import HpoPanel from '../components/panel/HpoPanel'
 
 export const ANVIL_URL = 'https://anvil.terra.bio'
 export const GOOGLE_LOGIN_URL = '/login/google-oauth2'
@@ -362,6 +363,7 @@ export const INDIVIDUAL_FIELD_SEX = 'sex'
 export const INDIVIDUAL_FIELD_AFFECTED = 'affected'
 export const INDIVIDUAL_FIELD_NOTES = 'notes'
 export const INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP = 'probandRelationship'
+export const INDIVIDUAL_FIELD_FEATURES = 'features'
 
 export const INDIVIDUAL_FIELD_CONFIGS = {
   [FAMILY_FIELD_ID]: { label: 'Family ID' },
@@ -395,7 +397,7 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
 export const INDIVIDUAL_HPO_EXPORT_DATA = [
   {
     header: 'HPO Terms (present)',
-    field: 'features',
+    field: INDIVIDUAL_FIELD_FEATURES,
     format: features => (features ? features.map(feature => `${feature.id} (${feature.label})`).join('; ') : ''),
     description: 'comma-separated list of HPO Terms for present phenotypes in this individual',
   },
@@ -439,6 +441,10 @@ export const INDIVIDUAL_EXPORT_DATA = [].concat(
   INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, [INDIVIDUAL_HAS_DATA_EXPORT_CONFIG],
   INDIVIDUAL_HPO_EXPORT_DATA,
 )
+
+export const INDIVIDUAL_FIELD_DISPLAY_LOOKUP = {
+  [INDIVIDUAL_FIELD_FEATURES]: individual => <HpoPanel key={INDIVIDUAL_FIELD_FEATURES} individual={individual} />,
+}
 
 // CLINVAR
 
