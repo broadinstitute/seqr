@@ -321,6 +321,8 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
   const showSecondaryQuality = !variant.svType && genotype.numAlt >= 0
   const secondaryQuality = genotype.ab || genotype.hl
 
+  const quality = Number.isInteger(genotype.gq) ? genotype.gq : genotype.qs
+
   const content = (
     <span>
       {genotype.otherSample && (
@@ -349,7 +351,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
           trigger={<Label horizontal size="mini" content={previousCall.content} color={previousCall.color} />}
         />
       )}
-      {genotype.gq || genotype.qs || '-'}
+      {Number.isInteger(quality) ? quality : '-'}
       {showSecondaryQuality && `, ${secondaryQuality ? secondaryQuality.toPrecision(2) : '-'}`}
       {variant.genotypeFilters && (
         <small>
