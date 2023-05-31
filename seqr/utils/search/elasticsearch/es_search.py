@@ -141,7 +141,7 @@ class EsSearch(object):
                     self.samples_by_family_index[alias_index] = {}
                 self.samples_by_family_index[alias_index].update(alias_samples)
 
-    def _filter_families_for_inheritance(self, inheritance_filter):
+    def _set_family_affected_status(self, inheritance_filter):
         for index, family_samples in list(self.samples_by_family_index.items()):
             for family_guid, samples_by_id in family_samples.items():
                 individual_affected_status = _get_family_affected_status(samples_by_id, inheritance_filter)
@@ -213,10 +213,11 @@ class EsSearch(object):
 
         inheritance_filter = inheritance_filter or {}
 
-        if inheritance_mode or inheritance_filter:
-            self._filter_families_for_inheritance(inheritance_filter)
+        quality_affected_only = quality_filter and quality_filter.get('affected_only')
+        if inheritance_mode or inheritance_filter or quality_affected_only:
+            self._set_family_affected_status(inheritance_filter)
 
-        quality_filters_by_family = self._get_quality_filters_by_family(quality_filter)
+        quality_filters_by_family = self._get_quality_filters_by_family(quality_filter, quality_affected_only)
 
         comp_het_dataset_type = dataset_type
         if dataset_type != secondary_dataset_type:
@@ -1233,7 +1234,7 @@ class EsSearch(object):
                 long_running.append({'task': task, 'parent_task_id': parent_id})
         return long_running
 
-    def _get_quality_filters_by_family(self, quality_filter):
+    def _get_quality_filters_by_family(self, quality_filter, affected_only):
         quality_field_configs = {
             'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_QUERY_FIELDS.items()
         }
@@ -1249,7 +1250,15 @@ class EsSearch(object):
             for index in self._indices:
                 family_samples_by_id = self.samples_by_family_index[index]
                 for family_guid, samples_by_id in family_samples_by_id.items():
-                    family_sample_ids[family_guid].update(samples_by_id.keys())
+                    if affected_only:
+                        family_affected_status = self._family_individual_affected_status[family_guid]
+                        sample_ids = {
+                            sample_id for sample_id, sample in samples_by_id.items()
+                            if family_affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED
+                        }
+                    else:
+                        sample_ids = samples_by_id.keys()
+                    family_sample_ids[family_guid].update(sample_ids)
 
             path_filter = self._get_clinvar_pathogenic_override_filter()
             for family_guid, sample_ids in sorted(family_sample_ids.items()):
