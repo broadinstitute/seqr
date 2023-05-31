@@ -386,7 +386,16 @@ const SV_INDIVIDUAL_DETAIL_FIELDS = [INDIVIDUAL_FIELD_SV_FLAGS, ...INDIVIDUAL_DE
 const IndividualDetailField = ({ field, individual }) => {
   const { individualFields, ...fieldProps } = INDIVIDUAL_FIELD_LOOKUP[field]
   const individualProps = individualFields ? individualFields(individual) : {}
-  return <div><BaseFieldView field={field} initialValues={individual} {...individualProps} {...fieldProps} /></div>
+  return (
+    <BaseFieldView
+      field={field}
+      initialValues={individual}
+      {...individualProps}
+      {...fieldProps}
+      compact
+      blockDisplay
+    />
+  )
 }
 
 IndividualDetailField.propTypes = {
