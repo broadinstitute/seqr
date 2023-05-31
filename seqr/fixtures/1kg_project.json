@@ -1407,6 +1407,101 @@
     }
 },
 {
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 3,
+    "fields": {
+        "sample": 151,
+        "gene_id": "ENSG00000106554",
+        "p_value": 0.1,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 1001,
+        "end": 2001,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.85,
+        "read_count": 1297,
+        "rare_disease_samples_with_junction": 1,
+        "rare_disease_samples_total": 20
+    }
+},
+{
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 4,
+    "fields": {
+        "sample": 151,
+        "gene_id": "ENSG00000106554",
+        "p_value": 0.0001,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 3000,
+        "end": 4000,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.85,
+        "read_count": 1297,
+        "rare_disease_samples_with_junction": 1,
+        "rare_disease_samples_total": 20
+    }
+},
+{
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 5,
+    "fields": {
+        "sample": 151,
+        "gene_id": "ENSG00000106554",
+        "p_value": 0.0001,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 5000,
+        "end": 6000,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.85,
+        "read_count": 1297,
+        "rare_disease_samples_with_junction": 1,
+        "rare_disease_samples_total": 20
+    }
+},
+{
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 6,
+    "fields": {
+        "sample": 152,
+        "gene_id": "ENSG00000106554",
+        "p_value": 0.001,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 7000,
+        "end": 8000,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.85,
+        "read_count": 1297,
+        "rare_disease_samples_with_junction": 1,
+        "rare_disease_samples_total": 20
+    }
+},
+{
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 7,
+    "fields": {
+        "sample": 152,
+        "gene_id": "ENSG00000106554",
+        "p_value": 0.2,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 9000,
+        "end": 9100,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.85,
+        "read_count": 1297,
+        "rare_disease_samples_with_junction": 1,
+        "rare_disease_samples_total": 20
+    }
+},
+{
     "model": "seqr.phenotypeprioritization",
     "pk": 1,
     "fields": {
