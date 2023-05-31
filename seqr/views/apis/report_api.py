@@ -1020,13 +1020,10 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
         if not value:
             if required:
                 missing.append(_get_row_id(row))
-            else:
-                if recommended:
-                    check_recommend_condition = WARN_MISSING_CONDITIONAL_COLUMNS.get(column)
-                    if not check_recommend_condition or check_recommend_condition(row):
-                        warn_missing.append(_get_row_id(row))
-                if enum:
-                    row[column] = 'NA'
+            elif recommended:
+                check_recommend_condition = WARN_MISSING_CONDITIONAL_COLUMNS.get(column)
+                if not check_recommend_condition or check_recommend_condition(row):
+                    warn_missing.append(_get_row_id(row))
         elif enum and value not in enum:
             invalid.append(f'{_get_row_id(row)} ({value})')
     if missing or warn_missing or invalid:
