@@ -5,7 +5,13 @@ import { connect } from 'react-redux'
 import { Popup, Icon, Header, Divider, Label } from 'semantic-ui-react'
 
 import { getSortedIndividualsByFamily, getGenesById } from 'redux/selectors'
-import { INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_LOOKUP } from 'shared/utils/constants'
+import {
+  INDIVIDUAL_FIELD_FEATURES,
+  INDIVIDUAL_FIELD_FILTER_FLAGS,
+  INDIVIDUAL_FIELD_POP_FILTERS,
+  INDIVIDUAL_FIELD_SV_FLAGS,
+  INDIVIDUAL_FIELD_LOOKUP,
+} from 'shared/utils/constants'
 import BaseFieldView from '../view-fields/BaseFieldView'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { VerticalSpacer } from '../../Spacers'
@@ -371,9 +377,16 @@ Genotype.propTypes = {
   genesById: PropTypes.object,
 }
 
+const INDIVIDUAL_DETAIL_FIELDS = [INDIVIDUAL_FIELD_FEATURES]
+const VARIANT_INDIVIDUAL_DETAIL_FIELDS = [
+  INDIVIDUAL_FIELD_FILTER_FLAGS, INDIVIDUAL_FIELD_POP_FILTERS, ...INDIVIDUAL_DETAIL_FIELDS,
+]
+const SV_INDIVIDUAL_DETAIL_FIELDS = [INDIVIDUAL_FIELD_SV_FLAGS, ...INDIVIDUAL_DETAIL_FIELDS]
+
 const IndividualDetailField = ({ field, individual }) => {
   const { individualFields, ...fieldProps } = INDIVIDUAL_FIELD_LOOKUP[field]
-  return <BaseFieldView field={field} initialValues={individual} {...individualFields(individual)} {...fieldProps} />
+  const individualProps = individualFields ? individualFields(individual) : {}
+  return <div><BaseFieldView field={field} initialValues={individual} {...individualProps} {...fieldProps} /></div>
 }
 
 IndividualDetailField.propTypes = {
@@ -390,7 +403,7 @@ const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet
           affected={individual.affected}
           label={<small>{individual.displayName}</small>}
           popupHeader={individual.displayName}
-          popupContent={[INDIVIDUAL_FIELD_FEATURES].map(field => (
+          popupContent={(variant.svType ? SV_INDIVIDUAL_DETAIL_FIELDS : VARIANT_INDIVIDUAL_DETAIL_FIELDS).map(field => (
             <IndividualDetailField key={field} field={field} individual={individual} />
           ))}
         />
