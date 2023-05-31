@@ -5,7 +5,8 @@ import { connect } from 'react-redux'
 import { Popup, Icon, Header, Divider, Label } from 'semantic-ui-react'
 
 import { getSortedIndividualsByFamily, getGenesById } from 'redux/selectors'
-import { INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_DISPLAY_LOOKUP } from 'shared/utils/constants'
+import { INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_LOOKUP } from 'shared/utils/constants'
+import BaseFieldView from '../view-fields/BaseFieldView'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { VerticalSpacer } from '../../Spacers'
 import { ColoredDiv } from '../../StyledComponents'
@@ -370,6 +371,16 @@ Genotype.propTypes = {
   genesById: PropTypes.object,
 }
 
+const IndividualDetailField = ({ field, individual }) => {
+  const { individualFields, ...fieldProps } = INDIVIDUAL_FIELD_LOOKUP[field]
+  return <BaseFieldView field={field} initialValues={individual} {...individualFields(individual)} {...fieldProps} />
+}
+
+IndividualDetailField.propTypes = {
+  individual: PropTypes.object,
+  field: PropTypes.string,
+}
+
 const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet, genesById }) => (
   <IndividualsContainer>
     {(individuals || []).map(individual => (
@@ -379,9 +390,9 @@ const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet
           affected={individual.affected}
           label={<small>{individual.displayName}</small>}
           popupHeader={individual.displayName}
-          popupContent={[
-            INDIVIDUAL_FIELD_FEATURES,
-          ].map(field => individual[field] && INDIVIDUAL_FIELD_DISPLAY_LOOKUP[field](individual))}
+          popupContent={[INDIVIDUAL_FIELD_FEATURES].map(field => (
+            <IndividualDetailField key={field} field={field} individual={individual} />
+          ))}
         />
         <br />
         <Genotype variant={variant} individual={individual} isCompoundHet={isCompoundHet} genesById={genesById} />

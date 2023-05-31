@@ -275,37 +275,31 @@ class HpoTermsEditor extends React.PureComponent {
 
 }
 
-export const HPO_FIELD_RENDER = { // eslint-disable-line import/prefer-default-export
-  formFields: [
-    {
-      name: 'nonstandardFeatures',
-      component: HpoTermsEditor,
-      format: val => getFlattenedHpoTermsByCategory([], val),
-      allowAdditions: false,
-      header: { content: 'Present', color: 'green' },
-    },
-    {
-      name: 'features',
-      component: HpoTermsEditor,
-      format: val => getFlattenedHpoTermsByCategory(val),
-      allowAdditions: true,
-    },
-    {
-      name: 'absentNonstandardFeatures',
-      component: HpoTermsEditor,
-      format: val => getFlattenedHpoTermsByCategory([], val),
-      allowAdditions: false,
-      header: { content: 'Not Present', color: 'red' },
-    },
-    {
-      name: 'absentFeatures',
-      component: HpoTermsEditor,
-      format: val => getFlattenedHpoTermsByCategory(val),
-      allowAdditions: true,
-    },
-  ],
-  individualFields: individual => ({
-    initialValues: { ...individual, individualField: 'hpo_terms' },
-    fieldValue: individual,
-  }),
-}
+export const HPO_FORM_FIELDS = [ // eslint-disable-line import/prefer-default-export
+  {
+    name: 'nonstandardFeatures',
+    component: HpoTermsEditor,
+    format: val => getFlattenedHpoTermsByCategory([], val),
+    allowAdditions: false,
+    header: { content: 'Present', color: 'green' },
+  },
+  {
+    name: 'features',
+    component: HpoTermsEditor,
+    format: val => getFlattenedHpoTermsByCategory(val),
+    allowAdditions: true,
+  },
+  {
+    name: 'absentNonstandardFeatures',
+    component: HpoTermsEditor,
+    format: val => getFlattenedHpoTermsByCategory([], val),
+    allowAdditions: false,
+    header: { content: 'Not Present', color: 'red' },
+  },
+  {
+    name: 'absentFeatures',
+    component: HpoTermsEditor,
+    format: val => getFlattenedHpoTermsByCategory(val),
+    allowAdditions: true,
+  },
+]

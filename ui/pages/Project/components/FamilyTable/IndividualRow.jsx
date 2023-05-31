@@ -24,13 +24,13 @@ import { VerticalSpacer } from 'shared/components/Spacers'
 import {
   AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED, INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_FILTER_FLAGS, INDIVIDUAL_FIELD_POP_FILTERS,
-  INDIVIDUAL_FIELD_SV_FLAGS, INDIVIDUAL_FIELD_DISPLAY_LOOKUP,
+  INDIVIDUAL_FIELD_SV_FLAGS, INDIVIDUAL_FIELD_LOOKUP,
 } from 'shared/utils/constants'
 
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid, getMmeSubmissionsByGuid } from 'redux/selectors'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
-import { HPO_FIELD_RENDER } from '../HpoTerms'
+import { HPO_FORM_FIELDS } from '../HpoTerms'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
   ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS,
@@ -409,7 +409,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       />
     )),
   },
-  [INDIVIDUAL_FIELD_FEATURES]: HPO_FIELD_RENDER,
+  [INDIVIDUAL_FIELD_FEATURES]: { formFields: HPO_FORM_FIELDS },
   disorders: {
     component: ListFieldView,
     formFieldProps: {
@@ -428,12 +428,11 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
 
 const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(
   ({ field, header, subFields, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate }) => {
-    const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field]
-    const fieldDisplay = INDIVIDUAL_FIELD_DISPLAY_LOOKUP[field]
+    const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field] || {}
     const coreField = {
-      field, fieldName: header, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate, fieldDisplay,
+      field, fieldName: header, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate,
     }
-    const formattedField = { ...coreField, ...fieldProps }
+    const formattedField = { ...(INDIVIDUAL_FIELD_LOOKUP[field] || {}), ...coreField, ...fieldProps }
     if (subFields) {
       formattedField.formFields = subFields.map(subField => (
         { name: subField.field, label: subField.header, ...subFieldProps, ...(subFieldsLookup || {})[subField.field] }

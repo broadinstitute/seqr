@@ -445,8 +445,14 @@ export const INDIVIDUAL_EXPORT_DATA = [].concat(
   INDIVIDUAL_HPO_EXPORT_DATA,
 )
 
-export const INDIVIDUAL_FIELD_DISPLAY_LOOKUP = {
-  [INDIVIDUAL_FIELD_FEATURES]: individual => <HpoPanel key={INDIVIDUAL_FIELD_FEATURES} individual={individual} />,
+export const INDIVIDUAL_FIELD_LOOKUP = {
+  [INDIVIDUAL_FIELD_FEATURES]: {
+    fieldDisplay: individual => <HpoPanel individual={individual} />,
+    individualFields: individual => ({
+      initialValues: { ...individual, individualField: 'hpo_terms' },
+      fieldValue: individual,
+    }),
+  },
 }
 
 // CLINVAR
