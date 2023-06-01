@@ -917,8 +917,8 @@
         "sample_id": "NA19679_S",
         "is_active": true,
         "elasticsearch_index":null,
-        "tissue_type": "M",
-        "data_source": "muscle_samples.tsv.gz",
+        "tissue_type": "F",
+        "data_source": "fibs_samples.tsv.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1373,7 +1373,7 @@
     "pk": 1,
     "fields": {
         "sample": 151,
-        "gene_id": "ENSG00000106554",
+        "gene_id": "ENSG00000268903",
         "p_value": 1.08E-56,
         "z_score": 12.34,
         "chrom": "7",
@@ -1411,7 +1411,7 @@
     "pk": 3,
     "fields": {
         "sample": 151,
-        "gene_id": "ENSG00000106554",
+        "gene_id": "ENSG00000268903",
         "p_value": 0.1,
         "z_score": 12.34,
         "chrom": "7",
@@ -1430,7 +1430,7 @@
     "pk": 4,
     "fields": {
         "sample": 151,
-        "gene_id": "ENSG00000106554",
+        "gene_id": "ENSG00000268903",
         "p_value": 0.0001,
         "z_score": 12.34,
         "chrom": "7",
@@ -1449,7 +1449,7 @@
     "pk": 5,
     "fields": {
         "sample": 151,
-        "gene_id": "ENSG00000106554",
+        "gene_id": "ENSG00000268903",
         "p_value": 0.0001,
         "z_score": 12.34,
         "chrom": "7",
@@ -1468,7 +1468,7 @@
     "pk": 6,
     "fields": {
         "sample": 152,
-        "gene_id": "ENSG00000106554",
+        "gene_id": "ENSG00000268903",
         "p_value": 0.001,
         "z_score": 12.34,
         "chrom": "7",
@@ -1487,7 +1487,7 @@
     "pk": 7,
     "fields": {
         "sample": 152,
-        "gene_id": "ENSG00000106554",
+        "gene_id": "ENSG00000268903",
         "p_value": 0.2,
         "z_score": 12.34,
         "chrom": "7",

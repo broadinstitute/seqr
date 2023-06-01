@@ -100,7 +100,7 @@ EXPECTED_SEARCH_RESPONSE = {
     },
     'locusListsByGuid': {LOCUS_LIST_GUID: {'intervals': mock.ANY}},
     'rnaSeqData': {
-        'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'spliceOutliers': {}},
+        'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'spliceOutliers': {'ENSG00000268903': mock.ANY}},
         'I000003_na19679': {'outliers': {}, 'spliceOutliers': {'ENSG00000268903': mock.ANY}},
     },
     'phenotypeGeneScores': {
@@ -145,6 +145,7 @@ def _get_compound_het_es_variants(results_model, **kwargs):
     return deepcopy(COMP_HET_VARAINTS), 1
 
 
+@mock.patch('seqr.views.utils.variant_utils.MAX_SIGNIFICANT_OUTLIER_NUM', 2)
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class VariantSearchAPITest(object):
 
@@ -167,6 +168,29 @@ class VariantSearchAPITest(object):
         self.assertEqual(response_json['familiesByGuid']['F000001_1']['displayName'], '1')
         self.assertEqual(response_json['familiesByGuid']['F000001_1']['analysisStatus'], 'Q')
 
+    def _assert_expected_rnaseq_response(self, response_json):
+        self.assertDictEqual(
+            response_json['rnaSeqData']['I000001_na19675']['outliers']['ENSG00000268903'][0],
+            {'geneId': 'ENSG00000268903', 'isSignificant': True, 'pAdjust': 1.39e-09, 'pValue': 5.88e-10,
+             'tissueType': None, 'zScore': 7.08}
+        )
+        self.assertIn(
+            {'chrom': '7', 'deltaPsi': 0.85, 'end': 8000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+             'pValue': 0.001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1, 'readCount': 1297,
+             'start': 7000, 'strand': '*', 'tissueType': 'M', 'type': 'psi5', 'zScore': 12.34},
+            response_json['rnaSeqData']['I000001_na19675']['spliceOutliers']['ENSG00000268903']
+        )
+        self.assertDictEqual(
+            response_json['rnaSeqData']['I000003_na19679']['spliceOutliers']['ENSG00000268903'][0],
+            {'chrom': '7', 'deltaPsi': 0.65, 'end': 132886934, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+             'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 23, 'rareDiseaseSamplesWithJunction': 2, 'readCount': 234,
+             'start': 132885754, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'zScore': 12.34}
+        )
+        fibs_significant_outliers = [
+            outlier for outlier in response_json['rnaSeqData']['I000001_na19675']['spliceOutliers']['ENSG00000268903']
+            if outlier['tissueType'] == 'F' and outlier['isSignificant']
+        ]
+        self.assertEqual(2, len(fibs_significant_outliers))
 
     def _assert_expected_results_family_context(self, response_json, locus_list_detail=False):
         self._assert_expected_results_context(response_json, locus_list_detail=locus_list_detail)
@@ -191,7 +215,9 @@ class VariantSearchAPITest(object):
         self.assertEqual(len(response_json['familyNotesByGuid']), 3)
         self.assertSetEqual(set(response_json['familyNotesByGuid']['FAN000001_1'].keys()), FAMILY_NOTE_FIELDS)
 
-    def _assert_expected_results_context(self, response_json, has_pa_detail=True, locus_list_detail=False):
+        self._assert_expected_rnaseq_response(response_json)
+
+    def _assert_expected_results_context(self, response_json, has_pa_detail=True, locus_list_detail=False, rnaseq=True):
         gene_fields = {'locusListGuids'}
         gene_fields.update(GENE_VARIANT_FIELDS)
         basic_gene_id = next(gene_id for gene_id in ['ENSG00000268903', 'ENSG00000233653'] if gene_id in response_json['genesById'])
@@ -225,6 +251,8 @@ class VariantSearchAPITest(object):
         if response_json['variantFunctionalDataByGuid']:
             self.assertSetEqual(set(next(iter(response_json['variantFunctionalDataByGuid'].values())).keys()), FUNCTIONAL_FIELDS)
 
+        if rnaseq:
+            self._assert_expected_rnaseq_response(response_json)
 
     @mock.patch('seqr.utils.middleware.logger.error')
     @mock.patch('seqr.views.apis.variant_search_api.get_variant_query_gene_counts')
@@ -427,7 +455,7 @@ class VariantSearchAPITest(object):
         })
         expected_search_response['search']['totalResults'] = 1
         self.assertDictEqual(response_json, expected_search_response)
-        self._assert_expected_results_context(response_json, has_pa_detail=False)
+        self._assert_expected_results_context(response_json, has_pa_detail=False, rnaseq=False)
         mock_error_logger.assert_not_called()
 
         # Test cross-project discovery for analyst users

@@ -30,7 +30,7 @@ export const getIndividualGeneDataByFamilyGene = createSelector(
       if (rnaSeqData) {
         acc[familyGuid] = acc[familyGuid] || {}
         acc[familyGuid].rnaSeqData = Object.entries(rnaSeqData).reduce(
-          (acc2, [geneId, data]) => (data.isSignificant ? {
+          (acc2, [geneId, [data]]) => (data.isSignificant ? {
             ...acc2,
             [geneId]: [...(acc2[geneId] || []), { ...data, individualName: displayName }],
           } : acc2), acc[familyGuid].rnaSeqData || {},

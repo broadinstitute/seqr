@@ -132,7 +132,7 @@ def _add_locus_lists(projects, genes, add_list_detail=False, user=None):
 
 
 def _get_rna_seq_outliers(gene_ids, family_guids):
-    data_by_individual_gene = defaultdict(lambda: {'outliers': {}, 'spliceOutliers': {}})
+    data_by_individual_gene = defaultdict(lambda: {'outliers': defaultdict(list), 'spliceOutliers': defaultdict(list)})
 
     for outlier, outlier_cls, max_sign in [('outliers', RnaSeqOutlier, None),
                                            ('spliceOutliers', RnaSeqSpliceOutlier, MAX_SIGNIFICANT_OUTLIER_NUM)]:
@@ -147,7 +147,7 @@ def _get_rna_seq_outliers(gene_ids, family_guids):
             max_significant_num_per_tissue=max_sign,
         )
         for data in outlier_data:
-            data_by_individual_gene[data.pop('individualGuid')][outlier][data['geneId']] = data
+            data_by_individual_gene[data.pop('individualGuid')][outlier][data['geneId']].append(data)
 
     return data_by_individual_gene
 

@@ -764,7 +764,7 @@ def get_json_for_rna_seq_outliers(models, max_significant_num_per_tissue=None, *
     if max_significant_num_per_tissue:
         models = models.annotate(place=Window(
             expression=DenseRank(),
-            partition_by=[F("sample__tissue_type")],
+            partition_by=[F('sample__tissue_type'), F('sample__individual_id')],
             order_by=[F(significant_field), F('id')],  # Adding `id` to the sorting key to remove duplications
         ))
         significant_filter['place__lt'] = max_significant_num_per_tissue + 1
