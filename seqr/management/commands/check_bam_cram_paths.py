@@ -31,7 +31,7 @@ class Command(BaseCommand):
             individual__family__project__name__in=args
         ) if args else IgvSample.objects.all()).filter(
             file_path__startswith='gs://'
-        ).prefetch_related('individual', 'individual__family__project')
+        ).order_by('id').prefetch_related('individual', 'individual__family__project')
 
         missing_counter = collections.defaultdict(int)
         guids_of_samples_with_missing_file = set()
