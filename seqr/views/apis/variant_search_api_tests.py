@@ -174,23 +174,21 @@ class VariantSearchAPITest(object):
             {'geneId': 'ENSG00000268903', 'isSignificant': True, 'pAdjust': 1.39e-09, 'pValue': 5.88e-10,
              'tissueType': None, 'zScore': 7.08}
         )
-        self.assertIn(
-            {'chrom': '7', 'deltaPsi': 0.85, 'end': 8000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
-             'pValue': 0.001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1, 'readCount': 1297,
-             'start': 7000, 'strand': '*', 'tissueType': 'M', 'type': 'psi5', 'zScore': 12.34},
-            response_json['rnaSeqData']['I000001_na19675']['spliceOutliers']['ENSG00000268903']
+        self.assertListEqual(
+            response_json['rnaSeqData']['I000001_na19675']['spliceOutliers']['ENSG00000268903'],
+            [{'chrom': '7', 'deltaPsi': 0.85, 'end': 132886973, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+              'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1, 'readCount': 1297,
+              'start': 132885746, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'zScore': 12.34},
+             {'chrom': '7', 'deltaPsi': 0.85, 'end': 4000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+              'pValue': 0.0001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1, 'readCount': 1297,
+              'start': 3000, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'zScore': 12.34},
+             {'chrom': '7', 'deltaPsi': 0.85, 'end': 6000, 'geneId': 'ENSG00000268903', 'isSignificant': False,
+              'pValue': 0.0001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1, 'readCount': 1297,
+              'start': 5000, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'zScore': 12.34},
+             {'chrom': '7', 'deltaPsi': 0.85, 'end': 8000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+              'pValue': 0.001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1, 'readCount': 1297,
+              'start': 7000, 'strand': '*', 'tissueType': 'M', 'type': 'psi5', 'zScore': 12.34}]
         )
-        self.assertDictEqual(
-            response_json['rnaSeqData']['I000003_na19679']['spliceOutliers']['ENSG00000268903'][0],
-            {'chrom': '7', 'deltaPsi': 0.65, 'end': 132886934, 'geneId': 'ENSG00000268903', 'isSignificant': True,
-             'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 23, 'rareDiseaseSamplesWithJunction': 2, 'readCount': 234,
-             'start': 132885754, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'zScore': 12.34}
-        )
-        fibs_significant_outliers = [
-            outlier for outlier in response_json['rnaSeqData']['I000001_na19675']['spliceOutliers']['ENSG00000268903']
-            if outlier['tissueType'] == 'F' and outlier['isSignificant']
-        ]
-        self.assertEqual(2, len(fibs_significant_outliers))
 
     def _assert_expected_results_family_context(self, response_json, locus_list_detail=False):
         self._assert_expected_results_context(response_json, locus_list_detail=locus_list_detail)
