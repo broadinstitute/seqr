@@ -1114,7 +1114,7 @@ for fam_q in COMPOUND_HET_PATH_INHERITANCE_QUERY['bool']['should']:
     fam_quality_q = fam_q['bool']['must'][1]
     fam_quality_q['bool'] = {'should': [
         deepcopy(fam_quality_q),
-        {'terms': {'clinvar_clinical_significance': ['Pathogenic', 'Pathogenic/Likely_pathogenic']}}
+        {'regexp': {'clinvar_clinical_significance': '.*Pathogenic.*'}}
     ]}
 
 RECESSIVE_INHERITANCE_QUERY = {
@@ -1693,10 +1693,8 @@ class EsUtilsTest(TestCase):
                                 {'range': {'gnomad_genomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.05}}}
                             ]
                         }},
-                        {'terms': {
-                            'clinvar_clinical_significance': [
-                                'Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic',
-                            ]
+                        {'regexp': {
+                            'clinvar_clinical_significance': '.*Likely_pathogenic.*|.*Pathogenic.*',
                         }}
                     ]
                 }},
@@ -1720,11 +1718,8 @@ class EsUtilsTest(TestCase):
                                 'intergenic_variant',
                             ]
                         }},
-                        {'terms': {
-                            'clinvar_clinical_significance': [
-                                'Conflicting_interpretations_of_pathogenicity', 'Likely_pathogenic', 'Pathogenic',
-                                'Pathogenic/Likely_pathogenic', 'Uncertain_significance', 'not_provided', 'other',
-                            ]
+                        {'regexp': {
+                            'clinvar_clinical_significance': '.*Likely_pathogenic.*|.*Pathogenic.*|Conflicting_interpretations_of_pathogenicity.*|~((.*[Bb]enign.*)|(.*[Pp]athogenic.*))',
                         }},
                         {'terms': {'hgmd_class': ['DM', 'DM?']}},
                         {'range': {'splice_ai_delta_score': {'gte': 0.8}}},
@@ -1768,8 +1763,8 @@ class EsUtilsTest(TestCase):
                                     {'term': {'samples_gq_5_to_10': 'HG00731'}},
                                     {'term': {'samples_gq_10_to_15': 'HG00731'}},
                                 ],
-                            }}, {'terms': {
-                                'clinvar_clinical_significance': ['Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic']
+                            }}, {'regexp': {
+                                'clinvar_clinical_significance': '.*Likely_pathogenic.*|.*Pathogenic.*'
                             }}]}}
                         ],
                     }},
@@ -1795,8 +1790,8 @@ class EsUtilsTest(TestCase):
                                     {'term': {'samples_gq_5_to_10': 'NA20870'}},
                                     {'term': {'samples_gq_10_to_15': 'NA20870'}},
                                 ]
-                            }}, {'terms': {
-                                'clinvar_clinical_significance': ['Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic']
+                            }}, {'regexp': {
+                                'clinvar_clinical_significance': '.*Likely_pathogenic.*|.*Pathogenic.*',
                             }}]}}
                         ],
                         '_name': 'F000003_3'
@@ -1898,10 +1893,8 @@ class EsUtilsTest(TestCase):
 
         variants, _ = query_variants(results_model, num_results=5)
         self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_NO_CONSEQUENCE_FILTER_VARIANTS + [PARSED_MITO_VARIANT])
-        path_filter = {'terms': {
-            'clinvar_clinical_significance': [
-                'Pathogenic', 'Pathogenic/Likely_pathogenic'
-            ]
+        path_filter = {'regexp': {
+            'clinvar_clinical_significance':  '.*Pathogenic.*'
         }}
         self.assertExecutedSearches([
             dict(filters=[path_filter], start_index=0, size=5, index=SV_INDEX_NAME),
@@ -2018,7 +2011,7 @@ class EsUtilsTest(TestCase):
         })
 
         annotation_query = {'bool': {'should': [
-            {'terms': {'clinvar_clinical_significance': ['Pathogenic', 'Pathogenic/Likely_pathogenic']}},
+            {'regexp': {'clinvar_clinical_significance': '.*Pathogenic.*'}},
             {'terms': {'hgmd_class': ['DM']}},
             {'range': {'splice_ai_delta_score': {'gte': 0.5}}},
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'intron']}},

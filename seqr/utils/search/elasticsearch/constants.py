@@ -55,20 +55,7 @@ INHERITANCE_FILTERS = {
 
 PATH_FREQ_OVERRIDE_CUTOFF = 0.05
 
-CLINVAR_SIGNFICANCE_MAP = {
-    'pathogenic': ['Pathogenic', 'Pathogenic/Likely_pathogenic'],
-    'likely_pathogenic': ['Likely_pathogenic', 'Pathogenic/Likely_pathogenic'],
-    'benign': ['Benign', 'Benign/Likely_benign'],
-    'likely_benign': ['Likely_benign', 'Benign/Likely_benign'],
-    'vus_or_conflicting': [
-        'Conflicting_interpretations_of_pathogenicity',
-        'Uncertain_significance',
-        'not_provided',
-        'other'
-    ],
-}
-CLINVAR_PATH_SIGNIFICANCES = set(CLINVAR_SIGNFICANCE_MAP['pathogenic'])
-CLINVAR_PATH_SIGNIFICANCES.update(CLINVAR_SIGNFICANCE_MAP['likely_pathogenic'])
+CLINVAR_PATH_SIGNIFICANCES = {'pathogenic', 'likely_pathogenic'}
 
 HGMD_CLASS_MAP = {
     'disease_causing': ['DM'],
