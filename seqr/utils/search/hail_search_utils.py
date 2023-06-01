@@ -9,6 +9,14 @@ from seqr.utils.xpos_utils import MIN_POS, MAX_POS
 from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
 
 
+def _hail_backend_url(path):
+    return f'{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'
+
+
+def ping_hail_backend():
+    requests.get(_hail_backend_url('status')).raise_for_status()
+
+
 def get_hail_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100,
                       gene_agg=False, **kwargs):
 
@@ -33,9 +41,7 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     _parse_location_search(search_body)
 
     path = 'gene_counts' if gene_agg else 'search'
-    response = requests.post(
-        f'{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}', json=search_body, timeout=300,
-    )
+    response = requests.post(_hail_backend_url(path), json=search_body, timeout=300)
     response.raise_for_status()
     response_json = response.json()
 

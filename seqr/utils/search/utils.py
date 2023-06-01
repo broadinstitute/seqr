@@ -9,7 +9,7 @@ from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
-from seqr.utils.search.hail_search_utils import get_hail_variants
+from seqr.utils.search.hail_search_utils import get_hail_variants, ping_hail_backend
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 
@@ -50,7 +50,7 @@ def backend_specific_call(es_func, other_func=_no_backend_error):
 
 
 def ping_search_backend():
-    backend_specific_call(ping_elasticsearch)()
+    backend_specific_call(ping_elasticsearch, ping_hail_backend)()
 
 
 def get_search_backend_status():
