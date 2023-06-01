@@ -38,11 +38,11 @@ DATASET_TYPES_LOOKUP = {
 DATASET_TYPES_LOOKUP[ALL_DATA_TYPES] = [dt for dts in DATASET_TYPES_LOOKUP.values() for dt in dts]
 
 
-def _no_backend_error(*args, **kwargs):
+def _no_es_error(*args, **kwargs):
     raise InvalidSearchException('Elasticsearch backend is disabled')
 
 
-def backend_specific_call(es_func, other_func=_no_backend_error):
+def backend_specific_call(es_func, other_func):
     if es_backend_enabled():
         return es_func
     else:
@@ -58,7 +58,7 @@ def ping_search_backend_admin():
 
 
 def get_search_backend_status():
-    return backend_specific_call(get_elasticsearch_status)()
+    return backend_specific_call(get_elasticsearch_status, _no_es_error)()
 
 
 def _get_filtered_search_samples(search_filter, active_only=True):
@@ -103,11 +103,11 @@ def delete_search_backend_data(data_id):
         projects = set(active_samples.values_list('individual__family__project__name', flat=True))
         raise InvalidSearchException(f'"{data_id}" is still used by: {", ".join(projects)}')
 
-    return backend_specific_call(delete_es_index)(data_id)
+    return backend_specific_call(delete_es_index, _no_es_error)(data_id)
 
 
 def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
-    variants = backend_specific_call(get_es_variants_for_variant_ids)(
+    variants = backend_specific_call(get_es_variants_for_variant_ids, _no_es_error)(  # TODO
         *_get_families_search_data(families), [variant_id], user, return_all_queried_families=return_all_queried_families,
     )
     if not variants:
@@ -116,7 +116,7 @@ def get_single_variant(families, variant_id, return_all_queried_families=False, 
 
 
 def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
-    return backend_specific_call(get_es_variants_for_variant_ids)(
+    return backend_specific_call(get_es_variants_for_variant_ids, _no_es_error)(  # TODO
         *_get_families_search_data(families), variant_ids, user, dataset_type=dataset_type,
     )
 
