@@ -5,16 +5,8 @@ import { Label, Popup } from 'semantic-ui-react'
 
 import { getSortedIndividualsByFamily, getRnaSeqSignificantJunctionData } from 'redux/selectors'
 import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
-import RnaSeqJunctionOutliersTable, { JUNCTION_COLUMN, OTHER_SPLICE_COLUMNS } from 'shared/components/table/RnaSeqJunctionOutliersTable'
+import RnaSeqJunctionOutliersTable from 'shared/components/table/RnaSeqJunctionOutliersTable'
 import { variantIntervalOverlap } from './VariantUtils'
-
-const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', format: ({ individualName }) => (<b>{individualName}</b>) }
-
-const RNA_SEQ_SPLICE_POPUP_COLUMNS = [
-  INDIVIDUAL_NAME_COLUMN,
-  { ...JUNCTION_COLUMN, format: null },
-  ...OTHER_SPLICE_COLUMNS,
-]
 
 const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: true }
 
@@ -40,7 +32,7 @@ const BaseSpliceOutlierLabel = React.memo((
     <RnaSeqJunctionOutliersTable
       {...HOVER_DATA_TABLE_PROPS}
       data={overlappedOutliers}
-      columns={RNA_SEQ_SPLICE_POPUP_COLUMNS}
+      showPopupColumns
     />
   )
   return (
