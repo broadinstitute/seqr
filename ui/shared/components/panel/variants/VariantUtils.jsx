@@ -60,3 +60,19 @@ export const ProteinSequence = React.memo(({ hgvs }) => <Sequence color="black" 
 ProteinSequence.propTypes = {
   hgvs: PropTypes.string.isRequired,
 }
+
+export const variantIntervalOverlap = (variant, padding = 0) => (interval) => {
+  const { pos, end, genomeVersion, liftedOverPos } = variant
+  const variantPos = genomeVersion === interval.genomeVersion ? pos : liftedOverPos
+  if (!variantPos) {
+    return false
+  }
+  if ((variantPos >= interval.start - padding) && (variantPos <= interval.end + padding)) {
+    return true
+  }
+  if (end && !variant.endChrom) {
+    const variantPosEnd = variantPos + (end - pos)
+    return (variantPosEnd >= interval.start - padding) && (variantPosEnd <= interval.end + padding)
+  }
+  return false
+}

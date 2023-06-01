@@ -12,7 +12,7 @@ import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts from './Transcripts'
 import VariantGenes, { LocusListLabels } from './VariantGene'
-import { getLocus, has37Coords, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
+import { getLocus, has37Coords, Sequence, ProteinSequence, TranscriptLink, variantIntervalOverlap } from './VariantUtils'
 import { GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS } from '../../../utils/constants'
 import SpliceOutlierLabel from './SpliceOutlierLabel'
 
@@ -294,26 +294,14 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, fa
   if (!locusListIntervalsByProject || locusListIntervalsByProject.length < 1) {
     return null
   }
-  const { pos, end, genomeVersion, liftedOverPos, familyGuids = [] } = variant
+  const { familyGuids = [] } = variant
   const locusListIntervals = familyGuids.reduce((acc, familyGuid) => ([
     ...acc, ...(locusListIntervalsByProject[familiesByGuid[familyGuid].projectGuid] || [])]), [])
   if (locusListIntervals.length < 1) {
     return null
   }
-  const locusListGuids = locusListIntervals.filter((interval) => {
-    const variantPos = genomeVersion === interval.genomeVersion ? pos : liftedOverPos
-    if (!variantPos) {
-      return false
-    }
-    if ((variantPos >= interval.start) && (variantPos <= interval.end)) {
-      return true
-    }
-    if (end && !variant.endChrom) {
-      const variantPosEnd = variantPos + (end - pos)
-      return (variantPosEnd >= interval.start) && (variantPosEnd <= interval.end)
-    }
-    return false
-  }).map(({ locusListGuid }) => locusListGuid)
+  const locusListGuids = locusListIntervals.filter(variantIntervalOverlap(variant))
+    .map(({ locusListGuid }) => locusListGuid)
 
   return locusListGuids.length > 0 && <LocusListLabels locusListGuids={locusListGuids} />
 })
