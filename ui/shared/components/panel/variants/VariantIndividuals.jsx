@@ -5,9 +5,16 @@ import { connect } from 'react-redux'
 import { Popup, Icon, Header, Divider, Label } from 'semantic-ui-react'
 
 import { getSortedIndividualsByFamily, getGenesById } from 'redux/selectors'
+import {
+  INDIVIDUAL_FIELD_FEATURES,
+  INDIVIDUAL_FIELD_FILTER_FLAGS,
+  INDIVIDUAL_FIELD_POP_FILTERS,
+  INDIVIDUAL_FIELD_SV_FLAGS,
+  INDIVIDUAL_FIELD_LOOKUP,
+} from 'shared/utils/constants'
+import BaseFieldView from '../view-fields/BaseFieldView'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { VerticalSpacer } from '../../Spacers'
-import HpoPanel from '../HpoPanel'
 import { ColoredDiv } from '../../StyledComponents'
 
 const IndividualsContainer = styled.div`
@@ -62,6 +69,8 @@ const AlleleContainer = styled(Header).attrs({ size: 'medium' })`
      }
   }
 `
+
+const WarningIcon = styled(Icon).attrs({ name: 'warning sign', color: 'yellow' })``
 
 const PAR_REGIONS = {
   37: {
@@ -155,7 +164,7 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
     {warning && (
       <Popup
         wide
-        trigger={<Icon name="warning sign" color="yellow" />}
+        trigger={<WarningIcon />}
         content={
           <div>
             <b>Warning: </b>
@@ -370,6 +379,32 @@ Genotype.propTypes = {
   genesById: PropTypes.object,
 }
 
+const INDIVIDUAL_DETAIL_FIELDS = [INDIVIDUAL_FIELD_FEATURES]
+const VARIANT_INDIVIDUAL_DETAIL_FIELDS = [
+  INDIVIDUAL_FIELD_FILTER_FLAGS, INDIVIDUAL_FIELD_POP_FILTERS, ...INDIVIDUAL_DETAIL_FIELDS,
+]
+const SV_INDIVIDUAL_DETAIL_FIELDS = [INDIVIDUAL_FIELD_SV_FLAGS, ...INDIVIDUAL_DETAIL_FIELDS]
+
+const IndividualDetailField = ({ field, individual }) => {
+  const { individualFields, ...fieldProps } = INDIVIDUAL_FIELD_LOOKUP[field]
+  const individualProps = individualFields ? individualFields(individual) : {}
+  return (
+    <BaseFieldView
+      field={field}
+      initialValues={individual}
+      {...individualProps}
+      {...fieldProps}
+      compact
+      blockDisplay
+    />
+  )
+}
+
+IndividualDetailField.propTypes = {
+  individual: PropTypes.object,
+  field: PropTypes.string,
+}
+
 const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet, genesById }) => (
   <IndividualsContainer>
     {(individuals || []).map(individual => (
@@ -377,11 +412,16 @@ const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet
         <PedigreeIcon
           sex={individual.sex}
           affected={individual.affected}
-          label={<small>{individual.displayName}</small>}
+          label={(
+            <small>
+              {individual.displayName}
+              {variant.svType && individual[INDIVIDUAL_FIELD_SV_FLAGS] && <WarningIcon />}
+            </small>
+          )}
           popupHeader={individual.displayName}
-          popupContent={
-            individual.features ? <HpoPanel individual={individual} /> : null
-          }
+          popupContent={(variant.svType ? SV_INDIVIDUAL_DETAIL_FIELDS : VARIANT_INDIVIDUAL_DETAIL_FIELDS).map(field => (
+            <IndividualDetailField key={field} field={field} individual={individual} />
+          ))}
         />
         <br />
         <Genotype variant={variant} individual={individual} isCompoundHet={isCompoundHet} genesById={genesById} />
