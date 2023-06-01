@@ -673,7 +673,7 @@ ANALYTE_TABLE_COLUMNS = [
     'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
     'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status', 'age_at_collection',
     'participant_drugs_intake', 'participant_special_diet', 'hours_since_last_meal', 'passage_number', 'time_to_freeze',
-    'sample_transformation_detail',
+    'sample_transformation_detail', 'quality_issues',
 ]
 EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
     'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
@@ -686,7 +686,9 @@ READ_TABLE_AIRTABLE_FIELDS = [
     'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
     'alignment_software', 'mean_coverage', 'analysis_details',
 ]
-READ_TABLE_COLUMNS = ['aligned_dna_short_read_id', 'experiment_dna_short_read_id'] + READ_TABLE_AIRTABLE_FIELDS
+READ_TABLE_COLUMNS = ['aligned_dna_short_read_id', 'experiment_dna_short_read_id'] + READ_TABLE_AIRTABLE_FIELDS + ['quality_issues']
+READ_TABLE_COLUMNS.insert(6, 'reference_assembly_details')
+READ_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')
 READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
 CALLED_TABLE_COLUMNS = [
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
@@ -707,14 +709,22 @@ TABLE_COLUMNS = {
 WARN_MISSING_TABLE_COLUMNS = {
     'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
 }
+WARN_MISSING_CONDITIONAL_COLUMNS = {
+    'reported_race': lambda row: not row['ancestry_detail'],
+    'age_at_enrollment': lambda row: row['affected_status'] == 'Affected'
+}
 
 GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
 GREGOR_ANCESTRY_DETAIL_MAP.pop(MIDDLE_EASTERN)
+GREGOR_ANCESTRY_DETAIL_MAP.update({
+    HISPANIC: 'Other',
+    OTHER_POPULATION: 'Other',
+})
 GREGOR_ANCESTRY_MAP = deepcopy(ANCESTRY_MAP)
 GREGOR_ANCESTRY_MAP.update({
     MIDDLE_EASTERN: 'Middle Eastern or North African',
-    HISPANIC: 'Unknown',
-    OTHER_POPULATION: 'Unknown',
+    HISPANIC: None,
+    OTHER_POPULATION: None,
 })
 
 HPO_QUALIFIERS = {
@@ -887,10 +897,10 @@ def _get_participant_row(individual, airtable_sample):
         'proband_relationship': individual.get_proband_relationship_display(),
         'sex': individual.get_sex_display(),
         'affected_status': individual.get_affected_display(),
-        'reported_race': GREGOR_ANCESTRY_MAP.get(individual.population, 'Unknown'),
+        'reported_race': GREGOR_ANCESTRY_MAP.get(individual.population),
         'ancestry_detail': GREGOR_ANCESTRY_DETAIL_MAP.get(individual.population),
-        'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else 'Unknown',
-        'recontactable': airtable_sample.get('Recontactable') or 'Unknown',
+        'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else None,
+        'recontactable': airtable_sample.get('Recontactable'),
     }
     if individual.birth_year and individual.birth_year > 0:
         participant.update({
@@ -1011,7 +1021,9 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
             if required:
                 missing.append(_get_row_id(row))
             elif recommended:
-                warn_missing.append(_get_row_id(row))
+                check_recommend_condition = WARN_MISSING_CONDITIONAL_COLUMNS.get(column)
+                if not check_recommend_condition or check_recommend_condition(row):
+                    warn_missing.append(_get_row_id(row))
         elif enum and value not in enum:
             invalid.append(f'{_get_row_id(row)} ({value})')
     if missing or warn_missing or invalid:
