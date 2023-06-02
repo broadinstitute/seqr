@@ -1066,12 +1066,15 @@ export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectB
     familyGuid => projectByGuid[familiesByGuid[familyGuid].projectGuid].enableHgmd,
   )) && variant.hgmd && variant.hgmd.class
 
-export const clinvarSignificance = (clinvar) => {
-  let { pathogenicity, assertions } = clinvar || {}
-  if (!pathogenicity) {
-    [pathogenicity, ...assertions] = (clinvar.clinicalSignificance || '').split(/[,|]/)
+export const clinvarSignificance = (clinvar = {}) => {
+  let { pathogenicity, assertions } = clinvar
+  const { clinicalSignificance } = clinvar
+  if (clinicalSignificance && !pathogenicity) {
+    [pathogenicity, ...assertions] = clinicalSignificance.split(/[,|]/)
     if (pathogenicity === 'Pathogenic/Likely_pathogenic/Pathogenic') {
       pathogenicity = 'Pathogenic/Likely_pathogenic'
+    } else if (pathogenicity === 'Pathogenic/Pathogenic') {
+      pathogenicity = 'Pathogenic'
     }
     if (!(pathogenicity.replace(' ', '_').toLowerCase() in CLINVAR_PATHOGENICITIES)) {
       assertions = [pathogenicity, ...assertions]
@@ -1080,7 +1083,7 @@ export const clinvarSignificance = (clinvar) => {
     assertions = assertions.map(a => a.replace(/^_/, ''))
   }
 
-  return { pathogenicity, assertions, severity: CLINVAR_PATHOGENICITIES[pathogenicity.replace(' ', '_').toLowerCase()] }
+  return { pathogenicity, assertions, severity: CLINVAR_PATHOGENICITIES[pathogenicity?.replace(' ', '_').toLowerCase()] }
 }
 
 export const clinvarColor = (severity, pathColor, riskColor, benignColor) => {
