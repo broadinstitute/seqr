@@ -4,7 +4,7 @@ from datetime import timedelta
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
-    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, DATASET_TYPES_LOOKUP
+    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
@@ -28,6 +28,14 @@ SEARCH_EXCEPTION_MESSAGE_MAP.update(ES_EXCEPTION_MESSAGE_MAP)
 
 ERROR_LOG_EXCEPTIONS = set()
 ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
+
+DATASET_TYPES_LOOKUP = {
+    data_types[0]: data_types for data_types in [
+        [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS],
+        [Sample.DATASET_TYPE_SV_CALLS],
+    ]
+}
+DATASET_TYPES_LOOKUP[ALL_DATA_TYPES] = [dt for dts in DATASET_TYPES_LOOKUP.values() for dt in dts]
 
 
 def _raise_search_error(error):
@@ -66,16 +74,16 @@ def get_search_samples(projects, active_only=True):
     return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
-def _get_families_search_data(families, dataset_types=None):
+def _get_families_search_data(families, dataset_type=None):
     samples = _get_filtered_search_samples({'individual__family__in': families})
     if len(samples) < 1:
         raise InvalidSearchException('No search data found for families {}'.format(
             ', '.join([f.family_id for f in families])))
 
-    if dataset_types:
-        samples = samples.filter(dataset_type__in=dataset_types)
+    if dataset_type:
+        samples = samples.filter(dataset_type__in=DATASET_TYPES_LOOKUP[dataset_type])
         if not samples:
-            raise InvalidSearchException(f'Unable to search against dataset type "{dataset_types[0]}"')
+            raise InvalidSearchException(f'Unable to search against dataset type "{dataset_type}"')
 
     projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name')
     project_versions = defaultdict(set)
@@ -102,18 +110,34 @@ def delete_search_backend_data(data_id):
     )(data_id)
 
 
-def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
-    variants = backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
-        *_get_families_search_data(families), [variant_id], user, return_all_queried_families=return_all_queried_families,
-    )
+def get_single_variant(families, variant_id, **kwargs):
+    variants = get_variants_for_variant_ids(families, [variant_id], **kwargs)
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variants[0]
 
 
-def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
-    return backend_specific_call(get_es_variants_for_variant_ids, _raise_search_error('Elasticsearch backend is disabled'))(  # TODO
-        *_get_families_search_data(families), variant_ids, user, dataset_type=dataset_type,
+def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, **kwargs):
+    parsed_variant_ids = {}
+    for variant_id in variant_ids:
+        try:
+            parsed_variant_ids[variant_id] = _parse_variant_id(variant_id)
+        except (KeyError, ValueError):
+            parsed_variant_ids[variant_id] = None
+
+    if dataset_type:
+        def is_valid(v_id):
+            if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+                return bool(v_id)
+            return not v_id
+        parsed_variant_ids = {k: v for k, v in parsed_variant_ids.items() if is_valid(v)}
+    elif all(v for v in parsed_variant_ids.values()):
+        dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS
+    elif all(v is None for v in parsed_variant_ids.values()):
+        dataset_type = Sample.DATASET_TYPE_SV_CALLS
+
+    return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
+        *_get_families_search_data(families, dataset_type=dataset_type), parsed_variant_ids, **kwargs
     )
 
 
@@ -198,11 +222,11 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
 
     dataset_type, secondary_dataset_type = _search_dataset_type(parsed_search)
     parsed_search.update({'dataset_type': dataset_type, 'secondary_dataset_type': secondary_dataset_type})
-    dataset_types = None
+    search_dataset_type = None
     if dataset_type and dataset_type != ALL_DATA_TYPES and (secondary_dataset_type is None or secondary_dataset_type == dataset_type):
-        dataset_types = DATASET_TYPES_LOOKUP[dataset_type]
+        search_dataset_type = dataset_type
 
-    samples, genome_version = _get_families_search_data(families, dataset_types=dataset_types)
+    samples, genome_version = _get_families_search_data(families, dataset_type=search_dataset_type)
     if parsed_search.get('inheritance'):
         samples = _parse_inheritance(parsed_search, samples, previous_search_results)
 
@@ -265,7 +289,7 @@ def _parse_variant_items(search_json):
         else:
             try:
                 variant_id = item.lstrip('chr')
-                parsed_variant_ids.append(parse_variant_id(variant_id))
+                parsed_variant_ids.append(_parse_variant_id(variant_id))
                 variant_ids.append(variant_id)
             except (KeyError, ValueError):
                 invalid_items.append(item)
@@ -273,7 +297,7 @@ def _parse_variant_items(search_json):
     return rs_ids, variant_ids, parsed_variant_ids, invalid_items
 
 
-def parse_variant_id(variant_id):
+def _parse_variant_id(variant_id):
     chrom, pos, ref, alt = variant_id.split('-')
     pos = int(pos)
     get_xpos(chrom, pos)

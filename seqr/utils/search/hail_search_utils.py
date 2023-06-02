@@ -4,7 +4,7 @@ from django.db.models import F, Min
 import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization
-from seqr.utils.search.constants import PRIORITIZED_GENE_SORT, DATASET_TYPES_LOOKUP
+from seqr.utils.search.constants import PRIORITIZED_GENE_SORT
 from seqr.utils.xpos_utils import MIN_POS, MAX_POS
 from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
 
@@ -51,26 +51,12 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     return response_json['results'][end_offset - num_results:end_offset]
 
 
-def get_hail_variants_for_variant_ids(samples, genome_version, raw_variant_ids, user, return_all_queried_families=False):
-    variant_ids = []
-    variant_keys = []
-    from seqr.utils.search.utils import parse_variant_id
-    for variant_id in raw_variant_ids:
-        try:
-            variant_ids.append(parse_variant_id(variant_id))
-        except (KeyError, ValueError):
-            variant_keys.append(variant_id)
-
-    dataset_types = set()
-    if variant_keys:
-        dataset_types.update(DATASET_TYPES_LOOKUP[Sample.DATASET_TYPE_SV_CALLS])
-    if variant_ids:
-        dataset_types.update(DATASET_TYPES_LOOKUP[Sample.DATASET_TYPE_VARIANT_CALLS])
-
-    search_body = _format_search_body(
-        samples.filter(dataset_type__in=dataset_types), genome_version, user, len(raw_variant_ids), {
-            'variant_ids': variant_ids, 'variant_keys': variant_keys,
-        })
+def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user=None, return_all_queried_families=False):
+    search = {
+        'variant_ids': [parsed_id for parsed_id in parsed_variant_ids.values() if parsed_id],
+        'variant_keys': [variant_id for variant_id, parsed_id in parsed_variant_ids.itmes() if not parsed_id],
+    }
+    search_body = _format_search_body(samples, genome_version, user, len(parsed_variant_ids), search)
     response_json = _execute_search(search_body)
 
     if return_all_queried_families:

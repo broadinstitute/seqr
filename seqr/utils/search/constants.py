@@ -18,12 +18,3 @@ RECESSIVE = 'recessive'
 NEW_SV_FIELD = 'new_structural_variants'
 SV_ANNOTATION_TYPES = {'structural_consequence', 'structural', NEW_SV_FIELD}
 ALL_DATA_TYPES = 'ALL'
-
-DATASET_TYPES_LOOKUP = {
-    data_types[0]: data_types for data_types in [
-        [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS],
-        [Sample.DATASET_TYPE_SV_CALLS],
-    ]
-}
-DATASET_TYPES_LOOKUP[ALL_DATA_TYPES] = [dt for dts in DATASET_TYPES_LOOKUP.values() for dt in dts]
-

@@ -59,15 +59,27 @@ class SearchUtilsTests(SearchTestHelper):
         variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
         self.assertDictEqual(variant, PARSED_VARIANTS[0])
         mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, '37', ['2-103343353-GAGA-G'], self.user, return_all_queried_families=False,
+            mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, user=self.user,
         )
-        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
+        expected_samples = {
+            s for s in self.search_samples if s.guid not in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
+        }
+        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
 
         get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
         mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, '37', ['2-103343353-GAGA-G'], self.user, return_all_queried_families=True,
+            mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, user=self.user, return_all_queried_families=True,
         )
-        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
+        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
+
+        get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
+        mock_get_variants_for_ids.assert_called_with(
+            mock.ANY, '37', {'prefix_19107_DEL': None}, user=self.user,
+        )
+        expected_samples = {
+            s for s in self.search_samples if s.guid in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
+        }
+        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
 
         mock_get_variants_for_ids.return_value = []
         with self.assertRaises(InvalidSearchException) as cm:
@@ -77,14 +89,23 @@ class SearchUtilsTests(SearchTestHelper):
     def test_get_variants_for_variant_ids(self, mock_get_variants_for_ids):
         variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']
         get_variants_for_variant_ids(self.families, variant_ids, user=self.user)
-        mock_get_variants_for_ids.assert_called_with(mock.ANY, '37', variant_ids, self.user, dataset_type=None)
+        mock_get_variants_for_ids.assert_called_with(mock.ANY, '37', {
+            '2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G'),
+            '1-248367227-TC-T': ('1', 248367227, 'TC', 'T'),
+            'prefix-938_DEL': None,
+        }, user=self.user)
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
 
         get_variants_for_variant_ids(
             self.families, variant_ids, user=self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-        mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, '37', variant_ids, self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
+        mock_get_variants_for_ids.assert_called_with(mock.ANY, '37', {
+            '2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G'),
+            '1-248367227-TC-T': ('1', 248367227, 'TC', 'T'),
+        }, user=self.user)
+        expected_samples = {
+            s for s in self.search_samples if s.guid not in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
+        }
+        self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
 
     @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     def _test_invalid_search_params(self, search_func):
@@ -439,12 +460,9 @@ class HailSearchUtilsTests(TestCase, SearchUtilsTests):
     def test_get_single_variant(self, mock_call):
         super(HailSearchUtilsTests, self).test_get_single_variant(mock_call)
 
-    @mock.patch('seqr.utils.search.utils.ping_elasticsearch')
+    @mock.patch('seqr.utils.search.utils.get_hail_variants_for_variant_ids')
     def test_get_variants_for_variant_ids(self, mock_call):
-        with self.assertRaises(InvalidSearchException) as cm:
-            super(HailSearchUtilsTests, self).test_get_variants_for_variant_ids(mock_call)
-        self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
-        mock_call.assert_not_called()
+        super(HailSearchUtilsTests, self).test_get_variants_for_variant_ids(mock_call)
 
     @mock.patch('seqr.utils.search.utils.get_hail_variants')
     def test_query_variants(self, mock_call):
