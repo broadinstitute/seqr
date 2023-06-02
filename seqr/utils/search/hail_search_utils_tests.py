@@ -190,3 +190,60 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.assertDictEqual(gene_counts, MOCK_COUNTS)
         self.assert_cached_results({'gene_aggs': gene_counts})
         self._test_expected_search_call(sort=None)
+
+   # TODO
+   #  @responses.activate
+    # def test_get_single_variant(self, mock_get_variants_for_ids):
+    #     mock_get_variants_for_ids.return_value = [PARSED_VARIANTS[0]]
+    #     variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
+    #     self.assertDictEqual(variant, PARSED_VARIANTS[0])
+    #     mock_get_variants_for_ids.assert_called_with(
+    #         mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, user=self.user,
+    #     )
+    #     expected_samples = {
+    #         s for s in self.search_samples if s.guid not in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
+    #     }
+    #     self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
+    #
+    #     get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
+    #     mock_get_variants_for_ids.assert_called_with(
+    #         mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, user=self.user, return_all_queried_families=True,
+    #     )
+    #     self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
+    #
+    #     get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
+    #     mock_get_variants_for_ids.assert_called_with(
+    #         mock.ANY, '37', {'prefix_19107_DEL': None}, user=self.user,
+    #     )
+    #     expected_samples = {
+    #         s for s in self.search_samples if s.guid in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
+    #     }
+    #     self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
+    #
+    #     mock_get_variants_for_ids.return_value = []
+    #     with self.assertRaises(InvalidSearchException) as cm:
+    #         get_single_variant(self.families, '10-10334333-A-G')
+    #     self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
+
+    # TODO
+    # @responses.activate
+    # def test_get_variants_for_variant_ids(self):
+    #     variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']
+    #     get_variants_for_variant_ids(self.families, variant_ids, user=self.user)
+    #     mock_get_variants_for_ids.assert_called_with(mock.ANY, '37', {
+    #         '2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G'),
+    #         '1-248367227-TC-T': ('1', 248367227, 'TC', 'T'),
+    #         'prefix-938_DEL': None,
+    #     }, user=self.user)
+    #     self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
+    #
+    #     get_variants_for_variant_ids(
+    #         self.families, variant_ids, user=self.user, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+    #     mock_get_variants_for_ids.assert_called_with(mock.ANY, '37', {
+    #         '2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G'),
+    #         '1-248367227-TC-T': ('1', 248367227, 'TC', 'T'),
+    #     }, user=self.user)
+    #     expected_samples = {
+    #         s for s in self.search_samples if s.guid not in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
+    #     }
+    #     self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
