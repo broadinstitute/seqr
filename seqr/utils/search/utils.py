@@ -4,12 +4,12 @@ from datetime import timedelta
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
-    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS
+    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, DATASET_TYPES_LOOKUP
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
-from seqr.utils.search.hail_search_utils import get_hail_variants, ping_hail_backend
+from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 
@@ -28,14 +28,6 @@ SEARCH_EXCEPTION_MESSAGE_MAP.update(ES_EXCEPTION_MESSAGE_MAP)
 
 ERROR_LOG_EXCEPTIONS = set()
 ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
-
-DATASET_TYPES_LOOKUP = {
-    data_types[0]: data_types for data_types in [
-        [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS],
-        [Sample.DATASET_TYPE_SV_CALLS],
-    ]
-}
-DATASET_TYPES_LOOKUP[ALL_DATA_TYPES] = [dt for dts in DATASET_TYPES_LOOKUP.values() for dt in dts]
 
 
 def _raise_search_error(error):
@@ -111,7 +103,7 @@ def delete_search_backend_data(data_id):
 
 
 def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
-    variants = backend_specific_call(get_es_variants_for_variant_ids, _raise_search_error('Elasticsearch backend is disabled'))(  # TODO
+    variants = backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
         *_get_families_search_data(families), [variant_id], user, return_all_queried_families=return_all_queried_families,
     )
     if not variants:
@@ -273,15 +265,19 @@ def _parse_variant_items(search_json):
         else:
             try:
                 variant_id = item.lstrip('chr')
-                chrom, pos, ref, alt = variant_id.split('-')
-                pos = int(pos)
-                get_xpos(chrom, pos)
+                parsed_variant_ids.append(parse_variant_id(variant_id))
                 variant_ids.append(variant_id)
-                parsed_variant_ids.append((chrom, pos, ref, alt))
             except (KeyError, ValueError):
                 invalid_items.append(item)
 
     return rs_ids, variant_ids, parsed_variant_ids, invalid_items
+
+
+def parse_variant_id(variant_id):
+    chrom, pos, ref, alt = variant_id.split('-')
+    pos = int(pos)
+    get_xpos(chrom, pos)
+    return chrom, pos, ref, alt
 
 
 def _validate_sort(sort, families):

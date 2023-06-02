@@ -435,12 +435,9 @@ class HailSearchUtilsTests(TestCase, SearchUtilsTests):
     def setUp(self):
         self.set_up()
 
-    @mock.patch('seqr.utils.search.utils.ping_elasticsearch')
+    @mock.patch('seqr.utils.search.utils.get_hail_variants_for_variant_ids')
     def test_get_single_variant(self, mock_call):
-        with self.assertRaises(InvalidSearchException) as cm:
-            super(HailSearchUtilsTests, self).test_get_single_variant(mock_call)
-        self.assertEqual(str(cm.exception), 'Elasticsearch backend is disabled')
-        mock_call.assert_not_called()
+        super(HailSearchUtilsTests, self).test_get_single_variant(mock_call)
 
     @mock.patch('seqr.utils.search.utils.ping_elasticsearch')
     def test_get_variants_for_variant_ids(self, mock_call):
