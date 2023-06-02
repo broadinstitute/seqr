@@ -181,7 +181,7 @@ class SearchUtilsTests(SearchTestHelper):
         self.set_cache({'total_results': 20000})
         with self.assertRaises(InvalidSearchException) as cm:
             query_variants(self.results_model, page=1, num_results=2, load_all=True)
-        self.assertEqual(str(cm.exception), 'Unable to load more than 10000 variants (20000 requested)')
+        self.assertEqual(str(cm.exception), 'Unable to export more than 1000 variants (20000 requested)')
 
         self._test_invalid_search_params(query_variants)
 
@@ -233,7 +233,15 @@ class SearchUtilsTests(SearchTestHelper):
 
         query_variants(self.results_model, user=self.user, load_all=True)
         self._test_expected_search_call(
-            mock_get_variants, results_cache, sort='xpos', page=1, num_results=10000, skip_genotype_filter=False,
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=1000, skip_genotype_filter=False,
+        )
+
+        with mock.patch('seqr.utils.search.utils.MAX_EXPORT_VARIANTS', 4):
+            with self.assertRaises(InvalidSearchException) as cm:
+                query_variants(self.results_model, user=self.user, load_all=True)
+        self.assertEqual(str(cm.exception), 'Unable to export more than 4 variants (5 requested)')
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=4, skip_genotype_filter=False,
         )
 
         self.set_cache({'total_results': 22})
