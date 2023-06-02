@@ -76,6 +76,7 @@
 	    "can_view_group": 2,
 	    "last_accessed_date": "2017-09-15T18:15:50.827Z",
         "consent_code": "H",
+        "genome_version": "38",
     "workspace_name": "anvil-non-analyst-project 1000 Genomes Demo",
     "workspace_namespace": "ext-data"
     }
@@ -526,6 +527,7 @@
         "case_review_status_last_modified_date": "2017-03-12T22:34:59.093Z",
         "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
+        "population": "AMR",
         "features": [{"id": "HP:0002011"}, {"id": "HP:0011675"}],
         "absent_features": [{"id": "HP:0002017"}]
     }
@@ -900,6 +902,25 @@
         "sample_id": "NA19678",
         "is_active": true,
         "elasticsearch_index": "test_index_old",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
+    }
+},
+{
+    "model": "seqr.sample",
+    "pk": 153,
+    "fields": {
+        "guid": "S000153_na19679",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 3,
+        "sample_type": "RNA",
+        "dataset_type": "VARIANTS",
+        "sample_id": "NA19679_S",
+        "is_active": true,
+        "elasticsearch_index":null,
+        "tissue_type": "M",
+        "data_source": "muscle_samples.tsv.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1366,6 +1387,25 @@
         "read_count": 1297,
         "rare_disease_samples_with_junction": 1,
         "rare_disease_samples_total": 20
+    }
+},
+{
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 2,
+    "fields": {
+        "sample": 153,
+        "gene_id": "ENSG00000268903",
+        "p_value": 1.08E-56,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 132885754,
+        "end": 132886934,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.65,
+        "read_count": 234,
+        "rare_disease_samples_with_junction": 2,
+        "rare_disease_samples_total": 23
     }
 },
 {
