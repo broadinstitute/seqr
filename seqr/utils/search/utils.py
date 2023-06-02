@@ -110,14 +110,20 @@ def delete_search_backend_data(data_id):
     )(data_id)
 
 
-def get_single_variant(families, variant_id, **kwargs):
-    variants = get_variants_for_variant_ids(families, [variant_id], **kwargs)
+def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
+    variants = _get_variants_for_variant_ids(
+        families, [variant_id], user, return_all_queried_families=return_all_queried_families,
+    )
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variants[0]
 
 
-def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, **kwargs):
+def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
+    return _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=dataset_type)
+
+
+def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None, **kwargs):
     parsed_variant_ids = {}
     for variant_id in variant_ids:
         try:
@@ -137,7 +143,7 @@ def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, **kwa
         dataset_type = Sample.DATASET_TYPE_SV_CALLS
 
     return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
-        *_get_families_search_data(families, dataset_type=dataset_type), parsed_variant_ids, **kwargs
+        *_get_families_search_data(families, dataset_type=dataset_type), parsed_variant_ids, user, **kwargs
     )
 
 

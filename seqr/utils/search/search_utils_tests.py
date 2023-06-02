@@ -59,7 +59,7 @@ class SearchUtilsTests(SearchTestHelper):
         variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
         self.assertDictEqual(variant, PARSED_VARIANTS[0])
         mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, user=self.user,
+            mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, self.user, return_all_queried_families=False,
         )
         expected_samples = {
             s for s in self.search_samples if s.guid not in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
@@ -68,13 +68,13 @@ class SearchUtilsTests(SearchTestHelper):
 
         get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
         mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, user=self.user, return_all_queried_families=True,
+            mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, self.user, return_all_queried_families=True,
         )
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
 
         get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
         mock_get_variants_for_ids.assert_called_with(
-            mock.ANY, '37', {'prefix_19107_DEL': None}, user=self.user,
+            mock.ANY, '37', {'prefix_19107_DEL': None}, self.user, return_all_queried_families=False,
         )
         expected_samples = {
             s for s in self.search_samples if s.guid in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
@@ -93,7 +93,7 @@ class SearchUtilsTests(SearchTestHelper):
             '2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G'),
             '1-248367227-TC-T': ('1', 248367227, 'TC', 'T'),
             'prefix-938_DEL': None,
-        }, user=self.user)
+        }, self.user)
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
 
         get_variants_for_variant_ids(
@@ -101,7 +101,7 @@ class SearchUtilsTests(SearchTestHelper):
         mock_get_variants_for_ids.assert_called_with(mock.ANY, '37', {
             '2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G'),
             '1-248367227-TC-T': ('1', 248367227, 'TC', 'T'),
-        }, user=self.user)
+        }, self.user)
         expected_samples = {
             s for s in self.search_samples if s.guid not in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
         }

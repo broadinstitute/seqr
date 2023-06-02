@@ -51,7 +51,7 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     return response_json['results'][end_offset - num_results:end_offset]
 
 
-def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user=None, return_all_queried_families=False):
+def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user, return_all_queried_families=False):
     search = {
         'variant_ids': [parsed_id for parsed_id in parsed_variant_ids.values() if parsed_id],
         'variant_keys': [variant_id for variant_id, parsed_id in parsed_variant_ids.itmes() if not parsed_id],
