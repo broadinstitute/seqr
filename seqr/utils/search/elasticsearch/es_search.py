@@ -142,7 +142,7 @@ class EsSearch(object):
                 self.samples_by_family_index[alias_index].update(alias_samples)
 
     def _set_family_affected_status(self, inheritance_filter):
-        for index, family_samples in list(self.samples_by_family_index.items()):
+        for family_samples in list(self.samples_by_family_index.values()):
             for family_guid, samples_by_id in family_samples.items():
                 individual_affected_status = _get_family_affected_status(samples_by_id, inheritance_filter)
                 if family_guid not in self._family_individual_affected_status:
