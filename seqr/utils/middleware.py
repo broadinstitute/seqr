@@ -6,13 +6,12 @@ from django.http.request import RawPostDataException
 from django.utils.cache import add_never_cache_headers
 from django.utils.deprecation import MiddlewareMixin
 from django.urls import get_resolver, get_urlconf
-import elasticsearch.exceptions
 from requests import HTTPError
 from social_core.exceptions import AuthException
 import json
 import traceback
 
-from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
+from seqr.utils.search.utils import ERROR_LOG_EXCEPTIONS, SEARCH_EXCEPTION_ERROR_MAP, SEARCH_EXCEPTION_MESSAGE_MAP
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.terra_api_utils import TerraAPIException
@@ -33,42 +32,23 @@ EXCEPTION_ERROR_MAP = {
     PermissionDenied: 403,
     ObjectDoesNotExist: 404,
     Http404: 404,
-    InvalidIndexException: 400,
-    InvalidSearchException: 400,
     ErrorsWarningsException: 400,
     AuthException: 401,
-    elasticsearch.exceptions.ConnectionError: 504,
-    elasticsearch.exceptions.TransportError: lambda e: int(e.status_code) if e.status_code != 'N/A' else 400,
     HTTPError: lambda e: int(e.response.status_code),
     TerraAPIException: lambda e: e.status_code,
     AnymailError: lambda e: getattr(e, 'status_code', None) or 400,
 }
+EXCEPTION_ERROR_MAP.update(SEARCH_EXCEPTION_ERROR_MAP)
 
 EXCEPTION_JSON_MAP = {
     ErrorsWarningsException: lambda e: {'errors': e.errors, 'warnings': e.warnings}
 }
 
 EXCEPTION_MESSAGE_MAP = {
-    elasticsearch.exceptions.ConnectionError: str,
-    elasticsearch.exceptions.TransportError: lambda e: '{}: {} - {} - {}'.format(e.__class__.__name__, e.status_code, repr(e.error), _get_transport_error_type(e.info)),
     TerraAPIException: lambda e: LOGIN_URL if e.status_code == 401 else str(e),
 }
+EXCEPTION_MESSAGE_MAP.update(SEARCH_EXCEPTION_MESSAGE_MAP)
 
-ERROR_LOG_EXCEPTIONS = {InvalidIndexException}
-
-def _get_transport_error_type(error):
-    error_type = 'no detail'
-    if isinstance(error, dict):
-        root_cause = error.get('root_cause')
-        error_info = error.get('error')
-        if (not root_cause) and isinstance(error_info, dict):
-            root_cause = error_info.get('root_cause')
-
-        if root_cause:
-            error_type = root_cause[0].get('type') or root_cause[0].get('reason')
-        elif error_info and not isinstance(error_info, dict):
-            error_type = repr(error_info)
-    return error_type
 
 def _get_exception_status_code(exception):
     status = next((code for exc, code in EXCEPTION_ERROR_MAP.items() if isinstance(exception, exc)), 500)

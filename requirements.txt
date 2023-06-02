@@ -4,7 +4,7 @@
 #
 #    pip-compile requirements.in
 #
-asgiref==3.6.0
+asgiref==3.7.1
     # via django
 async-timeout==4.0.2
     # via redis
@@ -44,7 +44,7 @@ django-csp==3.7
     # via -r requirements.in
 django-guardian==2.4.0
     # via -r requirements.in
-django-hijack==3.3.0
+django-hijack==3.4.1
     # via -r requirements.in
 django-storages[google]==1.11.1
     # via -r requirements.in
@@ -62,7 +62,7 @@ google-api-core[grpc]==2.11.0
     #   google-cloud-core
     #   google-cloud-logging
     #   google-cloud-storage
-google-auth==2.18.0
+google-auth==2.18.1
     # via
     #   google-api-core
     #   google-cloud-core
@@ -118,7 +118,7 @@ proto-plus==1.22.2
     # via
     #   google-cloud-appengine-logging
     #   google-cloud-logging
-protobuf==4.23.0
+protobuf==4.23.1
     # via
     #   google-api-core
     #   google-cloud-audit-log
@@ -148,7 +148,7 @@ pytz==2023.3
     # via django
 redis==4.5.5
     # via -r requirements.in
-requests==2.30.0
+requests==2.31.0
     # via
     #   -r requirements.in
     #   django-anymail
@@ -184,7 +184,9 @@ sqlparse==0.4.4
     # via django
 tqdm==4.65.0
     # via -r requirements.in
-urllib3==1.26.15
+typing-extensions==4.6.2
+    # via asgiref
+urllib3==1.26.16
     # via
     #   django-anymail
     #   elasticsearch

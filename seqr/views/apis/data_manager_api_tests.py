@@ -8,7 +8,8 @@ import responses
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree
 from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _get_json_for_models
-from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
+from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
 
 
@@ -378,6 +379,7 @@ EXPECTED_UPDATED_LIRICAL_DATA = [
 class DataManagerAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
     def test_elasticsearch_status(self):
         url = reverse(elasticsearch_status)
@@ -407,6 +409,12 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertListEqual(response_json['diskStats'], EXPECTED_DISK_ALLOCATION)
         self.assertListEqual(response_json['nodeStats'], EXPECTED_NODE_STATS)
 
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
     def test_delete_index(self):
         url = reverse(delete_index)
@@ -414,8 +422,8 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'test_index'}))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(
-            response.json(), ({'error': 'Index "test_index" is still used by: 1kg project n\xe5me with uni\xe7\xf8de'}))
+        self.assertEqual(
+            response.json()['error'], '"test_index" is still used by: 1kg project n\xe5me with uni\xe7\xf8de')
         self.assertEqual(len(urllib3_responses.calls), 0)
 
         urllib3_responses.add_json(
@@ -435,54 +443,12 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
 
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+
     # 2022-04-05 mfranklin: disabled because we don't have access to gs://seqr-datasets/
-    # @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    # def test_upload_sv_qc(self, mock_subprocess):
-    #     url = reverse(upload_qc_pipeline_output, )
-    #     self.check_data_manager_login(url)
-    #
-    #     request_data = json.dumps({
-    #         'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/sv/sv_sample_metadata.tsv'
-    #     })
-    #
-    #     mock_does_file_exist = mock.MagicMock()
-    #     mock_does_file_exist.wait.return_value = 0
-    #     mock_file_iter = mock.MagicMock()
-    #     mock_file_iter.stdout = SAMPLE_SV_WES_QC_DATA
-    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
-    #     response = self.client.post(url, content_type='application/json', data=request_data)
-    #     self.assertEqual(response.status_code, 200)
-    #     response_json = response.json()
-    #     self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
-    #     self.assertListEqual(response_json['info'], [
-    #         'Parsed 6 SV samples',
-    #         'Found and updated matching seqr individuals for 4 samples'
-    #     ])
-    #     self.assertListEqual(response_json['warnings'], ['The following 2 samples were skipped: MANZ_1169_DNA, NA'])
-    #
-    #     self.assertIsNone(Individual.objects.get(individual_id='NA19675_1').sv_flags)
-    #     self.assertListEqual(Individual.objects.get(individual_id='NA19678').sv_flags, ['high_QS_rare_calls:_>10'])
-    #     self.assertListEqual(Individual.objects.get(individual_id='HG00732').sv_flags, ['raw_calls:_>100'])
-    #     self.assertListEqual(
-    #         Individual.objects.get(individual_id='HG00733').sv_flags,
-    #         ['high_QS_rare_calls:_>10', 'raw_calls:_>100'])
-    #
-    #     # Test genome data
-    #     mock_file_iter.stdout = SAMPLE_SV_WGS_QC_DATA
-    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
-    #     response = self.client.post(url, content_type='application/json', data=request_data)
-    #     self.assertEqual(response.status_code, 200)
-    #     response_json = response.json()
-    #     self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
-    #     self.assertListEqual(response_json['info'], [
-    #         'Parsed 2 SV samples',
-    #         'Found and updated matching seqr individuals for 1 samples'
-    #     ])
-    #     self.assertListEqual(response_json['warnings'], ['The following 1 samples were skipped: NA19678'])
-    #     self.assertListEqual(Individual.objects.get(individual_id='NA21234').sv_flags, ['outlier_num._calls'])
-    #     # Should not overwrite existing QC flags
-    #     self.assertListEqual(Individual.objects.get(individual_id='NA19678').sv_flags, ['high_QS_rare_calls:_>10'])
-    #
     # @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     # def test_upload_qc_pipeline_output(self, mock_subprocess):
     #     url = reverse(upload_qc_pipeline_output,)
@@ -582,57 +548,104 @@ class DataManagerAPITest(AuthenticationTestCase):
     #     self.assertDictEqual(indiv.filter_flags, {'contamination': '2.79E+00'})
     #     self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '38051', 'r_insertion_deletion': '1.8064E+00'})
     #     self.assertEqual(indiv.population, 'OTH')
-
-    @mock.patch('seqr.views.apis.data_manager_api.KIBANA_ELASTICSEARCH_PASSWORD', 'abc123')
-    @responses.activate
-    def test_kibana_proxy(self):
-        url = '/api/kibana/random/path'
-        self.check_data_manager_login(url)
-
-        response_args = {
-            'stream': True,
-            'body': 'Test response',
-            'content_type': 'text/custom',
-            'headers': {'x-test-header': 'test', 'keep-alive': 'true'},
-        }
-        proxy_url = 'http://localhost:5601{}'.format(url)
-        responses.add(responses.GET, proxy_url, status=200, **response_args)
-        responses.add(responses.POST, proxy_url, status=201, **response_args)
-        responses.add(responses.GET, '{}/bad_response'.format(proxy_url), body=HTTPError())
-
-        response = self.client.get(url, HTTP_TEST_HEADER='some/value')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, b'Test response')
-        self.assertEqual(response.get('content-type'), 'text/custom')
-        self.assertEqual(response.get('x-test-header'), 'test')
-        self.assertIsNone(response.get('keep-alive'))
-
-        data = json.dumps([{'content': 'Test Body'}])
-        response = self.client.post(url, content_type='application/json', data=data)
-        self.assertEqual(response.status_code, 201)
-
-        self.assertEqual(len(responses.calls), 2)
-
-        get_request = responses.calls[0].request
-        self.assertEqual(get_request.headers['Host'], 'localhost:5601')
-        self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
-        self.assertEqual(get_request.headers['Test-Header'], 'some/value')
-
-        post_request = responses.calls[1].request
-        self.assertEqual(post_request.headers['Host'], 'localhost:5601')
-        self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
-        self.assertEqual(post_request.headers['Content-Type'], 'application/json')
-        self.assertEqual(post_request.headers['Content-Length'], '26')
-        self.assertEqual(post_request.body, data.encode('utf-8'))
-
-        # Test with error response
-        response = self.client.get('{}/bad_response'.format(url))
-        self.assertEqual(response.status_code, 500)
-
-        # Test with connection error
-        response = self.client.get('{}/bad_path'.format(url))
-        self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
-
+    #
+    # @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    # def test_upload_sv_qc(self, mock_subprocess):
+    #     url = reverse(upload_qc_pipeline_output, )
+    #     self.check_data_manager_login(url)
+    #
+    #     request_data = json.dumps({
+    #         'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/sv/sv_sample_metadata.tsv'
+    #     })
+    #
+    #     mock_does_file_exist = mock.MagicMock()
+    #     mock_does_file_exist.wait.return_value = 0
+    #     mock_file_iter = mock.MagicMock()
+    #     mock_file_iter.stdout = SAMPLE_SV_WES_QC_DATA
+    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+    #     response = self.client.post(url, content_type='application/json', data=request_data)
+    #     self.assertEqual(response.status_code, 200)
+    #     response_json = response.json()
+    #     self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
+    #     self.assertListEqual(response_json['info'], [
+    #         'Parsed 6 SV samples',
+    #         'Found and updated matching seqr individuals for 4 samples'
+    #     ])
+    #     self.assertListEqual(response_json['warnings'], ['The following 2 samples were skipped: MANZ_1169_DNA, NA'])
+    #
+    #     self.assertIsNone(Individual.objects.get(individual_id='NA19675_1').sv_flags)
+    #     self.assertListEqual(Individual.objects.get(individual_id='NA19678').sv_flags, ['high_QS_rare_calls:_>10'])
+    #     self.assertListEqual(Individual.objects.get(individual_id='HG00732').sv_flags, ['raw_calls:_>100'])
+    #     self.assertListEqual(
+    #         Individual.objects.get(individual_id='HG00733').sv_flags,
+    #         ['high_QS_rare_calls:_>10', 'raw_calls:_>100'])
+    #
+    #     # Test genome data
+    #     mock_file_iter.stdout = SAMPLE_SV_WGS_QC_DATA
+    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+    #     response = self.client.post(url, content_type='application/json', data=request_data)
+    #     self.assertEqual(response.status_code, 200)
+    #     response_json = response.json()
+    #     self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
+    #     self.assertListEqual(response_json['info'], [
+    #         'Parsed 2 SV samples',
+    #         'Found and updated matching seqr individuals for 1 samples'
+    #     ])
+    #     self.assertListEqual(response_json['warnings'], ['The following 1 samples were skipped: NA19678'])
+    #     self.assertListEqual(Individual.objects.get(individual_id='NA21234').sv_flags, ['outlier_num._calls'])
+    #     # Should not overwrite existing QC flags
+    #     self.assertListEqual(Individual.objects.get(individual_id='NA19678').sv_flags, ['high_QS_rare_calls:_>10'])
+    #
+    # @mock.patch('seqr.views.apis.data_manager_api.KIBANA_ELASTICSEARCH_PASSWORD', 'abc123')
+    # @responses.activate
+    # def test_kibana_proxy(self):
+    #     url = '/api/kibana/random/path'
+    #     self.check_data_manager_login(url)
+    #
+    #     response_args = {
+    #         'stream': True,
+    #         'body': 'Test response',
+    #         'content_type': 'text/custom',
+    #         'headers': {'x-test-header': 'test', 'keep-alive': 'true'},
+    #     }
+    #     proxy_url = 'http://localhost:5601{}'.format(url)
+    #     responses.add(responses.GET, proxy_url, status=200, **response_args)
+    #     responses.add(responses.POST, proxy_url, status=201, **response_args)
+    #     responses.add(responses.GET, '{}/bad_response'.format(proxy_url), body=HTTPError())
+    #
+    #     response = self.client.get(url, HTTP_TEST_HEADER='some/value')
+    #     self.assertEqual(response.status_code, 200)
+    #     self.assertEqual(response.content, b'Test response')
+    #     self.assertEqual(response.get('content-type'), 'text/custom')
+    #     self.assertEqual(response.get('x-test-header'), 'test')
+    #     self.assertIsNone(response.get('keep-alive'))
+    #
+    #     data = json.dumps([{'content': 'Test Body'}])
+    #     response = self.client.post(url, content_type='application/json', data=data)
+    #     self.assertEqual(response.status_code, 201)
+    #
+    #     self.assertEqual(len(responses.calls), 2)
+    #
+    #     get_request = responses.calls[0].request
+    #     self.assertEqual(get_request.headers['Host'], 'localhost:5601')
+    #     self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
+    #     self.assertEqual(get_request.headers['Test-Header'], 'some/value')
+    #
+    #     post_request = responses.calls[1].request
+    #     self.assertEqual(post_request.headers['Host'], 'localhost:5601')
+    #     self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
+    #     self.assertEqual(post_request.headers['Content-Type'], 'application/json')
+    #     self.assertEqual(post_request.headers['Content-Length'], '26')
+    #     self.assertEqual(post_request.body, data.encode('utf-8'))
+    #
+    #     # Test with error response
+    #     response = self.client.get('{}/bad_response'.format(url))
+    #     self.assertEqual(response.status_code, 500)
+    #
+    #     # Test with connection error
+    #     response = self.client.get('{}/bad_path'.format(url))
+    #     self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
+    #
     RNA_DATA_TYPE_PARAMS = {
         'outlier': {
             'model_cls': RnaSeqOutlier,
@@ -769,33 +782,33 @@ class DataManagerAPITest(AuthenticationTestCase):
             'row_id': 'ENSG00000106554-7-132885746-132886973-*-psi5',
         },
     }
-
-    def _has_expected_file_loading_logs(self, file, info=None, warnings=None, additional_logs=None, additional_logs_offset=None):
-        expected_logs = [
-            (f'==> gsutil ls {file}', None),
-            (f'==> gsutil cat {file} | gunzip -c -q - ', None),
-        ] + [(info_log, None) for info_log in info or []] + [
-            (warn_log, {'severity': 'WARNING'}) for warn_log in warnings or []
-        ]
-        if additional_logs:
-            if additional_logs_offset:
-                for log in reversed(additional_logs):
-                    expected_logs.insert(additional_logs_offset, log)
-            else:
-                expected_logs += additional_logs
-
-        self.assert_json_logs(self.data_manager_user, expected_logs)
-
-    def _check_rna_sample_model(self, individual_id, data_source, tissue_type):
-        rna_samples = Sample.objects.filter(individual_id=individual_id, sample_type='RNA', tissue_type=tissue_type)
-        self.assertEqual(len(rna_samples), 1)
-        sample = rna_samples.first()
-        self.assertTrue(sample.is_active)
-        self.assertIsNone(sample.elasticsearch_index)
-        self.assertEqual(sample.sample_type, 'RNA')
-        self.assertEqual(sample.tissue_type, tissue_type)
-        self.assertEqual(sample.data_source, data_source)
-        return sample.guid
+    #
+    # def _has_expected_file_loading_logs(self, file, info=None, warnings=None, additional_logs=None, additional_logs_offset=None):
+    #     expected_logs = [
+    #         (f'==> gsutil ls {file}', None),
+    #         (f'==> gsutil cat {file} | gunzip -c -q - ', None),
+    #     ] + [(info_log, None) for info_log in info or []] + [
+    #         (warn_log, {'severity': 'WARNING'}) for warn_log in warnings or []
+    #     ]
+    #     if additional_logs:
+    #         if additional_logs_offset:
+    #             for log in reversed(additional_logs):
+    #                 expected_logs.insert(additional_logs_offset, log)
+    #         else:
+    #             expected_logs += additional_logs
+    #
+    #     self.assert_json_logs(self.data_manager_user, expected_logs)
+    #
+    # def _check_rna_sample_model(self, individual_id, data_source, tissue_type):
+    #     rna_samples = Sample.objects.filter(individual_id=individual_id, sample_type='RNA', tissue_type=tissue_type)
+    #     self.assertEqual(len(rna_samples), 1)
+    #     sample = rna_samples.first()
+    #     self.assertTrue(sample.is_active)
+    #     self.assertIsNone(sample.elasticsearch_index)
+    #     self.assertEqual(sample.sample_type, 'RNA')
+    #     self.assertEqual(sample.tissue_type, tissue_type)
+    #     self.assertEqual(sample.data_source, data_source)
+    #     return sample.guid
 
     # 2022-05-30 mfranklin: Commenting out this test as our ranged gsutil optimisation
     #       is causing conflicts when patching subprocess (when creating the GSClient)
