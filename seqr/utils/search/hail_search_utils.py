@@ -14,7 +14,7 @@ def _hail_backend_url(path):
 
 
 def ping_hail_backend():
-    requests.get(_hail_backend_url('status')).raise_for_status()
+    requests.get(_hail_backend_url('status'), timeout=5).raise_for_status()
 
 
 def get_hail_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100,

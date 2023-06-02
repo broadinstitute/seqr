@@ -4,6 +4,7 @@
 
 ## 6/2/23
 * Update Clinvar filtering and display
+
 * Add support for Gencode v39
   * To add new data, run the `update_gencode_latest`
 
