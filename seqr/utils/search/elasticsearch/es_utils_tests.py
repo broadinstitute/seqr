@@ -1575,7 +1575,7 @@ class EsUtilsTest(TestCase):
                 'gnomad_genomes': {'af': 0.01, 'hh': 3},
                 'topmed': {'ac': 2, 'af': None},
             },
-            'qualityFilter': {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'},
+            'qualityFilter': {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass', 'affected_only': True},
             'in_silico': {'cadd': '11.5', 'sift': 'D'},
             'inheritance': {'mode': 'de_novo'},
             'customQuery': {'term': {'customFlag': 'flagVal'}},
@@ -1762,39 +1762,7 @@ class EsUtilsTest(TestCase):
                                     {'term': {'samples_gq_0_to_5': 'HG00731'}},
                                     {'term': {'samples_gq_5_to_10': 'HG00731'}},
                                     {'term': {'samples_gq_10_to_15': 'HG00731'}},
-                                    {'term': {'samples_gq_0_to_5': 'HG00732'}},
-                                    {'term': {'samples_gq_5_to_10': 'HG00732'}},
-                                    {'term': {'samples_gq_10_to_15': 'HG00732'}},
-                                    {'term': {'samples_gq_0_to_5': 'HG00733'}},
-                                    {'term': {'samples_gq_5_to_10': 'HG00733'}},
-                                    {'term': {'samples_gq_10_to_15': 'HG00733'}},
                                 ],
-                                'must': [
-                                    {'bool': {
-                                        'minimum_should_match': 1,
-                                        'should': [
-                                            {'bool': {
-                                                'must_not': [
-                                                    {'term': {'samples_ab_0_to_5': 'HG00732'}},
-                                                    {'term': {'samples_ab_5_to_10': 'HG00732'}},
-                                                ]
-                                            }},
-                                            {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00732'}}]}}
-                                        ]
-                                    }},
-                                    {'bool': {
-                                        'minimum_should_match': 1,
-                                        'should': [
-                                            {'bool': {
-                                                'must_not': [
-                                                    {'term': {'samples_ab_0_to_5': 'HG00733'}},
-                                                    {'term': {'samples_ab_5_to_10': 'HG00733'}},
-                                                ]
-                                            }},
-                                            {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00733'}}]}}
-                                        ]
-                                    }},
-                                ]
                             }}, {'regexp': {
                                 'clinvar_clinical_significance': '.*Likely_pathogenic.*|.*Pathogenic.*'
                             }}]}}
@@ -3358,7 +3326,7 @@ class EsUtilsTest(TestCase):
 
         def _execute_inheritance_search(
                 mode=None, inheritance_filter=None, expected_filter=None, expected_comp_het_filter=None,
-                dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, **kwargs):
+                quality_filter=None, expected_quality_filter=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, **kwargs):
             _set_cache(cache_key, None)
             annotations = {'frameshift': ['frameshift_variant']} if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS \
                 else {'structural': ['DEL', 'gCNV_DEL']}
@@ -3366,6 +3334,8 @@ class EsUtilsTest(TestCase):
                 'inheritance': {'mode': mode, 'filter': inheritance_filter},
                 'annotations': annotations,
             }
+            if quality_filter:
+                search_model.search['qualityFilter'] = quality_filter
             search_model.save()
             query_variants(results_model, num_results=2)
 
@@ -3380,8 +3350,11 @@ class EsUtilsTest(TestCase):
                         annotation_query,  {'bool': {'_name': 'F000002_2', 'must': [expected_filter]}}])
                 ])
             else:
+                filters = [expected_filter]
+                if expected_quality_filter:
+                    filters.append(expected_quality_filter)
                 self.assertExecutedSearch(index=index, filters=[
-                    annotation_query, {'bool': {'_name': 'F000002_2', 'must': [expected_filter]}}], **kwargs)
+                    annotation_query, {'bool': {'_name': 'F000002_2', 'must': filters}}], **kwargs)
 
         # custom genotype
         _execute_inheritance_search(
@@ -3441,6 +3414,29 @@ class EsUtilsTest(TestCase):
                 ]
             }
         })
+
+        _execute_inheritance_search(mode='de_novo', inheritance_filter={'affected': custom_affected}, expected_filter={
+            'bool': {
+                'minimum_should_match': 1,
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00731'}},
+                    {'term': {'samples_num_alt_1': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}},
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_1': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}}
+                ],
+                'should': [
+                    {'term': {'samples_num_alt_1': 'HG00732'}},
+                    {'term': {'samples_num_alt_2': 'HG00732'}}
+                ]
+            }
+        }, quality_filter={'affected_only': True, 'min_gq': 10}, expected_quality_filter={
+            'bool': {'must_not': [
+                {'term': {'samples_gq_0_to_5': 'HG00732'}},
+                {'term': {'samples_gq_5_to_10': 'HG00732'}},
+            ]}}
+        )
 
         _execute_inheritance_search(
             mode='de_novo', inheritance_filter={'affected': custom_multi_affected}, expected_filter={'bool': {
