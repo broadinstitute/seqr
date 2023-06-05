@@ -44,17 +44,18 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     tissueType: null,
   }
 
-  onTissueChange = (tissueType) => {
-    this.setState({ tissueType })
+  onTissueChange = (e, data) => {
+    this.setState({ tissueType: data.value })
   }
 
   render() {
     const { familyGuid, rnaSeqData, significantJunctionOutliers, genesById, tissueOptions } = this.props
-    const { tissueType: tissueTypeState } = this.state
-    const tissueType = tissueTypeState || tissueOptions?.length > 0 ? tissueOptions[0].value : null
+    const { tissueType } = this.state
+    const showTissueType = tissueType ||
+      (tissueOptions?.length > 0 ? tissueOptions[tissueOptions.length - 1].value : null)
 
     const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map(({ formatData, ...config }) => ({
-      data: formatData(Object.values((rnaSeqData || {})[config.key] || {}).flat(), tissueType),
+      data: formatData(Object.values((rnaSeqData || {})[config.key] || {}).flat(), showTissueType),
       ...config,
     })).filter(({ data }) => data.length)
 
@@ -69,13 +70,17 @@ class BaseRnaSeqResultPage extends React.PureComponent {
       </Grid.Column>
     ))
 
+    const tableData = significantJunctionOutliers.reduce(
+      (acc, outlier) => (outlier.tissueType === showTissueType ? [...acc, outlier] : acc), [],
+    )
+
     return (
       <div>
-        {tissueType && (
+        {showTissueType && (
           <span>
             Tissue type: &nbsp;
             {tissueOptions.length > 1 ? (
-              <Dropdown inline value={tissueType} options={tissueOptions} onChange={this.onTissueChange} />
+              <Dropdown inline value={showTissueType} options={tissueOptions} onChange={this.onTissueChange} />
             ) : tissueOptions[0].text }
           </span>
         )}
@@ -86,11 +91,11 @@ class BaseRnaSeqResultPage extends React.PureComponent {
             </Grid>
           )}
         </React.Suspense>
-        {(significantJunctionOutliers.length > 0) && (
+        {(tableData.length > 0) && (
           <FamilyReads
             layout={RnaSeqJunctionOutliersTable}
             noTriggerButton
-            data={significantJunctionOutliers}
+            data={tableData}
             defaultSortColumn="pValue"
             maxHeight="600px"
           />
