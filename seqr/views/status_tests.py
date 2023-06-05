@@ -42,6 +42,8 @@ class StatusTest(object):
 
         mock_db_connections.__getitem__.return_value.cursor.side_effect = None
         mock_redis.return_value.ping.side_effect = None
+        responses.reset()
+        urllib3_responses.reset()
         responses.add(responses.GET, 'http://test-hail:5000/status', status=200)
         urllib3_responses.add(urllib3_responses.HEAD, '/', status=200)
         urllib3_responses.add(urllib3_responses.HEAD, '/status', status=500)
@@ -64,6 +66,7 @@ class StatusTest(object):
         self.assertDictEqual(
             response.json(), {'version': 'v1.0', 'dependent_services_ok': True, 'secondary_services_ok': True})
         mock_logger.error.assert_not_called()
+        self._assert_expected_requests()
 
 
 class ElasticsearchStatusTest(TestCase, StatusTest):
@@ -75,6 +78,10 @@ class ElasticsearchStatusTest(TestCase, StatusTest):
     def test_status(self, *args):
         super(ElasticsearchStatusTest, self).test_status(*args)
 
+    def _assert_expected_requests(self):
+        self.assertEqual(len(responses.calls), 0)
+        self.assertListEqual([call.request.url for call in urllib3_responses.calls], ['/', '/status', '/', '/status'])
+
 
 class HailSearchStatusTest(TestCase, StatusTest):
 
@@ -85,3 +92,8 @@ class HailSearchStatusTest(TestCase, StatusTest):
     @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', 'http://test-hail')
     def test_status(self, *args):
         super(HailSearchStatusTest, self).test_status(*args)
+
+    def _assert_expected_requests(self):
+        self.assertEqual(len(urllib3_responses.calls), 0)
+        self.assertEqual(len(responses.calls), 1)
+        self.assertEqual(responses.calls[0].request.url, 'http://test-hail:5000/status')
