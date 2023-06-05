@@ -60,7 +60,8 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     response_json = _execute_search(search_body)
 
     if return_all_queried_families:
-        _validate_expected_families(response_json['results'], {s['family_guid'] for s in search_body['sample_data']})
+        expected_family_guids = set(samples.values_list('individual__family__guid', flat=True))
+        _validate_expected_families(response_json['results'], expected_family_guids)
 
     return response_json['results']
 

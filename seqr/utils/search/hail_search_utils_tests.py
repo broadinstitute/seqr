@@ -7,18 +7,22 @@ import responses
 
 from seqr.models import Family
 from seqr.utils.search.utils import get_variant_query_gene_counts, query_variants, get_single_variant, \
-    get_variants_for_variant_ids
+    get_variants_for_variant_ids, InvalidSearchException
 from seqr.utils.search.search_utils_tests import SearchTestHelper, MOCK_COUNTS
 from seqr.views.utils.test_utils import PARSED_VARIANTS
 
 MOCK_HOST = 'http://test-hail-host'
 
+FAMILY_3_SAMPLE = {
+    'sample_id': 'NA20870', 'individual_guid': 'I000007_na20870', 'family_guid': 'F000003_3',
+    'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M',
+}
 EXPECTED_SAMPLE_DATA = {
     'VARIANTS': [
         {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
         {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
         {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
-        {'sample_id': 'NA20870', 'individual_guid': 'I000007_na20870', 'family_guid': 'F000003_3', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M'},
+        FAMILY_3_SAMPLE,
     ], 'SV_WES': [
         {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
         {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
@@ -40,9 +44,10 @@ ALL_AFFECTED_SAMPLE_DATA = deepcopy(EXPECTED_SAMPLE_DATA)
 ALL_AFFECTED_SAMPLE_DATA['MITO'] = [
     {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
 ]
-ALL_AFFECTED_SAMPLE_DATA['VARIANTS'].append({
+FAMILY_5_SAMPLE = {
     'sample_id': 'NA20874', 'individual_guid': 'I000009_na20874', 'family_guid': 'F000005_5', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M',
-})
+}
+ALL_AFFECTED_SAMPLE_DATA['VARIANTS'].append(FAMILY_5_SAMPLE)
 
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HOST)
@@ -70,9 +75,6 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         expected_search.update(search_body)
 
         request_body = json.loads(responses.calls[-1].request.body)
-        if request_body != expected_search:
-            diff_k = {k for k, v in request_body.items() if v != expected_search.get(k)}
-            import pdb; pdb.set_trace()
         self.assertDictEqual(request_body, expected_search)
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
@@ -209,40 +211,35 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.assert_cached_results({'gene_aggs': gene_counts})
         self._test_expected_search_call(sort=None)
 
-   # TODO
-   #  @responses.activate
-    # def test_get_single_variant(self, mock_get_variants_for_ids):
-    #     mock_get_variants_for_ids.return_value = [PARSED_VARIANTS[0]]
-    #     variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
-    #     self.assertDictEqual(variant, PARSED_VARIANTS[0])
-    #     mock_get_variants_for_ids.assert_called_with(
-    #         mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, user=self.user,
-    #     )
-    #     expected_samples = {
-    #         s for s in self.search_samples if s.guid not in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
-    #     }
-    #     self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
-    #
-    #     get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
-    #     mock_get_variants_for_ids.assert_called_with(
-    #         mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, user=self.user, return_all_queried_families=True,
-    #     )
-    #     self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
-    #
-    #     get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
-    #     mock_get_variants_for_ids.assert_called_with(
-    #         mock.ANY, '37', {'prefix_19107_DEL': None}, user=self.user,
-    #     )
-    #     expected_samples = {
-    #         s for s in self.search_samples if s.guid in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
-    #     }
-    #     self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
-    #
-    #     mock_get_variants_for_ids.return_value = []
-    #     with self.assertRaises(InvalidSearchException) as cm:
-    #         get_single_variant(self.families, '10-10334333-A-G')
-    #     self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
-    # TODO test return_all_queried_families _validate_expected_families failure
+    @responses.activate
+    def test_get_single_variant(self):
+        variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
+        self.assertDictEqual(variant, PARSED_VARIANTS[0])
+        self._test_minimal_search_call({
+            'variant_ids': [['2', 103343353, 'GAGA', 'G']], 'variant_keys': [],
+        }, num_results=1, sample_data=ALL_AFFECTED_SAMPLE_DATA, omit_sample_type='SV_WES')
+
+        get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
+        self._test_minimal_search_call({
+            'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'],
+        }, num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='VARIANTS')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
+        self.assertEqual(
+            str(cm.exception),
+            'Unable to return all families for the following variants: 1-248367227-TC-T (F000002_2; F000005_5), 2-103343353-GAGA-G (F000005_5)',
+        )
+
+        get_single_variant(self.families.filter(guid='F000003_3'), '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
+        self._test_minimal_search_call({
+            'variant_ids': [['2', 103343353, 'GAGA', 'G']], 'variant_keys': [],
+        }, num_results=1, sample_data={'VARIANTS': [FAMILY_3_SAMPLE]})
+
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={'results': [], 'total': 0})
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_single_variant(self.families, '10-10334333-A-G', user=self.user)
+        self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
     @responses.activate
     def test_get_variants_for_variant_ids(self):
