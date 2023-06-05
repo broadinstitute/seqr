@@ -1,5 +1,3 @@
-from seqr.models import Sample
-
 SEQR_DATSETS_GS_PATH = 'gs://seqr-datasets/v02'
 
 VCF_FILE_EXTENSIONS = ('.vcf', '.vcf.gz', '.vcf.bgz')
