@@ -4,7 +4,7 @@
 #
 #    pip-compile requirements-dev.in
 #
-asgiref==3.6.0
+asgiref==3.7.1
     # via
     #   -c requirements.txt
     #   django
@@ -55,7 +55,7 @@ pyyaml==6.0
     # via responses
 rcssmin==1.1.1
     # via django-compressor
-requests==2.30.0
+requests==2.31.0
     # via
     #   -c requirements.txt
     #   responses
@@ -69,10 +69,16 @@ sqlparse==0.4.4
     #   django
     #   django-debug-toolbar
 tomli==2.0.1
-    # via build
-types-pyyaml==6.0.12.9
+    # via
+    #   build
+    #   pyproject-hooks
+types-pyyaml==6.0.12.10
     # via responses
-urllib3==1.26.15
+typing-extensions==4.6.2
+    # via
+    #   -c requirements.txt
+    #   asgiref
+urllib3==1.26.16
     # via
     #   -c requirements.txt
     #   requests

@@ -3,7 +3,8 @@ from django.urls.base import reverse
 import json
 import mock
 
-from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, bulk_update_family_analysed_by
+from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, hpo_summary_data, \
+    bulk_update_family_analysed_by
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 from seqr.models import FamilyAnalysedBy
 
@@ -132,6 +133,58 @@ class SummaryDataAPITest(object):
         self.assertEqual(response.status_code, 200)
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
+
+    def test_hpo_summary_data(self):
+        url = reverse(hpo_summary_data, args=['HP:0002011'])
+        self.check_require_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'data': []})
+
+        self.login_manager()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'data'})
+        self.assertListEqual(response_json['data'], [
+            {
+                'individualGuid': 'I000001_na19675',
+                'displayName': 'NA19675_1',
+                'features': [
+                    {'id': 'HP:0001631', 'label': 'Defect in the atrial septum', 'category': 'HP:0025354'},
+                    {'id': 'HP:0002011', 'label': 'Morphological abnormality of the central nervous system',
+                     'category': 'HP:0000707', 'qualifiers': [
+                        {'label': 'Infantile onset', 'type': 'age_of_onset'},
+                        {'label': 'Mild', 'type': 'severity'},
+                        {'label': 'Nonprogressive', 'type': 'pace_of_progression'}
+                    ]},
+                    {'id': 'HP:0001636', 'label': 'Tetralogy of Fallot', 'category': 'HP:0033127'},
+                ],
+                'familyId': '1',
+                    'familyData': {
+                    'projectGuid': PROJECT_GUID,
+                    'familyGuid': 'F000001_1',
+                    'analysisStatus': 'Q',
+                    'displayName': '1',
+                }
+            },
+            {
+                'individualGuid': 'I000004_hg00731',
+                'displayName': 'HG00731_a',
+                'features': [
+                    {'id': 'HP:0002011', 'label': 'Morphological abnormality of the central nervous system', 'category': 'HP:0000707'},
+                    {'id': 'HP:0011675', 'label': 'Arrhythmia', 'category': 'HP:0001626'},
+                ],
+                'familyId': '2',
+                'familyData': {
+                    'projectGuid': PROJECT_GUID,
+                    'familyGuid': 'F000002_2',
+                    'analysisStatus': 'Q',
+                    'displayName': '2_1',
+                }
+            },
+        ])
 
     @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
     def test_bulk_update_family_analysed_by(self, mock_load_uploaded_file):

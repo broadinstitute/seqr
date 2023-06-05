@@ -58,6 +58,21 @@ export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid
   return null
 }
 
+export const getMultiProjectFamilies = createSelector(
+  (state, props) => props.match.params,
+  params => ({
+    projectFamilies: Object.entries(params.families.split(',').map(f => f.split(':')).reduce(
+      (acc, [familyGuid, projectGuid]) => {
+        if (!acc[projectGuid]) {
+          acc[projectGuid] = []
+        }
+        acc[projectGuid].push(familyGuid)
+        return acc
+      }, {},
+    )).map(([projectGuid, familyGuids]) => ({ projectGuid, familyGuids })),
+  }),
+)
+
 const createProjectFamiliesSelector = createSelectorCreator(
   defaultMemoize,
   (a, b) => ['projectGuid', 'familyGuids', 'familyGuid', 'analysisGroupGuid', 'searchHash'].every(k => a[k] === b[k]),
