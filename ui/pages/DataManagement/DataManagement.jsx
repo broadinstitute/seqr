@@ -63,7 +63,6 @@ DataManagement.propTypes = {
 const mapStateToProps = state => ({
   user: getUser(state),
   elasticsearchEnabled: getElasticsearchEnabled(state),
-
 })
 
 export default connect(mapStateToProps)(DataManagement)
