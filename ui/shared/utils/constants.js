@@ -1681,7 +1681,8 @@ export const ACMG_RULE_SPECIFICATION_COMP_HET = [
   ],
 ]
 
+export const FAQ_PATH = '/faq'
 export const MATCHMAKER_PATH = '/matchmaker'
 export const PRIVACY_PATH = '/privacy_policy'
 export const TOS_PATH = '/terms_of_service'
-export const PUBLIC_PAGES = [MATCHMAKER_PATH, PRIVACY_PATH, TOS_PATH]
+export const PUBLIC_PAGES = [MATCHMAKER_PATH, FAQ_PATH, PRIVACY_PATH, TOS_PATH]
