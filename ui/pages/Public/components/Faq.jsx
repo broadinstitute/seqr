@@ -3,6 +3,8 @@
 import React from 'react'
 import { Header, Segment, List, Icon } from 'semantic-ui-react'
 
+import { WORKSPACE_REQUIREMENTS } from 'shared/components/panel/LoadWorkspaceDataForm'
+
 export default () => (
   <Segment basic padded="very">
     <Header dividing content="FAQ" size="huge" />
@@ -139,7 +141,9 @@ export default () => (
     To access existing seqr projects, follow the above instructions for adding new collaborators. To submit a request to
     load data to seqr, you will need:
 
-    TODO PULL FROM LoadWorkspaceDataForm
+    <List bulleted>
+      {WORKSPACE_REQUIREMENTS.map(item => <List.Item>{item}</List.Item>)}
+    </List>
 
     If you do not have sufficient permissions on the workspace to request loading, you can contact the existing Owner of
     the workspace to request for these permissions. Another option is to clone the existing workspace and then request
