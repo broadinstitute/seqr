@@ -4,12 +4,12 @@ from datetime import timedelta
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
-    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES
+    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
-    es_backend_enabled, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
-from seqr.utils.search.hail_search_utils import get_hail_variants
+    es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
+from seqr.utils.search.hail_search_utils import get_hail_variants, ping_hail_backend
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 
@@ -50,7 +50,11 @@ def backend_specific_call(es_func, other_func=_no_backend_error):
 
 
 def ping_search_backend():
-    backend_specific_call(ping_elasticsearch)()
+    backend_specific_call(ping_elasticsearch, ping_hail_backend)()
+
+
+def ping_search_backend_admin():
+    backend_specific_call(ping_kibana, lambda: True)()
 
 
 def get_search_backend_status():
@@ -125,12 +129,18 @@ def _get_cached_search_results(search_model, sort=None):
     return safe_redis_get_json(_get_search_cache_key(search_model, sort=sort)) or {}
 
 
+def _validate_export_variant_count(total_variants):
+    if total_variants > MAX_EXPORT_VARIANTS:
+        raise InvalidSearchException(f'Unable to export more than {MAX_EXPORT_VARIANTS} variants ({total_variants} requested)')
+
+
 def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
     previous_search_results = _get_cached_search_results(search_model, sort=sort)
     total_results = previous_search_results.get('total_results')
 
     if load_all:
-        num_results = total_results or MAX_VARIANTS
+        num_results = total_results or MAX_EXPORT_VARIANTS
+        _validate_export_variant_count(num_results)
     start_index = (page - 1) * num_results
     end_index = page * num_results
     if total_results is not None:
@@ -150,9 +160,14 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     if end_index > MAX_VARIANTS:
         raise InvalidSearchException(f'Unable to load more than {MAX_VARIANTS} variants ({end_index} requested)')
 
-    return _query_variants(
+    variants, total_results = _query_variants(
         search_model, user, previous_search_results, sort=sort, page=page, num_results=num_results,
         skip_genotype_filter=skip_genotype_filter)
+
+    if load_all:
+        _validate_export_variant_count(total_results)
+
+    return variants, total_results
 
 
 def _query_variants(search_model, user, previous_search_results, sort=None, num_results=100, **kwargs):

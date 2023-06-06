@@ -768,7 +768,8 @@ class DataManagerAPITest(AuthenticationTestCase):
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'F',
             'num_parsed_samples': 4,
-            'initial_model_count': 1,
+            'initial_model_count': 2,
+            'deleted_count': 1,
             'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
             'get_models_json': lambda models: list(
                 models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'type', 'p_value', 'z_score', 'delta_psi',

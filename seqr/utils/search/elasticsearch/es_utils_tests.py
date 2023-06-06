@@ -1114,7 +1114,7 @@ for fam_q in COMPOUND_HET_PATH_INHERITANCE_QUERY['bool']['should']:
     fam_quality_q = fam_q['bool']['must'][1]
     fam_quality_q['bool'] = {'should': [
         deepcopy(fam_quality_q),
-        {'terms': {'clinvar_clinical_significance': ['Pathogenic', 'Pathogenic/Likely_pathogenic']}}
+        {'regexp': {'clinvar_clinical_significance': '.*Pathogenic.*'}}
     ]}
 
 RECESSIVE_INHERITANCE_QUERY = {
@@ -1575,7 +1575,7 @@ class EsUtilsTest(TestCase):
                 'gnomad_genomes': {'af': 0.01, 'hh': 3},
                 'topmed': {'ac': 2, 'af': None},
             },
-            'qualityFilter': {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'},
+            'qualityFilter': {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass', 'affected_only': True},
             'in_silico': {'cadd': '11.5', 'sift': 'D'},
             'inheritance': {'mode': 'de_novo'},
             'customQuery': {'term': {'customFlag': 'flagVal'}},
@@ -1693,10 +1693,8 @@ class EsUtilsTest(TestCase):
                                 {'range': {'gnomad_genomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.05}}}
                             ]
                         }},
-                        {'terms': {
-                            'clinvar_clinical_significance': [
-                                'Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic',
-                            ]
+                        {'regexp': {
+                            'clinvar_clinical_significance': '.*Likely_pathogenic.*|.*Pathogenic.*',
                         }}
                     ]
                 }},
@@ -1720,11 +1718,8 @@ class EsUtilsTest(TestCase):
                                 'intergenic_variant',
                             ]
                         }},
-                        {'terms': {
-                            'clinvar_clinical_significance': [
-                                'Conflicting_interpretations_of_pathogenicity', 'Likely_pathogenic', 'Pathogenic',
-                                'Pathogenic/Likely_pathogenic', 'Uncertain_significance', 'not_provided', 'other',
-                            ]
+                        {'regexp': {
+                            'clinvar_clinical_significance': '.*Likely_pathogenic.*|.*Pathogenic.*|Conflicting_interpretations_of_pathogenicity.*|~((.*[Bb]enign.*)|(.*[Pp]athogenic.*))',
                         }},
                         {'terms': {'hgmd_class': ['DM', 'DM?']}},
                         {'range': {'splice_ai_delta_score': {'gte': 0.8}}},
@@ -1767,41 +1762,9 @@ class EsUtilsTest(TestCase):
                                     {'term': {'samples_gq_0_to_5': 'HG00731'}},
                                     {'term': {'samples_gq_5_to_10': 'HG00731'}},
                                     {'term': {'samples_gq_10_to_15': 'HG00731'}},
-                                    {'term': {'samples_gq_0_to_5': 'HG00732'}},
-                                    {'term': {'samples_gq_5_to_10': 'HG00732'}},
-                                    {'term': {'samples_gq_10_to_15': 'HG00732'}},
-                                    {'term': {'samples_gq_0_to_5': 'HG00733'}},
-                                    {'term': {'samples_gq_5_to_10': 'HG00733'}},
-                                    {'term': {'samples_gq_10_to_15': 'HG00733'}},
                                 ],
-                                'must': [
-                                    {'bool': {
-                                        'minimum_should_match': 1,
-                                        'should': [
-                                            {'bool': {
-                                                'must_not': [
-                                                    {'term': {'samples_ab_0_to_5': 'HG00732'}},
-                                                    {'term': {'samples_ab_5_to_10': 'HG00732'}},
-                                                ]
-                                            }},
-                                            {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00732'}}]}}
-                                        ]
-                                    }},
-                                    {'bool': {
-                                        'minimum_should_match': 1,
-                                        'should': [
-                                            {'bool': {
-                                                'must_not': [
-                                                    {'term': {'samples_ab_0_to_5': 'HG00733'}},
-                                                    {'term': {'samples_ab_5_to_10': 'HG00733'}},
-                                                ]
-                                            }},
-                                            {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00733'}}]}}
-                                        ]
-                                    }},
-                                ]
-                            }}, {'terms': {
-                                'clinvar_clinical_significance': ['Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic']
+                            }}, {'regexp': {
+                                'clinvar_clinical_significance': '.*Likely_pathogenic.*|.*Pathogenic.*'
                             }}]}}
                         ],
                     }},
@@ -1827,8 +1790,8 @@ class EsUtilsTest(TestCase):
                                     {'term': {'samples_gq_5_to_10': 'NA20870'}},
                                     {'term': {'samples_gq_10_to_15': 'NA20870'}},
                                 ]
-                            }}, {'terms': {
-                                'clinvar_clinical_significance': ['Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic']
+                            }}, {'regexp': {
+                                'clinvar_clinical_significance': '.*Likely_pathogenic.*|.*Pathogenic.*',
                             }}]}}
                         ],
                         '_name': 'F000003_3'
@@ -1930,10 +1893,8 @@ class EsUtilsTest(TestCase):
 
         variants, _ = query_variants(results_model, num_results=5)
         self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_NO_CONSEQUENCE_FILTER_VARIANTS + [PARSED_MITO_VARIANT])
-        path_filter = {'terms': {
-            'clinvar_clinical_significance': [
-                'Pathogenic', 'Pathogenic/Likely_pathogenic'
-            ]
+        path_filter = {'regexp': {
+            'clinvar_clinical_significance':  '.*Pathogenic.*'
         }}
         self.assertExecutedSearches([
             dict(filters=[path_filter], start_index=0, size=5, index=SV_INDEX_NAME),
@@ -2050,7 +2011,7 @@ class EsUtilsTest(TestCase):
         })
 
         annotation_query = {'bool': {'should': [
-            {'terms': {'clinvar_clinical_significance': ['Pathogenic', 'Pathogenic/Likely_pathogenic']}},
+            {'regexp': {'clinvar_clinical_significance': '.*Pathogenic.*'}},
             {'terms': {'hgmd_class': ['DM']}},
             {'range': {'splice_ai_delta_score': {'gte': 0.5}}},
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'intron']}},
@@ -2338,8 +2299,67 @@ class EsUtilsTest(TestCase):
                             ]
                         }},
                     ]
-                    }},
-                 ],
+                }},
+                         ],
+                gene_aggs=True,
+                start_index=0,
+                size=1,
+                index=','.join([INDEX_NAME, SV_INDEX_NAME]),
+            ),
+            dict(
+                filters=[
+                    annotation_secondary_query,
+                    {'bool': {'_name': 'F000003_3', 'must': [{'term': {'samples_num_alt_1': 'NA20870'}}]}},
+                ],
+                gene_aggs=True,
+                start_index=0,
+                size=1
+            ),
+        ])
+
+    @urllib3_responses.activate
+    def test_multi_datatype_secondary_annotations_comp_het_get_es_variants(self):
+        setup_responses()
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'structural': ['DEL'], 'SCREEN': ['dELS']},
+            'annotations_secondary': {'structural_consequence': ['LOF']},
+            'inheritance': {'mode': 'compound_het'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        query_variants(results_model, num_results=10)
+
+        annotation_secondary_query = {'bool': {'should': [
+            {'terms': {'transcriptConsequenceTerms': ['DEL', 'LOF']}},
+            {'terms': {'screen_region_type': ['dELS']}}]}}
+
+        self.assertExecutedSearches([
+            dict(
+                filters=[annotation_secondary_query, {'bool': {
+                    '_name': 'F000002_2',
+                    'must': [
+                        {'bool': {
+                            'should': [
+                                {'bool': {
+                                    'minimum_should_match': 1,
+                                    'must_not': [
+                                        {'term': {'samples_no_call': 'HG00732'}},
+                                        {'term': {'samples_num_alt_2': 'HG00732'}},
+                                        {'term': {'samples_no_call': 'HG00733'}},
+                                        {'term': {'samples_num_alt_2': 'HG00733'}}
+                                    ],
+                                    'should': [
+                                        {'term': {'samples_num_alt_1': 'HG00731'}},
+                                        {'term': {'samples_num_alt_2': 'HG00731'}},
+                                    ]
+                                }},
+                                {'term': {'samples': 'HG00731'}},
+                            ]
+                        }},
+                    ]
+                }},
+                         ],
                 gene_aggs=True,
                 start_index=0,
                 size=1,
@@ -3306,7 +3326,7 @@ class EsUtilsTest(TestCase):
 
         def _execute_inheritance_search(
                 mode=None, inheritance_filter=None, expected_filter=None, expected_comp_het_filter=None,
-                dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, **kwargs):
+                quality_filter=None, expected_quality_filter=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, **kwargs):
             _set_cache(cache_key, None)
             annotations = {'frameshift': ['frameshift_variant']} if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS \
                 else {'structural': ['DEL', 'gCNV_DEL']}
@@ -3314,6 +3334,8 @@ class EsUtilsTest(TestCase):
                 'inheritance': {'mode': mode, 'filter': inheritance_filter},
                 'annotations': annotations,
             }
+            if quality_filter:
+                search_model.search['qualityFilter'] = quality_filter
             search_model.save()
             query_variants(results_model, num_results=2)
 
@@ -3328,8 +3350,11 @@ class EsUtilsTest(TestCase):
                         annotation_query,  {'bool': {'_name': 'F000002_2', 'must': [expected_filter]}}])
                 ])
             else:
+                filters = [expected_filter]
+                if expected_quality_filter:
+                    filters.append(expected_quality_filter)
                 self.assertExecutedSearch(index=index, filters=[
-                    annotation_query, {'bool': {'_name': 'F000002_2', 'must': [expected_filter]}}], **kwargs)
+                    annotation_query, {'bool': {'_name': 'F000002_2', 'must': filters}}], **kwargs)
 
         # custom genotype
         _execute_inheritance_search(
@@ -3389,6 +3414,29 @@ class EsUtilsTest(TestCase):
                 ]
             }
         })
+
+        _execute_inheritance_search(mode='de_novo', inheritance_filter={'affected': custom_affected}, expected_filter={
+            'bool': {
+                'minimum_should_match': 1,
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00731'}},
+                    {'term': {'samples_num_alt_1': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}},
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_1': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}}
+                ],
+                'should': [
+                    {'term': {'samples_num_alt_1': 'HG00732'}},
+                    {'term': {'samples_num_alt_2': 'HG00732'}}
+                ]
+            }
+        }, quality_filter={'affected_only': True, 'min_gq': 10}, expected_quality_filter={
+            'bool': {'must_not': [
+                {'term': {'samples_gq_0_to_5': 'HG00732'}},
+                {'term': {'samples_gq_5_to_10': 'HG00732'}},
+            ]}}
+        )
 
         _execute_inheritance_search(
             mode='de_novo', inheritance_filter={'affected': custom_multi_affected}, expected_filter={'bool': {
@@ -3514,7 +3562,7 @@ class EsUtilsTest(TestCase):
                     {'term': {'samples_num_alt_2': 'HG00733'}}
                 ],
                 'must': [
-                    {'match': {'contig': 'X'}},
+                    {'range': {'xpos': {'gte': 23000000001, 'lte': 24000000001}}},
                     {'term': {'samples_num_alt_2': 'HG00731'}},
                 ]
             }
@@ -3533,7 +3581,7 @@ class EsUtilsTest(TestCase):
                     {'term': {'samples_cn_0': 'HG00733'}},
                     {'term': {'samples_cn_gte_4': 'HG00733'}},
                 ],
-                'must': [{'match': {'contig': 'X'}}],
+                'must': [{'range': {'xpos': {'gte': 23000000001, 'lte': 24000000001}}},],
             }
         }
 
@@ -3546,7 +3594,7 @@ class EsUtilsTest(TestCase):
                     {'term': {'samples_num_alt_2': 'HG00733'}}
                 ],
                 'must': [
-                    {'match': {'contig': 'X'}},
+                    {'range': {'xpos': {'gte': 23000000001, 'lte': 24000000001}}},
                     {'term': {'samples_num_alt_2': 'HG00732'}},
                 ]
             }

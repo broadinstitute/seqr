@@ -284,15 +284,15 @@ MOCK_DATA_MODEL = {
                 {'column': 'internal_project_id'},
                 {'column': 'gregor_center', 'required': True, 'enumerations': ['BCM', 'BROAD', 'UW']},
                 {'column': 'consent_code', 'required': True, 'enumerations': ['GRU', 'HMB']},
-                {'column': 'recontactable', 'enumerations': ['Yes', 'No', 'Unknown']},
+                {'column': 'recontactable', 'enumerations': ['Yes', 'No']},
                 {'column': 'prior_testing'},
                 {'column': 'family_id', 'required': True},
                 {'column': 'paternal_id'},
                 {'column': 'maternal_id'},
                 {'column': 'proband_relationship', 'required': True},
                 {'column': 'sex', 'required': True, 'enumerations': ['Male', 'Female', 'Unknown']},
-                {'column': 'reported_race', 'enumerations': ['Asian', 'White', 'Black', 'Unknown']},
-                {'column': 'reported_ethnicity', 'enumerations': ['Hispanic', 'Not Hispanic', 'Unknown']},
+                {'column': 'reported_race', 'enumerations': ['Asian', 'White', 'Black']},
+                {'column': 'reported_ethnicity', 'enumerations': ['Hispanic or Latino', 'Not Hispanic or Latino']},
                 {'column': 'ancestry_metadata'},
                 {'column': 'affected_status', 'required': True, 'enumerations': ['Affected', 'Unaffected', 'Unknown']},
                 {'column': 'phenotype_description'},
@@ -687,12 +687,14 @@ class ReportAPITest(object):
             'The following tables are required in the data model but absent from the reports: subject',
             'The following columns are included in the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id, proband_relationship_detail, sex_detail, twin_id',
             'The following columns are included in the "participant" data model but are missing in the report: ancestry_metadata',
+            'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
+            'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
             'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
-            'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
+            'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
         ] + skipped_file_validation_warnings[1:6] + skipped_file_validation_warnings[7:])
         self.assertListEqual(response.json()['errors'], [
             'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
-            'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black, Unknown. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
+            'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
             'The following entries are missing required "aligned_dna_short_read_set_id" (from Airtable) in the "aligned_dna_short_read_set" table: NA19675_1',
         ])
 
@@ -724,11 +726,17 @@ class ReportAPITest(object):
             'proband_relationship_detail', 'sex', 'sex_detail', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
             'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
         ])
-        self.assertIn([
+        row = next(r for r in participant_file if r[0] == 'Broad_NA19675_1')
+        self.assertListEqual([
             'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
             '34415322|33665635', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
-            'Middle Eastern or North African', 'Unknown', '', '21', 'Affected', 'myopathy', '18',
-        ], participant_file)
+            'Middle Eastern or North African', '', '', '21', 'Affected', 'myopathy', '18',
+        ], row)
+        hispanic_row = next(r for r in participant_file if r[0] == 'Broad_HG00731')
+        self.assertListEqual([
+            'Broad_HG00731', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_2', 'Broad_HG00732',
+            'Broad_HG00733', '', '', '', 'Female', '', '', 'Hispanic or Latino', 'Other', '', 'Affected', '', '',
+        ], hispanic_row)
 
         self.assertEqual(len(family_file), 10)
         self.assertEqual(family_file[0], [
@@ -754,11 +762,12 @@ class ReportAPITest(object):
             'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
             'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status', 'age_at_collection',
             'participant_drugs_intake', 'participant_special_diet', 'hours_since_last_meal', 'passage_number',
-            'time_to_freeze', 'sample_transformation_detail',
+            'time_to_freeze', 'sample_transformation_detail', 'quality_issues',
         ])
-        self.assertIn(
-            ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', ''],
-            analyte_file)
+        row = next(r for r in analyte_file if r[1] == 'Broad_NA19675_1')
+        self.assertListEqual(
+            ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', '', ''],
+            row)
 
         self.assertEqual(len(experiment_file), 3)
         self.assertEqual(experiment_file[0], [
@@ -775,14 +784,14 @@ class ReportAPITest(object):
         self.assertEqual(len(read_file), 3)
         self.assertEqual(read_file[0], [
             'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
-            'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage',
-            'analysis_details',
+            'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri', 'reference_assembly_details',
+            'alignment_software', 'mean_coverage', 'analysis_details',  'quality_issues',
         ])
         self.assertIn([
             'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38',
-            'BWA-MEM-2.3', '42.4', 'DOI:10.5281/zenodo.4469317',
+            '', '', 'BWA-MEM-2.3', '42.4', 'DOI:10.5281/zenodo.4469317', '',
         ], read_file)
 
         self.assertEqual(len(read_set_file), 3)
@@ -850,7 +859,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
             'WGS__MITO': {'non_demo': 1},
             'WES__SV': {'non_demo': 3},
             'WGS__SV': {'non_demo': 1},
-            'RNA__VARIANTS': {'non_demo': 3},
+            'RNA__VARIANTS': {'non_demo': 4},
         },
     }
 
@@ -867,6 +876,6 @@ class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
             'WGS__MITO': {'internal': 1},
             'WES__SV': {'internal': 3},
             'WGS__SV': {'external': 1},
-            'RNA__VARIANTS': {'internal': 3},
+            'RNA__VARIANTS': {'internal': 4},
         },
     }

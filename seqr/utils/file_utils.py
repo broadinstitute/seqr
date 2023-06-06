@@ -84,7 +84,7 @@ def mv_file_to_gs(local_path, gs_path, user=None):
     _run_gsutil_with_wait(command, gs_path, user)
 
 
-def get_gs_file_list(gs_path, user=None, check_subfolders=True):
+def get_gs_file_list(gs_path, user=None, check_subfolders=True, allow_missing=False):
     gs_path = gs_path.rstrip('/')
     command = 'ls'
 
@@ -95,7 +95,7 @@ def get_gs_file_list(gs_path, user=None, check_subfolders=True):
             return []
         gs_path = f'{gs_path}/**'
 
-    all_lines = _run_gsutil_with_stdout(command, gs_path, user)
+    all_lines = _run_gsutil_with_stdout(command, gs_path, user, allow_missing=allow_missing)
     return [line for line in all_lines if is_google_bucket_file_path(line)]
 
 
@@ -107,10 +107,13 @@ def _run_gsutil_with_wait(command, gs_path, user=None):
     return process
 
 
-def _run_gsutil_with_stdout(command, gs_path, user=None):
+def _run_gsutil_with_stdout(command, gs_path, user=None, allow_missing=False):
     process = _run_gsutil_command(command, gs_path, user=user, pipe_errors=True)
     output, errs = process.communicate()
     if errs:
         errors = errs.decode('utf-8').strip().replace('\n', ' ')
-        raise Exception(f'Run command failed: {errors}')
+        if allow_missing:
+            logger.info(errors, user)
+        else:
+            raise Exception(f'Run command failed: {errors}')
     return [line for line in output.decode('utf-8').split('\n') if line]

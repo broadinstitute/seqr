@@ -1,5 +1,5 @@
 import React from 'react'
-import { Form } from 'semantic-ui-react'
+import { Form, Label } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
 import { validators } from '../components/form/FormHelpers'
@@ -13,8 +13,9 @@ import {
   BaseSemanticInput,
 } from '../components/form/Inputs'
 
-import { stripMarkdown } from './stringUtils'
+import { stripMarkdown, snakecaseToTitlecase } from './stringUtils'
 import { ColoredIcon } from '../components/StyledComponents'
+import HpoPanel from '../components/panel/HpoPanel'
 
 export const ANVIL_URL = 'https://anvil.terra.bio'
 export const GOOGLE_LOGIN_URL = '/login/google-oauth2'
@@ -362,6 +363,10 @@ export const INDIVIDUAL_FIELD_SEX = 'sex'
 export const INDIVIDUAL_FIELD_AFFECTED = 'affected'
 export const INDIVIDUAL_FIELD_NOTES = 'notes'
 export const INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP = 'probandRelationship'
+export const INDIVIDUAL_FIELD_FEATURES = 'features'
+export const INDIVIDUAL_FIELD_FILTER_FLAGS = 'filterFlags'
+export const INDIVIDUAL_FIELD_POP_FILTERS = 'popPlatformFilters'
+export const INDIVIDUAL_FIELD_SV_FLAGS = 'svFlags'
 
 export const INDIVIDUAL_FIELD_CONFIGS = {
   [FAMILY_FIELD_ID]: { label: 'Family ID' },
@@ -395,7 +400,7 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
 export const INDIVIDUAL_HPO_EXPORT_DATA = [
   {
     header: 'HPO Terms (present)',
-    field: 'features',
+    field: INDIVIDUAL_FIELD_FEATURES,
     format: features => (features ? features.map(feature => `${feature.id} (${feature.label})`).join('; ') : ''),
     description: 'comma-separated list of HPO Terms for present phenotypes in this individual',
   },
@@ -440,28 +445,92 @@ export const INDIVIDUAL_EXPORT_DATA = [].concat(
   INDIVIDUAL_HPO_EXPORT_DATA,
 )
 
+const FLAG_TITLE = {
+  chimera: '% Chimera',
+  contamination: '% Contamination',
+  coverage_exome: '% 20X Coverage',
+  coverage_genome: 'Mean Coverage',
+}
+
+const ratioLabel = (flag) => {
+  const words = snakecaseToTitlecase(flag).split(' ')
+  return `Ratio ${words[1]}/${words[2]}`
+}
+
+export const INDIVIDUAL_FIELD_LOOKUP = {
+  [INDIVIDUAL_FIELD_FILTER_FLAGS]: {
+    fieldDisplay: filterFlags => Object.entries(filterFlags).map(([flag, val]) => (
+      <Label
+        key={flag}
+        basic
+        horizontal
+        color="orange"
+        content={`${FLAG_TITLE[flag] || snakecaseToTitlecase(flag)}: ${parseFloat(val).toFixed(2)}`}
+      />
+    )),
+  },
+  [INDIVIDUAL_FIELD_POP_FILTERS]: {
+    fieldDisplay: filterFlags => Object.keys(filterFlags).map(flag => (
+      <Label
+        key={flag}
+        basic
+        horizontal
+        color="orange"
+        content={flag.startsWith('r_') ? ratioLabel(flag) : snakecaseToTitlecase(flag.replace('n_', 'num._'))}
+      />
+    )),
+  },
+  [INDIVIDUAL_FIELD_SV_FLAGS]: {
+    fieldDisplay: filterFlags => filterFlags.map(flag => (
+      <Label
+        key={flag}
+        basic
+        horizontal
+        color="orange"
+        content={snakecaseToTitlecase(flag)}
+      />
+    )),
+  },
+  [INDIVIDUAL_FIELD_FEATURES]: {
+    fieldDisplay: individual => <HpoPanel individual={individual} />,
+    individualFields: individual => ({
+      initialValues: { ...individual, individualField: 'hpo_terms' },
+      fieldValue: individual,
+    }),
+  },
+}
+
 // CLINVAR
 
-export const CLINSIG_SEVERITY = {
-  // clinvar
-  pathogenic: 1,
-  'risk factor': 0,
-  risk_factor: 0,
-  'likely pathogenic': 1,
-  'pathogenic/likely_pathogenic': 1,
-  likely_pathogenic: 1,
-  benign: -1,
-  'likely benign': -1,
-  'benign/likely_benign': -1,
-  likely_benign: -1,
-  protective: -1,
-  // hgmd
-  DM: 1,
-  'DM?': 0,
-  FPV: 0,
-  FP: 0,
-  DFP: 0,
-  DP: 0,
+const CLINVAR_DEFAULT_PATHOGENICITY = 'no_pathogenic_assertion'
+const CLINVAR_MAX_RISK_PATHOGENICITY = 'established_risk_allele'
+const CLINVAR_MIN_RISK_PATHOGENICITY = 'likely_risk_allele'
+const CLINVAR_PATHOGENICITIES = [
+  'pathogenic',
+  'pathogenic/likely_pathogenic',
+  'pathogenic/likely_pathogenic/likely_risk_allele',
+  'pathogenic/likely_risk_allele',
+  'likely_pathogenic',
+  'likely_pathogenic/likely_risk_allele',
+  CLINVAR_MAX_RISK_PATHOGENICITY,
+  CLINVAR_MIN_RISK_PATHOGENICITY,
+  'conflicting_interpretations_of_pathogenicity',
+  'uncertain_risk_allele',
+  'uncertain_significance/uncertain_risk_allele',
+  'uncertain_significance',
+  CLINVAR_DEFAULT_PATHOGENICITY,
+  'likely_benign',
+  'benign/likely_benign',
+  'benign',
+].reverse().reduce((acc, path, i) => ({ ...acc, [path]: i }), {})
+
+const HGMD_SEVERITY = {
+  DM: 1.5,
+  'DM?': 0.5,
+  FPV: 0.5,
+  FP: 0.5,
+  DFP: 0.5,
+  DP: 0.5,
 }
 
 // LOCUS LISTS
@@ -997,16 +1066,45 @@ export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectB
     familyGuid => projectByGuid[familiesByGuid[familyGuid].projectGuid].enableHgmd,
   )) && variant.hgmd && variant.hgmd.class
 
-const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
-  const { clinvar = {} } = variant
-  const clinvarSignificance = clinvar.clinicalSignificance && clinvar.clinicalSignificance.split('/')[0].toLowerCase()
-  const hgmdSignificance = getPermissionedHgmdClass(variant, user, familiesByGuid, projectByGuid)
-  if (!clinvarSignificance && !hgmdSignificance) return -10
-  let clinvarSeverity = 0.1
-  if (clinvarSignificance) {
-    clinvarSeverity = clinvarSignificance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[clinvarSignificance] + 1 : 0.5
+export const clinvarSignificance = (clinvar = {}) => {
+  let { pathogenicity, assertions } = clinvar
+  const { clinicalSignificance } = clinvar
+  if (clinicalSignificance && !pathogenicity) {
+    [pathogenicity, ...assertions] = clinicalSignificance.split(/[,|]/)
+    if (pathogenicity === 'Pathogenic/Likely_pathogenic/Pathogenic') {
+      pathogenicity = 'Pathogenic/Likely_pathogenic'
+    } else if (pathogenicity === 'Pathogenic/Pathogenic') {
+      pathogenicity = 'Pathogenic'
+    }
+    if (!(pathogenicity.replace(' ', '_').toLowerCase() in CLINVAR_PATHOGENICITIES)) {
+      assertions = [pathogenicity, ...assertions]
+      pathogenicity = CLINVAR_DEFAULT_PATHOGENICITY
+    }
+    assertions = assertions.map(a => a.replace(/^_/, ''))
   }
-  const hgmdSeverity = hgmdSignificance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[hgmdSignificance] + 0.5 : 0
+
+  return { pathogenicity, assertions, severity: CLINVAR_PATHOGENICITIES[pathogenicity?.replace(' ', '_').toLowerCase()] }
+}
+
+export const clinvarColor = (severity, pathColor, riskColor, benignColor) => {
+  if (severity > CLINVAR_PATHOGENICITIES[CLINVAR_MAX_RISK_PATHOGENICITY]) {
+    return pathColor
+  }
+  if (severity >= CLINVAR_PATHOGENICITIES[CLINVAR_MIN_RISK_PATHOGENICITY]) {
+    return riskColor
+  }
+  if (severity < CLINVAR_PATHOGENICITIES[CLINVAR_DEFAULT_PATHOGENICITY]) {
+    return benignColor
+  }
+  return null
+}
+
+const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
+  const { pathogenicity, severity } = clinvarSignificance(variant.clinvar)
+  const hgmdSignificance = getPermissionedHgmdClass(variant, user, familiesByGuid, projectByGuid)
+  if (!pathogenicity && !hgmdSignificance) return -10
+  const clinvarSeverity = pathogenicity ? severity + 1 : 0.1
+  const hgmdSeverity = HGMD_SEVERITY[hgmdSignificance] || 0
   return clinvarSeverity + hgmdSeverity
 }
 

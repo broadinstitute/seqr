@@ -55,7 +55,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
 
         # Test database models
         existing_sample = Sample.objects.get(individual_id=1, sample_type='RNA', tissue_type='M')
-        existing_rna_samples = Sample.objects.filter(sample_type='RNA')
+        existing_rna_samples = Sample.objects.filter(sample_type='RNA', rnaseqtpm__isnull=False)
         self.assertEqual(existing_sample.guid, EXISTING_SAMPLE_GUID)
         self.assertEqual(existing_sample.sample_id, 'NA19675_D2')
         self.assertTrue(existing_sample.is_active)

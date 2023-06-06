@@ -2,6 +2,7 @@ from collections import defaultdict
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConnectionError as EsConnectionError, TransportError
 import elasticsearch_dsl
+from urllib3.connectionpool import connection_from_url
 
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
@@ -10,7 +11,7 @@ from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch, get_compound_het_page
 from seqr.views.utils.json_utils import  _to_camel_case
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, \
-    ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
+    ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT, KIBANA_SERVER
 
 
 class InvalidIndexException(Exception):
@@ -65,6 +66,12 @@ def get_es_client(timeout=60, **kwargs):
 def ping_elasticsearch():
     if not get_es_client(timeout=3, max_retries=0).ping():
         raise ValueError('No response from elasticsearch ping')
+
+
+def ping_kibana():
+    resp = connection_from_url('http://{}'.format(KIBANA_SERVER)).urlopen('HEAD', '/status', timeout=3, retries=3)
+    if resp.status >= 400:
+        raise ValueError('Kibana Error {}: {}'.format(resp.status, resp.reason))
 
 
 SAMPLE_FIELDS_LIST = ['samples', 'samples_num_alt_1']

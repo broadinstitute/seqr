@@ -16,7 +16,7 @@ const FieldValue = styled.div`
   padding-bottom: ${props => (props.compact ? 0 : '15px')}; 
   padding-left: ${props => (props.compact ? 0 : '22px')};
   padding-right: ${props => (props.fieldName ? '20px' : '5px')};
-  display: ${props => ((props.fieldName && !props.compact) ? 'block' : 'inline-block')};
+  display: ${props => (((props.fieldName && !props.compact) || props.blockDisplay) ? 'block' : 'inline-block')};
   max-width: calc(100% - ${props => (props.hasButtons ? '60' : '0')}px);
 `
 
@@ -56,6 +56,7 @@ class BaseFieldView extends React.PureComponent {
     modalSize: PropTypes.string,
     defaultId: PropTypes.string,
     additionalEditFields: PropTypes.arrayOf(PropTypes.object),
+    blockDisplay: PropTypes.bool,
   }
 
   static defaultProps = {
@@ -161,7 +162,7 @@ class BaseFieldView extends React.PureComponent {
   render() {
     const {
       isVisible, isPrivate, isEditable, isDeletable, user, field, initialValues, fieldValue: propFieldValue, style,
-      showEmptyValues, onSubmit, deleteConfirm, fieldName, compact, hideValue, fieldDisplay, isRequired,
+      showEmptyValues, onSubmit, deleteConfirm, fieldName, compact, hideValue, fieldDisplay, isRequired, blockDisplay,
     } = this.props
     const { showInLineButton } = this.state
 
@@ -209,7 +210,7 @@ class BaseFieldView extends React.PureComponent {
         !compact && <br key="br" />,
       ],
       hasValue && !hideValue && showInLineButton && (
-        <FieldValue key="value" compact={compact} fieldName={fieldName} hasButtons={hasButtons}>
+        <FieldValue key="value" compact={compact} fieldName={fieldName} hasButtons={hasButtons} blockDisplay={blockDisplay}>
           {fieldDisplay(fieldValue, compact, this.getFieldId())}
         </FieldValue>
       ),
