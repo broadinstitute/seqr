@@ -18,8 +18,10 @@ def run():
     logging.basicConfig(level=logging.INFO)
     hl.init()
     app = web.Application()
-    app.add_routes([web.get('/status', status)])
-    app.add_routes([web.post('/search', search)])
+    app.add_routes([
+        web.get('/status', status),
+        web.post('/search', search),
+    ])
     # TODO add gene_counts route
     web.run_app(
         app,
