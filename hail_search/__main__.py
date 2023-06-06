@@ -20,7 +20,7 @@ def run():
         app,
         host="0.0.0.0",
         port=5000,
-        access_log_format='"%r" %s %b seconds:%Tf',
+        access_log_format='"%r" %s %b %Tfsec',
     )
 
 

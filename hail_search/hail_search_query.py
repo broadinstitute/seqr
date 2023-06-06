@@ -225,7 +225,8 @@ class BaseHailTableQuery(object):
         annotation_ht_query_result = hl.query_table(
             f'{tables_path}/annotations.ht', families_ht.key).first().drop(*families_ht.key)
         ht = families_ht.annotate(**annotation_ht_query_result)
-        logger.info(f'Annotated {ht.count()} rows ({cls.__name__})')
+        ct, ann = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, 10)))
+        logger.info(f'Annotated {ct} rows ({cls.__name__})')
 
         if clinvar_path_terms and quality_filter:
             ht = ht.annotate(genotypes=hl.if_else(
