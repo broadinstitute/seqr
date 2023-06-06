@@ -8,7 +8,6 @@ from seqr.utils.search.constants import PRIORITIZED_GENE_SORT
 from seqr.utils.xpos_utils import MIN_POS, MAX_POS
 from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
 
-HAIL_BACKEND_SERVICE_HOSTNAME = 'http://hail-search:5000/'
 
 def _hail_backend_url(path):
     return f'{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'

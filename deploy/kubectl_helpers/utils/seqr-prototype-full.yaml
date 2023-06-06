@@ -108,12 +108,10 @@ spec:
           value: "127.0.0.1"
         - name: REDIS_SERVICE_HOSTNAME
           value: "redis"
+        - name: HAIL_BACKEND_SERVICE_HOSTNAME
+          value: "http://hail-search"
         - name: POSTGRES_SERVICE_PORT
           value: "5432"
-        - name: ELASTICSEARCH_SERVICE_PORT
-          value: "9200"
-        - name: KIBANA_SERVICE_PORT
-          value: "5601"
         - name: DEPLOYMENT_TYPE
           value: "prototype"
         - name: SEQR_GIT_BRANCH
