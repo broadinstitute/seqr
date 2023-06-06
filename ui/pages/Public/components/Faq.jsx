@@ -4,6 +4,7 @@ import React from 'react'
 import { Header, Segment, List, Icon } from 'semantic-ui-react'
 
 import { WORKSPACE_REQUIREMENTS } from 'shared/components/panel/LoadWorkspaceDataForm'
+import { SeqrAvailability } from './LandingPage'
 
 export default () => (
   <Segment basic padded="very">
@@ -72,30 +73,16 @@ export default () => (
 
     <Header content="Q. How can I analyze my data in seqr?" size="medium" />
     There are 3 mechanisms through which you can load and analyze your data in seqr:
-    <List ordered>
-      <List.Item>
-        Through the <a href="https://anvilproject.org" target="blank">AnVIL</a> platform* where requests can be placed
-        for loading of a joint called vcf in seqr. To learn more about generating a joint called vcf, please refer to
-        this <a href="https://drive.google.com/file/d/1aE7vUvUOZw_r78Osjn1Q0Cs3c5DCuonz/view?usp=sharing" target="blank">documentation</a>.
-      </List.Item>
-      <List.Item>
-        As a collaborator providing samples for sequencing within the &nbsp;
-        <a href="https://cmg.broadinstitute.org" target="blank">Broad Institute Center for Mendelian Genomics</a>, part
-        of the <a href="https://gregorconsortium.org" target="blank">GREGoR consortium</a>.
-      </List.Item>
-      <List.Item>
-        Through a local installation. The seqr source code is available on &nbsp;
-        <a href="https://github.com/broadinstitute/seqr" target="blank">GitHub</a>, however this generally requires
-        strong bioinformatics skills to deploy and then download/storage of large annotation datasets. See below for
-        more details.
-      </List.Item>
-    </List>
+    <SeqrAvailability hasFootnote />
 
     *AnVIL is a controlled-access NIH-designated data repository supported on the Terra platform. Users are expected to
     ensure that data use and sharing within a Terra or AnVIL Workspace are conducted in accordance with all applicable
     national, tribal, and state laws and regulations, as well as relevant institutional policies and procedures for
     handling genomic data. However, because seqr runs within Terra or AnVIL workspaces, no additional regulatory
-    approval is required to use seqr to analyze data stored on Terra or AnVIL.
+    approval is required to use seqr to analyze data stored on Terra or AnVIL. <br />
+
+    To learn more about generating a joint called vcf, please refer to
+    this <a href="https://drive.google.com/file/d/1aE7vUvUOZw_r78Osjn1Q0Cs3c5DCuonz/view?usp=sharing" target="blank">documentation</a>
 
     <Header content="Q. I am unable to log in or access my project in seqr. What should I do?" size="medium" />
     To access seqr, users must have their email address registered with AnVIL (see instructions above) and to view
@@ -123,7 +110,8 @@ export default () => (
     a few days to up to a week to process, depending on the sample numbers and data types.
 
     <Header content="Q. How can I set up seqr locally?" size="medium" />
-    There is <a href="https://github.com/broadinstitute/seqr/blob/master/deploy/LOCAL_INSTALL.md" target="blank">documentation</a>
+    Setting up seqr locally generally requires strong bioinformatics skills to deploy, and also requires the
+    download/storage of large annotation datasets. There is <a href="https://github.com/broadinstitute/seqr/blob/master/deploy/LOCAL_INSTALL.md" target="blank">documentation</a>
     &nbsp; in GitHub on setting up a local instance of seqr. If you have questions or issues with deployment, we
     recommend you take a look at our <a href="https://github.com/broadinstitute/seqr/discussions" target="blank">Github discussions page</a>
     &nbsp; for general troubleshooting help. If after looking into our documentation, you still have questions that can
