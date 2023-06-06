@@ -225,8 +225,7 @@ class BaseHailTableQuery(object):
         annotation_ht_query_result = hl.query_table(
             f'{tables_path}/annotations.ht', families_ht.key).first().drop(*families_ht.key)
         ht = families_ht.annotate(**annotation_ht_query_result)
-        ct, ann = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, 10)))
-        logger.info(f'Annotated {ct} rows ({cls.__name__})')
+        logger.info(f'Annotated {ht.count()} rows ({cls.__name__})')
 
         if clinvar_path_terms and quality_filter:
             ht = ht.annotate(genotypes=hl.if_else(
@@ -234,6 +233,7 @@ class BaseHailTableQuery(object):
                 ht.genotypes, ht.genotypes.filter(lambda x: ~ht.failQualityFamilies.contains(x.familyGuid))
             )).drop('failQualityFamilies')
             ht = ht.filter(ht.genotypes.size() > 0)
+            logger.info(f'Filter path/quality to {ht.count()} rows')
 
         ht = ht.annotate(
             familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
@@ -415,11 +415,16 @@ class BaseHailTableQuery(object):
         if filtered_genes:
             ht = cls._filter_gene_ids(ht, filtered_genes)
 
+        logger.info('Applying filters')
         ht = cls._filter_by_frequency(ht, frequencies, clinvar_path_terms)
+        logger.info(f'Filtered frequency to {ht.count()} rows')
         ht = cls._filter_by_in_silico(ht, in_silico)
+        logger.info(f'Filtered in silico to {ht.count()} rows')
         ht = cls._filter_by_annotations(ht, allowed_consequences, allowed_consequences_secondary, consequence_overrides)
+        logger.info(f'Filtered annotations to {ht.count()} rows')
         if vcf_quality_filter is not None:
             ht = cls._filter_vcf_filters(ht)
+            logger.info(f'Filtered VCF quality to {ht.count()} rows')
 
         return ht
 
