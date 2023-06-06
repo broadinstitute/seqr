@@ -135,7 +135,7 @@ def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None
         parsed_variant_ids = {
             k: v for k, v in parsed_variant_ids.items()
             if (dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and v) or
-               (dataset_type == Sample.DATASET_TYPE_SV_CALLS and not v)
+               (dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS and not v)
         }
     elif all(v for v in parsed_variant_ids.values()):
         dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS
