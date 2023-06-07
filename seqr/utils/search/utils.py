@@ -1,13 +1,15 @@
 from collections import defaultdict
 from datetime import timedelta
 
-from seqr.models import Sample
+from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.search.constants import XPOS_SORT_KEY
+from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
+    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
-    es_backend_enabled, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
+    es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
+from seqr.utils.search.hail_search_utils import get_hail_variants, ping_hail_backend
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 
@@ -27,6 +29,14 @@ SEARCH_EXCEPTION_MESSAGE_MAP.update(ES_EXCEPTION_MESSAGE_MAP)
 ERROR_LOG_EXCEPTIONS = set()
 ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
 
+DATASET_TYPES_LOOKUP = {
+    data_types[0]: data_types for data_types in [
+        [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS],
+        [Sample.DATASET_TYPE_SV_CALLS],
+    ]
+}
+DATASET_TYPES_LOOKUP[ALL_DATA_TYPES] = [dt for dts in DATASET_TYPES_LOOKUP.values() for dt in dts]
+
 
 def _no_backend_error(*args, **kwargs):
     raise InvalidSearchException('Elasticsearch backend is disabled')
@@ -40,7 +50,11 @@ def backend_specific_call(es_func, other_func=_no_backend_error):
 
 
 def ping_search_backend():
-    backend_specific_call(ping_elasticsearch)()
+    backend_specific_call(ping_elasticsearch, ping_hail_backend)()
+
+
+def ping_search_backend_admin():
+    backend_specific_call(ping_kibana, lambda: True)()
 
 
 def get_search_backend_status():
@@ -58,12 +72,29 @@ def get_search_samples(projects, active_only=True):
     return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
-def _get_families_search_samples(families):
+def _get_families_search_data(families, dataset_types=None):
     samples = _get_filtered_search_samples({'individual__family__in': families})
     if len(samples) < 1:
         raise InvalidSearchException('No search data found for families {}'.format(
             ', '.join([f.family_id for f in families])))
-    return samples
+
+    if dataset_types:
+        samples = samples.filter(dataset_type__in=dataset_types)
+        if not samples:
+            raise InvalidSearchException(f'Unable to search against dataset type "{dataset_types[0]}"')
+
+    projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name')
+    project_versions = defaultdict(set)
+    for genome_version, project_name in projects:
+        project_versions[genome_version].add(project_name)
+
+    if len(project_versions) > 1:
+        summary = '; '.join(
+            [f"{build} - {', '.join(sorted(projects))}" for build, projects in project_versions.items()])
+        raise InvalidSearchException(
+            f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
+
+    return samples, next(iter(project_versions.keys()))
 
 
 def delete_search_backend_data(data_id):
@@ -77,7 +108,7 @@ def delete_search_backend_data(data_id):
 
 def get_single_variant(families, variant_id, return_all_queried_families=False, user=None):
     variants = backend_specific_call(get_es_variants_for_variant_ids)(
-        _get_families_search_samples(families), [variant_id], user, return_all_queried_families=return_all_queried_families,
+        *_get_families_search_data(families), [variant_id], user, return_all_queried_families=return_all_queried_families,
     )
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
@@ -86,7 +117,7 @@ def get_single_variant(families, variant_id, return_all_queried_families=False, 
 
 def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
     return backend_specific_call(get_es_variants_for_variant_ids)(
-        _get_families_search_samples(families), variant_ids, user, dataset_type=dataset_type,
+        *_get_families_search_data(families), variant_ids, user, dataset_type=dataset_type,
     )
 
 
@@ -98,12 +129,18 @@ def _get_cached_search_results(search_model, sort=None):
     return safe_redis_get_json(_get_search_cache_key(search_model, sort=sort)) or {}
 
 
+def _validate_export_variant_count(total_variants):
+    if total_variants > MAX_EXPORT_VARIANTS:
+        raise InvalidSearchException(f'Unable to export more than {MAX_EXPORT_VARIANTS} variants ({total_variants} requested)')
+
+
 def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
     previous_search_results = _get_cached_search_results(search_model, sort=sort)
     total_results = previous_search_results.get('total_results')
 
     if load_all:
-        num_results = total_results or MAX_VARIANTS
+        num_results = total_results or MAX_EXPORT_VARIANTS
+        _validate_export_variant_count(num_results)
     start_index = (page - 1) * num_results
     end_index = page * num_results
     if total_results is not None:
@@ -120,12 +157,17 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
     if previously_loaded_results is not None:
         return previously_loaded_results, total_results
 
-    if load_all and total_results and int(total_results) >= int(MAX_VARIANTS):
-        raise InvalidSearchException('Too many variants to load. Please refine your search and try again')
+    if end_index > MAX_VARIANTS:
+        raise InvalidSearchException(f'Unable to load more than {MAX_VARIANTS} variants ({end_index} requested)')
 
-    return _query_variants(
+    variants, total_results = _query_variants(
         search_model, user, previous_search_results, sort=sort, page=page, num_results=num_results,
         skip_genotype_filter=skip_genotype_filter)
+
+    if load_all:
+        _validate_export_variant_count(total_results)
+
+    return variants, total_results
 
 
 def _query_variants(search_model, user, previous_search_results, sort=None, num_results=100, **kwargs):
@@ -133,11 +175,12 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
 
     rs_ids = None
     variant_ids = None
+    parsed_variant_ids = None
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
     if invalid_items:
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
     if not (genes or intervals):
-        rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
+        rs_ids, variant_ids, parsed_variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
         if invalid_items:
             raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
         if rs_ids and variant_ids:
@@ -149,12 +192,26 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     parsed_search = {
         'parsedLocus': {
             'genes': genes, 'intervals': intervals, 'rs_ids': rs_ids, 'variant_ids': variant_ids,
+            'parsed_variant_ids': parsed_variant_ids,
         },
     }
     parsed_search.update(search)
 
-    variant_results = backend_specific_call(get_es_variants)(
-        _get_families_search_samples(search_model.families.all()), parsed_search, user, previous_search_results,
+    families = search_model.families.all()
+    _validate_sort(sort, families)
+
+    dataset_type, secondary_dataset_type = _search_dataset_type(parsed_search)
+    parsed_search.update({'dataset_type': dataset_type, 'secondary_dataset_type': secondary_dataset_type})
+    dataset_types = None
+    if dataset_type and dataset_type != ALL_DATA_TYPES and (secondary_dataset_type is None or secondary_dataset_type == dataset_type):
+        dataset_types = DATASET_TYPES_LOOKUP[dataset_type]
+
+    samples, genome_version = _get_families_search_data(families, dataset_types=dataset_types)
+    if parsed_search.get('inheritance'):
+        samples = _parse_inheritance(parsed_search, samples, previous_search_results)
+
+    variant_results = backend_specific_call(get_es_variants, get_hail_variants)(
+        samples, parsed_search, user, previous_search_results, genome_version,
         sort=sort, num_results=num_results, **kwargs,
     )
 
@@ -200,10 +257,11 @@ def _get_gene_aggs_for_cached_variants(previous_search_results):
 def _parse_variant_items(search_json):
     raw_items = search_json.get('rawVariantItems')
     if not raw_items:
-        return None, None, None
+        return None, None, None, None
 
     invalid_items = []
     variant_ids = []
+    parsed_variant_ids = []
     rs_ids = []
     for item in raw_items.replace(',', ' ').split():
         if item.startswith('rs'):
@@ -211,10 +269,112 @@ def _parse_variant_items(search_json):
         else:
             try:
                 variant_id = item.lstrip('chr')
-                chrom, pos, _, _ = variant_id.split('-')
-                get_xpos(chrom, int(pos))
+                chrom, pos, ref, alt = variant_id.split('-')
+                pos = int(pos)
+                get_xpos(chrom, pos)
                 variant_ids.append(variant_id)
+                parsed_variant_ids.append((chrom, pos, ref, alt))
             except (KeyError, ValueError):
                 invalid_items.append(item)
 
-    return rs_ids, variant_ids, invalid_items
+    return rs_ids, variant_ids, parsed_variant_ids, invalid_items
+
+
+def _validate_sort(sort, families):
+    if sort == PRIORITIZED_GENE_SORT and len(families) > 1:
+        raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
+
+
+def _search_dataset_type(search):
+    if search['parsedLocus']['variant_ids']:
+        return Sample.DATASET_TYPE_VARIANT_CALLS, None
+
+    dataset_type = _annotation_dataset_type(search.get('annotations'))
+    secondary_dataset_type = _annotation_dataset_type(search.get('annotations_secondary'))
+    return dataset_type, secondary_dataset_type
+
+
+def _annotation_dataset_type(annotations):
+    if not annotations:
+        return None
+
+    annotation_types = {k for k, v in annotations.items() if v}
+    if annotation_types.issubset(SV_ANNOTATION_TYPES):
+        return Sample.DATASET_TYPE_SV_CALLS
+    elif annotation_types.isdisjoint(SV_ANNOTATION_TYPES):
+        return Sample.DATASET_TYPE_VARIANT_CALLS
+    return ALL_DATA_TYPES
+
+
+def _parse_inheritance(search, samples, previous_search_results):
+    inheritance = search.pop('inheritance')
+    inheritance_mode = inheritance.get('mode')
+    inheritance_filter = inheritance.get('filter') or {}
+
+    if inheritance_filter.get('genotype'):
+        inheritance_mode = None
+
+    search.update({'inheritance_mode': inheritance_mode, 'inheritance_filter': inheritance_filter})
+    if not (inheritance_mode or inheritance_filter):
+        return samples
+
+    if not inheritance_mode and list(inheritance_filter.keys()) == ['affected']:
+        raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
+
+    samples = samples.select_related('individual')
+    if inheritance_filter.get('genotype') and not inheritance_filter.get(Individual.AFFECTED_STATUS_AFFECTED):
+        samples = _filter_genotype_samples(samples, inheritance_filter)
+    else:
+        skipped_samples = _filter_affected_family_samples(samples, inheritance_filter)
+        if skipped_samples:
+            search['skipped_samples'] = skipped_samples
+            samples = samples.exclude(id__in=[s.id for s in skipped_samples])
+
+    has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
+    if has_comp_het_search:
+        if not search.get('annotations'):
+            raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
+
+        has_location_filter = bool(search['parsedLocus']['genes'] or search['parsedLocus']['intervals'])
+        family_ids = {s.individual.family_id for s in samples.select_related('individual')}
+        if not has_location_filter and len(family_ids) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
+            raise InvalidSearchException(
+                'Location must be specified to search for compound heterozygous variants across many families')
+
+        if search['secondary_dataset_type']:
+            invalid_type = next((
+                dt for dt in [search['dataset_type'], search['secondary_dataset_type']]
+                if dt and dt != ALL_DATA_TYPES and samples.filter(dataset_type__in=DATASET_TYPES_LOOKUP[dt]).count() < 1
+            ), None)
+            if invalid_type:
+                raise InvalidSearchException(
+                    f'Unable to search for comp-het pairs with dataset type "{invalid_type}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
+                )
+
+    return samples
+
+
+def _filter_genotype_samples(samples, inheritance_filter):
+    samples = samples.filter(individual__guid__in=inheritance_filter.get('genotype').keys())
+    if not samples:
+        raise InvalidSearchException('Invalid custom inheritance')
+    return samples
+
+
+def _filter_affected_family_samples(samples, inheritance_filter):
+    affected_family_groups = defaultdict(set)
+    sample_group_field = backend_specific_call('elasticsearch_index', 'dataset_type')
+    individual_affected_status = inheritance_filter.get('affected') or {}
+    for sample in samples:
+        family_id = sample.individual.family_id
+        affected_status = individual_affected_status.get(sample.individual.guid) or sample.individual.affected
+        if affected_status == Individual.AFFECTED_STATUS_AFFECTED:
+            affected_family_groups[family_id].add(getattr(sample, sample_group_field))
+
+    if not affected_family_groups:
+        raise InvalidSearchException(
+            'Inheritance based search is disabled in families with no data loaded for affected individuals')
+
+    return [
+        s for s in samples if getattr(s, sample_group_field) not in affected_family_groups[s.individual.family_id]
+    ]

@@ -23,11 +23,12 @@ const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_SUMMARY },
 ]
 
-export const NoHoverFamilyLink = React.memo(({ family, path, target = '_blank' }) => (
+export const NoHoverFamilyLink = React.memo(({ family, path, target = '_blank', ...props }) => (
   <ColoredLink
     to={`/project/${family.projectGuid}/${path || `family_page/${family.familyGuid}`}`}
     color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
     target={target}
+    {...props} // passing through props allows refs to work for popup trigger
   >
     {family.displayName}
   </ColoredLink>

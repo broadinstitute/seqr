@@ -1,6 +1,13 @@
 # _seqr_ Changes
 
 ## dev
+* Add a 'rank' field to the RnaSeqSpliceOutlier model
+
+## 6/2/23
+* Update Clinvar filtering and display
+
+* Add support for Gencode v39
+  * To add new data, run the `update_gencode_latest`
 
 ## 4/26/23
 * Add RnaSeqSpliceOutlier model (REQUIRES DB MIGRATION)

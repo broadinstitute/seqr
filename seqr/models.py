@@ -1114,6 +1114,7 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
         ('*', 'Any direction'),
     )
 
+    rank = models.IntegerField(null=True)
     p_value = models.FloatField()
     z_score = models.FloatField()
     chrom = models.CharField(max_length=2)
@@ -1130,7 +1131,7 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
         unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end', 'strand', 'type')
 
         json_fields = ['gene_id', 'p_value', 'z_score', 'chrom', 'start', 'end', 'strand', 'read_count', 'type',
-                       'delta_psi', 'rare_disease_samples_with_junction', 'rare_disease_samples_total']
+                       'delta_psi', 'rare_disease_samples_with_junction', 'rare_disease_samples_total', 'rank']
 
 
 class PhenotypePrioritization(BulkOperationBase):
