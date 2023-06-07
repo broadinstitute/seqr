@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add a 'rank' field to the RnaSeqSpliceOutlier model
 
 ## 6/2/23
 * Update Clinvar filtering and display
