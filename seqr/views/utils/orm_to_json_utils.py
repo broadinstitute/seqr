@@ -757,17 +757,12 @@ def get_json_for_matchmaker_submission(submission):
         additional_model_fields=['contact_name', 'contact_href', 'submission_id'])
 
 
-def get_json_for_rna_seq_outliers(models, max_significant_num_per_tissue=None, **kwargs):
+def get_json_for_rna_seq_outliers(models, max_significant_num=None, **kwargs):
     significant_field = models.model.SIGNIFICANCE_FIELD
 
     significant_filter = {f'{significant_field}__lt': models.model.SIGNIFICANCE_THRESHOLD}
-    if max_significant_num_per_tissue:
-        models = models.annotate(place=Window(
-            expression=DenseRank(),
-            partition_by=[F("sample__tissue_type")],
-            order_by=[F(significant_field), F('id')],  # Adding `id` to the sorting key to remove duplications
-        ))
-        significant_filter['place__lt'] = max_significant_num_per_tissue + 1
+    if max_significant_num:
+        significant_filter['rank__lt'] = max_significant_num
 
     additional_values = {'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))}
 
