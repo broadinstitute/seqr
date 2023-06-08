@@ -49,6 +49,7 @@ spec:
         volumeMounts:
         - name: hail-datasets
           mountPath: /hail_datasets
+          readOnly: true
         resources:
           requests:
             memory: "55Gi"
