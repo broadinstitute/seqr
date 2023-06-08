@@ -220,12 +220,12 @@ class BaseHailTableQuery(object):
                     ) for k in family_dict_fields},
                 )
 
-        logger.info(f'Prefiltered to {families_ht.count()} rows ({cls.__name__})')
+        # logger.info(f'Prefiltered to {families_ht.count()} rows ({cls.__name__})')
 
         annotation_ht_query_result = hl.query_table(
             f'{tables_path}/annotations.ht', families_ht.key).first().drop(*families_ht.key)
         ht = families_ht.annotate(**annotation_ht_query_result)
-        logger.info(f'Annotated {ht._force_count()} rows ({cls.__name__})')
+        # logger.info(f'Annotated {ht._force_count()} rows ({cls.__name__})')
 
         if clinvar_path_terms and quality_filter:
             ht = ht.annotate(genotypes=hl.if_else(
@@ -233,7 +233,7 @@ class BaseHailTableQuery(object):
                 ht.genotypes, ht.genotypes.filter(lambda x: ~ht.failQualityFamilies.contains(x.familyGuid))
             )).drop('failQualityFamilies')
             ht = ht.filter(ht.genotypes.size() > 0)
-            logger.info(f'Filter path/quality to {ht.count()} rows')
+            # logger.info(f'Filter path/quality to {ht.count()} rows')
 
         ht = ht.annotate(
             familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
@@ -262,7 +262,7 @@ class BaseHailTableQuery(object):
                               genome_version=None, quality_filter=None, clinvar_path_terms=None, consequence_overrides=None,
                               table_name=None, **kwargs):
         table_name = family_guid or table_name
-        logger.info(f'Initial count for {table_name}: {ht.count()}')
+        # logger.info(f'Initial count for {table_name}: {ht.count()}')
 
         ht, sample_id_index_map = cls._add_entry_sample_families(ht, sample_data, family_guid)
 
@@ -286,7 +286,7 @@ class BaseHailTableQuery(object):
         if not family_guid:
             ht = ht.annotate(entries=ht.entries.filter(lambda x: ht.families.contains(x.familyGuid)))
 
-        logger.info(f'Prefiltered {table_name} to {ht.count()} rows')
+        # logger.info(f'Prefiltered {table_name} to {ht.count()} rows')
 
         return ht.transmute(
             genotypes=ht.entries.filter(lambda gt: hl.is_defined(gt.individualGuid)).map(lambda gt: gt.select(
@@ -415,16 +415,15 @@ class BaseHailTableQuery(object):
         if filtered_genes:
             ht = cls._filter_gene_ids(ht, filtered_genes)
 
-        logger.info('Applying filters')
         ht = cls._filter_by_frequency(ht, frequencies, clinvar_path_terms)
-        logger.info(f'Filtered frequency to {ht.count()} rows')
+        # logger.info(f'Filtered frequency to {ht.count()} rows')
         ht = cls._filter_by_in_silico(ht, in_silico)
-        logger.info(f'Filtered in silico to {ht.count()} rows')
+        # logger.info(f'Filtered in silico to {ht.count()} rows')
         ht = cls._filter_by_annotations(ht, allowed_consequences, allowed_consequences_secondary, consequence_overrides)
-        logger.info(f'Filtered annotations to {ht.count()} rows')
+        # logger.info(f'Filtered annotations to {ht.count()} rows')
         if vcf_quality_filter is not None:
             ht = cls._filter_vcf_filters(ht)
-            logger.info(f'Filtered VCF quality to {ht.count()} rows')
+            # logger.info(f'Filtered VCF quality to {ht.count()} rows')
 
         return ht
 
@@ -892,8 +891,8 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     @classmethod
     def _filter_entries_table(cls, ht, excluded_intervals=None, variant_ids=None, genome_version=None, **kwargs):
-        if excluded_intervals or variant_ids:
-            logger.info(f'Unfiltered count: {ht.count()}')
+        # if excluded_intervals or variant_ids:
+        #     logger.info(f'Unfiltered count: {ht.count()}')
 
         if excluded_intervals:
             ht = hl.filter_intervals(ht, excluded_intervals, keep=False)
@@ -1007,7 +1006,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     @classmethod
     def _filter_entries_table(cls, ht, high_af_ht=None, **kwargs):
         if high_af_ht is not None:
-            logger.info(f'No AF filter count: {ht.count()}')
+            # logger.info(f'No AF filter count: {ht.count()}')
             ht = ht.filter(hl.is_missing(high_af_ht[ht.key]))
 
         return super(VariantHailTableQuery, cls)._filter_entries_table(ht, **kwargs)
