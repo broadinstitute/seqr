@@ -36,11 +36,9 @@ spec:
     spec:
       volumes:
       - name: hail-datasets
-        gcePersistentDisk:
-          # This disk must already exist.
-          pdName: hail-datasets-disk-2
-          fsType: ext4
-          readOnly: true
+        emptyDir:
+          sizeLimit: 40Gi
+          medium: "Memory"
       containers:
       - name: hail-search-pod
         ports:
@@ -51,14 +49,20 @@ spec:
         volumeMounts:
         - name: hail-datasets
           mountPath: /hail_datasets
-          readOnly: true
         resources:
           requests:
-            memory: "12Gi"
-            cpu: "1"
+            memory: "55Gi"
+            cpu: "7"
           limits:
-            memory: "16Gi"
-            cpu: "2"
+            memory: "55Gi"
+            cpu: "7"
+      initContainers:
+        - name: init-data
+          image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+          command: ['gsutil', '-m', 'rsync', '-r', 'gs://hail-backend-datasets/all_data', '/hail_datasets']
+          volumeMounts:
+            - name: hail-datasets
+              mountPath: /hail_datasets
       restartPolicy: Always
       dnsPolicy: ClusterFirst
       nodeSelector:
