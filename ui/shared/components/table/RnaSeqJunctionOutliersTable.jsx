@@ -27,7 +27,7 @@ const JUNCTION_COLUMN = {
   format: (row, isExport, updateReads) => (
     <div>
       <ButtonLink onClick={openReads(updateReads, row)}>
-        {row.junctionLocus}
+        {`${row.chrom}:${row.start}-${row.end} ${row.strand}`}
       </ButtonLink>
       <GeneSearchLink
         buttonText=""

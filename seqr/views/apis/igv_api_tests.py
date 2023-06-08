@@ -123,8 +123,8 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertListEqual(
             response_json['info'], ['Parsed 3 rows in 2 individuals from samples.csv', 'No change detected for 1 rows'])
         self.assertListEqual(sorted(response_json['updates'], key=lambda o: o['individualGuid']), [
-            {'individualGuid': 'I000001_na19675', 'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675'},
-            {'individualGuid': 'I000003_na19679', 'filePath': 'gs://readviz/NA19679.bam', 'sampleId': None},
+            {'individualGuid': 'I000001_na19675', 'individualId': 'NA19675_1', 'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675'},
+            {'individualGuid': 'I000003_na19679', 'individualId': 'NA19679', 'filePath': 'gs://readviz/NA19679.bam', 'sampleId': None},
         ])
 
         # test data manager access

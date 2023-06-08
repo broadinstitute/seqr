@@ -164,6 +164,7 @@ class SummaryDataAPITest(object):
                 'familyId': '1',
                     'familyData': {
                     'projectGuid': PROJECT_GUID,
+                    'genomeVersion': '37',
                     'familyGuid': 'F000001_1',
                     'analysisStatus': 'Q',
                     'displayName': '1',
@@ -179,6 +180,7 @@ class SummaryDataAPITest(object):
                 'familyId': '2',
                 'familyData': {
                     'projectGuid': PROJECT_GUID,
+                    'genomeVersion': '37',
                     'familyGuid': 'F000002_2',
                     'analysisStatus': 'Q',
                     'displayName': '2_1',

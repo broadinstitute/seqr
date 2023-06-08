@@ -794,8 +794,7 @@ def get_individual_rna_seq_data(request, individual_guid):
 
     outlier_data = {
         'outliers': _get_rna_seq_data(RnaSeqOutlier, individual),
-        'spliceOutliers': _get_rna_seq_data(RnaSeqSpliceOutlier, individual,
-                                            max_significant_num_per_tissue=MAX_SIGNIFICANT_OUTLIER_NUM),
+        'spliceOutliers': _get_rna_seq_data(RnaSeqSpliceOutlier, individual, max_significant_num=MAX_SIGNIFICANT_OUTLIER_NUM),
     }
 
     genes_to_show = get_genes({

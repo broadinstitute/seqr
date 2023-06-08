@@ -3,7 +3,7 @@ import { Form } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
-import { RadioGroup, AlignedBooleanCheckbox, Select } from 'shared/components/form/Inputs'
+import { RadioGroup, AlignedBooleanCheckbox, Select, InlineToggle } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase, camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
@@ -493,6 +493,14 @@ export const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...PREDICTOR_FIELDS.filter
 )]
 
 export const SNP_QUALITY_FILTER_FIELDS = [
+  {
+    name: 'affected_only',
+    label: 'Affected Only',
+    labelHelp: 'Only apply quality filters to affected individuals',
+    control: InlineToggle,
+    color: 'grey',
+    width: 6,
+  },
   {
     name: 'vcf_filter',
     label: 'Filter Value',

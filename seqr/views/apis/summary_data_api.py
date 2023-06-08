@@ -114,6 +114,7 @@ def hpo_summary_data(request, hpo_id):
         'features', individualGuid=F('guid'), displayName=INDIVIDUAL_DISPLAY_NAME_EXPR, familyId=F('family__family_id'),
          familyData=JSONObject(
             projectGuid=F('family__project__guid'),
+            genomeVersion=F('family__project__genome_version'),
             familyGuid=F('family__guid'),
             analysisStatus=F('family__analysis_status'),
             displayName=Coalesce(NullIf('family__display_name', Value('')), 'family__family_id'),

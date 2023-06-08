@@ -414,11 +414,6 @@ export const getUserOptions = createSelector(
   ),
 )
 
-const getSpliceId = (row) => {
-  const { geneId, chrom, start, end, strand, type } = row
-  return `${geneId}-${chrom}-${start}-${end}-${strand}-${type}`
-}
-
 export const getRnaSeqSignificantJunctionData = createSelector(
   getGenesById,
   getIndividualsByGuid,
@@ -428,14 +423,13 @@ export const getRnaSeqSignificantJunctionData = createSelector(
       ...acc,
       [individualGuid]: Object.values(rnaSeqData.spliceOutliers).flat().filter(({ isSignificant }) => isSignificant)
         .sort((a, b) => a.pValue - b.pValue)
-        .map(row => ({
-          geneSymbol: (genesById[row.geneId] || {}).geneSymbol || row.geneId,
-          junctionLocus: `${row.chrom}:${row.start}-${row.end} ${row.strand}`,
-          idField: getSpliceId(row),
+        .map(({ geneId, chrom, start, end, strand, type, ...cols }) => ({
+          geneSymbol: (genesById[geneId] || {}).geneSymbol || geneId,
+          idField: `${geneId}-${chrom}-${start}-${end}-${strand}-${type}`,
           familyGuid: individualsByGuid[individualGuid].familyGuid,
           individualName: individualsByGuid[individualGuid].displayName,
           individualGuid,
-          ...row,
+          ...{ geneId, chrom, start, end, strand, type, ...cols },
         })),
     } : acc), {},
   ),
