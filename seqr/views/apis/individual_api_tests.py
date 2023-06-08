@@ -647,7 +647,7 @@ class IndividualAPITest(object):
         self.assertDictEqual(
             {
                 'chrom': '7', 'deltaPsi': 0.85, 'end': 132886973, 'geneId': 'ENSG00000268903', 'isSignificant': True,
-                'pValue': 1.08e-56, 'rank': 0, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1,
+                'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1,
                 'readCount': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'zScore': 12.34,
                 'tissueType': 'F',
             },
