@@ -1,6 +1,6 @@
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F
+from django.db.models import F, Value
 import logging
 import redis
 
@@ -12,7 +12,7 @@ from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
-    get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
+    get_json_for_queryset, get_json_for_saved_variants_with_tags, \
     get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
@@ -136,16 +136,19 @@ def _get_rna_seq_outliers(gene_ids, family_guids):
 
     for outlier, outlier_cls, max_sign in [('outliers', RnaSeqOutlier, None),
                                            ('spliceOutliers', RnaSeqSpliceOutlier, MAX_SIGNIFICANT_OUTLIER_NUM)]:
-        outlier_data = get_json_for_rna_seq_outliers(
+        filters = {f'{outlier_cls.SIGNIFICANCE_FIELD}__lt': outlier_cls.SIGNIFICANCE_THRESHOLD}
+        if max_sign:
+            filters.update({'rank__lt': max_sign})
+        outlier_data = get_json_for_queryset(
             outlier_cls.objects.filter(
                 gene_id__in=gene_ids,
                 sample__individual__family__guid__in=family_guids,
                 sample__is_active=True,
-                **{f'{outlier_cls.SIGNIFICANCE_FIELD}__lt': outlier_cls.SIGNIFICANCE_THRESHOLD}
+                **filters
             ),
             nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
                            {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
-            max_significant_num_per_tissue=max_sign,
+            additional_values={'isSignificant': Value(True)}
         )
         for data in outlier_data:
             data_by_individual_gene[data.pop('individualGuid')][outlier][data['geneId']].append(data)
