@@ -1328,7 +1328,7 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
 
 class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
 
-    DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
+    DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end', 'selectedMainTranscriptId']
 
     @staticmethod
     def get_major_consequence_id(transcript):
