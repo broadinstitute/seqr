@@ -177,8 +177,9 @@ const mapAddDataStateToProps = state => ({
 
 const AddProjectWorkspaceDataForm = connect(mapAddDataStateToProps)(AddWorkspaceDataForm)
 
-const EditDatasetsButton = React.memo(({ showLoadWorkspaceData, user }) => {
+const EditDatasetsButton = React.memo(({ showLoadWorkspaceData, elasticsearchEnabled, user }) => {
   const showEditDatasets = user.isDataManager || user.isPm
+  const showAddCallset = user.isDataManager && elasticsearchEnabled
   return (
     (showEditDatasets || showLoadWorkspaceData) ? (
       <Modal
@@ -187,7 +188,7 @@ const EditDatasetsButton = React.memo(({ showLoadWorkspaceData, user }) => {
         size="small"
         trigger={<ButtonLink>{showEditDatasets ? 'Edit Datasets' : 'Load Additional Data'}</ButtonLink>}
       >
-        {showEditDatasets ? <Tab panes={user.isDataManager ? PANES : IGV_ONLY_PANES} /> : (
+        {showEditDatasets ? <Tab panes={showAddCallset ? PANES : IGV_ONLY_PANES} /> : (
           <AddProjectWorkspaceDataForm
             successMessage="Your request to load data has been submitted. Loading data from AnVIL to seqr is a slow process, and generally takes a week. You will receive an email letting you know once your new data is available."
           />
@@ -199,6 +200,7 @@ const EditDatasetsButton = React.memo(({ showLoadWorkspaceData, user }) => {
 
 EditDatasetsButton.propTypes = {
   showLoadWorkspaceData: PropTypes.bool,
+  elasticsearchEnabled: PropTypes.bool,
   user: PropTypes.object,
 }
 
