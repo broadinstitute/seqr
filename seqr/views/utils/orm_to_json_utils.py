@@ -4,8 +4,8 @@ Utility functions for converting Django ORM object to JSON
 
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharField, Case, When, Window
-from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JSONObject, DenseRank
+from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharField, Case, When
+from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JSONObject
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 
@@ -757,12 +757,15 @@ def get_json_for_matchmaker_submission(submission):
         additional_model_fields=['contact_name', 'contact_href', 'submission_id'])
 
 
-def get_json_for_rna_seq_outliers(models, max_significant_num=None, **kwargs):
+MAX_SIGNIFICANT_OUTLIER_NUM = 50
+
+
+def get_json_for_rna_seq_outliers(models, top_outliers_only=False, **kwargs):
     significant_field = models.model.SIGNIFICANCE_FIELD
 
     significant_filter = {f'{significant_field}__lt': models.model.SIGNIFICANCE_THRESHOLD}
-    if max_significant_num:
-        significant_filter['rank__lt'] = max_significant_num
+    if top_outliers_only:
+        significant_filter['rank__lt'] = MAX_SIGNIFICANT_OUTLIER_NUM
 
     additional_values = {'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))}
 
