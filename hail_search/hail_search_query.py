@@ -137,8 +137,6 @@ class BaseHailTableQuery(object):
             exclude_intervals=exclude_intervals, genome_version=self._genome_version, **kwargs,
         )
 
-        self._ht = self._ht.annotate(_sort=self._sort_order())
-
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
             is_all_recessive_search = inheritance_mode == RECESSIVE
             self._filter_compound_hets(is_all_recessive_search)
@@ -712,6 +710,7 @@ class BaseHailTableQuery(object):
 
     def _format_results(self, ht):
         results = ht.annotate(
+            _sort=self._sort_order(ht),
             genomeVersion=self._genome_version.replace('GRCh', ''),
             **{k: v(ht) for k, v in self.annotation_fields.items()},
         )
@@ -739,22 +738,22 @@ class BaseHailTableQuery(object):
         ]
         return hail_results, total_results
 
-    def _sort_order(self):
-        sort_expressions = self._get_sort_expressions(XPOS_SORT_KEY)
+    def _sort_order(self, ht):
+        sort_expressions = self._get_sort_expressions(ht, XPOS_SORT_KEY)
         if self._sort != XPOS_SORT_KEY:
-            sort_expressions = self._get_sort_expressions(self._sort) + sort_expressions
+            sort_expressions = self._get_sort_expressions(ht, self._sort) + sort_expressions
         return sort_expressions
 
-    def _get_sort_expressions(self, sort):
+    def _get_sort_expressions(self, ht, sort):
         if sort in self.SORTS:
-            return self.SORTS[sort](self._ht)
+            return self.SORTS[sort](ht)
         elif sort == CONSEQUENCE_SORT_KEY:
-            return self._consequence_sorts()
+            return self._consequence_sorts(ht)
 
         sort_expression = None
         if sort in POPULATION_SORTS:
             pop_fields = [pop for pop in POPULATION_SORTS[sort] if pop in self.POPULATIONS]
-            af_exprs = [self.population_expression(self._ht, pop).af for pop in pop_fields]
+            af_exprs = [self.population_expression(ht, pop).af for pop in pop_fields]
             if af_exprs:
                 sort_expression = af_exprs[0]
                 for af_expr in af_exprs[1:]:
@@ -762,24 +761,27 @@ class BaseHailTableQuery(object):
 
         elif sort in self.PREDICTION_FIELDS_CONFIG:
             prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
-            sort_expression = -self._ht[prediction_path[0]][prediction_path[1]]
+            sort_expression = -ht[prediction_path[0]][prediction_path[1]]
 
         elif sort == 'in_omim':
-            sort_expression = -self._omim_sort(hl.set(set(self._sort_metadata)))
+            sort_expression = -self._omim_sort(ht, hl.set(set(self._sort_metadata)))
 
         elif self._sort_metadata:
-            sort_expression = self._gene_rank_sort(self._sort_metadata)
+            sort_expression = self._gene_rank_sort(ht, self._sort_metadata)
 
         return [sort_expression] if sort_expression is not None else []
 
-    def _consequence_sorts(self):
-        return [hl.min(self._ht.sortedTranscriptConsequences.map(self.get_major_consequence_id))]
+    @classmethod
+    def _consequence_sorts(cls, ht):
+        return [hl.min(ht.sortedTranscriptConsequences.map(cls.get_major_consequence_id))]
 
-    def _omim_sort(self, omim_gene_set):
-        return self._ht.sortedTranscriptConsequences.filter(lambda t: omim_gene_set.contains(t.gene_id)).size()
+    @classmethod
+    def _omim_sort(cls, ht, omim_gene_set):
+        return ht.sortedTranscriptConsequences.filter(lambda t: omim_gene_set.contains(t.gene_id)).size()
 
-    def _gene_rank_sort(self, gene_ranks):
-        return hl.min(self._ht.sortedTranscriptConsequences.map(lambda t: hl.dict(gene_ranks).get(t.gene_id)))
+    @staticmethod
+    def _gene_rank_sort(ht, gene_ranks):
+        return hl.min(ht.sortedTranscriptConsequences.map(lambda t: hl.dict(gene_ranks).get(t.gene_id)))
 
     # For production: should use custom json serializer
     @classmethod
@@ -931,15 +933,17 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     def _is_allowed_consequence_filter(tc, allowed_consequence_ids):
         return hl.set(allowed_consequence_ids).intersection(hl.set(tc.sorted_consequence_ids)).size() > 0
 
-    def _consequence_sorts(self):
-        return super(BaseVariantHailTableQuery, self)._consequence_sorts() + [
-            self._selected_main_transcript_expr(self._ht).sorted_consequence_ids[0],
+    @classmethod
+    def _consequence_sorts(cls, ht):
+        return super(BaseVariantHailTableQuery, cls)._consequence_sorts(ht) + [
+            ht.selected_transcript.sorted_consequence_ids[0],
         ]
 
-    def _omim_sort(self, omim_gene_set):
-        main_transcript = self._selected_main_transcript_expr(self._ht)
-        return super(BaseVariantHailTableQuery, self)._omim_sort(omim_gene_set) + hl.if_else(
-            hl.is_missing(main_transcript.sorted_consequence_ids) | omim_gene_set.contains(main_transcript.gene_id),
+    @classmethod
+    def _omim_sort(cls, ht, omim_gene_set):
+        return super(BaseVariantHailTableQuery, cls)._omim_sort(ht, omim_gene_set) + hl.if_else(
+            hl.is_missing(ht.selected_transcript.sorted_consequence_ids) |
+            omim_gene_set.contains(ht.selected_transcript.gene_id),
             10, 0)
 
     def _format_results(self, ht):
@@ -1360,9 +1364,10 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
             hl.set(v1.genotypes.values().filter(lambda g: g.numAlt == 2).map(lambda g: g.familyGuid)),
         )
 
-    def _consequence_sorts(self):
-        rank_sort, variant_sort = super(AllDataTypeHailTableQuery, self)._consequence_sorts()
-        is_sv = hl.is_defined(self._ht.svType_id)
+    @classmethod
+    def _consequence_sorts(cls, ht):
+        rank_sort, variant_sort = super(AllDataTypeHailTableQuery, cls)._consequence_sorts(ht)
+        is_sv = hl.is_defined(ht.svType_id)
         return [
             hl.if_else(is_sv, SV_CONSEQUENCE_RANK_OFFSET, rank_sort),
             hl.if_else(is_sv, rank_sort, variant_sort),
