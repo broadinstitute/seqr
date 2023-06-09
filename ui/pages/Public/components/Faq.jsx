@@ -84,6 +84,14 @@ export default () => (
     To learn more about generating a joint called vcf, please refer to
     this <a href="https://drive.google.com/file/d/1aE7vUvUOZw_r78Osjn1Q0Cs3c5DCuonz/view?usp=sharing" target="blank">documentation</a>
 
+    <Header content="Q. How can I set up seqr locally?" size="medium" />
+    Setting up seqr locally generally requires strong bioinformatics skills to deploy, and also requires the
+    download/storage of large annotation datasets. There is <a href="https://github.com/broadinstitute/seqr/blob/master/deploy/LOCAL_INSTALL.md" target="blank">documentation</a>
+    &nbsp; in GitHub on setting up a local instance of seqr. If you have questions or issues with deployment, we
+    recommend you take a look at our <a href="https://github.com/broadinstitute/seqr/discussions" target="blank">Github discussions page</a>
+    &nbsp; for general troubleshooting help. If after looking into our documentation, you still have questions that can
+    not be easily answered via a discussion post, send us an <a href="mailto:seqr@broadinstitute.org">email</a>.
+
     <Header content="Q. I am unable to log in or access my project in seqr. What should I do?" size="medium" />
     To access seqr, users must have their email address registered with AnVIL (see instructions above) and to view
     specific projects they must have access to the AnVIL workspace corresponding to the project. The most frequent
@@ -109,14 +117,6 @@ export default () => (
     Genomic datasets are large and the seqr loading pipeline richly annotates the variants so data loading can take from
     a few days to up to a week to process, depending on the sample numbers and data types.
 
-    <Header content="Q. How can I set up seqr locally?" size="medium" />
-    Setting up seqr locally generally requires strong bioinformatics skills to deploy, and also requires the
-    download/storage of large annotation datasets. There is <a href="https://github.com/broadinstitute/seqr/blob/master/deploy/LOCAL_INSTALL.md" target="blank">documentation</a>
-    &nbsp; in GitHub on setting up a local instance of seqr. If you have questions or issues with deployment, we
-    recommend you take a look at our <a href="https://github.com/broadinstitute/seqr/discussions" target="blank">Github discussions page</a>
-    &nbsp; for general troubleshooting help. If after looking into our documentation, you still have questions that can
-    not be easily answered via a discussion post, send us an <a href="mailto:seqr@broadinstitute.org">email</a>.
-
     <Header content="Q. How do I add a new team member to a project?" size="medium" />
     To add a new collaborator, navigate to the respective workspace in AnVIL and select Share. Only personnel with
     &quot;Can Share&quot; level access in AnVIL can add or remove collaborators. The seqr team does not manage user
@@ -137,7 +137,7 @@ export default () => (
     the workspace to request for these permissions. Another option is to clone the existing workspace and then request
     loading from the copy, as you will now be the Owner of the cloned workspace.
 
-    <Header content="Q How much does it cost to use seqr?" size="medium" />
+    <Header content="Q. How much does it cost to use seqr?" size="medium" />
     There are currently no costs associated with requests to load data from your AnVIL workspace to seqr or to use seqr
     in AnVIL to analyze genomic data. <br /><br />
 
