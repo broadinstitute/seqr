@@ -13,7 +13,7 @@ from hail_search.constants import CHROM_TO_XPOS_OFFSET, AFFECTED, UNAFFECTED, MA
     PREDICTION_FIELD_ID_LOOKUP, RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, ALT_ALT, \
     REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, \
     CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF, SCREEN_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
-    XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY
+    XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY, STRUCTURAL_ANNOTATION_FIELD_SECONDARY
 
 logger = logging.getLogger(__name__)
 
@@ -467,6 +467,7 @@ class BaseHailTableQuery(object):
 
         self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
         if annotations_secondary:
+            consequence_overrides[STRUCTURAL_ANNOTATION_FIELD_SECONDARY] = annotations_secondary.get(STRUCTURAL_ANNOTATION_FIELD)
             self._allowed_consequences_secondary = sorted(
                 {ann for anns in annotations_secondary.values() for ann in anns})
 
@@ -562,10 +563,21 @@ class BaseHailTableQuery(object):
     @classmethod
     def _filter_by_annotations(cls, ht, allowed_consequences, allowed_consequences_secondary, consequence_overrides):
         annotation_override_filter = cls._get_annotation_override_filter(ht, consequence_overrides)
+
+        secondary_sv_types = STRUCTURAL_ANNOTATION_FIELD_SECONDARY in cls.ANNOTATION_OVERRIDE_FIELDS and \
+            consequence_overrides.get(STRUCTURAL_ANNOTATION_FIELD_SECONDARY)
+        has_allowed_secondary_consequence = cls._get_has_annotation_expr(ht, allowed_consequences_secondary)
+        if secondary_sv_types:
+            secondary_override_expr = cls._has_allowed_sv_type_expr(ht, secondary_sv_types)
+            if has_allowed_secondary_consequence is False:
+                has_allowed_secondary_consequence = secondary_override_expr
+            else:
+                has_allowed_secondary_consequence |= secondary_override_expr
+
         annotation_exprs = {
             'override_consequences': False if annotation_override_filter is None else annotation_override_filter,
             'has_allowed_consequence': cls._get_has_annotation_expr(ht, allowed_consequences),
-            'has_allowed_secondary_consequence': cls._get_has_annotation_expr(ht, allowed_consequences_secondary),
+            'has_allowed_secondary_consequence': has_allowed_secondary_consequence,
         }
 
         ht = ht.annotate(**annotation_exprs)
@@ -600,8 +612,7 @@ class BaseHailTableQuery(object):
             score_path = cls.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
             annotation_filters.append(ht[score_path[0]][score_path[1]] >= splice_ai)
         if consequence_overrides.get(STRUCTURAL_ANNOTATION_FIELD):
-            allowed_sv_types = hl.set({SV_TYPE_MAP[t] for t in consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]})
-            annotation_filters.append(allowed_sv_types.contains(ht.svType_id))
+            annotation_filters.append(cls._has_allowed_sv_type_expr(ht, consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]))
 
         if not annotation_filters:
             return None
@@ -619,6 +630,11 @@ class BaseHailTableQuery(object):
     @staticmethod
     def _has_clivar_terms_expr(ht, clinvar_terms):
         return hl.set(clinvar_terms).contains(ht.clinvar.clinical_significance_id)
+
+    @staticmethod
+    def _has_allowed_sv_type_expr(ht, sv_types):
+        allowed_sv_types = hl.set({SV_TYPE_MAP[t] for t in sv_types})
+        return allowed_sv_types.contains(ht.svType_id)
 
     @classmethod
     def _get_has_annotation_expr(cls, ht, allowed_consequences):
@@ -1094,7 +1110,7 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
 
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
-    ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD]
+    ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, STRUCTURAL_ANNOTATION_FIELD_SECONDARY, NEW_SV_FIELD]
 
     SORTS = {
         'size': lambda r: [hl.if_else(
@@ -1279,6 +1295,7 @@ class MultiDataTypeHailTableQuery(object):
             to_merge = merge_fields.intersection(new_merge_fields)
             to_merge.update(all_type_merge_fields)
             merge_fields.update(new_merge_fields)
+            logger.info(f'Merging fields: {", ".join(to_merge)}')
 
             transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
             transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences', 'element_type'))
