@@ -568,11 +568,13 @@ class BaseHailTableQuery(object):
 
         allowed_consequence_ids = cls._get_allowed_consequence_ids(allowed_consequences)
         if allowed_consequence_ids:
+            allowed_consequence_ids = hl.set(allowed_consequence_ids)
             annotation_exprs['has_allowed_consequence'] = ht.sortedTranscriptConsequences.any(
                 lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequence_ids))
 
         allowed_secondary_consequence_ids = cls._get_allowed_consequence_ids(allowed_consequences_secondary)
-        if allowed_consequences_secondary:
+        if allowed_secondary_consequence_ids:
+            allowed_secondary_consequence_ids = hl.set(allowed_secondary_consequence_ids)
             annotation_exprs['has_allowed_secondary_consequence'] = ht.sortedTranscriptConsequences.any(
                 lambda tc: cls._is_allowed_consequence_filter(tc, allowed_secondary_consequence_ids))
 
@@ -636,7 +638,7 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _is_allowed_consequence_filter(tc, allowed_consequence_ids):
-        return hl.set(allowed_consequence_ids).contains(tc.major_consequence_id)
+        return allowed_consequence_ids.contains(tc.major_consequence_id)
 
     @classmethod
     def _format_quality_filter(cls, quality_filter):
@@ -926,7 +928,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
     def _is_allowed_consequence_filter(tc, allowed_consequence_ids):
-        return hl.set(allowed_consequence_ids).intersection(hl.set(tc.sorted_consequence_ids)).size() > 0
+        return allowed_consequence_ids.intersection(hl.set(tc.sorted_consequence_ids)).size() > 0
 
     @classmethod
     def _consequence_sorts(cls, ht):
