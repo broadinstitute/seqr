@@ -23,6 +23,32 @@ const LOGIN_BUTTON_PROPS = {
   label: 'Already a seqr user?', content: 'Sign In', primary: true, size: 'big', labelPosition: 'left',
 }
 
+export const SeqrAvailability = ({ hasFootnote }) => (
+  <List ordered>
+    <List.Item>
+      Through the &nbsp;
+      <Anchor href="https://anvilproject.org">AnVIL platform</Anchor>
+      {hasFootnote && '*'}
+      &nbsp; where requests can be placed for loading a joint called vcf into seqr
+    </List.Item>
+    <List.Item>
+      As a collaborator providing samples for sequencing within the &nbsp;
+      <Anchor href="https://cmg.broadinstitute.org">Broad Institute Center for Mendelian Genomics</Anchor>
+      , part of the &nbsp;
+      <Anchor href="https://gregorconsortium.org" target="blank">GREGoR consortium</Anchor>
+    </List.Item>
+    <List.Item>
+      On GitHub as an &nbsp;
+      <Anchor href="http://github.com/broadinstitute/seqr">open source project</Anchor>
+      &nbsp;for download and local installation
+    </List.Item>
+  </List>
+)
+
+SeqrAvailability.propTypes = {
+  hasFootnote: PropTypes.bool,
+}
+
 const LandingPage = ({ googleLoginEnabled }) => (
   <Segment.Group>
     <PageSegment textAlign="center" size="massive" secondary>
@@ -70,23 +96,7 @@ const LandingPage = ({ googleLoginEnabled }) => (
         &nbsp; is available through three methods:
       </Header>
       <VerticalSpacer height={10} />
-      <List ordered>
-        <List.Item>
-          Available for all collaborators within the &nbsp;
-          <Anchor href="https://cmg.broadinstitute.org">Broad Institute Center for Mendelian Genomics</Anchor>
-          &nbsp; or Mendelian Genomics Research Center with data pre-loaded into projects
-        </List.Item>
-        <List.Item>
-          Available for use on the &nbsp;
-          <Anchor href="https://anvilproject.org">AnVIL platform</Anchor>
-          &nbsp; where requests can be placed for loading a joint called vcf into seqr
-        </List.Item>
-        <List.Item>
-          Available on GitHub as an &nbsp;
-          <Anchor href="http://github.com/broadinstitute/seqr">open source project</Anchor>
-          &nbsp;for download and local installation
-        </List.Item>
-      </List>
+      <SeqrAvailability />
     </PageSegment>
     <PageSegment secondary>
       <List bulleted>

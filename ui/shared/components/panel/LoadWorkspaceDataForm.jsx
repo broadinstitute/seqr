@@ -30,6 +30,20 @@ import AnvilFileSelector from 'shared/components/form/AnvilFileSelector'
 
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
 
+export const WORKSPACE_REQUIREMENTS = [
+  '"Writer" or "Owner" level access to the workspace',
+  'The "Can Share" permission enabled for the workspace',
+  (
+    <span>
+      No &nbsp;
+      <a href="https://support.terra.bio/hc/en-us/articles/360026775691" target="_blank" rel="noreferrer">
+        authorization domains
+      </a>
+      &nbsp; to be associated with the workspace
+    </span>
+  ),
+]
+
 const NON_ID_REQUIRED_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
 
 const FIELD_DESCRIPTIONS = {
