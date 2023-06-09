@@ -561,22 +561,12 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _filter_by_annotations(cls, ht, allowed_consequences, allowed_consequences_secondary, consequence_overrides):
-        annotation_exprs = {}
-
         annotation_override_filter = cls._get_annotation_override_filter(ht, consequence_overrides)
-        annotation_exprs['override_consequences'] = False if annotation_override_filter is None else annotation_override_filter
-
-        allowed_consequence_ids = cls._get_allowed_consequence_ids(allowed_consequences)
-        if allowed_consequence_ids:
-            allowed_consequence_ids = hl.set(allowed_consequence_ids)
-            annotation_exprs['has_allowed_consequence'] = ht.sortedTranscriptConsequences.any(
-                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequence_ids))
-
-        allowed_secondary_consequence_ids = cls._get_allowed_consequence_ids(allowed_consequences_secondary)
-        if allowed_secondary_consequence_ids:
-            allowed_secondary_consequence_ids = hl.set(allowed_secondary_consequence_ids)
-            annotation_exprs['has_allowed_secondary_consequence'] = ht.sortedTranscriptConsequences.any(
-                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_secondary_consequence_ids))
+        annotation_exprs = {
+            'override_consequences': False if annotation_override_filter is None else annotation_override_filter,
+            'has_allowed_consequence': cls._get_has_annotation_expr(ht, allowed_consequences),
+            'has_allowed_secondary_consequence': cls._get_has_annotation_expr(ht, allowed_consequences_secondary),
+        }
 
         ht = ht.annotate(**annotation_exprs)
         filter_fields = [k for k, v in annotation_exprs.items() if v is not False]
@@ -629,6 +619,15 @@ class BaseHailTableQuery(object):
     @staticmethod
     def _has_clivar_terms_expr(ht, clinvar_terms):
         return hl.set(clinvar_terms).contains(ht.clinvar.clinical_significance_id)
+
+    @classmethod
+    def _get_has_annotation_expr(cls, ht, allowed_consequences):
+        allowed_consequence_ids = cls._get_allowed_consequence_ids(allowed_consequences)
+        if allowed_consequence_ids:
+            allowed_consequence_ids = hl.set(allowed_consequence_ids)
+            return ht.sortedTranscriptConsequences.any(
+                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequence_ids))
+        return False
 
     @staticmethod
     def _get_allowed_consequence_ids(allowed_consequences):
@@ -1259,7 +1258,10 @@ class MultiDataTypeHailTableQuery(object):
         ht, family_guid = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type_0, sample_data[data_type_0], **kwargs)
         ht = ht.annotate(dataType=data_type_0)
 
-        all_type_merge_fields = {'dataType', 'familyGuids', 'override_consequences', 'rg37_locus', 'xpos'}
+        all_type_merge_fields = {
+            'dataType', 'familyGuids', 'rg37_locus', 'xpos',
+            'override_consequences', 'has_allowed_consequence', 'has_allowed_secondary_consequence',
+        }
         family_set_fields, family_dict_fields = cls._get_families_annotation_fields(kwargs['inheritance_mode'])
         all_type_merge_fields.update(family_set_fields)
         all_type_merge_fields.update(family_dict_fields)
