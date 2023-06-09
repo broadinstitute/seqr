@@ -1162,9 +1162,9 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
     def _filter_annotated_table(cls, ht, **kwargs):
         ht = ht.annotate(
             sortedTranscriptConsequences=hl.if_else(
-                _no_genotype_override(r.genotypes, 'geneIds'), ht.sortedTranscriptConsequences, hl.bind(
+                _no_genotype_override(ht.genotypes, 'geneIds'), ht.sortedTranscriptConsequences, hl.bind(
                     lambda gene_ids: ht.sortedTranscriptConsequences.filter(lambda t: gene_ids.contains(t.gene_id)),
-                    r.genotypes.values().flatmap(lambda g: g.geneIds)
+                    ht.genotypes.values().flatmap(lambda g: g.geneIds)
                 ),
             ),
             # Remove once data is reloaded
