@@ -1375,6 +1375,7 @@
     "pk": 1,
     "fields": {
         "sample": 151,
+        "rank": 0,
         "gene_id": "ENSG00000106554",
         "p_value": 1.08E-56,
         "z_score": 12.34,
@@ -1394,6 +1395,7 @@
     "pk": 2,
     "fields": {
         "sample": 153,
+        "rank": 0,
         "gene_id": "ENSG00000268903",
         "p_value": 1.08E-56,
         "z_score": 12.34,
