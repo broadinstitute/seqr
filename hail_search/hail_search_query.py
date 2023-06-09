@@ -869,7 +869,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         else:
             matched_transcripts = results.sortedTranscriptConsequences
 
-        return matched_transcripts[0]
+        return hl.or_missing(matched_transcripts.size() > 0, matched_transcripts[0])
 
     def _selected_main_transcript_id_expr(self, results):
         selected_transcript = self._selected_main_transcript_expr(results)
