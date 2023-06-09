@@ -56,7 +56,6 @@ class BaseHailTableQuery(object):
             hl.is_defined(r.rg37_locus), r.rg37_locus.position, hl.missing(hl.dtype('int32')),
         ),
     }
-    COMPUTED_ANNOTATION_FIELDS = {}
 
     SORTS = {
         XPOS_SORT_KEY: lambda r: [r.xpos],
@@ -709,17 +708,13 @@ class BaseHailTableQuery(object):
                 ch_ht.v2.compHetFamilyCarriers[family_guid]).size() == 0)
 
     def _format_results(self, ht):
-        results = ht.annotate(
-            _sort=self._sort_order(ht),
-            genomeVersion=self._genome_version.replace('GRCh', ''),
-            **{k: v(ht) for k, v in self.annotation_fields.items()},
-        )
-        results = results.annotate(
-            **{k: v(self, results) for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()},
-        )
-        return results.select(
-            'genomeVersion', '_sort', *self.CORE_FIELDS,
-            *set(list(self.COMPUTED_ANNOTATION_FIELDS.keys()) + list(self.annotation_fields.keys())))
+        annotations = {k: v(ht) for k, v in self.annotation_fields.items()}
+        annotations.update({
+            '_sort': self._sort_order(ht),
+            'genomeVersion': self._genome_version.replace('GRCh', ''),
+        })
+        results = ht.annotate(**annotations)
+        return results.select(*self.CORE_FIELDS, *list(annotations.keys()))
 
     def search(self):
         if self._ht:
@@ -1153,14 +1148,6 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
         'end': lambda r: _get_genotype_override_field(r.genotypes, r.interval.end.position, 'end', hl.max),
         'numExon': lambda r: _get_genotype_override_field(r.genotypes, r.num_exon, 'numExon', hl.max),
     })
-    COMPUTED_ANNOTATION_FIELDS = {
-        'transcripts': lambda self, r: hl.if_else(
-            _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
-                lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
-                r.genotypes.values().flatmap(lambda g: g.geneIds)
-            ),
-        )
-    }
 
     @classmethod
     def _missing_entry(cls, entry):
@@ -1173,8 +1160,14 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
 
     @classmethod
     def _filter_annotated_table(cls, ht, **kwargs):
-        # Remove once data is reloaded
         ht = ht.annotate(
+            sortedTranscriptConsequences=hl.if_else(
+                _no_genotype_override(r.genotypes, 'geneIds'), ht.sortedTranscriptConsequences, hl.bind(
+                    lambda gene_ids: ht.sortedTranscriptConsequences.filter(lambda t: gene_ids.contains(t.gene_id)),
+                    r.genotypes.values().flatmap(lambda g: g.geneIds)
+                ),
+            ),
+            # Remove once data is reloaded
             xpos=hl.dict(CHROM_TO_XPOS_OFFSET).get(ht.interval.start.contig.replace('^chr', '')) + ht.interval.start.position,
         )
         return super(GcnvHailTableQuery, cls)._filter_annotated_table(ht, **kwargs)
@@ -1225,7 +1218,6 @@ class MultiDataTypeHailTableQuery(object):
         self.POPULATIONS = {}
         self.PREDICTION_FIELDS_CONFIG = {}
         self.BASE_ANNOTATION_FIELDS = {}
-        self.COMPUTED_ANNOTATION_FIELDS = {}
         self.SORTS = {}
 
         self.CORE_FIELDS = set()
@@ -1233,7 +1225,6 @@ class MultiDataTypeHailTableQuery(object):
             self.POPULATIONS.update(cls.POPULATIONS)
             self.PREDICTION_FIELDS_CONFIG.update(cls.PREDICTION_FIELDS_CONFIG)
             self.BASE_ANNOTATION_FIELDS.update(cls.BASE_ANNOTATION_FIELDS)
-            self.COMPUTED_ANNOTATION_FIELDS.update(cls.COMPUTED_ANNOTATION_FIELDS)
             self.CORE_FIELDS.update(cls.CORE_FIELDS)
             self.SORTS.update(cls.SORTS)
         self.BASE_ANNOTATION_FIELDS.update({
@@ -1313,13 +1304,6 @@ class MultiDataTypeHailTableQuery(object):
 class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
     DATA_TYPE_ANNOTATION_FIELDS = ['end', 'pos']
-
-    def __init__(self, *args, **kwargs):
-        super(AllSvHailTableQuery, self).__init__(*args, **kwargs)
-        self.COMPUTED_ANNOTATION_FIELDS = {
-            k: lambda _self, r: hl.or_else(v(_self, r), r[k])
-            for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()
-        }
 
 
 class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
