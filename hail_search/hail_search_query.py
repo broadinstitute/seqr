@@ -827,6 +827,9 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         ),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
         'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
+        'selectedMainTranscriptId': lambda r: hl.or_missing(
+            r.selected_transcript != r.sortedTranscriptConsequences[0], r.selected_transcript.transcript_id,
+        ),
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
 
@@ -870,16 +873,6 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
             matched_transcripts = results.sortedTranscriptConsequences
 
         return hl.or_missing(matched_transcripts.size() > 0, matched_transcripts[0])
-
-    def _selected_main_transcript_id_expr(self, results):
-        selected_transcript = self._selected_main_transcript_expr(results)
-        return hl.or_missing(
-            selected_transcript != results.sortedTranscriptConsequences[0], selected_transcript.transcript_id,
-        )
-
-    COMPUTED_ANNOTATION_FIELDS = {
-        'selectedMainTranscriptId': _selected_main_transcript_id_expr,
-    }
 
     @classmethod
     def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, **kwargs):
@@ -948,6 +941,10 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         return super(BaseVariantHailTableQuery, self)._omim_sort(omim_gene_set) + hl.if_else(
             hl.is_missing(main_transcript.sorted_consequence_ids) | omim_gene_set.contains(main_transcript.gene_id),
             10, 0)
+
+    def _format_results(self, ht):
+        ht = ht.annotate(selected_transcript=self._selected_main_transcript_expr(ht))
+        return super(BaseVariantHailTableQuery, self)._format_results(ht)
 
 
 class VariantHailTableQuery(BaseVariantHailTableQuery):
