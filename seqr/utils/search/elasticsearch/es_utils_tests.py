@@ -732,7 +732,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
 PARSED_NO_CONSEQUENCE_FILTER_VARIANTS = deepcopy(PARSED_VARIANTS)
 PARSED_NO_CONSEQUENCE_FILTER_VARIANTS[1]['selectedMainTranscriptId'] = None
 
-PARSED_NO_SORT_VARIANTS = deepcopy(PARSED_NO_CONSEQUENCE_FILTER_VARIANTS)
+PARSED_NO_SORT_VARIANTS = deepcopy(PARSED_NO_CONSEQUENCE_FILTER_VARIANTS + [PARSED_SV_VARIANT])
 for var in PARSED_NO_SORT_VARIANTS:
     del var['_sort']
 
@@ -1397,7 +1397,13 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variant, PARSED_NO_SORT_VARIANTS[1])
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}],
-            size=3, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
+            size=2, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), unsorted=True,
+        )
+
+        variant = get_single_variant(self.families, 'prefix_19107_DEL')
+        self.assertDictEqual(variant, PARSED_NO_SORT_VARIANTS[2])
+        self.assertExecutedSearch(
+            filters=[{'terms': {'variantId': ['prefix_19107_DEL']}}], size=1, index=SV_INDEX_NAME, unsorted=True,
         )
 
         variant = get_single_variant(self.families, '1-248367227-TC-T', return_all_queried_families=True)
@@ -1409,7 +1415,7 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variant, all_family_variant)
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['1-248367227-TC-T']}}],
-            size=3, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
+            size=2, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), unsorted=True,
         )
 
         with self.assertRaises(InvalidSearchException) as cm:

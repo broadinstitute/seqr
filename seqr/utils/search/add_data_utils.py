@@ -4,12 +4,19 @@ from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 
 
+def _hail_backend_error(*args, **kwargs):
+    raise ValueError('Adding samples is disabled for the hail backend')
+
+
 def add_new_search_samples(request_json, project, user, summary_template=None, expected_families=None):
     dataset_type = request_json.get('datasetType')
     if dataset_type not in Sample.DATASET_TYPE_LOOKUP:
         raise ValueError(f'Invalid dataset type "{dataset_type}"')
 
-    sample_ids, sample_type, sample_data = backend_specific_call(validate_es_index_metadata_and_get_samples)(request_json, project)
+    sample_ids, sample_type, sample_data = backend_specific_call(
+        validate_es_index_metadata_and_get_samples,
+        _hail_backend_error,
+    )(request_json, project)
     if not sample_ids:
         raise ValueError('No samples found. Make sure the specified caller type is correct')
 

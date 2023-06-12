@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Message, Segment } from 'semantic-ui-react'
 
-import LoadWorkspaceDataForm from 'shared/components/panel/LoadWorkspaceDataForm'
+import LoadWorkspaceDataForm, { WORKSPACE_REQUIREMENTS } from 'shared/components/panel/LoadWorkspaceDataForm'
 
 export const WorkspaceAccessError = ({ match }) => (
   <Segment basic padded="very" textAlign="center">
@@ -13,15 +13,7 @@ export const WorkspaceAccessError = ({ match }) => (
       </Message.Header>
       <Message.List>
         To submit the initial request to load data to seqr, users require:
-        <Message.Item>&quot;Writer&quot; or &quot;Owner&quot; level access to the workspace</Message.Item>
-        <Message.Item>The &quot;Can Share&quot; permission enabled for the workspace</Message.Item>
-        <Message.Item>
-          No &nbsp;
-          <a href="https://support.terra.bio/hc/en-us/articles/360026775691" target="_blank" rel="noreferrer">
-            authorization domains
-          </a>
-          &nbsp; to be associated with the workspace
-        </Message.Item>
+        {WORKSPACE_REQUIREMENTS.map(item => <Message.Item>{item}</Message.Item>)}
       </Message.List>
     </Message>
   </Segment>

@@ -262,13 +262,11 @@ def _get_es_indices(client):
     return indices, seqr_index_projects
 
 
-def get_es_variants_for_variant_ids(samples, genome_version, variant_ids, user, dataset_type=None, return_all_queried_families=False):
+def get_es_variants_for_variant_ids(samples, genome_version, variants_by_id, user, return_all_queried_families=False):
     variants = EsSearch(
         samples, genome_version, user=user, return_all_queried_families=return_all_queried_families,
-    ).filter_by_variant_ids(variant_ids)
-    if dataset_type:
-        variants = variants.update_dataset_type(dataset_type)
-    return variants.search(num_results=len(variant_ids))
+    ).filter_by_variant_ids(list(variants_by_id.keys()))
+    return variants.search(num_results=len(variants_by_id))
 
 
 def get_es_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=None, num_results=None,
