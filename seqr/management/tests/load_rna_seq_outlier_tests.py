@@ -55,10 +55,7 @@ class LoadRnaSeqTest(TestCase):
         models = RnaSeqOutlier.objects.all()
         self.assertEqual(models.count(), 2)
         self.assertSetEqual({model.sample for model in models}, {sample})
-        self.assertListEqual(list(get_json_for_rna_seq_outliers(models)), [
-            {'geneId': 'ENSG00000240361', 'pAdjust': 0.13, 'pValue': 0.01, 'zScore': -3.1, 'isSignificant': False},
-            {'geneId': 'ENSG00000233750', 'pAdjust': 0.0000057, 'pValue': 0.064, 'zScore': 7.8, 'isSignificant': True},
+        self.assertListEqual(list(models.values_list('gene_id', 'p_adjust', 'p_value', 'z_score')), [
+            ('ENSG00000240361', 0.13, 0.01, -3.1), ('ENSG00000233750', 0.0000057, 0.064, 7.8),
         ])
         mock_logger.assert_called_with('create 2 RnaSeqOutliers for NA19675_D2')
-
-

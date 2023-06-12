@@ -810,10 +810,7 @@ def _get_rna_seq_data(model_cls, individual, **kwargs):
     outlier_data = model_cls.objects.filter(sample__individual=individual, sample__is_active=True)
 
     outliers_by_gene = defaultdict(list)
-    for data in get_json_for_rna_seq_outliers(
-            outlier_data,
-            nested_fields=[{'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
-            **kwargs):
+    for data in get_json_for_rna_seq_outliers(outlier_data, **kwargs):
         outliers_by_gene[data['geneId']].append(data)
 
     return outliers_by_gene
