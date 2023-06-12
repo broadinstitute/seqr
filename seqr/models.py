@@ -1111,6 +1111,7 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
         ('*', 'Any direction'),
     )
 
+    rank = models.IntegerField()
     p_value = models.FloatField()
     z_score = models.FloatField()
     chrom = models.CharField(max_length=2)
