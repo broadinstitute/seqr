@@ -145,7 +145,7 @@ def _get_compound_het_es_variants(results_model, **kwargs):
     return deepcopy(COMP_HET_VARAINTS), 1
 
 
-@mock.patch('seqr.views.utils.variant_utils.MAX_SIGNIFICANT_OUTLIER_NUM', 2)
+@mock.patch('seqr.views.utils.orm_to_json_utils.MAX_SIGNIFICANT_OUTLIER_NUM', 2)
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class VariantSearchAPITest(object):
 

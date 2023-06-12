@@ -12,11 +12,10 @@ from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
-    get_json_for_queryset, get_json_for_saved_variants_with_tags, \
+    get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
     get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
-from seqr.views.utils.individual_utils import MAX_SIGNIFICANT_OUTLIER_NUM
 from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
 
 logger = logging.getLogger(__name__)
@@ -134,22 +133,18 @@ def _add_locus_lists(projects, genes, add_list_detail=False, user=None):
 def _get_rna_seq_outliers(gene_ids, family_guids):
     data_by_individual_gene = defaultdict(lambda: {'outliers': defaultdict(list), 'spliceOutliers': defaultdict(list)})
 
-    for outlier, outlier_cls, max_sign in [('outliers', RnaSeqOutlier, None),
-                                           ('spliceOutliers', RnaSeqSpliceOutlier, MAX_SIGNIFICANT_OUTLIER_NUM)]:
-        filters = {f'{outlier_cls.SIGNIFICANCE_FIELD}__lt': outlier_cls.SIGNIFICANCE_THRESHOLD}
-        if max_sign:
-            filters.update({'rank__lt': max_sign})
-        outlier_data = get_json_for_queryset(
+    for outlier, outlier_cls, top_outliers_only in [('outliers', RnaSeqOutlier, False), ('spliceOutliers', RnaSeqSpliceOutlier, True)]:
+        outlier_data = get_json_for_rna_seq_outliers(
             outlier_cls.objects.filter(
                 gene_id__in=gene_ids,
                 sample__individual__family__guid__in=family_guids,
                 sample__is_active=True,
-                **filters
             ),
-            nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
-                           {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
-            additional_values={'isSignificant': Value(True)}
+            signigicant_only=True,
+            top_outliers_only=top_outliers_only,
+            nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'}],
         )
+
         for data in outlier_data:
             data_by_individual_gene[data.pop('individualGuid')][outlier][data['geneId']].append(data)
 

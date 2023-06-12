@@ -760,7 +760,7 @@ def get_json_for_matchmaker_submission(submission):
 MAX_SIGNIFICANT_OUTLIER_NUM = 50
 
 
-def get_json_for_rna_seq_outliers(models, top_outliers_only=False, nested_fields=None, **kwargs):
+def get_json_for_rna_seq_outliers(models, top_outliers_only=False, nested_fields=None, signigicant_only=False, **kwargs):
     significant_field = models.model.SIGNIFICANCE_FIELD
 
     significant_filter = {f'{significant_field}__lt': models.model.SIGNIFICANCE_THRESHOLD}
@@ -768,11 +768,15 @@ def get_json_for_rna_seq_outliers(models, top_outliers_only=False, nested_fields
     if top_outliers_only:
         significant_filter['rank__lt'] = MAX_SIGNIFICANT_OUTLIER_NUM
 
+    if signigicant_only:
+        models = models.filter(**significant_filter)
+        additional_values = {'isSignificant': Value(True)}
+    else:
+        additional_values = {'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))}
+
     if nested_fields is None:
         nested_fields = []
 
-    nested_fields.append({'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}),
-
-    additional_values = {'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))}
+    nested_fields.append({'fields': ('sample', 'tissue_type'), 'key': 'tissueType'})
 
     return get_json_for_queryset(models, nested_fields=nested_fields, additional_values=additional_values, **kwargs)
