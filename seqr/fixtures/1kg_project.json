@@ -1590,6 +1590,32 @@
     }
 },
 {
+    "model": "seqr.igvsample",
+    "pk": 146,
+    "fields": {
+        "guid": "S000146_na20870",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 7,
+        "sample_type": "alignment",
+        "file_path": "gs://readviz/NA20870.cram"
+    }
+},
+{
+    "model": "seqr.igvsample",
+    "pk": 147,
+    "fields": {
+        "guid": "S000147_na20870",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 7,
+        "sample_type": "gcnv",
+        "file_path": "gs://datasets-gcnv/NA20870.bed.gz"
+    }
+},
+{
     "model": "seqr.varianttagtype",
     "pk": 1,
     "fields": {

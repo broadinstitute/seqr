@@ -290,7 +290,7 @@ SAMPLE_GENE_SPLICE_DATA = {
     'ENSG00000106554-7-132885746-132975168-*-psi5': {
         'chrom': '7', 'start': 132885746, 'end': 132975168, 'strand': '*', 'type': 'psi5',
         'p_value': 1.08e-56, 'z_score': -6.53, 'delta_psi': -0.85, 'read_count': 231, 'gene_id': 'ENSG00000106554',
-        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 0
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 0,
     },
 }
 SAMPLE_GENE_SPLICE_DATA2 = {
@@ -413,7 +413,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+            self.assertEqual(response.json()['error'], 'Elasticsearch is disabled')
 
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
@@ -447,7 +447,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
             response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
             self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+            self.assertEqual(response.json()['error'], 'Deleting indices is disabled for the hail backend')
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_upload_qc_pipeline_output(self, mock_subprocess):
