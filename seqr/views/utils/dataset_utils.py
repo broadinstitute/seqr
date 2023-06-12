@@ -333,7 +333,7 @@ def _get_splice_id(row):
 
 
 def load_rna_seq_splice_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
-    samples_to_load, info, warnings =  _load_rna_seq(
+    samples_to_load, info, warnings = _load_rna_seq(
         RnaSeqSpliceOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_splice_outlier_row,
         SPLICE_OUTLIER_HEADER_COLS.values(), get_unique_key=_get_splice_id
     )
