@@ -333,10 +333,17 @@ def _get_splice_id(row):
 
 
 def load_rna_seq_splice_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
-    return _load_rna_seq(
+    samples_to_load, info, warnings =  _load_rna_seq(
         RnaSeqSpliceOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_splice_outlier_row,
         SPLICE_OUTLIER_HEADER_COLS.values(), get_unique_key=_get_splice_id
     )
+
+    for sample_data_rows in samples_to_load.values():
+        sorted_data_rows = sorted([data_row for data_row in sample_data_rows.values()], key=lambda d: d[P_VALUE_COL])
+        for i, data_row in enumerate(sorted_data_rows):
+            data_row['rank'] = i
+
+    return samples_to_load, info, warnings
 
 
 def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_columns, get_unique_key):
