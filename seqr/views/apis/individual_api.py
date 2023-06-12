@@ -20,8 +20,7 @@ from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
     is_internal_anvil_project
-from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families, \
-    MAX_SIGNIFICANT_OUTLIER_NUM
+from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
 
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
@@ -794,7 +793,7 @@ def get_individual_rna_seq_data(request, individual_guid):
 
     outlier_data = {
         'outliers': _get_rna_seq_data(RnaSeqOutlier, individual),
-        'spliceOutliers': _get_rna_seq_data(RnaSeqSpliceOutlier, individual, max_significant_num=MAX_SIGNIFICANT_OUTLIER_NUM),
+        'spliceOutliers': _get_rna_seq_data(RnaSeqSpliceOutlier, individual, top_outliers_only=True),
     }
 
     genes_to_show = get_genes({
@@ -811,10 +810,7 @@ def _get_rna_seq_data(model_cls, individual, **kwargs):
     outlier_data = model_cls.objects.filter(sample__individual=individual, sample__is_active=True)
 
     outliers_by_gene = defaultdict(list)
-    for data in get_json_for_rna_seq_outliers(
-            outlier_data,
-            nested_fields=[{'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}],
-            **kwargs):
+    for data in get_json_for_rna_seq_outliers(outlier_data, **kwargs):
         outliers_by_gene[data['geneId']].append(data)
 
     return outliers_by_gene

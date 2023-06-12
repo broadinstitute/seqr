@@ -172,7 +172,7 @@ class SavedVariantAPITest(object):
             'outliers': {
                 'ENSG00000135953': [{
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
-                    'isSignificant': True, 'tissueType': None,
+                    'tissueType': None, 'isSignificant': True,
             }]},
             'spliceOutliers': {},
         }})
