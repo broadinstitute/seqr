@@ -694,7 +694,26 @@ CALLED_TABLE_COLUMNS = [
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
     'caller_software', 'variant_types', 'analysis_details',
 ]
-ALL_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + CALLED_TABLE_COLUMNS
+
+AIRTABLE_COLUMN_MAP = {
+    'targeted_region_bed_file': 'targeted_region_bed_file',
+    'reference_assembly': 'reference_assembly',
+    'alignment_software': 'alignment_software_dna',
+    'analysis_details': 'analysis_details',
+}
+REVERSE_AIRTABLE_COLUMN_MAP = {v: k for k, v in AIRTABLE_COLUMN_MAP.items()}
+
+ALL_MAPPED_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + CALLED_TABLE_COLUMNS
+DATA_TYPE_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS
+ALL_AIRTABLE_COLUMNS = [c for c in CALLED_TABLE_COLUMNS if c not in DATA_TYPE_AIRTABLE_COLUMNS]
+OMIT_DATA_TYPES = {
+    'targeted_regions_method': {'wgs'},
+}
+for suffix in ['wes', 'wgs']:
+    ALL_AIRTABLE_COLUMNS += [
+        AIRTABLE_COLUMN_MAP.get(field, f'{field}_{suffix}')
+        for field in DATA_TYPE_AIRTABLE_COLUMNS if suffix not in OMIT_DATA_TYPES.get(field, [])
+    ]
 
 TABLE_COLUMNS = {
     'participant': PARTICIPANT_TABLE_COLUMNS,
@@ -1027,7 +1046,7 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
         elif enum and value not in enum:
             invalid.append(f'{_get_row_id(row)} ({value})')
     if missing or warn_missing or invalid:
-        airtable_summary = ' (from Airtable)' if column in ALL_AIRTABLE_COLUMNS else ''
+        airtable_summary = ' (from Airtable)' if column in ALL_MAPPED_AIRTABLE_COLUMNS else ''
         error_template = f'The following entries {{issue}} "{column}"{airtable_summary} in the "{file_name}" table'
         if missing:
             errors.append(
