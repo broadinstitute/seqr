@@ -3,23 +3,20 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Label, Popup } from 'semantic-ui-react'
 
-import { getSortedIndividualsByFamily, getRnaSeqSignificantJunctionData } from 'redux/selectors'
+import { getSpliceOutliersByChromFamily } from 'redux/selectors'
 import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
 import RnaSeqJunctionOutliersTable from 'shared/components/table/RnaSeqJunctionOutliersTable'
 import { variantIntervalOverlap } from './VariantUtils'
 
 const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: true }
 
-const BaseSpliceOutlierLabel = React.memo((
-  { variant, significantJunctionOutliers, individualsByFamilyGuid },
-) => {
+const BaseSpliceOutlierLabel = React.memo(({ variant, spliceOutliersByFamily }) => {
   const { pos, end, familyGuids, endChrom } = variant
-  const individualGuids = familyGuids.reduce((acc, fGuid) => (
-    [...acc, ...individualsByFamilyGuid[fGuid].map(individual => individual.individualGuid)]
+  const outliers = familyGuids.reduce((acc, fGuid) => (
+    [...acc, ...(spliceOutliersByFamily[fGuid] || [])]
   ), [])
 
-  const overlappedOutliers = individualGuids.map(iGuid => significantJunctionOutliers[iGuid] || []).flat()
-    .filter(variantIntervalOverlap({ pos, end, endChrom }, RNASEQ_JUNCTION_PADDING))
+  const overlappedOutliers = outliers.filter(variantIntervalOverlap({ pos, end, endChrom }, RNASEQ_JUNCTION_PADDING))
 
   if (overlappedOutliers.length < 1) {
     return null
@@ -41,14 +38,12 @@ const BaseSpliceOutlierLabel = React.memo((
 })
 
 BaseSpliceOutlierLabel.propTypes = {
-  significantJunctionOutliers: PropTypes.object,
-  individualsByFamilyGuid: PropTypes.object,
+  spliceOutliersByFamily: PropTypes.object,
   variant: PropTypes.object,
 }
 
-const mapLocusListStateToProps = state => ({
-  significantJunctionOutliers: getRnaSeqSignificantJunctionData(state),
-  individualsByFamilyGuid: getSortedIndividualsByFamily(state),
+const mapLocusListStateToProps = (state, ownProps) => ({
+  spliceOutliersByFamily: getSpliceOutliersByChromFamily(state)[ownProps.variant.chrom],
 })
 
 export default connect(mapLocusListStateToProps)(BaseSpliceOutlierLabel)

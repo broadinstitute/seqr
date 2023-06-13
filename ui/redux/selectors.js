@@ -435,3 +435,24 @@ export const getRnaSeqSignificantJunctionData = createSelector(
     } : acc), {},
   ),
 )
+
+export const getSpliceOutliersByChromFamily = createSelector(
+  getIndividualsByGuid,
+  getRnaSeqSignificantJunctionData,
+  (individualsByGuid, spliceDataByIndiv) => Object.entries(spliceDataByIndiv).reduce(
+    (acc, [individualGuid, spliceData]) => {
+      const { familyGuid } = individualsByGuid[individualGuid]
+      spliceData.forEach((data) => {
+        const { chrom } = data
+        if (!acc[chrom]) {
+          acc[chrom] = {}
+        }
+        if (!acc[chrom][familyGuid]) {
+          acc[chrom][familyGuid] = []
+        }
+        acc[chrom][familyGuid].push(data)
+      })
+      return acc
+    }, {},
+  ),
+)
