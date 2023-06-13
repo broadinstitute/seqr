@@ -1,6 +1,6 @@
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F, Value
+from django.db.models import F
 import logging
 import redis
 
