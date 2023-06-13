@@ -2,7 +2,7 @@ import React from 'react'
 import { Popup, Icon } from 'semantic-ui-react'
 import PropTypes from 'prop-types'
 
-import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
+import { RNASEQ_JUNCTION_PADDING, TISSUE_DISPLAY } from 'shared/utils/constants'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import { GeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
 import DataTable from 'shared/components/table/DataTable'
@@ -113,7 +113,15 @@ const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', format: ({
 
 const RNA_SEQ_SPLICE_POPUP_COLUMNS = [
   INDIVIDUAL_NAME_COLUMN,
-  { ...JUNCTION_COLUMN, format: null },
+  {
+    ...JUNCTION_COLUMN,
+    format: ({ chrom, start, end, strand }) => `${chrom}:${start}-${end} ${strand}`,
+  },
+  {
+    name: 'tissueType',
+    content: 'Tissue Type',
+    format: ({ tissueType }) => TISSUE_DISPLAY[tissueType],
+  },
   ...OTHER_SPLICE_COLUMNS,
 ]
 
