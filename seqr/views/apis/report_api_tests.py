@@ -175,20 +175,20 @@ AIRTABLE_GREGOR_RECORDS = {
       "id": "rec2B6OGmQpAkQW3s",
       "fields": {
         'SMID': 'SM-JDBTM',
-        'seq_library_prep_kit_method': 'Kapa HyperPrep',
-        'read_length': '151',
-        'experiment_type': 'exome',
-        'targeted_regions_method': 'Twist',
+        'seq_library_prep_kit_method_wes': 'Kapa HyperPrep',
+        'read_length_wes': '151',
+        'experiment_type_wes': 'exome',
+        'targeted_regions_method_wes': 'Twist',
         'targeted_region_bed_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed',
-        'date_data_generation': '2022-08-15',
-        'target_insert_size': '385',
-        'sequencing_platform': 'NovaSeq',
-        'aligned_dna_short_read_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
-        'aligned_dna_short_read_index_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai',
-        'md5sum': '129c28163df082',
+        'date_data_generation_wes': '2022-08-15',
+        'target_insert_size_wes': '385',
+        'sequencing_platform_wes': 'NovaSeq',
+        'aligned_dna_short_read_file_wes': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
+        'aligned_dna_short_read_index_file_wes': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai',
+        'md5sum_wes': '129c28163df082',
         'reference_assembly': 'GRCh38',
-        'alignment_software': 'BWA-MEM-2.3',
-        'mean_coverage': '42.4',
+        'alignment_software_dna': 'BWA-MEM-2.3',
+        'mean_coverage_wes': '42.4',
         'analysis_details': 'DOI:10.5281/zenodo.4469317',
         'called_variants_dna_short_read_id': 'SX2-3',
         'aligned_dna_short_read_set_id': 'BCM_H7YG5DSX2',
@@ -679,6 +679,7 @@ class ReportAPITest(object):
         expected_files = [
             'participant', 'family', 'phenotype', 'analyte', 'experiment_dna_short_read',
             'aligned_dna_short_read', 'aligned_dna_short_read_set', 'called_variants_dna_short_read',
+            'experiment_rna_short_read', 'aligned_rna_short_read',
         ]
         skipped_file_validation_warnings = [
             f'No data model found for "{file}" table so no validation was performed' for file in expected_files
@@ -717,7 +718,8 @@ class ReportAPITest(object):
             [row.split('\t') for row in write_call.args[0].split('\n')]
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
         ]
-        participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, called_file = files
+        participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, \
+            called_file, experiment_rna_file, read_rna_file = files
 
         self.assertEqual(len(participant_file), 14)
         self.assertEqual(participant_file[0], [
@@ -807,6 +809,8 @@ class ReportAPITest(object):
             'SX2-3', 'BCM_H7YG5DSX2', 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
             '129c28163df082', 'gatk4.1.2', 'SNV', 'DOI:10.5281/zenodo.4469317',
         ])
+
+        # TODo test experiment_rna_file, read_rna_file
 
         # test airtable calls
         self.assertEqual(len(responses.calls), 4)
