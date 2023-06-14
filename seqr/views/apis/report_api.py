@@ -730,17 +730,19 @@ AIRTABLE_COLUMN_MAP = {
 REVERSE_AIRTABLE_COLUMN_MAP = {v: k for k, v in AIRTABLE_COLUMN_MAP.items()}
 AIRTABLE_COLUMN_MAP.update({k: k for k in [
     'targeted_region_bed_file', 'reference_assembly', 'analysis_details', 'percent_rRNA', 'percent_mRNA',
+    'aligned_rna_short_read_file', 'aligned_rna_short_read_index_file',
 ]})
 
 ALL_AIRTABLE_COLUMNS = list(AIRTABLE_COLUMN_MAP.values()) + [
     c for c in CALLED_TABLE_COLUMNS if c not in DATA_TYPE_AIRTABLE_COLUMNS
 ]
-OMIT_DATA_TYPES = {c: {'rna'} for c in EXPERIMENT_TABLE_AIRTABLE_FIELDS_NO_RNA + READ_TABLE_DNA_AIRTABLE_FIELDS}
+OMIT_DATA_TYPES = {'mean_coverage': {'rna'}}
+OMIT_DATA_TYPES.update({c: {'rna'} for c in EXPERIMENT_TABLE_AIRTABLE_FIELDS_NO_RNA + READ_TABLE_DNA_AIRTABLE_FIELDS})
 OMIT_DATA_TYPES['targeted_regions_method'].add('wgs')
 OMIT_DATA_TYPES.update({
     c: {'wes', 'wgs'} for c in EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_TABLE_RNA_AIRTABLE_FIELDS
 })
-for suffix in ['wes', 'wgs']:
+for suffix in ['wes', 'wgs', 'rna']:
     for field in DATA_TYPE_AIRTABLE_COLUMNS:
         if field not in AIRTABLE_COLUMN_MAP and suffix not in OMIT_DATA_TYPES.get(field, []):
             suffix_field = f'{field}_{suffix}'
