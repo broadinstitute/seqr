@@ -725,7 +725,7 @@ ALL_MAPPED_AIRTABLE_COLUMNS = set(CALLED_TABLE_COLUMNS)
 ALL_MAPPED_AIRTABLE_COLUMNS.update(DATA_TYPE_AIRTABLE_COLUMNS)
 
 AIRTABLE_COLUMN_MAP = {
-    'alignment_software': 'alignment_software_dna',
+    'alignment_software': 'alignment_software_dna',  # TODO alignment_software_rna
 }
 REVERSE_AIRTABLE_COLUMN_MAP = {v: k for k, v in AIRTABLE_COLUMN_MAP.items()}
 AIRTABLE_COLUMN_MAP.update({k: k for k in [

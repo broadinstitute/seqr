@@ -191,7 +191,7 @@ AIRTABLE_GREGOR_RECORDS = {
         'mean_coverage_wes': '42.4',
         'analysis_details': 'DOI:10.5281/zenodo.4469317',
         'called_variants_dna_short_read_id': 'SX2-3',
-        'aligned_dna_short_read_set_id': 'BCM_H7YG5DSX2',
+        'aligned_dna_short_read_set_id': '',
         'called_variants_dna_file': 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
         'caller_software': 'gatk4.1.2',
         'variant_types': 'SNV',
@@ -201,6 +201,34 @@ AIRTABLE_GREGOR_RECORDS = {
       "id": "rec2B6OGmCVzkQW3s",
       "fields": {
         'SMID': 'SM-AGHT',
+        'seq_library_prep_kit_method_rna': 'Unknown',
+        'library_prep_type_rna': 'stranded poly-A pulldown',
+        'read_length_rna': '153',
+        'experiment_type_rna': 'paired-end',
+        'single_or_paired_ends_rna': 'paired-end',
+        'targeted_region_bed_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed',
+        'date_data_generation_rna': '2023-01-12',
+        'sequencing_platform_rna': 'NovaSeq',
+        'md5sum_rna': '4c2f6759c873e72adada0c38708c5eb3',
+        'reference_assembly': 'GRCh38',
+        'alignment_software_rna': 'STARv2.7.10b',
+        'within_site_batch_name_rna': 'LCSET-26938',
+        'RIN_rna': '8.8189',
+        'aligned_dna_short_read_set_id': 'BCM_EB6C8336',
+        'estimated_library_size_rna': '34,535,627',
+        'total_reads_rna': '88,627,482',
+        'percent_rRNA': '2.5',
+        'percent_mRNA': '78.6',
+        '5prime3prime_bias_rna': '1.08',
+        'aligned_rna_short_read_file': 'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Aligned.sortedByCoord.out.bam',
+        'aligned_rna_short_read_index_file': 'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Aligned.sortedByCoord.out.bam.bai',
+        'reference_assembly_uri_rna': 'gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta',
+        'gene_annotation_rna': 'GENCODEv26',
+        'alignment_log_file_rna': 'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Log.final.out',
+        'percent_uniquely_aligned_rna': 'SNV',
+        'variant_types': '88.49',
+        'percent_multimapped_rna': '8.9',
+        'percent_unaligned_rna': '1.57',
       },
     },
 ]}
@@ -696,7 +724,7 @@ class ReportAPITest(object):
         self.assertListEqual(response.json()['errors'], [
             'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
             'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
-            'The following entries are missing required "aligned_dna_short_read_set_id" (from Airtable) in the "aligned_dna_short_read_set" table: NA19675_1',
+            'The following entries are missing required "aligned_dna_short_read_set_id" (from Airtable) in the "aligned_dna_short_read_set" table: VCGS_FAM203_621_D2',
         ])
 
         responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
@@ -771,34 +799,33 @@ class ReportAPITest(object):
             ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', '', ''],
             row)
 
-        self.assertEqual(len(experiment_file), 3)
+        self.assertEqual(len(experiment_file), 2)
         self.assertEqual(experiment_file[0], [
             'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
             'read_length', 'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file',
             'date_data_generation', 'target_insert_size', 'sequencing_platform',
         ])
-        self.assertIn([
+        self.assertEqual([
             'Broad_exome_VCGS_FAM203_621_D2', 'Broad_SM-JDBTM', 'VCGS_FAM203_621_D2', 'Kapa HyperPrep', '151', 'exome',
             'Twist', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2022-08-15', '385', 'NovaSeq',
-        ], experiment_file)
-        self.assertIn(['Broad_NA_NA19675_1', 'Broad_SM-AGHT', 'NA19675_1', '', '', '', '', '', '', '', ''], experiment_file)
+        ], experiment_file[1])
 
-        self.assertEqual(len(read_file), 3)
+        self.assertEqual(len(read_file), 2)
         self.assertEqual(read_file[0], [
             'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
             'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri', 'reference_assembly_details',
             'alignment_software', 'mean_coverage', 'analysis_details',  'quality_issues',
         ])
-        self.assertIn([
+        self.assertEqual([
             'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38',
             '', '', 'BWA-MEM-2.3', '42.4', 'DOI:10.5281/zenodo.4469317', '',
-        ], read_file)
+        ], read_file[1])
 
-        self.assertEqual(len(read_set_file), 3)
+        self.assertEqual(len(read_set_file), 2)
         self.assertEqual(read_set_file[0], ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'])
-        self.assertIn(['BCM_H7YG5DSX2', 'Broad_exome_VCGS_FAM203_621_D2_1'], read_set_file)
+        self.assertEqual(['', 'Broad_exome_VCGS_FAM203_621_D2_1'], read_set_file[1])
 
         self.assertEqual(len(called_file), 2)
         self.assertEqual(called_file[0], [
@@ -806,11 +833,25 @@ class ReportAPITest(object):
             'caller_software', 'variant_types', 'analysis_details',
         ])
         self.assertEqual(called_file[1], [
-            'SX2-3', 'BCM_H7YG5DSX2', 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
+            'SX2-3', '', 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
             '129c28163df082', 'gatk4.1.2', 'SNV', 'DOI:10.5281/zenodo.4469317',
         ])
 
-        # TODo test experiment_rna_file, read_rna_file
+        self.assertEqual(len(experiment_rna_file), 2)
+        self.assertEqual(experiment_rna_file[0], [
+            'experiment_rna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
+            'read_length', 'experiment_type', 'date_data_generation', 'sequencing_platform', 'library_prep_type',
+            'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size',
+            'total_reads', 'percent_rRNA', 'percent_mRNA', '5prime3prime_bias', 'percent_mtRNA', 'percent_Globin',
+            'percent_UMI', 'percent_GC', 'percent_chrX_Y'
+        ])
+        self.assertEqual(experiment_rna_file[1], [
+            'Broad_paired-end_NA19675_1', 'Broad_SM-AGHT', 'NA19675_1', 'Unknown', '153', 'paired-end',
+            '2023-01-12', 'NovaSeq', 'stranded poly-A pulldown', 'paired-end', 'LCSET-26938', '8.8189', '34,535,627',
+            '88,627,482', '2.5', '78.6', '1.08', '', '', '', '', '',
+        ])
+
+        # TODo test read_rna_file
 
         # test airtable calls
         self.assertEqual(len(responses.calls), 4)
