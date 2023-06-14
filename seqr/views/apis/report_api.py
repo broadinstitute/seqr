@@ -693,7 +693,7 @@ EXPERIMENT_RNA_TABLE_COLUMNS = ['experiment_rna_short_read_id'] + COMPUTED_EXPER
 READ_TABLE_DNA_AIRTABLE_FIELDS = ['aligned_dna_short_read_file', 'aligned_dna_short_read_index_file']
 READ_TABLE_RNA_AIRTABLE_FIELDS = [
     'aligned_rna_short_read_file', 'aligned_rna_short_read_index_file',
-    'gene_annotation', 'alignment_log_file', 'percent_uniquely_aligned', 'percent_multimapped', 'percent_unaligned'
+    'gene_annotation', 'alignment_log_file', 'percent_uniquely_aligned', 'percent_multimapped', 'percent_unaligned',
 ]
 READ_TABLE_AIRTABLE_FIELDS = [
     'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage', 'analysis_details',
@@ -707,7 +707,7 @@ READ_RNA_TABLE_COLUMNS = [
     'aligned_rna_short_read_id', 'experiment_rna_short_read_id',
 ] + READ_TABLE_RNA_AIRTABLE_FIELDS[:2] + READ_TABLE_AIRTABLE_FIELDS + READ_TABLE_RNA_AIRTABLE_FIELDS[2:] + ['quality_issues']
 READ_RNA_TABLE_COLUMNS.insert(6, 'reference_assembly_details')
-READ_RNA_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')
+READ_RNA_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')  # TODO airtable
 READ_RNA_TABLE_COLUMNS.insert(8, 'alignment_postprocessing')
 READ_RNA_TABLE_COLUMNS.insert(8, 'gene_annotation_details')
 READ_RNA_TABLE_COLUMNS.remove('analysis_details')

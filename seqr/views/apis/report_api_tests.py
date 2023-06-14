@@ -851,7 +851,20 @@ class ReportAPITest(object):
             '88,627,482', '2.5', '78.6', '1.08', '', '', '', '', '',
         ])
 
-        # TODo test read_rna_file
+        self.assertEqual(len(read_rna_file), 2)
+        self.assertEqual(read_rna_file[0], [
+            'aligned_rna_short_read_id', 'experiment_rna_short_read_id', 'aligned_rna_short_read_file',
+            'aligned_rna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri',
+            'reference_assembly_details', 'gene_annotation', 'gene_annotation_details',
+            'alignment_software', 'alignment_postprocessing', 'mean_coverage', 'analysis_details', 'alignment_log_file',
+            'percent_uniquely_aligned', 'percent_multimapped', 'percent_unaligned', 'quality_issues',
+        ])
+        self.assertEqual([
+            'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
+            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
+            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38',
+            '', '', 'BWA-MEM-2.3', '42.4', 'DOI:10.5281/zenodo.4469317', '',
+        ], read_rna_file[1])
 
         # test airtable calls
         self.assertEqual(len(responses.calls), 4)
