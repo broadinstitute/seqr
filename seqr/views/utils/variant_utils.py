@@ -1,6 +1,6 @@
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F
+from django.db.models import F, Value
 import logging
 import redis
 
@@ -133,10 +133,11 @@ def _add_locus_lists(projects, genes, add_list_detail=False, user=None):
 def _get_rna_seq_outliers(gene_ids, family_guids):
     data_by_individual_gene = defaultdict(lambda: {'outliers': {}})
 
-    outlier_data = get_json_for_rna_seq_outliers(
+    outlier_data = get_json_for_queryset(
         RnaSeqOutlier.objects.filter(
             gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, sample__individual__family__guid__in=family_guids),
-        nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},]
+        nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'}],
+        additional_values={'isSignificant': Value(True)},
     )
     for data in outlier_data:
         data_by_individual_gene[data.pop('individualGuid')]['outliers'][data['geneId']] = data
