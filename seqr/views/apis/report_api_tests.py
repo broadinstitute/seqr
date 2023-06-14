@@ -222,8 +222,7 @@ AIRTABLE_GREGOR_RECORDS = {
         '5prime3prime_bias_rna': '1.08',
         'aligned_rna_short_read_file': 'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Aligned.sortedByCoord.out.bam',
         'aligned_rna_short_read_index_file': 'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Aligned.sortedByCoord.out.bam.bai',
-        # TODO
-        # 'reference_assembly_uri_rna': 'gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta',
+        'reference_assembly_uri_rna': 'gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta',
         'gene_annotation_rna': 'GENCODEv26',
         'alignment_log_file_rna': 'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Log.final.out',
         'percent_uniquely_aligned_rna': '88.49',
@@ -894,10 +893,10 @@ class ReportAPITest(object):
             'gene_annotation_rna', 'library_prep_type_rna', 'md5sum_rna', 'md5sum_wes', 'md5sum_wgs', 'mean_coverage_wes',
             'mean_coverage_wgs', 'percent_mRNA', 'percent_multimapped_rna', 'percent_rRNA',  'percent_unaligned_rna',
             'percent_uniquely_aligned_rna', 'read_length_rna', 'read_length_wes', 'read_length_wgs', 'reference_assembly',
-            'seq_library_prep_kit_method_rna', 'seq_library_prep_kit_method_wes', 'seq_library_prep_kit_method_wgs',
-            'sequencing_platform_rna', 'sequencing_platform_wes', 'sequencing_platform_wgs', 'single_or_paired_ends_rna',
-            'target_insert_size_wes', 'target_insert_size_wgs',  'targeted_region_bed_file', 'targeted_regions_method_wes',
-             'total_reads_rna', 'variant_types', 'within_site_batch_name_rna',
+            'reference_assembly_uri_rna', 'seq_library_prep_kit_method_rna', 'seq_library_prep_kit_method_wes',
+            'seq_library_prep_kit_method_wgs', 'sequencing_platform_rna', 'sequencing_platform_wes',
+            'sequencing_platform_wgs', 'single_or_paired_ends_rna', 'target_insert_size_wes', 'target_insert_size_wgs',
+            'targeted_region_bed_file', 'targeted_regions_method_wes', 'total_reads_rna', 'variant_types', 'within_site_batch_name_rna',
         ]
         self._assert_expected_airtable_call(2, "OR(SMID='SM-AGHT',SMID='SM-JDBTM')", metadata_fields)
 

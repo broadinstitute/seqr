@@ -676,6 +676,7 @@ ANALYTE_TABLE_COLUMNS = [
     'participant_drugs_intake', 'participant_special_diet', 'hours_since_last_meal', 'passage_number', 'time_to_freeze',
     'sample_transformation_detail', 'quality_issues',
 ]
+# TODO cleanup
 EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
     'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
     'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
@@ -698,7 +699,8 @@ READ_TABLE_RNA_FILE_AIRTABLE_FIELDS = [
     'aligned_rna_short_read_file', 'aligned_rna_short_read_index_file',
 ]
 READ_TABLE_RNA_AIRTABLE_FIELDS = [
-    'gene_annotation', 'alignment_software',  'alignment_log_file', 'percent_uniquely_aligned', 'percent_multimapped', 'percent_unaligned',
+    'reference_assembly_uri', 'gene_annotation', 'alignment_software',  'alignment_log_file', 'percent_uniquely_aligned',
+    'percent_multimapped', 'percent_unaligned',
 ]
 READ_TABLE_AIRTABLE_FIELDS = [
     'md5sum',
@@ -710,9 +712,8 @@ READ_TABLE_COLUMNS.insert(6, 'reference_assembly_details')
 READ_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')
 READ_RNA_TABLE_COLUMNS = [
     'aligned_rna_short_read_id', 'experiment_rna_short_read_id',
-] + READ_TABLE_RNA_FILE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + ['reference_assembly', 'mean_coverage'] + READ_TABLE_RNA_AIRTABLE_FIELDS + ['quality_issues']
+] + READ_TABLE_RNA_FILE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + ['mean_coverage', 'reference_assembly'] + READ_TABLE_RNA_AIRTABLE_FIELDS + ['quality_issues']
 READ_RNA_TABLE_COLUMNS.insert(6, 'reference_assembly_details')
-READ_RNA_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')  # TODO airtable
 READ_RNA_TABLE_COLUMNS.insert(12, 'alignment_postprocessing')
 READ_RNA_TABLE_COLUMNS.insert(10, 'gene_annotation_details')
 READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
