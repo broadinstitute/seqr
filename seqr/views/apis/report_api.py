@@ -713,7 +713,7 @@ READ_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')
 READ_RNA_TABLE_COLUMNS = [
     'aligned_rna_short_read_id', 'experiment_rna_short_read_id',
 ] + READ_TABLE_RNA_FILE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + ['mean_coverage', 'reference_assembly'] + READ_TABLE_RNA_AIRTABLE_FIELDS + ['quality_issues']
-READ_RNA_TABLE_COLUMNS.insert(6, 'reference_assembly_details')
+READ_RNA_TABLE_COLUMNS.insert(8, 'reference_assembly_details')
 READ_RNA_TABLE_COLUMNS.insert(12, 'alignment_postprocessing')
 READ_RNA_TABLE_COLUMNS.insert(10, 'gene_annotation_details')
 READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']

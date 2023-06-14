@@ -853,18 +853,18 @@ class ReportAPITest(object):
         self.assertEqual(len(read_rna_file), 2)
         self.assertEqual(read_rna_file[0], [
             'aligned_rna_short_read_id', 'experiment_rna_short_read_id', 'aligned_rna_short_read_file',
-            'aligned_rna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri',
-            'reference_assembly_details',  'mean_coverage',
-            'gene_annotation', 'gene_annotation_details', 'alignment_software', 'alignment_log_file', 'alignment_postprocessing',
-            'percent_uniquely_aligned',
-            'percent_multimapped', 'percent_unaligned', 'quality_issues',
+            'aligned_rna_short_read_index_file', 'md5sum', 'mean_coverage', 'reference_assembly', 'reference_assembly_uri',
+            'reference_assembly_details', 'gene_annotation', 'gene_annotation_details', 'alignment_software',
+            'alignment_log_file', 'alignment_postprocessing', 'percent_uniquely_aligned', 'percent_multimapped',
+            'percent_unaligned', 'quality_issues',
         ])
         self.assertEqual([
             'Broad_paired-end_NA19675_1_1', 'Broad_paired-end_NA19675_1',
             'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Aligned.sortedByCoord.out.bam',
             'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Aligned.sortedByCoord.out.bam.bai',
-            '4c2f6759c873e72adada0c38708c5eb3', 'GRCh38', '', '', '', 'GENCODEv26', '', 'STARv2.7.10b',
-            'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Log.final.out', '', '88.49', '8.9', '1.57', '',
+            '4c2f6759c873e72adada0c38708c5eb3',  '', 'GRCh38',
+            'gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta','', 'GENCODEv26', '',
+            'STARv2.7.10b', 'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Log.final.out', '', '88.49', '8.9', '1.57', '',
         ], read_rna_file[1])
 
         # test airtable calls
