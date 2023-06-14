@@ -695,25 +695,29 @@ CALLED_TABLE_COLUMNS = [
     'caller_software', 'variant_types', 'analysis_details',
 ]
 
-AIRTABLE_COLUMN_MAP = {
-    'targeted_region_bed_file': 'targeted_region_bed_file',
-    'reference_assembly': 'reference_assembly',
-    'alignment_software': 'alignment_software_dna',
-    'analysis_details': 'analysis_details',
-}
-REVERSE_AIRTABLE_COLUMN_MAP = {v: k for k, v in AIRTABLE_COLUMN_MAP.items()}
-
 ALL_MAPPED_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + CALLED_TABLE_COLUMNS
 DATA_TYPE_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS
-ALL_AIRTABLE_COLUMNS = [c for c in CALLED_TABLE_COLUMNS if c not in DATA_TYPE_AIRTABLE_COLUMNS]
+
+AIRTABLE_COLUMN_MAP = {
+    'alignment_software': 'alignment_software_dna',
+}
+REVERSE_AIRTABLE_COLUMN_MAP = {v: k for k, v in AIRTABLE_COLUMN_MAP.items()}
+AIRTABLE_COLUMN_MAP.update(
+    {k: k for k in ['targeted_region_bed_file', 'reference_assembly', 'analysis_details']}
+)
+
+ALL_AIRTABLE_COLUMNS = list(AIRTABLE_COLUMN_MAP.values()) + [
+    c for c in CALLED_TABLE_COLUMNS if c not in DATA_TYPE_AIRTABLE_COLUMNS
+]
 OMIT_DATA_TYPES = {
     'targeted_regions_method': {'wgs'},
 }
 for suffix in ['wes', 'wgs']:
-    ALL_AIRTABLE_COLUMNS += [
-        AIRTABLE_COLUMN_MAP.get(field, f'{field}_{suffix}')
-        for field in DATA_TYPE_AIRTABLE_COLUMNS if suffix not in OMIT_DATA_TYPES.get(field, [])
-    ]
+    for field in DATA_TYPE_AIRTABLE_COLUMNS:
+        if field not in AIRTABLE_COLUMN_MAP and suffix not in OMIT_DATA_TYPES.get(field, []):
+            suffix_field = f'{field}_{suffix}'
+            ALL_AIRTABLE_COLUMNS.append(suffix_field)
+            REVERSE_AIRTABLE_COLUMN_MAP[suffix_field] = field
 
 TABLE_COLUMNS = {
     'participant': PARTICIPANT_TABLE_COLUMNS,
@@ -892,7 +896,10 @@ def _get_gregor_airtable_data(individuals, user):
         fields=[SMID_FIELD] + fields,
         or_filters={f'{SMID_FIELD}': {r[SMID_FIELD] for r in sample_records.values()}},
     )
-    airtable_metadata_by_smid = {r[SMID_FIELD]: r for r in airtable_metadata.values()}
+    airtable_metadata_by_smid = {
+        r[SMID_FIELD]: {REVERSE_AIRTABLE_COLUMN_MAP.get(k, k): v for k, v in r.items()}
+        for r in airtable_metadata.values()
+    }
 
     return sample_records, airtable_metadata_by_smid
 
