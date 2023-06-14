@@ -28,10 +28,14 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     end_offset = num_results * page
     search_body = _format_search_body(samples, genome_version, user, end_offset, search)
 
+    frequencies = search_body.pop('freqs', None)
+    if frequencies and frequencies.get('callset'):
+        frequencies['seqr'] = frequencies.pop('callset')
+
     search_body.update({
         'sort': sort,
         'sort_metadata': _get_sort_metadata(sort, samples),
-        'frequencies': search_body.pop('freqs', None),
+        'frequencies': frequencies,
         'quality_filter': search_body.pop('qualityFilter', None),
         'custom_query': search_body.pop('customQuery', None),
     })
