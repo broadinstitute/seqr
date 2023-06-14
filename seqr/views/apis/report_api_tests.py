@@ -222,7 +222,8 @@ AIRTABLE_GREGOR_RECORDS = {
         '5prime3prime_bias_rna': '1.08',
         'aligned_rna_short_read_file': 'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Aligned.sortedByCoord.out.bam',
         'aligned_rna_short_read_index_file': 'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Aligned.sortedByCoord.out.bam.bai',
-        'reference_assembly_uri_rna': 'gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta',
+        # TODO
+        # 'reference_assembly_uri_rna': 'gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta',
         'gene_annotation_rna': 'GENCODEv26',
         'alignment_log_file_rna': 'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Log.final.out',
         'percent_uniquely_aligned_rna': '88.49',
@@ -841,29 +842,30 @@ class ReportAPITest(object):
             'experiment_rna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
             'read_length', 'experiment_type', 'date_data_generation', 'sequencing_platform', 'library_prep_type',
             'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size',
-            'total_reads', 'percent_rRNA', 'percent_mRNA', '5prime3prime_bias', 'percent_mtRNA', 'percent_Globin',
+            'total_reads', '5prime3prime_bias', 'percent_rRNA', 'percent_mRNA', 'percent_mtRNA', 'percent_Globin',
             'percent_UMI', 'percent_GC', 'percent_chrX_Y'
         ])
         self.assertEqual(experiment_rna_file[1], [
             'Broad_paired-end_NA19675_1', 'Broad_SM-AGHT', 'NA19675_1', 'Unknown', '153', 'paired-end',
             '2023-01-12', 'NovaSeq', 'stranded poly-A pulldown', 'paired-end', 'LCSET-26938', '8.8189', '34,535,627',
-            '88,627,482', '2.5', '78.6', '1.08', '', '', '', '', '',
+            '88,627,482', '1.08', '2.5', '78.6', '', '', '', '', '',
         ])
 
         self.assertEqual(len(read_rna_file), 2)
         self.assertEqual(read_rna_file[0], [
             'aligned_rna_short_read_id', 'experiment_rna_short_read_id', 'aligned_rna_short_read_file',
             'aligned_rna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri',
-            'reference_assembly_details', 'alignment_software', 'alignment_postprocessing', 'mean_coverage',
-            'gene_annotation', 'gene_annotation_details', 'alignment_log_file', 'percent_uniquely_aligned',
+            'reference_assembly_details',  'mean_coverage',
+            'gene_annotation', 'gene_annotation_details', 'alignment_software', 'alignment_log_file', 'alignment_postprocessing',
+            'percent_uniquely_aligned',
             'percent_multimapped', 'percent_unaligned', 'quality_issues',
         ])
         self.assertEqual([
             'Broad_paired-end_NA19675_1_1', 'Broad_paired-end_NA19675_1',
             'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Aligned.sortedByCoord.out.bam',
             'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Aligned.sortedByCoord.out.bam.bai',
-            '4c2f6759c873e72adada0c38708c5eb3', 'GRCh38', '', '', '', '', '', 'GENCODEv26', '',
-            'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Log.final.out', '88.49', '8.9', '1.57', '',
+            '4c2f6759c873e72adada0c38708c5eb3', 'GRCh38', '', '', '', 'GENCODEv26', '', 'STARv2.7.10b',
+            'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Log.final.out', '', '88.49', '8.9', '1.57', '',
         ], read_rna_file[1])
 
         # test airtable calls
@@ -886,7 +888,7 @@ class ReportAPITest(object):
             'SMID', '5prime3prime_bias_rna', 'RIN_rna', 'aligned_dna_short_read_file_wes', 'aligned_dna_short_read_file_wgs',
             'aligned_dna_short_read_index_file_wes', 'aligned_dna_short_read_index_file_wgs', 'aligned_dna_short_read_set_id',
             'aligned_rna_short_read_file',  'aligned_rna_short_read_index_file', 'alignment_log_file_rna',
-            'alignment_software_dna', 'analysis_details', 'called_variants_dna_file', 'called_variants_dna_short_read_id',
+            'alignment_software_dna', 'alignment_software_rna', 'analysis_details', 'called_variants_dna_file', 'called_variants_dna_short_read_id',
             'caller_software', 'date_data_generation_rna', 'date_data_generation_wes', 'date_data_generation_wgs',
             'estimated_library_size_rna', 'experiment_type_rna', 'experiment_type_wes', 'experiment_type_wgs',
             'gene_annotation_rna', 'library_prep_type_rna', 'md5sum_rna', 'md5sum_wes', 'md5sum_wgs', 'mean_coverage_wes',
