@@ -829,12 +829,19 @@ class ReportAPITest(object):
         sample_fields[0] = 'SeqrCollaboratorSampleID'
         self._assert_expected_airtable_call(1, secondary_sample_filter, sample_fields)
         metadata_fields = [
-            'SMID', 'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'aligned_dna_short_read_set_id',
-            'alignment_software', 'analysis_details', 'analysis_details', 'called_variants_dna_file',
-            'called_variants_dna_short_read_id', 'caller_software', 'date_data_generation', 'experiment_type',
-            'md5sum', 'md5sum', 'mean_coverage', 'read_length', 'reference_assembly', 'seq_library_prep_kit_method',
-            'sequencing_platform', 'target_insert_size', 'targeted_region_bed_file', 'targeted_regions_method',
-            'variant_types',
+            'SMID', '5prime3prime_bias_rna', 'RIN_rna', 'aligned_dna_short_read_file_wes', 'aligned_dna_short_read_file_wgs',
+            'aligned_dna_short_read_index_file_wes', 'aligned_dna_short_read_index_file_wgs', 'aligned_dna_short_read_set_id',
+            'aligned_rna_short_read_file',  'aligned_rna_short_read_index_file', 'alignment_log_file_rna',
+            'alignment_software_dna', 'analysis_details', 'called_variants_dna_file', 'called_variants_dna_short_read_id',
+            'caller_software', 'date_data_generation_rna', 'date_data_generation_wes', 'date_data_generation_wgs',
+            'estimated_library_size_rna', 'experiment_type_rna', 'experiment_type_wes', 'experiment_type_wgs',
+            'gene_annotation_rna', 'library_prep_type_rna', 'md5sum_rna', 'md5sum_wes', 'md5sum_wgs', 'mean_coverage_wes',
+            'mean_coverage_wgs', 'percent_mRNA', 'percent_multimapped_rna', 'percent_rRNA',  'percent_unaligned_rna',
+            'percent_uniquely_aligned_rna', 'read_length_rna', 'read_length_wes', 'read_length_wgs', 'reference_assembly',
+            'seq_library_prep_kit_method_rna', 'seq_library_prep_kit_method_wes', 'seq_library_prep_kit_method_wgs',
+            'sequencing_platform_rna', 'sequencing_platform_wes', 'sequencing_platform_wgs', 'single_or_paired_ends_rna',
+            'target_insert_size_wes', 'target_insert_size_wgs',  'targeted_region_bed_file', 'targeted_regions_method_wes',
+             'total_reads_rna', 'variant_types', 'within_site_batch_name_rna',
         ]
         self._assert_expected_airtable_call(2, "OR(SMID='SM-AGHT',SMID='SM-JDBTM')", metadata_fields)
 
