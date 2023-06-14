@@ -915,7 +915,7 @@ def _get_gregor_airtable_data(individuals, user):
     fields = ALL_AIRTABLE_COLUMNS
     airtable_metadata = session.fetch_records(
         'GREGoR Data Model',
-        fields=[SMID_FIELD] + fields,
+        fields=[SMID_FIELD] + sorted(fields),
         or_filters={f'{SMID_FIELD}': {r[SMID_FIELD] for r in sample_records.values()}},
     )
     airtable_metadata_by_smid = {r[SMID_FIELD]: _format_gregor_airtable_record(r) for r in airtable_metadata.values()}
