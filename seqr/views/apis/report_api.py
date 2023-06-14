@@ -679,39 +679,67 @@ EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
     'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
     'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
 ]
-EXPERIMENT_TABLE_COLUMNS = [
-    'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id',
-] + EXPERIMENT_TABLE_AIRTABLE_FIELDS
-READ_TABLE_AIRTABLE_FIELDS = [
-    'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
-    'alignment_software', 'mean_coverage', 'analysis_details',
+EXPERIMENT_TABLE_AIRTABLE_FIELDS_NO_RNA = [c for c in EXPERIMENT_TABLE_AIRTABLE_FIELDS if c.startswith('target')]
+EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS = [
+    'library_prep_type', 'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size',
+    'total_reads', 'percent_rRNA', 'percent_mRNA', '5prime3prime_bias',
 ]
-READ_TABLE_COLUMNS = ['aligned_dna_short_read_id', 'experiment_dna_short_read_id'] + READ_TABLE_AIRTABLE_FIELDS + ['quality_issues']
+COMPUTED_EXPERIMENT_COLUMNS = ['analyte_id', 'experiment_sample_id']
+EXPERIMENT_TABLE_COLUMNS = ['experiment_dna_short_read_id'] + COMPUTED_EXPERIMENT_COLUMNS + EXPERIMENT_TABLE_AIRTABLE_FIELDS
+EXPERIMENT_RNA_TABLE_COLUMNS = ['experiment_rna_short_read_id'] + COMPUTED_EXPERIMENT_COLUMNS + [
+    c for c in EXPERIMENT_TABLE_AIRTABLE_FIELDS if c not in EXPERIMENT_TABLE_AIRTABLE_FIELDS_NO_RNA
+] + EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + [
+    'percent_mtRNA', 'percent_Globin', 'percent_UMI', 'percent_GC', 'percent_chrX_Y']
+READ_TABLE_DNA_AIRTABLE_FIELDS = ['aligned_dna_short_read_file', 'aligned_dna_short_read_index_file']
+READ_TABLE_RNA_AIRTABLE_FIELDS = [
+    'aligned_rna_short_read_file', 'aligned_rna_short_read_index_file',
+    'gene_annotation', 'alignment_log_file', 'percent_uniquely_aligned', 'percent_multimapped', 'percent_unaligned'
+]
+READ_TABLE_AIRTABLE_FIELDS = [
+    'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage', 'analysis_details',
+]
+READ_TABLE_COLUMNS = [
+    'aligned_dna_short_read_id', 'experiment_dna_short_read_id',
+] + READ_TABLE_DNA_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + ['quality_issues']
 READ_TABLE_COLUMNS.insert(6, 'reference_assembly_details')
 READ_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')
+READ_RNA_TABLE_COLUMNS = [
+    'aligned_rna_short_read_id', 'experiment_rna_short_read_id',
+] + READ_TABLE_RNA_AIRTABLE_FIELDS[:2] + READ_TABLE_AIRTABLE_FIELDS + READ_TABLE_RNA_AIRTABLE_FIELDS[2:] + ['quality_issues']
+READ_RNA_TABLE_COLUMNS.insert(6, 'reference_assembly_details')
+READ_RNA_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')
+READ_RNA_TABLE_COLUMNS.insert(8, 'alignment_postprocessing')
+READ_RNA_TABLE_COLUMNS.insert(8, 'gene_annotation_details')
+READ_RNA_TABLE_COLUMNS.remove('analysis_details')
 READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
 CALLED_TABLE_COLUMNS = [
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
     'caller_software', 'variant_types', 'analysis_details',
 ]
 
-ALL_MAPPED_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + CALLED_TABLE_COLUMNS
-DATA_TYPE_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS
+DATA_TYPE_AIRTABLE_COLUMNS = set(
+    EXPERIMENT_TABLE_AIRTABLE_FIELDS + EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS +
+    READ_TABLE_DNA_AIRTABLE_FIELDS + READ_TABLE_RNA_AIRTABLE_FIELDS
+)
+ALL_MAPPED_AIRTABLE_COLUMNS = set(CALLED_TABLE_COLUMNS)
+ALL_MAPPED_AIRTABLE_COLUMNS.update(DATA_TYPE_AIRTABLE_COLUMNS)
 
 AIRTABLE_COLUMN_MAP = {
     'alignment_software': 'alignment_software_dna',
 }
 REVERSE_AIRTABLE_COLUMN_MAP = {v: k for k, v in AIRTABLE_COLUMN_MAP.items()}
-AIRTABLE_COLUMN_MAP.update(
-    {k: k for k in ['targeted_region_bed_file', 'reference_assembly', 'analysis_details']}
-)
+AIRTABLE_COLUMN_MAP.update({k: k for k in [
+    'targeted_region_bed_file', 'reference_assembly', 'analysis_details', 'percent_rRNA', 'percent_mRNA',
+]})
 
 ALL_AIRTABLE_COLUMNS = list(AIRTABLE_COLUMN_MAP.values()) + [
     c for c in CALLED_TABLE_COLUMNS if c not in DATA_TYPE_AIRTABLE_COLUMNS
 ]
-OMIT_DATA_TYPES = {
-    'targeted_regions_method': {'wgs'},
-}
+OMIT_DATA_TYPES = {c: {'rna'} for c in EXPERIMENT_TABLE_AIRTABLE_FIELDS_NO_RNA + READ_TABLE_DNA_AIRTABLE_FIELDS}
+OMIT_DATA_TYPES['targeted_regions_method'].add('wgs')
+OMIT_DATA_TYPES.update({
+    c: {'wes', 'wgs'} for c in EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_TABLE_RNA_AIRTABLE_FIELDS
+})
 for suffix in ['wes', 'wgs']:
     for field in DATA_TYPE_AIRTABLE_COLUMNS:
         if field not in AIRTABLE_COLUMN_MAP and suffix not in OMIT_DATA_TYPES.get(field, []):
@@ -719,16 +747,6 @@ for suffix in ['wes', 'wgs']:
             ALL_AIRTABLE_COLUMNS.append(suffix_field)
             REVERSE_AIRTABLE_COLUMN_MAP[suffix_field] = field
 
-TABLE_COLUMNS = {
-    'participant': PARTICIPANT_TABLE_COLUMNS,
-    'family': GREGOR_FAMILY_TABLE_COLUMNS,
-    'phenotype': PHENOTYPE_TABLE_COLUMNS,
-    'analyte': ANALYTE_TABLE_COLUMNS,
-    'experiment_dna_short_read': EXPERIMENT_TABLE_COLUMNS,
-    'aligned_dna_short_read': READ_TABLE_COLUMNS,
-    'aligned_dna_short_read_set': READ_SET_TABLE_COLUMNS,
-    'called_variants_dna_short_read': CALLED_TABLE_COLUMNS,
-}
 WARN_MISSING_TABLE_COLUMNS = {
     'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
 }
@@ -822,7 +840,8 @@ def gregor_export(request):
     family_map = {}
     phenotype_rows = []
     analyte_rows = []
-    airtable_rows = []
+    dna_airtable_rows = []
+    rna_airtable_rows = []
     for individual in individuals:
         # family table
         family = individual.family
@@ -861,20 +880,23 @@ def gregor_export(request):
             airtable_metadata = airtable_metadata_by_smid.get(sm_id)
             if airtable_metadata:
                 experiment_ids = _get_experiment_ids(airtable_sample, airtable_metadata)
-                airtable_rows.append(dict(analyte_id=analyte_id, **airtable_metadata, **experiment_ids))
+                row_list = rna_airtable_rows if airtable_metadata['is_rna'] else dna_airtable_rows
+                row_list.append(dict(analyte_id=analyte_id, **airtable_metadata, **experiment_ids))
 
         # analyte table
         analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
     files, warnings = _get_validated_gregor_files([
-        ('participant', participant_rows),
-        ('family', list(family_map.values())),
-        ('phenotype', phenotype_rows),
-        ('analyte', analyte_rows),
-        ('experiment_dna_short_read', airtable_rows),
-        ('aligned_dna_short_read', airtable_rows),
-        ('aligned_dna_short_read_set', airtable_rows),
-        ('called_variants_dna_short_read', airtable_rows),
+        ('participant', participant_rows, PARTICIPANT_TABLE_COLUMNS),
+        ('family', list(family_map.values()), GREGOR_FAMILY_TABLE_COLUMNS),
+        ('phenotype', phenotype_rows, PHENOTYPE_TABLE_COLUMNS),
+        ('analyte', analyte_rows, ANALYTE_TABLE_COLUMNS),
+        ('experiment_dna_short_read', dna_airtable_rows, EXPERIMENT_TABLE_COLUMNS),
+        ('aligned_dna_short_read', dna_airtable_rows, READ_TABLE_COLUMNS),
+        ('aligned_dna_short_read_set', dna_airtable_rows, READ_SET_TABLE_COLUMNS),
+        ('called_variants_dna_short_read', dna_airtable_rows, CALLED_TABLE_COLUMNS),
+        ('experiment_rna_short_read', rna_airtable_rows, EXPERIMENT_RNA_TABLE_COLUMNS),
+        ('aligned_rna_short_read', rna_airtable_rows, READ_RNA_TABLE_COLUMNS),
     ])
     write_multiple_files_to_gs(files, file_path, request.user, file_format='tsv')
 
@@ -896,12 +918,15 @@ def _get_gregor_airtable_data(individuals, user):
         fields=[SMID_FIELD] + fields,
         or_filters={f'{SMID_FIELD}': {r[SMID_FIELD] for r in sample_records.values()}},
     )
-    airtable_metadata_by_smid = {
-        r[SMID_FIELD]: {REVERSE_AIRTABLE_COLUMN_MAP.get(k, k): v for k, v in r.items()}
-        for r in airtable_metadata.values()
-    }
+    airtable_metadata_by_smid = {r[SMID_FIELD]: _format_gregor_airtable_record(r) for r in airtable_metadata.values()}
 
     return sample_records, airtable_metadata_by_smid
+
+
+def _format_gregor_airtable_record(r):
+    record = {REVERSE_AIRTABLE_COLUMN_MAP.get(k, k): v for k, v in r.items()}
+    record['is_rna'] = 'experiment_type_rna' in r
+    return record
 
 
 def _get_gregor_family_row(family):
@@ -960,11 +985,14 @@ def _get_analyte_row(individual):
 
 def _get_experiment_ids(airtable_sample, airtable_metadata):
     collaborator_sample_id = airtable_sample['CollaboratorSampleID']
-    experiment_dna_short_read_id = f'Broad_{airtable_metadata.get("experiment_type", "NA")}_{collaborator_sample_id}'
+    experiment_short_read_id = f'Broad_{airtable_metadata.get("experiment_type", "NA")}_{collaborator_sample_id}'
+    aligned_short_read_id = f'{experiment_short_read_id}_1'
     return {
-        'experiment_dna_short_read_id': experiment_dna_short_read_id,
+        'experiment_dna_short_read_id': experiment_short_read_id,
+        'experiment_rna_short_read_id': experiment_short_read_id,
         'experiment_sample_id': collaborator_sample_id,
-        'aligned_dna_short_read_id': f'{experiment_dna_short_read_id}_1'
+        'aligned_dna_short_read_id': aligned_short_read_id,
+        'aligned_rna_short_read_id': aligned_short_read_id,
     }
 
 
@@ -985,8 +1013,7 @@ def _get_validated_gregor_files(file_data):
         )
 
     files = []
-    for file_name, data in file_data:
-        columns = TABLE_COLUMNS[file_name]
+    for file_name, data, columns in file_data:
         files.append([file_name, columns, data])
 
         table_validator = validators.get(file_name)
