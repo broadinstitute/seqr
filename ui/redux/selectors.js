@@ -360,6 +360,20 @@ export const getSearchGeneBreakdownValues = createSelector(
   })),
 )
 
+const groupDataNestedByChrom = (accInit, groupedData, nestedKey) => groupedData.reduce(
+  (acc, data) => {
+    const { chrom } = data
+    if (!acc[chrom]) {
+      acc[chrom] = {}
+    }
+    if (!acc[chrom][nestedKey]) {
+      acc[chrom][nestedKey] = []
+    }
+    acc[chrom][nestedKey].push(data)
+    return acc
+  }, accInit,
+)
+
 export const getLocusListIntervalsByChromProject = createSelector(
   getProjectsByGuid,
   getLocusListsByGuid,
@@ -368,16 +382,7 @@ export const getLocusListIntervalsByChromProject = createSelector(
       const projectIntervals = locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid]).reduce(
         (acc2, { intervals = [] }) => [...acc2, ...intervals], [],
       )
-      projectIntervals.forEach((interval) => {
-        if (!acc[interval.chrom]) {
-          acc[interval.chrom] = {}
-        }
-        if (!acc[interval.chrom][projectGuid]) {
-          acc[interval.chrom][projectGuid] = []
-        }
-        acc[interval.chrom][projectGuid].push(interval)
-      })
-      return acc
+      return groupDataNestedByChrom(acc, projectIntervals, projectGuid)
     }, {},
   ),
 )
@@ -419,7 +424,7 @@ export const getRnaSeqSignificantJunctionData = createSelector(
   getGenesById,
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
-  (genesById, individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
+  (genesById, individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual || {}).reduce(
     (acc, [individualGuid, rnaSeqData]) => (rnaSeqData.spliceOutliers ? {
       ...acc,
       [individualGuid]: Object.values(rnaSeqData.spliceOutliers).flat().filter(({ isSignificant }) => isSignificant)
@@ -437,22 +442,13 @@ export const getRnaSeqSignificantJunctionData = createSelector(
 )
 
 export const getSpliceOutliersByChromFamily = createSelector(
-  getIndividualsByGuid,
   getRnaSeqSignificantJunctionData,
-  (individualsByGuid, spliceDataByIndiv) => Object.entries(spliceDataByIndiv).reduce(
-    (acc, [individualGuid, spliceData]) => {
-      const { familyGuid } = individualsByGuid[individualGuid]
-      spliceData.forEach((data) => {
-        const { chrom } = data
-        if (!acc[chrom]) {
-          acc[chrom] = {}
-        }
-        if (!acc[chrom][familyGuid]) {
-          acc[chrom][familyGuid] = []
-        }
-        acc[chrom][familyGuid].push(data)
-      })
-      return acc
+  spliceDataByIndiv => Object.values(spliceDataByIndiv).reduce(
+    (acc, spliceData) => {
+      if (!spliceData || spliceData.length < 1) {
+        return acc
+      }
+      return groupDataNestedByChrom(acc, spliceData, spliceData[0].familyGuid)
     }, {},
   ),
 )

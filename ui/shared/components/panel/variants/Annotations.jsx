@@ -4,17 +4,58 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Popup, Label, Icon } from 'semantic-ui-react'
 
-import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid, getUser } from 'redux/selectors'
+import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid, getUser, getSpliceOutliersByChromFamily }
+  from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
+import RnaSeqJunctionOutliersTable from '../../table/RnaSeqJunctionOutliersTable'
 import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts from './Transcripts'
 import VariantGenes, { LocusListLabels } from './VariantGene'
-import { getLocus, has37Coords, Sequence, ProteinSequence, TranscriptLink, variantIntervalOverlap } from './VariantUtils'
-import { GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS } from '../../../utils/constants'
-import SpliceOutlierLabel from './SpliceOutlierLabel'
+import { getLocus, has37Coords, Sequence, ProteinSequence, TranscriptLink, getOverlappedIntervals } from './VariantUtils'
+import {
+  GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS,
+  RNASEQ_JUNCTION_PADDING,
+} from '../../../utils/constants'
+
+const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: true }
+
+const BaseSpliceOutlierLabel = React.memo(({ variant, spliceOutliersByFamily }) => {
+  if (!spliceOutliersByFamily || spliceOutliersByFamily.length < 1) {
+    return null
+  }
+
+  const overlappedOutliers = getOverlappedIntervals(
+    variant, spliceOutliersByFamily, null, RNASEQ_JUNCTION_PADDING, variant.genomeVersion,
+  )
+
+  if (overlappedOutliers.length < 1) {
+    return null
+  }
+
+  return (
+    <Popup
+      trigger={<Label size="mini" content={<span>RNA splice</span>} color="pink" />}
+      content={<RnaSeqJunctionOutliersTable {...HOVER_DATA_TABLE_PROPS} data={overlappedOutliers} showPopupColumns />}
+      size="tiny"
+      wide
+      hoverable
+    />
+  )
+})
+
+BaseSpliceOutlierLabel.propTypes = {
+  spliceOutliersByFamily: PropTypes.object,
+  variant: PropTypes.object,
+}
+
+const mapSpliceOutliersStateToProps = (state, ownProps) => ({
+  spliceOutliersByFamily: getSpliceOutliersByChromFamily(state)[ownProps.variant.chrom],
+})
+
+const SpliceOutlierLabel = connect(mapSpliceOutliersStateToProps)(BaseSpliceOutlierLabel)
 
 const LargeText = styled.div`
   font-size: 1.2em;
@@ -294,13 +335,8 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, fa
   if (!locusListIntervalsByProject || locusListIntervalsByProject.length < 1) {
     return null
   }
-  const { familyGuids = [] } = variant
-  const locusListIntervals = familyGuids.reduce((acc, familyGuid) => ([
-    ...acc, ...(locusListIntervalsByProject[familiesByGuid[familyGuid].projectGuid] || [])]), [])
-  if (locusListIntervals.length < 1) {
-    return null
-  }
-  const locusListGuids = locusListIntervals.filter(variantIntervalOverlap(variant))
+
+  const locusListGuids = getOverlappedIntervals(variant, locusListIntervalsByProject, familiesByGuid)
     .map(({ locusListGuid }) => locusListGuid)
 
   return locusListGuids.length > 0 && <LocusListLabels locusListGuids={locusListGuids} />

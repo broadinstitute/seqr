@@ -61,9 +61,9 @@ ProteinSequence.propTypes = {
   hgvs: PropTypes.string.isRequired,
 }
 
-export const variantIntervalOverlap = (variant, padding = 0) => (interval) => {
+const variantIntervalOverlap = (variant, padding) => (interval) => {
   const { pos, end, genomeVersion, liftedOverPos } = variant
-  const variantPos = genomeVersion === interval.genomeVersion ? pos : liftedOverPos
+  const variantPos = genomeVersion === interval.genomeVersion || genomeVersion ? pos : liftedOverPos
   if (!variantPos) {
     return false
   }
@@ -75,4 +75,14 @@ export const variantIntervalOverlap = (variant, padding = 0) => (interval) => {
     return (variantPosEnd >= interval.start - padding) && (variantPosEnd <= interval.end + padding)
   }
   return false
+}
+
+export const getOverlappedIntervals = (
+  variant, intervals, familiesByGuid = null, padding = 0, genomeVersion = null,
+) => {
+  const { familyGuids = [] } = variant
+  const familyIntervals = familyGuids.reduce((acc, fGuid) => (
+    [...acc, ...(intervals[familiesByGuid ? familiesByGuid[fGuid].projectId : fGuid] || [])]), [])
+
+  return familyIntervals.filter(variantIntervalOverlap(variant, padding, genomeVersion))
 }
