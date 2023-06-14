@@ -708,8 +708,8 @@ READ_RNA_TABLE_COLUMNS = [
 ] + READ_TABLE_RNA_AIRTABLE_FIELDS[:2] + READ_TABLE_AIRTABLE_FIELDS + READ_TABLE_RNA_AIRTABLE_FIELDS[2:] + ['quality_issues']
 READ_RNA_TABLE_COLUMNS.insert(6, 'reference_assembly_details')
 READ_RNA_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')  # TODO airtable
-READ_RNA_TABLE_COLUMNS.insert(8, 'alignment_postprocessing')
-READ_RNA_TABLE_COLUMNS.insert(8, 'gene_annotation_details')
+READ_RNA_TABLE_COLUMNS.insert(9, 'alignment_postprocessing')
+READ_RNA_TABLE_COLUMNS.insert(13, 'gene_annotation_details')
 READ_RNA_TABLE_COLUMNS.remove('analysis_details')
 READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
 CALLED_TABLE_COLUMNS = [

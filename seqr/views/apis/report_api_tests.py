@@ -225,8 +225,7 @@ AIRTABLE_GREGOR_RECORDS = {
         'reference_assembly_uri_rna': 'gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta',
         'gene_annotation_rna': 'GENCODEv26',
         'alignment_log_file_rna': 'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Log.final.out',
-        'percent_uniquely_aligned_rna': 'SNV',
-        'variant_types': '88.49',
+        'percent_uniquely_aligned_rna': '88.49',
         'percent_multimapped_rna': '8.9',
         'percent_unaligned_rna': '1.57',
       },
@@ -855,15 +854,16 @@ class ReportAPITest(object):
         self.assertEqual(read_rna_file[0], [
             'aligned_rna_short_read_id', 'experiment_rna_short_read_id', 'aligned_rna_short_read_file',
             'aligned_rna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri',
-            'reference_assembly_details', 'gene_annotation', 'gene_annotation_details',
-            'alignment_software', 'alignment_postprocessing', 'mean_coverage', 'analysis_details', 'alignment_log_file',
-            'percent_uniquely_aligned', 'percent_multimapped', 'percent_unaligned', 'quality_issues',
+            'reference_assembly_details', 'alignment_software', 'alignment_postprocessing', 'mean_coverage',
+            'gene_annotation', 'gene_annotation_details', 'alignment_log_file', 'percent_uniquely_aligned',
+            'percent_multimapped', 'percent_unaligned', 'quality_issues',
         ])
         self.assertEqual([
-            'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
-            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
-            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38',
-            '', '', 'BWA-MEM-2.3', '42.4', 'DOI:10.5281/zenodo.4469317', '',
+            'Broad_paired-end_NA19675_1_1', 'Broad_paired-end_NA19675_1',
+            'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Aligned.sortedByCoord.out.bam',
+            'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Aligned.sortedByCoord.out.bam.bai',
+            '4c2f6759c873e72adada0c38708c5eb3', 'GRCh38', '', '', '', '', '', 'GENCODEv26', '',
+            'gs://tgg-rnaseq/batch_2023_01/star/FAM_3.Log.final.out', '88.49', '8.9', '1.57', '',
         ], read_rna_file[1])
 
         # test airtable calls
