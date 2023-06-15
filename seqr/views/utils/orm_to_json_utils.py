@@ -12,7 +12,7 @@ from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
-    get_audit_field_names
+    get_audit_field_names, RnaSeqOutlier, RnaSeqSpliceOutlier
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
@@ -757,26 +757,30 @@ def get_json_for_matchmaker_submission(submission):
         additional_model_fields=['contact_name', 'contact_href', 'submission_id'])
 
 
-MAX_SIGNIFICANT_OUTLIER_NUM = 50
+def get_json_for_rna_seq_outliers(filters, significant_only=True):
+    filters['sample__is_active'] = True
+    data_by_individual_gene = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
+    for model, outlier_type in [(RnaSeqOutlier, 'outliers'), (RnaSeqSpliceOutlier, 'spliceOutliers')]:
+        significant_field = model.SIGNIFICANCE_FIELD
 
-def get_json_for_rna_seq_outliers(models, top_outliers_only=False, nested_fields=None, signigicant_only=False, **kwargs):
-    significant_field = models.model.SIGNIFICANCE_FIELD
+        significant_filter = {f'{significant_field}__lt': model.SIGNIFICANCE_THRESHOLD}
+        if hasattr(model, 'MAX_SIGNIFICANT_OUTLIER_NUM'):
+            significant_filter['rank__lt'] = model.MAX_SIGNIFICANT_OUTLIER_NUM
 
-    significant_filter = {f'{significant_field}__lt': models.model.SIGNIFICANCE_THRESHOLD}
+        additional_values = {'isSignificant': Value(True)} if significant_only else\
+            {'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))}
 
-    if top_outliers_only:
-        significant_filter['rank__lt'] = MAX_SIGNIFICANT_OUTLIER_NUM
+        outliers = get_json_for_queryset(
+            model.objects.filter(**filters, **(significant_filter if significant_only else {})),
+            nested_fields=[
+                {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'},
+                {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
+            ],
+            additional_values=additional_values,
+        )
 
-    if signigicant_only:
-        models = models.filter(**significant_filter)
-        additional_values = {'isSignificant': Value(True)}
-    else:
-        additional_values = {'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))}
+        for data in outliers:
+            data_by_individual_gene[data.pop('individualGuid')][outlier_type][data['geneId']].append(data)
 
-    if nested_fields is None:
-        nested_fields = []
-
-    nested_fields.append({'fields': ('sample', 'tissue_type'), 'key': 'tissueType'})
-
-    return get_json_for_queryset(models, nested_fields=nested_fields, additional_values=additional_values, **kwargs)
+    return data_by_individual_gene

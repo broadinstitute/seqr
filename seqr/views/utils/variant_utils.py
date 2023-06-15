@@ -7,7 +7,7 @@ import redis
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, Project, RnaSeqSpliceOutlier
+    RnaSeqTpm, PhenotypePrioritization, Project
 from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -131,24 +131,9 @@ def _add_locus_lists(projects, genes, add_list_detail=False, user=None):
 
 
 def _get_rna_seq_outliers(gene_ids, family_guids):
-    data_by_individual_gene = defaultdict(lambda: {'outliers': defaultdict(list), 'spliceOutliers': defaultdict(list)})
+    filters = {'gene_id__in': gene_ids, 'sample__individual__family__guid__in': family_guids}
 
-    for outlier, outlier_cls, top_outliers_only in [('outliers', RnaSeqOutlier, False), ('spliceOutliers', RnaSeqSpliceOutlier, True)]:
-        outlier_data = get_json_for_rna_seq_outliers(
-            outlier_cls.objects.filter(
-                gene_id__in=gene_ids,
-                sample__individual__family__guid__in=family_guids,
-                sample__is_active=True,
-            ),
-            signigicant_only=True,
-            top_outliers_only=top_outliers_only,
-            nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'}],
-        )
-
-        for data in outlier_data:
-            data_by_individual_gene[data.pop('individualGuid')][outlier][data['geneId']].append(data)
-
-    return data_by_individual_gene
+    return get_json_for_rna_seq_outliers(filters)
 
 
 def get_phenotype_prioritization(family_guids, gene_ids=None):
@@ -255,7 +240,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         )
 
     if include_individual_gene_scores:
-        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), loaded_family_guids)
+        filters = {'gene_id__in': genes.keys(), 'sample__individual__family__guid__in': loaded_family_guids}
+        response['rnaSeqData'] = get_json_for_rna_seq_outliers(filters)
         families_by_guid = response.get('familiesByGuid')
         if families_by_guid:
             _add_family_has_rna_tpm(families_by_guid, genes.keys())
