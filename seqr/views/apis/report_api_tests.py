@@ -825,12 +825,12 @@ class ReportAPITest(object):
         sample_fields[0] = 'SeqrCollaboratorSampleID'
         self._assert_expected_airtable_call(1, secondary_sample_filter, sample_fields)
         metadata_fields = [
-            'SMID', 'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
-            'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
-            'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
-            'alignment_software', 'mean_coverage', 'analysis_details',
-            'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id',
-            'called_variants_dna_file', 'md5sum', 'caller_software', 'variant_types', 'analysis_details',
+            'SMID', 'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'aligned_dna_short_read_set_id',
+            'alignment_software', 'analysis_details', 'analysis_details', 'called_variants_dna_file',
+            'called_variants_dna_short_read_id', 'caller_software', 'date_data_generation', 'experiment_type',
+            'md5sum', 'md5sum', 'mean_coverage', 'read_length', 'reference_assembly', 'seq_library_prep_kit_method',
+            'sequencing_platform', 'target_insert_size', 'targeted_region_bed_file', 'targeted_regions_method',
+            'variant_types',
         ]
         self._assert_expected_airtable_call(2, "OR(SMID='SM-AGHT',SMID='SM-JDBTM')", metadata_fields)
 
