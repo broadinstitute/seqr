@@ -101,7 +101,7 @@ EXPECTED_SEARCH_RESPONSE = {
     'locusListsByGuid': {LOCUS_LIST_GUID: {'intervals': mock.ANY}},
     'rnaSeqData': {
         'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'spliceOutliers': {'ENSG00000268903': mock.ANY}},
-        'I000003_na19679': {'outliers': {}, 'spliceOutliers': {'ENSG00000268903': mock.ANY}},
+        'I000003_na19679': {'spliceOutliers': {'ENSG00000268903': mock.ANY}},
     },
     'phenotypeGeneScores': {
         'I000001_na19675': {'ENSG00000268903': {'exomiser': EXPECTED_EXOMISER_DATA}},
@@ -145,7 +145,7 @@ def _get_compound_het_es_variants(results_model, **kwargs):
     return deepcopy(COMP_HET_VARAINTS), 1
 
 
-@mock.patch('seqr.views.utils.orm_to_json_utils.MAX_SIGNIFICANT_OUTLIER_NUM', 2)
+@mock.patch('seqr.views.utils.orm_to_json_utils.RnaSeqSpliceOutlier.MAX_SIGNIFICANT_OUTLIER_NUM', 2)
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class VariantSearchAPITest(object):
 
