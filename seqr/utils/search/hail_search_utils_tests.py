@@ -67,15 +67,15 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             sample_data = {k: v for k, v in sample_data.items() if k != omit_sample_type}
 
         expected_search = {
-            'requester_email': 'test_user@broadinstitute.org',
             'sample_data': sample_data,
             'genome_version': 'GRCh37',
             'num_results': num_results,
         }
         expected_search.update(search_body)
 
-        request_body = json.loads(responses.calls[-1].request.body)
-        self.assertDictEqual(request_body, expected_search)
+        executed_request = responses.calls[-1].request
+        self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')
+        self.assertDictEqual(json.loads(executed_request.body), expected_search)
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
                                    rs_ids=None, variant_ids=None, dataset_type=None, secondary_dataset_type=None,

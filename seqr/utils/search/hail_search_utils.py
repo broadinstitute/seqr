@@ -13,8 +13,8 @@ def _hail_backend_url(path):
     return f'{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'
 
 
-def _execute_search(search_body, path='search'):
-    response = requests.post(_hail_backend_url(path), json=search_body, timeout=300)
+def _execute_search(search_body, user, path='search'):
+    response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user.email}, timeout=300)
     response.raise_for_status()
     return response.json()
 
@@ -26,7 +26,7 @@ def ping_hail_backend():
 def get_hail_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100,
                       gene_agg=False, **kwargs):
     end_offset = num_results * page
-    search_body = _format_search_body(samples, genome_version, user, end_offset, search)
+    search_body = _format_search_body(samples, genome_version, end_offset, search)
 
     search_body.update({
         'sort': sort,
@@ -40,7 +40,7 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     _parse_location_search(search_body)
 
     path = 'gene_counts' if gene_agg else 'search'
-    response_json = _execute_search(search_body, path)
+    response_json = _execute_search(search_body, user, path)
 
     if gene_agg:
         previous_search_results['gene_aggs'] = response_json
@@ -56,8 +56,8 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
         'variant_ids': [parsed_id for parsed_id in parsed_variant_ids.values() if parsed_id],
         'variant_keys': [variant_id for variant_id, parsed_id in parsed_variant_ids.items() if not parsed_id],
     }
-    search_body = _format_search_body(samples, genome_version, user, len(parsed_variant_ids), search)
-    response_json = _execute_search(search_body)
+    search_body = _format_search_body(samples, genome_version, len(parsed_variant_ids), search)
+    response_json = _execute_search(search_body, user)
 
     if return_all_queried_families:
         expected_family_guids = set(samples.values_list('individual__family__guid', flat=True))
@@ -66,9 +66,8 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     return response_json['results']
 
 
-def _format_search_body(samples, genome_version, user, num_results, search):
+def _format_search_body(samples, genome_version, num_results, search):
     search_body = {
-        'requester_email': user.email,
         'genome_version': GENOME_VERSION_LOOKUP[genome_version],
         'num_results': num_results,
     }
