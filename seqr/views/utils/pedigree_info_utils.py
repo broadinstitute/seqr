@@ -24,21 +24,21 @@ RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_
 def parse_pedigree_table(parsed_file, filename, user, project):
     """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
 
-        Args:
-            parsed_file (array): The parsed output from the raw file.
-            filename (string): The original filename - used to determine the file format based on the suffix.
-            user (User): (optional) Django User object
-            project (Project): (optional) Django Project object
+    Args:
+        parsed_file (array): The parsed output from the raw file.
+        filename (string): The original filename - used to determine the file format based on the suffix.
+        user (User): (optional) Django User object
+        project (Project): (optional) Django Project object
 
-        Return:
-            A 3-tuple that contains:
-            (
-                json_records (list): list of dictionaries, with each dictionary containing info about
-                    one of the individuals in the input data
-                errors (list): list of error message strings
-                warnings (list): list of warning message strings
-            )
-        """
+    Return:
+        A 3-tuple that contains:
+        (
+            json_records (list): list of dictionaries, with each dictionary containing info about
+                one of the individuals in the input data
+            errors (list): list of error message strings
+            warnings (list): list of warning message strings
+        )
+    """
     header_string = str(parsed_file[0])
     is_merged_pedigree_sample_manifest = "do not modify" in header_string.lower() and "Broad" in header_string
     if is_merged_pedigree_sample_manifest:
