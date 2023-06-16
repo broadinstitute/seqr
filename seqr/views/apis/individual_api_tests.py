@@ -380,7 +380,7 @@ class IndividualAPITest(object):
         ]})
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
-            'test.tsv',  'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"""'.encode('utf-8'))})
+            'test.tsv',  '#Some comments\n#Family ID	#Individual ID	Previous Individual ID\n"1"	"NA19675_1"""'.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'warnings': [], 'errors': [
             'Error while parsing file: test.tsv. Row 1 contains 2 columns: 1, NA19675_1, while header contains 3: Family ID, Individual ID, Previous Individual ID',
@@ -401,10 +401,12 @@ class IndividualAPITest(object):
         })
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
-            'test.tsv', 'Family ID	Individual ID	affected	proband_relation\n"1"	"NA19675_1"	"no"	"mom"'.encode('utf-8'))})
+            'test.tsv', 'Family ID	Individual ID	affected	sex	proband_relation\n"1"	"NA19675_1"	"no"	"boy"	"mom"'.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'warnings': None, 'errors': [
-            'Invalid value "no" for Affected in row #1', 'Invalid value "mom" for Proband Relationship in row #1',
+            'Invalid value "no" for Affected in row #1',
+            'Invalid value "boy" for Sex in row #1',
+            'Invalid value "mom" for Proband Relationship in row #1',
         ]})
 
         rows = [
