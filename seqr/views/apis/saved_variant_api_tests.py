@@ -173,7 +173,9 @@ class SavedVariantAPITest(object):
                 'ENSG00000135953': [{
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'tissueType': None, 'isSignificant': True,
-            }]},
+                }]
+            },
+            'spliceOutliers': {},
         }})
 
         # include project tag types
