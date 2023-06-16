@@ -131,6 +131,7 @@ def _add_locus_lists(projects, genes, add_list_detail=False, user=None):
 
 
 def _get_rna_seq_outliers(gene_ids, family_guids):
+    # TODO change to get_json_for_rna_seq_outliers in issue #3324
     data_by_individual_gene = defaultdict(lambda: {'outliers': {}})
 
     outlier_data = get_json_for_queryset(
