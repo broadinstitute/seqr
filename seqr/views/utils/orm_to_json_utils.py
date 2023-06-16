@@ -758,18 +758,15 @@ def get_json_for_matchmaker_submission(submission):
 
 
 def get_json_for_rna_seq_outliers(filters, significant_only=True):
-    filters['sample__is_active'] = True
-    data_by_individual_gene = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    filters = {'sample__is_active': True, **filters}
 
-    for model, outlier_type in [(RnaSeqOutlier, 'outliers'), (RnaSeqSpliceOutlier, 'spliceOutliers')]:
-        significant_field = model.SIGNIFICANCE_FIELD
+    outlier_models = [(RnaSeqOutlier, 'outliers'), (RnaSeqSpliceOutlier, 'spliceOutliers')]
+    data_by_individual_gene = defaultdict(lambda: {outlier[1]: defaultdict(list) for outlier in outlier_models})
 
-        significant_filter = {f'{significant_field}__lt': model.SIGNIFICANCE_THRESHOLD}
+    for model, outlier_type in outlier_models:
+        significant_filter = {f'{model.SIGNIFICANCE_FIELD}__lt': model.SIGNIFICANCE_THRESHOLD}
         if hasattr(model, 'MAX_SIGNIFICANT_OUTLIER_NUM'):
             significant_filter['rank__lt'] = model.MAX_SIGNIFICANT_OUTLIER_NUM
-
-        additional_values = {'isSignificant': Value(True)} if significant_only else\
-            {'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))}
 
         outliers = get_json_for_queryset(
             model.objects.filter(**filters, **(significant_filter if significant_only else {})),
@@ -777,7 +774,8 @@ def get_json_for_rna_seq_outliers(filters, significant_only=True):
                 {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'},
                 {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
             ],
-            additional_values=additional_values,
+            additional_values={'isSignificant': Value(True)} if significant_only else {
+                'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))},
         )
 
         for data in outliers:
