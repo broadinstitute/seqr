@@ -27,9 +27,8 @@ const BaseSpliceOutlierLabel = React.memo(({ variant, spliceOutliersByFamily }) 
     return null
   }
 
-  const overlappedOutliers = getOverlappedIntervals(
-    variant, spliceOutliersByFamily, null, RNASEQ_JUNCTION_PADDING, variant.genomeVersion,
-  )
+  const overlappedOutliers = getOverlappedIntervals(variant, spliceOutliersByFamily, null,
+    RNASEQ_JUNCTION_PADDING, true)
 
   if (overlappedOutliers.length < 1) {
     return null
