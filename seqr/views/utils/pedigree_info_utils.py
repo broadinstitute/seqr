@@ -21,38 +21,73 @@ NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES = ['CMG', 'TGG_Non-Report']
 RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
 
 
-def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warnings=False, required_columns=None):
+def parse_pedigree_table(parsed_file, filename, user, project):
     """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
 
-    Args:
-        parsed_file (array): The parsed output from the raw file.
-        filename (string): The original filename - used to determine the file format based on the suffix.
-        user (User): (optional) Django User object
-        project (Project): (optional) Django Project object
+        Args:
+            parsed_file (array): The parsed output from the raw file.
+            filename (string): The original filename - used to determine the file format based on the suffix.
+            user (User): (optional) Django User object
+            project (Project): (optional) Django Project object
 
-    Return:
-        A 3-tuple that contains:
-        (
-            json_records (list): list of dictionaries, with each dictionary containing info about
-                one of the individuals in the input data
-            errors (list): list of error message strings
-            warnings (list): list of warning message strings
-        )
-    """
+        Return:
+            A 3-tuple that contains:
+            (
+                json_records (list): list of dictionaries, with each dictionary containing info about
+                    one of the individuals in the input data
+                errors (list): list of error message strings
+                warnings (list): list of warning message strings
+            )
+        """
+    header_string = str(parsed_file[0])
+    is_merged_pedigree_sample_manifest = "do not modify" in header_string.lower() and "Broad" in header_string
+    if is_merged_pedigree_sample_manifest:
+        if not user_is_pm(user):
+            raise ValueError('Unsupported file format')
+        if not project:
+            raise ValueError('Project argument required for parsing sample manifest')
+        header, rows = _parse_merged_pedigree_sample_manifest_rows(parsed_file[1:])
+    else:
+        header = None
+        rows = None
 
+    rows, header = _parse_pedigree_table_rows(parsed_file, filename, header=header, rows=rows)
+
+    # convert to json and validate
+    errors = None
+    column_map = None
+    try:
+        if is_merged_pedigree_sample_manifest:
+            logger.info("Parsing merged pedigree-sample-manifest file", user)
+            sample_manifest_rows, kit_id, errors = _parse_merged_pedigree_sample_manifest_format(rows, project)
+            column_map = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP
+        elif 'participant_guid' in header:
+            logger.info("Parsing RGP DSM export file", user)
+            rows = _parse_rgp_dsm_export_format(rows)
+            header = None
+    except Exception as e:
+        raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
+
+    json_records, warnings = _parse_pedigree_table_json(rows, header=header, column_map=column_map, errors=errors)
+
+    if is_merged_pedigree_sample_manifest:
+        _set_proband_relationship(json_records)
+        _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
+
+    return json_records, warnings
+
+
+def parse_basic_pedigree_table(parsed_file, filename, required_columns=None):
+    rows, header = _parse_pedigree_table_rows(parsed_file, filename)
+    return _parse_pedigree_table_json(rows, header=header, fail_on_warnings=True, required_columns=required_columns)
+
+
+def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
     # parse rows from file
     try:
-        rows = [row for row in parsed_file[1:] if row and not (row[0] or '').startswith('#')]
-
-        header_string = str(parsed_file[0])
-        is_merged_pedigree_sample_manifest = "do not modify" in header_string.lower() and "Broad" in header_string
-        if is_merged_pedigree_sample_manifest:
-            if not user_is_pm(user):
-                raise ValueError('Unsupported file format')
-            if not project:
-                raise ValueError('Project argument required for parsing sample manifest')
-            header, rows = _parse_merged_pedigree_sample_manifest_rows(rows)
-        else:
+        rows = rows or [row for row in parsed_file[1:] if row and not (row[0] or '').startswith('#')]
+        if not header:
+            header_string = str(parsed_file[0])
             if _is_header_row(header_string):
                 header_row = parsed_file[0]
             else:
@@ -68,38 +103,20 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
                     i + 1, len(row), ', '.join(row), len(header), ', '.join(header)
                 ))
 
-        rows = [dict(zip(header, row)) for row in rows]
+        return [dict(zip(header, row)) for row in rows], header
     except Exception as e:
         raise ErrorsWarningsException(['Error while parsing file: {}. {}'.format(filename, e)], [])
 
-    # convert to json and validate
-    errors = None
-    try:
-        if is_merged_pedigree_sample_manifest:
-            logger.info("Parsing merged pedigree-sample-manifest file", user)
-            sample_manifest_rows, kit_id, errors = _parse_merged_pedigree_sample_manifest_format(rows, project)
-            column_map = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP
-        elif 'participant_guid' in header:
-            logger.info("Parsing RGP DSM export file", user)
-            rows = _parse_rgp_dsm_export_format(rows)
-            column_map = None
-        else:
-            logger.info("Parsing regular pedigree file", user)
-            column_map = _parse_header_columns(header)
-    except Exception as e:
-        raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
 
+def _parse_pedigree_table_json(rows, header=None, column_map=None, errors=None, fail_on_warnings=False, required_columns=None):
+    # convert to json and validate
+    column_map = column_map or (_parse_header_columns(header) if header else None)
     if column_map:
         json_records = _convert_fam_file_rows_to_json(column_map, rows, required_columns=required_columns)
     else:
         json_records = rows
 
     warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings, errors=errors)
-
-    if is_merged_pedigree_sample_manifest:
-        _set_proband_relationship(json_records)
-        _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
-
     return json_records, warnings
 
 

@@ -542,20 +542,20 @@ class IndividualAPITest(object):
         response = _send_request_data(data)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
-            'errors': ['Error while parsing file: sample_manifest.tsv. Unsupported file format'], 'warnings': [],
+            'errors': ['Unsupported file format'], 'warnings': [],
         })
 
         data[1] = header_2[:5] + header_2[7:10] + header_2[14:17] + ['Coded Phenotype'] + header_2[19:]
         response = _send_request_data(data)
         self.assertDictEqual(response.json(), {
-            'errors': ['Error while parsing file: sample_manifest.tsv. Unsupported file format'], 'warnings': [],
+            'errors': ['Unsupported file format'], 'warnings': [],
         })
 
         self.login_pm_user()
         response = _send_request_data(data)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'warnings': [], 'errors': [
-            'Error while parsing file: sample_manifest.tsv. Expected vs. actual header columns: | '
+            'Expected vs. actual header columns: | '
             'Sample ID| Family ID| Alias|-Alias|-Paternal Sample ID| Maternal Sample ID| Gender| Affected Status|'
             '-Primary Biosample|-Analyte Type|-Tissue Affected Status|-Recontactable| Volume| Concentration| Notes|'
             '-MONDO Label|-MONDO ID|+Coded Phenotype| Consent Code| Data Use Restrictions',
@@ -566,7 +566,6 @@ class IndividualAPITest(object):
         response = _send_request_data(data)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'warnings': [], 'errors': [
-            'Error while parsing file: sample_manifest.tsv. '
             'Expected vs. actual header columns: |-Collaborator Participant ID| Collaborator Sample ID|+',
         ]})
 

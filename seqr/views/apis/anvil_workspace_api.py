@@ -28,7 +28,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
     TerraRefreshTokenFailedException
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, JsonConstants
+from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, JsonConstants
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, mv_file_to_gs, get_gs_file_list
@@ -192,7 +192,7 @@ def create_project_from_workspace(request, namespace, name):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records = _parse_uploaded_pedigree(request_json, request.user)
+    pedigree_records = _parse_uploaded_pedigree(request_json)
 
     # Create a new Project in seqr
     project_args = {
@@ -232,7 +232,7 @@ def add_workspace_data(request, project_guid):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records = _parse_uploaded_pedigree(request_json, request.user)
+    pedigree_records = _parse_uploaded_pedigree(request_json)
 
     previous_samples = get_search_samples([project]).filter(
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS).prefetch_related('individual')
@@ -257,11 +257,11 @@ def add_workspace_data(request, project_guid):
     return create_json_response(pedigree_json)
 
 
-def _parse_uploaded_pedigree(request_json, user):
+def _parse_uploaded_pedigree(request_json):
     # Parse families/individuals in the uploaded pedigree file
     json_records = load_uploaded_file(request_json['uploadedFileId'])
-    pedigree_records, _ = parse_pedigree_table(
-        json_records, 'uploaded pedigree file', user=user, fail_on_warnings=True, required_columns=[
+    pedigree_records, _ = parse_basic_pedigree_table(
+        json_records, 'uploaded pedigree file', required_columns=[
             JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN,
         ])
 
