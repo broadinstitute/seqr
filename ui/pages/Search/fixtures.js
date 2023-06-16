@@ -20,7 +20,7 @@ export const LOCUS_LIST = {
   numEntries: 60,
   parsedItems: { items:  [{ geneId: 'ENSG00000164458' }], itemMap: { 'TTN': { geneId: 'ENSG00000164458', symbol: 'TTN' } } },
   intervals: [
-    {'chrom': '1', 'end': 248367300, 'genomeVersion': '37', 'locusListGuid': 'LL00132_2017_monogenic_ibd_gen', 'locusListIntervalGuid': 'LLI0000012_test_list_edit4545_', 'start': 248367200},
+    {'chrom': '1', 'end': 7300, 'genomeVersion': '37', 'locusListGuid': 'LL00132_2017_monogenic_ibd_gen', 'locusListIntervalGuid': 'LLI0000012_test_list_edit4545_', 'start': 7200},
     {'chrom': '3', 'end': 3000, 'genomeVersion': '37', 'locusListGuid': 'LL00132_2017_monogenic_ibd_gen', 'locusListIntervalGuid': 'LLI0000013_a_new_list325_3000', 'start': 25},
   ]
 }
