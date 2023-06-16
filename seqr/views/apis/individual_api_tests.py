@@ -578,7 +578,7 @@ class IndividualAPITest(object):
              'DNA', 'Yes', 'No', '20', '98', '', 'Perinatal death', 'MONDO:0100086', 'HMB', '',
              ],
             ['SK-3QVD', 'A04', 'SM-IRW61', 'PED073', 'SCO_PED073C_GA0341', 'SCO_PED073C_GA0341_1',
-             'SCO_PED073B_GA0339_1', '', 'male', 'unaffected', 'UBERON:0002371 (bone marrow)',
+             'SCO_PED073B_GA0339_1', '', 'male', 'affected', 'UBERON:0002371 (bone marrow)',
              'RNA', 'No', 'No', '17', '83', 'half sib', 'Perinatal death', 'MONDO:0100086', '', '',
              ]]
 
@@ -687,7 +687,7 @@ class IndividualAPITest(object):
         })
         indiv_2 = next(i for i in response_json['individualsByGuid'].values() if i['individualId'] == 'SCO_PED073C_GA0341_1')
         self.assertDictEqual({k: v for k, v in indiv_2.items() if k in test_keys}, {
-            'affected': 'N', 'notes': 'half sib', 'sex': 'M', 'maternalId': None, 'paternalId': 'SCO_PED073B_GA0339_1',
+            'affected': 'A', 'notes': 'half sib', 'sex': 'M', 'maternalId': None, 'paternalId': 'SCO_PED073B_GA0339_1',
             'primaryBiosample': 'BM', 'analyteType': 'R', 'tissueAffectedStatus': False,
             'probandRelationship': 'J',
         })
