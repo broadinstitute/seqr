@@ -235,8 +235,10 @@ def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
 
     errors = errors or []
     warnings = []
+    individual_id_counts = defaultdict(int)
     for r in records:
         individual_id = r[JsonConstants.INDIVIDUAL_ID_COLUMN]
+        individual_id_counts[individual_id] += 1
         family_id = r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
 
         # check proband relationship has valid gender
@@ -285,6 +287,11 @@ def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
             parent_family_id = parent.get(JsonConstants.FAMILY_ID_COLUMN) or parent['family']['familyId']
             if parent_family_id != family_id:
                 errors.append("%(parent_id)s is recorded as the %(parent_id_type)s of %(individual_id)s but they have different family ids: %(parent_family_id)s and %(family_id)s" % locals())
+
+    errors += [
+        f'{individual_id} is included as {count} separate records, but must be unique within the project'
+        for individual_id, count in individual_id_counts.items() if count > 1
+    ]
 
     if fail_on_warnings:
         errors += warnings
