@@ -20,8 +20,6 @@ import {
   RNASEQ_JUNCTION_PADDING,
 } from '../../../utils/constants'
 
-const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: true }
-
 const BaseSpliceOutlierLabel = React.memo(({ variant, spliceOutliersByFamily }) => {
   if (!spliceOutliersByFamily || spliceOutliersByFamily.length < 1) {
     return null
@@ -37,7 +35,7 @@ const BaseSpliceOutlierLabel = React.memo(({ variant, spliceOutliersByFamily }) 
   return (
     <Popup
       trigger={<Label size="mini" content={<span>RNA splice</span>} color="pink" />}
-      content={<RnaSeqJunctionOutliersTable {...HOVER_DATA_TABLE_PROPS} data={overlappedOutliers} showPopupColumns />}
+      content={<RnaSeqJunctionOutliersTable basic="very" compact="very" singleLine data={overlappedOutliers} showPopupColumns />}
       size="tiny"
       wide
       hoverable
