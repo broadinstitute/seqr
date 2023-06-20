@@ -67,15 +67,15 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             sample_data = {k: v for k, v in sample_data.items() if k != omit_sample_type}
 
         expected_search = {
-            'requester_email': 'test_user@broadinstitute.org',
             'sample_data': sample_data,
             'genome_version': 'GRCh37',
             'num_results': num_results,
         }
         expected_search.update(search_body)
 
-        request_body = json.loads(responses.calls[-1].request.body)
-        self.assertDictEqual(request_body, expected_search)
+        executed_request = responses.calls[-1].request
+        self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')
+        self.assertDictEqual(json.loads(executed_request.body), expected_search)
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
                                    rs_ids=None, variant_ids=None, dataset_type=None, secondary_dataset_type=None,
@@ -181,18 +181,19 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         freq_filter = {'callset': {'af': 0.1}, 'gnomad_genomes': {'af': 0.01, 'ac': 3, 'hh': 3}}
         custom_query = {'term': {'customFlag': 'flagVal'}}
         genotype_filter = {'genotype': {'I000001_na19675': 'ref_alt'}}
-        self.search_model.search = {
+        self.search_model.search = deepcopy({
             'inheritance': {'mode': 'any_affected', 'filter': genotype_filter},
             'freqs': freq_filter,
             'qualityFilter': quality_filter,
             'in_silico': {'cadd': '11.5', 'sift': 'D'},
             'customQuery': custom_query,
-        }
+        })
         self.results_model.families.set(Family.objects.filter(guid='F000001_1'))
         query_variants(self.results_model, user=self.user, sort='prioritized_gene')
+        expected_freq_filter = {'seqr': freq_filter['callset'], 'gnomad_genomes': freq_filter['gnomad_genomes']}
         self._test_expected_search_call(
             inheritance_mode=None, inheritance_filter=genotype_filter, sample_data=FAMILY_1_SAMPLE_DATA,
-            search_fields=['in_silico'], frequencies=freq_filter, quality_filter=quality_filter, custom_query=custom_query,
+            search_fields=['in_silico'], frequencies=expected_freq_filter, quality_filter=quality_filter, custom_query=custom_query,
             sort='prioritized_gene', sort_metadata={'ENSG00000268903': 1, 'ENSG00000268904': 11},
         )
 
