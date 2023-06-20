@@ -372,6 +372,13 @@ class IndividualAPITest(object):
         self.assertEqual(errors[0], 'Missing required columns: Individual Id')
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
+            'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"\n"2"	"NA19675_1"	""'.encode('utf-8'))})
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': ['NA19675_1 is included as 2 separate records, but must be unique within the project'], 'warnings': []
+        })
+
+        response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
             'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"'.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
@@ -392,9 +399,7 @@ class IndividualAPITest(object):
         data = 'Family ID	Individual ID	Previous Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes	familyNotes\n\
 "1"	"NA19675"	"NA19675_1"	"NA19678"	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
 "1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
-"1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
-"21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family""\n\
-"21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	""'
+"21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family""'
 
         f = SimpleUploadedFile("1000_genomes demo_individuals.tsv", data.encode('utf-8'))
 
