@@ -263,12 +263,9 @@ const getSpliceOutlierLocus = (variant, spliceOutliersByFamily) => {
     return null
   }
   const { chrom } = variant
-  let { pos, end } = variant
-  overlappedOutliers.forEach((outlier) => {
-    pos = outlier.start < pos ? outlier.start : pos
-    end = outlier.end > end ? outlier.end : end
-  })
-  return getLocus(chrom, pos, RNASEQ_JUNCTION_PADDING, end - pos)
+  const minPos = Math.min(overlappedOutliers.map(outlier => outlier.pos))
+  const maxEnd = Math.max(overlappedOutliers.map(outlier => outlier.end))
+  return getLocus(chrom, minPos, RNASEQ_JUNCTION_PADDING, maxEnd - minPos)
 }
 
 class FamilyReads extends React.PureComponent {
