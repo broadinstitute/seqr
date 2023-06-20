@@ -10,14 +10,15 @@ import {
   getFamiliesByGuid,
   getProjectsByGuid,
   getGenesById,
+  getSpliceOutliersByChromFamily,
 } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { CheckboxGroup, RadioGroup } from '../../form/Inputs'
 import StateChangeForm from '../../form/StateChangeForm'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
-import { getLocus } from '../variants/VariantUtils'
-import { AFFECTED, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
+import { getLocus, getOverlappedIntervals } from '../variants/VariantUtils'
+import { AFFECTED, GENOME_VERSION_38, getVariantMainGeneId, RNASEQ_JUNCTION_PADDING } from '../../../utils/constants'
 import {
   ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
   MAPPABILITY_TRACK_OPTIONS, BAM_TRACK_OPTIONS,
@@ -255,6 +256,21 @@ const TISSUE_REFERENCES_LOOKUP = Object.entries(TISSUE_REFERENCE_KEY).reduce((ac
     .map(track => track.value),
 }), {})
 
+const getSpliceOutlierLocus = (variant, spliceOutliersByFamily) => {
+  const overlappedOutliers = getOverlappedIntervals(variant, spliceOutliersByFamily, null,
+    RNASEQ_JUNCTION_PADDING, true)
+  if (overlappedOutliers.length < 1) {
+    return null
+  }
+  const { chrom } = variant
+  let { pos, end } = variant
+  overlappedOutliers.forEach((outlier) => {
+    pos = outlier.start < pos ? outlier.start : pos
+    end = outlier.end > end ? outlier.end : end
+  })
+  return getLocus(chrom, pos, RNASEQ_JUNCTION_PADDING, end - pos)
+}
+
 class FamilyReads extends React.PureComponent {
 
   static propTypes = {
@@ -268,6 +284,7 @@ class FamilyReads extends React.PureComponent {
     igvSamplesByFamilySampleIndividual: PropTypes.object,
     genesById: PropTypes.object,
     noTriggerButton: PropTypes.bool,
+    spliceOutliersByChromFamily: PropTypes.object,
   }
 
   state = {
@@ -381,7 +398,7 @@ class FamilyReads extends React.PureComponent {
   render() {
     const {
       variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, familiesByGuid,
-      projectsByGuid, genesById, sortedIndividualByFamily, noTriggerButton, ...props
+      projectsByGuid, genesById, sortedIndividualByFamily, noTriggerButton, spliceOutliersByChromFamily, ...props
     } = this.props
     const { openFamily, sampleTypes, rnaReferences, junctionTrackOptions, locus } = this.state
 
@@ -402,8 +419,12 @@ class FamilyReads extends React.PureComponent {
     const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const project = openFamily && this.getProjectForFamily(openFamily)
     const geneLocus = project && variant && getGeneLocus(variant, genesById, project)
-    const locusOptions = geneLocus ? [{ value: getVariantLocus(variant, project), text: 'Variant' },
+    const geneLocusOptions = geneLocus ? [{ value: getVariantLocus(variant, project), text: 'Variant' },
       { value: geneLocus, text: 'Gene' }] : null
+    const spliceOutlierLocus = variant && getSpliceOutlierLocus({ ...variant, familyGuids: [openFamily] },
+      spliceOutliersByChromFamily[variant.chrom])
+    const locusOptions = spliceOutlierLocus ?
+      (geneLocusOptions || []).concat([{ value: spliceOutlierLocus, text: 'Splice Outlier' }]) : geneLocusOptions
     const reads = Object.keys(igvSampleIndividuals).length > 0 ? (
       <Segment.Group horizontal>
         {(dnaTrackOptions.length > 1 || rnaTrackOptions.length > 0) && (
@@ -492,6 +513,7 @@ const mapStateToProps = state => ({
   familiesByGuid: getFamiliesByGuid(state),
   projectsByGuid: getProjectsByGuid(state),
   genesById: getGenesById(state),
+  spliceOutliersByChromFamily: getSpliceOutliersByChromFamily(state),
 })
 
 export default connect(mapStateToProps)(FamilyReads)
