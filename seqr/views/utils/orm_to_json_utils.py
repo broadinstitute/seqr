@@ -761,7 +761,7 @@ EXPRESSION_OUTLIERS = 'outliers'
 SPLICE_OUTLIERS = 'spliceOutliers'
 
 
-def get_json_for_rna_seq_outliers(filters, significant_only=True):
+def get_json_for_rna_seq_outliers(filters, significant_only=True, individual_guid=None):
     filters = {'sample__is_active': True, **filters}
 
     data_by_individual_gene = defaultdict(lambda: {EXPRESSION_OUTLIERS: {}, SPLICE_OUTLIERS: defaultdict(list)})
@@ -771,21 +771,20 @@ def get_json_for_rna_seq_outliers(filters, significant_only=True):
         if hasattr(model, 'MAX_SIGNIFICANT_OUTLIER_NUM'):
             significant_filter['rank__lt'] = model.MAX_SIGNIFICANT_OUTLIER_NUM
 
+        nested_fields = [{'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}]
+        nested_fields += [] if individual_guid else [{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'}]
         outliers = get_json_for_queryset(
             model.objects.filter(**filters, **(significant_filter if significant_only else {})),
-            nested_fields=[
-                {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'},
-                {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
-            ],
+            nested_fields=nested_fields,
             additional_values={'isSignificant': Value(True)} if significant_only else {
                 'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))},
         )
 
-        if outlier_type == EXPRESSION_OUTLIERS:
-            for data in outliers:
-                data_by_individual_gene[data.pop('individualGuid')][outlier_type][data['geneId']] = data
-        else:
-            for data in outliers:
-                data_by_individual_gene[data.pop('individualGuid')][outlier_type][data['geneId']].append(data)
+        for data in outliers:
+            indiv_guid = individual_guid or data.pop('individualGuid')
+            if outlier_type == EXPRESSION_OUTLIERS:
+                data_by_individual_gene[indiv_guid][outlier_type][data['geneId']] = data
+            else:
+                data_by_individual_gene[indiv_guid][outlier_type][data['geneId']].append(data)
 
     return data_by_individual_gene
