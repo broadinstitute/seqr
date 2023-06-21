@@ -796,7 +796,7 @@ def get_individual_rna_seq_data(request, individual_guid):
 
     genes_to_show = get_genes({
         gene_id for rna_data in outlier_data.get(individual_guid, {}).values() for gene_id, data in rna_data.items()
-        if any([d['isSignificant'] for d in data])
+        if any([d['isSignificant'] for d in (data if isinstance(data, list) else [data])])
     })
 
     return create_json_response({
