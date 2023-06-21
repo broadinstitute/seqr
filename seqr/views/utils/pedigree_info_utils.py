@@ -27,8 +27,8 @@ def parse_pedigree_table(parsed_file, filename, user, project):
     Args:
         parsed_file (array): The parsed output from the raw file.
         filename (string): The original filename - used to determine the file format based on the suffix.
-        user (User): (optional) Django User object
-        project (Project): (optional) Django Project object
+        user (User): Django User object
+        project (Project): Django Project object
 
     Return:
         A 3-tuple that contains:
