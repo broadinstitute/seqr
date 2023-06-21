@@ -97,7 +97,7 @@ class BaseRnaSeqResultPage extends React.PureComponent {
         <React.Suspense fallback={<Loader />}>
           {(outlierPlots.length > 0) && (
             <Grid>
-              <Grid.Row divided columns={outlierPlots.length}>{outlierPlots}</Grid.Row>
+              <Grid.Row divided key={tissueType} columns={outlierPlots.length}>{outlierPlots}</Grid.Row>
             </Grid>
           )}
         </React.Suspense>
