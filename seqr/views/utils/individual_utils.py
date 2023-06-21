@@ -83,7 +83,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
                 updated_family_ids.add(individual.family_id)
 
     updated_family_models = Family.objects.filter(id__in=updated_family_ids)
-    _remove_pedigree_images(updated_family_models.filter(id__in=updated_family_ids), user)
+    _remove_pedigree_images(updated_family_models, user)
 
     pedigree_json = None
     if get_update_json:
