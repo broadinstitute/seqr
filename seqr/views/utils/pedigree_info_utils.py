@@ -411,11 +411,11 @@ def _set_proband_relationship(json_records):
 
         maternal_siblings = {
             r[JsonConstants.INDIVIDUAL_ID_COLUMN] for r in records
-            if affected[JsonConstants.MATERNAL_ID_COLUMN] == r[JsonConstants.MATERNAL_ID_COLUMN]
+            if affected[JsonConstants.MATERNAL_ID_COLUMN] and affected[JsonConstants.MATERNAL_ID_COLUMN] == r[JsonConstants.MATERNAL_ID_COLUMN]
         }
         paternal_siblings = {
             r[JsonConstants.INDIVIDUAL_ID_COLUMN] for r in records
-            if affected[JsonConstants.PATERNAL_ID_COLUMN] == r[JsonConstants.PATERNAL_ID_COLUMN]
+            if affected[JsonConstants.PATERNAL_ID_COLUMN] and affected[JsonConstants.PATERNAL_ID_COLUMN] == r[JsonConstants.PATERNAL_ID_COLUMN]
         }
         relationships.update({r_id: Individual.MATERNAL_SIBLING_RELATIONSHIP for r_id in maternal_siblings})
         relationships.update({r_id: Individual.PATERNAL_SIBLING_RELATIONSHIP for r_id in paternal_siblings})
