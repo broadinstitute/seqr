@@ -218,7 +218,7 @@ export const STATE = {
   },
   locusListsByGuid: { [LOCUS_LIST_GUID]: LOCUS_LIST },
   rnaSeqDataByIndividual: { I021474_na19679: {
-    outliers: {ENSG00000136758: [{geneId:  "ENSG00000136758", isSignificant: true, pAdjust: 0.000225907356686287, pValue: 2.69828505929319e-9, tissueType: "M", zScore: 5.62}]},
+    outliers: {ENSG00000136758: {geneId:  "ENSG00000136758", isSignificant: true, pAdjust: 0.000225907356686287, pValue: 2.69828505929319e-9, tissueType: "M", zScore: 5.62}},
     spliceOutliers: { ENSG00000136758: [
       {chrom: "10", deltaPsi: 0.56, end: 27114400, geneId: "ENSG00000136758", isSignificant: true, pValue: 2.1234e-10, rareDiseaseSamplesTotal: 171, rareDiseaseSamplesWithJunction: 1, readCount: 1208, start: 27114300, strand: "*", tissueType: "F", type: "psi5", zScore: 2.96},
       {chrom: "11", deltaPsi: 0.56, end: 27114400, geneId: "ENSG00000136758", isSignificant: true, pValue: 2.1234e-10, rareDiseaseSamplesTotal: 171, rareDiseaseSamplesWithJunction: 1, readCount: 1208, start: 27114300, strand: "*", tissueType: "F", type: "psi5", zScore: 2.96},

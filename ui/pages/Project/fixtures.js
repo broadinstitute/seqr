@@ -1017,17 +1017,17 @@ export const STATE_WITH_2_FAMILIES = {
   rnaSeqDataByIndividual: {
     I021476_na19678_1: {
       outliers: {
-        ENSG00000228198: [{ isSignificant: true, pValue: 0.0004 }],
-        ENSG00000164458: [{ isSignificant: true, pValue: 0.0073 }],
+        ENSG00000228198: { isSignificant: true, pValue: 0.0004 },
+        ENSG00000164458: { isSignificant: true, pValue: 0.0073 },
       },
     },
     I021474_na19679_1: {
       outliers: {
-        ENSG00000228198: [{ isSignificant: true, pValue: 0.01 }],
-        ENSG00000164458: [{ isSignificant: false, pValue: 0.73 }],
+        ENSG00000228198: { isSignificant: true, pValue: 0.01 },
+        ENSG00000164458: { isSignificant: false, pValue: 0.73 },
       },
     },
-    I021476_na19678_2: { outliers: { ENSG00000228198: [{ isSignificant: true, pValue: 0.0214 }] } },
+    I021476_na19678_2: { outliers: { ENSG00000228198: { isSignificant: true, pValue: 0.0214 } } },
   },
   phenotypeGeneScoresByIndividual: {
     I021476_na19678_1: {
