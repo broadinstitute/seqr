@@ -669,8 +669,8 @@ class IndividualAPITest(object):
         self.assertEqual(len(response_json['familiesByGuid']), 1)
         family_guid = next(iter(response_json['familiesByGuid'].keys()))
         self.assertEqual(response_json['familiesByGuid'][family_guid]['familyId'], 'PED073')
-        self.assertEqual(response_json['familiesByGuid'][family_guid]['codedPhenotype'], None)
-        self.assertEqual(response_json['familiesByGuid'][family_guid]['mondoId'], None)
+        self.assertEqual(response_json['familiesByGuid'][family_guid]['codedPhenotype'], 'Perinatal death')
+        self.assertEqual(response_json['familiesByGuid'][family_guid]['mondoId'],  'MONDO:0100086')
         self.assertSetEqual(set(
             response_json['familiesByGuid'][family_guid]['individualGuids']),
             set(response_json['individualsByGuid'].keys())

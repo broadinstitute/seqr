@@ -6,7 +6,8 @@ from collections import defaultdict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Sample, IgvSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_individual_parents, create_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_individual_parents, create_model_from_json, \
+    update_family_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, _get_json_for_families, get_json_for_family_notes
 from seqr.views.utils.pedigree_info_utils import JsonConstants
 
@@ -82,7 +83,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
                 updated_family_ids.add(individual.family_id)
 
     updated_family_models = Family.objects.filter(id__in=updated_family_ids)
-    _remove_pedigree_images(updated_family_models, user)
+    _remove_pedigree_images(updated_family_models.filter(id__in=updated_family_ids), user)
 
     pedigree_json = None
     if get_update_json:
@@ -142,6 +143,14 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
     if family_notes:
         note = create_model_from_json(FamilyNote, {'note': family_notes, 'note_type': 'C', 'family': family}, user)
         updated_note_ids.append(note.id)
+
+    family_record = {
+        k: record.pop(k) for k in [JsonConstants.CODED_PHENOTYPE_COLUMN, JsonConstants.MONDO_ID_COLUMN] if k in record
+    }
+    if family_record:
+        is_updated = update_family_from_json(family, family_record, user=user)
+        if is_updated:
+            updated_family_ids.add(family.id)
 
     is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
     if is_updated:
