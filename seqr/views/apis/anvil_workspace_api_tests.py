@@ -383,7 +383,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_subprocess.return_value.stdout = [b'File not found']
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Data file or path /test_path.vcf.gz is not found.')
+        self.assertListEqual(response.json()['errors'], ['Data file or path /test_path.vcf.gz is not found.'])
         mock_subprocess.assert_called_with('gsutil ls gs://test_bucket/test_path.vcf.gz', stdout=-1, stderr=-2, shell=True)
         mock_file_logger.info.assert_has_calls([
             mock.call('==> gsutil ls gs://test_bucket/test_path.vcf.gz', self.manager_user),
@@ -395,7 +395,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_subprocess.return_value.communicate.return_value = b'', b'File not found'
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_SHARDED_DATA_PATH))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Data file or path /test_path-*.vcf.gz is not found.')
+        self.assertListEqual(response.json()['errors'], ['Data file or path /test_path-*.vcf.gz is not found.'])
         mock_subprocess.assert_called_with('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-1, shell=True)
         mock_file_logger.info.assert_has_calls([
             mock.call('==> gsutil ls gs://test_bucket/test_path-*.vcf.gz', self.manager_user),
@@ -407,7 +407,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_subprocess.return_value.communicate.return_value = b'\n', b''
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_SHARDED_DATA_PATH))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Data file or path /test_path-*.vcf.gz is not found.')
+        self.assertListEqual(response.json()['errors'], ['Data file or path /test_path-*.vcf.gz is not found.'])
         mock_subprocess.assert_called_with('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-1, shell=True)
         mock_file_logger.info.assert_has_calls([
             mock.call('==> gsutil ls gs://test_bucket/test_path-*.vcf.gz', self.manager_user),
@@ -415,8 +415,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
 
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_BAD_DATA_PATH))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'],
-                         'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz')
+        self.assertListEqual(response.json()['errors'],
+                         ['Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz'])
 
         # test no header line
         mock_subprocess.reset_mock()

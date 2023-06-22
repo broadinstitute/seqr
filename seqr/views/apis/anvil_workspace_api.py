@@ -31,8 +31,8 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
 from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, JsonConstants
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
-from seqr.utils.file_utils import does_file_exist, mv_file_to_gs, get_gs_file_list
-from seqr.utils.vcf_utils import validate_vcf_and_get_samples
+from seqr.utils.file_utils import mv_file_to_gs, get_gs_file_list
+from seqr.utils.vcf_utils import validate_vcf_and_get_samples, validate_vcf_exists
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
@@ -146,21 +146,7 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     # Validate the data path
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=path.lstrip('/'))
-    if not data_path.endswith(VCF_FILE_EXTENSIONS):
-        error = 'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
-        return create_json_response({'error': error}, status=400, reason=error)
-
-    file_to_check = None
-    if '*' in data_path:
-        files = get_gs_file_list(data_path, request.user, check_subfolders=False, allow_missing=True)
-        if files:
-            file_to_check = files[0]
-    elif does_file_exist(data_path, user=request.user):
-        file_to_check = data_path
-
-    if not file_to_check:
-        error = 'Data file or path {} is not found.'.format(path)
-        return create_json_response({'error': error}, status=400, reason=error)
+    file_to_check = validate_vcf_exists(data_path, request.user, path_name=path)
 
     # Validate the VCF to see if it contains all the required samples
     samples = validate_vcf_and_get_samples(file_to_check)

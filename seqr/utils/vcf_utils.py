@@ -3,7 +3,8 @@ import re
 from collections import defaultdict
 
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.file_utils import file_iter
+from seqr.utils.file_utils import file_iter, does_file_exist, get_gs_file_list
+from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
 
 BLOCK_SIZE = 65536
 
@@ -80,3 +81,23 @@ def validate_vcf_and_get_samples(vcf_filename):
     _validate_vcf_meta(meta)
 
     return samples
+
+
+def validate_vcf_exists(data_path, user, path_name=None):
+    if not data_path.endswith(VCF_FILE_EXTENSIONS):
+        raise ErrorsWarningsException([
+            'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
+        ])
+
+    file_to_check = None
+    if '*' in data_path:
+        files = get_gs_file_list(data_path, user, check_subfolders=False, allow_missing=True)
+        if files:
+            file_to_check = files[0]
+    elif does_file_exist(data_path, user=user):
+        file_to_check = data_path
+
+    if not file_to_check:
+        raise ErrorsWarningsException(['Data file or path {} is not found.'.format(path_name or data_path)])
+
+    return file_to_check
