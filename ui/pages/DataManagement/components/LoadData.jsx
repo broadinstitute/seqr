@@ -1,24 +1,72 @@
 import React from 'react'
-import PropTypes from 'prop-types'
-import { Segment } from 'semantic-ui-react'
+import { FormSpy } from 'react-final-form'
 
-import StateDataLoader from 'shared/components/StateDataLoader'
+import { validators } from 'shared/components/form/FormHelpers'
+import FormWizard from 'shared/components/form/FormWizard'
+import { ButtonRadioGroup } from 'shared/components/form/Inputs'
+import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
+import { SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
 
-const LOAD_PROJECT_OPTION_URL = '/api/data_management/loadable_project_options'
+const SUBSCRIPTION = { values: true }
+const LoadedProjectOptions = () => (
+  <FormSpy subscription={SUBSCRIPTION}>
+    {({ values }) => (
+      <LoadOptionsSelect
+        url={`/api/data_management/loaded_projects/${values.sampleType}`}
+        optionsResponseKey="projects"
+        validationErrorMessage="No Projects Found"
+      />
+    )}
+  </FormSpy>
+)
 
-const LoadData = ({ projectOptions }) => <Segment>{JSON.stringify(projectOptions)}</Segment>
+const LOAD_DATA_PAGES = [
+  {
+    fields: [
+      {
+        name: 'filePath',
+        label: 'Callset File Path',
+        placeholder: 'gs://',
+        validate: validators.required,
+      },
+      {
+        name: 'sampleType',
+        label: 'Sample Type',
+        component: ButtonRadioGroup,
+        options: [SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME].map(value => ({ value, text: value })),
+        validate: validators.required,
+      },
+      {
+        name: 'datasetType',
+        label: 'Dataset Type',
+        component: ButtonRadioGroup,
+        options: [DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS].map(value => ({ value, text: value })),
+        validate: validators.required,
+      },
+    ],
+    submitUrl: '/api/data_management/validate_file_path',
+  },
+  {
+    fields: [
+      {
+        name: 'projects',
+        label: 'Projects To Load',
+        component: LoadedProjectOptions,
+        validate: validators.required,
+      },
+    ],
+  },
+]
 
-LoadData.propTypes = {
-  projectOptions: PropTypes.object,
-}
+const formatSubmitUrl = () => '/api/data_management/load_data'
 
-const validateResponse = ({ projectOptions }) => projectOptions && projectOptions.length
-
-export default () => (
-  <StateDataLoader
-    url={LOAD_PROJECT_OPTION_URL}
-    childComponent={LoadData}
-    validateResponse={validateResponse}
-    validationErrorMessage="No Projects Available for Data Loading"
+const LoadData = () => (
+  <FormWizard
+    pages={LOAD_DATA_PAGES}
+    formatSubmitUrl={formatSubmitUrl}
+    successMessage="Data loading has been triggered, and further updates will be posted in slack"
+    noModal
   />
 )
+
+export default LoadData
