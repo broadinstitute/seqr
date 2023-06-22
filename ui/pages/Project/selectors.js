@@ -771,8 +771,13 @@ export const getPageHeaderBreadcrumbIdSections = createSelector(
         content: `Family: ${family.displayName || ''}`,
         link: `/project/${project.projectGuid}/family_page/${family.familyGuid}`,
       }]
-      if (match.params.breadcrumbIdSection) {
-        breadcrumbIdSections.push({ content: snakecaseToTitlecase(match.params.breadcrumbIdSection), link: match.url })
+      const { breadcrumbIdSection } = match.params
+      if (breadcrumbIdSection) {
+        if (breadcrumbIdSection.startsWith('rnaseq_results/')) {
+          breadcrumbIdSections.push({ content: `RnaSeq: ${breadcrumbIdSection.split('/')[1]}` })
+        } else {
+          breadcrumbIdSections.push({ content: snakecaseToTitlecase(breadcrumbIdSection), link: match.url })
+        }
       }
       return breadcrumbIdSections
     }
