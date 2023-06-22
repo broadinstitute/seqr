@@ -24,7 +24,6 @@ const OUTLIER_VOLCANO_PLOT_CONFIGS = [
     getLocation: (({ geneId }) => geneId),
     searchType: 'genes',
     title: 'Expression Outliers',
-    formatData: data => data,
   },
   {
     key: 'spliceOutliers',
@@ -59,21 +58,10 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     const showTissueType = tissueType || (tissueOptions?.length > 0 ? tissueOptions[0].value : null)
     const tissueDisplay = TISSUE_DISPLAY[showTissueType]
 
-    const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map(({ formatData, ...config }) => ({
-      data: formatData(Object.values((rnaSeqData || {})[config.key] || {}).flat(), showTissueType),
-      ...config,
-    })).filter(({ data }) => data.length)
-
-    const outlierPlots = outlierPlotConfigs.map(({ key, data, ...config }) => (
-      <Grid.Column key={key} width={8}>
-        <RnaSeqOutliers
-          familyGuid={familyGuid}
-          rnaSeqData={data}
-          genesById={genesById}
-          {...config}
-        />
-      </Grid.Column>
-    ))
+    const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map(({ formatData, ...config }) => {
+      const data = Object.values((rnaSeqData || {})[config.key] || {}).flat()
+      return ({ data: formatData ? formatData(data, showTissueType) : data, ...config })
+    }).filter(({ data }) => data.length)
 
     const tableData = significantJunctionOutliers.reduce(
       (acc, outlier) => (outlier.tissueType === showTissueType ? [...acc, outlier] : acc), [],
@@ -95,11 +83,20 @@ class BaseRnaSeqResultPage extends React.PureComponent {
           </TissueContainer>
         )}
         <React.Suspense fallback={<Loader />}>
-          {(outlierPlots.length > 0) && (
-            <Grid>
-              <Grid.Row divided key={tissueType} columns={outlierPlots.length}>{outlierPlots}</Grid.Row>
-            </Grid>
-          )}
+          <Grid>
+            <Grid.Row divided columns={outlierPlotConfigs.length}>
+              {outlierPlotConfigs.map(({ key, data, ...config }) => (
+                <Grid.Column key={key} width={8}>
+                  <RnaSeqOutliers
+                    familyGuid={familyGuid}
+                    rnaSeqData={data}
+                    genesById={genesById}
+                    {...config}
+                  />
+                </Grid.Column>
+              ))}
+            </Grid.Row>
+          </Grid>
         </React.Suspense>
         {(tableData.length > 0) && (
           <FamilyReads

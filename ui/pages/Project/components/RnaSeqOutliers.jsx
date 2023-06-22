@@ -21,6 +21,18 @@ class RnaSeqOutliersGraph extends React.PureComponent {
   }
 
   componentDidMount() {
+    this.initPlot()
+  }
+
+  componentDidUpdate(prevProp) {
+    const { data } = this.props
+    if (data !== prevProp.data) {
+      select(this.svg).selectAll('*').remove()
+      this.initPlot()
+    }
+  }
+
+  initPlot = () => {
     const { data: dataArray, genesById } = this.props
 
     const svg = select(this.svg).append('g')
