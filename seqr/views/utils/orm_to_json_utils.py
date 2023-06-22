@@ -771,20 +771,20 @@ def get_json_for_rna_seq_outliers(filters, significant_only=True, individual_gui
         if hasattr(model, 'MAX_SIGNIFICANT_OUTLIER_NUM'):
             significant_filter['rank__lt'] = model.MAX_SIGNIFICANT_OUTLIER_NUM
 
-        nested_fields = [{'fields': ('sample', 'tissue_type'), 'key': 'tissueType'}]
-        nested_fields += [] if individual_guid else [{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'}]
         outliers = get_json_for_queryset(
             model.objects.filter(**filters, **(significant_filter if significant_only else {})),
-            nested_fields=nested_fields,
+            nested_fields=[
+                {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'},
+                {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid', 'value': individual_guid},
+            ],
             additional_values={'isSignificant': Value(True)} if significant_only else {
                 'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))},
         )
 
         for data in outliers:
-            indiv_guid = individual_guid or data.pop('individualGuid')
             if outlier_type == EXPRESSION_OUTLIERS:
-                data_by_individual_gene[indiv_guid][outlier_type][data['geneId']] = data
+                data_by_individual_gene[data.pop('individualGuid')][outlier_type][data['geneId']] = data
             else:
-                data_by_individual_gene[indiv_guid][outlier_type][data['geneId']].append(data)
+                data_by_individual_gene[data.pop('individualGuid')][outlier_type][data['geneId']].append(data)
 
     return data_by_individual_gene
