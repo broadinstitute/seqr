@@ -774,7 +774,7 @@ export const getPageHeaderBreadcrumbIdSections = createSelector(
       const { breadcrumbIdSection } = match.params
       if (breadcrumbIdSection) {
         if (breadcrumbIdSection.startsWith('rnaseq_results/')) {
-          breadcrumbIdSections.push({ content: `RnaSeq: ${breadcrumbIdSection.split('/')[1]}` })
+          breadcrumbIdSections.push({ content: `RNAseq: ${breadcrumbIdSection.split('/')[1]}` })
         } else {
           breadcrumbIdSections.push({ content: snakecaseToTitlecase(breadcrumbIdSection), link: match.url })
         }
