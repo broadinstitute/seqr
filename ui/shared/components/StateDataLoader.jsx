@@ -10,7 +10,7 @@ class StateDataLoader extends React.PureComponent {
   static propTypes = {
     url: PropTypes.string.isRequired,
     childComponent: PropTypes.elementType.isRequired,
-    parseResponse: PropTypes.func.isRequired,
+    parseResponse: PropTypes.func,
     validateResponse: PropTypes.func,
     errorHeader: PropTypes.string,
     validationErrorHeader: PropTypes.string,
@@ -31,7 +31,7 @@ class StateDataLoader extends React.PureComponent {
     this.setState({ loading: true })
     new HttpRequestHelper(url,
       (responseJson) => {
-        const loadedProps = parseResponse(responseJson)
+        const loadedProps = parseResponse ? parseResponse(responseJson) : responseJson
         if (validateResponse && !validateResponse(loadedProps)) {
           this.setState({
             errorHeader: validationErrorHeader,

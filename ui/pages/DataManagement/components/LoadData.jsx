@@ -1,23 +1,24 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Button, Segment } from 'semantic-ui-react'
+import { Segment } from 'semantic-ui-react'
 
-import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButton'
-import ProjectSelector from 'shared/components/page/ProjectSelector'
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import StateDataLoader from 'shared/components/StateDataLoader'
 
-// TODO actually implement
+const LOAD_PROJECT_OPTION_URL = '/api/data_management/loadable_project_options'
 
-const onSubmit = projectGuid => () => new HttpRequestHelper(`/api/data_management/write_pedigree/${projectGuid}`).get()
-
-const LoadData = ({ project }) => (project ? (
-  <DispatchRequestButton onSubmit={onSubmit(project.guid)} buttonContainer={<Segment basic />}>
-    <Button primary content={`Write Pedigree for ${project.title}`} />
-  </DispatchRequestButton>
-) : null)
+const LoadData = ({ projectOptions }) => <Segment>{JSON.stringify(projectOptions)}</Segment>
 
 LoadData.propTypes = {
-  project: PropTypes.object,
+  projectOptions: PropTypes.object,
 }
 
-export default () => <ProjectSelector layout={LoadData} />
+const validateResponse = ({ projectOptions }) => projectOptions && projectOptions.length
+
+export default () => (
+  <StateDataLoader
+    url={LOAD_PROJECT_OPTION_URL}
+    childComponent={LoadData}
+    validateResponse={validateResponse}
+    validationErrorMessage="No Projects Available for Data Loading"
+  />
+)
