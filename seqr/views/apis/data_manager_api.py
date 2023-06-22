@@ -19,6 +19,7 @@ from seqr.utils.search.utils import get_search_backend_status, delete_search_bac
 from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.vcf_utils import validate_vcf_exists
 
 from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file, \
     load_rna_seq_splice_outlier
@@ -409,10 +410,18 @@ def write_pedigree(request, project_guid):
     return create_json_response({'success': True})
 
 
+DATA_TYPE_FILE_EXTS = {
+    Sample.DATASET_TYPE_MITO_CALLS: ('.mt',),
+    Sample.DATASET_TYPE_SV_CALLS: ('.bed',),
+}
+
+
 @data_manager_required
 def validate_callset(request):
     request_json = json.loads(request.body)
-    validate_vcf_exists(request_json['filePath'], request.user)  # TODO additonal file exts
+    validate_vcf_exists(
+        request_json['filePath'], request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(request_json['datasetType'])
+    )
     return create_json_response({'success': True})
 
 

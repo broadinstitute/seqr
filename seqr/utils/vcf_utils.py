@@ -83,10 +83,11 @@ def validate_vcf_and_get_samples(vcf_filename):
     return samples
 
 
-def validate_vcf_exists(data_path, user, path_name=None):
-    if not data_path.endswith(VCF_FILE_EXTENSIONS):
+def validate_vcf_exists(data_path, user, path_name=None, allowed_exts=None):
+    file_extensions = (allowed_exts or ()) + VCF_FILE_EXTENSIONS
+    if not data_path.endswith(file_extensions):
         raise ErrorsWarningsException([
-            'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
+            'Invalid VCF file format - file path must end with {}'.format(' or '.join(file_extensions))
         ])
 
     file_to_check = None
