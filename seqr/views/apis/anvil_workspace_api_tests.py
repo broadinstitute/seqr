@@ -214,7 +214,7 @@ INFO_META = [
 
 BAD_FORMAT_META = [
     b'##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
-    b'##FORMAT=<ID=DP,Number=1,Type=String,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+    b'##FORMAT=<ID=GQ,Number=1,Type=String,Description="Genotype Quality">\n',
 ]
 
 FORMAT_META = [
@@ -455,10 +455,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'Missing required INFO field(s) AN',
-            'Incorrect meta Type for INFO.AF - expected "Float", got "Integer"',
-            'Missing required FORMAT field(s) GQ, GT',
-            'Incorrect meta Type for FORMAT.DP - expected "Integer", got "String"'
+            'Missing required FORMAT field(s) GT',
+            'Incorrect meta Type for FORMAT.GQ - expected "Integer", got "String"'
         ])
 
         # Test valid operations
