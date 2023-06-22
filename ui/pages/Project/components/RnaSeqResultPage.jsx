@@ -59,7 +59,7 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     const tissueDisplay = TISSUE_DISPLAY[showTissueType]
 
     const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map(({ formatData, ...config }) => {
-      const data = Object.values((rnaSeqData || {})[config.key] || {}).flat()
+      const data = rnaSeqData[config.key] || []
       return ({ data: formatData ? formatData(data, showTissueType) : data, ...config })
     }).filter(({ data }) => data.length)
 
@@ -82,22 +82,24 @@ class BaseRnaSeqResultPage extends React.PureComponent {
             ) : tissueDisplay}
           </TissueContainer>
         )}
-        <React.Suspense fallback={<Loader />}>
-          <Grid>
-            <Grid.Row divided columns={outlierPlotConfigs.length}>
-              {outlierPlotConfigs.map(({ key, data, ...config }) => (
-                <Grid.Column key={key} width={8}>
-                  <RnaSeqOutliers
-                    familyGuid={familyGuid}
-                    rnaSeqData={data}
-                    genesById={genesById}
-                    {...config}
-                  />
-                </Grid.Column>
-              ))}
-            </Grid.Row>
-          </Grid>
-        </React.Suspense>
+        { outlierPlotConfigs.length > 0 && (
+          <React.Suspense fallback={<Loader />}>
+            <Grid>
+              <Grid.Row divided columns={outlierPlotConfigs.length}>
+                {outlierPlotConfigs.map(({ key, data, ...config }) => (
+                  <Grid.Column key={key} width={8}>
+                    <RnaSeqOutliers
+                      familyGuid={familyGuid}
+                      rnaSeqData={data}
+                      genesById={genesById}
+                      {...config}
+                    />
+                  </Grid.Column>
+                ))}
+              </Grid.Row>
+            </Grid>
+          </React.Suspense>
+        )}
         {(tableData.length > 0) && (
           <FamilyReads
             layout={RnaSeqJunctionOutliersTable}
@@ -128,7 +130,9 @@ RnaSeqResultPage.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   individual: getIndividualsByGuid(state)[ownProps.match.params.individualGuid],
-  rnaSeqData: getRnaSeqDataByIndividual(state)[ownProps.match.params.individualGuid],
+  rnaSeqData: Object.entries(getRnaSeqDataByIndividual(state)[ownProps.match.params.individualGuid] || {}).reduce(
+    (acc, [outlier, data]) => ({ ...acc, [outlier]: Object.values(data).flat() }), {},
+  ),
   significantJunctionOutliers: getRnaSeqSignificantJunctionData(state)[ownProps.match.params.individualGuid] || [],
   genesById: getGenesById(state),
   tissueOptions: getTissueOptionsByIndividualGuid(state)[ownProps.match.params.individualGuid],
