@@ -409,6 +409,13 @@ def write_pedigree(request, project_guid):
     return create_json_response({'success': True})
 
 
+@data_manager_required
+def validate_callset(request):
+    request_json = json.loads(request.body)
+    validate_vcf_exists(request_json['filePath'], request.user)  # TODO additonal file exts
+    return create_json_response({'success': True})
+
+
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
 # More info at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.5.1
 EXCLUDE_HTTP_RESPONSE_HEADERS = {

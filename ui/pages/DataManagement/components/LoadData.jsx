@@ -44,7 +44,7 @@ const LOAD_DATA_PAGES = [
         validate: validators.required,
       },
     ],
-    submitUrl: '/api/data_management/validate_file_path',
+    submitUrl: '/api/data_management/validate_callset',
   },
   {
     fields: [
