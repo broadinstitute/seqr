@@ -1375,6 +1375,7 @@
     "pk": 1,
     "fields": {
         "sample": 151,
+        "rank": 0,
         "gene_id": "ENSG00000106554",
         "p_value": 1.08E-56,
         "z_score": 12.34,
@@ -1394,6 +1395,7 @@
     "pk": 2,
     "fields": {
         "sample": 153,
+        "rank": 0,
         "gene_id": "ENSG00000268903",
         "p_value": 1.08E-56,
         "z_score": 12.34,
@@ -1485,6 +1487,32 @@
         "individual": 1,
         "sample_type": "alignment",
         "file_path": "/readviz/NA19675.cram"
+    }
+},
+{
+    "model": "seqr.igvsample",
+    "pk": 146,
+    "fields": {
+        "guid": "S000146_na20870",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 7,
+        "sample_type": "alignment",
+        "file_path": "gs://readviz/NA20870.cram"
+    }
+},
+{
+    "model": "seqr.igvsample",
+    "pk": 147,
+    "fields": {
+        "guid": "S000147_na20870",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 7,
+        "sample_type": "gcnv",
+        "file_path": "gs://datasets-gcnv/NA20870.bed.gz"
     }
 },
 {

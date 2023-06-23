@@ -285,18 +285,19 @@ SAMPLE_GENE_SPLICE_DATA = {
     'ENSG00000163092-2-167254166-167258349-*-psi3': {
         'chrom': '2', 'start': 167254166, 'end': 167258349, 'strand': '*', 'type': 'psi3',
         'p_value': 1.56e-25, 'z_score': -4.9, 'delta_psi': -0.46, 'read_count': 166, 'gene_id': 'ENSG00000163092',
-        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 1,
     },
     'ENSG00000106554-7-132885746-132975168-*-psi5': {
         'chrom': '7', 'start': 132885746, 'end': 132975168, 'strand': '*', 'type': 'psi5',
         'p_value': 1.08e-56, 'z_score': -6.53, 'delta_psi': -0.85, 'read_count': 231, 'gene_id': 'ENSG00000106554',
-        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20},
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 0,
+    },
 }
 SAMPLE_GENE_SPLICE_DATA2 = {
     'ENSG00000163092-2-167258096-167258349-*-psi3': {
         'chrom': '2', 'start': 167258096, 'end': 167258349, 'strand': '*', 'type': 'psi3',
         'p_value': 1.56e-25, 'z_score': 6.33, 'delta_psi': 0.45, 'read_count': 143, 'gene_id': 'ENSG00000163092',
-        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 0,
     }
 }
 RNA_OUTLIER_SAMPLE_DATA = [
@@ -412,7 +413,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+            self.assertEqual(response.json()['error'], 'Elasticsearch is disabled')
 
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
@@ -446,7 +447,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
             response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
             self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+            self.assertEqual(response.json()['error'], 'Deleting indices is disabled for the hail backend')
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_upload_qc_pipeline_output(self, mock_subprocess):
@@ -743,11 +744,11 @@ class DataManagerAPITest(AuthenticationTestCase):
             'write_data': {'NA20870\t\t{"ENSG00000163092-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
                            ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163092",'
-                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
+                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}\n',
                            'NA20870\t\t{"ENSG00000163093-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
                            ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163093",'
-                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
+                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}\n',
             },
             'new_data': [
                 # existing sample NA19675_1

@@ -103,12 +103,16 @@ class DatasetAPITest(object):
         )
         self.assertDictEqual(response_json['individualsByGuid'], {
             'I000002_na19678': {'sampleGuids': mock.ANY},
-            'I000003_na19679': {'sampleGuids': ['S000153_na19679', existing_sample_guid]},
+            'I000003_na19679': {'sampleGuids': mock.ANY},
             'I000013_na20878': {'sampleGuids': [new_sample_guid]},
         })
         self.assertSetEqual(
             set(response_json['individualsByGuid']['I000002_na19678']['sampleGuids']),
             {replaced_sample_guid, existing_old_index_sample_guid}
+        )
+        self.assertSetEqual(
+            set(response_json['individualsByGuid']['I000003_na19679']['sampleGuids']),
+            {'S000153_na19679', existing_sample_guid}
         )
 
         self.assertDictEqual(response_json['familiesByGuid'], {
@@ -311,7 +315,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
             response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+        self.assertEqual(response.json()['errors'][0], 'Adding samples is disabled for the hail backend')
 
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
