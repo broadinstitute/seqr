@@ -1,7 +1,10 @@
 # _seqr_ Changes
 
 ## dev
+
+## 6/23/23
 * Add a 'rank' field to the RnaSeqSpliceOutlier model (REQUIRES DB MIGRATION)
+* Remove hail python dependency
 
 ## 6/2/23
 * Update Clinvar filtering and display
