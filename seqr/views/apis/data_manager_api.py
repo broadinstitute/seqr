@@ -17,10 +17,11 @@ from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH
-from seqr.utils.file_utils import file_iter, does_file_exist
+from seqr.utils.file_utils import file_iter, does_file_exist, get_gs_file_list
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.vcf_utils import validate_vcf_exists
 
+from seqr.views.utils.airflow_utils import trigger_data_loading
 from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file, \
     load_rna_seq_splice_outlier
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
@@ -30,7 +31,7 @@ from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data
 
 from seqr.models import Sample, Individual, Project, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, RnaSeqSpliceOutlier
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
+from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
 
@@ -438,7 +439,23 @@ def get_loaded_projects(request, sample_type, dataset_type):
 @pm_or_data_manager_required
 def load_data(request):
     request_json = json.loads(request.body)
-    # TODO
+    sample_type = request_json['sampleType']
+    dataset_type = request_json['datasetType']
+    projects = request_json['projects']
+
+    dag_name = f'RDG_{sample_type}_Broad_Internal_{dataset_type}'  # TODO GCNV
+
+    version_path_prefix = f'{SEQR_DATSETS_GS_PATH}/GRCh38/{dag_name}'
+    version_paths = get_gs_file_list(version_path_prefix, user=request.user, allow_missing=True, check_subfolders=False)
+    curr_version = max([int(re.findall(f'{version_path_prefix}/v(\d\d)/', p)[0]) for p in version_paths] + [0])
+    dag_variables = {'version_path': f'{version_path_prefix}/v{curr_version+1:02d}'}
+
+    success_message = f'*{request.user.email}* triggered internal loading {sample_type} {dataset_type} data for {len(projects)} projects'
+    trigger_data_loading(
+        dag_name, projects, request_json['filePath'], dag_variables, request.user, success_message,
+        SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
+    )
+
     return create_json_response({'success': True})
 
 

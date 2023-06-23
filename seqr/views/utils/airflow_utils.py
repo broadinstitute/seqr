@@ -32,7 +32,8 @@ def trigger_data_loading(dag_name, projects, data_path, additional_dag_variables
         _send_slack_msg_on_failure_trigger(e, dag_id, updated_variables, error_message)
         success = False
 
-    _send_load_data_slack_msg(success_message, success_slack_channel, dag_id, updated_variables)
+    if success or success_slack_channel != SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL:
+        _send_load_data_slack_msg(success_message, success_slack_channel, dag_id, updated_variables)
     return success
 
 
