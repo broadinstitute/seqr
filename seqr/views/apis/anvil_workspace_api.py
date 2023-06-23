@@ -276,9 +276,17 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     dag_variables = {
         'project_path': '{}v{}'.format(_get_loading_project_path(project, sample_type), datetime.now().strftime("%Y%m%d")),
     }
-    get_message = _load_data_slack_msg_template(project, ids_path, data_path, num_updated_individuals, sample_type, user)
+    success_message_template = f"""
+        *{user.email}* requested to load {num_updated_individuals} {sample_type} samples ({GENOME_VERSION_LOOKUP.get(project.genome_version)}) from AnVIL workspace *{project.workspace_namespace}/{project.workspace_name}* at 
+        {data_path} to seqr project <{_get_seqr_project_url(project)}|*{project.name}*> (guid: {project.guid})  
+  
+        The sample IDs to load have been uploaded to {ids_path}.  
+  
+        DAG {{dag_id}} is triggered with following:
+        ```{{dag}}```
+        """
     trigger_success = trigger_data_loading(
-        f'AnVIL_{sample_type}', [project.guid], data_path, dag_variables, user, get_message,
+        f'AnVIL_{sample_type}', [project.guid], data_path, dag_variables, user, success_message_template,
         SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, f'ERROR triggering AnVIL loading for project {project.guid}',
     )
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
@@ -321,33 +329,6 @@ def _get_loading_project_path(project, sample_type):
 
 def _get_seqr_project_url(project):
     return f'{BASE_URL}project/{project.guid}/project_page'
-
-
-def _load_data_slack_msg_template(project, ids_path, data_path, sample_count, sample_type, user):
-    return lambda dag_name, dag: """
-        *{user}* requested to load {sample_count} {sample_type} samples ({genome_version}) from AnVIL workspace *{namespace}/{name}* at 
-        {path} to seqr project <{project_url}|*{project_name}*> (guid: {guid})  
-  
-        The sample IDs to load have been uploaded to {ids_path}.  
-  
-        DAG {dag_name} is triggered with following:
-        ```{dag}```
-        """.format(
-        user=user.email,
-        path=data_path,
-        ids_path=ids_path,
-        namespace=project.workspace_namespace,
-        name=project.workspace_name,
-        project_url=_get_seqr_project_url(project),
-        guid=project.guid,
-        project_name=project.name,
-        sample_count=sample_count,
-        sample_type=sample_type,
-        genome_version=GENOME_VERSION_LOOKUP.get(project.genome_version),
-        dag_name=dag_name,
-        dag=dag,
-    )
-
 
 
 def _merge_sharded_vcf(vcf_files):

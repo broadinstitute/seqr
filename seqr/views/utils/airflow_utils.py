@@ -16,7 +16,7 @@ class DagRunningException(Exception):
 
 
 def trigger_data_loading(dag_name, projects, data_path, additional_dag_variables, user,
-                         get_message, success_slack_channel, error_message):
+                         success_message_template, success_slack_channel, error_message):
     success = True
     updated_variables = _construct_dag_variables(projects, data_path, additional_dag_variables)
     dag_id = f'seqr_vcf_to_es_{dag_name}_v{AIRFLOW_DAG_VERSION}'
@@ -32,12 +32,15 @@ def trigger_data_loading(dag_name, projects, data_path, additional_dag_variables
         _send_slack_msg_on_failure_trigger(e, dag_id, updated_variables, error_message)
         success = False
 
-    _send_load_data_slack_msg(get_message, success_slack_channel, dag_id, updated_variables)
+    _send_load_data_slack_msg(success_message_template, success_slack_channel, dag_id, updated_variables)
     return success
 
 
-def _send_load_data_slack_msg(get_message, channel, dag_id, dag):
-    message_content = get_message(dag_id, json.dumps(dag, indent=4))
+def _send_load_data_slack_msg(message_template, channel, dag_id, dag):
+    message_content = message_template.format(
+        dag_id=dag_id,
+        dag=json.dumps(dag, indent=4),
+    )
     safe_post_to_slack(channel, message_content)
 
 
