@@ -1217,3 +1217,23 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
+        # test data manager access
+        self.login_data_manager_user()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_loaded_projects(self):
+        url = reverse(get_loaded_projects, args=['WGS', 'SV'])
+        self.check_pm_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'projects': [
+            {'dataTypeLastLoaded': None, 'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg'},
+            {'dataTypeLastLoaded': '2018-02-05T06:42:55.397Z', 'name': 'Non-Analyst Project', 'projectGuid': 'R0004_non_analyst_project'},
+        ]})
+
+        # test data manager access
+        self.login_data_manager_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
