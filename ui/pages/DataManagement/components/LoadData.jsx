@@ -7,14 +7,28 @@ import { ButtonRadioGroup } from 'shared/components/form/Inputs'
 import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
 import { SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
 
+const formatProjectOption = ({ name, projectGuid, dataTypeLastLoaded }) => ({
+  value: projectGuid,
+  text: name,
+  description: dataTypeLastLoaded && `Last Loaded: ${new Date(dataTypeLastLoaded).toLocaleDateString()}`,
+  color: dataTypeLastLoaded ? 'teal' : 'orange',
+})
+
+const renderLabel = ({ color, text }) => ({ color, content: text })
+
 const SUBSCRIPTION = { values: true }
-const LoadedProjectOptions = () => (
+const LoadedProjectOptions = props => (
   <FormSpy subscription={SUBSCRIPTION}>
     {({ values }) => (
       <LoadOptionsSelect
         url={`/api/data_management/loaded_projects/${values.sampleType}/${values.datasetType}`}
+        formatOption={formatProjectOption}
         optionsResponseKey="projects"
         validationErrorMessage="No Projects Found"
+        multiple
+        search
+        renderLabel={renderLabel}
+        {...props}
       />
     )}
   </FormSpy>

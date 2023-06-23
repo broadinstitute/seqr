@@ -429,7 +429,7 @@ def validate_callset(request):
 def get_loaded_projects(request, sample_type, dataset_type):
     projects = get_internal_projects().filter(
         family__individual__sample__sample_type=sample_type, is_demo=False,
-    ).distinct().values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
+    ).distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
         'family__individual__sample__loaded_date', filter=Q(family__individual__sample__dataset_type=dataset_type),
     ))
     return create_json_response({'projects': list(projects)})
