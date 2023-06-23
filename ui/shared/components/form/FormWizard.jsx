@@ -8,7 +8,6 @@ import FormWrapper from './FormWrapper'
 class FormWizard extends React.PureComponent {
 
   static propTypes = {
-    onSubmit: PropTypes.func.isRequired,
     formatSubmitUrl: PropTypes.func.isRequired,
     formatSubmitValues: PropTypes.func,
     onSubmitSuccess: PropTypes.func,
