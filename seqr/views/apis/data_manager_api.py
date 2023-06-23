@@ -435,6 +435,13 @@ def get_loaded_projects(request, sample_type, dataset_type):
     return create_json_response({'projects': list(projects)})
 
 
+@pm_or_data_manager_required
+def load_data(request):
+    request_json = json.loads(request.body)
+    # TODO
+    return create_json_response({'success': True})
+
+
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
 # More info at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.5.1
 EXCLUDE_HTTP_RESPONSE_HEADERS = {
