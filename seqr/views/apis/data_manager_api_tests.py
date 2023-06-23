@@ -6,7 +6,8 @@ from requests import HTTPError
 import responses
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
-    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree
+    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree, validate_callset, \
+    get_loaded_projects, load_data
 from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
@@ -1191,4 +1192,28 @@ class DataManagerAPITest(AuthenticationTestCase):
             mock.call('gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg', stdout=-1, stderr=-2, shell=True),
             mock.call().wait(),
         ])
+
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_validate_callset(self, mock_subprocess):
+        url = reverse(validate_callset)
+        self.check_pm_login(url)
+
+        mock_subprocess.return_value.wait.return_value = -1
+        mock_subprocess.return_value.stdout = [b'File not found']
+        body = {'filePath': 'gs://test_bucket/mito_callset.mt', 'datasetType': 'SV'}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Invalid VCF file format - file path must end with .bed or .vcf or .vcf.gz or .vcf.bgz',
+        ])
+
+        body['datasetType'] = 'MITO'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Data file or path gs://test_bucket/mito_callset.mt is not found.'])
+
+        mock_subprocess.return_value.wait.return_value = 0
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
 
