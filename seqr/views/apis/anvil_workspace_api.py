@@ -276,17 +276,13 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     dag_variables = {
         'project_path': '{}v{}'.format(_get_loading_project_path(project, sample_type), datetime.now().strftime("%Y%m%d")),
     }
-    success_message_template = f"""
+    success_message = f"""
         *{user.email}* requested to load {num_updated_individuals} {sample_type} samples ({GENOME_VERSION_LOOKUP.get(project.genome_version)}) from AnVIL workspace *{project.workspace_namespace}/{project.workspace_name}* at 
         {data_path} to seqr project <{_get_seqr_project_url(project)}|*{project.name}*> (guid: {project.guid})  
   
-        The sample IDs to load have been uploaded to {ids_path}.  
-  
-        DAG {{dag_id}} is triggered with following:
-        ```{{dag}}```
-        """
+        The sample IDs to load have been uploaded to {ids_path}."""
     trigger_success = trigger_data_loading(
-        f'AnVIL_{sample_type}', [project.guid], data_path, dag_variables, user, success_message_template,
+        f'AnVIL_{sample_type}', [project.guid], data_path, dag_variables, user, success_message,
         SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, f'ERROR triggering AnVIL loading for project {project.guid}',
     )
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(

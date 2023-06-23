@@ -853,12 +853,13 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         }}]})
         self.assertEqual(responses.calls[call_cnt+1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))
 
+
         slack_message = """
         *test_user_manager@test.com* requested to load 3 WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})  
   
         The sample IDs to load have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/{guid}_ids.txt.  
-  
+
         DAG seqr_vcf_to_es_AnVIL_WES_v0.0.1 is triggered with following:
         ```{{
     "active_projects": [
