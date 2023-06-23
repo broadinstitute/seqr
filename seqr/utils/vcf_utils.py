@@ -9,14 +9,8 @@ from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
 BLOCK_SIZE = 65536
 
 EXPECTED_META_FIELDS ={
-    'INFO': {
-        'AC': 'Integer',
-        'AN': 'Integer',
-        'AF': 'Float'
-    },
     'FORMAT': {
         'AD': 'Integer',
-        'DP': 'Integer',
         'GQ': 'Integer',
         'GT': 'String'
     }
