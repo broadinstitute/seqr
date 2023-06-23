@@ -755,10 +755,11 @@ export const getPageHeaderAnalysisGroup = createSelector(
 export const getPageHeaderBreadcrumbIdSections = createSelector(
   getCurrentProject,
   getPageHeaderFamily,
+  getIndividualsByGuid,
   getPageHeaderAnalysisGroup,
   (state, props) => props.breadcrumb || props.match.params.breadcrumb,
   (state, props) => props.match,
-  (project, family, analysisGroup, breadcrumb, match) => {
+  (project, family, individualsByGuid, analysisGroup, breadcrumb, match) => {
     if (!project) {
       return null
     }
@@ -771,8 +772,14 @@ export const getPageHeaderBreadcrumbIdSections = createSelector(
         content: `Family: ${family.displayName || ''}`,
         link: `/project/${project.projectGuid}/family_page/${family.familyGuid}`,
       }]
-      if (match.params.breadcrumbIdSection) {
-        breadcrumbIdSections.push({ content: snakecaseToTitlecase(match.params.breadcrumbIdSection), link: match.url })
+      const { breadcrumbIdSection } = match.params
+      if (breadcrumbIdSection) {
+        if (breadcrumbIdSection.startsWith('rnaseq_results/')) {
+          const individualId = individualsByGuid[breadcrumbIdSection.split('/')[1]]?.individualId || ''
+          breadcrumbIdSections.push({ content: `RNAseq: ${individualId}` })
+        } else {
+          breadcrumbIdSections.push({ content: snakecaseToTitlecase(breadcrumbIdSection), link: match.url })
+        }
       }
       return breadcrumbIdSections
     }
