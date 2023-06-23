@@ -443,7 +443,9 @@ def load_data(request):
     dataset_type = request_json['datasetType']
     projects = request_json['projects']
 
-    dag_name = f'RDG_{sample_type}_Broad_Internal_{dataset_type}'  # TODO GCNV
+    dag_dataset_type = 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
+        else dataset_type
+    dag_name = f'RDG_{sample_type}_Broad_Internal_{dag_dataset_type}'
 
     version_path_prefix = f'{SEQR_DATSETS_GS_PATH}/GRCh38/{dag_name}'
     version_paths = get_gs_file_list(version_path_prefix, user=request.user, allow_missing=True, check_subfolders=False)
