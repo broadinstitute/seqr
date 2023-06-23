@@ -10,7 +10,7 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max, Value, F
+from django.db.models import Max, Value, F, Q
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
@@ -26,7 +26,7 @@ from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tp
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.permissions_utils import data_manager_required, get_internal_projects
+from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 
 from seqr.models import Sample, Individual, Project, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, RnaSeqSpliceOutlier
 
@@ -416,13 +416,23 @@ DATA_TYPE_FILE_EXTS = {
 }
 
 
-@data_manager_required
+@pm_or_data_manager_required
 def validate_callset(request):
     request_json = json.loads(request.body)
     validate_vcf_exists(
         request_json['filePath'], request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(request_json['datasetType'])
     )
     return create_json_response({'success': True})
+
+
+@pm_or_data_manager_required
+def get_loaded_projects(request, sample_type, dataset_type):
+    projects = get_internal_projects().filter(
+        family__individual__sample__sample_type=sample_type, is_demo=False,
+    ).distinct().values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
+        'family__individual__sample__loaded_date', filter=Q(family__individual__sample__dataset_type=dataset_type),
+    ))
+    return create_json_response({'projects': list(projects)})
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
