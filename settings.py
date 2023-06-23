@@ -412,6 +412,7 @@ SERVICE_ACCOUNT_CREDENTIALS = None
 
 AIRFLOW_API_AUDIENCE = os.environ.get('AIRFLOW_API_AUDIENCE')
 AIRFLOW_WEBSERVER_URL = os.environ.get('AIRFLOW_WEBSERVER_URL')
+AIRFLOW_DAG_VERSION = os.environ.get('AIRFLOW_DAG_VERSION', '0.0.1')
 
 if TERRA_API_ROOT_URL:
     service_account_file = '/.config/service-account-key.json'

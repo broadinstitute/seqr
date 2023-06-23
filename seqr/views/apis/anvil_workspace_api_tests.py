@@ -95,10 +95,12 @@ UPDATED_ANVIL_VARIABLES = {
     "key": "AnVIL_WES",
     "value": json.dumps({
         "active_projects": [TEST_GUID],
+        "projects_to_run": [TEST_GUID],
         "vcf_path": "gs://test_bucket/test_path.vcf",
         "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v20210301".format(guid=TEST_GUID),
-        "projects_to_run": [TEST_GUID] })
+    })
 }
+
 
 DAG_TASKS_RESP = {
     "tasks": [
@@ -162,9 +164,10 @@ ADD_DATA_UPDATED_ANVIL_VARIABLES = {
     "key": "AnVIL_WES",
     "value": json.dumps({
         "active_projects": [PROJECT1_GUID],
+        "projects_to_run": [PROJECT1_GUID],
         "vcf_path": "gs://test_bucket/test_path.vcf",
         "project_path": "gs://seqr-datasets/v02/GRCh37/AnVIL_WES/{guid}/v20210301".format(guid=PROJECT1_GUID),
-        "projects_to_run": [PROJECT1_GUID] })
+    })
 }
 ADD_DATA_UPDATE_DAG_TASKS_RESP = {
             "tasks": [
@@ -593,7 +596,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
                       json={},
                       status=200)
 
-        patcher = mock.patch('seqr.views.apis.anvil_workspace_api.id_token.fetch_id_token', lambda *args: MOCK_TOKEN)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.id_token.fetch_id_token', lambda *args: MOCK_TOKEN)
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', MOCK_AIRTABLE_KEY)
@@ -602,7 +605,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', MOCK_AIRTABLE_URL)
         patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.apis.anvil_workspace_api.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.BASE_URL', 'http://testserver/')
@@ -619,7 +622,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.mock_load_file = patcher.start()
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.apis.anvil_workspace_api.safe_post_to_slack')
+        patcher = mock.patch('seqr.views.utils.airflow_utils.safe_post_to_slack')
         self.mock_slack = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.mv_file_to_gs')
@@ -632,6 +635,9 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.logger')
         self.mock_api_logger = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.logger')
+        self.mock_airflow_logger = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.datetime')
         self.mock_datetime = patcher.start()
@@ -789,6 +795,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             temp_file_data = b's\nHG00735\nNA19675\nNA19678'
 
         self.mock_api_logger.error.assert_not_called()
+        self.mock_airflow_logger.assert_not_called()
 
         self.mock_tempfile.assert_called_with(mode='wb', delete=False)
         self.mock_tempfile.return_value.__enter__.return_value.write.assert_called_with(temp_file_data)
@@ -857,11 +864,11 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
     "active_projects": [
         "{guid}"
     ],
-    "vcf_path": "gs://test_bucket/test_path.vcf",
-    "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v20210301",
     "projects_to_run": [
         "{guid}"
-    ]
+    ],
+    "vcf_path": "gs://test_bucket/test_path.vcf",
+    "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v20210301"
 }}```
         """.format(guid=project.guid, version=genome_version, workspace_name=project.workspace_name,
                    project_name=project.name)
@@ -910,7 +917,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.mock_api_logger.error.assert_called_with(
             'Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
             self.manager_user, detail=samples)
-        self.mock_api_logger.warning.assert_called_with(
+        self.mock_airflow_logger.warning.assert_called_with(
             'seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again.', self.manager_user)
         self.mock_airtable_logger.error.assert_called_with(
             f'Airtable create "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: '
@@ -924,11 +931,11 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
     "active_projects": [
         "{guid}"
     ],
-    "vcf_path": "gs://test_bucket/test_path.vcf",
-    "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v20210301",
     "projects_to_run": [
         "{guid}"
-    ]
+    ],
+    "vcf_path": "gs://test_bucket/test_path.vcf",
+    "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v20210301"
 }}```
         """.format(
             guid=project.guid,
