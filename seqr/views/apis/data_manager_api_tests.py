@@ -1194,6 +1194,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             mock.call().wait(),
         ])
 
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_validate_callset(self, mock_subprocess):
         url = reverse(validate_callset)
@@ -1223,6 +1224,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
 
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_get_loaded_projects(self):
         url = reverse(get_loaded_projects, args=['WGS', 'SV'])
         self.check_pm_login(url)
@@ -1255,6 +1257,7 @@ class LoadDataAPITest(AirflowTestCase):
         return variables
 
     @responses.activate
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_load_data(self, mock_subprocess):
         url = reverse(load_data)
