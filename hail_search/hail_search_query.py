@@ -329,9 +329,9 @@ class BaseHailTableQuery(object):
             return ht
 
         if inheritance_mode == ANY_AFFECTED:
-            affected_status_samples = {s['sample_id'] for s in sample_data if s['affected'] == AFFECTED}
+            affected_status_samples = hl.set({s['sample_id'] for s in sample_data if s['affected'] == AFFECTED})
             ht = ht.annotate(families=hl.set(ht.entries.filter(
-                lambda x: hl.set(affected_status_samples).contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
+                lambda x: affected_status_samples.contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
             ).map(lambda x: x.familyGuid)))
         else:
             ht = cls._filter_families_inheritance(
@@ -375,11 +375,11 @@ class BaseHailTableQuery(object):
     
     @classmethod
     def _annotate_possible_comp_hets(cls, ht, sample_data):
-        unaffected_samples = {s['sample_id'] for s in sample_data if s['affected'] == UNAFFECTED}
+        unaffected_samples = hl.set({s['sample_id'] for s in sample_data if s['affected'] == UNAFFECTED})
 
         return ht.annotate(compHetFamilyCarriers=hl.dict(ht.entries.group_by(lambda x: x.familyGuid).items().map(
             # group unaffected sample entries by family
-            lambda item: (item[0], item[1].filter(lambda x: hl.set(unaffected_samples).contains(x.sampleId)))
+            lambda item: (item[0], item[1].filter(lambda x: unaffected_samples.contains(x.sampleId)))
         ).filter(
             # remove comp het variants where all unaffected individuals are carriers
             lambda item: hl.is_defined(item[0]) & ((item[1].size() < 2) | item[1].any(lambda x: cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)))
@@ -425,7 +425,8 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _filter_gene_ids(ht, gene_ids):
-        return ht.filter(ht.sortedTranscriptConsequences.any(lambda t: hl.set(gene_ids).contains(t.gene_id)))
+        gene_id_set = hl.set(gene_ids)
+        return ht.filter(ht.sortedTranscriptConsequences.any(lambda t: gene_id_set.contains(t.gene_id)))
 
     @staticmethod
     def _should_add_chr_prefix(genome_version):
@@ -597,9 +598,10 @@ class BaseHailTableQuery(object):
         consequence_overrides = {k: v for k, v in consequence_overrides.items() if k in cls.ANNOTATION_OVERRIDE_FIELDS}
 
         if consequence_overrides.get(CLINVAR_KEY):
-            annotation_filters.append(hl.set({
+            allowed_significances = hl.set({
                 CLINVAR_SIG_MAP[s] for s in consequence_overrides[CLINVAR_KEY]
-            }).contains(ht.clinvar.clinical_significance_id))
+            })
+            annotation_filters.append(allowed_significances.contains(ht.clinvar.clinical_significance_id))
         if consequence_overrides.get(HGMD_KEY):
             allowed_classes = hl.set({HGMD_SIG_MAP[s] for s in consequence_overrides[HGMD_KEY]})
             annotation_filters.append(allowed_classes.contains(ht.hgmd.class_id))
@@ -628,7 +630,8 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _has_clivar_terms_expr(ht, clinvar_terms):
-        return hl.set(clinvar_terms).contains(ht.clinvar.clinical_significance_id)
+        allowed_terms = hl.set(clinvar_terms)
+        return allowed_terms.contains(ht.clinvar.clinical_significance_id)
 
     @staticmethod
     def _has_allowed_sv_type_expr(ht, sv_types):
@@ -857,19 +860,19 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     def _selected_main_transcript_expr(self, results):
         get_matching_transcripts = lambda allowed_values, get_field: results.sortedTranscriptConsequences.filter(
-            lambda t: hl.set(allowed_values).contains(get_field(t)))
+            lambda t: allowed_values.contains(get_field(t)))
 
         gene_transcripts = None
         if self._filtered_genes:
-            gene_transcripts = get_matching_transcripts(self._filtered_genes, lambda t: t.gene_id)
+            gene_transcripts = get_matching_transcripts(hl.set(self._filtered_genes), lambda t: t.gene_id)
 
         consequence_transcripts = None
         if self._allowed_consequences:
-            consequence_transcripts = get_matching_transcripts(self._allowed_consequences, self.get_major_consequence)
+            consequence_transcripts = get_matching_transcripts(hl.set(self._allowed_consequences), self.get_major_consequence)
             if self._allowed_consequences_secondary:
                 consequence_transcripts = hl.if_else(
                     consequence_transcripts.size() > 0, consequence_transcripts,
-                    get_matching_transcripts(self._allowed_consequences_secondary, self.get_major_consequence))
+                    get_matching_transcripts(hl.set(self._allowed_consequences_secondary), self.get_major_consequence))
 
         if gene_transcripts is not None:
             if consequence_transcripts is None:
@@ -923,7 +926,8 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     @classmethod
     def _filter_annotated_table(cls, ht, rs_ids=None, **kwargs):
         if rs_ids:
-            ht = ht.filter(hl.set(rs_ids).contains(ht.rsid))
+            rs_id_set = hl.set(rs_ids)
+            ht = ht.filter(rs_id_set.contains(ht.rsid))
         return super(BaseVariantHailTableQuery, cls)._filter_annotated_table(ht, **kwargs)
 
     @staticmethod
