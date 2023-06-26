@@ -1248,7 +1248,7 @@ class LoadDataAPITest(AirflowTestCase):
     DAG_NAME = 'RDG_WGS_Broad_Internal_MITO'
     LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
 
-    def _get_expected_dag_variables(self, **kwargs):
+    def _get_expected_dag_variables(self, *args, **kwargs):
         variables = super(LoadDataAPITest, self)._get_expected_dag_variables()
         variables.update({
             'vcf_path': 'gs://test_bucket/mito_callset.mt',
@@ -1273,7 +1273,7 @@ class LoadDataAPITest(AirflowTestCase):
 
         self.assert_airflow_calls()
         mock_subprocess.assert_called_with(
-            'gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO', stdout=-1, stderr=-1, shell=True)
+            'gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO', stdout=-1, stderr=-1, shell=True)  # nosec
 
         slack_message = """*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
 
@@ -1307,7 +1307,7 @@ class LoadDataAPITest(AirflowTestCase):
         self.assert_airflow_calls(trigger_error=True, dag_name='RDG_WGS_Broad_Internal_SV')
 
         mock_subprocess.assert_called_with(
-            'gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV', stdout=-1, stderr=-1, shell=True)
+            'gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV', stdout=-1, stderr=-1, shell=True)  # nosec
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
         error = self.mock_airflow_logger.error.call_args.args[0]
