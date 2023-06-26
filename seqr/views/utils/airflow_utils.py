@@ -42,13 +42,12 @@ def _send_load_data_slack_msg(message, channel, dag_id, dag):
 
         DAG {dag_id} is triggered with following:
         ```{json.dumps(dag, indent=4)}```
-        """
+    """
     safe_post_to_slack(channel, message_content)
 
 
 def _send_slack_msg_on_failure_trigger(e, dag_id, dag, error_message):
-    message_content = f"""
-        {error_message}: {e} 
+    message_content = f"""{error_message}: {e} 
         
         DAG {dag_id} should be triggered with following: 
         ```{json.dumps(dag, indent=4)}```

@@ -607,9 +607,8 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'state': 'running'}
         ]})
 
-    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False):
+    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dag_name=None):
         self.mock_airflow_logger.info.assert_not_called()
-        self.mock_airflow_logger.error.assert_not_called()
 
         # Test triggering anvil dags
         call_count = 5
@@ -619,7 +618,8 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             call_count = 1
         self.assertEqual(len(responses.calls), call_count + self.ADDITIONAL_REQUEST_COUNT)
         # check dag running state
-        self.assertEqual(responses.calls[0].request.url, f'{self.dag_url}/dagRuns')
+        dag_url = self.dag_url.replace(self.DAG_NAME, dag_name) if dag_name else self.dag_url
+        self.assertEqual(responses.calls[0].request.url, f'{dag_url}/dagRuns')
         self.assertEqual(responses.calls[0].request.method, "GET")
         self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
 
@@ -657,6 +657,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.assertEqual(responses.calls[call_cnt].request.headers['Authorization'], self.auth_header)
 
         self.mock_airflow_logger.warning.assert_not_called()
+        self.mock_airflow_logger.error.assert_not_called()
 
     def _get_expected_dag_variables(self, omit_project=None, **kwargs):
         projects = [project for project in ['R0001_1kg', self.LOADING_PROJECT_GUID] if project != omit_project]

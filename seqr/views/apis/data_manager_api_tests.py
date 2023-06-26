@@ -1269,10 +1269,61 @@ class LoadDataAPITest(AirflowTestCase):
         self.assertDictEqual(response.json(), {'success': True})
 
         self.assert_airflow_calls()
-        self.mock_slack.assert_called_once_with(
-            SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL,
-            '*test_user_pm@test.com* triggered loading internal WGS MITO data for 2 projects')
+        mock_subprocess.assert_called_with(
+            'gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO', stdout=-1, stderr=-1, shell=True)
 
+        slack_message = """*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects  
+
+        DAG seqr_vcf_to_es_RDG_WGS_Broad_Internal_MITO_v0.0.1 is triggered with following:
+        ```{
+    "active_projects": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "vcf_path": "gs://test_bucket/mito_callset.mt",
+    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01"
+}```
+    """
+
+        self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message)
+
+        # Test loading trigger error
         self.mock_slack.reset_mock()
+        responses.calls.reset()
+        mock_subprocess.return_value.communicate.return_value = b'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v01/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v02/', b''
 
-        # TODO test GCNV, trigger failure, incremented version path
+        body.update({'datasetType': 'SV', 'filePath': 'gs://test_bucket/sv_callset.vcf'})
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+
+        self.assert_airflow_calls(trigger_error=True, dag_name='RDG_WGS_Broad_Internal_SV')
+
+        mock_subprocess.assert_called_with(
+            'gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV', stdout=-1, stderr=-1, shell=True)
+        self.mock_airflow_logger.warning.assert_not_called()
+        self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
+        error = self.mock_airflow_logger.error.call_args.args[0]
+        self.assertRegex(error, 'Connection refused by Responses')
+
+        error_message = f"""ERROR triggering internal WGS SV loading: {error} 
+        
+        DAG seqr_vcf_to_es_RDG_WGS_Broad_Internal_SV_v0.0.1 should be triggered with following: 
+        ```{{
+    "active_projects": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "vcf_path": "gs://test_bucket/sv_callset.vcf",
+    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v03"
+}}```
+        """
+        self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)

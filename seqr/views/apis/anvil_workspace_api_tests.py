@@ -681,7 +681,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
     "vcf_path": "gs://test_bucket/test_path.vcf",
     "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v20210301"
 }}```
-        """.format(guid=project.guid, version=genome_version, workspace_name=project.workspace_name,
+    """.format(guid=project.guid, version=genome_version, workspace_name=project.workspace_name,
                    project_name=project.name)
         self.mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
         self.mock_send_email.assert_not_called()
@@ -726,14 +726,14 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         self.mock_api_logger.error.assert_called_with(
             'Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
             self.manager_user, detail=samples)
+        self.mock_airflow_logger.error.assert_not_called()
         self.mock_airflow_logger.warning.assert_called_with(
             'seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again.', self.manager_user)
         self.mock_airtable_logger.error.assert_called_with(
             f'Airtable create "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: '
             f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', self.manager_user)
 
-        slack_message_on_failure = """
-        ERROR triggering AnVIL loading for project {guid}: seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again. 
+        slack_message_on_failure = """ERROR triggering AnVIL loading for project {guid}: seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again. 
         
         DAG seqr_vcf_to_es_AnVIL_WES_v0.0.1 should be triggered with following: 
         ```{{
