@@ -295,22 +295,23 @@ class BaseHailTableQuery(object):
     def _add_entry_sample_families(cls, ht, sample_data, family_guid):
         sample_index_id_map = dict(enumerate(hl.eval(ht.sample_ids)))
         sample_id_index_map = {v: k for k, v in sample_index_id_map.items()}
+        sample_index_id_map = hl.dict(sample_index_id_map)
         sample_individual_map = {s['sample_id']: s['individual_guid'] for s in sample_data}
         missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
         if missing_samples:
             raise HTTPBadRequest(
                 text=f'The following samples are available in seqr but missing the loaded data: {", ".join(missing_samples)}'
             )
-        sample_index_individual_map = {
+        sample_index_individual_map = hl.dict({
             sample_id_index_map[sample_id]: i_guid for sample_id, i_guid in sample_individual_map.items()
-        }
-        sample_index_family_map = {sample_id_index_map[s['sample_id']]: s['family_guid'] for s in sample_data}
+        })
+        sample_index_family_map = hl.dict({sample_id_index_map[s['sample_id']]: s['family_guid'] for s in sample_data})
 
         ht = ht.annotate(entries=hl.enumerate(ht.entries).map(
             lambda x: hl.or_else(x[1], cls._missing_entry(x[1])).annotate(
-                sampleId=hl.dict(sample_index_id_map).get(x[0]),
-                individualGuid=hl.dict(sample_index_individual_map).get(x[0]),
-                familyGuid=hl.dict(sample_index_family_map).get(x[0]),
+                sampleId=sample_index_id_map.get(x[0]),
+                individualGuid=sample_index_individual_map.get(x[0]),
+                familyGuid=sample_index_family_map.get(x[0]),
             )))
         ht = ht.annotate(families=hl.set(
             {family_guid} if family_guid else ht.entries.map(lambda x: x.familyGuid).filter(lambda x: hl.is_defined(x))
@@ -795,7 +796,8 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _gene_rank_sort(ht, gene_ranks):
-        return hl.min(ht.sortedTranscriptConsequences.map(lambda t: hl.dict(gene_ranks).get(t.gene_id)))
+        gene_ranks = hl.dict(gene_ranks)
+        return hl.min(ht.sortedTranscriptConsequences.map(lambda t: gene_ranks.get(t.gene_id)))
 
     # For production: should use custom json serializer
     @classmethod
@@ -1180,6 +1182,7 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
 
     @classmethod
     def _filter_annotated_table(cls, ht, **kwargs):
+        chrom_to_xpos_offset = hl.dict(CHROM_TO_XPOS_OFFSET)
         ht = ht.annotate(
             sortedTranscriptConsequences=hl.if_else(
                 _no_genotype_override(ht.genotypes, 'geneIds'), ht.sortedTranscriptConsequences, hl.bind(
@@ -1188,7 +1191,7 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
                 ),
             ),
             # Remove once data is reloaded
-            xpos=hl.dict(CHROM_TO_XPOS_OFFSET).get(ht.interval.start.contig.replace('^chr', '')) + ht.interval.start.position,
+            xpos=chrom_to_xpos_offset.get(ht.interval.start.contig.replace('^chr', '')) + ht.interval.start.position,
         )
         return super(GcnvHailTableQuery, cls)._filter_annotated_table(ht, **kwargs)
 
@@ -1265,8 +1268,9 @@ class MultiDataTypeHailTableQuery(object):
         return field_annotation
 
     def population_expression(self, r, population):
+        population_map = hl.dict(DATA_TYPE_POPULATIONS_MAP)
         return hl.or_missing(
-            hl.dict(DATA_TYPE_POPULATIONS_MAP)[r.dataType].contains(population),
+            population_map[r.dataType].contains(population),
             super(MultiDataTypeHailTableQuery, self).population_expression(r, population),
         )
 
