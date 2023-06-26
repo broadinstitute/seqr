@@ -1272,7 +1272,7 @@ class LoadDataAPITest(AirflowTestCase):
         mock_subprocess.assert_called_with(
             'gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO', stdout=-1, stderr=-1, shell=True)
 
-        slack_message = """*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects  
+        slack_message = """*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
 
         DAG seqr_vcf_to_es_RDG_WGS_Broad_Internal_MITO_v0.0.1 is triggered with following:
         ```{
@@ -1310,7 +1310,7 @@ class LoadDataAPITest(AirflowTestCase):
         error = self.mock_airflow_logger.error.call_args.args[0]
         self.assertRegex(error, 'Connection refused by Responses')
 
-        error_message = f"""ERROR triggering internal WGS SV loading: {error} 
+        error_message = f"""ERROR triggering internal WGS SV loading: {error}
         
         DAG seqr_vcf_to_es_RDG_WGS_Broad_Internal_SV_v0.0.1 should be triggered with following: 
         ```{{

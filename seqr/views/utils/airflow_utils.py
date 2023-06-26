@@ -38,7 +38,7 @@ def trigger_data_loading(dag_name, projects, data_path, additional_dag_variables
 
 
 def _send_load_data_slack_msg(message, channel, dag_id, dag):
-    message_content = f"""{message}  
+    message_content = f"""{message}
 
         DAG {dag_id} is triggered with following:
         ```{json.dumps(dag, indent=4)}```
@@ -47,7 +47,7 @@ def _send_load_data_slack_msg(message, channel, dag_id, dag):
 
 
 def _send_slack_msg_on_failure_trigger(e, dag_id, dag, error_message):
-    message_content = f"""{error_message}: {e} 
+    message_content = f"""{error_message}: {e}
         
         DAG {dag_id} should be triggered with following: 
         ```{json.dumps(dag, indent=4)}```

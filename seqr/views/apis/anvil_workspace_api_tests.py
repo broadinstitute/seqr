@@ -668,7 +668,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         *test_user_manager@test.com* requested to load 3 WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})  
   
-        The sample IDs to load have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/{guid}_ids.txt.  
+        The sample IDs to load have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/{guid}_ids.txt.
 
         DAG seqr_vcf_to_es_AnVIL_WES_v0.0.1 is triggered with following:
         ```{{
@@ -733,7 +733,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             f'Airtable create "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: '
             f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', self.manager_user)
 
-        slack_message_on_failure = """ERROR triggering AnVIL loading for project {guid}: seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again. 
+        slack_message_on_failure = """ERROR triggering AnVIL loading for project {guid}: seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again.
         
         DAG seqr_vcf_to_es_AnVIL_WES_v0.0.1 should be triggered with following: 
         ```{{
