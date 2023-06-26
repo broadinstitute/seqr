@@ -109,12 +109,11 @@ class BaseHailTableQuery(object):
     def get_major_consequence(transcript):
         raise NotImplementedError
 
-    def __init__(self, data_type, sample_data, genome_version, requester_email=None, gene_ids=None, sort=None, sort_metadata=None, num_results=100, **kwargs):
+    def __init__(self, data_type, sample_data, genome_version,  gene_ids=None, sort=None, sort_metadata=None, num_results=100, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
         self._sort_metadata = sort_metadata
         self._num_results = num_results
-        self._requester_email = requester_email  # In production: log user associated with request
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
         self._allowed_consequences = None

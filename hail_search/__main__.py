@@ -27,7 +27,7 @@ def run():
         app,
         host='0.0.0.0',
         port=5000,
-        access_log_format='"%r" %s %b %Tfs',
+        access_log_format='%{From}i "%r" %s %Tfs',
     )
 
 
