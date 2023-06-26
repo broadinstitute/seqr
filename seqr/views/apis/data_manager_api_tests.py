@@ -12,6 +12,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _g
 from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
+from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -1268,7 +1269,10 @@ class LoadDataAPITest(AirflowTestCase):
         self.assertDictEqual(response.json(), {'success': True})
 
         self.assert_airflow_calls()
+        self.mock_slack.assert_called_once_with(
+            SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL,
+            '*test_user_pm@test.com* triggered loading internal WGS MITO data for 2 projects')
 
-        # TODO test slack
+        self.mock_slack.reset_mock()
 
         # TODO test GCNV, trigger failure, incremented version path

@@ -452,7 +452,7 @@ def load_data(request):
     curr_version = max([int(re.findall(f'{version_path_prefix}/v(\d\d)/', p)[0]) for p in version_paths] + [0])
     dag_variables = {'version_path': f'{version_path_prefix}/v{curr_version+1:02d}'}
 
-    success_message = f'*{request.user.email}* triggered internal loading {sample_type} {dataset_type} data for {len(projects)} projects'
+    success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
     trigger_data_loading(
         dag_name, projects, request_json['filePath'], dag_variables, request.user, success_message,
         SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
