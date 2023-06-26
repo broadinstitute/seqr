@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add internal UI to trigger airflow data loading
 
 ## 6/23/23
 * Add a 'rank' field to the RnaSeqSpliceOutlier model (REQUIRES DB MIGRATION)
