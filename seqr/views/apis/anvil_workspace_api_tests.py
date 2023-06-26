@@ -8,8 +8,8 @@ import responses
 from seqr.models import Project, Family, Individual
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     validate_anvil_vcf, grant_workspace_access, add_workspace_data, get_anvil_vcf_list
-from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, TEST_WORKSPACE_NAMESPACE,\
-    TEST_WORKSPACE_NAME, TEST_WORKSPACE_NAME1, TEST_NO_PROJECT_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME2
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, AirflowTestCase, \
+    TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME, TEST_WORKSPACE_NAME1, TEST_NO_PROJECT_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME2
 from seqr.views.utils.terra_api_utils import remove_token, TerraAPIException, TerraRefreshTokenFailedException
 from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
@@ -63,91 +63,8 @@ REQUEST_BODY.update(VALIDATE_VFC_RESPONSE)
 
 TEMP_PATH = '/temp_path/temp_filename'
 
-TEST_GUID=f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
-MOCK_TOKEN = 'mock_openid_bearer' # nosec
-MOCK_AIRFLOW_URL = 'http://testairflowserver'
 MOCK_AIRTABLE_URL = 'http://testairtable'
 MOCK_AIRTABLE_KEY = 'mock_key' # nosec
-
-DAG_RUNS = {
-    'dag_runs': [
-        {'conf': {},
-         'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1',
-         'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
-         'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00',
-         'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00',
-         'state': 'success'}
-    ]
-}
-
-DAG_RUNS_RUNNING = {
-    'dag_runs': [
-        {'conf': {},
-         'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1',
-         'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
-         'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00',
-         'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00',
-         'state': 'running'}
-    ]
-}
-
-UPDATED_ANVIL_VARIABLES = {
-    "key": "AnVIL_WES",
-    "value": json.dumps({
-        "active_projects": [TEST_GUID],
-        "projects_to_run": [TEST_GUID],
-        "vcf_path": "gs://test_bucket/test_path.vcf",
-        "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v20210301".format(guid=TEST_GUID),
-    })
-}
-
-
-DAG_TASKS_RESP = {
-    "tasks": [
-        {
-            "task_id": "create_dataproc_cluster",
-        },
-        {
-            "task_id": "pyspark_compute_project_R0006_test",
-        },
-        {
-            "task_id": "pyspark_compute_variants_AnVIL_WES",
-        },
-        {
-            "task_id": "pyspark_export_project_R0006_test",
-        },
-        {
-            "task_id": "scale_dataproc_cluster",
-        },
-        {
-            "task_id": "skip_compute_project_subset_R0006_test",
-        }
-        ],
-    "total_entries": 6
-}
-UPDATE_DAG_TASKS_RESP = {
-            "tasks": [
-                {
-                    "task_id": "create_dataproc_cluster",
-                },
-                {
-                    "task_id": f"pyspark_compute_project_{TEST_GUID}",
-                },
-                {
-                    "task_id": "pyspark_compute_variants_AnVIL_WES",
-                },
-                {
-                    "task_id": f"pyspark_export_project_{TEST_GUID}",
-                },
-                {
-                    "task_id": "scale_dataproc_cluster",
-                },
-                {
-                    "task_id": f"skip_compute_project_subset_{TEST_GUID}",
-                }
-                ],
-            "total_entries": 6
-        }
 
 PROJECT1_SAMPLES = ['HG00735', 'NA19675', 'NA19678', 'NA20870', 'HG00732', 'NA19675_1', 'NA20874', 'HG00733', 'HG00731']
 PROJECT2_SAMPLES = ['HG00735', 'NA19675', 'NA19678', 'NA20885']
@@ -160,38 +77,6 @@ REQUEST_BODY_ADD_DATA2['vcfSamples'] = PROJECT2_SAMPLES
 
 PROJECT1_GUID = 'R0001_1kg'
 PROJECT2_GUID = 'R0003_test'
-ADD_DATA_UPDATED_ANVIL_VARIABLES = {
-    "key": "AnVIL_WES",
-    "value": json.dumps({
-        "active_projects": [PROJECT1_GUID],
-        "projects_to_run": [PROJECT1_GUID],
-        "vcf_path": "gs://test_bucket/test_path.vcf",
-        "project_path": "gs://seqr-datasets/v02/GRCh37/AnVIL_WES/{guid}/v20210301".format(guid=PROJECT1_GUID),
-    })
-}
-ADD_DATA_UPDATE_DAG_TASKS_RESP = {
-            "tasks": [
-                {
-                    "task_id": "create_dataproc_cluster",
-                },
-                {
-                    "task_id": f"pyspark_compute_project_{PROJECT1_GUID}",
-                },
-                {
-                    "task_id": "pyspark_compute_variants_AnVIL_WES",
-                },
-                {
-                    "task_id": f"pyspark_export_project_{PROJECT1_GUID}",
-                },
-                {
-                    "task_id": "scale_dataproc_cluster",
-                },
-                {
-                    "task_id": f"skip_compute_project_subset_{PROJECT1_GUID}",
-                }
-                ],
-            "total_entries": 6
-        }
 
 BASIC_META = [
     b'##fileformat=VCFv4.3\n',
@@ -553,59 +438,20 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         ])
 
 
-class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
+class LoadAnvilDataAPITest(AirflowTestCase):
     fixtures = ['users', 'social_auth', '1kg_project']
+
+    DAG_NAME = 'AnVIL_WES'
+    LOADING_PROJECT_GUID = f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
+    ADDITIONAL_REQUEST_COUNT = 1
 
     def setUp(self):
         # Set up api responses
         responses.add(responses.POST, f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', status=400)
-        # check dag running state
-        responses.add(responses.GET,
-                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json=DAG_RUNS,
-                      status=200)
-        # update variables
-        responses.add(responses.PATCH,
-                      '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json={'key': 'AnVIL_WES', 'value': 'updated variables'},
-                      status=200)
-        # get task id
-        responses.add(responses.GET,
-                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json=DAG_TASKS_RESP,
-                      status=200)
-        # get task id again if the response of the previous request didn't include the updated guid
-        responses.add(responses.GET,
-                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json=UPDATE_DAG_TASKS_RESP,
-                      status=200)
-        # get task id again if the response of the previous request didn't include the updated guid
-        responses.add(responses.GET,
-                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json=ADD_DATA_UPDATE_DAG_TASKS_RESP,
-                      status=200)
-        # trigger dag
-        responses.add(responses.POST,
-                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json={},
-                      status=200)
-
-        patcher = mock.patch('seqr.views.utils.airflow_utils.id_token.fetch_id_token', lambda *args: MOCK_TOKEN)
-        patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', MOCK_AIRTABLE_KEY)
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', MOCK_AIRTABLE_URL)
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.BASE_URL', 'http://testserver/')
@@ -622,9 +468,6 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.mock_load_file = patcher.start()
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.safe_post_to_slack')
-        self.mock_slack = patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.mv_file_to_gs')
         self.mock_mv_file = patcher.start()
         self.mock_mv_file.return_value = True
@@ -636,9 +479,6 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.logger')
         self.mock_api_logger = patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.logger')
-        self.mock_airflow_logger = patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.datetime')
         self.mock_datetime = patcher.start()
         self.mock_datetime.now.side_effect = lambda: datetime(2021, 3, 1, 0, 0, 0)
@@ -648,6 +488,15 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.addCleanup(patcher.stop)
 
         super(LoadAnvilDataAPITest, self).setUp()
+
+    def _get_expected_dag_variables(self, additional_tasks_check=False, **kwargs):
+        variables = super(LoadAnvilDataAPITest, self)._get_expected_dag_variables(
+            omit_project=self.LOADING_PROJECT_GUID if additional_tasks_check else 'R0001_1kg')
+        variables.update({
+            'vcf_path': 'gs://test_bucket/test_path.vcf',
+            'project_path': f'gs://seqr-datasets/v02/GRCh{"37" if additional_tasks_check else "38"}/{self.DAG_NAME}/{variables["active_projects"][0]}/v20210301',
+        })
+        return variables
 
     @mock.patch('seqr.models.Project._compute_guid', lambda project: f'P_{project.name}')
     @responses.activate
@@ -786,16 +635,13 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
 
     def _assert_valid_operation(self, project, test_add_data=True):
         if test_add_data:
-            updated_anvil_variables = ADD_DATA_UPDATED_ANVIL_VARIABLES
             genome_version = 'GRCh37'
             temp_file_data = b's\nHG00731\nHG00732\nHG00733\nHG00735\nNA19675\nNA19675_1\nNA19678\nNA20870\nNA20874'
         else:
-            updated_anvil_variables = UPDATED_ANVIL_VARIABLES
             genome_version = 'GRCh38'
             temp_file_data = b's\nHG00735\nNA19675\nNA19678'
 
         self.mock_api_logger.error.assert_not_called()
-        self.mock_airflow_logger.assert_not_called()
 
         self.mock_tempfile.assert_called_with(mode='wb', delete=False)
         self.mock_tempfile.return_value.__enter__.return_value.write.assert_called_with(temp_file_data)
@@ -804,46 +650,10 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             user=self.manager_user
         )
 
-        # Test triggering anvil dags
-        self.assertEqual(len(responses.calls), 7 if test_add_data else 6)
-        # check dag running state
-        self.assertEqual(responses.calls[0].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL))
-        self.assertEqual(responses.calls[0].request.method, "GET")
-        self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
-        self.assertEqual(responses.calls[0].response.json(), DAG_RUNS)
-
-        # update variables
-        self.assertEqual(responses.calls[1].request.url, '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL))
-        self.assertEqual(responses.calls[1].request.method, "PATCH")
-        self.assertDictEqual(json.loads(responses.calls[1].request.body), updated_anvil_variables)
-        self.assertEqual(responses.calls[1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
-
-        # get task id
-        self.assertEqual(responses.calls[2].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL))
-        self.assertEqual(responses.calls[2].request.method, 'GET')
-        self.assertEqual(responses.calls[2].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
-        self.assertEqual(responses.calls[2].response.json(), DAG_TASKS_RESP)
-
-        self.assertEqual(responses.calls[3].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL))
-        self.assertEqual(responses.calls[3].request.method, 'GET')
-        self.assertEqual(responses.calls[3].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
-        self.assertEqual(responses.calls[3].response.json(), UPDATE_DAG_TASKS_RESP)
-
-        call_cnt = 5 if test_add_data else 4
-        if test_add_data:
-            self.assertEqual(responses.calls[4].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL))
-            self.assertEqual(responses.calls[4].request.method, 'GET')
-            self.assertEqual(responses.calls[4].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
-            self.assertEqual(responses.calls[4].response.json(), ADD_DATA_UPDATE_DAG_TASKS_RESP)
-
-        # trigger dag
-        self.assertEqual(responses.calls[call_cnt].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL))
-        self.assertEqual(responses.calls[call_cnt].request.method, 'POST')
-        self.assertDictEqual(json.loads(responses.calls[call_cnt].request.body), {})
-        self.assertEqual(responses.calls[call_cnt].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+        self.assert_airflow_calls(additional_tasks_check=test_add_data)
 
         # create airtable record
-        self.assertDictEqual(json.loads(responses.calls[call_cnt+1].request.body), {'records': [{'fields': {
+        self.assertDictEqual(json.loads(responses.calls[-1].request.body), {'records': [{'fields': {
             'Requester Name': 'Test Manager User',
             'Requester Email': 'test_user_manager@test.com',
             'AnVIL Project URL': f'http://testserver/project/{project.guid}/project_page',
@@ -851,7 +661,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             'Number of Samples': 9 if test_add_data else 3,
             'Status': 'Loading',
         }}]})
-        self.assertEqual(responses.calls[call_cnt+1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))
+        self.assertEqual(responses.calls[-1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))
 
 
         slack_message = """
@@ -907,9 +717,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         responses.calls.reset()
         self.mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
         # Test triggering dag exception
-        responses.replace(responses.GET,
-                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
-                      json=DAG_RUNS_RUNNING)
+        self.add_dag_trigger_error_response()
 
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
@@ -944,11 +752,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         )
         self.mock_slack.assert_any_call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message_on_failure)
         self.mock_send_email.assert_not_called()
-        self.assertEqual(len(responses.calls), 2)
-        self.assertEqual(responses.calls[0].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL))
-        self.assertEqual(responses.calls[0].request.method, "GET")
-        self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
-        self.assertEqual(responses.calls[0].response.json(), DAG_RUNS_RUNNING)
+        self.assert_airflow_calls(trigger_error=True)
 
         # Airtable record created with correct status
         self.assertDictEqual(json.loads(responses.calls[1].request.body), {'records': [{'fields': {
@@ -967,15 +771,8 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
 
         # make sure the task id including the newly created project to avoid infinitely pulling the tasks
-        responses.add(responses.GET,
-                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json={"tasks": [
-                            {"task_id": "pyspark_compute_project_R0006_anvil_no_project_workspace"},
-                            {"task_id": "pyspark_compute_project_R0007_anvil_no_project_workspace"},
-                            {"task_id": "pyspark_compute_project_R0008_anvil_no_project_workspace"}],
-                            "total_entries": 2},
-                      status=200)
+        self.add_dag_tasks_response([
+            'R0006_anvil_no_project_workspace', 'R0007_anvil_no_project_workspace', 'R0008_anvil_no_project_workspace'])
         self._test_not_yet_email_date(url, REQUEST_BODY)
 
         # Remove created project to allow future requests
@@ -993,14 +790,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
 
         # make sure the task id including the newly created project to avoid infinitely pulling the tasks
-        responses.add(responses.GET,
-                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json={"tasks": [
-                          {"task_id": "pyspark_compute_project_R0003_test"},
-                          {"task_id": "pyspark_compute_project_R0004_test"}],
-                          "total_entries": 2},
-                      status=200)
+        self.add_dag_tasks_response(['R0003_test', 'R0004_test'])
         self._test_not_yet_email_date(url, REQUEST_BODY_ADD_DATA)
 
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])

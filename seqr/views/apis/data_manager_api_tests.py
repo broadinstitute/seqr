@@ -9,7 +9,7 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree, validate_callset, \
     get_loaded_projects, load_data
 from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _get_json_for_models
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
 
@@ -376,48 +376,6 @@ EXPECTED_UPDATED_LIRICAL_DATA = [
      'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
      'tool': 'lirical', 'rank': 4, 'individualGuid': 'I000002_na19678'},
 ]
-
-MOCK_TOKEN = 'mock_openid_bearer' # nosec
-MOCK_AIRFLOW_URL = 'http://testairflowserver'
-
-DAG_RUNS = {
-    'dag_runs': [
-        {'conf': {},
-         'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1',
-         'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
-         'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00',
-         'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00',
-         'state': 'success'}
-    ]
-}
-
-
-DAG_TASKS_RESP = {
-    "tasks": [
-        {
-            "task_id": "create_dataproc_cluster",
-        },
-        {
-            "task_id": "pyspark_compute_project_R0001_1kg",
-        },
-        {
-            "task_id": "pyspark_compute_variants_AnVIL_WES",
-        },
-        {
-            "task_id": "pyspark_export_project_R0001_1kg",
-        },
-        {
-            "task_id": "scale_dataproc_cluster",
-        },
-        {
-            "task_id": "skip_compute_project_subset_R0001_1kg",
-        }
-        ],
-    "total_entries": 6
-}
-from copy import deepcopy
-ADD_DATA_UPDATE_DAG_TASKS_RESP = deepcopy(DAG_TASKS_RESP)
-ADD_DATA_UPDATE_DAG_TASKS_RESP['tasks'].append({"task_id": "pyspark_compute_project_R0004_non_analyst_project"})
 
 
 class DataManagerAPITest(AuthenticationTestCase):
@@ -1280,49 +1238,28 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
+
+class LoadDataAPITest(AirflowTestCase):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    DAG_NAME = 'RDG_WGS_Broad_Internal_MITO'
+    LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
+
+    def _get_expected_dag_variables(self, **kwargs):
+        variables = super(LoadDataAPITest, self)._get_expected_dag_variables()
+        variables.update({
+            'vcf_path': 'gs://test_bucket/mito_callset.mt',
+            'version_path': 'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01',
+        })
+        return variables
+
     @responses.activate
-    @mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
-    @mock.patch('seqr.views.utils.airflow_utils.id_token.fetch_id_token', lambda *args: MOCK_TOKEN)
-    @mock.patch('seqr.views.utils.airflow_utils.logger')
-    @mock.patch('seqr.views.utils.airflow_utils.safe_post_to_slack')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_load_data(self, mock_subprocess, mock_slack, mock_logger):
+    def test_load_data(self, mock_subprocess):
         url = reverse(load_data)
         self.check_pm_login(url)
 
-        # TODO share with anvil api test
-        # check dag running state
-        responses.add(responses.GET,
-                      '{}/api/v1/dags/seqr_vcf_to_es_RDG_WGS_Broad_Internal_MITO_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json=DAG_RUNS,
-                      status=200)
-        # update variables
-        responses.add(responses.PATCH,
-                      '{}/api/v1/variables/RDG_WGS_Broad_Internal_MITO'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json={'key': 'AnVIL_WES', 'value': 'updated variables'},
-                      status=200)
-        # get task id
-        responses.add(responses.GET,
-                      '{}/api/v1/dags/seqr_vcf_to_es_RDG_WGS_Broad_Internal_MITO_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json=DAG_TASKS_RESP,
-                      status=200)
-        # get task id again if the response of the previous request didn't include the updated guid
-        responses.add(responses.GET,
-                      '{}/api/v1/dags/seqr_vcf_to_es_RDG_WGS_Broad_Internal_MITO_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json=ADD_DATA_UPDATE_DAG_TASKS_RESP,
-                      status=200)
-        # trigger dag
-        responses.add(responses.POST,
-                      '{}/api/v1/dags/seqr_vcf_to_es_RDG_WGS_Broad_Internal_MITO_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
-                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
-                      json={},
-                      status=200)
         mock_subprocess.return_value.communicate.return_value = b'', b'File not found'
-
         body = {'filePath': 'gs://test_bucket/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'projects': [
             'R0001_1kg', 'R0004_non_analyst_project',
         ]}
@@ -1330,8 +1267,8 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
-        mock_logger.error.assert_not_called()
-        # TODO test airflow calls
+        self.assert_airflow_calls()
+
         # TODO test slack
 
         # TODO test GCNV, trigger failure, incremented version path
