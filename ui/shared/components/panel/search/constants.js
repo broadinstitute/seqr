@@ -557,7 +557,7 @@ export const SV_QUALITY_FILTER_FIELDS = [
   {
     name: 'min_gq_sv',
     label: 'WGS SV Genotype Quality',
-    labelHelp: 'The genotype quality (GQ) represents the quality of a Structural Variant call. Recommended SV-QG cutoffs for filtering: > 10.',
+    labelHelp: 'The genotype quality (GQ) represents the quality of a Structural Variant call. Recommended SV-GQ cutoffs for filtering: > 10.',
     min: 0,
     max: 100,
     step: 10,

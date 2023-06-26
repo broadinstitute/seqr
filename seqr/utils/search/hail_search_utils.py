@@ -13,37 +13,38 @@ def _hail_backend_url(path):
     return f'{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'
 
 
+def _execute_search(search_body, user, path='search'):
+    response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user.email}, timeout=300)
+    response.raise_for_status()
+    return response.json()
+
+
 def ping_hail_backend():
     requests.get(_hail_backend_url('status'), timeout=5).raise_for_status()
 
 
 def get_hail_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100,
                       gene_agg=False, **kwargs):
-
     end_offset = num_results * page
-    search_body = {
-        'requester_email': user.email,
-        'genome_version': GENOME_VERSION_LOOKUP[genome_version],
+    search_body = _format_search_body(samples, genome_version, end_offset, search)
+
+    frequencies = search_body.pop('freqs', None)
+    if frequencies and frequencies.get('callset'):
+        frequencies['seqr'] = frequencies.pop('callset')
+
+    search_body.update({
         'sort': sort,
         'sort_metadata': _get_sort_metadata(sort, samples),
-        'num_results': end_offset,
-    }
-    search_body.update(search)
-    search_body.update({
-        'frequencies': search_body.pop('freqs', None),
+        'frequencies': frequencies,
         'quality_filter': search_body.pop('qualityFilter', None),
         'custom_query': search_body.pop('customQuery', None),
     })
     search_body.pop('skipped_samples', None)
 
-    search_body['sample_data'] = _get_sample_data(samples, search_body.get('inheritance_filter'))
-
     _parse_location_search(search_body)
 
     path = 'gene_counts' if gene_agg else 'search'
-    response = requests.post(_hail_backend_url(path), json=search_body, timeout=300)
-    response.raise_for_status()
-    response_json = response.json()
+    response_json = _execute_search(search_body, user, path)
 
     if gene_agg:
         previous_search_results['gene_aggs'] = response_json
@@ -52,6 +53,31 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     previous_search_results['total_results'] = response_json['total']
     previous_search_results['all_results'] = response_json['results']
     return response_json['results'][end_offset - num_results:end_offset]
+
+
+def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user, return_all_queried_families=False):
+    search = {
+        'variant_ids': [parsed_id for parsed_id in parsed_variant_ids.values() if parsed_id],
+        'variant_keys': [variant_id for variant_id, parsed_id in parsed_variant_ids.items() if not parsed_id],
+    }
+    search_body = _format_search_body(samples, genome_version, len(parsed_variant_ids), search)
+    response_json = _execute_search(search_body, user)
+
+    if return_all_queried_families:
+        expected_family_guids = set(samples.values_list('individual__family__guid', flat=True))
+        _validate_expected_families(response_json['results'], expected_family_guids)
+
+    return response_json['results']
+
+
+def _format_search_body(samples, genome_version, num_results, search):
+    search_body = {
+        'genome_version': GENOME_VERSION_LOOKUP[genome_version],
+        'num_results': num_results,
+    }
+    search_body.update(search)
+    search_body['sample_data'] = _get_sample_data(samples, search_body.get('inheritance_filter'))
+    return search_body
 
 
 def _get_sample_data(samples, inheritance_filter):
@@ -129,3 +155,20 @@ def _format_interval(chrom=None, start=None, end=None, offset=None, **kwargs):
         start = max(start - offset_pos, MIN_POS)
         end = min(end + offset_pos, MAX_POS)
     return f'{chrom}:{start}-{end}'
+
+
+def _validate_expected_families(results, expected_families):
+    # In the ES backed we could force return variants even if all families are hom ref
+    # This is not possible in the hail backend as those rows are removed at loading, so fail if missing
+    invalid_family_variants = []
+    for result in results:
+        missing_families = expected_families - set(result['familyGuids'])
+        if missing_families:
+            invalid_family_variants.append((result['variantId'], missing_families))
+
+    if invalid_family_variants:
+        from seqr.utils.search.utils import InvalidSearchException
+        missing = ', '.join([
+            f'{variant_id} ({"; ".join(sorted(families))})' for variant_id, families in invalid_family_variants
+        ])
+        raise InvalidSearchException(f'Unable to return all families for the following variants: {missing}')

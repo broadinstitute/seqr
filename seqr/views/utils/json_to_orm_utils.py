@@ -21,7 +21,7 @@ def update_family_from_json(family, json, user, allow_unknown_keys=False, immuta
 
     immutable_keys = (immutable_keys or []) + ['pedigree_image', 'assigned_analyst', 'case_review_summary', 'case_review_notes', 'guid']
 
-    update_model_from_json(
+    return update_model_from_json(
         family, json, user=user, allow_unknown_keys=allow_unknown_keys, immutable_keys=immutable_keys,
     )
 

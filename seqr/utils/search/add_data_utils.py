@@ -4,6 +4,10 @@ from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 
 
+def _hail_backend_error(*args, **kwargs):
+    raise ValueError('Adding samples is disabled for the hail backend')
+
+
 def _get_sample_placeholder(request_json, project):
     # Temporary function to allow adding sample models, in production will implement for real with correct data
     sample_ids = list(Individual.objects.filter(family__project=project).values_list('individual_id', flat=True))

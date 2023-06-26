@@ -6,18 +6,23 @@ from requests import HTTPError
 import responses
 
 from seqr.models import Family
-from seqr.utils.search.utils import get_variant_query_gene_counts, query_variants
+from seqr.utils.search.utils import get_variant_query_gene_counts, query_variants, get_single_variant, \
+    get_variants_for_variant_ids, InvalidSearchException
 from seqr.utils.search.search_utils_tests import SearchTestHelper, MOCK_COUNTS
 from seqr.views.utils.test_utils import PARSED_VARIANTS
 
 MOCK_HOST = 'http://test-hail-host'
 
+FAMILY_3_SAMPLE = {
+    'sample_id': 'NA20870', 'individual_guid': 'I000007_na20870', 'family_guid': 'F000003_3',
+    'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M',
+}
 EXPECTED_SAMPLE_DATA = {
     'VARIANTS': [
         {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
         {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
         {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
-        {'sample_id': 'NA20870', 'individual_guid': 'I000007_na20870', 'family_guid': 'F000003_3', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M'},
+        FAMILY_3_SAMPLE,
     ], 'SV_WES': [
         {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
         {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
@@ -35,6 +40,15 @@ FAMILY_1_SAMPLE_DATA = {
     ],
 }
 
+ALL_AFFECTED_SAMPLE_DATA = deepcopy(EXPECTED_SAMPLE_DATA)
+ALL_AFFECTED_SAMPLE_DATA['MITO'] = [
+    {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
+]
+FAMILY_5_SAMPLE = {
+    'sample_id': 'NA20874', 'individual_guid': 'I000009_na20874', 'family_guid': 'F000005_5', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M',
+}
+ALL_AFFECTED_SAMPLE_DATA['VARIANTS'].append(FAMILY_5_SAMPLE)
+
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HOST)
 class HailSearchUtilsTests(SearchTestHelper, TestCase):
@@ -43,23 +57,34 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
     def setUp(self):
         super(HailSearchUtilsTests, self).set_up()
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={
+            'results': PARSED_VARIANTS, 'total': 5,
+        })
 
-    def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
-                                   rs_ids=None, variant_ids=None, dataset_type=None, secondary_dataset_type=None,
-                                   frequencies=None, custom_query=None, inheritance_mode='de_novo', inheritance_filter=None,
-                                   quality_filter=None, sort='xpos', sort_metadata=None, num_results=100,
-                                   sample_data=None, omit_sample_type=None):
+    def _test_minimal_search_call(self, search_body, num_results=100, sample_data=None, omit_sample_type=None):
         sample_data = sample_data or EXPECTED_SAMPLE_DATA
         if omit_sample_type:
             sample_data = {k: v for k, v in sample_data.items() if k != omit_sample_type}
 
         expected_search = {
-            'requester_email': 'test_user@broadinstitute.org',
             'sample_data': sample_data,
             'genome_version': 'GRCh37',
+            'num_results': num_results,
+        }
+        expected_search.update(search_body)
+
+        executed_request = responses.calls[-1].request
+        self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')
+        self.assertDictEqual(json.loads(executed_request.body), expected_search)
+
+    def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
+                                   rs_ids=None, variant_ids=None, dataset_type=None, secondary_dataset_type=None,
+                                   frequencies=None, custom_query=None, inheritance_mode='de_novo', inheritance_filter=None,
+                                   quality_filter=None, sort='xpos', sort_metadata=None, **kwargs):
+
+        expected_search = {
             'sort': sort,
             'sort_metadata': sort_metadata,
-            'num_results': num_results,
             'inheritance_mode': inheritance_mode,
             'inheritance_filter': inheritance_filter or {},
             'dataset_type': dataset_type,
@@ -75,21 +100,10 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         }
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
 
-        request_body = json.loads(responses.calls[-1].request.body)
-        self.assertDictEqual(request_body, expected_search)
+        self._test_minimal_search_call(expected_search, **kwargs)
 
     @responses.activate
     def test_query_variants(self):
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=400, body='Bad Search Error')
-        with self.assertRaises(HTTPError) as cm:
-            query_variants(self.results_model, user=self.user)
-        self.assertEqual(cm.exception.response.status_code, 400)
-        self.assertEqual(cm.exception.response.text, 'Bad Search Error')
-
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={
-            'results': PARSED_VARIANTS, 'total': 5,
-        })
-
         variants, total = query_variants(self.results_model, user=self.user)
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total, 5)
@@ -167,20 +181,27 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         freq_filter = {'callset': {'af': 0.1}, 'gnomad_genomes': {'af': 0.01, 'ac': 3, 'hh': 3}}
         custom_query = {'term': {'customFlag': 'flagVal'}}
         genotype_filter = {'genotype': {'I000001_na19675': 'ref_alt'}}
-        self.search_model.search = {
+        self.search_model.search = deepcopy({
             'inheritance': {'mode': 'any_affected', 'filter': genotype_filter},
             'freqs': freq_filter,
             'qualityFilter': quality_filter,
             'in_silico': {'cadd': '11.5', 'sift': 'D'},
             'customQuery': custom_query,
-        }
+        })
         self.results_model.families.set(Family.objects.filter(guid='F000001_1'))
         query_variants(self.results_model, user=self.user, sort='prioritized_gene')
+        expected_freq_filter = {'seqr': freq_filter['callset'], 'gnomad_genomes': freq_filter['gnomad_genomes']}
         self._test_expected_search_call(
             inheritance_mode=None, inheritance_filter=genotype_filter, sample_data=FAMILY_1_SAMPLE_DATA,
-            search_fields=['in_silico'], frequencies=freq_filter, quality_filter=quality_filter, custom_query=custom_query,
+            search_fields=['in_silico'], frequencies=expected_freq_filter, quality_filter=quality_filter, custom_query=custom_query,
             sort='prioritized_gene', sort_metadata={'ENSG00000268903': 1, 'ENSG00000268904': 11},
         )
+
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=400, body='Bad Search Error')
+        with self.assertRaises(HTTPError) as cm:
+            query_variants(self.results_model, user=self.user)
+        self.assertEqual(cm.exception.response.status_code, 400)
+        self.assertEqual(cm.exception.response.text, 'Bad Search Error')
 
     @responses.activate
     def test_get_variant_query_gene_counts(self):
@@ -190,3 +211,48 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.assertDictEqual(gene_counts, MOCK_COUNTS)
         self.assert_cached_results({'gene_aggs': gene_counts})
         self._test_expected_search_call(sort=None)
+
+    @responses.activate
+    def test_get_single_variant(self):
+        variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
+        self.assertDictEqual(variant, PARSED_VARIANTS[0])
+        self._test_minimal_search_call({
+            'variant_ids': [['2', 103343353, 'GAGA', 'G']], 'variant_keys': [],
+        }, num_results=1, sample_data=ALL_AFFECTED_SAMPLE_DATA, omit_sample_type='SV_WES')
+
+        get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
+        self._test_minimal_search_call({
+            'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'],
+        }, num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='VARIANTS')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
+        self.assertEqual(
+            str(cm.exception),
+            'Unable to return all families for the following variants: 1-248367227-TC-T (F000002_2; F000005_5), 2-103343353-GAGA-G (F000005_5)',
+        )
+
+        get_single_variant(self.families.filter(guid='F000003_3'), '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
+        self._test_minimal_search_call({
+            'variant_ids': [['2', 103343353, 'GAGA', 'G']], 'variant_keys': [],
+        }, num_results=1, sample_data={'VARIANTS': [FAMILY_3_SAMPLE]})
+
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={'results': [], 'total': 0})
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_single_variant(self.families, '10-10334333-A-G', user=self.user)
+        self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
+
+    @responses.activate
+    def test_get_variants_for_variant_ids(self):
+        variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']
+        get_variants_for_variant_ids(self.families, variant_ids, user=self.user)
+        self._test_minimal_search_call({
+            'variant_ids': [['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
+            'variant_keys': ['prefix-938_DEL'],
+        }, num_results=3, sample_data=ALL_AFFECTED_SAMPLE_DATA)
+
+        get_variants_for_variant_ids(self.families, variant_ids, user=self.user, dataset_type='VARIANTS')
+        self._test_minimal_search_call({
+            'variant_ids': [['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
+            'variant_keys': [],
+        }, num_results=2, sample_data=ALL_AFFECTED_SAMPLE_DATA, omit_sample_type='SV_WES')
