@@ -43,7 +43,8 @@ class BaseHailTableQuery(object):
 
     CORE_FIELDS = ['genotypes', 'xpos']
     BASE_ANNOTATION_FIELDS = {
-        'familyGuids': lambda r: hl.array(r.familyGuids),
+        # 'familyGuids': lambda r: hl.array(r.familyGuids),
+        'familyGuids': lambda r: r.genotypes.values().group_by(lambda x: x.familyGuid).keys(),
     }
     LIFTOVER_ANNOTATION_FIELDS = {
         'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
@@ -140,7 +141,7 @@ class BaseHailTableQuery(object):
             self._filter_compound_hets(is_all_recessive_search)
             if is_all_recessive_search:
                 self._ht = self._ht.filter(hl.is_defined(self._ht.recessiveFamilies) & (self._ht.recessiveFamilies.size() > 0))
-                self._ht = self._ht.transmute(familyGuids=self._ht.recessiveFamilies)
+                self._ht = self._ht.transmute(familyGuids=self._ht.recessiveFamilies)  # TODO
                 if self._allowed_consequences_secondary:
                     self._ht = self._ht.filter(self._ht.has_allowed_consequence | self._ht.override_consequences)
             else:
@@ -170,8 +171,10 @@ class BaseHailTableQuery(object):
             project_samples[s['project_guid']].append(s)
 
         family_set_fields, family_dict_fields = cls._get_families_annotation_fields(inheritance_mode)
+        family_list_fields = {'family_entries'}
         if clinvar_path_terms and quality_filter:
-            family_set_fields.add('failQualityFamilies')
+            # family_set_fields.add('failQualityFamilies')
+            family_list_fields.add('passes_quality_families')
 
         logger.info(f'Loading data for {len(family_samples)} families in {len(project_samples)} projects ({cls.__name__})')
         family_guid = None
@@ -199,11 +202,16 @@ class BaseHailTableQuery(object):
             for project_ht in filtered_project_hts[1:]:
                 families_ht = families_ht.join(project_ht, how='outer')
                 families_ht = families_ht.select(
-                    genotypes=hl.bind(
+                    # genotypes=hl.bind(
+                    #     lambda g1, g2: g1.extend(g2),
+                    #     hl.or_else(families_ht.genotypes, hl.empty_array(families_ht.genotypes.dtype.element_type)),
+                    #     hl.or_else(families_ht.genotypes_1, hl.empty_array(families_ht.genotypes.dtype.element_type)),
+                    # ),
+                    **{k: hl.bind(
                         lambda g1, g2: g1.extend(g2),
-                        hl.or_else(families_ht.genotypes, hl.empty_array(families_ht.genotypes.dtype.element_type)),
-                        hl.or_else(families_ht.genotypes_1, hl.empty_array(families_ht.genotypes.dtype.element_type)),
-                    ),
+                        hl.or_else(families_ht[k], hl.empty_array(families_ht[k].dtype.element_type)),
+                        hl.or_else(families_ht[f'{k}_1'], hl.empty_array(families_ht[k].dtype.element_type)),
+                    ) for k in family_list_fields},
                     **{k: hl.bind(
                         lambda s1, s2: s1.union(s2),
                         hl.or_else(families_ht[k], hl.empty_set(hl.tstr)),
@@ -224,17 +232,31 @@ class BaseHailTableQuery(object):
         # logger.info(f'Annotated {ht._force_count()} rows ({cls.__name__})')
 
         if clinvar_path_terms and quality_filter:
-            ht = ht.annotate(genotypes=hl.if_else(
-                cls._has_clivar_terms_expr(ht, clinvar_path_terms),
-                ht.genotypes, ht.genotypes.filter(lambda x: ~ht.failQualityFamilies.contains(x.familyGuid))
-            )).drop('failQualityFamilies')
-            ht = ht.filter(ht.genotypes.size() > 0)
+            ht = ht.annotate(family_entries=hl.if_else(
+                cls._has_clivar_terms_expr(ht, clinvar_path_terms), ht.family_entries,
+                hl.enumerate(ht.family_entries.map(lambda x: hl.or_missing(ht.passes_quality_families[x[0]], x[1])))),
+            ).drop('passes_quality_families')
+            ht = ht.filter(ht.family_entries.any(lambda x: hl.is_defined(x)))
+            # ht = ht.annotate(genotypes=hl.if_else(
+            #     cls._has_clivar_terms_expr(ht, clinvar_path_terms),
+            #     ht.genotypes, ht.genotypes.filter(lambda x: ~ht.failQualityFamilies.contains(x.familyGuid))
+            # )).drop('failQualityFamilies')
+            # ht = ht.filter(ht.genotypes.size() > 0)
             # logger.info(f'Filter path/quality to {ht.count()} rows')
 
-        ht = ht.annotate(
-            familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
-            genotypes=ht.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
-        )
+        ht = ht.transmute(
+            genotypes=ht.family_entries.flatmap(lambda x: x).filter(
+                lambda gt: hl.is_defined(gt.individualGuid)
+            ).map(lambda gt: gt.select(
+                'sampleId', 'individualGuid', 'familyGuid',
+                numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
+                **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
+            ))).drop('entries')
+        
+        # ht = ht.annotate(
+        #     familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
+        #     genotypes=ht.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
+        # )
         return cls._filter_annotated_table(
             ht, consequence_overrides=consequence_overrides, clinvar_path_terms=clinvar_path_terms,
             vcf_quality_filter=vcf_quality_filter, **kwargs), family_guid
@@ -260,7 +282,7 @@ class BaseHailTableQuery(object):
         table_name = family_guid or table_name
         # logger.info(f'Initial count for {table_name}: {ht.count()}')
 
-        ht, sample_id_index_map = cls._add_entry_sample_families(ht, sample_data, family_guid)
+        ht, sample_id_family_index_map = cls._add_entry_sample_families(ht, sample_data, family_guid)
 
         if inheritance_mode == X_LINKED_RECESSIVE:
             x_chrom_interval = hl.parse_locus_interval(
@@ -268,28 +290,39 @@ class BaseHailTableQuery(object):
             ht = ht.filter(cls.get_x_chrom_filter(ht, x_chrom_interval))
 
         ht = cls._filter_inheritance(
-            ht, inheritance_mode, inheritance_filter or {}, sample_data, sample_id_index_map,
+            ht, inheritance_mode, inheritance_filter or {}, sample_data, sample_id_family_index_map,
             consequence_overrides=consequence_overrides,
         )
 
         if quality_filter:
-            ht = ht.annotate(failQualityFamilies=hl.set(ht.entries.filter(
-                lambda gt: ~cls._genotype_passes_quality(gt, quality_filter)).map(lambda x: x.familyGuid)))
+            ht = ht.annotate(passes_quality_families=ht.family_entries.map(
+                lambda entries: entries.all(lambda gt: cls._genotype_passes_quality(gt, quality_filter)))
+            )
+            # ht = ht.annotate(failQualityFamilies=hl.set(ht.entries.filter(
+            #     lambda gt: ~cls._genotype_passes_quality(gt, quality_filter)).map(lambda x: x.familyGuid)))
             if not clinvar_path_terms:
-                ht = ht.transmute(families=ht.families.difference(ht.failQualityFamilies))
-                ht = ht.filter(ht.families.size() > 0)
-
-        if not family_guid:
-            ht = ht.annotate(entries=ht.entries.filter(lambda x: ht.families.contains(x.familyGuid)))
-
-        # logger.info(f'Prefiltered {table_name} to {ht.count()} rows')
-
-        return ht.transmute(
-            genotypes=ht.entries.filter(lambda gt: hl.is_defined(gt.individualGuid)).map(lambda gt: gt.select(
-                'sampleId', 'individualGuid', 'familyGuid',
-                numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
-                **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
-            ))).select_globals()
+                # ht = ht.transmute(families=ht.families.difference(ht.failQualityFamilies))
+                # ht = ht.filter(ht.families.size() > 0)
+                ht = ht.transmute(family_entries=hl.enumerate(ht.family_entries.map(
+                    lambda x: hl.or_missing(ht.passes_quality_families[x[0]], x[1])))
+                )
+                ht = ht.filter(ht.family_entries.any(lambda x: hl.is_defined(x)))
+        
+        return ht.select_globals()
+        # 
+        # if not family_guid:
+        #     # TODO transmute directly on genotypes select
+        #     ht = ht.annotate(entries=ht.family_entries.flatmap(lambda x: x))
+        #     # ht = ht.annotate(entries=ht.entries.filter(lambda x: ht.families.contains(x.familyGuid)))
+        # 
+        # # logger.info(f'Prefiltered {table_name} to {ht.count()} rows')
+        # 
+        # return ht.transmute(
+        #     genotypes=ht.entries.filter(lambda gt: hl.is_defined(gt.individualGuid)).map(lambda gt: gt.select(
+        #         'sampleId', 'individualGuid', 'familyGuid',
+        #         numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
+        #         **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
+        #     ))).select_globals()
 
     @classmethod
     def _add_entry_sample_families(cls, ht, sample_data, family_guid):
@@ -305,19 +338,34 @@ class BaseHailTableQuery(object):
         sample_index_individual_map = hl.dict({
             sample_id_index_map[sample_id]: i_guid for sample_id, i_guid in sample_individual_map.items()
         })
-        sample_index_family_map = hl.dict({sample_id_index_map[s['sample_id']]: s['family_guid'] for s in sample_data})
+        sample_id_family_map = {s['sample_id']: s['family_guid'] for s in sample_data}
+        sample_index_family_map = hl.dict({sample_id_index_map[k]: v for k, v in sample_id_family_map.items()})
+        family_index_map = {f: i for i, f in enumerate(sorted(set(sample_id_family_map.values())))}
+        family_sample_indices = [[]] * len(family_index_map)
+        sample_id_family_index_map = {}
+        for sample_id, family_guid in sample_id_family_map.items():
+            sample_index = sample_id_index_map[sample_id]
+            family_index = family_index_map[family_guid]
+            family_sample_indices[family_index].append(sample_index)
+            sample_id_family_index_map[sample_id] = (family_index, len(family_sample_indices[family_index]))
+        family_sample_indices = hl.array(family_sample_indices)
 
         ht = ht.annotate(entries=hl.enumerate(ht.entries).map(
             lambda x: hl.or_else(x[1], cls._missing_entry(x[1])).annotate(
                 sampleId=sample_index_id_map.get(x[0]),
                 individualGuid=sample_index_individual_map.get(x[0]),
                 familyGuid=sample_index_family_map.get(x[0]),
-            )))
-        ht = ht.annotate(families=hl.set(
-            {family_guid} if family_guid else ht.entries.map(lambda x: x.familyGuid).filter(lambda x: hl.is_defined(x))
-        ))
+            )),
+        )
+        # TODO entries still needed?
+        ht = ht.annotate(
+            family_entries=family_sample_indices.map(lambda sample_indices: sample_indices.map(lambda i: ht.entries[i]))
+        )
+        # ht = ht.annotate(families=hl.set(
+        #     {family_guid} if family_guid else ht.entries.map(lambda x: x.familyGuid).filter(lambda x: hl.is_defined(x))
+        # ))
 
-        return ht, sample_id_index_map
+        return ht, sample_id_family_index_map
 
     @classmethod
     def _missing_entry(cls, entry):
@@ -325,26 +373,33 @@ class BaseHailTableQuery(object):
         return hl.struct(**{k: hl.missing(v) for k, v in entry_type.items()})
 
     @classmethod
-    def _filter_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_data, sample_id_index_map, **kwargs):
+    def _filter_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map, **kwargs):
         if not (inheritance_filter or inheritance_mode):
             return ht
 
         if inheritance_mode == ANY_AFFECTED:
+            # TODO add affected to entry struct
             affected_status_samples = hl.set({s['sample_id'] for s in sample_data if s['affected'] == AFFECTED})
-            ht = ht.annotate(families=hl.set(ht.entries.filter(
-                lambda x: affected_status_samples.contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
-            ).map(lambda x: x.familyGuid)))
+            ht = ht.annotate(family_entries=ht.family_entries.map(
+                lambda entries: hl.or_missing(ht.entries.any(
+                    lambda x: affected_status_samples.contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
+                ), entries))
+            )
+            # ht = ht.annotate(families=hl.set(ht.entries.filter(
+            #     lambda x: affected_status_samples.contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
+            # ).map(lambda x: x.familyGuid)))
         else:
             ht = cls._filter_families_inheritance(
-                ht, inheritance_mode, inheritance_filter, sample_id_index_map, sample_data)
+                ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data)
 
             if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
                 ht = cls._annotate_possible_comp_hets(ht, sample_data)
         
                 if inheritance_mode == RECESSIVE:
+                    # TODO
                     ht = ht.annotate(recessiveFamilies=ht.families, families=ht.compHetFamilyCarriers.key_set())
                     ht = cls._filter_families_inheritance(
-                        ht, COMPOUND_HET, inheritance_filter, sample_id_index_map, sample_data)
+                        ht, COMPOUND_HET, inheritance_filter, sample_id_family_index_map, sample_data)
                     ht = ht.annotate(
                         compHetFamilyCarriers=hl.dict(ht.compHetFamilyCarriers.items().filter(
                             lambda item: ht.families.contains(item[0])
@@ -354,23 +409,35 @@ class BaseHailTableQuery(object):
                 else:
                     ht = ht.annotate(families=ht.families.intersection(ht.compHetFamilyCarriers.key_set()))
 
-        return ht.filter(ht.families.size() > 0)
+        #return ht.filter(ht.families.size() > 0)
+        return ht.filter(ht.family_entries.any(lambda x: hl.is_defined(x)))
 
     @classmethod
-    def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_index_map, sample_data):
+    def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data):
         inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
         individual_genotype_filter = inheritance_filter.get('genotype') or {}
         
+        entry_genotypes = defaultdict(list)
         for s in sample_data:
             genotype = individual_genotype_filter.get(s['individual_guid']) or inheritance_filter.get(s['affected'])
             if inheritance_mode == X_LINKED_RECESSIVE and s['affected'] == UNAFFECTED and s['sex'] == MALE:
                 genotype = REF_REF
             if genotype:
-                entry_index = sample_id_index_map[s['sample_id']]
-                ht = ht.annotate(families=hl.if_else(
-                    cls.GENOTYPE_QUERY_MAP[genotype](ht.entries[entry_index].GT), ht.families,
-                    ht.families.remove(ht.entries[entry_index].familyGuid)
-                ))
+                family_index, entry_index = sample_id_family_index_map[s['sample_id']]
+                entry_genotypes[family_index].append((entry_index, genotype))
+                # ht = ht.annotate(families=hl.if_else(
+                #     cls.GENOTYPE_QUERY_MAP[genotype](ht.entries[entry_index].GT), ht.families,
+                #     ht.families.remove(ht.entries[entry_index].familyGuid)
+                # ))
+
+        entry_genotypes = hl.dict(entry_genotypes)
+        ht = ht.annotate(family_entries=hl.enumerate(ht.family_entries).map(lambda idx_entries_tup: hl.if_else(
+            entry_genotypes.get(idx_entries_tup[0]),
+            hl.or_missing(entry_genotypes[idx_entries_tup[0]].all(
+                lambda entry_gt_tup: cls.GENOTYPE_QUERY_MAP[entry_gt_tup[1]](idx_entries_tup[1][entry_gt_tup[0]])
+            ), x[1]),
+            idx_entries_tup[1],
+        )))
             
         return ht
     
@@ -674,7 +741,7 @@ class BaseHailTableQuery(object):
     def _filter_compound_hets(self, is_all_recessive_search):
         ch_ht = self._ht.annotate(
             gene_ids=hl.set(self._ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)),
-            compHetFamilies=self._ht.familyGuids.intersection(self._ht.compHetFamilyCarriers.key_set()),
+            compHetFamilies=self._ht.familyGuids.intersection(self._ht.compHetFamilyCarriers.key_set()),  # TODO
         )
 
         if is_all_recessive_search:
@@ -1149,10 +1216,14 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     def _filter_inheritance(cls, ht, *args, consequence_overrides=None):
         ht = super(BaseSvHailTableQuery, cls)._filter_inheritance(ht, *args)
         if consequence_overrides[NEW_SV_FIELD]:
-            ht = ht.annotate(families=ht.families.intersection(hl.set(
-                ht.entries.filter(lambda x: x.newCall).map(lambda x: x.familyGuid)
-            )))
-            ht = ht.filter(ht.families.size() > 0)
+            ht = ht.annotate(family_entries=ht.family_entries.map(
+                lambda entries: hl.or_missing(entries.any(lambda x: x.newCall), entries))
+            )
+            ht = ht.filter(ht.family_entries.any(lambda x: hl.is_defined(x)))
+            # ht = ht.annotate(families=ht.families.intersection(hl.set(
+            #     ht.entries.filter(lambda x: x.newCall).map(lambda x: x.familyGuid)
+            # )))
+            # ht = ht.filter(ht.families.size() > 0)
         return ht
 
 
@@ -1282,7 +1353,7 @@ class MultiDataTypeHailTableQuery(object):
         ht = ht.annotate(dataType=data_type_0)
 
         all_type_merge_fields = {
-            'dataType', 'familyGuids', 'rg37_locus', 'xpos',
+            'dataType', 'rg37_locus', 'xpos',  # 'familyGuids',
             'override_consequences', 'has_allowed_consequence', 'has_allowed_secondary_consequence',
         }
         family_set_fields, family_dict_fields = cls._get_families_annotation_fields(kwargs['inheritance_mode'])
