@@ -251,7 +251,8 @@ class BaseHailTableQuery(object):
                 'sampleId', 'individualGuid', 'familyGuid',
                 numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
                 **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
-            ))).drop('entries')
+            )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])
+        ).drop('entries')
         
         # ht = ht.annotate(
         #     familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
@@ -303,9 +304,9 @@ class BaseHailTableQuery(object):
             if not clinvar_path_terms:
                 # ht = ht.transmute(families=ht.families.difference(ht.failQualityFamilies))
                 # ht = ht.filter(ht.families.size() > 0)
-                ht = ht.transmute(family_entries=hl.enumerate(ht.family_entries.map(
-                    lambda x: hl.or_missing(ht.passes_quality_families[x[0]], x[1])))
-                )
+                ht = ht.transmute(family_entries=hl.enumerate(ht.family_entries).map(
+                    lambda x: hl.or_missing(ht.passes_quality_families[x[0]], x[1])
+                ))
                 ht = ht.filter(ht.family_entries.any(lambda x: hl.is_defined(x)))
         
         return ht.select_globals()
