@@ -491,7 +491,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
 
     def _get_expected_dag_variables(self, additional_tasks_check=False, **kwargs):
         variables = super(LoadAnvilDataAPITest, self)._get_expected_dag_variables(
-            omit_project=self.LOADING_PROJECT_GUID if additional_tasks_check else 'R0001_1kg')
+            omit_project=self.LOADING_PROJECT_GUID if additional_tasks_check else PROJECT1_GUID)
         variables.update({
             'vcf_path': 'gs://test_bucket/test_path.vcf',
             'project_path': f'gs://seqr-datasets/v02/GRCh{"37" if additional_tasks_check else "38"}/{self.DAG_NAME}/{variables["active_projects"][0]}/v20210301',
@@ -717,7 +717,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         responses.calls.reset()
         self.mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
         # Test triggering dag exception
-        self.add_dag_trigger_error_response()
+        self.set_dag_trigger_error_response()
 
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)

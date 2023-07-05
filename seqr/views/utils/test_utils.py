@@ -533,6 +533,7 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
 MOCK_TOKEN = 'mock_openid_bearer'  # nosec
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
+PROJECT_GUID = 'R0001_1kg'
 
 
 class AirflowTestCase(AnvilAuthenticationTestCase):
@@ -563,7 +564,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         # get task id again if the response of the previous request didn't include the updated guid
         self.add_dag_tasks_response([self.LOADING_PROJECT_GUID])
         # get task id again if the response of the previous request didn't include the updated guid
-        self.add_dag_tasks_response([self.LOADING_PROJECT_GUID, 'R0001_1kg'])
+        self.add_dag_tasks_response([self.LOADING_PROJECT_GUID, PROJECT_GUID])
         # trigger dag
         responses.add(responses.POST, f'{self.dag_url}/dagRuns', headers=headers, json={})
 
@@ -597,7 +598,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'tasks': tasks, 'total_entries': len(tasks),
         })
 
-    def add_dag_trigger_error_response(self):
+    def set_dag_trigger_error_response(self):
         responses.replace(responses.GET, f'{self.dag_url}/dagRuns', json={'dag_runs': [{
             'conf': {},
             'dag_id': f'seqr_vcf_to_es_{self.DAG_NAME}_v0.0.1',
@@ -660,7 +661,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.mock_airflow_logger.error.assert_not_called()
 
     def _get_expected_dag_variables(self, omit_project=None, **kwargs):
-        projects = [project for project in ['R0001_1kg', self.LOADING_PROJECT_GUID] if project != omit_project]
+        projects = [project for project in [PROJECT_GUID, self.LOADING_PROJECT_GUID] if project != omit_project]
         return {
             'active_projects': projects,
             'projects_to_run': projects,
