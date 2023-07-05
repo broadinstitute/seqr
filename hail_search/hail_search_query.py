@@ -41,10 +41,11 @@ class BaseHailTableQuery(object):
     TRANSCRIPT_FIELDS = ['gene_id']
     ANNOTATION_OVERRIDE_FIELDS = []
 
-    CORE_FIELDS = ['genotypes', 'xpos']
+    CORE_FIELDS = ['xpos'] #['genotypes', 'xpos']
     BASE_ANNOTATION_FIELDS = {
         # 'familyGuids': lambda r: hl.array(r.familyGuids),
-        'familyGuids': lambda r: r.genotypes.values().group_by(lambda x: x.familyGuid).keys(),
+        'familyGuids': lambda r: r.genotypes.group_by(lambda x: x.familyGuid).keys(),
+        'genotypes': lambda r: r.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
     }
     LIFTOVER_ANNOTATION_FIELDS = {
         'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
@@ -249,7 +250,6 @@ class BaseHailTableQuery(object):
             # TODO recessive
             genotype_fields.update({k: k for k in ['is_comp_het_carrier', 'is_comp_het']})
         genotype_fields.update(cls.GENOTYPE_FIELDS)
-        # TODO group genotypes at format step?
         ht = ht.transmute(
             genotypes=ht.family_entries.flatmap(lambda x: x).filter(
                 lambda gt: hl.is_defined(gt.individualGuid)
@@ -258,7 +258,7 @@ class BaseHailTableQuery(object):
                 numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
                 **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in genotype_fields.items()}
                 # **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
-            )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])
+            ))#.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])
         ).drop('entries')
         
         # ht = ht.annotate(
@@ -275,12 +275,13 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _get_families_annotation_fields(inheritance_mode):
+        # TODO clean up
         family_dict_fields = set()
         family_set_fields = set()
-        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-            # family_dict_fields.add('compHetFamilyCarriers') # TODO clean up
-            if inheritance_mode == RECESSIVE:
-                family_set_fields.add('recessiveFamilies')
+        # if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
+        #     family_dict_fields.add('compHetFamilyCarriers')
+        #     if inheritance_mode == RECESSIVE:
+        #         family_set_fields.add('recessiveFamilies')
         return family_set_fields, family_dict_fields
 
     @classmethod
@@ -492,7 +493,6 @@ class BaseHailTableQuery(object):
         #     # omit comp het variants where all unaffected individuals are carriers
         #     entries.size() < 2 | entries.any(lambda x: cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)),
         #     # get carrier samples per family
-        #     # TODO normalize IDs across data types
         #     hl.set(hl.enumerate(entries).filter(lambda x: ~cls.GENOTYPE_QUERY_MAP[REF_REF](x[1].GT)).map(lambda x: x[0]))
         # )))
 
@@ -793,12 +793,12 @@ class BaseHailTableQuery(object):
         ch_ht = self._ht.annotate(
             gene_ids=hl.set(self._ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)),
             #compHetFamilies=self._ht.familyGuids.intersection(self._ht.compHetFamilyCarriers.key_set()),
-            genotype_entries=self._ht.genotypes.values(),
+            #genotype_entries=self._ht.genotypes.values(),
         )
 
         if is_all_recessive_search:
-            ch_ht = ch_ht.annotate(genotype_entries=genotype_entries.filter(lambda e: e.is_comp_het))
-            ch_ht = ch_ht.filter(ch_ht.genotype_entries.size() > 0)
+            ch_ht = ch_ht.annotate(genotypes=genotypes.filter(lambda e: e.is_comp_het))
+            ch_ht = ch_ht.filter(ch_ht.genotypes.size() > 0)
             # ch_ht = ch_ht.filter(hl.is_defined(ch_ht.compHetFamilies) & (ch_ht.compHetFamilies.size() > 0))
 
         # Get possible pairs of variants within the same gene
@@ -825,13 +825,12 @@ class BaseHailTableQuery(object):
 
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.annotate(
-            v1=ch_ht.v1.annotate(genotypes=ch_ht.v1.genotype_entries.filter(
+            v1=ch_ht.v1.annotate(genotypes=ch_ht.v1.genotypes.filter(
                 lambda x: ch_ht.family_guids.contains(x.familyGuid)
-            ).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0].drop('is_comp_het_carrier', 'is_comp_het'))),
-            v2=ch_ht.v2.annotate(genotypes=ch_ht.v2.genotype_entries.filter(
+            ).map(lambda x: x.drop('is_comp_het_carrier', 'is_comp_het'))),
+            v2=ch_ht.v2.annotate(genotypes=ch_ht.v2.genotypes.filter(
                 lambda x: ch_ht.family_guids.contains(x.familyGuid)
-            ).group_by(lambda x: x.individualGuid).map_values(
-                lambda x: x[0].drop('is_comp_het_carrier', 'is_comp_het'))),
+            ).map(lambda x: x.drop('is_comp_het_carrier', 'is_comp_het'))),
         )
         ch_ht = ch_ht.annotate(
             v1=self._format_results(ch_ht.v1).annotate(**{
@@ -858,10 +857,10 @@ class BaseHailTableQuery(object):
             lambda grouped_gts_1, grouped_gts_2: hl.set(grouped_gts_1.items().filter(
                 lambda x: grouped_gts_2.contains(x[0]) & (grouped_gts_2[x[0]].intersection(x[1]).size() == 0)
             ).map(lambda x: x[0])),
-            ch_ht.v1.genotype_entries.group_by(lambda x: x.familyGuid).map_values(
+            ch_ht.v1.genotypes.group_by(lambda x: x.familyGuid).map_values(
                 lambda gts: hl.set(gts.filter(lambda g: g.is_comp_het_carrier).map(lambda g: g.individualGuid))
             ),
-            ch_ht.v2.genotype_entries.group_by(lambda x: x.familyGuid).map_values(
+            ch_ht.v2.genotypes.group_by(lambda x: x.familyGuid).map_values(
                 lambda gts: hl.set(gts.filter(lambda g: g.is_comp_het_carrier).map(lambda g: g.individualGuid))
             ),
         )
@@ -1228,13 +1227,17 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
 
 
 def _no_genotype_override(genotypes, field):
-    return genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g[field]))
+    #return genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g[field]))
+    return genotypes.any(lambda g: (g.numAlt > 0) & hl.is_missing(g[field]))
 
 
 def _get_genotype_override_field(genotypes, default, field, agg):
     return hl.if_else(
-        _no_genotype_override(genotypes, field), default, agg(genotypes.values().map(lambda g: g[field]))
+        _no_genotype_override(genotypes, field), default, agg(genotypes.map(lambda g: g[field]))
     )
+    # return hl.if_else(
+    #     _no_genotype_override(genotypes, field), default, agg(genotypes.values().map(lambda g: g[field]))
+    # )
 
 
 class BaseSvHailTableQuery(BaseHailTableQuery):
@@ -1336,7 +1339,8 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
             sortedTranscriptConsequences=hl.if_else(
                 _no_genotype_override(ht.genotypes, 'geneIds'), ht.sortedTranscriptConsequences, hl.bind(
                     lambda gene_ids: ht.sortedTranscriptConsequences.filter(lambda t: gene_ids.contains(t.gene_id)),
-                    ht.genotypes.values().flatmap(lambda g: g.geneIds)
+                    # ht.genotypes.values().flatmap(lambda g: g.geneIds)
+                    ht.genotypes.flatmap(lambda g: g.geneIds)
                 ),
             ),
             # Remove once data is reloaded
@@ -1455,7 +1459,8 @@ class MultiDataTypeHailTableQuery(object):
 
             transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
             transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences', 'element_type'))
-            transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes', 'value_type', map_func='map_values'))
+            # transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes', 'value_type', map_func='map_values'))
+            transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes', 'element_type'))
             ht = ht.transmute(**transmute_expressions)
 
         return ht, family_guid
@@ -1523,7 +1528,8 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
             hl.is_defined(v1.locus) & hl.set(SV_DEL_INDICES).contains(v2.svType_id) &
             (v2.interval.start.position <= v1.locus.position) & (v1.locus.position <= v2.interval.end.position),
             hl.empty_set(hl.tstr),
-            hl.set(v1.genotypes.values().filter(lambda g: g.numAlt == 2).map(lambda g: g.familyGuid)),
+            # hl.set(v1.genotypes.values().filter(lambda g: g.numAlt == 2).map(lambda g: g.familyGuid)),
+            hl.set(v1.genotypes.filter(lambda g: g.numAlt == 2).map(lambda g: g.familyGuid)),
         )
 
     @classmethod
