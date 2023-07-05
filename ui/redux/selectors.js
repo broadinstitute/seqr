@@ -360,7 +360,7 @@ export const getSearchGeneBreakdownValues = createSelector(
   })),
 )
 
-const groupDataNestedByChrom = (accInit, groupedData, nestedKey) => groupedData.reduce(
+const groupDataNestedByChrom = (initialData, groupedData, nestedKey) => groupedData.reduce(
   (acc, data) => {
     const { chrom } = data
     if (!acc[chrom]) {
@@ -371,7 +371,7 @@ const groupDataNestedByChrom = (accInit, groupedData, nestedKey) => groupedData.
     }
     acc[chrom][nestedKey].push(data)
     return acc
-  }, accInit,
+  }, initialData,
 )
 
 export const getLocusListIntervalsByChromProject = createSelector(
@@ -425,9 +425,9 @@ export const getRnaSeqSignificantJunctionData = createSelector(
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
   (genesById, individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual || {}).reduce(
-    (acc, [individualGuid, rnaSeqData]) => (rnaSeqData.spliceOutliers ? {
-      ...acc,
-      [individualGuid]: Object.values(rnaSeqData.spliceOutliers).flat().filter(({ isSignificant }) => isSignificant)
+    (acc, [individualGuid, rnaSeqData]) => {
+      const individualData = Object.values(rnaSeqData.spliceOutliers || {}).flat()
+        .filter(({ isSignificant }) => isSignificant)
         .sort((a, b) => a.pValue - b.pValue)
         .map(({ geneId, chrom, start, end, strand, type, ...cols }) => ({
           geneSymbol: (genesById[geneId] || {}).geneSymbol || geneId,
@@ -436,19 +436,15 @@ export const getRnaSeqSignificantJunctionData = createSelector(
           individualName: individualsByGuid[individualGuid].displayName,
           individualGuid,
           ...{ geneId, chrom, start, end, strand, type, ...cols },
-        })),
-    } : acc), {},
+        }))
+      return (individualData.length > 0 ? { ...acc, [individualGuid]: individualData } : acc)
+    }, {},
   ),
 )
 
 export const getSpliceOutliersByChromFamily = createSelector(
   getRnaSeqSignificantJunctionData,
   spliceDataByIndiv => Object.values(spliceDataByIndiv).reduce(
-    (acc, spliceData) => {
-      if (!spliceData || spliceData.length < 1) {
-        return acc
-      }
-      return groupDataNestedByChrom(acc, spliceData, spliceData[0].familyGuid)
-    }, {},
+    (acc, spliceData) => (groupDataNestedByChrom(acc, spliceData, spliceData[0].familyGuid)), {},
   ),
 )

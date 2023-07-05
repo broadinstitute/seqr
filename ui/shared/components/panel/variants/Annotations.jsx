@@ -25,8 +25,8 @@ const BaseSpliceOutlierLabel = React.memo(({ variant, spliceOutliersByFamily }) 
     return null
   }
 
-  const overlappedOutliers = getOverlappedIntervals(variant, spliceOutliersByFamily, null,
-    RNASEQ_JUNCTION_PADDING, true)
+  const overlappedOutliers = getOverlappedIntervals(variant, spliceOutliersByFamily, fGuid => fGuid,
+    RNASEQ_JUNCTION_PADDING)
 
   if (overlappedOutliers.length < 1) {
     return null
@@ -333,8 +333,8 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, fa
     return null
   }
 
-  const locusListGuids = getOverlappedIntervals(variant, locusListIntervalsByProject, familiesByGuid)
-    .map(({ locusListGuid }) => locusListGuid)
+  const locusListGuids = getOverlappedIntervals(variant, locusListIntervalsByProject,
+    fGuid => familiesByGuid[fGuid].projectId).map(({ locusListGuid }) => locusListGuid)
 
   return locusListGuids.length > 0 && <LocusListLabels locusListGuids={locusListGuids} />
 })

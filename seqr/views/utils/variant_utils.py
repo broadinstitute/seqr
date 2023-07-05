@@ -240,8 +240,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         )
 
     if include_individual_gene_scores:
-        filters = {'gene_id__in': genes.keys(), 'sample__individual__family__guid__in': loaded_family_guids}
-        response['rnaSeqData'] = get_json_for_rna_seq_outliers(filters)
+        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), loaded_family_guids)
         families_by_guid = response.get('familiesByGuid')
         if families_by_guid:
             _add_family_has_rna_tpm(families_by_guid, genes.keys())
