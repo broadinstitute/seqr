@@ -792,11 +792,11 @@ def get_individual_rna_seq_data(request, individual_guid):
     check_project_permissions(individual.family.project, request.user)
 
     filters = {'sample__individual': individual}
-    outlier_data = get_json_for_rna_seq_outliers(filters, significant_only=False)
+    outlier_data = get_json_for_rna_seq_outliers(filters, significant_only=False, individual_guid=individual_guid)
 
     genes_to_show = get_genes({
         gene_id for rna_data in outlier_data.get(individual_guid, {}).values() for gene_id, data in rna_data.items()
-        if any([d['isSignificant'] for d in data])
+        if any([d['isSignificant'] for d in (data if isinstance(data, list) else [data])])
     })
 
     return create_json_response({

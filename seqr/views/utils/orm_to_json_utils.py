@@ -757,13 +757,16 @@ def get_json_for_matchmaker_submission(submission):
         additional_model_fields=['contact_name', 'contact_href', 'submission_id'])
 
 
-def get_json_for_rna_seq_outliers(filters, significant_only=True):
+EXPRESSION_OUTLIERS = 'outliers'
+SPLICE_OUTLIERS = 'spliceOutliers'
+
+
+def get_json_for_rna_seq_outliers(filters, significant_only=True, individual_guid=None):
     filters = {'sample__is_active': True, **filters}
 
-    outlier_models = [(RnaSeqOutlier, 'outliers'), (RnaSeqSpliceOutlier, 'spliceOutliers')]
-    data_by_individual_gene = defaultdict(lambda: {outlier[1]: defaultdict(list) for outlier in outlier_models})
+    data_by_individual_gene = defaultdict(lambda: {EXPRESSION_OUTLIERS: {}, SPLICE_OUTLIERS: defaultdict(list)})
 
-    for model, outlier_type in outlier_models:
+    for model, outlier_type in [(RnaSeqOutlier, EXPRESSION_OUTLIERS), (RnaSeqSpliceOutlier, SPLICE_OUTLIERS)]:
         significant_filter = {f'{model.SIGNIFICANCE_FIELD}__lt': model.SIGNIFICANCE_THRESHOLD}
         if hasattr(model, 'MAX_SIGNIFICANT_OUTLIER_NUM'):
             significant_filter['rank__lt'] = model.MAX_SIGNIFICANT_OUTLIER_NUM
@@ -772,13 +775,16 @@ def get_json_for_rna_seq_outliers(filters, significant_only=True):
             model.objects.filter(**filters, **(significant_filter if significant_only else {})),
             nested_fields=[
                 {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'},
-                {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
+                {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid', 'value': individual_guid},
             ],
             additional_values={'isSignificant': Value(True)} if significant_only else {
                 'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))},
         )
 
         for data in outliers:
-            data_by_individual_gene[data.pop('individualGuid')][outlier_type][data['geneId']].append(data)
+            if outlier_type == EXPRESSION_OUTLIERS:
+                data_by_individual_gene[data.pop('individualGuid')][outlier_type][data['geneId']] = data
+            else:
+                data_by_individual_gene[data.pop('individualGuid')][outlier_type][data['geneId']].append(data)
 
     return data_by_individual_gene
