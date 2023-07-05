@@ -240,7 +240,7 @@ class BaseHailTableQuery(object):
                 numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
                 **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in genotype_fields.items()}
             ))
-        ).drop('entries')
+        )
 
         return cls._filter_annotated_table(
             ht, consequence_overrides=consequence_overrides, clinvar_path_terms=clinvar_path_terms,
@@ -315,17 +315,15 @@ class BaseHailTableQuery(object):
             family_sample_indices[family_index].append(sample_index)
         family_sample_indices = hl.array(family_sample_indices)
 
-        ht = ht.annotate(entries=hl.enumerate(ht.entries).map(
-            lambda x: hl.or_else(x[1], cls._missing_entry(x[1])).annotate(
-                sampleId=sample_index_id_map.get(x[0]),
-                individualGuid=sample_index_individual_map.get(x[0]),
-                familyGuid=sample_index_family_map.get(x[0]),
-                affected_id=sample_index_affected_status.get(x[0]),
-            )),
-        )
-        # TODO entries still needed?
         ht = ht.annotate(
-            family_entries=family_sample_indices.map(lambda sample_indices: sample_indices.map(lambda i: ht.entries[i]))
+            family_entries=family_sample_indices.map(lambda sample_indices: sample_indices.map(
+                lambda i: hl.or_else(ht.entries[i], cls._missing_entry(ht.entries[i])).annotate(
+                    sampleId=sample_index_id_map.get(i),
+                    individualGuid=sample_index_individual_map.get(i),
+                    familyGuid=sample_index_family_map.get(i),
+                    affected_id=sample_index_affected_status.get(i),
+                )
+            ))
         )
 
         return ht, sample_id_family_index_map
@@ -719,18 +717,9 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
 
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
-        # TODO clean up annotation
         ch_ht = ch_ht.annotate(
-            v1=ch_ht.v1.annotate(genotypes=ch_ht.v1.genotypes.filter(
-                lambda x: ch_ht.family_guids.contains(x.familyGuid)
-            ).map(lambda x: x.drop('affected_id'))),
-            v2=ch_ht.v2.annotate(genotypes=ch_ht.v2.genotypes.filter(
-                lambda x: ch_ht.family_guids.contains(x.familyGuid)
-            ).map(lambda x: x.drop('affected_id'))),
-        )
-        ch_ht = ch_ht.annotate(
-            v1=self._format_results(ch_ht.v1).annotate(**{VARIANT_KEY_FIELD: ch_ht.v1[VARIANT_KEY_FIELD]}),
-            v2=self._format_results(ch_ht.v2).annotate(**{VARIANT_KEY_FIELD: ch_ht.v2[VARIANT_KEY_FIELD]}),
+            v1=self._format_comp_het_result(ch_ht, ch_ht.v1),
+            v2=self._format_comp_het_result(ch_ht, ch_ht.v2),
         )
 
         # Format pairs as lists and de-duplicate
@@ -740,6 +729,11 @@ class BaseHailTableQuery(object):
             **{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
 
         self._comp_het_ht = ch_ht.distinct()
+
+    def _format_comp_het_result(self, ch_ht, v):
+        return self._format_results(v.annotate(
+            genotypes=v.genotypes.filter(lambda x: ch_ht.family_guids.contains(x.familyGuid)).map(lambda x: x.drop('affected_id')),
+        )).annotate(**{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
 
     def _valid_comp_het_families_expr(self, ch_ht):
         # TODO optimize
@@ -1334,18 +1328,16 @@ class MultiDataTypeHailTableQuery(object):
             logger.info(f'Merging fields: {", ".join(to_merge)}')
 
             transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
-            transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences', 'element_type'))
-            # TODO cleanup
-            # transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes', 'value_type', map_func='map_values'))
-            transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes', 'element_type'))
+            transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences'))
+            transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes'))
             ht = ht.transmute(**transmute_expressions)
 
         return ht, family_guid
 
     @staticmethod
-    def _merge_nested_structs(ht, field, sub_type, map_func='map'):
-        struct_type = dict(**getattr(ht[field].dtype, sub_type))
-        new_struct_type = dict(**getattr(ht[f'{field}_1'].dtype, sub_type))
+    def _merge_nested_structs(ht, field):
+        struct_type = dict(**ht[field].dtype.element_type)
+        new_struct_type = dict(**ht[f'{field}_1'].dtype.element_type)
         is_same_type = struct_type == new_struct_type
         struct_type.update(new_struct_type)
 
@@ -1353,7 +1345,7 @@ class MultiDataTypeHailTableQuery(object):
             table_field = ht[merge_field]
             if is_same_type:
                 return table_field
-            return getattr(table_field, map_func)(
+            return table_field.map(
                 lambda x: x.select(**{k: x.get(k, hl.missing(v)) for k, v in struct_type.items()})
             )
 
@@ -1390,7 +1382,7 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
         )
 
     def _valid_comp_het_families_expr(self, ch_ht):
-        # TODO handle multi data type comp hets
+        # TODO multi data type comp het not returning
         valid_families = super(AllDataTypeHailTableQuery, self)._valid_comp_het_families_expr(ch_ht)
         invalid_families = self._invalid_hom_alt_individual_families(ch_ht.v1, ch_ht.v2).union(
             self._invalid_hom_alt_individual_families(ch_ht.v2, ch_ht.v1)
