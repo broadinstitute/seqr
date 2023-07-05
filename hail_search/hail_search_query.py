@@ -141,8 +141,12 @@ class BaseHailTableQuery(object):
             is_all_recessive_search = inheritance_mode == RECESSIVE
             self._filter_compound_hets(is_all_recessive_search)
             if is_all_recessive_search:
-                self._ht = self._ht.filter(hl.is_defined(self._ht.recessiveFamilies) & (self._ht.recessiveFamilies.size() > 0))
-                self._ht = self._ht.transmute(familyGuids=self._ht.recessiveFamilies)  # TODO deprecate familyGuids
+                # self._ht = self._ht.filter(hl.is_defined(self._ht.recessiveFamilies) & (self._ht.recessiveFamilies.size() > 0))
+                # self._ht = self._ht.transmute(familyGuids=self._ht.recessiveFamilies)
+                self._ht = self._ht.annotate(genotypes=self._ht.genotypes.filter(
+                    lambda e: e.is_recessive).map(lambda e: e.drop('is_comp_het', 'is_recessive')))
+                self._ht = self._ht.filter(self._ht.genotypes.size() > 0)
+
                 if self._allowed_consequences_secondary:
                     self._ht = self._ht.filter(self._ht.has_allowed_consequence | self._ht.override_consequences)
             else:
@@ -171,7 +175,7 @@ class BaseHailTableQuery(object):
             family_samples[s['family_guid']].append(s)
             project_samples[s['project_guid']].append(s)
 
-        family_set_fields, family_dict_fields = cls._get_families_annotation_fields(inheritance_mode)
+        #family_set_fields, family_dict_fields = cls._get_families_annotation_fields(inheritance_mode)
         family_list_fields = {'family_entries'}
         if clinvar_path_terms and quality_filter:
             # family_set_fields.add('failQualityFamilies')
@@ -213,16 +217,16 @@ class BaseHailTableQuery(object):
                         hl.or_else(families_ht[k], hl.empty_array(families_ht[k].dtype.element_type)),
                         hl.or_else(families_ht[f'{k}_1'], hl.empty_array(families_ht[k].dtype.element_type)),
                     ) for k in family_list_fields},
-                    **{k: hl.bind(
-                        lambda s1, s2: s1.union(s2),
-                        hl.or_else(families_ht[k], hl.empty_set(hl.tstr)),
-                        hl.or_else(families_ht[f'{k}_1'], hl.empty_set(hl.tstr)),
-                    ) for k in family_set_fields},
-                    **{k: hl.bind(
-                        lambda d1, d2: hl.dict(d1.items().extend(d2.items())),
-                        hl.or_else(families_ht[k], hl.empty_dict(hl.tstr, families_ht[k].dtype.value_type)),
-                        hl.or_else(families_ht[f'{k}_1'], hl.empty_dict(hl.tstr, families_ht[k].dtype.value_type)),
-                    ) for k in family_dict_fields},
+                    # **{k: hl.bind(
+                    #     lambda s1, s2: s1.union(s2),
+                    #     hl.or_else(families_ht[k], hl.empty_set(hl.tstr)),
+                    #     hl.or_else(families_ht[f'{k}_1'], hl.empty_set(hl.tstr)),
+                    # ) for k in family_set_fields},
+                    # **{k: hl.bind(
+                    #     lambda d1, d2: hl.dict(d1.items().extend(d2.items())),
+                    #     hl.or_else(families_ht[k], hl.empty_dict(hl.tstr, families_ht[k].dtype.value_type)),
+                    #     hl.or_else(families_ht[f'{k}_1'], hl.empty_dict(hl.tstr, families_ht[k].dtype.value_type)),
+                    # ) for k in family_dict_fields},
                 )
 
         # logger.info(f'Prefiltered to {families_ht.count()} rows ({cls.__name__})')
@@ -428,9 +432,7 @@ class BaseHailTableQuery(object):
             #     #ht = cls._annotate_possible_comp_hets(ht, sample_data)
             #
             #     if inheritance_mode == RECESSIVE:
-            #         # TODO implement recessive search
             #         ht = ht.annotate(recessiveFamilies=ht.families, families=ht.compHetFamilyCarriers.key_set())
-            #         # TODO need to use unfiltered ht, as recessive variants have been removed?
             #         ht = cls._filter_families_inheritance(
             #             ht, COMPOUND_HET, inheritance_filter, sample_id_family_index_map, sample_data)
             #         ht = ht.annotate(
@@ -446,8 +448,16 @@ class BaseHailTableQuery(object):
             #         #ht = ht.annotate(families=ht.families.intersection(ht.compHetFamilyCarriers.key_set()))
 
         if inheritance_mode == RECESSIVE:
-            ht = ht.annotate(family_entries=hl.enumerate(ht.all_family_entries).map(lambda x: x[1].map(
-                lambda e: e.annotate(is_recessive=hl.is_defined(ht.family_entries[x[0]]))
+            ht = ht.annotate(family_entries=ht.all_family_entries, recessive_family_entries=ht.family_entries)
+            ht = cls._filter_families_inheritance(
+                ht, COMPOUND_HET, inheritance_filter, sample_id_family_index_map, sample_data)
+            ht = ht.transmute(family_entries=hl.enumerate(ht.all_family_entries).map(lambda x: hl.bind(
+                lambda is_recessive, is_comp_het: hl.or_missing(
+                    is_recessive | is_comp_het,
+                    x[1].map(lambda e: e.annotate(is_recessive=is_recessive, is_comp_het=is_comp_het))
+                ),
+                hl.is_defined(ht.recessive_family_entries[x[0]]),
+                hl.is_defined(ht.family_entries[x[0]]),
             )))
 
         #return ht.filter(ht.families.size() > 0)
@@ -819,7 +829,8 @@ class BaseHailTableQuery(object):
         )
 
         if is_all_recessive_search:
-            ch_ht = ch_ht.annotate(genotypes=genotypes.filter(lambda e: e.is_comp_het).map(lambda e: e.drop('is_comp_het')))
+            ch_ht = ch_ht.annotate(genotypes=ch_ht.genotypes.filter(
+                lambda e: e.is_comp_het).map(lambda e: e.drop('is_comp_het', 'is_recessive')))
             ch_ht = ch_ht.filter(ch_ht.genotypes.size() > 0)
             # ch_ht = ch_ht.filter(hl.is_defined(ch_ht.compHetFamilies) & (ch_ht.compHetFamilies.size() > 0))
 
@@ -1464,9 +1475,9 @@ class MultiDataTypeHailTableQuery(object):
             'dataType', 'rg37_locus', 'xpos',  # 'familyGuids',
             'override_consequences', 'has_allowed_consequence', 'has_allowed_secondary_consequence',
         }
-        family_set_fields, family_dict_fields = cls._get_families_annotation_fields(kwargs['inheritance_mode'])
-        all_type_merge_fields.update(family_set_fields)
-        all_type_merge_fields.update(family_dict_fields)
+        # family_set_fields, family_dict_fields = cls._get_families_annotation_fields(kwargs['inheritance_mode'])
+        # all_type_merge_fields.update(family_set_fields)
+        # all_type_merge_fields.update(family_dict_fields)
 
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
         for dt in data_type[1:]:
@@ -1485,6 +1496,7 @@ class MultiDataTypeHailTableQuery(object):
 
             transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
             transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences', 'element_type'))
+            # TODO cleanup
             # transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes', 'value_type', map_func='map_values'))
             transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes', 'element_type'))
             ht = ht.transmute(**transmute_expressions)
