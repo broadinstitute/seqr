@@ -373,6 +373,7 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data):
+        # TODO not working for SV (missing data?)
         inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
         individual_genotype_filter = inheritance_filter.get('genotype') or {}
 
@@ -1382,7 +1383,6 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
         )
 
     def _valid_comp_het_families_expr(self, ch_ht):
-        # TODO multi data type comp het not returning
         valid_families = super(AllDataTypeHailTableQuery, self)._valid_comp_het_families_expr(ch_ht)
         invalid_families = self._invalid_hom_alt_individual_families(ch_ht.v1, ch_ht.v2).union(
             self._invalid_hom_alt_individual_families(ch_ht.v2, ch_ht.v1)
