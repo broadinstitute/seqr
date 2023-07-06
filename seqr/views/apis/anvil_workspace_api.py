@@ -276,8 +276,9 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     dag_variables = {
         'project_path': '{}v{}'.format(_get_loading_project_path(project, sample_type), datetime.now().strftime("%Y%m%d")),
     }
+    reload_summary = f' and {len(previous_loaded_ids)} re-loaded' if previous_loaded_ids else ''
     success_message = f"""
-        *{user.email}* requested to load {num_updated_individuals} {sample_type} samples ({GENOME_VERSION_LOOKUP.get(project.genome_version)}) from AnVIL workspace *{project.workspace_namespace}/{project.workspace_name}* at 
+        *{user.email}* requested to load {num_updated_individuals} new{reload_summary} {sample_type} samples ({GENOME_VERSION_LOOKUP.get(project.genome_version)}) from AnVIL workspace *{project.workspace_namespace}/{project.workspace_name}* at 
         {data_path} to seqr project <{_get_seqr_project_url(project)}|*{project.name}*> (guid: {project.guid})  
   
         The sample IDs to load have been uploaded to {ids_path}."""
