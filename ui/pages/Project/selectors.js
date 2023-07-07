@@ -903,3 +903,16 @@ export const getTissueOptionsByIndividualGuid = createSelector(
     ), {})
   },
 )
+
+export const getRnaSeqOutliersByIndividual = createSelector(
+  getRnaSeqDataByIndividual,
+  rnaSeqDataByIndividual => Object.entries(rnaSeqDataByIndividual).reduce(
+    (acc, [individualGuid, rnaSeqData]) => ({
+      ...acc,
+      [individualGuid]: {
+        outliers: Object.values(rnaSeqData.outliers || {}),
+        spliceOutliers: Object.values(rnaSeqData.spliceOutliers || {}).flat(),
+      },
+    }), {},
+  ),
+)

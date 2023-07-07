@@ -4,13 +4,13 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Loader, Grid, Dropdown } from 'semantic-ui-react'
 
-import { getGenesById, getIndividualsByGuid, getRnaSeqDataByIndividual, getRnaSeqSignificantJunctionData } from 'redux/selectors'
+import { getGenesById, getIndividualsByGuid, getRnaSeqSignificantJunctionData } from 'redux/selectors'
 import { RNASEQ_JUNCTION_PADDING, TISSUE_DISPLAY } from 'shared/utils/constants'
 import DataLoader from 'shared/components/DataLoader'
 import FamilyReads from 'shared/components/panel/family/FamilyReads'
 import RnaSeqJunctionOutliersTable from 'shared/components/table/RnaSeqJunctionOutliersTable'
 import { loadRnaSeqData } from '../reducers'
-import { getRnaSeqDataLoading, getTissueOptionsByIndividualGuid } from '../selectors'
+import { getRnaSeqDataLoading, getRnaSeqOutliersByIndividual, getTissueOptionsByIndividualGuid } from '../selectors'
 
 const RnaSeqOutliers = React.lazy(() => import('./RnaSeqOutliers'))
 
@@ -128,14 +128,12 @@ RnaSeqResultPage.propTypes = {
   loading: PropTypes.bool,
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  individual: getIndividualsByGuid(state)[ownProps.match.params.individualGuid],
-  rnaSeqData: Object.entries(getRnaSeqDataByIndividual(state)[ownProps.match.params.individualGuid] || {}).reduce(
-    (acc, [outlier, data]) => ({ ...acc, [outlier]: Object.values(data).flat() }), {},
-  ),
-  significantJunctionOutliers: getRnaSeqSignificantJunctionData(state)[ownProps.match.params.individualGuid] || [],
+const mapStateToProps = (state, { match }) => ({
+  individual: getIndividualsByGuid(state)[match.params.individualGuid],
+  rnaSeqData: getRnaSeqOutliersByIndividual(state)[match.params.individualGuid],
+  significantJunctionOutliers: getRnaSeqSignificantJunctionData(state)[match.params.individualGuid] || [],
   genesById: getGenesById(state),
-  tissueOptions: getTissueOptionsByIndividualGuid(state)[ownProps.match.params.individualGuid],
+  tissueOptions: getTissueOptionsByIndividualGuid(state)[match.params.individualGuid],
   loading: getRnaSeqDataLoading(state),
 })
 
