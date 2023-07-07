@@ -1,17 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { connect } from 'react-redux'
+import { Header } from 'semantic-ui-react'
 
 import { extent } from 'd3-array'
 import { axisBottom, axisLeft } from 'd3-axis'
-import { scaleLinear, scaleLog } from 'd3-scale'
+import { scaleLinear, scaleLog, scalePow } from 'd3-scale'
 import { select } from 'd3-selection'
 
-import { getGenesById, getRnaSeqDataByIndividual } from 'redux/selectors'
-import DataLoader from 'shared/components/DataLoader'
 import { GeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
-import { loadRnaSeqData } from '../reducers'
-import { getRnaSeqDataLoading } from '../selectors'
 
 const GRAPH_HEIGHT = 400
 const GRAPH_WIDTH = 600
@@ -20,19 +16,31 @@ const GRAPH_MARGIN = { top: 10, bottom: 40, right: 30, left: 45 }
 class RnaSeqOutliersGraph extends React.PureComponent {
 
   static propTypes = {
-    data: PropTypes.object,
+    data: PropTypes.arrayOf(PropTypes.object),
     genesById: PropTypes.object,
   }
 
   componentDidMount() {
-    const { data, genesById } = this.props
-    const dataArray = Object.values(data)
+    this.initPlot()
+  }
+
+  componentDidUpdate(prevProp) {
+    const { data } = this.props
+    if (data !== prevProp.data) {
+      select(this.svg).selectAll('*').remove()
+      this.initPlot()
+    }
+  }
+
+  initPlot = () => {
+    const { data: dataArray, genesById } = this.props
 
     const svg = select(this.svg).append('g')
       .attr('transform', `translate(${GRAPH_MARGIN.left},${GRAPH_MARGIN.top})`)
 
     const x = scaleLinear().domain(extent(dataArray.map(d => d.zScore))).range([0, GRAPH_WIDTH])
     const y = scaleLog().domain(extent(dataArray.map(d => d.pValue))).range([0, GRAPH_HEIGHT])
+    const r = scalePow().exponent(4).domain(extent(dataArray.map(d => Math.abs(d.deltaPsi)))).range([1, 10])
 
     // x-axis
     svg.append('g')
@@ -66,8 +74,9 @@ class RnaSeqOutliersGraph extends React.PureComponent {
     dataPoints.append('circle')
       .attr('cx', d => x(d.zScore))
       .attr('cy', d => y(d.pValue))
-      .attr('r', 3)
-      .style('fill', d => (d.isSignificant ? 'red' : 'lightgrey'))
+      .attr('r', d => (d.deltaPsi === undefined ? 3 : r(Math.abs(d.deltaPsi))))
+      .style('fill', 'None')
+      .style('stroke', d => (d.isSignificant ? 'red' : 'lightgrey'))
 
     dataPoints.append('text')
       .text(d => (d.isSignificant ? (genesById[d.geneId] || {}).geneSymbol : null))
@@ -97,36 +106,27 @@ class RnaSeqOutliersGraph extends React.PureComponent {
 
 }
 
-const BaseRnaSeqOutliers = React.memo(({ individualGuid, rnaSeqData, genesById, familyGuid, loading, load }) => (
-  <DataLoader content={rnaSeqData} contentId={individualGuid} load={load} loading={loading}>
+const RnaSeqOutliers = React.memo(({ rnaSeqData, genesById, familyGuid, getLocation, searchType, title }) => (
+  <div>
+    <Header content={title} textAlign="center" />
     <GeneSearchLink
-      buttonText="Search for variants in outlier genes"
+      buttonText={`Search for variants in outlier ${searchType}`}
       icon="search"
-      location={Object.values(rnaSeqData || {}).filter(({ isSignificant }) => isSignificant).map(({ geneId }) => geneId).join(',')}
+      location={rnaSeqData.filter(({ isSignificant }) => isSignificant).map(getLocation).join(',')}
       familyGuid={familyGuid}
       floated="right"
     />
     <RnaSeqOutliersGraph data={rnaSeqData} genesById={genesById} />
-  </DataLoader>
+  </div>
 ))
 
-BaseRnaSeqOutliers.propTypes = {
-  individualGuid: PropTypes.string.isRequired,
+RnaSeqOutliers.propTypes = {
   familyGuid: PropTypes.string.isRequired,
-  rnaSeqData: PropTypes.object,
+  rnaSeqData: PropTypes.arrayOf(PropTypes.object).isRequired,
   genesById: PropTypes.object,
-  loading: PropTypes.bool,
-  load: PropTypes.func,
+  getLocation: PropTypes.func,
+  searchType: PropTypes.string,
+  title: PropTypes.string,
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  rnaSeqData: getRnaSeqDataByIndividual(state)[ownProps.individualGuid]?.outliers,
-  genesById: getGenesById(state),
-  loading: getRnaSeqDataLoading(state),
-})
-
-const mapDispatchToProps = {
-  load: loadRnaSeqData,
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(BaseRnaSeqOutliers)
+export default RnaSeqOutliers

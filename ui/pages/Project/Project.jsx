@@ -10,7 +10,7 @@ import { loadCurrentProject, unloadProject } from './reducers'
 import { getCurrentProject } from './selectors'
 import ProjectPageUI from './components/ProjectPageUI'
 import CaseReview from './components/CaseReview'
-import FamilyPage from './components/FamilyPage'
+import FamilyPageRouter from './components/FamilyPage'
 import Matchmaker from './components/Matchmaker'
 import SavedVariants from './components/SavedVariants'
 
@@ -44,7 +44,7 @@ class Project extends React.PureComponent {
           {project.hasCaseReview && <Route path={`${match.url}/case_review`} component={CaseReview} />}
           <Route path={`${match.url}/analysis_group/:analysisGroupGuid`} component={ProjectPageUI} />
           <Route path={`${match.url}/family_page/:familyGuid/matchmaker_exchange`} component={Matchmaker} />
-          <Route path={`${match.url}/family_page/:familyGuid`} component={FamilyPage} />
+          <Route path={`${match.url}/family_page/:familyGuid`} component={FamilyPageRouter} />
           <Route path={`${match.url}/saved_variants`} component={SavedVariants} />
           <Route component={Error404} />
         </Switch>

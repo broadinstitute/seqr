@@ -39,7 +39,6 @@ import { getCurrentProject, getParentOptionsByIndividual } from '../../selectors
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 import CollapsableLayout from './CollapsableLayout'
 
-const RnaSeqOutliers = React.lazy(() => import('../RnaSeqOutliers'))
 const PhenotypePrioritizedGenes = React.lazy(() => import('../PhenotypePrioritizedGenes'))
 
 const Detail = styled.div`
@@ -119,13 +118,6 @@ CaseReviewStatus.propTypes = {
 
 const SHOW_DATA_MODAL_CONFIG = [
   {
-    shouldShowField: 'hasRnaOutlierData',
-    component: RnaSeqOutliers,
-    modalName: ({ sampleId }) => `OUTRIDER-${sampleId}`,
-    title: ({ sampleId }) => `RNA-Seq OUTRIDER: ${sampleId}`,
-    linkText: 'Show RNA-Seq OUTRIDER',
-  },
-  {
     shouldShowField: 'hasPhenotypeGeneScores',
     component: PhenotypePrioritizedGenes,
     modalName: ({ individualId }) => `PHENOTYPE-PRIORITIZATION-${individualId}`,
@@ -172,6 +164,14 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
           }
         />
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
+    )}
+    {individual.hasRnaOutlierData && (
+      <Link
+        target="_blank"
+        to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/rnaseq_results/${individual.individualGuid}`}
+      >
+        RNAseq Results
+      </Link>
     )}
     {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
       ({ modalName, title, modalSize, linkText, component }) => {

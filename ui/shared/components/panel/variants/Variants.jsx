@@ -127,7 +127,9 @@ VariantLayout.propTypes = {
   children: PropTypes.node,
 }
 
-const Variant = React.memo(({ variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, ...props }) => {
+const Variant = React.memo((
+  { variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, updateReads, ...props },
+) => {
   const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)
   const { severity } = clinvarSignificance(variant.clinvar)
   return (

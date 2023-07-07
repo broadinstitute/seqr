@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.db.models import prefetch_related_objects
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Individual, Family, RnaSeqOutlier
+from seqr.models import Individual, Family
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
@@ -785,21 +785,25 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 
     return create_json_response(response)
 
+
 @login_and_policies_required
 def get_individual_rna_seq_data(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     check_project_permissions(individual.family.project, request.user)
-    outlier_data = RnaSeqOutlier.objects.filter(sample__individual=individual, sample__is_active=True)
 
-    rna_seq_data = {
-        data['geneId']: data for data in get_json_for_rna_seq_outliers(outlier_data)
-    }
-    genes_to_show = get_genes([gene_id for gene_id, data in rna_seq_data.items() if data['isSignificant']])
+    filters = {'sample__individual': individual}
+    outlier_data = get_json_for_rna_seq_outliers(filters, significant_only=False, individual_guid=individual_guid)
+
+    genes_to_show = get_genes({
+        gene_id for rna_data in outlier_data.get(individual_guid, {}).values() for gene_id, data in rna_data.items()
+        if any([d['isSignificant'] for d in (data if isinstance(data, list) else [data])])
+    })
 
     return create_json_response({
-        'rnaSeqData': {individual_guid: {'outliers': rna_seq_data}},
+        'rnaSeqData': outlier_data,
         'genesById': genes_to_show,
     })
+
 
 @login_and_policies_required
 def get_hpo_terms(request, hpo_parent_id):

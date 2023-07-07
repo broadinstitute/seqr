@@ -24,7 +24,7 @@ const FOOTER_LINKS = [
   { to: TOS_PATH, content: 'Terms of Service' },
 ]
 
-const SEQR_PAPER_URL = 'https://doi.org/10.1002/humu.24366'
+const SEQR_PAPER_URL = 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9903206'
 export const SeqrPaperLink =
   ({ content }) => <a target="_blank" rel="noreferrer" href={SEQR_PAPER_URL}>{content || SEQR_PAPER_URL}</a>
 
