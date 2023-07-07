@@ -663,9 +663,11 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         }}]})
         self.assertEqual(responses.calls[-1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))
 
-
+        sample_summary = '3 new'
+        if test_add_data:
+            sample_summary += ' and 7 re-loaded'
         slack_message = """
-        *test_user_manager@test.com* requested to load 3 WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
+        *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})  
   
         The sample IDs to load have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/{guid}_ids.txt.
@@ -682,7 +684,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
     "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v20210301"
 }}```
     """.format(guid=project.guid, version=genome_version, workspace_name=project.workspace_name,
-                   project_name=project.name)
+                   project_name=project.name, sample_summary=sample_summary)
         self.mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
         self.mock_send_email.assert_not_called()
 
