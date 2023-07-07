@@ -986,17 +986,54 @@ class IndividualAPITest(object):
                 'ENSG00000135953': {
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'isSignificant': True,
+                    'tissueType': None,
                 },
                 'ENSG00000240361': {
                     'geneId': 'ENSG00000240361', 'zScore': -4.08, 'pValue': 5.88, 'pAdjust': 0.09, 'isSignificant': False,
+                    'tissueType': None,
                 },
                 'ENSG00000268903': {
                     'geneId': 'ENSG00000268903', 'zScore': 7.08, 'pValue':0.000000000588, 'pAdjust': 0.00000000139,
                     'isSignificant': True,
+                    'tissueType': None,
                 },
-            }}
-        })
+            },
+            'spliceOutliers': {
+                'ENSG00000106554': mock.ANY,
+            },
+        }})
+        self.assertDictEqual(
+            {
+                'chrom': '7', 'deltaPsi': 0.85, 'end': 132886973, 'geneId': 'ENSG00000106554', 'isSignificant': True,
+                'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1,
+                'readCount': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'zScore': 12.34,
+                'tissueType': 'F',
+            },
+            response_json['rnaSeqData'][INDIVIDUAL_GUID]['spliceOutliers']['ENSG00000106554'][0]
+        )
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
+
+    @mock.patch('seqr.views.utils.orm_to_json_utils.RnaSeqSpliceOutlier.MAX_SIGNIFICANT_OUTLIER_NUM', 2)
+    def test_get_individual_rna_seq_data_is_significant(self):
+        url = reverse(get_individual_rna_seq_data, args=[INDIVIDUAL_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        response_rnaseq_data = response.json()['rnaSeqData'][INDIVIDUAL_GUID]
+        self.assertTrue(response_rnaseq_data['outliers']['ENSG00000135953']['isSignificant'])
+        significant_outliers = [outlier for outlier in response_rnaseq_data['outliers'].values() if outlier['isSignificant']]
+        self.assertEqual(2, len(significant_outliers))
+        self.assertListEqual(
+            [{field: outlier[field] for field in ['start', 'end', 'pValue', 'tissueType', 'isSignificant']}
+             for outlier in response_rnaseq_data['spliceOutliers']['ENSG00000106554']],
+            [{'start': 132885746, 'end': 132886973, 'pValue': 1.08e-56, 'tissueType': 'F', 'isSignificant': True},
+             {'start': 1001, 'end': 2001, 'pValue': 0.1, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 3000, 'end': 4000, 'pValue': 0.0001, 'tissueType': 'F', 'isSignificant': True},
+             {'start': 5000, 'end': 6000, 'pValue': 0.0001, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 7000, 'end': 8000, 'pValue': 0.001, 'tissueType': 'M', 'isSignificant': True},
+             {'start': 9000, 'end': 9100, 'pValue': 0.2, 'tissueType': 'M', 'isSignificant': False}],
+        )
 
 
 class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
