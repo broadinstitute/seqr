@@ -42,7 +42,8 @@ const PageHeader = React.memo((
       )
     }
   } else if (match.params.breadcrumb === 'family_page') {
-    if (match.params.breadcrumbIdSection === 'matchmaker_exchange') {
+    const { breadcrumbIdSection } = match.params
+    if (breadcrumbIdSection === 'matchmaker_exchange' || breadcrumbIdSection === 'rnaseq_results') {
       description = ''
     } else {
       description = family.description
