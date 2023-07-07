@@ -511,7 +511,7 @@ const mapStateToProps = (state, ownProps) => ({
   familiesByGuid: getFamiliesByGuid(state),
   projectsByGuid: getProjectsByGuid(state),
   genesById: getGenesById(state),
-  spliceOutliersByFamily: getSpliceOutliersByChromFamily(state)[ownProps.variant?.chrom],
+  spliceOutliersByFamily: ownProps.variant && getSpliceOutliersByChromFamily(state)[ownProps.variant.chrom],
 })
 
 export default connect(mapStateToProps)(FamilyReads)
