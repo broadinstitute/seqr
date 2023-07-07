@@ -6,7 +6,7 @@ import subprocess # nosec
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
-    igv_genomes_proxy
+    igv_genomes_proxy, receive_bulk_igv_table_handler
 from seqr.views.apis.igv_api import GS_STORAGE_ACCESS_CACHE_KEY
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
@@ -118,8 +118,9 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'uploadedFileId', 'errors', 'info', 'updates'})
+        self.assertSetEqual(set(response_json.keys()), {'uploadedFileId', 'errors', 'warnings', 'info', 'updates'})
         self.assertListEqual(response_json['errors'], [])
+        self.assertListEqual(response_json['warnings'], [])
         self.assertListEqual(
             response_json['info'], ['Parsed 3 rows in 2 individuals from samples.csv', 'No change detected for 1 rows'])
         self.assertListEqual(sorted(response_json['updates'], key=lambda o: o['individualGuid']), [
@@ -131,6 +132,67 @@ class IgvAPITest(AuthenticationTestCase):
         self.login_data_manager_user()
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 200)
+
+    @mock.patch('seqr.views.apis.igv_api.load_uploaded_file')
+    def test_receive_bulk_alignment_table_handler(self, mock_load_uploaded_file):
+        url = reverse(receive_bulk_igv_table_handler)
+        self.check_pm_login(url)
+
+        # Send invalid requests
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['No file uploaded']})
+
+        uploaded_file_id = 'test_file_id'
+        request_data = json.dumps({'mappingFile': {'uploadedFileId': uploaded_file_id}})
+        pm_projects_rows = [
+            ['1kg project nåme with uniçøde', 'NA19675_1', 'gs://readviz/batch_10.dcr.bed.gz', 'NA19675'],
+            ['1kg project nåme with uniçøde', 'NA19675_1', 'gs://readviz/NA19675_1.bam'],
+            ['1kg project nåme with uniçøde', 'NA20870', 'gs://readviz/NA20870.cram'],
+            ['Test Reprocessed Project', 'NA20885', 'gs://readviz/NA20885.cram'],
+        ]
+        rows = pm_projects_rows + [['Non-Analyst Project', 'NA21234', 'gs://readviz/NA21234.cram']]
+        mock_load_uploaded_file.return_value = [['NA19675']] + rows
+        response = self.client.post(url, content_type='application/json', data=request_data)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['Must contain 3 or 4 columns: NA19675']})
+
+        mock_load_uploaded_file.return_value = rows + [
+            ['Non-project', 'NA19675_1', 'gs://readviz/NA19679.bam'],
+            ['1kg project nåme with uniçøde', 'NA19675', 'gs://readviz/batch_10.dcr.bed.gz'],
+        ]
+        response = self.client.post(url, content_type='application/json', data=request_data)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': [
+            'The following Individuals do not exist: NA19675 (1kg project nåme with uniçøde), NA21234 (Non-Analyst Project), NA19675_1 (Non-project)']})
+
+        # Send valid request
+        mock_load_uploaded_file.return_value = pm_projects_rows
+        response = self.client.post(url, content_type='application/json', data=request_data)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'uploadedFileId', 'errors', 'warnings', 'info', 'updates'})
+        self.assertListEqual(response_json['errors'], [])
+        self.assertListEqual(response_json['warnings'], [])
+        self.assertListEqual(response_json['info'], ['Parsed 4 rows in 3 individuals', 'No change detected for 1 rows'])
+        updates = [
+            {'individualGuid': 'I000001_na19675', 'individualId': 'NA19675_1', 'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675'},
+            {'individualGuid': 'I000001_na19675', 'individualId': 'NA19675_1', 'filePath': 'gs://readviz/NA19675_1.bam', 'sampleId': None},
+            {'individualGuid': 'I000015_na20885', 'individualId': 'NA20885', 'filePath': 'gs://readviz/NA20885.cram', 'sampleId': None},
+        ]
+        self.assertListEqual(sorted(response_json['updates'], key=lambda o: o['individualGuid']), updates)
+
+        # test data manager access
+        self.login_data_manager_user()
+        mock_load_uploaded_file.return_value = rows
+        response = self.client.post(url, content_type='application/json', data=request_data)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(response_json['info'], ['Parsed 5 rows in 4 individuals', 'No change detected for 1 rows'])
+        self.assertListEqual(sorted(response_json['updates'], key=lambda o: o['individualGuid']), updates + [
+            {'individualGuid': 'I000018_na21234', 'individualId': 'NA21234', 'filePath': 'gs://readviz/NA21234.cram', 'sampleId': None}
+        ])
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')

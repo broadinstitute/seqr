@@ -13,7 +13,7 @@ from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    login_and_policies_required, pm_or_data_manager_required
+    login_and_policies_required, pm_or_data_manager_required, get_project_guids_user_can_view
 
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 GS_STORAGE_URL = 'https://storage.googleapis.com'
@@ -43,7 +43,7 @@ def _process_igv_table_handler(parse_uploaded_file, get_valid_matched_individual
 
         matched_individuals = get_valid_matched_individuals(individual_dataset_mapping)
 
-        message = f'Parsed {sum([len(rows) for rows in individual_dataset_mapping.values()])} rows in {len(individual_dataset_mapping)} individuals'
+        message = f'Parsed {sum([len(rows) for rows in individual_dataset_mapping.values()])} rows in {len(matched_individuals)} individuals'
         if filename:
             message += f' from {filename}'
         info.append(message)
@@ -109,17 +109,18 @@ def receive_bulk_igv_table_handler(request):
         return uploaded_file_id, None, records
 
     def _get_valid_matched_individuals(individual_dataset_mapping):
-        projects = {k[0] for k in individual_dataset_mapping.keys()}
-        individual_ids = {k[1] for k in individual_dataset_mapping.keys()}
-        matched_individuals = Individual.objects.filter(
-            family__project__name__in=projects, individual_id__in=individual_ids).select_related('family__project')
-        individuals_by_project_id = {(i.family.project.name, i.individual_id): i for i in matched_individuals}
+        individuals = Individual.objects.filter(
+            family__project__guid__in=get_project_guids_user_can_view(request.user, limit_data_manager=False),
+            family__project__name__in={k[0] for k in individual_dataset_mapping.keys()},
+            individual_id__in={k[1] for k in individual_dataset_mapping.keys()},
+        ).select_related('family__project')
+        individuals_by_project_id = {(i.family.project.name, i.individual_id): i for i in individuals}
         unmatched = set(individual_dataset_mapping.keys()) - set(individuals_by_project_id.keys())
         if len(unmatched) > 0:
             raise Exception(
-                f'The following Individuals do not exist: {", ".join([f"{i} ({p})" for p, i in unmatched])}')
+                f'The following Individuals do not exist: {", ".join([f"{i} ({p})" for p, i in sorted(unmatched)])}')
 
-        return {v: individual_dataset_mapping[k] for k, v in individuals_by_project_id.items()}
+        return {v: individual_dataset_mapping[k] for k, v in individuals_by_project_id.items() if individual_dataset_mapping[k]}
 
     return _process_igv_table_handler(_parse_uploaded_file, _get_valid_matched_individuals)
 
