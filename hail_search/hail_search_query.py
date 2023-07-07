@@ -128,7 +128,7 @@ class BaseHailTableQuery(object):
 
         consequence_overrides = self._parse_overrides(pathogenicity, annotations, annotations_secondary)
 
-        self._ht, self._family_guid = self.import_filtered_table(
+        self._ht, self._family_guids = self.import_filtered_table(
             data_type, sample_data, intervals=self._parse_intervals(intervals, variant_ids), variant_ids=variant_ids,
             consequence_overrides=consequence_overrides, allowed_consequences=self._allowed_consequences,
             allowed_consequences_secondary=self._allowed_consequences_secondary, filtered_genes=self._filtered_genes,
@@ -178,7 +178,6 @@ class BaseHailTableQuery(object):
             family_list_fields.add('passes_quality_families')
 
         logger.info(f'Loading data for {len(family_samples)} families in {len(project_samples)} projects ({cls.__name__})')
-        family_guid = None
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
             family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht', **load_table_kwargs)
@@ -244,7 +243,7 @@ class BaseHailTableQuery(object):
 
         return cls._filter_annotated_table(
             ht, consequence_overrides=consequence_overrides, clinvar_path_terms=clinvar_path_terms,
-            vcf_quality_filter=vcf_quality_filter, **kwargs), family_guid
+            vcf_quality_filter=vcf_quality_filter, **kwargs), set(family_samples.keys())
 
     @classmethod
     def _get_family_table_filter_kwargs(cls, **kwargs):
@@ -373,7 +372,6 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data):
-        # TODO not working for SV (missing data?)
         inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
         individual_genotype_filter = inheritance_filter.get('genotype') or {}
 
@@ -686,14 +684,20 @@ class BaseHailTableQuery(object):
         return x_interval.contains(ht.locus)
 
     def _filter_compound_hets(self, is_all_recessive_search):
-        ch_ht = self._ht.annotate(
-            gene_ids=hl.set(self._ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)),
-        )
-
+        ch_ht = self._ht
         if is_all_recessive_search:
             ch_ht = ch_ht.annotate(genotypes=ch_ht.genotypes.filter(
                 lambda e: e.is_comp_het).map(lambda e: e.drop('is_comp_het', 'is_recessive')))
             ch_ht = ch_ht.filter(ch_ht.genotypes.size() > 0)
+
+        family_guids = hl.array(sorted(self._family_guids))
+        ch_ht = ch_ht.annotate(
+            gene_ids=hl.set(ch_ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)),
+            family_genotypes=hl.bind(
+                lambda family_genotypes: family_guids.map(lambda family_guid: family_genotypes.get(family_guid)),
+                ch_ht.genotypes.group_by(lambda x: x.familyGuid)
+            ),
+        )
 
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
@@ -715,15 +719,16 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.filter(ch_ht.v1[VARIANT_KEY_FIELD] != ch_ht.v2[VARIANT_KEY_FIELD])
 
         # Filter variant pairs for family and genotype
-        ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
+        ch_ht = ch_ht.annotate(valid_families=hl.enumerate(ch_ht.v1.family_genotypes).map(
+            lambda x: self._is_valid_comp_het_family(ch_ht, x[1], ch_ht.v2.family_genotypes[x[0]])
+        ))
+        ch_ht = ch_ht.filter(ch_ht.valid_families.any(lambda x: x))
 
-        ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
+        # Format pairs as lists and de-duplicate
         ch_ht = ch_ht.annotate(
             v1=self._format_comp_het_result(ch_ht, ch_ht.v1),
             v2=self._format_comp_het_result(ch_ht, ch_ht.v2),
         )
-
-        # Format pairs as lists and de-duplicate
         ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2], key=lambda x: x._sort)})
         ch_ht = ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
         ch_ht = ch_ht.key_by(
@@ -731,28 +736,19 @@ class BaseHailTableQuery(object):
 
         self._comp_het_ht = ch_ht.distinct()
 
+    def _is_valid_comp_het_family(self, ch_ht, genotypes_1, genotypes2):
+        return hl.is_defined(genotypes_1) & hl.is_defined(genotypes2) & genotypes_1.all(
+            lambda g: (g.affected_id != UNAFFECTED_ID) | (g.numAlt == 0) | genotypes2.any(
+                lambda g2: (g.individualGuid == g2.individualGuid) & (g2.numAlt == 0)
+            )
+        )
+
     def _format_comp_het_result(self, ch_ht, v):
         return self._format_results(v.annotate(
-            genotypes=v.genotypes.filter(lambda x: ch_ht.family_guids.contains(x.familyGuid)).map(lambda x: x.drop('affected_id')),
+            genotypes=hl.enumerate(ch_ht.valid_families).filter(lambda x: x[1]).flatmap(
+                lambda x: v.family_genotypes[x[0]].map(lambda g: g.drop('affected_id'))
+            )
         )).annotate(**{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
-
-    def _valid_comp_het_families_expr(self, ch_ht):
-        # TODO optimize
-        return hl.bind(
-            lambda grouped_gts_1, grouped_gts_2: hl.set(grouped_gts_1.items().filter(
-                lambda x: grouped_gts_2.contains(x[0]) & (grouped_gts_2[x[0]].intersection(x[1]).size() == 0)
-            ).map(lambda x: x[0])),
-            ch_ht.v1.genotypes.group_by(lambda x: x.familyGuid).map_values(
-                lambda gts: hl.set(gts.filter(
-                    lambda g: (g.affected_id == UNAFFECTED_ID) & (g.numAlt > 0)
-                ).map(lambda g: g.individualGuid))
-            ),
-            ch_ht.v2.genotypes.group_by(lambda x: x.familyGuid).map_values(
-                lambda gts: hl.set(gts.filter(
-                    lambda g: (g.affected_id == UNAFFECTED_ID) & (g.numAlt > 0)
-                ).map(lambda g: g.individualGuid))
-            ),
-        )
 
     def _format_results(self, ht):
         annotations = {k: v(ht) for k, v in self.annotation_fields.items()}
@@ -921,11 +917,11 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     @classmethod
     def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, **kwargs):
-        ht, family_guid = super(BaseVariantHailTableQuery, cls).import_filtered_table(
+        ht, family_guids = super(BaseVariantHailTableQuery, cls).import_filtered_table(
             data_type, sample_data, intervals=None if exclude_intervals else intervals,
             excluded_intervals=intervals if exclude_intervals else None, **kwargs)
         ht = ht.key_by(VARIANT_KEY_FIELD)
-        return ht, family_guid
+        return ht, family_guids
 
     @classmethod
     def _filter_entries_table(cls, ht, excluded_intervals=None, variant_ids=None, genome_version=None, **kwargs):
@@ -1153,12 +1149,12 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
 
     @classmethod
     def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, **kwargs):
-        ht, family_guid = super(BaseSvHailTableQuery, cls).import_filtered_table(data_type, sample_data, **kwargs)
+        ht, family_guids = super(BaseSvHailTableQuery, cls).import_filtered_table(data_type, sample_data, **kwargs)
         if intervals:
             interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
                 if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
             ht = ht.filter(interval_filter)
-        return ht, family_guid
+        return ht, family_guids
 
     @staticmethod
     def get_x_chrom_filter(ht, x_interval):
@@ -1305,7 +1301,7 @@ class MultiDataTypeHailTableQuery(object):
     def import_filtered_table(cls, data_type, sample_data, **kwargs):
         data_type_0 = data_type[0]
 
-        ht, family_guid = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type_0, sample_data[data_type_0], **kwargs)
+        ht, family_guids = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type_0, sample_data[data_type_0], **kwargs)
         ht = ht.annotate(dataType=data_type_0)
 
         all_type_merge_fields = {
@@ -1316,9 +1312,8 @@ class MultiDataTypeHailTableQuery(object):
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
         for dt in data_type[1:]:
             data_type_cls = QUERY_CLASS_MAP[dt]
-            sub_ht, new_family_guid = data_type_cls.import_filtered_table(dt, sample_data[dt], **kwargs)
-            if new_family_guid != family_guid:
-                family_guid = None
+            sub_ht, new_family_guids = data_type_cls.import_filtered_table(dt, sample_data[dt], **kwargs)
+            family_guids.update(new_family_guids)
             sub_ht = sub_ht.annotate(dataType=dt)
             ht = ht.join(sub_ht, how='outer')
 
@@ -1333,7 +1328,7 @@ class MultiDataTypeHailTableQuery(object):
             transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes'))
             ht = ht.transmute(**transmute_expressions)
 
-        return ht, family_guid
+        return ht, family_guids
 
     @staticmethod
     def _merge_nested_structs(ht, field):
@@ -1382,23 +1377,24 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
             BaseSvHailTableQuery.get_major_consequence(transcript),
         )
 
-    def _valid_comp_het_families_expr(self, ch_ht):
-        valid_families = super(AllDataTypeHailTableQuery, self)._valid_comp_het_families_expr(ch_ht)
-        invalid_families = self._invalid_hom_alt_individual_families(ch_ht.v1, ch_ht.v2).union(
-            self._invalid_hom_alt_individual_families(ch_ht.v2, ch_ht.v1)
+    def _is_valid_comp_het_family(self, ch_ht, genotypes_1, genotypes_2):
+        is_valid = super(AllDataTypeHailTableQuery, self)._is_valid_comp_het_family(ch_ht, genotypes_1, genotypes_2)
+        return is_valid & (
+            genotypes_1.all(lambda g: g.numAlt < 2) | self._is_overlapped_trans_deletion(ch_ht.v1, ch_ht.v2)
+        ) & (
+             genotypes_2.all(lambda g: g.numAlt < 2) | self._is_overlapped_trans_deletion(ch_ht.v2, ch_ht.v1)
+        ) & genotypes_1.all(
+            lambda g: (g.affected_id != UNAFFECTED_ID) | (g.numAlt == 0) | genotypes_2.any(
+                lambda g2: (g.individualGuid == g2.individualGuid) & (g2.numAlt == 0)
+            )
         )
-        return valid_families.difference(invalid_families)
 
     @staticmethod
-    def _invalid_hom_alt_individual_families(v1, v2):
+    def _is_overlapped_trans_deletion(v1, v2):
         # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
         # considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
-        return hl.if_else(
-            hl.is_defined(v1.locus) & hl.set(SV_DEL_INDICES).contains(v2.svType_id) &
-            (v2.interval.start.position <= v1.locus.position) & (v1.locus.position <= v2.interval.end.position),
-            hl.empty_set(hl.tstr),
-            hl.set(v1.genotypes.filter(lambda g: g.numAlt == 2).map(lambda g: g.familyGuid)),
-        )
+        return hl.is_defined(v1.locus) & hl.set(SV_DEL_INDICES).contains(v2.svType_id) & \
+               (v2.interval.start.position <= v1.locus.position) & (v1.locus.position <= v2.interval.end.position)
 
     @classmethod
     def _consequence_sorts(cls, ht):
