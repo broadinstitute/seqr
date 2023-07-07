@@ -772,10 +772,10 @@ export const getPageHeaderBreadcrumbIdSections = createSelector(
         content: `Family: ${family.displayName || ''}`,
         link: `/project/${project.projectGuid}/family_page/${family.familyGuid}`,
       }]
-      const { breadcrumbIdSection } = match.params
+      const { breadcrumbIdSection, breadcrumbIdSubsection } = match.params
       if (breadcrumbIdSection) {
-        if (breadcrumbIdSection.startsWith('rnaseq_results/')) {
-          const individualId = individualsByGuid[breadcrumbIdSection.split('/')[1]]?.individualId || ''
+        if (breadcrumbIdSection === 'rnaseq_results') {
+          const individualId = individualsByGuid[breadcrumbIdSubsection]?.individualId || ''
           breadcrumbIdSections.push({ content: `RNAseq: ${individualId}` })
         } else {
           breadcrumbIdSections.push({ content: snakecaseToTitlecase(breadcrumbIdSection), link: match.url })
@@ -902,4 +902,17 @@ export const getTissueOptionsByIndividualGuid = createSelector(
       } : acc
     ), {})
   },
+)
+
+export const getRnaSeqOutliersByIndividual = createSelector(
+  getRnaSeqDataByIndividual,
+  rnaSeqDataByIndividual => Object.entries(rnaSeqDataByIndividual).reduce(
+    (acc, [individualGuid, rnaSeqData]) => ({
+      ...acc,
+      [individualGuid]: {
+        outliers: Object.values(rnaSeqData.outliers || {}),
+        spliceOutliers: Object.values(rnaSeqData.spliceOutliers || {}).flat(),
+      },
+    }), {},
+  ),
 )

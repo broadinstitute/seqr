@@ -32,7 +32,7 @@ const JUNCTION_COLUMN = {
       <GeneSearchLink
         buttonText=""
         icon="search"
-        location={`${row.chrom}:${Math.max(1, row.start - RNASEQ_JUNCTION_PADDING)}-${row.end + RNASEQ_JUNCTION_PADDING}`}
+        location={getLocus(row.chrom, row.start, RNASEQ_JUNCTION_PADDING, row.end - row.start)}
         familyGuid={row.familyGuid}
       />
     </div>
