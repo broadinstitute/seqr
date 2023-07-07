@@ -138,7 +138,12 @@ ES_VARIANTS = [
               'consequence_terms': [
                   'frameshift_variant'
               ]
-            }
+            },
+            {
+              "gene_symbol" : "H3-2",
+              "gene_id" : None,
+              "major_consequence" : "NEAREST_TSS"
+            },
           ],
           'screen_region_type' : [
             'dELS',
