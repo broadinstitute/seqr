@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
+import datetime
 import json
 import mock
 
 from copy import deepcopy
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
+from io import BytesIO
+from openpyxl import load_workbook
 
 from seqr.models import Individual
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
@@ -354,12 +357,10 @@ class IndividualAPITest(object):
             }))
         self.assertEqual(response.status_code, 200 if self.HAS_EXTERNAL_PROJECT_ACCESS else 403)
 
-    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-    def test_individuals_table_handler(self):
+    def test_individuals_table_handler_errors(self):
         individuals_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
         self.check_manager_login(individuals_url)
 
-        # send invalid requests
         response = self.client.get(individuals_url)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Received 0 files instead of 1'], 'warnings': []})
@@ -370,6 +371,20 @@ class IndividualAPITest(object):
         errors = response.json()['errors']
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0], 'Missing required columns: Individual Id')
+
+        response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
+            'test.tsv', 'Family ID	Individual ID\n""	""""'.encode('utf-8'))})
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'warnings': None, 'errors': [
+            'Missing Family Id in row #1', 'Missing Individual Id in row #1',
+        ]})
+
+        response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
+            'test.tsv',  '#Some comments\n#Family ID	#Individual ID	Previous Individual ID\n"1"	"NA19675_1"""'.encode('utf-8'))})
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'warnings': [], 'errors': [
+            'Error while parsing file: test.tsv. Row 1 contains 2 columns: 1, NA19675_1, while header contains 3: Family ID, Individual ID, Previous Individual ID',
+        ]})
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
             'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"\n"2"	"NA19675_1"	""'.encode('utf-8'))})
@@ -386,16 +401,51 @@ class IndividualAPITest(object):
         })
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
-            'test.tsv', 'Family ID	Individual ID	Paternal ID\n"1"	"NA19675_1"	"NA19678_dad"'.encode('utf-8'))})
+            'test.tsv', 'Family ID	Individual ID	affected	sex	proband_relation\n"1"	"NA19675_1"	"no"	"boy"	"mom"'.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'warnings': None, 'errors': [
+            'Invalid value "no" for Affected in row #1',
+            'Invalid value "boy" for Sex in row #1',
+            'Invalid value "mom" for Proband Relationship in row #1',
+        ]})
+
+        rows = [
+            'Family ID	Individual ID	Paternal ID	sex	proband_relation',
+            '"1"	"NA19675_1"	"NA19678_dad"	""	""',
+        ]
+        response = self.client.post(individuals_url, {
+            'f': SimpleUploadedFile('test.tsv',  '\n'.join(rows).encode('utf-8'))})
+        self.assertEqual(response.status_code, 400)
+        missing_entry_warning = "NA19678_dad is the father of NA19675_1 but is not included. Make sure to create an additional record with NA19678_dad as the Individual ID"
         self.assertDictEqual(response.json(), {
-            'errors': [
-                "NA19678_dad is the father of NA19675_1 but is not included. Make sure to create an additional record with NA19678_dad as the Individual ID",
-            ],
+            'errors': [missing_entry_warning],
             'warnings': [],
         })
 
-        # send valid requests
+        rows += [
+            '"1"	"NA19675_1"	"NA19675_1"	"F"	"Father"',
+            '"2"	"NA19675_2"	"NA19675_1"	"M"	""',
+        ]
+        response = self.client.post(individuals_url, {
+            'f': SimpleUploadedFile('test.tsv', '\n'.join(rows).encode('utf-8'))})
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': [
+                'Invalid proband relationship "Father" for NA19675_1 with given gender Female',
+                'NA19675_1 is recorded as their own father',
+                'NA19675_1 is recorded as Female and also as the father of NA19675_1',
+                'NA19675_1 is recorded as Female and also as the father of NA19675_2',
+                'NA19675_1 is recorded as the father of NA19675_2 but they have different family ids: 1 and 2',
+                'NA19675_1 is included as 2 separate records, but must be unique within the project',
+            ],
+            'warnings': [missing_entry_warning],
+        })
+
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+    def test_individuals_table_handler(self):
+        individuals_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
+        self.check_manager_login(individuals_url)
+
         data = 'Family ID	Individual ID	Previous Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes	familyNotes\n\
 "1"	"NA19675"	"NA19675_1"	"NA19678"	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
 "1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
@@ -463,6 +513,309 @@ class IndividualAPITest(object):
         response = self.client.post(save_url)
         self.assertEqual(response.status_code, 200)
 
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+    @mock.patch('seqr.views.utils.pedigree_info_utils.NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES')
+    @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
+    def test_individuals_sample_manifest_table_handler(self, mock_email, mock_no_validate_categories):
+        receive_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
+        self.check_manager_login(receive_url)
+
+        def _send_request_data(data):
+            return self.client.post(receive_url, {'f': SimpleUploadedFile(
+                'sample_manifest.tsv', '\n'.join(['\t'.join(row) for row in data]).encode('utf-8')),
+            })
+
+        header_2 = [
+            'Kit ID', 'Well', 'Sample ID', 'Family ID', 'Alias', 'Alias', 'Paternal Sample ID', 'Maternal Sample ID',
+            'Gender', 'Affected Status', 'Primary Biosample', 'Analyte Type', 'Tissue Affected Status', 'Recontactable',
+            'Volume', 'Concentration', 'Notes', 'MONDO Label', 'MONDO ID', 'Consent Code', 'Data Use Restrictions']
+        header_3 = [
+            '', 'Position', '', '', 'Collaborator Participant ID', 'Collaborator Sample ID', '', '', '', '', '', '',
+            '(i.e yes, no)', '(i.e yes, no, unknown)', 'ul', 'ng/ul', '', '', '(i.e. "MONDO:0031632")', '',
+            'indicate study/protocol number']
+        data = [
+            ['Do not modify - Broad use', '', '', 'Please fill in columns D - T', '', '', '', '', '', '', '', '', '',
+             '', '', '', '', '', '', '', ''],
+            header_2, header_3,
+        ]
+
+        response = _send_request_data(data)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': ['Unsupported file format'], 'warnings': [],
+        })
+
+        data[1] = header_2[:5] + header_2[7:10] + header_2[14:17] + ['Coded Phenotype'] + header_2[19:]
+        response = _send_request_data(data)
+        self.assertDictEqual(response.json(), {
+            'errors': ['Unsupported file format'], 'warnings': [],
+        })
+
+        self.login_pm_user()
+        response = _send_request_data(data)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'warnings': [], 'errors': [
+            'Expected vs. actual header columns: | '
+            'Sample ID| Family ID| Alias|-Alias|-Paternal Sample ID| Maternal Sample ID| Gender| Affected Status|'
+            '-Primary Biosample|-Analyte Type|-Tissue Affected Status|-Recontactable| Volume| Concentration| Notes|'
+            '-MONDO Label|-MONDO ID|+Coded Phenotype| Consent Code| Data Use Restrictions',
+        ]})
+
+        data[1] = header_2
+        data[2] = header_3[:4] + header_3[5:10] + header_3[14:18] + header_3[-1:]
+        response = _send_request_data(data)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'warnings': [], 'errors': [
+            'Expected vs. actual header columns: |-Collaborator Participant ID| Collaborator Sample ID|+',
+        ]})
+
+        data[2] = header_3
+        data += [
+            ['SK-3QVD', 'A02', 'SM-IRW6C', 'PED073', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', '', '', 'male',
+             'unaffected', 'UBERON:0000479 (tissue)', 'blood plasma', '', 'Unknown', '20', '94.8', 'probably dad', '',
+             '', 'GMB', '1234'],
+            ['SK-3QVD', 'A03', 'SM-IRW69', 'PED073', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1',
+             'SCO_PED073B_GA0339_1', 'SCO_PED073A_GA0338_1', 'female', 'affected', 'UBERON:0002371 (bone marrow)',
+             'DNA', 'Yes', 'No', '20', '98', '', 'Perinatal death', 'MONDO:0100086', 'HMB', '',
+             ],
+            ['SK-3QVD', 'A04', 'SM-IRW61', 'PED073', 'SCO_PED073C_GA0341', 'SCO_PED073C_GA0341_1',
+             'SCO_PED073B_GA0339_1', '', 'male', 'affected', 'UBERON:0002371 (bone marrow)',
+             'RNA', 'No', 'No', '17', '83', 'half sib', 'Perinatal death', 'MONDO:0100086', '', '',
+             ]]
+
+        expected_warning = 'SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but is not included. ' \
+                           'Make sure to create an additional record with SCO_PED073A_GA0338_1 as the Individual ID'
+        missing_columns_error = 'SCO_PED073B_GA0339_1 is missing the following required columns: MONDO ID, MONDO Label, Tissue Affected Status'
+        response = _send_request_data(data)
+        self.assertDictEqual(response.json(), {'warnings': [expected_warning], 'errors': [
+            missing_columns_error, 'Multiple consent codes specified in manifest: GMB, HMB',
+        ]})
+
+        data[4][-2] = 'GMB'
+        mock_no_validate_categories.resolve_expression.return_value = ['Not-used category']
+        response = _send_request_data(data)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'warnings': [expected_warning], 'errors': [
+            missing_columns_error, 'Consent code in manifest "GMB" does not match project consent code "HMB"',
+        ]})
+
+        data[3][12] = 'No'
+        data[3][17] = 'microcephaly'
+        data[3][18] = 'MONDO:0001149'
+        data[3][-2] = ''
+        data[4][-2] = 'HMB'
+        response = _send_request_data(data)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'warnings': [], 'errors': [expected_warning]})
+
+        data[4][7] = ''
+        response = _send_request_data(data)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json, {'uploadedFileId': mock.ANY, 'warnings': [], 'errors': [], 'info': [
+            '1 families, 3 individuals parsed from sample_manifest.tsv',
+            '1 new families, 3 new individuals will be added to the project',
+            '0 existing individuals will be updated',
+        ]})
+
+        mock_email.assert_called_with(
+            subject='SK-3QVD Merged Sample Pedigree File',
+            body=mock.ANY,
+            to=['test_pm_user@test.com'],
+            attachments=[
+                ('SK-3QVD.xlsx', mock.ANY,
+                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+                ('sample_manifest.xlsx', mock.ANY,
+                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            ])
+        self.assertEqual(
+            mock_email.call_args.kwargs['body'],
+            '\n'.join([
+                'User test_pm_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.This email has 2 attached files:',
+                '    ', '    SK-3QVD.xlsx is the sample manifest file in a format that can be sent to GP.', '    ',
+                '    sample_manifest.tsv is the original merged pedigree-sample-manifest file that the user uploaded.', '    ',
+            ]))
+        mock_email.return_value.attach_alternative.assert_called_with(
+            """User test_pm_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.<br />This email has 2 attached files:<br />
+    <br />
+    <b>SK-3QVD.xlsx</b> is the sample manifest file in a format that can be sent to GP.<br />
+    <br />
+    <b>sample_manifest.tsv</b> is the original merged pedigree-sample-manifest file that the user uploaded.<br />
+    """, 'text/html')
+        mock_email.return_value.send.assert_called()
+
+        # Test sent sample manifest is correct
+        sample_wb = load_workbook(BytesIO(mock_email.call_args.kwargs['attachments'][0][1]))
+        sample_ws = sample_wb.active
+        sample_ws.title = 'Sample Info'
+        self.assertListEqual(
+            [[cell.value or '' for cell in row] for row in sample_ws],
+            [['Well', 'Sample ID', 'Alias', 'Alias', 'Gender', 'Volume', 'Concentration'],
+             ['Position', '', 'Collaborator Participant ID', 'Collaborator Sample ID', '', 'ul', 'ng/ul'],
+             ['A02', 'SM-IRW6C', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', 'male', '20', '94.8'],
+             ['A03', 'SM-IRW69', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1', 'female', '20', '98'],
+             ['A04', 'SM-IRW61', 'SCO_PED073C_GA0341', 'SCO_PED073C_GA0341_1', 'male', '17', '83']])
+
+        # Test original file copy is correct
+        original_wb = load_workbook(BytesIO(mock_email.call_args.kwargs['attachments'][1][1]))
+        original_ws = original_wb.active
+        self.assertListEqual([[cell.value or '' for cell in row] for row in original_ws], data)
+
+        url = reverse(save_individuals_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
+        self.assertEqual(len(response_json['familiesByGuid']), 1)
+        family_guid = next(iter(response_json['familiesByGuid'].keys()))
+        self.assertEqual(response_json['familiesByGuid'][family_guid]['familyId'], 'PED073')
+        self.assertEqual(response_json['familiesByGuid'][family_guid]['codedPhenotype'], 'Perinatal death')
+        self.assertEqual(response_json['familiesByGuid'][family_guid]['mondoId'],  'MONDO:0100086')
+        self.assertSetEqual(set(
+            response_json['familiesByGuid'][family_guid]['individualGuids']),
+            set(response_json['individualsByGuid'].keys())
+        )
+        self.assertSetEqual({i['familyGuid'] for i in response_json['individualsByGuid'].values()}, {family_guid})
+        self.assertEqual(len(response_json['individualsByGuid']), 3)
+        test_keys = {
+            'affected', 'sex', 'notes', 'probandRelationship', 'primaryBiosample', 'analyteType', 'tissueAffectedStatus',
+            'maternalId', 'paternalId'}
+        indiv_1 = next(i for i in response_json['individualsByGuid'].values() if i['individualId'] == 'SCO_PED073B_GA0339_1')
+        self.assertDictEqual({k: v for k, v in indiv_1.items() if k in test_keys}, {
+            'affected': 'N', 'notes': 'probably dad', 'sex': 'M', 'maternalId': None, 'paternalId': None,
+            'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': False,
+            'probandRelationship': 'F',
+        })
+        indiv_2 = next(i for i in response_json['individualsByGuid'].values() if i['individualId'] == 'SCO_PED073C_GA0341_1')
+        self.assertDictEqual({k: v for k, v in indiv_2.items() if k in test_keys}, {
+            'affected': 'A', 'notes': 'half sib', 'sex': 'M', 'maternalId': None, 'paternalId': 'SCO_PED073B_GA0339_1',
+            'primaryBiosample': 'BM', 'analyteType': 'R', 'tissueAffectedStatus': False,
+            'probandRelationship': 'J',
+        })
+        indiv_3 = next(i for i in response_json['individualsByGuid'].values() if i['individualId'] == 'SCO_PED073C_GA0340_1')
+        self.assertDictEqual({k: v for k, v in indiv_3.items() if k in test_keys}, {
+            'affected': 'A', 'notes': None, 'sex': 'F', 'maternalId': None, 'paternalId': 'SCO_PED073B_GA0339_1',
+             'primaryBiosample': 'BM', 'analyteType': 'D', 'tissueAffectedStatus': True, 'probandRelationship': 'S',
+        })
+        self.assertEqual(indiv_2['paternalGuid'], indiv_1['individualGuid'])
+        self.assertEqual(indiv_3['paternalGuid'], indiv_1['individualGuid'])
+
+    @mock.patch('seqr.views.utils.pedigree_info_utils.date')
+    def test_individuals_datastat_table_handler(self, mock_date):
+        mock_date.today.return_value = datetime.date(2020, 1, 1)
+
+        receive_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
+        self.check_manager_login(receive_url)
+
+        data =  [['participant_guid', 'familyId', 'RELATIONSHIP', 'RELATIONSHIP_OTHER_DETAILS', 'WEBSITE', 'DESCRIPTION', 'CLINICAL_DIAGNOSES', 'CLINICAL_DIAGNOSES_DETAILS', 'GENETIC_DIAGNOSES', 'GENETIC_DIAGNOSES_DETAILS', 'FIND_OUT_DOCTOR_DETAILS', 'PATIENT_AGE', 'CONDITION_AGE', 'PATIENT_DECEASED', 'DECEASED_AGE', 'DECEASED_CAUSE', 'DECEASED_DNA', 'PATIENT_SEX', 'RACE', 'ETHNICITY', 'DOCTOR_TYPES', 'DOCTOR_TYPES_OTHER_DETAILS', 'TESTS', 'TESTS_MICROARRAY_YEAR', 'TESTS_MICROARRAY_LAB', 'TESTS_MICROARRAY_FAMILY', 'TESTS_MICROARRAY_FAMILY_OTHER_DETAILS',  'TESTS_WEXOME_YEAR', 'TESTS_WEXOME_LAB', 'TESTS_WEXOME_FAMILY', 'TESTS_WEXOME_FAMILY_OTHER_DETAILS', 'TESTS_WGENOME_YEAR', 'TESTS_WGENOME_LAB', 'TESTS_WGENOME_FAMILY', 'TESTS_WGENOME_FAMILY_OTHER_DETAILS', 'TESTS_OTHER_DETAILS', 'BIOPSY', 'BIOPSY_OTHER_DETAILS', 'OTHER_STUDIES', 'OTHER_STUDIES_DESCRIBE', 'EXPECT_RESULTS', 'MOTHER_SAME_CONDITION', 'MOTHER_CONDITION_AGE', 'MOTHER_RACE', 'MOTHER_ETHNICITY', 'MOTHER_CAN_PARTICIPATE', 'MOTHER_DECEASED', 'MOTHER_DECEASED_DNA', 'FATHER_SAME_CONDITION', 'FATHER_CONDITION_AGE', 'FATHER_RACE', 'FATHER_ETHNICITY', 'FATHER_CAN_PARTICIPATE', 'FATHER_DECEASED', 'FATHER_DECEASED_DNA', 'NO_SIBLINGS', 'SIBLING', 'NO_CHILDREN', 'CHILD', 'NO_RELATIVE_AFFECTED', 'RELATIVE', 'FAMILY_INFO'],
+            ['1518231365', '123', 'OTHER', 'Grandchild', 'wwww.myblog.com', 'I have a really debilitating probably genetic condition. I\xe2ve seen many specialists.', 'YES', 'SMA\xe2s', 'YES', 'Dwarfism\xe2', 'Dr John Smith', '34', '21', 'YES', '33', 'heart attack', 'NO', 'MALE', 'WHITE,ASIAN,PACIFIC', 'NOT_HISPANIC', 'CLIN_GEN,NEURO,CARDIO,OTHER', 'Pediatrician', 'SINGLE_GENE,GENE_PANEL,WEXOME,WGENOME,OTHER', '', '', '', '', '2018', 'UDN\xe2s lab', 'PARENT,AUNT_UNCLE,NIECE_NEPHEW,OTHER', 'Grandmother',  '', '', '', 'Grandmother', 'Blood work', 'MUSCLE,SKIN,OTHER', 'Bone\xe2s', 'YES', 'Undiagnosed Diseases Network', 'NO', 'YES', '19', 'WHITE,ASIAN', 'NOT_HISPANIC', 'YES', '', '', 'NO', '', '', 'BLACK', 'PREFER_NOT_ANSWER', 'YES', 'NO', '', '[{"SIBLING_SEX":"FEMALE","SIBLING_AGE":"21","SIBLING_RACE":"WHITE","SIBLING_ETHNICITY":"NOT_HISPANIC","SIBLING_SAME_CONDITION":"YES","SIBLING_CONDITION_AGE":null,"SIBLING_CAN_PARTICIPATE":"NO"},{"SIBLING_SEX":"","SIBLING_AGE":"17","SIBLING_RACE": "WHITE","SIBLING_ETHNICITY":"NOT_HISPANIC","SIBLING_SAME_CONDITION":"","SIBLING_CONDITION_AGE":"","SIBLING_CAN_PARTICIPATE":"YES"}]', 'YES', '', 'NO', '[{"RELATIVE_SEX":"MALE","RELATIVE_AGE":"44","RELATIVE_RACE": "WHITE", "RELATIVE_ETHNICITY":"NOT_HISPANIC","RELATIVE_CONDITION_AGE":null,"RELATIVE_CAN_PARTICIPATE":null}]', 'patient\xe2s uncle (dads brother) died from Fahrs disease at 70'],
+            ['b392fd78b440', '987', 'ADULT_CHILD', 'Grandchild', '', '', 'UNSURE', 'SMA', 'NO', 'Dwarfism', '', '47', '2', '', '33', 'heart attack', 'NO', 'PREFER_NOT_ANSWER', 'WHITE', 'UNKNOWN', '', 'Pediatrician', 'NOT_SURE,MICROARRAY,WEXOME', '', '', '', '', '2018', 'UDN', 'PARENT,AUNT_UNCLE,OTHER', 'Grandmother', '', '', '', 'Grandmother', 'Blood work', 'NONE', '', 'NO', 'Undiagnosed Diseases Network', 'NO', 'UNSURE', '19', '', 'UNKNOWN', 'NO', 'UNSURE', '', '', '', '', '', '', '', 'YES', 'YES', '[{"SIBLING_SEX":"FEMALE","SIBLING_AGE":"21","SIBLING_RACE":"WHITE","SIBLING_ETHNICITY":"NOT_HISPANIC","SIBLING_SAME_CONDITION":"YES","SIBLING_CONDITION_AGE":null,"SIBLING_CAN_PARTICIPATE":"NO"}]', 'NO', '[{"CHILD_SEX":"MALE","CHILD_AGE":"12","CHILD_RACE":"WHITE","CHILD_ETHNICITY":"NOT_HISPANIC","CHILD_SAME_CONDITION":"NO","CHILD_CONDITION_AGE":null,"CHILD_CAN_PARTICIPATE":"UNSURE"}]', 'YES', '', '']]
+        response = self.client.post(receive_url, {'f': SimpleUploadedFile(
+            'datstat.tsv', '\n'.join(['\t'.join(row) for row in data]).encode('utf-8')),
+        })
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json, {'uploadedFileId': mock.ANY, 'warnings': [], 'errors': [], 'info': [
+            '2 families, 6 individuals parsed from datstat.tsv',
+            '2 new families, 6 new individuals will be added to the project',
+            '0 existing individuals will be updated',
+        ]})
+
+        url = reverse(save_individuals_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid', 'familyNotesByGuid'})
+        self.assertEqual(len(response_json['familiesByGuid']), 2)
+        RGP_123_guid = next(f for f in response_json['familiesByGuid'].values() if f['familyId'] == 'RGP_123')['familyGuid']
+        RGP_987_guid = next(f for f in response_json['familiesByGuid'].values() if f['familyId'] == 'RGP_987')['familyGuid']
+        self.assertEqual(len(response_json['individualsByGuid']), 6)
+        individuals = sorted(response_json['individualsByGuid'].values(), key=lambda i: i['individualId'])
+        self.assertListEqual(
+            [i['individualId'] for i in individuals],
+            ['RGP_123_1', 'RGP_123_2', 'RGP_123_3', 'RGP_987_1', 'RGP_987_2', 'RGP_987_3'],
+        )
+        self.assertSetEqual({i['familyGuid'] for i in individuals[:3]}, {RGP_123_guid})
+        self.assertSetEqual({i['familyGuid'] for i in individuals[3:]}, {RGP_987_guid})
+        self.assertListEqual([i['sex'] for i in individuals], ['F', 'M', 'M', 'F', 'M', 'U'])
+        self.assertListEqual([i['affected'] for i in individuals], ['N', 'N', 'A', 'N', 'N', 'A'])
+        parents = individuals[:2] + individuals[3:5]
+        no_parent_fields = [
+            'maternalId', 'paternalId', 'maternalGuid', 'paternalGuid', 'maternalEthnicity', 'paternalEthnicity',
+            'birthYear', 'deathYear', 'onsetAge', 'affectedRelatives',
+        ]
+        for no_parent_field in no_parent_fields:
+            self.assertSetEqual({i[no_parent_field] for i in parents}, {None})
+
+        self.assertDictEqual({k: v for k, v in individuals[2].items() if k in no_parent_fields}, {
+            'maternalGuid': individuals[0]['individualGuid'], 'paternalGuid': individuals[1]['individualGuid'],
+            'maternalId': 'RGP_123_1', 'paternalId': 'RGP_123_2', 'paternalEthnicity': ['Black'],
+            'maternalEthnicity': ['White', 'Asian', 'Not Hispanic'], 'birthYear': 1986, 'deathYear': 2019,
+            'onsetAge': 'A', 'affectedRelatives': True,
+        })
+        self.assertDictEqual({k: v for k, v in individuals[5].items() if k in no_parent_fields}, {
+            'maternalGuid': individuals[3]['individualGuid'], 'paternalGuid': individuals[4]['individualGuid'],
+            'maternalId': 'RGP_987_1', 'paternalId': 'RGP_987_2', 'maternalEthnicity': None, 'paternalEthnicity': None,
+            'birthYear': 1973, 'deathYear': None, 'onsetAge': 'C', 'affectedRelatives': False,
+        })
+
+        self.assertEqual(len(response_json['familyNotesByGuid']), 2)
+        note_1 = next(n['note'] for n in response_json['familyNotesByGuid'].values() if n['familyGuid'] == RGP_123_guid)
+        self.assertEqual(note_1, """#### Clinical Information
+* __Patient is my:__ Grandchild (male)
+* __Current Age:__ Patient is deceased, age 33, due to heart attack, sample not available
+* __Age of Onset:__ 21
+* __Race/Ethnicity:__ White, Asian, Pacific; Not Hispanic
+* __Case Description:__ I have a really debilitating probably genetic condition. Ive seen many specialists.
+* __Clinical Diagnoses:__ Yes; SMAs
+* __Genetic Diagnoses:__ Yes; Dwarfism
+* __Website/Blog:__ Yes
+* __Additional Information:__ patients uncle (dads brother) died from Fahrs disease at 70
+#### Prior Testing
+* __Referring Physician:__ Dr John Smith
+* __Doctors Seen:__ Clinical geneticist, Neurologist, Cardiologist, Other: Pediatrician
+* __Previous Testing:__ Yes;
+* * Single gene testing
+* * Gene panel testing
+* * Whole exome sequencing. Year: 2018, Lab: UDNs lab, Relatives: Parent, Aunt or Uncle, Niece or Nephew, Other: Grandmother
+* * Whole genome sequencing. Year: unspecified, Lab: unspecified, Relatives: None Specified
+* * Other tests: Blood work
+* __Biopsies Available:__ Muscle Biopsy, Skin Biopsy, Other Tissue Biopsy: Bones
+* __Other Research Studies:__ Yes, Name of studies: Undiagnosed Diseases Network, Expecting results: No
+#### Family Information
+* __Mother:__ affected, onset age 19, available
+* __Father:__ unaffected, unavailable, deceased, sample not available
+* __Siblings:__ 
+* * Sister, age 21, affected, unavailable
+* * Sibling (unspecified sex), age 17, unspecified affected status, available
+* __Children:__ None
+* __Relatives:__ 
+* * Male, age 44, affected, unspecified availability""")
+
+        note_2 = next(n['note'] for n in response_json['familyNotesByGuid'].values() if n['familyGuid'] == RGP_987_guid)
+        self.assertEqual(note_2, """#### Clinical Information
+* __Patient is my:__ Adult Child (unspecified sex) - unable to provide consent
+* __Current Age:__ 47
+* __Age of Onset:__ 2
+* __Race/Ethnicity:__ White; Unknown
+* __Case Description:__ 
+* __Clinical Diagnoses:__ Unsure
+* __Genetic Diagnoses:__ No
+* __Website/Blog:__ No
+* __Additional Information:__ None specified
+#### Prior Testing
+* __Referring Physician:__ None
+* __Doctors Seen:__ 
+* __Previous Testing:__ Not sure
+* __Biopsies Available:__ None
+* __Other Research Studies:__ No
+#### Family Information
+* __Mother:__ unknown affected status, unavailable, unknown deceased status
+* __Father:__ unknown affected status, unavailable, unspecified deceased status
+* __Siblings:__ None
+* __Children:__ 
+* * Son, age 12, unaffected, unspecified availability
+* __Relatives:__ None""")
 
     def _is_expected_individuals_metadata_upload(self, response, expected_families=False):
         self.assertEqual(response.status_code, 200)

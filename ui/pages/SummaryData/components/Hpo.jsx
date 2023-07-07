@@ -12,7 +12,7 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { GENOME_VERSION_LOOKUP } from 'shared/utils/constants'
 
 const SEARCH_CATEGORIES = ['hpo_terms']
-const MAX_SEARCH_FAMILIES = 750
+const MAX_SEARCH_FAMILIES = 500
 const ID_FIELD = 'individualGuid'
 const COLUMNS = [
   {

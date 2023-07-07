@@ -10,26 +10,28 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max, Value, F
+from django.db.models import Max, Value, F, Q
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH
-from seqr.utils.file_utils import file_iter, does_file_exist
+from seqr.utils.file_utils import file_iter, does_file_exist, get_gs_file_list
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.vcf_utils import validate_vcf_exists
 
+from seqr.views.utils.airflow_utils import trigger_data_loading
 from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file, \
     load_rna_seq_splice_outlier
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.permissions_utils import data_manager_required, get_internal_projects
+from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 
 from seqr.models import Sample, Individual, Project, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, RnaSeqSpliceOutlier
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
+from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
 
@@ -405,6 +407,56 @@ def write_pedigree(request, project_guid):
     write_multiple_files_to_gs(
         [(f'{project.guid}_pedigree', annotations.keys(), data)],
         file_path, request.user, file_format='tsv')
+
+    return create_json_response({'success': True})
+
+
+DATA_TYPE_FILE_EXTS = {
+    Sample.DATASET_TYPE_MITO_CALLS: ('.mt',),
+    Sample.DATASET_TYPE_SV_CALLS: ('.bed',),
+}
+
+
+@pm_or_data_manager_required
+def validate_callset(request):
+    request_json = json.loads(request.body)
+    validate_vcf_exists(
+        request_json['filePath'], request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(request_json['datasetType'])
+    )
+    return create_json_response({'success': True})
+
+
+@pm_or_data_manager_required
+def get_loaded_projects(request, sample_type, dataset_type):
+    projects = get_internal_projects().filter(
+        family__individual__sample__sample_type=sample_type, is_demo=False,
+    ).distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
+        'family__individual__sample__loaded_date', filter=Q(family__individual__sample__dataset_type=dataset_type),
+    ))
+    return create_json_response({'projects': list(projects)})
+
+
+@pm_or_data_manager_required
+def load_data(request):
+    request_json = json.loads(request.body)
+    sample_type = request_json['sampleType']
+    dataset_type = request_json['datasetType']
+    projects = request_json['projects']
+
+    dag_dataset_type = 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
+        else dataset_type
+    dag_name = f'RDG_{sample_type}_Broad_Internal_{dag_dataset_type}'
+
+    version_path_prefix = f'{SEQR_DATSETS_GS_PATH}/GRCh38/{dag_name}'
+    version_paths = get_gs_file_list(version_path_prefix, user=request.user, allow_missing=True, check_subfolders=False)
+    curr_version = max([int(re.findall(f'{version_path_prefix}/v(\d\d)/', p)[0]) for p in version_paths] + [0])
+    dag_variables = {'version_path': f'{version_path_prefix}/v{curr_version+1:02d}'}
+
+    success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
+    trigger_data_loading(
+        dag_name, projects, request_json['filePath'], dag_variables, request.user, success_message,
+        SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
+    )
 
     return create_json_response({'success': True})
 
