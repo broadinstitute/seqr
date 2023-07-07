@@ -439,6 +439,10 @@ export const RadioButtonGroup = styled(({ radioLabelStyle, ...props }) => <Butto
       border-radius: 0;
     }
   }
+
+  &.buttons + .buttons .label {
+    margin-left: 1em !important;
+  }
   
   ${props => (props.radioLabelStyle ?
     `.label {

@@ -242,6 +242,19 @@ IgvPanel.propTypes = {
   locus: PropTypes.string,
 }
 
+const TISSUE_REFERENCE_KEY = {
+  WB: 'Blood',
+  F: 'Fibs',
+  M: 'Muscle',
+  L: 'Lymph',
+}
+
+const TISSUE_REFERENCES_LOOKUP = Object.entries(TISSUE_REFERENCE_KEY).reduce((acc, [tissueType, key]) => ({
+  ...acc,
+  [tissueType]: [...NORM_GTEX_TRACK_OPTIONS, ...AGG_GTEX_TRACK_OPTIONS].filter(track => track.text.includes(key))
+    .map(track => track.value),
+}), {})
+
 class FamilyReads extends React.PureComponent {
 
   static propTypes = {
@@ -254,6 +267,7 @@ class FamilyReads extends React.PureComponent {
     sortedIndividualByFamily: PropTypes.object,
     igvSamplesByFamilySampleIndividual: PropTypes.object,
     genesById: PropTypes.object,
+    noTriggerButton: PropTypes.bool,
   }
 
   state = {
@@ -266,6 +280,10 @@ class FamilyReads extends React.PureComponent {
       minTotalReads: 0,
     },
     locus: null,
+  }
+
+  updateReads = (familyGuid, locus, sampleTypes, tissueType) => {
+    this.setState({ openFamily: familyGuid, sampleTypes, locus, rnaReferences: TISSUE_REFERENCES_LOOKUP[tissueType] })
   }
 
   getProjectForFamily = (familyGuid) => {
@@ -363,11 +381,11 @@ class FamilyReads extends React.PureComponent {
   render() {
     const {
       variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, familiesByGuid,
-      projectsByGuid, genesById, sortedIndividualByFamily, ...props
+      projectsByGuid, genesById, sortedIndividualByFamily, noTriggerButton, ...props
     } = this.props
     const { openFamily, sampleTypes, rnaReferences, junctionTrackOptions, locus } = this.state
 
-    const showReads = (
+    const showReads = noTriggerButton ? null : (
       <ReadButtons
         variant={variant}
         familyGuid={familyGuid}
@@ -463,7 +481,7 @@ class FamilyReads extends React.PureComponent {
       </Segment.Group>
     ) : null
 
-    return React.createElement(layout, { variant, reads, showReads, ...props })
+    return React.createElement(layout, { variant, reads, showReads, updateReads: this.updateReads, ...props })
   }
 
 }

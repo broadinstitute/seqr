@@ -2,12 +2,15 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Header } from 'semantic-ui-react'
 
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import FormWrapper from './FormWrapper'
 
 class FormWizard extends React.PureComponent {
 
   static propTypes = {
-    onSubmit: PropTypes.func.isRequired,
+    formatSubmitUrl: PropTypes.func.isRequired,
+    formatSubmitValues: PropTypes.func,
+    onSubmitSuccess: PropTypes.func,
     pages: PropTypes.arrayOf(PropTypes.object),
     successMessage: PropTypes.string,
   }
@@ -26,31 +29,37 @@ class FormWizard extends React.PureComponent {
     }))
   }
 
-  onPageSubmitSucceeded = values => this.setState(prevState => ({
-    asyncValues: { ...prevState.asyncValues, ...(values || {}) },
-  }))
-
-  resolvedPageSubmit = () => Promise.resolve()
+  onPageSubmit = (url, formatUrl) => values => (
+    new HttpRequestHelper(
+      url || formatUrl(values),
+      newValues => this.setState(prevState => ({
+        asyncValues: { ...prevState.asyncValues, ...(newValues || {}) },
+      })),
+    ).post(values)
+  )
 
   setSubmitSucceeded = () => this.setState({ formSubmitSucceeded: true })
 
   onFormSubmit = (values) => {
-    const { onSubmit } = this.props
+    const { formatSubmitUrl, formatSubmitValues, onSubmitSuccess } = this.props
     const { asyncValues } = this.state
-    return onSubmit({ ...asyncValues, ...values })
+    const allValues = { ...asyncValues, ...values }
+    return new HttpRequestHelper(
+      formatSubmitUrl(allValues), onSubmitSuccess,
+    ).post(formatSubmitValues ? formatSubmitValues(allValues) : allValues)
   }
 
   render() {
-    const { pages, onSubmit, successMessage, ...props } = this.props
+    const { pages, formatSubmitUrl: f, formatSubmitValues, onSubmitSuccess, successMessage, ...props } = this.props
     const { pageIndex, formSubmitSucceeded } = this.state
 
-    const { fields, onPageSubmit } = pages[pageIndex]
+    const { fields, submitUrl, formatSubmitUrl } = pages[pageIndex]
 
     const formProps = (pageIndex === pages.length - 1) ? {
       onSubmit: this.onFormSubmit,
       onSubmitSucceeded: this.setSubmitSucceeded,
     } : {
-      onSubmit: onPageSubmit(this.onPageSubmitSucceeded) || this.resolvedPageSubmit,
+      onSubmit: this.onPageSubmit(submitUrl, formatSubmitUrl),
       onSubmitSucceeded: this.navigateNext,
       submitButtonText: 'Next',
       submitButtonIcon: 'angle double right',
