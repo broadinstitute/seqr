@@ -59,7 +59,7 @@ class BaseRnaSeqResultPage extends React.PureComponent {
     const tissueDisplay = TISSUE_DISPLAY[showTissueType]
 
     const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map(({ formatData, ...config }) => {
-      const data = rnaSeqData[config.key] || []
+      const data = rnaSeqData[config.key]
       return ({ data: formatData ? formatData(data, showTissueType) : data, ...config })
     }).filter(({ data }) => data.length)
 
