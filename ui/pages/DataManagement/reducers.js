@@ -90,8 +90,8 @@ export const uploadRnaSeq = loadMultipleData(
 
 export const addIgv = loadMultipleData(
   'add_igv',
-  ({ updates }, values) => updates.map(({ individualGuid, individualId, ...update }) => ([
-    `/api/individual/${individualGuid}/update_igv_sample`, individualId, { ...update, ...values },
+  ({ updates }) => updates.map(({ individualGuid, individualId, ...update }) => ([
+    `/api/individual/${individualGuid}/update_igv_sample`, individualId, update,
   ])),
   RECEIVE_IGV_UPLOAD_STATS,
   numLoaded => `Successfully added IGV tracks for ${numLoaded} samples`,
