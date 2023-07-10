@@ -12,7 +12,7 @@ def _get_sample_placeholder(request_json, project):
     # Temporary function to allow adding sample models, in production will implement for real with correct data
     from seqr.models import Individual
     sample_ids = list(Individual.objects.filter(family__project=project).values_list('individual_id', flat=True))
-    sample_data = {'elasticsearch_index': elasticsearch_index}
+    sample_data = {'elasticsearch_index': request_json['elasticsearchIndex']}
     return sample_ids, Sample.SAMPLE_TYPE_WES, sample_data
 
 
