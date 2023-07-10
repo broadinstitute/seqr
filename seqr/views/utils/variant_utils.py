@@ -1,13 +1,13 @@
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F, Value
+from django.db.models import F
 import logging
 import redis
 
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, Project
+    RnaSeqTpm, PhenotypePrioritization, Project
 from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -131,19 +131,9 @@ def _add_locus_lists(projects, genes, add_list_detail=False, user=None):
 
 
 def _get_rna_seq_outliers(gene_ids, family_guids):
-    # TODO change to get_json_for_rna_seq_outliers in issue #3324
-    data_by_individual_gene = defaultdict(lambda: {'outliers': {}})
+    filters = {'gene_id__in': gene_ids, 'sample__individual__family__guid__in': family_guids}
 
-    outlier_data = get_json_for_queryset(
-        RnaSeqOutlier.objects.filter(
-            gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, sample__individual__family__guid__in=family_guids),
-        nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'}],
-        additional_values={'isSignificant': Value(True)},
-    )
-    for data in outlier_data:
-        data_by_individual_gene[data.pop('individualGuid')]['outliers'][data['geneId']] = data
-
-    return data_by_individual_gene
+    return get_json_for_rna_seq_outliers(filters)
 
 
 def get_phenotype_prioritization(family_guids, gene_ids=None):

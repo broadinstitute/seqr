@@ -23,7 +23,7 @@ const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_SUMMARY },
 ]
 
-export const NoHoverFamilyLink = React.memo(({ family, path, target = '_blank', ...props }) => (
+export const NoHoverFamilyLink = React.memo(({ family, path, target, ...props }) => (
   <ColoredLink
     to={`/project/${family.projectGuid}/${path || `family_page/${family.familyGuid}`}`}
     color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}

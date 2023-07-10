@@ -18,7 +18,7 @@ const COLUMNS = [
   {
     name: 'familyId',
     content: 'Family',
-    format: row => <b><NoHoverFamilyLink family={row.familyData} /></b>,
+    format: row => <b><NoHoverFamilyLink family={row.familyData} target="_blank" /></b>,
   },
   { name: 'displayName', content: 'Individual' },
   {
