@@ -92,7 +92,7 @@ def _get_families_search_data(families, dataset_type=None):
 
     if len(project_versions) > 1:
         summary = '; '.join(
-            [f"{build} - {', '.join(sorted(projects))}" for build, projects in project_versions.items()])
+            [f"{build} - {', '.join(sorted(projects))}" for build, projects in sorted(project_versions.items())])
         raise InvalidSearchException(
             f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
 
@@ -352,13 +352,10 @@ def _parse_inheritance(search, samples, previous_search_results):
         raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
     samples = samples.select_related('individual')
-    if inheritance_filter.get('genotype') and not inheritance_filter.get(Individual.AFFECTED_STATUS_AFFECTED):
-        samples = _filter_genotype_samples(samples, inheritance_filter)
-    else:
-        skipped_samples = _filter_affected_family_samples(samples, inheritance_filter)
-        if skipped_samples:
-            search['skipped_samples'] = skipped_samples
-            samples = samples.exclude(id__in=[s.id for s in skipped_samples])
+    skipped_samples = _filter_inheritance_family_samples(samples, inheritance_filter)
+    if skipped_samples:
+        search['skipped_samples'] = skipped_samples
+        samples = samples.exclude(id__in=[s.id for s in skipped_samples])
 
     has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
     if has_comp_het_search:
@@ -384,27 +381,27 @@ def _parse_inheritance(search, samples, previous_search_results):
     return samples
 
 
-def _filter_genotype_samples(samples, inheritance_filter):
-    samples = samples.filter(individual__guid__in=inheritance_filter.get('genotype').keys())
-    if not samples:
-        raise InvalidSearchException('Invalid custom inheritance')
-    return samples
-
-
-def _filter_affected_family_samples(samples, inheritance_filter):
-    affected_family_groups = defaultdict(set)
+def _filter_inheritance_family_samples(samples, inheritance_filter):
+    family_groups = defaultdict(set)
     sample_group_field = backend_specific_call('elasticsearch_index', 'dataset_type')
     individual_affected_status = inheritance_filter.get('affected') or {}
+    genotype_filter = None if inheritance_filter.get(Individual.AFFECTED_STATUS_AFFECTED) else inheritance_filter.get('genotype')
     for sample in samples:
-        family_id = sample.individual.family_id
-        affected_status = individual_affected_status.get(sample.individual.guid) or sample.individual.affected
-        if affected_status == Individual.AFFECTED_STATUS_AFFECTED:
-            affected_family_groups[family_id].add(getattr(sample, sample_group_field))
+        if genotype_filter:
+            is_filtered_family = sample.individual.guid in genotype_filter
+        else:
+            affected_status = individual_affected_status.get(sample.individual.guid) or sample.individual.affected
+            is_filtered_family = affected_status == Individual.AFFECTED_STATUS_AFFECTED
 
-    if not affected_family_groups:
+        if is_filtered_family:
+            family_groups[sample.individual.family_id].add(getattr(sample, sample_group_field))
+
+    if not family_groups:
         raise InvalidSearchException(
-            'Inheritance based search is disabled in families with no data loaded for affected individuals')
+            'Invalid custom inheritance' if genotype_filter else
+            'Inheritance based search is disabled in families with no data loaded for affected individuals'
+        )
 
     return [
-        s for s in samples if getattr(s, sample_group_field) not in affected_family_groups[s.individual.family_id]
+        s for s in samples if getattr(s, sample_group_field) not in family_groups[s.individual.family_id]
     ]

@@ -3343,7 +3343,13 @@ class EsUtilsTest(TestCase):
             if quality_filter:
                 search_model.search['qualityFilter'] = quality_filter
             search_model.save()
-            query_variants(results_model, num_results=2)
+            variants, _ = query_variants(results_model, num_results=2)
+
+            if mode not in {'compound_het', 'recessive'}:
+                self.assertSetEqual(
+                    set(variants[-1]['genotypes'].keys()),
+                    {'I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733'},
+                )
 
             index = INDEX_NAME if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else SV_INDEX_NAME
             annotation_query = {'terms': {'transcriptConsequenceTerms': next(iter(annotations.values()))}}
