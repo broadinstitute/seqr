@@ -14,10 +14,17 @@ import RnaSeqJunctionOutliersTable from '../../table/RnaSeqJunctionOutliersTable
 import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts from './Transcripts'
 import VariantGenes, { LocusListLabels } from './VariantGene'
-import { getLocus, has37Coords, Sequence, ProteinSequence, TranscriptLink, getOverlappedIntervals } from './VariantUtils'
+import {
+  getLocus,
+  has37Coords,
+  Sequence,
+  ProteinSequence,
+  TranscriptLink,
+  getOverlappedIntervals,
+  getOverlappedSpliceOutliers,
+} from './VariantUtils'
 import {
   GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS,
-  RNASEQ_JUNCTION_PADDING,
 } from '../../../utils/constants'
 
 const BaseSpliceOutlierLabel = React.memo(({ variant, spliceOutliersByFamily }) => {
@@ -25,8 +32,7 @@ const BaseSpliceOutlierLabel = React.memo(({ variant, spliceOutliersByFamily }) 
     return null
   }
 
-  const overlappedOutliers = getOverlappedIntervals(variant, spliceOutliersByFamily, fGuid => fGuid,
-    RNASEQ_JUNCTION_PADDING)
+  const overlappedOutliers = getOverlappedSpliceOutliers(variant, spliceOutliersByFamily)
 
   if (overlappedOutliers.length < 1) {
     return null

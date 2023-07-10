@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Popup } from 'semantic-ui-react'
 
-import { GENOME_VERSION_37, getVariantMainGeneId } from '../../../utils/constants'
+import { GENOME_VERSION_37, getVariantMainGeneId, RNASEQ_JUNCTION_PADDING } from '../../../utils/constants'
 
 const SequenceContainer = styled.span`
   word-break: break-all;
@@ -83,3 +83,7 @@ export const getOverlappedIntervals = (variant, intervals, getIntervalGroup, pad
   return familyGuids.reduce((acc, fGuid) => (
     [...acc, ...(intervals[getIntervalGroup(fGuid)] || []).filter(variantIntervalOverlap(variant, padding))]), [])
 }
+
+export const getOverlappedSpliceOutliers = (variant, spliceOutliersByFamily) => (
+  getOverlappedIntervals(variant, spliceOutliersByFamily, fGuid => fGuid, RNASEQ_JUNCTION_PADDING)
+)
