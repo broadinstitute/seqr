@@ -2,7 +2,7 @@ import React from 'react'
 import { Popup, Icon } from 'semantic-ui-react'
 import PropTypes from 'prop-types'
 
-import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
+import { RNASEQ_JUNCTION_PADDING, TISSUE_DISPLAY } from 'shared/utils/constants'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import { GeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
 import DataTable from 'shared/components/table/DataTable'
@@ -109,13 +109,29 @@ const RNA_SEQ_SPLICE_COLUMNS = [
   ...OTHER_SPLICE_COLUMNS,
 ]
 
+const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', format: ({ individualName }) => (<b>{individualName}</b>) }
+
+const RNA_SEQ_SPLICE_POPUP_COLUMNS = [
+  INDIVIDUAL_NAME_COLUMN,
+  {
+    ...JUNCTION_COLUMN,
+    format: ({ chrom, start, end, strand }) => `${chrom}:${start}-${end} ${strand}`,
+  },
+  {
+    name: 'tissueType',
+    content: 'Tissue Type',
+    format: ({ tissueType }) => TISSUE_DISPLAY[tissueType],
+  },
+  ...OTHER_SPLICE_COLUMNS,
+]
+
 const RnaSeqJunctionOutliersTable = React.memo(
-  ({ variant, reads, showReads, updateReads, data, dispatch, ...props }) => (
+  ({ variant, reads, showReads, updateReads, data, showPopupColumns, dispatch, ...props }) => (
     <div>
       {reads}
       <DataTable
         idField="idField"
-        columns={RNA_SEQ_SPLICE_COLUMNS}
+        columns={showPopupColumns ? RNA_SEQ_SPLICE_POPUP_COLUMNS : RNA_SEQ_SPLICE_COLUMNS}
         data={data}
         formatProps={updateReads}
         {...props}
@@ -130,6 +146,7 @@ RnaSeqJunctionOutliersTable.propTypes = {
   showReads: PropTypes.object,
   updateReads: PropTypes.func,
   data: PropTypes.arrayOf(PropTypes.object),
+  showPopupColumns: PropTypes.bool,
   dispatch: PropTypes.func,
 }
 
