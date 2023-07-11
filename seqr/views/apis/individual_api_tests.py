@@ -999,17 +999,17 @@ class IndividualAPITest(object):
                 },
             },
             'spliceOutliers': {
-                'ENSG00000106554': mock.ANY,
+                'ENSG00000268903': mock.ANY,
             },
         }})
         self.assertDictEqual(
             {
-                'chrom': '7', 'deltaPsi': 0.85, 'end': 132886973, 'geneId': 'ENSG00000106554', 'isSignificant': True,
+                'chrom': '7', 'deltaPsi': 0.85, 'end': 132886973, 'geneId': 'ENSG00000268903', 'isSignificant': True,
                 'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1,
                 'readCount': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'zScore': 12.34,
                 'tissueType': 'F',
             },
-            response_json['rnaSeqData'][INDIVIDUAL_GUID]['spliceOutliers']['ENSG00000106554'][0]
+            response_json['rnaSeqData'][INDIVIDUAL_GUID]['spliceOutliers']['ENSG00000268903'][0]
         )
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
@@ -1026,7 +1026,7 @@ class IndividualAPITest(object):
         self.assertEqual(2, len(significant_outliers))
         self.assertListEqual(
             [{field: outlier[field] for field in ['start', 'end', 'pValue', 'tissueType', 'isSignificant']}
-             for outlier in response_rnaseq_data['spliceOutliers']['ENSG00000106554']],
+             for outlier in response_rnaseq_data['spliceOutliers']['ENSG00000268903']],
             [{'start': 132885746, 'end': 132886973, 'pValue': 1.08e-56, 'tissueType': 'F', 'isSignificant': True},
              {'start': 1001, 'end': 2001, 'pValue': 0.1, 'tissueType': 'F', 'isSignificant': False},
              {'start': 3000, 'end': 4000, 'pValue': 0.0001, 'tissueType': 'F', 'isSignificant': True},

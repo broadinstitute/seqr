@@ -360,6 +360,20 @@ export const getSearchGeneBreakdownValues = createSelector(
   })),
 )
 
+const groupDataNestedByChrom = (initialData, groupedData, nestedKey) => groupedData.reduce(
+  (acc, data) => {
+    const { chrom } = data
+    if (!acc[chrom]) {
+      acc[chrom] = {}
+    }
+    if (!acc[chrom][nestedKey]) {
+      acc[chrom][nestedKey] = []
+    }
+    acc[chrom][nestedKey].push(data)
+    return acc
+  }, initialData,
+)
+
 export const getLocusListIntervalsByChromProject = createSelector(
   getProjectsByGuid,
   getLocusListsByGuid,
@@ -368,16 +382,7 @@ export const getLocusListIntervalsByChromProject = createSelector(
       const projectIntervals = locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid]).reduce(
         (acc2, { intervals = [] }) => [...acc2, ...intervals], [],
       )
-      projectIntervals.forEach((interval) => {
-        if (!acc[interval.chrom]) {
-          acc[interval.chrom] = {}
-        }
-        if (!acc[interval.chrom][projectGuid]) {
-          acc[interval.chrom][projectGuid] = []
-        }
-        acc[interval.chrom][projectGuid].push(interval)
-      })
-      return acc
+      return groupDataNestedByChrom(acc, projectIntervals, projectGuid)
     }, {},
   ),
 )
@@ -419,18 +424,27 @@ export const getRnaSeqSignificantJunctionData = createSelector(
   getGenesById,
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
-  (genesById, individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
-    (acc, [individualGuid, rnaSeqData]) => (rnaSeqData.spliceOutliers ? {
-      ...acc,
-      [individualGuid]: Object.values(rnaSeqData.spliceOutliers).flat().filter(({ isSignificant }) => isSignificant)
+  (genesById, individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual || {}).reduce(
+    (acc, [individualGuid, rnaSeqData]) => {
+      const individualData = Object.values(rnaSeqData.spliceOutliers || {}).flat()
+        .filter(({ isSignificant }) => isSignificant)
         .sort((a, b) => a.pValue - b.pValue)
         .map(({ geneId, chrom, start, end, strand, type, ...cols }) => ({
           geneSymbol: (genesById[geneId] || {}).geneSymbol || geneId,
           idField: `${geneId}-${chrom}-${start}-${end}-${strand}-${type}`,
           familyGuid: individualsByGuid[individualGuid].familyGuid,
+          individualName: individualsByGuid[individualGuid].displayName,
           individualGuid,
           ...{ geneId, chrom, start, end, strand, type, ...cols },
-        })),
-    } : acc), {},
+        }))
+      return (individualData.length > 0 ? { ...acc, [individualGuid]: individualData } : acc)
+    }, {},
+  ),
+)
+
+export const getSpliceOutliersByChromFamily = createSelector(
+  getRnaSeqSignificantJunctionData,
+  spliceDataByIndiv => Object.values(spliceDataByIndiv).reduce(
+    (acc, spliceData) => (groupDataNestedByChrom(acc, spliceData, spliceData[0].familyGuid)), {},
   ),
 )
