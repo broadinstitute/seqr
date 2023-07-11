@@ -81,7 +81,10 @@ const variantIntervalOverlap = (variant, padding) => (interval) => {
 export const getOverlappedIntervals = (variant, intervals, getIntervalGroup, padding = 0) => {
   const { familyGuids = [] } = variant
   return familyGuids.reduce((acc, fGuid) => (
-    [...acc, ...(intervals[getIntervalGroup(fGuid)] || []).filter(variantIntervalOverlap(variant, padding))]), [])
+    intervals ? [
+      ...acc, ...(intervals[getIntervalGroup(fGuid)] || []).filter(variantIntervalOverlap(variant, padding)),
+    ] : []
+  ), [])
 }
 
 export const getOverlappedSpliceOutliers = (variant, spliceOutliersByFamily) => (
