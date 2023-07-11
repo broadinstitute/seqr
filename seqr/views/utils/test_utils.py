@@ -1066,7 +1066,6 @@ PARSED_VARIANTS = [
         'transcripts': {
             'ENSG00000135953': [TRANSCRIPT_3],
             'ENSG00000228198': [TRANSCRIPT_2],
-            'null': [{'geneSymbol': 'H3-2', 'geneId': None, 'majorConsequence': 'NEAREST_TSS'}],
         },
         'variantId': '1-248367227-TC-T',
         'xpos': 1248367227,
