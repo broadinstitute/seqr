@@ -839,7 +839,6 @@ class BaseHailTableQuery(object):
 
 class BaseVariantHailTableQuery(BaseHailTableQuery):
 
-    GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ']}
     POPULATIONS = {
         'callset': {'hom': None, 'hemi': None, 'het': None},
     }
@@ -993,8 +992,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
 class VariantHailTableQuery(BaseVariantHailTableQuery):
 
-    GENOTYPE_FIELDS = {f.lower(): f for f in ['AB', 'AD', 'PL']}
-    GENOTYPE_FIELDS.update(BaseVariantHailTableQuery.GENOTYPE_FIELDS)
+    GENOTYPE_FIELDS = {f: f for f in ['ab', 'dp', 'gq']}
     POPULATIONS = {
         'topmed': {'hemi': None, 'het': None},
         'exac': {
@@ -1075,7 +1073,7 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
         'mitoCn': 'mito_cn',
         'contamination': 'contamination',
     }
-    GENOTYPE_FIELDS.update(BaseVariantHailTableQuery.GENOTYPE_FIELDS)
+    GENOTYPE_FIELDS.update({f.lower(): f for f in ['DP', 'GQ']})
     POPULATIONS = {
         pop: {'hom': None, 'hemi': None, 'het': None} for pop in [
             'callset_heteroplasmy', 'gnomad_mito', 'gnomad_mito_heteroplasmy', 'helix', 'helix_heteroplasmy'
