@@ -68,13 +68,7 @@ jobs:
     container: hailgenetics/hail:0.2.115
 
     steps:
-      - name: Use pip cache
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pip
-          key: pip-${{ hashFiles('**/hail_search/requirements-test.txt') }}
-          restore-keys: |
-            pip-
+      - uses: actions/checkout@v2
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip wheel
