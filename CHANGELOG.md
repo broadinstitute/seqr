@@ -2,6 +2,10 @@
 
 ## dev
 
+## 7/11/23
+* Add internal UI to trigger airflow data loading
+* Add RnaSeqSpliceOutlier display
+
 ## 6/23/23
 * Add a 'rank' field to the RnaSeqSpliceOutlier model (REQUIRES DB MIGRATION)
 * Remove hail python dependency

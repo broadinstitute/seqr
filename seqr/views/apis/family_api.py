@@ -47,9 +47,9 @@ def family_page_data(request, family_guid):
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
     response['familiesByGuid'][family_guid]['detailsLoaded'] = True
 
-    outlier_samples = sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA).exclude(rnaseqoutlier=None)
-    for sample in outlier_samples:
-        individual_guid = response['samplesByGuid'][sample.guid]['individualGuid']
+    outlier_individual_guids = sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA)\
+        .exclude(rnaseqoutlier__isnull=True, rnaseqspliceoutlier__isnull=True).values_list('individual__guid', flat=True)
+    for individual_guid in outlier_individual_guids:
         response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
 
     has_phentoype_score_indivs = PhenotypePrioritization.objects.filter(individual__family=family).values_list(

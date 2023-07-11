@@ -1082,6 +1082,7 @@ class DeletableSampleMetadataModel(BulkOperationBase):
 
 class RnaSeqOutlier(DeletableSampleMetadataModel):
     SIGNIFICANCE_THRESHOLD = 0.05
+    SIGNIFICANCE_FIELD = 'p_adjust'
 
     p_value = models.FloatField()
     p_adjust = models.FloatField()
@@ -1105,6 +1106,9 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
 
 
 class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
+    SIGNIFICANCE_THRESHOLD = 0.01
+    SIGNIFICANCE_FIELD = 'p_value'
+    MAX_SIGNIFICANT_OUTLIER_NUM = 50
     STRAND_CHOICES = (
         ('+', '5′ to 3′ direction'),
         ('-', '3′ to 5′ direction'),

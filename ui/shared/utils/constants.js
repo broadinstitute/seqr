@@ -1681,6 +1681,16 @@ export const ACMG_RULE_SPECIFICATION_COMP_HET = [
   ],
 ]
 
+// RNAseq sample tissue type mapping
+export const TISSUE_DISPLAY = {
+  WB: 'Whole Blood',
+  F: 'Fibroblast',
+  M: 'Muscle',
+  L: 'Lymphocyte',
+}
+
+export const RNASEQ_JUNCTION_PADDING = 200
+
 export const FAQ_PATH = '/faq'
 export const MATCHMAKER_PATH = '/matchmaker'
 export const PRIVACY_PATH = '/privacy_policy'

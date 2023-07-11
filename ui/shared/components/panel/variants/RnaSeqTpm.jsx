@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import Boxplot from 'gtex-d3/src/modules/Boxplot'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { TISSUE_DISPLAY } from 'shared/utils/constants'
 import GtexLauncher, { GTEX_HOST } from '../../graph/GtexLauncher'
 import 'gtex-d3/css/boxplot.css'
 
@@ -16,13 +17,6 @@ const GTEX_TISSUES = {
 }
 
 const GTEX_TISSUE_LOOKUP = Object.entries(GTEX_TISSUES).reduce((acc, [k, v]) => ({ ...acc, [v]: k }), {})
-
-const TISSUE_DISPLAY = {
-  WB: 'Whole Blood',
-  F: 'Fibroblast',
-  M: 'Muscle',
-  L: 'Lymphocyte',
-}
 
 const PLOT_WIDTH = 600
 const PLOT_MARGIN_LEFT = 40
