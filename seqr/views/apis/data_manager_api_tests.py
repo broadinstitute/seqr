@@ -1295,7 +1295,7 @@ class LoadDataAPITest(AirflowTestCase):
         # Test loading trigger error
         self.mock_slack.reset_mock()
         responses.calls.reset()
-        mock_subprocess.return_value.communicate.return_value = b'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v01/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v02/', b''
+        mock_subprocess.return_value.communicate.return_value = b'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v01/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v02/', b''
 
         body.update({'datasetType': 'SV', 'filePath': 'gs://test_bucket/sv_callset.vcf'})
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
