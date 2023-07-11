@@ -786,7 +786,8 @@ class EsSearch(object):
 
         transcripts = defaultdict(list)
         for transcript in sorted_transcripts:
-            transcripts[transcript['geneId']].append(transcript)
+            if transcript['geneId']:
+                transcripts[transcript['geneId']].append(transcript)
         gene_ids = result.pop('geneIds', None)
         if gene_ids:
             transcripts = {gene_id: ts for gene_id, ts in transcripts.items() if gene_id in gene_ids}
