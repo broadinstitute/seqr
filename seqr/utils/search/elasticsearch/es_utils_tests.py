@@ -138,12 +138,7 @@ ES_VARIANTS = [
               'consequence_terms': [
                   'frameshift_variant'
               ]
-            },
-            {
-              "gene_symbol" : "H3-2",
-              "gene_id" : None,
-              "major_consequence" : "NEAREST_TSS"
-            },
+            }
           ],
           'screen_region_type' : [
             'dELS',
@@ -490,7 +485,12 @@ ES_SV_WGS_VARIANT = {
             'gene_symbol': 'FAM131C',
             'major_consequence': 'DUP_LOF',
             'gene_id': 'ENSG00000228201'
-        }
+        },
+        {
+            "gene_symbol": "H3-2",
+            "gene_id": None,
+            "major_consequence": "NEAREST_TSS"
+        },
       ],
       'cpx_intervals': [{'type': 'DUP', 'chrom': '2', 'start': 1000, 'end': 3000},
                         {'type': 'INV', 'chrom': '20', 'start': 11000, 'end': 13000}],
