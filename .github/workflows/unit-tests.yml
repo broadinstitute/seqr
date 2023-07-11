@@ -55,7 +55,7 @@ jobs:
             pip-
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip wheel
+          python -m pip install --upgrade pip wheel
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
       - name: Run coverage tests
@@ -77,7 +77,7 @@ jobs:
             pip-
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip wheel
+          python3 -m pip install --upgrade pip wheel
           pip install -r hail_search/requirements-test.txt
       - name: Run coverage tests
         run: |
