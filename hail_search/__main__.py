@@ -2,18 +2,11 @@ from aiohttp import web
 import hail as hl
 import logging
 
-
-async def status(request: web.Request) -> web.Response:
-    return web.json_response({'success': True})
+from hail_search.web_app import init_web_app
 
 
 def run():
-    logging.basicConfig(level=logging.INFO)
-    hl.init()
-    app = web.Application()
-    app.add_routes([
-        web.get('/status', status),
-    ])
+    app = init_web_app()
     web.run_app(
         app,
         host='0.0.0.0',

@@ -63,6 +63,27 @@ jobs:
           coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker panelapp
           coverage report --fail-under=99
 
+  hail_search:
+    runs-on: ubuntu-latest
+    container: hailgenetics/hail:0.2.115
+
+    steps:
+      - name: Use pip cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('**/hail_search/requirements-test.txt') }}
+          restore-keys: |
+            pip-
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -r hail_search/requirements-test.txt
+      - name: Run coverage tests
+        run: |
+          coverage run --source="./hail_search" --omit="./hail_search/__main__.py" -m pytest hail_search/
+          coverage report --fail-under=99
+
   nodejs:
     runs-on: ubuntu-latest
 
