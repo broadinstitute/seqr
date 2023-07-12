@@ -37,6 +37,7 @@ class BaseHailTableQuery(object):
     GENOTYPE_FIELDS = {}
     GENOTYPE_RESPONSE_KEYS = {}
     POPULATIONS = {}
+    POPULATION_FIELDS = {}
     PREDICTION_FIELDS_CONFIG = {}
     TRANSCRIPT_FIELDS = ['gene_id']
     ANNOTATION_OVERRIDE_FIELDS = []
@@ -97,8 +98,9 @@ class BaseHailTableQuery(object):
 
     def population_expression(self, r, population):
         pop_config = self._format_population_config(self.POPULATIONS[population])
+        pop_field = self.POPULATION_FIELDS.get(population, population)
         return hl.struct(**{
-            response_key: hl.or_else(r[population][field], '' if response_key == 'id' else 0)
+            response_key: hl.or_else(r[pop_field][field], '' if response_key == 'id' else 0)
             for response_key, field in pop_config.items() if field is not None
         })
 
@@ -839,9 +841,7 @@ class BaseHailTableQuery(object):
 
 class BaseVariantHailTableQuery(BaseHailTableQuery):
 
-    POPULATIONS = {
-        'callset': {'hom': None, 'hemi': None, 'het': None},
-    }
+    POPULATIONS = {}
     PREDICTION_FIELDS_CONFIG = {
         'mut_taster': ('dbnsfp', 'MutationTaster_pred_id'),
         'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred_id'),
@@ -993,6 +993,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
 
     GENOTYPE_FIELDS = {f: f for f in ['ab', 'dp', 'gq']}
     POPULATIONS = {
+        'seqr': {'hom': 'hom', 'hemi': None, 'het': None},
         'topmed': {'hemi': None},
         'exac': {
             'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': 'AC_Het',
@@ -1001,6 +1002,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         GNOMAD_GENOMES_FIELD: {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
     }
     POPULATIONS.update(BaseVariantHailTableQuery.POPULATIONS)
+    POPULATION_FIELDS = {'seqr': 'gt_stats'}
     PREDICTION_FIELDS_CONFIG = {
         'cadd': ('cadd', 'PHRED'),
         'eigen': ('eigen', 'Eigen_phred'),
@@ -1088,6 +1090,7 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
     }
     for pop in ['gnomad_mito_heteroplasmy', 'helix_heteroplasmy']:
         POPULATIONS[pop].update({'max_hl': 'max_hl'})
+    POPULATIONS['callset'] = {'hom': None, 'hemi': None, 'het': None}
     POPULATIONS.update(BaseVariantHailTableQuery.POPULATIONS)
     PREDICTION_FIELDS_CONFIG = {
         'apogee': ('mitimpact', 'score'),
@@ -1259,7 +1262,7 @@ class MultiDataTypeHailTableQuery(object):
     DATA_TYPE_ANNOTATION_FIELDS = []
 
     SV_MERGE_FIELDS = {'interval', 'svType_id', 'rg37_locus_end', 'strvctvre', 'sv_callset',}
-    VARIANT_MERGE_FIELDS = {'alleles', 'callset', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rsid',}
+    VARIANT_MERGE_FIELDS = {'alleles', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rsid',}
     MERGE_FIELDS = {
         GCNV_KEY: SV_MERGE_FIELDS, SV_KEY: SV_MERGE_FIELDS,
         VARIANT_DATASET: VARIANT_MERGE_FIELDS, MITO_DATASET: VARIANT_MERGE_FIELDS,
