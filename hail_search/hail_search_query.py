@@ -843,7 +843,6 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         'callset': {'hom': None, 'hemi': None, 'het': None},
     }
     PREDICTION_FIELDS_CONFIG = {
-        'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),
         'mut_taster': ('dbnsfp', 'MutationTaster_pred_id'),
         'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred_id'),
         'revel': ('dbnsfp', 'REVEL_score'),
@@ -1005,11 +1004,14 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     PREDICTION_FIELDS_CONFIG = {
         'cadd': ('cadd', 'PHRED'),
         'eigen': ('eigen', 'Eigen_phred'),
+        'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),
         'gnomad_noncoding': ('gnomad_non_coding_constraint', 'z_score'),
         'mpc': ('mpc', 'MPC'),
+        'mut_pred': ('dbnsfp', 'MutPred_score'),
         'primate_ai': ('primate_ai', 'score'),
         'splice_ai': ('splice_ai', 'delta_score'),
         'splice_ai_consequence': ('splice_ai', 'splice_consequence_id'),
+        'vest': ('dbnsfp', 'VEST4_score'),
     }
     PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     ANNOTATION_OVERRIDE_FIELDS = [HGMD_KEY, SPLICE_AI_FIELD, SCREEN_KEY] + BaseVariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
@@ -1089,6 +1091,7 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
     POPULATIONS.update(BaseVariantHailTableQuery.POPULATIONS)
     PREDICTION_FIELDS_CONFIG = {
         'apogee': ('mitimpact', 'score'),
+        'fathmm': ('dbnsfp', 'FATHMM_pred_id'),
         'hmtvar': ('hmtvar', 'score'),
         'mitotip': ('mitotip', 'trna_prediction_id'),
         'haplogroup_defining': ('haplogroup', 'is_defining'),
