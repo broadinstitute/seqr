@@ -449,7 +449,8 @@ def load_data(request):
 
     version_path_prefix = f'{SEQR_DATSETS_GS_PATH}/GRCh38/{dag_name}'
     version_paths = get_gs_file_list(version_path_prefix, user=request.user, allow_missing=True, check_subfolders=False)
-    curr_version = max([int(re.findall(f'{version_path_prefix}/v(\d\d)/', p)[0]) for p in version_paths] + [0])
+    versions = [re.findall(f'{version_path_prefix}/v(\d\d)/', p) for p in version_paths]
+    curr_version = max([int(v[0]) for v in versions if v] + [0])
     dag_variables = {'version_path': f'{version_path_prefix}/v{curr_version+1:02d}'}
 
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
