@@ -620,7 +620,7 @@ class BaseHailTableQuery(object):
             annotation_filters.append(allowed_classes.contains(ht.hgmd.class_id))
         if consequence_overrides.get(SCREEN_KEY):
             allowed_consequences = hl.set({SCREEN_CONSEQUENCE_RANK_MAP[c] for c in consequence_overrides[SCREEN_KEY]})
-            annotation_filters.append(allowed_consequences.intersection(hl.set(ht.screen.region_type_id)).size() > 0)
+            annotation_filters.append(allowed_consequences.intersection(hl.set(ht.screen.region_type_ids)).size() > 0)
         if consequence_overrides.get(SPLICE_AI_FIELD):
             splice_ai = float(consequence_overrides[SPLICE_AI_FIELD])
             score_path = cls.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
@@ -843,14 +843,14 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         'callset': {'hom': None, 'hemi': None, 'het': None},
     }
     PREDICTION_FIELDS_CONFIG = {
-        'fathmm': ('dbnsfp', 'FATHMM_pred_id'),
+        'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),
         'mut_taster': ('dbnsfp', 'MutationTaster_pred_id'),
         'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred_id'),
         'revel': ('dbnsfp', 'REVEL_score'),
         'sift': ('dbnsfp', 'SIFT_pred_id'),
     }
     TRANSCRIPT_FIELDS = BaseHailTableQuery.TRANSCRIPT_FIELDS + [
-        'amino_acids', 'biotype', 'canonical', 'codons', 'hgvsc', 'hgvsp', 'lof', 'lof_filter', 'lof_flags', 'lof_info',
+        'amino_acids', 'biotype_id', 'canonical', 'codons', 'hgvsc', 'hgvsp', 'is_lof_nagnag', 'lof_filter_ids',
         'transcript_id', 'transcript_rank',
     ]
     ANNOTATION_OVERRIDE_FIELDS = [CLINVAR_KEY]
@@ -994,9 +994,9 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
 
     GENOTYPE_FIELDS = {f: f for f in ['ab', 'dp', 'gq']}
     POPULATIONS = {
-        'topmed': {'hemi': None, 'het': None},
+        'topmed': {'hemi': None},
         'exac': {
-            'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': None,
+            'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': 'AC_Het',
         },
         'gnomad_exomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
         GNOMAD_GENOMES_FIELD: {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
@@ -1009,22 +1009,27 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         'mpc': ('mpc', 'MPC'),
         'primate_ai': ('primate_ai', 'score'),
         'splice_ai': ('splice_ai', 'delta_score'),
-        'splice_ai_consequence': ('splice_ai', 'splice_consequence'),
+        'splice_ai_consequence': ('splice_ai', 'splice_consequence_id'),
     }
     PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     ANNOTATION_OVERRIDE_FIELDS = [HGMD_KEY, SPLICE_AI_FIELD, SCREEN_KEY] + BaseVariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
 
     BASE_ANNOTATION_FIELDS = {
         'hgmd': lambda r: r.hgmd.select('accession', **{'class': hl.array(HGMD_SIGNIFICANCES)[r.hgmd.class_id]}),
-        'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
         'screenRegionType': lambda r: hl.or_missing(
-            r.screen.region_type_id.size() > 0,
-            hl.array(SCREEN_CONSEQUENCES)[r.screen.region_type_id[0]]),
+            r.screen.region_type_ids.size() > 0,
+            hl.array(SCREEN_CONSEQUENCES)[r.screen.region_type_ids[0]]),
     }
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     SORTS = deepcopy(BaseVariantHailTableQuery.SORTS)
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: BaseVariantHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [r.hgmd.class_id]
+
+    @classmethod
+    def _filter_annotated_table(cls, ht, **kwargs):
+        # TODO remove once all other data types have been updated
+        ht = ht.transmute(variantId=ht.variant_id, sortedTranscriptConsequences=ht.sorted_transcript_consequences)
+        return super(VariantHailTableQuery, cls)._filter_annotated_table(ht, **kwargs)
 
     @classmethod
     def _get_family_table_filter_kwargs(cls, frequencies=None, load_table_kwargs=None, clinvar_path_terms=None, **kwargs):
