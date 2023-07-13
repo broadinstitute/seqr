@@ -1261,6 +1261,7 @@ class LoadDataAPITest(AirflowTestCase):
         url = reverse(load_data)
         self.check_pm_login(url)
 
+        responses.replace(responses.GET, f'{self.dag_url}/dagRuns', json={'dag_runs': []})
         mock_subprocess.return_value.communicate.return_value = b'', b'File not found'
         body = {'filePath': 'gs://test_bucket/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'projects': [
             'R0001_1kg', 'R0004_non_analyst_project',
