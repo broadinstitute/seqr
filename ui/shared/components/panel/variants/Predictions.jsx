@@ -13,7 +13,7 @@ import { ButtonLink } from '../../StyledComponents'
 const PredictionValue = styled.span`
   margin-left: 5px;
   font-weight: bolder;
-  color: black;
+  color: ${props => props.color};
   text-transform: uppercase;
 `
 
@@ -43,7 +43,9 @@ const predictionFieldValue = (
   return indicatorMap[value[0]] || indicatorMap[value]
 }
 
-const Prediction = ({ field, fieldTitle, value, color, infoValue, infoTitle, warningThreshold, dangerThreshold }) => {
+const Prediction = (
+  { field, fieldTitle, value, color, infoValue, infoTitle, warningThreshold, dangerThreshold, href },
+) => {
   const indicator = infoValue ? (
     <Popup
       header={infoTitle}
@@ -69,7 +71,11 @@ const Prediction = ({ field, fieldTitle, value, color, infoValue, infoTitle, war
     <div>
       {indicator}
       {fieldDisplay}
-      <PredictionValue>{value}</PredictionValue>
+      {href ? (
+        <ButtonLink as="a" href={href} target="_blank" rel="noreferrer">
+          <PredictionValue>{value}</PredictionValue>
+        </ButtonLink>
+      ) : <PredictionValue color="black">{value}</PredictionValue>}
     </div>
   )
 }
@@ -83,6 +89,7 @@ Prediction.propTypes = {
   color: PropTypes.string,
   warningThreshold: PropTypes.number,
   dangerThreshold: PropTypes.number,
+  href: PropTypes.string,
 }
 
 class Predictions extends React.PureComponent {
@@ -116,9 +123,10 @@ class Predictions extends React.PureComponent {
       }
     }
 
-    const predictorFields = PREDICTOR_FIELDS.map(({ fieldTitle, ...predictorField }) => ({
+    const predictorFields = PREDICTOR_FIELDS.map(({ fieldTitle, getHref, ...predictorField }) => ({
       field: predictorField.field,
       fieldTitle,
+      href: getHref && getHref(variant),
       ...predictionFieldValue(predictions, genePredictors[predictorField.field] || predictorField),
     })).filter(predictorField => predictorField.value !== null && predictorField.value !== undefined)
     return (
