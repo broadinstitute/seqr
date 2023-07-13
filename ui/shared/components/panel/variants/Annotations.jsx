@@ -233,13 +233,6 @@ const VARIANT_LINKS = [
       `https://aggregator.bchresearch.org/variant.html?variant=${chrom}:${genomeVersion === GENOME_VERSION_37 ? pos : liftedOverPos}:${ref}:${alt}`
     ),
   },
-  {
-    name: 'SpliceAI',
-    shouldShow: ({ svType }) => !svType,
-    getHref: ({ chrom, pos, ref, alt, genomeVersion }) => (
-      `https://spliceailookup.broadinstitute.org/#variant=${chrom}-${pos}-${ref}-${alt}&hg=${genomeVersion}&distance=1000&mask=1`
-    ),
-  },
 ]
 
 const variantSearchLinks = (variant, mainTranscript, genesById, user) => {
