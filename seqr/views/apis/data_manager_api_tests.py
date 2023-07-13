@@ -1176,11 +1176,11 @@ class DataManagerAPITest(AuthenticationTestCase):
         file = [row.split('\t') for row in write_call.split('\n')]
         self.assertEqual(len(file), 15)
         self.assertListEqual(file[:5], [
-            ['Project_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex'],
-            ['R0001_1kg', '1', 'NA19675_1', 'NA19678', 'NA19679', 'M'],
-            ['R0001_1kg', '1', 'NA19678', '', '', 'M'],
-            ['R0001_1kg', '1', 'NA19679', '', '', 'F'],
-            ['R0001_1kg', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
+            ['Project_GUID', 'Family_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex'],
+            ['R0001_1kg', 'F000001_1', '1', 'NA19675_1', 'NA19678', 'NA19679', 'M'],
+            ['R0001_1kg', 'F000001_1', '1', 'NA19678', '', '', 'M'],
+            ['R0001_1kg', 'F000001_1', '1', 'NA19679', '', '', 'F'],
+            ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
          ])
 
         mock_subprocess.assert_has_calls(
