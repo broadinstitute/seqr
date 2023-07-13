@@ -123,54 +123,16 @@ SV_TYPE_DETAILS = [
     'delINVdup', 'dupINV', 'dupINVdel', 'dupINVdup',
 ]
 
-CLINVAR_SIGNIFICANCES = [
-    'Pathogenic', 'Pathogenic,_risk_factor', 'Pathogenic,_Affects', 'Pathogenic,_drug_response',
-    'Pathogenic,_drug_response,_protective,_risk_factor', 'Pathogenic,_association', 'Pathogenic,_other',
-    'Pathogenic,_association,_protective', 'Pathogenic,_protective', 'Pathogenic/Likely_pathogenic',
-    'Pathogenic/Likely_pathogenic,_risk_factor', 'Pathogenic/Likely_pathogenic,_drug_response',
-    'Pathogenic/Likely_pathogenic,_other', 'Likely_pathogenic,_risk_factor', 'Likely_pathogenic',
-    'Conflicting_interpretations_of_pathogenicity', 'Conflicting_interpretations_of_pathogenicity,_risk_factor',
-    'Conflicting_interpretations_of_pathogenicity,_Affects',
-    'Conflicting_interpretations_of_pathogenicity,_association,_risk_factor',
-    'Conflicting_interpretations_of_pathogenicity,_other,_risk_factor',
-    'Conflicting_interpretations_of_pathogenicity,_association',
-    'Conflicting_interpretations_of_pathogenicity,_drug_response',
-    'Conflicting_interpretations_of_pathogenicity,_drug_response,_other',
-    'Conflicting_interpretations_of_pathogenicity,_other', 'Uncertain_significance',
-    'Uncertain_significance,_risk_factor', 'Uncertain_significance,_Affects', 'Uncertain_significance,_association',
-    'Uncertain_significance,_other', 'Affects', 'Affects,_risk_factor', 'Affects,_association', 'other', 'NA',
-    'risk_factor', 'drug_response,_risk_factor', 'association', 'confers_sensitivity', 'drug_response', 'not_provided',
-    'Likely_benign,_drug_response,_other', 'Likely_benign,_other', 'Likely_benign', 'Benign/Likely_benign,_risk_factor',
-    'Benign/Likely_benign,_drug_response', 'Benign/Likely_benign,_other', 'Benign/Likely_benign', 'Benign,_risk_factor',
-    'Benign,_confers_sensitivity', 'Benign,_association,_confers_sensitivity', 'Benign,_drug_response', 'Benign,_other',
-    'Benign,_protective', 'Benign', 'protective,_risk_factor', 'protective',
-    # In production - sort these correctly (get current list of values from actual clinvar file)
-    'Pathogenic/Pathogenic,_low_penetrance', 'Pathogenic/Pathogenic,_low_penetrance|risk_factor',
-    'Pathogenic/Likely_pathogenic/Pathogenic,_low_penetrance', 'Pathogenic/Likely_pathogenic/Pathogenic,_low_penetrance|other',
-    'Pathogenic/Likely_pathogenic,_low_penetrance', 'Conflicting_interpretations_of_pathogenicity,_protective',
-    'Likely_risk_allele', 'Uncertain_significance,_drug_response', 'Uncertain_significance/Uncertain_risk_allele',
-    'Uncertain_risk_allele', 'Uncertain_risk_allele,_risk_factor', 'Uncertain_risk_allele,_protective',
-    'association,_risk_factor', 'association,_drug_response', 'association,_drug_response,_risk_factor',
-    'association_not_found', 'drug_response,_other', 'Likely_benign,_association', 'Benign/Likely_benign,_association',
-    'Benign/Likely_benign,_drug_response,_other', 'Benign/Likely_benign,_other,_risk_factor', 'Benign,_association',
-]
-CLINVAR_SIG_MAP = {sig: i for i, sig in enumerate(CLINVAR_SIGNIFICANCES)}
-CLINVAR_SIG_BENIGN_OFFSET = 39.5
 PATH_FREQ_OVERRIDE_CUTOFF = 0.05
-CLINVAR_SIGNFICANCE_MAP = {
-    'pathogenic': ['Pathogenic', 'Pathogenic/Likely_pathogenic'],
-    'likely_pathogenic': ['Likely_pathogenic', 'Pathogenic/Likely_pathogenic'],
-    'benign': ['Benign', 'Benign/Likely_benign'],
-    'likely_benign': ['Likely_benign', 'Benign/Likely_benign'],
-    'vus_or_conflicting': [
-        'Conflicting_interpretations_of_pathogenicity',
-        'Uncertain_significance',
-        'not_provided',
-        'other'
-    ],
-}
-CLINVAR_PATH_SIGNIFICANCES = set(CLINVAR_SIGNFICANCE_MAP['pathogenic'])
-CLINVAR_PATH_SIGNIFICANCES.update(CLINVAR_SIGNFICANCE_MAP['likely_pathogenic'])
+CLINVAR_PATH_SIGNIFICANCES = {'pathogenic', 'likely_pathogenic'}
+CLINVAR_NO_ASSERTION = 'No_pathogenic_assertion'
+CLINVAR_PATH_RANGES = [
+    ('pathogenic', 'Pathogenic', 'Pathogenic/Likely_risk_allele'),
+    ('likely_pathogenic', 'Pathogenic/Likely_pathogenic', 'Likely_risk_allele'),
+    ('vus_or_conflicting', 'Conflicting_interpretations_of_pathogenicity', CLINVAR_NO_ASSERTION),
+    ('likely_benign', 'Likely_benign', 'Benign/Likely_benign'),
+    ('benign', 'Benign/Likely_benign', 'Benign'),
+]
 
 HGMD_SIGNIFICANCES = ['DM', 'DM?', 'DP', 'DFP', 'FP', 'FTV', 'R']
 HGMD_SIG_MAP = {sig: i for i, sig in enumerate(HGMD_SIGNIFICANCES)}

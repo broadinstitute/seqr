@@ -9,9 +9,9 @@ from hail_search.constants import CHROM_TO_XPOS_OFFSET, AFFECTED, UNAFFECTED, AF
     GNOMAD_GENOMES_FIELD, POPULATION_SORTS, CONSEQUENCE_SORT_KEY, COMP_HET_ALT, INHERITANCE_FILTERS, GCNV_KEY, SV_KEY, \
     CONSEQUENCE_RANKS, CONSEQUENCE_RANK_MAP, SV_CONSEQUENCE_RANK_OFFSET, SCREEN_CONSEQUENCES, SCREEN_CONSEQUENCE_RANK_MAP, \
     SV_CONSEQUENCE_RANKS, SV_CONSEQUENCE_RANK_MAP, SV_TYPE_DISPLAYS, SV_DEL_INDICES, SV_TYPE_MAP, SV_TYPE_DETAILS, \
-    CLINVAR_SIGNIFICANCES, CLINVAR_SIG_MAP, CLINVAR_SIG_BENIGN_OFFSET, HGMD_SIGNIFICANCES, HGMD_SIG_MAP, \
+    CLINVAR_PATH_RANGES, CLINVAR_NO_ASSERTION, HGMD_SIGNIFICANCES, HGMD_SIG_MAP, \
     PREDICTION_FIELD_ID_LOOKUP, RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, ALT_ALT, \
-    REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, \
+    REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, \
     CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF, SCREEN_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY, STRUCTURAL_ANNOTATION_FIELD_SECONDARY
 
@@ -468,9 +468,10 @@ class BaseHailTableQuery(object):
         return intervals
 
     def _parse_overrides(self, pathogenicity, annotations, annotations_secondary):
-        consequence_overrides = {CLINVAR_KEY: set(), HGMD_KEY: set()}
-        for clinvar_filter in (pathogenicity or {}).get('clinvar', []):
-            consequence_overrides[CLINVAR_KEY].update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
+        consequence_overrides = {
+            CLINVAR_KEY: set((pathogenicity or {}).get('clinvar', [])),
+            HGMD_KEY: set(),
+        }
         for hgmd_filter in (pathogenicity or {}).get('hgmd', []):
             consequence_overrides[HGMD_KEY].update(HGMD_CLASS_MAP.get(hgmd_filter, []))
 
@@ -613,10 +614,7 @@ class BaseHailTableQuery(object):
         consequence_overrides = {k: v for k, v in consequence_overrides.items() if k in cls.ANNOTATION_OVERRIDE_FIELDS}
 
         if consequence_overrides.get(CLINVAR_KEY):
-            allowed_significances = hl.set({
-                CLINVAR_SIG_MAP[s] for s in consequence_overrides[CLINVAR_KEY]
-            })
-            annotation_filters.append(allowed_significances.contains(ht.clinvar.clinical_significance_id))
+            annotation_filters.append(cls._has_clivar_terms_expr(ht, consequence_overrides[CLINVAR_KEY]))
         if consequence_overrides.get(HGMD_KEY):
             allowed_classes = hl.set({HGMD_SIG_MAP[s] for s in consequence_overrides[HGMD_KEY]})
             annotation_filters.append(allowed_classes.contains(ht.hgmd.class_id))
@@ -639,14 +637,34 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _get_clinvar_path_terms(cls, consequence_overrides):
-        return [
-            CLINVAR_SIG_MAP[f] for f in consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES
-        ] if CLINVAR_KEY in cls.ANNOTATION_OVERRIDE_FIELDS else []
+        return {
+            f for f in consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES
+        } if CLINVAR_KEY in cls.ANNOTATION_OVERRIDE_FIELDS else []
 
     @staticmethod
     def _has_clivar_terms_expr(ht, clinvar_terms):
-        allowed_terms = hl.set(clinvar_terms)
-        return allowed_terms.contains(ht.clinvar.clinical_significance_id)
+        # TODO from table global
+        path_enum = ['Pathogenic', 'Pathogenic/Likely_pathogenic', 'Pathogenic/Likely_pathogenic/Likely_risk_allele', 'Pathogenic/Likely_risk_allele', 'Likely_pathogenic', 'Likely_pathogenic/Likely_risk_allele', 'Established_risk_allele', 'Likely_risk_allele', 'Conflicting_interpretations_of_pathogenicity', 'Uncertain_risk_allele', 'Uncertain_significance/Uncertain_risk_allele', 'Uncertain_significance', 'No_pathogenic_assertion', 'Likely_benign', 'Benign/Likely_benign', 'Benign']
+
+        ranges = []
+        range = [None, None]
+        for path_filter, start, end in CLINVAR_PATH_RANGES:
+            if path_filter in clinvar_terms:
+                range[1] = end
+                if not range[0]:
+                    range[0] = start
+            elif range[0]:
+                ranges.append([path_enum.index(range[0]), path_enum.index(range[1])])
+                range = [None, None]
+
+        if not ranges:
+            return True
+
+        q = (ht.clinvar.pathogenicity_id >= ranges[0][0]) & (ht.clinvar.pathogenicity_id <= ranges[0][1])
+        for range in ranges[1:]:
+            q |= (ht.clinvar.pathogenicity_id >= range[0]) & (ht.clinvar.pathogenicity_id <= range[1])
+
+        return q
 
     @staticmethod
     def _has_allowed_sv_type_expr(ht, sv_types):
@@ -862,7 +880,8 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         'alt': lambda r: r.alleles[1],
         'clinvar': lambda r: r.clinvar.select(
             'alleleId', 'goldStars',
-            clinicalSignificance=hl.array(CLINVAR_SIGNIFICANCES)[r.clinvar.clinical_significance_id],
+            # TODO use enum mapping
+            'pathogenicity_id', 'assertion_ids', ' conflictingPathogenicities',
         ),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
         'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
@@ -874,8 +893,10 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     SORTS = {
         PATHOGENICTY_SORT_KEY: lambda r: [hl.or_else(
+            r.clinvar.pathogenicity_id,
             # sort variants absent from clinvar between uncertain and benign
-            r.clinvar.clinical_significance_id, CLINVAR_SIG_BENIGN_OFFSET,
+            # TODO actually get enum from r.globals
+            hl.eval(r.globals.enums.clinvar.pathogenicity).index(CLINVAR_NO_ASSERTION) + 0.5,
         )],
     }
     SORTS.update(BaseHailTableQuery.SORTS)
