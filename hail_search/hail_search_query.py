@@ -880,8 +880,9 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         'alt': lambda r: r.alleles[1],
         'clinvar': lambda r: r.clinvar.select(
             'alleleId', 'goldStars',
-            # TODO use enum mapping
-            'pathogenicity_id', 'assertion_ids', ' conflictingPathogenicities',
+            # TODO use enum mapping?
+            'pathogenicity_id', 'assertion_ids', 'conflictingPathogenicities',
+            version=r.globals,  # TODO actually get from globals
         ),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
         'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
