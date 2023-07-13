@@ -13,7 +13,7 @@ import { ButtonLink } from '../../StyledComponents'
 const PredictionValue = styled.span`
   margin-left: 5px;
   font-weight: bolder;
-  color: ${props => props.color};
+  color: black;
   text-transform: uppercase;
 `
 
@@ -67,15 +67,13 @@ const Prediction = (
     />
   ) : fieldName
 
+  const valueDisplay = href ? <a href={href} target="_blank" rel="noreferrer">{value}</a> : value
+
   return (
     <div>
       {indicator}
       {fieldDisplay}
-      {href ? (
-        <ButtonLink as="a" href={href} target="_blank" rel="noreferrer">
-          <PredictionValue>{value}</PredictionValue>
-        </ButtonLink>
-      ) : <PredictionValue color="black">{value}</PredictionValue>}
+      <PredictionValue>{valueDisplay}</PredictionValue>
     </div>
   )
 }
