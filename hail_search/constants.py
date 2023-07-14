@@ -133,14 +133,11 @@ CLINVAR_PATH_RANGES = [
     ('likely_benign', 'Likely_benign', 'Benign/Likely_benign'),
     ('benign', 'Benign/Likely_benign', 'Benign'),
 ]
-
-HGMD_SIGNIFICANCES = ['DM', 'DM?', 'DP', 'DFP', 'FP', 'FTV', 'R']
-HGMD_SIG_MAP = {sig: i for i, sig in enumerate(HGMD_SIGNIFICANCES)}
-HGMD_CLASS_MAP = {
-    'disease_causing': ['DM'],
-    'likely_disease_causing': ['DM?'],
-    'hgmd_other': ['DP', 'DFP', 'FP', 'FTV'],
-}
+HGMD_PATH_RANGES = [
+    ('disease_causing', 'DM', 'DM'),
+    ('likely_disease_causing', 'DM?', 'DM?'),
+    ('hgmd_other', 'DM?', None),
+]
 
 CHROMOSOMES = [
     '1',

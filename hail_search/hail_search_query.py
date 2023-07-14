@@ -9,9 +9,9 @@ from hail_search.constants import CHROM_TO_XPOS_OFFSET, AFFECTED, UNAFFECTED, AF
     GNOMAD_GENOMES_FIELD, POPULATION_SORTS, CONSEQUENCE_SORT_KEY, COMP_HET_ALT, INHERITANCE_FILTERS, GCNV_KEY, SV_KEY, \
     CONSEQUENCE_RANKS, CONSEQUENCE_RANK_MAP, SV_CONSEQUENCE_RANK_OFFSET, SCREEN_CONSEQUENCES, SCREEN_CONSEQUENCE_RANK_MAP, \
     SV_CONSEQUENCE_RANKS, SV_CONSEQUENCE_RANK_MAP, SV_TYPE_DISPLAYS, SV_DEL_INDICES, SV_TYPE_MAP, SV_TYPE_DETAILS, \
-    CLINVAR_PATH_RANGES, CLINVAR_NO_ASSERTION, HGMD_SIGNIFICANCES, HGMD_SIG_MAP, \
+    CLINVAR_PATH_RANGES, CLINVAR_NO_ASSERTION, HGMD_PATH_RANGES, \
     RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, ALT_ALT, \
-    REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, \
+    REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, CLINVAR_PATH_SIGNIFICANCES, \
     CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF, SCREEN_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY, STRUCTURAL_ANNOTATION_FIELD_SECONDARY
 
@@ -506,10 +506,8 @@ class BaseHailTableQuery(object):
     def _parse_overrides(self, pathogenicity, annotations, annotations_secondary):
         consequence_overrides = {
             CLINVAR_KEY: set((pathogenicity or {}).get('clinvar', [])),
-            HGMD_KEY: set(),
+            HGMD_KEY: set((pathogenicity or {}).get('hgmd', [])),
         }
-        for hgmd_filter in (pathogenicity or {}).get('hgmd', []):
-            consequence_overrides[HGMD_KEY].update(HGMD_CLASS_MAP.get(hgmd_filter, []))
 
         annotations = {k: v for k, v in (annotations or {}).items() if v}
         consequence_overrides.update({
@@ -654,8 +652,9 @@ class BaseHailTableQuery(object):
         if consequence_overrides.get(CLINVAR_KEY):
             annotation_filters.append(cls._has_clivar_terms_expr(ht, consequence_overrides[CLINVAR_KEY]))
         if consequence_overrides.get(HGMD_KEY):
-            allowed_classes = hl.set({HGMD_SIG_MAP[s] for s in consequence_overrides[HGMD_KEY]})
-            annotation_filters.append(allowed_classes.contains(ht.hgmd.class_id))
+            annotation_filters.append(
+                cls._has_terms_range_expr(ht, 'hgmd', 'class', consequence_overrides[HGMD_KEY], HGMD_PATH_RANGES)
+            )
         if consequence_overrides.get(SCREEN_KEY):
             allowed_consequences = hl.set({SCREEN_CONSEQUENCE_RANK_MAP[c] for c in consequence_overrides[SCREEN_KEY]})
             annotation_filters.append(allowed_consequences.intersection(hl.set(ht.screen.region_type_ids)).size() > 0)
@@ -681,25 +680,34 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _has_clivar_terms_expr(cls, ht, clinvar_terms):
-        path_lookup = cls._get_enum_lookup(ht, 'clinvar', 'pathogenicity')
+        return cls._has_terms_range_expr(ht, 'clinvar', 'pathogenicity', clinvar_terms, CLINVAR_PATH_RANGES)
+
+    @classmethod
+    def _has_terms_range_expr(cls, ht, field, subfield, terms, range_configs):
+        enum_lookup = cls._get_enum_lookup(ht, field, subfield)
 
         ranges = []
         range = [None, None]
-        for path_filter, start, end in CLINVAR_PATH_RANGES:
-            if path_filter in clinvar_terms:
+        for path_filter, start, end in range_configs:
+            if path_filter in terms:
+                if end is None:
+                    # Filter for any value greater than start
+                    start = start + 1
+                    end = len(enum_lookup)
                 range[1] = end
                 if not range[0]:
                     range[0] = start
             elif range[0]:
-                ranges.append([path_lookup[range[0]], path_lookup[range[1]]])
+                ranges.append([enum_lookup[range[0]], enum_lookup[range[1]]])
                 range = [None, None]
 
         if not ranges:
             return True
 
-        q = (ht.clinvar.pathogenicity_id >= ranges[0][0]) & (ht.clinvar.pathogenicity_id <= ranges[0][1])
+        value = ht[field][f'{subfield}_id']
+        q = (value >= ranges[0][0]) & (value <= ranges[0][1])
         for range in ranges[1:]:
-            q |= (ht.clinvar.pathogenicity_id >= range[0]) & (ht.clinvar.pathogenicity_id <= range[1])
+            q |= (value >= range[0]) & (value <= range[1])
 
         return q
 
@@ -1079,12 +1087,13 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     ANNOTATION_OVERRIDE_FIELDS = [HGMD_KEY, SPLICE_AI_FIELD, SCREEN_KEY] + BaseVariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
 
     BASE_ANNOTATION_FIELDS = {
-        'hgmd': lambda r: r.hgmd.select('accession', **{'class': hl.array(HGMD_SIGNIFICANCES)[r.hgmd.class_id]}),
         'screenRegionType': lambda r: hl.or_missing(
             r.screen.region_type_ids.size() > 0,
             hl.array(SCREEN_CONSEQUENCES)[r.screen.region_type_ids[0]]),
     }
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
+    ENUM_ANNOTATION_FIELDS = {'hgmd': {}}
+    ENUM_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.ENUM_ANNOTATION_FIELDS)
 
     SORTS = deepcopy(BaseVariantHailTableQuery.SORTS)
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: BaseVariantHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [r.hgmd.class_id]
