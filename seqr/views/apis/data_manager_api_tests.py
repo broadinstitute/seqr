@@ -281,7 +281,7 @@ SAMPLE_GENE_OUTLIER_DATA = {
 }
 SAMPLE_GENE_TPM_DATA = {
     'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '7.8'},
-    'ENSG00000233750': {'gene_id': 'ENSG00000233750', 'tpm': '0.064'},
+    'ENSG00000233750': {'gene_id': 'ENSG00000233750', 'tpm': '0.0'},
 }
 SAMPLE_GENE_SPLICE_DATA = {
     'ENSG00000163092-2-167254166-167258349-*-psi3': {
@@ -690,15 +690,14 @@ class DataManagerAPITest(AuthenticationTestCase):
             'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 0.064],
             'duplicated_indiv_id_data': [
                 ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'muscle', 7.8],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.064],
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.0],
             ],
             'write_data': {'NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}\n',
-                           'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.064"}}\n'},
+                           'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.0"}}\n'},
             'new_data': [
                 # existing sample NA19675_D2
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.0],
                 # no matched individual NA19675_D3
                 ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
                 # skip GTEX samples
@@ -721,7 +720,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             ],
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
-            'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
+            'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.0)],
             'sample_guid': RNA_TPM_SAMPLE_GUID,
         },
         'splice_outlier': {
