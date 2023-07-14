@@ -100,9 +100,7 @@ class BaseHailTableQuery(object):
             ).map(lambda t: self._enum_field(
                 t, enums['sorted_transcript_consequences'], drop_fields=self.OMIT_TRANSCRIPT_FIELDS,
                 format=lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
-                annotate=None if 'major_consequence_id' in t else {
-                    'major_consequence': lambda value, *args: self.get_major_consequence(t),  # TODO probable cleanup
-                },
+                annotate=self._annotate_transcript,
             )).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
@@ -122,6 +120,10 @@ class BaseHailTableQuery(object):
             for response_key, field in pop_config.items() if field is not None
         })
 
+    @classmethod
+    def _annotate_transcript(cls, *args):
+        return {}
+
     @staticmethod
     def _enum_field(value, enum, r=None, annotate=None, format=None, drop_fields=None, **kwargs):
         annotations = {}
@@ -138,10 +140,11 @@ class BaseHailTableQuery(object):
             else:
                 annotations[field] = enum_array[value[value_field]]
 
+        value = value.annotate(**annotations)
         if annotate:
-            annotations.update(annotate(value, enum, r))
-
-        value = value.annotate(**annotations).drop(*drop)
+            annotations = annotate(value, enum, r)
+            value = value.annotate(**annotations)
+        value = value.drop(*drop)
 
         if format:
             value = format(value)
@@ -150,10 +153,6 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def get_major_consequence_id(transcript):
-        raise NotImplementedError
-
-    @staticmethod
-    def get_major_consequence(transcript):
         raise NotImplementedError
 
     def __init__(self, data_type, sample_data, genome_version,  gene_ids=None, sort=None, sort_metadata=None, num_results=100, **kwargs):
@@ -920,7 +919,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         'revel': ('dbnsfp', 'REVEL_score'),
         'sift': ('dbnsfp', 'SIFT_pred'),
     }
-    OMIT_TRANSCRIPT_FIELDS = ['consequence_term_ids']
+    OMIT_TRANSCRIPT_FIELDS = ['consequence_terms']
     ANNOTATION_OVERRIDE_FIELDS = [CLINVAR_KEY]
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
@@ -965,11 +964,12 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
         consequence_transcripts = None
         if self._allowed_consequences:
-            consequence_transcripts = get_matching_transcripts(hl.set(self._allowed_consequences), self.get_major_consequence)
+            get_major_csq = lambda t: hl.array(CONSEQUENCE_RANKS)[t.sorted_consequence_ids[0]]  # TODO
+            consequence_transcripts = get_matching_transcripts(hl.set(self._allowed_consequences), get_major_csq)
             if self._allowed_consequences_secondary:
                 consequence_transcripts = hl.if_else(
                     consequence_transcripts.size() > 0, consequence_transcripts,
-                    get_matching_transcripts(hl.set(self._allowed_consequences_secondary), self.get_major_consequence))
+                    get_matching_transcripts(hl.set(self._allowed_consequences_secondary), get_major_csq))
 
         if gene_transcripts is not None:
             if consequence_transcripts is None:
@@ -1027,13 +1027,13 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
             ht = ht.filter(rs_id_set.contains(ht.rsid))
         return super(BaseVariantHailTableQuery, cls)._filter_annotated_table(ht, **kwargs)
 
+    @classmethod
+    def _annotate_transcript(cls, transcript, *args):
+        return {'major_consequence': transcript.consequence_terms.first()}
+
     @staticmethod
     def get_major_consequence_id(transcript):
         return transcript.sorted_consequence_ids[0]
-
-    @staticmethod
-    def get_major_consequence(transcript):
-        return hl.array(CONSEQUENCE_RANKS)[transcript.sorted_consequence_ids[0]]
 
     @staticmethod
     def _get_allowed_consequence_ids(allowed_consequences):
@@ -1248,10 +1248,6 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     def get_major_consequence_id(transcript):
         return transcript.major_consequence_id
 
-    @staticmethod
-    def get_major_consequence(transcript):
-        return hl.array(SV_CONSEQUENCE_RANKS)[transcript.major_consequence_id]
-
     @classmethod
     def _filter_inheritance(cls, ht, *args, consequence_overrides=None):
         ht = super(BaseSvHailTableQuery, cls)._filter_inheritance(ht, *args)
@@ -1453,13 +1449,12 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
             BaseSvHailTableQuery.get_major_consequence_id(transcript),
         )
 
-    @staticmethod
-    def get_major_consequence(transcript):
-        return hl.if_else(
-            hl.is_defined(transcript.sorted_consequence_ids),
-            BaseVariantHailTableQuery.get_major_consequence(transcript),
-            BaseSvHailTableQuery.get_major_consequence(transcript),
-        )
+    @classmethod
+    def _annotate_transcript(cls, transcript, *args):
+        return {
+            k: hl.or_else(v, transcript[k])
+            for k, v in BaseVariantHailTableQuery._annotate_transcript(transcript, *args)
+        }
 
     def _is_valid_comp_het_family(self, ch_ht, genotypes_1, genotypes_2):
         is_valid = super(AllDataTypeHailTableQuery, self)._is_valid_comp_het_family(ch_ht, genotypes_1, genotypes_2)
