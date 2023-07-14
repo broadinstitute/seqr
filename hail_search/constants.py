@@ -142,15 +142,6 @@ HGMD_CLASS_MAP = {
     'hgmd_other': ['DP', 'DFP', 'FP', 'FTV'],
 }
 
-PREDICTION_FIELD_ID_LOOKUP = {
-    'fathmm': ['D', 'T'],
-    'mut_taster': ['D', 'A', 'N', 'P'],
-    'polyphen': ['D', 'P', 'B'],
-    'sift': ['D', 'T'],
-    'mitotip': ['likely_pathogenic',  'possibly_pathogenic', 'possibly_benign', 'likely_benign'],
-    'haplogroup_defining': ['Y'],
-}
-
 CHROMOSOMES = [
     '1',
     '2',

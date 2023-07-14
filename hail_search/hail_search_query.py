@@ -10,7 +10,7 @@ from hail_search.constants import CHROM_TO_XPOS_OFFSET, AFFECTED, UNAFFECTED, AF
     CONSEQUENCE_RANKS, CONSEQUENCE_RANK_MAP, SV_CONSEQUENCE_RANK_OFFSET, SCREEN_CONSEQUENCES, SCREEN_CONSEQUENCE_RANK_MAP, \
     SV_CONSEQUENCE_RANKS, SV_CONSEQUENCE_RANK_MAP, SV_TYPE_DISPLAYS, SV_DEL_INDICES, SV_TYPE_MAP, SV_TYPE_DETAILS, \
     CLINVAR_PATH_RANGES, CLINVAR_NO_ASSERTION, HGMD_SIGNIFICANCES, HGMD_SIG_MAP, \
-    PREDICTION_FIELD_ID_LOOKUP, RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, ALT_ALT, \
+    RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, ALT_ALT, \
     REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, \
     CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF, SCREEN_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY, STRUCTURAL_ANNOTATION_FIELD_SECONDARY
@@ -65,7 +65,10 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _get_enum_lookup(ht, field, subfield):
-        return {v: i for i, v in enumerate(hl.eval(getattr(getattr(ht.enums, field), subfield)))}
+        enum_field = getattr(getattr(ht.enums, field, None), subfield, None)
+        if enum_field is None:
+            return None
+        return {v: i for i, v in enumerate(hl.eval(enum_field))}
 
     @classmethod
     def populations_configs(cls):
@@ -79,13 +82,16 @@ class BaseHailTableQuery(object):
 
     @property
     def annotation_fields(self):
+        # TODO confirm enum approach works on real data
+        enums = hl.eval(self._ht.enums)
+
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
             }),
             'predictions': lambda r: hl.struct(**{
-                prediction: hl.array(PREDICTION_FIELD_ID_LOOKUP[prediction])[r[path[0]][path[1]]]
-                if prediction in PREDICTION_FIELD_ID_LOOKUP else r[path[0]][path[1]]
+                prediction: hl.array(enums[path[0]][path[1]])[r[path[0]][path[1]]]
+                if enums.get(path[0], {}).get(path[1]) else r[path[0]][path[1]]
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
             'transcripts': lambda r: hl.or_else(
@@ -557,10 +563,12 @@ class BaseHailTableQuery(object):
         missing_in_silico_q = None
         for in_silico, value in in_silico_filters.items():
             score_path = cls.PREDICTION_FIELDS_CONFIG[in_silico]
-            ht_value = ht[score_path[0]][score_path[1]]
-            if in_silico in PREDICTION_FIELD_ID_LOOKUP:
-                score_filter = ht_value == PREDICTION_FIELD_ID_LOOKUP[in_silico].index(value)
+            enum_lookup = cls._get_enum_lookup(ht, score_path[0], score_path[1])
+            if enum_lookup is not None:
+                ht_value = ht[score_path[0]][f'{score_path[1]}_id']
+                score_filter = ht_value == enum_lookup[value]
             else:
+                ht_value = ht[score_path[0]][score_path[1]]
                 score_filter = ht_value >= float(value)
 
             if in_silico_q is None:
@@ -647,7 +655,7 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _has_clivar_terms_expr(cls, ht, clinvar_terms):
-        path_lookup = cls._get_enum_lookup(ht, 'clinvar', 'path')
+        path_lookup = cls._get_enum_lookup(ht, 'clinvar', 'pathogenicity')
 
         ranges = []
         range = [None, None]
@@ -864,10 +872,10 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     POPULATIONS = {}
     PREDICTION_FIELDS_CONFIG = {
-        'mut_taster': ('dbnsfp', 'MutationTaster_pred_id'),
-        'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred_id'),
+        'mut_taster': ('dbnsfp', 'MutationTaster_pred'),
+        'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),
         'revel': ('dbnsfp', 'REVEL_score'),
-        'sift': ('dbnsfp', 'SIFT_pred_id'),
+        'sift': ('dbnsfp', 'SIFT_pred'),
     }
     TRANSCRIPT_FIELDS = BaseHailTableQuery.TRANSCRIPT_FIELDS + [
         'amino_acids', 'biotype_id', 'canonical', 'codons', 'hgvsc', 'hgvsp', 'is_lof_nagnag', 'lof_filter_ids',
@@ -1036,7 +1044,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         'mut_pred': ('dbnsfp', 'MutPred_score'),
         'primate_ai': ('primate_ai', 'score'),
         'splice_ai': ('splice_ai', 'delta_score'),
-        'splice_ai_consequence': ('splice_ai', 'splice_consequence_id'),
+        'splice_ai_consequence': ('splice_ai', 'splice_consequence'),
         'vest': ('dbnsfp', 'VEST4_score'),
     }
     PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
@@ -1118,9 +1126,9 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
     POPULATIONS.update(BaseVariantHailTableQuery.POPULATIONS)
     PREDICTION_FIELDS_CONFIG = {
         'apogee': ('mitimpact', 'score'),
-        'fathmm': ('dbnsfp', 'FATHMM_pred_id'),
+        'fathmm': ('dbnsfp', 'FATHMM_pred'),
         'hmtvar': ('hmtvar', 'score'),
-        'mitotip': ('mitotip', 'trna_prediction_id'),
+        'mitotip': ('mitotip', 'trna_prediction'),
         'haplogroup_defining': ('haplogroup', 'is_defining'),
     }
     PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
