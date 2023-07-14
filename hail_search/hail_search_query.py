@@ -63,6 +63,10 @@ class BaseHailTableQuery(object):
         XPOS_SORT_KEY: lambda r: [r.xpos],
     }
 
+    @staticmethod
+    def _get_enum_lookup(ht, field, subfield):
+        return {v: i for i, v in enumerate(hl.eval(getattr(getattr(ht.enums, field), subfield)))}
+
     @classmethod
     def populations_configs(cls):
         return {pop: cls._format_population_config(pop_config) for pop, pop_config in cls.POPULATIONS.items()}
@@ -641,10 +645,9 @@ class BaseHailTableQuery(object):
             f for f in consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES
         } if CLINVAR_KEY in cls.ANNOTATION_OVERRIDE_FIELDS else []
 
-    @staticmethod
-    def _has_clivar_terms_expr(ht, clinvar_terms):
-        # TODO from table global
-        path_enum = ['Pathogenic', 'Pathogenic/Likely_pathogenic', 'Pathogenic/Likely_pathogenic/Likely_risk_allele', 'Pathogenic/Likely_risk_allele', 'Likely_pathogenic', 'Likely_pathogenic/Likely_risk_allele', 'Established_risk_allele', 'Likely_risk_allele', 'Conflicting_interpretations_of_pathogenicity', 'Uncertain_risk_allele', 'Uncertain_significance/Uncertain_risk_allele', 'Uncertain_significance', 'No_pathogenic_assertion', 'Likely_benign', 'Benign/Likely_benign', 'Benign']
+    @classmethod
+    def _has_clivar_terms_expr(cls, ht, clinvar_terms):
+        path_lookup = cls._get_enum_lookup(ht, 'clinvar', 'path')
 
         ranges = []
         range = [None, None]
@@ -654,7 +657,7 @@ class BaseHailTableQuery(object):
                 if not range[0]:
                     range[0] = start
             elif range[0]:
-                ranges.append([path_enum.index(range[0]), path_enum.index(range[1])])
+                ranges.append([path_lookup[range[0]], path_lookup[range[1]]])
                 range = [None, None]
 
         if not ranges:
@@ -882,7 +885,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
             'alleleId', 'goldStars',
             # TODO use enum mapping?
             'pathogenicity_id', 'assertion_ids', 'conflictingPathogenicities',
-            version=r.globals,  # TODO actually get from globals
+            version=r.versions,  # TODO actually get from globals
         ),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
         'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
@@ -896,8 +899,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         PATHOGENICTY_SORT_KEY: lambda r: [hl.or_else(
             r.clinvar.pathogenicity_id,
             # sort variants absent from clinvar between uncertain and benign
-            # TODO actually get enum from r.globals
-            hl.eval(r.globals.enums.clinvar.pathogenicity).index(CLINVAR_NO_ASSERTION) + 0.5,
+            BaseHailTableQuery._get_enum_lookup(r, 'clinvar', 'pathogenicity')[CLINVAR_NO_ASSERTION] + 0.5,
         )],
     }
     SORTS.update(BaseHailTableQuery.SORTS)
