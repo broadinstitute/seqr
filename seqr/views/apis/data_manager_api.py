@@ -400,7 +400,7 @@ def write_pedigree(request, project_guid):
         )
 
     annotations = OrderedDict({
-        'Project_GUID': Value(project.guid), 'Family_ID': F('family__family_id'), 'Individual_ID': F('individual_id'),
+        'Project_GUID': Value(project.guid), 'Family_GUID': F('family__guid'), 'Family_ID': F('family__family_id'), 'Individual_ID': F('individual_id'),
         'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
     })
     data = Individual.objects.filter(family__project=project).order_by('family_id', 'individual_id').values(**dict(annotations))

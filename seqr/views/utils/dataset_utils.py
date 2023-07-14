@@ -304,7 +304,7 @@ def _parse_splice_outlier_row(row):
 
 def _parse_tpm_row(row):
     sample_id = row[SAMPLE_ID_COL]
-    if row[TPM_COL] != '0.0' and not sample_id.startswith('GTEX'):
+    if not sample_id.startswith('GTEX'):
         tissue = row[TISSUE_COL]
         if not tissue:
             raise ValueError(f'Sample {sample_id} has no tissue type')
