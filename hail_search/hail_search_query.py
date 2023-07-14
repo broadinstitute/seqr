@@ -7,7 +7,7 @@ import logging
 from hail_search.constants import CHROM_TO_XPOS_OFFSET, AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, MALE, \
     VARIANT_DATASET, MITO_DATASET, STRUCTURAL_ANNOTATION_FIELD, VARIANT_KEY_FIELD, GROUPED_VARIANTS_FIELD, \
     GNOMAD_GENOMES_FIELD, POPULATION_SORTS, CONSEQUENCE_SORT_KEY, COMP_HET_ALT, INHERITANCE_FILTERS, GCNV_KEY, SV_KEY, \
-    CONSEQUENCE_RANKS, CONSEQUENCE_RANK_MAP, SV_CONSEQUENCE_RANK_OFFSET, SCREEN_CONSEQUENCES, SCREEN_CONSEQUENCE_RANK_MAP, \
+    CONSEQUENCE_RANKS, CONSEQUENCE_RANK_MAP, SV_CONSEQUENCE_RANK_OFFSET, \
     SV_CONSEQUENCE_RANKS, SV_CONSEQUENCE_RANK_MAP, SV_TYPE_DISPLAYS, SV_DEL_INDICES, SV_TYPE_MAP, SV_TYPE_DETAILS, \
     CLINVAR_PATH_RANGES, CLINVAR_NO_ASSERTION, HGMD_PATH_RANGES, \
     RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, ALT_ALT, \
@@ -104,7 +104,7 @@ class BaseHailTableQuery(object):
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
         annotation_fields.update({
-            k: lambda r: self._enum_field(r[k], enums[k], r, **enum_config)
+            enum_config.get('response_key', k): lambda r: self._enum_field(r[k], enums[k], r, **enum_config)
             for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
         })
         if self._genome_version == GENOME_VERSION_GRCh38_DISPLAY:
@@ -120,7 +120,7 @@ class BaseHailTableQuery(object):
         })
 
     @staticmethod
-    def _enum_field(value, enum, r, annotate=None):
+    def _enum_field(value, enum, r, annotate=None, format=None, **kwargs):
         annotations = {}
         drop = []
         value_keys = value.keys()  # TODO needs eval?
@@ -138,7 +138,12 @@ class BaseHailTableQuery(object):
         if annotate:
             annotations.update(annotate(value, enum, r))
 
-        return value.annotate(**annotations).drop(*drop)
+        value = value.annotate(**annotations).drop(*drop)
+
+        if format:
+            value = format(format)
+
+        return value
 
     @staticmethod
     def get_major_consequence_id(transcript):
@@ -656,8 +661,9 @@ class BaseHailTableQuery(object):
                 cls._has_terms_range_expr(ht, 'hgmd', 'class', consequence_overrides[HGMD_KEY], HGMD_PATH_RANGES)
             )
         if consequence_overrides.get(SCREEN_KEY):
-            allowed_consequences = hl.set({SCREEN_CONSEQUENCE_RANK_MAP[c] for c in consequence_overrides[SCREEN_KEY]})
-            annotation_filters.append(allowed_consequences.intersection(hl.set(ht.screen.region_type_ids)).size() > 0)
+            screen_enum = cls._get_enum_lookup(ht, 'screen', 'region_type')
+            allowed_consequences = hl.set({screen_enum[c] for c in consequence_overrides[SCREEN_KEY]})
+            annotation_filters.append(allowed_consequences.contains(ht.screen.region_type_ids.first()))
         if consequence_overrides.get(SPLICE_AI_FIELD):
             splice_ai = float(consequence_overrides[SPLICE_AI_FIELD])
             score_path = cls.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
@@ -1086,13 +1092,13 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     ANNOTATION_OVERRIDE_FIELDS = [HGMD_KEY, SPLICE_AI_FIELD, SCREEN_KEY] + BaseVariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
 
-    BASE_ANNOTATION_FIELDS = {
-        'screenRegionType': lambda r: hl.or_missing(
-            r.screen.region_type_ids.size() > 0,
-            hl.array(SCREEN_CONSEQUENCES)[r.screen.region_type_ids[0]]),
+    ENUM_ANNOTATION_FIELDS = {
+        'hgmd': {},
+        'screen': {
+            'response_key': 'screenRegionType',
+            'format': lambda value: value.region_types.first(),
+        },
     }
-    BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
-    ENUM_ANNOTATION_FIELDS = {'hgmd': {}}
     ENUM_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.ENUM_ANNOTATION_FIELDS)
 
     SORTS = deepcopy(BaseVariantHailTableQuery.SORTS)
