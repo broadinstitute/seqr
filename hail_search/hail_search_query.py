@@ -966,7 +966,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         if self._allowed_consequences:
             allowed_consequence_ids = hl.set(self._get_allowed_consequence_ids(ht, self._allowed_consequences))
             consequence_transcripts = all_transcripts.filter(
-                lambda t: allowed_consequence_ids.contains(t.consequence_term_ids[0])
+                lambda t: allowed_consequence_ids.contains(self.get_major_consequence_id(t))
             )
             if self._allowed_consequences_secondary:
                 allowed_consequence_ids_secondary = hl.set(
@@ -975,7 +975,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
                 consequence_transcripts = hl.if_else(
                     results.has_allowed_consequence, consequence_transcripts,
                     all_transcripts.filter(
-                        lambda t: allowed_consequence_ids_secondary.contains(t.consequence_term_ids[0])
+                        lambda t: allowed_consequence_ids_secondary.contains(self.get_major_consequence_id(t))
                     )
                 )
 
@@ -1041,7 +1041,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
     def get_major_consequence_id(transcript):
-        return transcript.consequence_term_ids[0]
+        return hl.min(transcript.consequence_term_ids)
 
     @staticmethod
     def _is_allowed_consequence_filter(tc, allowed_consequence_ids):
@@ -1050,7 +1050,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     @classmethod
     def _consequence_sorts(cls, ht):
         return super(BaseVariantHailTableQuery, cls)._consequence_sorts(ht) + [
-            ht.selected_transcript.consequence_term_ids[0],
+            cls.get_major_consequence_id(ht.selected_transcript),
         ]
 
     @classmethod
