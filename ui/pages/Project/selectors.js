@@ -63,7 +63,7 @@ export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isL
 export const getSamplesLoading = state => state.samplesLoading.isLoading
 export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
 export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
-export const getFamiliesTableFilters = state => state.familyTableFilterState
+export const getFamiliesTableFiltersByProject = state => state.familyTableFilterState
 
 export const getCurrentProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
@@ -431,6 +431,12 @@ const analysedByFilters = (filter, analysedByOptions) => {
   }
   return filterGroups
 }
+
+export const getFamiliesTableFilters = createSelector(
+  getFamiliesTableFiltersByProject,
+  getCurrentProject,
+  (familyTableFiltersByProject, project) => (familyTableFiltersByProject || {})[project.projectGuid],
+)
 
 const getFamiliesFilterFunc = createSelector(
   (state, ownProps) => ownProps?.tableName === CASE_REVIEW_TABLE_NAME,

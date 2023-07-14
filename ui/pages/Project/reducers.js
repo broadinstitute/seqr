@@ -10,6 +10,7 @@ import {
 import { SHOW_ALL, SORT_BY_FAMILY_GUID, NOTE_TAG_NAME } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME } from './constants'
+import { getFamiliesTableFiltersByProject } from './selectors'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 const RECEIVE_DATA = 'RECEIVE_DATA'
@@ -370,7 +371,15 @@ export const updateFamiliesTable = (updates, tableName) => (
   { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }
 )
 
-export const updateFamiliesTableFilters = updates => ({ type: UPDATE_FAMILY_TABLE_FILTER_STATE, updates })
+export const updateFamiliesTableFilters = updates => (dispatch, getState) => {
+  const state = getState()
+  const { currentProjectGuid } = state
+  const familyTableFilters = (getFamiliesTableFiltersByProject(state) || {})[currentProjectGuid] || {}
+  dispatch({
+    type: UPDATE_FAMILY_TABLE_FILTER_STATE,
+    updates: { [currentProjectGuid]: { ...familyTableFilters, ...updates } },
+  })
+}
 
 export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
 
