@@ -39,7 +39,7 @@ class BaseHailTableQuery(object):
     POPULATIONS = {}
     POPULATION_FIELDS = {}
     PREDICTION_FIELDS_CONFIG = {}
-    TRANSCRIPT_FIELDS = ['gene_id']
+    OMIT_TRANSCRIPT_FIELDS = []
     ANNOTATION_OVERRIDE_FIELDS = []
 
     CORE_FIELDS = ['xpos']
@@ -97,14 +97,17 @@ class BaseHailTableQuery(object):
             }),
             'transcripts': lambda r: hl.or_else(
                 r.sortedTranscriptConsequences, hl.empty_array(r.sortedTranscriptConsequences.dtype.element_type)
-            ).map(lambda t: hl.struct(
-                majorConsequence=self.get_major_consequence(t),
-                **{_to_camel_case(k): t[k] for k in self.TRANSCRIPT_FIELDS},
+            ).map(lambda t: self._enum_field(
+                t, enums['sorted_transcript_consequences'], drop_fields=self.OMIT_TRANSCRIPT_FIELDS,
+                format=lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
+                annotate=None if 'major_consequence_id' in t else {
+                    'major_consequence': lambda value, *args: self.get_major_consequence(t),  # TODO probable cleanup
+                },
             )).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
         annotation_fields.update({
-            enum_config.get('response_key', k): lambda r: self._enum_field(r[k], enums[k], r, **enum_config)
+            enum_config.get('response_key', k): lambda r: self._enum_field(r[k], enums[k], r=r, **enum_config)
             for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
         })
         if self._genome_version == GENOME_VERSION_GRCh38_DISPLAY:
@@ -120,9 +123,9 @@ class BaseHailTableQuery(object):
         })
 
     @staticmethod
-    def _enum_field(value, enum, r, annotate=None, format=None, **kwargs):
+    def _enum_field(value, enum, r=None, annotate=None, format=None, drop_fields=None, **kwargs):
         annotations = {}
-        drop = []
+        drop = [] + (drop_fields or [])
         value_keys = value.keys()  # TODO needs eval?
         for field, field_enum in enum.items():
             is_array = f'{field}_ids' in value_keys
@@ -141,7 +144,7 @@ class BaseHailTableQuery(object):
         value = value.annotate(**annotations).drop(*drop)
 
         if format:
-            value = format(format)
+            value = format(value)
 
         return value
 
@@ -917,10 +920,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         'revel': ('dbnsfp', 'REVEL_score'),
         'sift': ('dbnsfp', 'SIFT_pred'),
     }
-    TRANSCRIPT_FIELDS = BaseHailTableQuery.TRANSCRIPT_FIELDS + [
-        'amino_acids', 'biotype_id', 'canonical', 'codons', 'hgvsc', 'hgvsp', 'is_lof_nagnag', 'lof_filter_ids',
-        'transcript_id', 'transcript_rank',
-    ]
+    OMIT_TRANSCRIPT_FIELDS = ['consequence_term_ids']
     ANNOTATION_OVERRIDE_FIELDS = [CLINVAR_KEY]
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
