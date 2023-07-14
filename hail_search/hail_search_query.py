@@ -7,8 +7,8 @@ import logging
 from hail_search.constants import CHROM_TO_XPOS_OFFSET, AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, MALE, \
     VARIANT_DATASET, MITO_DATASET, STRUCTURAL_ANNOTATION_FIELD, VARIANT_KEY_FIELD, GROUPED_VARIANTS_FIELD, \
     GNOMAD_GENOMES_FIELD, POPULATION_SORTS, CONSEQUENCE_SORT_KEY, COMP_HET_ALT, INHERITANCE_FILTERS, GCNV_KEY, SV_KEY, \
-    CONSEQUENCE_RANKS, CONSEQUENCE_RANK_MAP, SV_CONSEQUENCE_RANK_OFFSET, \
-    SV_CONSEQUENCE_RANKS, SV_CONSEQUENCE_RANK_MAP, SV_TYPE_DISPLAYS, SV_DEL_INDICES, SV_TYPE_MAP, SV_TYPE_DETAILS, \
+    SV_CONSEQUENCE_RANK_OFFSET, \
+    SV_TYPE_DISPLAYS, SV_DEL_INDICES, SV_TYPE_MAP, SV_TYPE_DETAILS, \
     CLINVAR_PATH_RANGES, CLINVAR_NO_ASSERTION, HGMD_PATH_RANGES, \
     RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, ALT_ALT, \
     REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, CLINVAR_PATH_SIGNIFICANCES, \
@@ -726,18 +726,18 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _get_has_annotation_expr(cls, ht, allowed_consequences):
-        allowed_consequence_ids = cls._get_allowed_consequence_ids(allowed_consequences)
+        allowed_consequence_ids = cls._get_allowed_consequence_ids(ht, allowed_consequences)
         if allowed_consequence_ids:
             allowed_consequence_ids = hl.set(allowed_consequence_ids)
             return ht.sortedTranscriptConsequences.any(
                 lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequence_ids))
         return False
 
-    @staticmethod
-    def _get_allowed_consequence_ids(allowed_consequences):
-        return {
-            SV_CONSEQUENCE_RANK_MAP[c] for c in (allowed_consequences or []) if SV_CONSEQUENCE_RANK_MAP.get(c)
-        }
+    @classmethod
+    def _get_allowed_consequence_ids(cls, ht, allowed_consequences):
+        # TODO confirm correct enum
+        enum = cls._get_enum_lookup(ht, 'sorted_transcript_consequences', 'consequence_term')
+        return {enum[c] for c in (allowed_consequences or []) if enum.get(c)}
 
     @staticmethod
     def _is_allowed_consequence_filter(tc, allowed_consequence_ids):
@@ -955,21 +955,29 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
 
     def _selected_main_transcript_expr(self, results):
-        get_matching_transcripts = lambda allowed_values, get_field: results.sortedTranscriptConsequences.filter(
-            lambda t: allowed_values.contains(get_field(t)))
+        all_transcripts = results.sortedTranscriptConsequences
 
         gene_transcripts = None
         if self._filtered_genes:
-            gene_transcripts = get_matching_transcripts(hl.set(self._filtered_genes), lambda t: t.gene_id)
+            filtered_genes = hl.set(self._filtered_genes)
+            gene_transcripts = all_transcripts.filter(lambda t: filtered_genes.contains(t.gene_id))
 
         consequence_transcripts = None
         if self._allowed_consequences:
-            get_major_csq = lambda t: hl.array(CONSEQUENCE_RANKS)[t.sorted_consequence_ids[0]]  # TODO
-            consequence_transcripts = get_matching_transcripts(hl.set(self._allowed_consequences), get_major_csq)
+            allowed_consequence_ids = hl.set(self._get_allowed_consequence_ids(ht, self._allowed_consequences))
+            consequence_transcripts = all_transcripts.filter(
+                lambda t: allowed_consequence_ids.contains(t.consequence_term_ids[0])
+            )
             if self._allowed_consequences_secondary:
+                allowed_consequence_ids_secondary = hl.set(
+                    self._get_allowed_consequence_ids(ht, self._allowed_consequences_secondary)
+                )
                 consequence_transcripts = hl.if_else(
-                    consequence_transcripts.size() > 0, consequence_transcripts,
-                    get_matching_transcripts(hl.set(self._allowed_consequences_secondary), get_major_csq))
+                    results.has_allowed_consequence, consequence_transcripts,
+                    all_transcripts.filter(
+                        lambda t: allowed_consequence_ids_secondary.contains(t.consequence_term_ids[0])
+                    )
+                )
 
         if gene_transcripts is not None:
             if consequence_transcripts is None:
@@ -983,9 +991,9 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         elif consequence_transcripts is not None:
             matched_transcripts = consequence_transcripts
         else:
-            matched_transcripts = results.sortedTranscriptConsequences
+            matched_transcripts = all_transcripts
 
-        return hl.or_missing(matched_transcripts.size() > 0, matched_transcripts[0])
+        return matched_transcripts.first()
 
     @classmethod
     def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, **kwargs):
@@ -1033,28 +1041,22 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
     def get_major_consequence_id(transcript):
-        return transcript.sorted_consequence_ids[0]
-
-    @staticmethod
-    def _get_allowed_consequence_ids(allowed_consequences):
-        return {
-            CONSEQUENCE_RANK_MAP[c] for c in (allowed_consequences or []) if CONSEQUENCE_RANK_MAP.get(c)
-        }
+        return transcript.consequence_term_ids[0]
 
     @staticmethod
     def _is_allowed_consequence_filter(tc, allowed_consequence_ids):
-        return allowed_consequence_ids.intersection(hl.set(tc.sorted_consequence_ids)).size() > 0
+        return allowed_consequence_ids.intersection(hl.set(tc.consequence_term_ids)).size() > 0
 
     @classmethod
     def _consequence_sorts(cls, ht):
         return super(BaseVariantHailTableQuery, cls)._consequence_sorts(ht) + [
-            ht.selected_transcript.sorted_consequence_ids[0],
+            ht.selected_transcript.consequence_term_ids[0],
         ]
 
     @classmethod
     def _omim_sort(cls, ht, omim_gene_set):
         return super(BaseVariantHailTableQuery, cls)._omim_sort(ht, omim_gene_set) + hl.if_else(
-            hl.is_missing(ht.selected_transcript.sorted_consequence_ids) |
+            hl.is_missing(ht.selected_transcript.consequence_term_ids) |
             omim_gene_set.contains(ht.selected_transcript.gene_id),
             10, 0)
 
@@ -1444,7 +1446,7 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
     @staticmethod
     def get_major_consequence_id(transcript):
         return hl.if_else(
-            hl.is_defined(transcript.sorted_consequence_ids),
+            hl.is_defined(transcript.consequence_term_ids),
             BaseVariantHailTableQuery.get_major_consequence_id(transcript),
             BaseSvHailTableQuery.get_major_consequence_id(transcript),
         )
