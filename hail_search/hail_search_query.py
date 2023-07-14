@@ -47,6 +47,7 @@ class BaseHailTableQuery(object):
         'familyGuids': lambda r: r.genotypes.group_by(lambda x: x.familyGuid).keys(),
         'genotypes': lambda r: r.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
     }
+    ENUM_ANNOTATION_FIELDS = {}
     LIFTOVER_ANNOTATION_FIELDS = {
         'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
             hl.is_defined(r.rg37_locus), '37', hl.missing(hl.dtype('str')),
@@ -102,6 +103,10 @@ class BaseHailTableQuery(object):
             )).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
+        annotation_fields.update({
+            k: lambda r: self._enum_field(r[k], enums[k], r, **enum_config)
+            for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
+        })
         if self._genome_version == GENOME_VERSION_GRCh38_DISPLAY:
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
@@ -113,6 +118,27 @@ class BaseHailTableQuery(object):
             response_key: hl.or_else(r[pop_field][field], '' if response_key == 'id' else 0)
             for response_key, field in pop_config.items() if field is not None
         })
+
+    @staticmethod
+    def _enum_field(value, enum, r, annotate=None):
+        annotations = {}
+        drop = []
+        value_keys = value.keys()  # TODO needs eval?
+        for field, field_enum in enum.items():
+            is_array = f'{field}_ids' in value_keys
+            value_field = f"{field}_id{'s' if is_array else ''}"
+            drop.append(value_field)
+
+            enum_array = hl.array(field_enum)
+            if is_array:
+                annotations[f'{field}s'] = value[value_field].map(lambda v: enum_array[v])
+            else:
+                annotations[field] = enum_array[value[value_field]]
+
+        if annotate:
+            annotations.update(annotate(value, enum, r))
+
+        return value.annotate(**annotations).drop(*drop)
 
     @staticmethod
     def get_major_consequence_id(transcript):
@@ -889,12 +915,6 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         'pos': lambda r: r.locus.position,
         'ref': lambda r: r.alleles[0],
         'alt': lambda r: r.alleles[1],
-        'clinvar': lambda r: r.clinvar.select(
-            'alleleId', 'goldStars',
-            # TODO use enum mapping?
-            'pathogenicity_id', 'assertion_ids', 'conflictingPathogenicities',
-            version=r.versions,  # TODO actually get from globals
-        ),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
         'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
         'selectedMainTranscriptId': lambda r: hl.or_missing(
@@ -902,6 +922,14 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         ),
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
+    ENUM_ANNOTATION_FIELDS = {
+        'clinvar': {'annotate': lambda value, enum, r: {
+            'conflictingPathogenicities': value.conflictingPathogenicities.map(
+                lambda p: p.annotate(pathogenicity=hl.array(enum['pathogenicity'])[p.pathogenicity_id]).drop('pathogenicity_id')
+            ),
+            'version': r.versions,  # TODO actually get from globals
+        }},
+    }
 
     SORTS = {
         PATHOGENICTY_SORT_KEY: lambda r: [hl.or_else(
