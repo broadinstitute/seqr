@@ -27,7 +27,7 @@ STRUCTURAL_ANNOTATION_FIELD_SECONDARY = 'structural_secondary'
 POPULATION_SORTS = {
     'gnomad': [GNOMAD_GENOMES_FIELD, 'gnomad_mito'],
     'gnomad_exomes': ['gnomad_exomes'],
-    'callset_af': ['callset', 'sv_callset'],  # TODO
+    'callset_af': ['seqr', 'sv_callset'],
 }
 XPOS_SORT_KEY = 'xpos'
 CONSEQUENCE_SORT_KEY = 'protein_consequence'
