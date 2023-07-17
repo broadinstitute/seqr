@@ -13,7 +13,7 @@ from seqr.models import Sample, Individual
 from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, NEW_SV_FIELD, ALL_DATA_TYPES
 from seqr.utils.search.elasticsearch.constants import X_LINKED_RECESSIVE, \
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
-    SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
+    SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_RESPONSE_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, \
@@ -822,7 +822,8 @@ class EsSearch(object):
             'selectedMainTranscriptId': selected_main_transcript_id,
             'populations': populations,
             'predictions': _get_field_values(
-                hit, PREDICTION_FIELDS_CONFIG, format_response_key=get_prediction_response_key
+                hit, PREDICTION_FIELDS_RESPONSE_CONFIG, format_response_key=get_prediction_response_key,
+                get_addl_fields=lambda field: MULTI_FIELD_PREDICTORS.get(field, [])
             ),
             'transcripts': dict(transcripts),
         })
@@ -1555,7 +1556,7 @@ def _parse_es_sort(sort, sort_config):
 
 def _get_field_values(hit, field_configs, format_response_key=_to_camel_case, get_addl_fields=None, lookup_field_prefix='', existing_fields=None, skip_fields=None):
     return {
-        field_config.get('response_key', format_response_key(field)): _value_if_has_key(
+        field_config.get('response_key') or format_response_key(field): _value_if_has_key(
             hit,
             (get_addl_fields(field) if get_addl_fields else []) +
             ['{}_{}'.format(lookup_field_prefix, field) if lookup_field_prefix else field],

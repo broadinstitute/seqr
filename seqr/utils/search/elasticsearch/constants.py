@@ -334,13 +334,10 @@ MITO_CORE_FIELDS_CONFIG = {
     'mitomap_pathogenic': {'response_key': 'mitomapPathogenic'},
 }
 CORE_FIELDS_CONFIG.update(MITO_CORE_FIELDS_CONFIG)
-# TODO confirm pull from correct field
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
     'dbnsfp_DANN_score': {},
     'eigen_Eigen_phred': {},
-    'dbnsfp_FATHMM_pred': {},
-    'dbnsfp_fathmm_MKL_coding_pred': {},
     'dbnsfp_VEST4_score': {'response_key': 'vest'},
     'dbnsfp_MutPred_score': {'response_key': 'mut_pred'},
     'mpc_MPC': {},
@@ -372,6 +369,8 @@ PREDICTION_FIELD_LOOKUP = {
 MULTI_FIELD_PREDICTORS = {
     'fathmm': ['dbnsfp_fathmm_MKL_coding_pred', 'dbnsfp_FATHMM_pred']
 }
+PREDICTION_FIELDS_RESPONSE_CONFIG = {k: {'response_key': k} for k, v in MULTI_FIELD_PREDICTORS.items()}
+PREDICTION_FIELDS_RESPONSE_CONFIG.update(PREDICTION_FIELDS_CONFIG)
 
 QUALITY_QUERY_FIELDS = {'gq_sv': 10}
 SHARED_QUALITY_FIELDS = {'gq': 5}
@@ -424,6 +423,7 @@ GENOTYPE_FIELDS = {
 }
 
 QUERY_FIELD_NAMES = list(CORE_FIELDS_CONFIG.keys()) + list(PREDICTION_FIELDS_CONFIG.keys()) + \
+                    [field for fields in MULTI_FIELD_PREDICTORS.values() for field in fields] + \
                     [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY, GRCH38_LOCUS_FIELD] + HAS_ALT_FIELD_KEYS
 for field_name, fields in NESTED_FIELDS.items():
     QUERY_FIELD_NAMES += ['{}_{}'.format(field_name, field) for field in fields.keys()]
