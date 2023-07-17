@@ -334,6 +334,7 @@ MITO_CORE_FIELDS_CONFIG = {
     'mitomap_pathogenic': {'response_key': 'mitomapPathogenic'},
 }
 CORE_FIELDS_CONFIG.update(MITO_CORE_FIELDS_CONFIG)
+# TODO confirm pull from correct field
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
     'dbnsfp_DANN_score': {},
