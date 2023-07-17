@@ -1283,8 +1283,8 @@ const INDICATOR_MAP = {
 }
 
 const FATHMM_MAP = {
-  N: { color: 'green', value: 'neutral' },
   ...INDICATOR_MAP,
+  N: { color: 'green', value: 'neutral' },
 }
 
 const POLYPHEN_MAP = {

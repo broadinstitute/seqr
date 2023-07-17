@@ -339,7 +339,7 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_DANN_score': {},
     'eigen_Eigen_phred': {},
     'dbnsfp_FATHMM_pred': {},
-    'dbnsfp_fathmm_MKL_coding_pred': {},  # TODO breaks filtering
+    'dbnsfp_fathmm_MKL_coding_pred': {},
     'dbnsfp_VEST4_score': {'response_key': 'vest'},
     'dbnsfp_MutPred_score': {'response_key': 'mut_pred'},
     'mpc_MPC': {},
@@ -367,6 +367,9 @@ def get_prediction_response_key(key):
 PREDICTION_FIELD_LOOKUP = {
     field_config.get('response_key', get_prediction_response_key(field)): field
     for field, field_config in PREDICTION_FIELDS_CONFIG.items()
+}
+MULTI_FIELD_PREDICTORS = {
+    'fathmm': ['dbnsfp_fathmm_MKL_coding_pred', 'dbnsfp_FATHMM_pred']
 }
 
 QUALITY_QUERY_FIELDS = {'gq_sv': 10}
