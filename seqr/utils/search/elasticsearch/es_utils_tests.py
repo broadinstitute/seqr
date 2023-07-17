@@ -1591,7 +1591,7 @@ class EsUtilsTest(TestCase):
                 'topmed': {'ac': 2, 'af': None},
             },
             'qualityFilter': {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass', 'affected_only': True},
-            'in_silico': {'cadd': '11.5', 'sift': 'D'},
+            'in_silico': {'cadd': '11.5', 'sift': 'D', 'fathmm': 'D'},
             'inheritance': {'mode': 'de_novo'},
             'customQuery': {'term': {'customFlag': 'flagVal'}},
             'locus': {'rawItems': 'DDX11L1, chr2:1234-5678, chr7:100-10100%10', 'excludeLocations': True},
@@ -1720,6 +1720,8 @@ class EsUtilsTest(TestCase):
                 {'range': {'cadd_PHRED': {'gte': 11.5}}},
                 {'bool': {'must_not': [{'exists': {'field': 'dbnsfp_SIFT_pred'}}]}},
                 {'prefix': {'dbnsfp_SIFT_pred': 'D'}},
+                {'bool': {'must_not': [{'exists': {'field': 'dbnsfp_fathmm_MKL_coding_pred'}}]}},
+                {'prefix': {'dbnsfp_fathmm_MKL_coding_pred': 'D'}},
             ]}},
             {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}},
             {'bool': {
