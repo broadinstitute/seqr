@@ -339,6 +339,9 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_DANN_score': {},
     'eigen_Eigen_phred': {},
     'dbnsfp_FATHMM_pred': {},
+    'dbnsfp_fathmm_MKL_coding_pred': {},  # TODO breaks filtering
+    'dbnsfp_VEST4_score': {'response_key': 'vest'},
+    'dbnsfp_MutPred_score': {'response_key': 'mut_pred'},
     'mpc_MPC': {},
     'dbnsfp_MutationTaster_pred': {'response_key': 'mut_taster'},
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
