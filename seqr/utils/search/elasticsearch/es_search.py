@@ -1505,7 +1505,6 @@ def _in_silico_filter(in_silico_filters, require_score):
     return _or_filters(in_silico_qs)
 
 
-
 def _pop_freq_filter(filter_key, value):
     return Q('range', **{filter_key: {'lte': value}}) | ~Q('exists', field=filter_key)
 
