@@ -797,14 +797,16 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.filter(ch_ht.valid_families.any(lambda x: x))
 
         # Format pairs as lists and de-duplicate
-        ch_ht = ch_ht.annotate(
-            v1=self._format_comp_het_result(ch_ht, ch_ht.v1),
-            v2=self._format_comp_het_result(ch_ht, ch_ht.v2),
-        )
-        ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2], key=lambda x: x._sort)})
-        ch_ht = ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
-        ch_ht = ch_ht.key_by(
-            **{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
+        ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2]).map(
+            lambda v: v.annotate(
+                genotypes=hl.enumerate(ch_ht.valid_families).filter(lambda x: x[1]).flatmap(
+                    lambda x: v.family_genotypes[x[0]].map(lambda g: g.drop('affected_id'))
+                )
+            )
+        )})
+        ch_ht = ch_ht.key_by(**{
+            VARIANT_KEY_FIELD: hl.str(':').join(hl.sorted(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD])))
+        })
 
         self._comp_het_ht = ch_ht.distinct()
 
@@ -815,12 +817,12 @@ class BaseHailTableQuery(object):
             )
         )
 
-    def _format_comp_het_result(self, ch_ht, v):
-        return self._format_results(v.annotate(
-            genotypes=hl.enumerate(ch_ht.valid_families).filter(lambda x: x[1]).flatmap(
-                lambda x: v.family_genotypes[x[0]].map(lambda g: g.drop('affected_id'))
-            )
-        )).annotate(**{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
+    def _format_comp_het_results(self, ch_ht):
+        formatted_grouped_variants = ch_ht[GROUPED_VARIANTS_FIELD].map(
+            lambda v: self._format_results(v).annotate(**{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
+        )
+        ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted(formatted_grouped_variants, key=lambda x: x._sort)})
+        return ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
 
     def _format_results(self, ht):
         annotations = {k: v(ht) for k, v in self.annotation_fields.items()}
@@ -832,13 +834,17 @@ class BaseHailTableQuery(object):
         return results.select(*self.CORE_FIELDS, *list(annotations.keys()))
 
     def search(self):
+        ch_ht = None
+        if self._comp_het_ht:
+            ch_ht = self._format_comp_het_results(self._comp_het_ht)
+
         if self._ht:
             ht = self._format_results(self._ht)
-            if self._comp_het_ht:
-                ht = ht.join(self._comp_het_ht, 'outer')
+            if ch_ht:
+                ht = ht.join(ch_ht, 'outer')
                 ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
         else:
-            ht = self._comp_het_ht
+            ht = ch_ht
 
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}. Fetched: {self._num_results}')
@@ -847,6 +853,25 @@ class BaseHailTableQuery(object):
             self._json_serialize(row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD)) for row in collected
         ]
         return hail_results, total_results
+
+    def gene_counts(self):
+        if self._comp_het_ht:
+            ht = self._comp_het_ht.explode(self._comp_het_ht[GROUPED_VARIANTS_FIELD])
+            ht = ht.transmute(**ht[GROUPED_VARIANTS_FIELD])
+            if self._ht:
+                ht = ht.join(self._ht, 'outer')
+        else:
+            ht = self._ht
+
+        ht = ht.select(
+            gene_ids=hl.set(ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)),
+            families=self.BASE_ANNOTATION_FIELDS['familyGuids'](ht),
+        ).explode('gene_ids').explode('families')
+        gene_counts = ht.aggregate(hl.agg.group_by(
+            ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
+        ))
+
+        return self._json_serialize(gene_counts)
 
     def _sort_order(self, ht):
         sort_expressions = self._get_sort_expressions(ht, XPOS_SORT_KEY)
@@ -1333,13 +1358,6 @@ class MultiDataTypeHailTableQuery(object):
 
     DATA_TYPE_ANNOTATION_FIELDS = []
 
-    SV_MERGE_FIELDS = {'interval', 'svType_id', 'rg37_locus_end', 'strvctvre', 'sv_callset',}
-    VARIANT_MERGE_FIELDS = {'alleles', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rsid',}
-    MERGE_FIELDS = {
-        GCNV_KEY: SV_MERGE_FIELDS, SV_KEY: SV_MERGE_FIELDS,
-        VARIANT_DATASET: VARIANT_MERGE_FIELDS, MITO_DATASET: VARIANT_MERGE_FIELDS,
-    }
-
     def __init__(self, data_type, *args, **kwargs):
         self._data_types = data_type
         self.POPULATIONS = {}
@@ -1384,13 +1402,9 @@ class MultiDataTypeHailTableQuery(object):
 
         ht, family_guids = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type_0, sample_data[data_type_0], **kwargs)
         ht = ht.annotate(dataType=data_type_0)
+        fields = {k for k in ht.row.keys()}
+        globals = {k for k in ht.globals.keys()}
 
-        all_type_merge_fields = {
-            'dataType', 'rg37_locus', 'xpos', 'override_consequences', 'has_allowed_consequence',
-            'has_allowed_secondary_consequence',
-        }
-
-        merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
         for dt in data_type[1:]:
             data_type_cls = QUERY_CLASS_MAP[dt]
             sub_ht, new_family_guids = data_type_cls.import_filtered_table(dt, sample_data[dt], **kwargs)
@@ -1398,16 +1412,22 @@ class MultiDataTypeHailTableQuery(object):
             sub_ht = sub_ht.annotate(dataType=dt)
             ht = ht.join(sub_ht, how='outer')
 
-            new_merge_fields = cls.MERGE_FIELDS[dt]
-            to_merge = merge_fields.intersection(new_merge_fields)
-            to_merge.update(all_type_merge_fields)
-            merge_fields.update(new_merge_fields)
+            new_fields = {k for k in sub_ht.row.keys()}
+            new_globals = {k for k in sub_ht.globals.keys()}
+            to_merge = fields.intersection(new_fields)
+            to_merge_globals = globals.intersection(new_globals)
+            fields.update(new_fields)
+            globals.update(new_globals)
             logger.info(f'Merging fields: {", ".join(to_merge)}')
 
-            transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
+            transmute_expressions = {
+                k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge
+                if k not in {'sortedTranscriptConsequences', 'genotypes'}
+            }
             transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences'))
             transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes'))
             ht = ht.transmute(**transmute_expressions)
+            ht = ht.transmute_globals(**{k: hl.struct(**ht[k], **ht[f'{k}_1']) for k in to_merge_globals})
 
         return ht, family_guids
 
