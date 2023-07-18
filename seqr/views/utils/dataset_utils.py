@@ -14,6 +14,7 @@ from seqr.utils.xpos_utils import format_chrom
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.permissions_utils import get_internal_projects
 from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
+from reference_data.models import GeneInfo
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL
 
 logger = SeqrLogger(__name__)
@@ -362,6 +363,7 @@ def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_column
     sample_id_to_tissue_type = {}
     samples_with_conflict_tissues = defaultdict(set)
     errors = []
+    gene_ids = set()
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in parse_row(row):
@@ -376,10 +378,12 @@ def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_column
 
             sample_id_to_tissue_type[(sample_id, project)] = tissue_type
 
+            gene_ids.add(row_dict[GENE_ID_COL])
+
             if get_unique_key:
                 gene_or_unique_id = get_unique_key(row_dict)
             else:
-                gene_or_unique_id = row_dict['gene_id']
+                gene_or_unique_id = row_dict[GENE_ID_COL]
             existing_data = samples_by_id[(sample_id, project)].get(gene_or_unique_id)
             if existing_data and existing_data != row_dict:
                 errors.append(f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries '
@@ -389,6 +393,11 @@ def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_column
                 sample_id_to_individual_id_mapping[sample_id] = indiv_id
 
             samples_by_id[(sample_id, project)][gene_or_unique_id] = row_dict
+
+    matched_gene_ids = set(GeneInfo.objects.filter(gene_id__in=gene_ids).values_list('gene_id', flat=True))
+    unknown_gene_ids = gene_ids - matched_gene_ids
+    if unknown_gene_ids:
+        errors.append(f'Unknown Gene IDs: {", ".join(sorted(unknown_gene_ids))}')
 
     if errors:
         raise ErrorsWarningsException(errors)

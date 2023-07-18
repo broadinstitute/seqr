@@ -5,12 +5,12 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from seqr.models import Sample, RnaSeqOutlier
-from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers
 
 RNA_FILE_ID = 'tmp_-_2021-03-01T00:00:00_-_test_data_manager_-_new_muscle_samples.tsv.gz'
 EXISTING_SAMPLE_GUID = 'S000150_na19675_d2'
 
 class LoadRnaSeqTest(TestCase):
+    databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
 
     @mock.patch('seqr.management.commands.load_rna_seq_outlier.logger.info')
