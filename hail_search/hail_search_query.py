@@ -204,7 +204,7 @@ class BaseHailTableQuery(object):
         clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides)
 
         family_filter_kwargs = dict(
-            quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms, inheritance_mode=inheritance_mode,
+            quality_filter=quality_filter,  vcf_quality_filter=vcf_quality_filter, clinvar_path_terms=clinvar_path_terms, inheritance_mode=inheritance_mode,
             consequence_overrides=consequence_overrides, genome_version=genome_version, **kwargs)
         family_filter_kwargs.update(cls._get_family_table_filter_kwargs(
             load_table_kwargs=load_table_kwargs, clinvar_path_terms=clinvar_path_terms, **kwargs))
@@ -244,6 +244,7 @@ class BaseHailTableQuery(object):
             for project_ht in filtered_project_hts[1:]:
                 families_ht = families_ht.join(project_ht, how='outer')
                 families_ht = families_ht.select(
+                    filters=families_ht.filters.union(families_ht.filters_1),
                     **{k: hl.bind(
                         lambda g1, g2: g1.extend(g2),
                         hl.or_else(families_ht[k], hl.empty_array(families_ht[k].dtype.element_type)),
@@ -287,7 +288,7 @@ class BaseHailTableQuery(object):
 
         return cls._filter_annotated_table(
             ht, consequence_overrides=consequence_overrides, clinvar_path_terms=clinvar_path_terms,
-            vcf_quality_filter=vcf_quality_filter, **kwargs), set(family_samples.keys())
+             **kwargs), set(family_samples.keys())
 
     @classmethod
     def _get_family_table_filter_kwargs(cls, **kwargs):
@@ -296,7 +297,7 @@ class BaseHailTableQuery(object):
     @classmethod
     def _filter_entries_table(cls, ht, sample_data=None, inheritance_mode=None, inheritance_filter=None,
                               genome_version=None, quality_filter=None, clinvar_path_terms=None, consequence_overrides=None,
-                              table_name=None, **kwargs):
+                              vcf_quality_filter=None, table_name=None, **kwargs):
         # logger.info(f'Initial count for {table_name}: {ht.count()}')
 
         ht, sample_id_family_index_map = cls._add_entry_sample_families(ht, sample_data)
@@ -310,6 +311,9 @@ class BaseHailTableQuery(object):
             ht, inheritance_mode, inheritance_filter or {}, sample_data, sample_id_family_index_map,
             consequence_overrides=consequence_overrides,
         )
+
+        if vcf_quality_filter:
+            ht = cls._filter_vcf_filters(ht)
 
         if quality_filter:
             ht = ht.annotate(passes_quality_families=ht.family_entries.map(
@@ -458,7 +462,7 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _filter_annotated_table(cls, ht, custom_query=None, frequencies=None, in_silico=None, clinvar_path_terms=None,
-                                vcf_quality_filter=None, consequence_overrides=None, filtered_genes=None,
+                                consequence_overrides=None, filtered_genes=None,
                                 allowed_consequences=None, allowed_consequences_secondary=None, **kwargs):
         if custom_query:
             # In production: should either remove the "custom search" functionality,
@@ -474,9 +478,6 @@ class BaseHailTableQuery(object):
         # logger.info(f'Filtered in silico to {ht.count()} rows')
         ht = cls._filter_by_annotations(ht, allowed_consequences, allowed_consequences_secondary, consequence_overrides)
         # logger.info(f'Filtered annotations to {ht.count()} rows')
-        if vcf_quality_filter is not None:
-            ht = cls._filter_vcf_filters(ht)
-            # logger.info(f'Filtered VCF quality to {ht.count()} rows')
 
         return ht
 
