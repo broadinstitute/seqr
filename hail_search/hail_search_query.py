@@ -1295,6 +1295,7 @@ class MultiDataTypeHailTableQuery(object):
         ht, family_guids = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type_0, sample_data[data_type_0], **kwargs)
         ht = ht.annotate(dataType=data_type_0)
         fields = {k for k in ht.row.keys()}
+        globals = {k for k in ht.globals.keys()}
 
         for dt in data_type[1:]:
             data_type_cls = QUERY_CLASS_MAP[dt]
@@ -1304,8 +1305,11 @@ class MultiDataTypeHailTableQuery(object):
             ht = ht.join(sub_ht, how='outer')
 
             new_fields = {k for k in sub_ht.row.keys()}
+            new_globals = {k for k in sub_ht.globals.keys()}
             to_merge = fields.intersection(new_fields)
+            to_merge_globals = globals.intersection(new_globals)
             fields.update(new_fields)
+            globals.update(new_globals)
             logger.info(f'Merging fields: {", ".join(to_merge)}')
 
             transmute_expressions = {
@@ -1315,6 +1319,7 @@ class MultiDataTypeHailTableQuery(object):
             transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences'))
             transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes'))
             ht = ht.transmute(**transmute_expressions)
+            ht = ht.transmute_globals(**{k: hl.struct(**ht[k], **ht[f'{k}_1') for k in to_merge_globals})
 
         return ht, family_guids
 
