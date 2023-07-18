@@ -63,7 +63,7 @@ export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isL
 export const getSamplesLoading = state => state.samplesLoading.isLoading
 export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
 export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
-export const getFamiliesTableFiltersByProject = state => state.familyTableFilterState
+const getFamiliesTableFiltersByProject = state => state.familyTableFilterState
 
 export const getCurrentProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
@@ -434,8 +434,8 @@ const analysedByFilters = (filter, analysedByOptions) => {
 
 export const getFamiliesTableFilters = createSelector(
   getFamiliesTableFiltersByProject,
-  getCurrentProject,
-  (familyTableFiltersByProject, project) => (familyTableFiltersByProject || {})[project.projectGuid],
+  getProjectGuid,
+  (familyTableFiltersByProject, projectGuid) => (familyTableFiltersByProject || {})[projectGuid],
 )
 
 const getFamiliesFilterFunc = createSelector(
