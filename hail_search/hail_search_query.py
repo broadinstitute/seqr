@@ -1250,13 +1250,6 @@ class MultiDataTypeHailTableQuery(object):
 
     DATA_TYPE_ANNOTATION_FIELDS = []
 
-    SV_MERGE_FIELDS = {'interval', 'svType_id', 'rg37_locus_end', 'strvctvre', 'sv_callset',}
-    VARIANT_MERGE_FIELDS = {'alleles', 'callset', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rsid',}
-    MERGE_FIELDS = {
-        GCNV_KEY: SV_MERGE_FIELDS, SV_KEY: SV_MERGE_FIELDS,
-        VARIANT_DATASET: VARIANT_MERGE_FIELDS, MITO_DATASET: VARIANT_MERGE_FIELDS,
-    }
-
     def __init__(self, data_type, *args, **kwargs):
         self._data_types = data_type
         self.POPULATIONS = {}
@@ -1301,13 +1294,8 @@ class MultiDataTypeHailTableQuery(object):
 
         ht, family_guids = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type_0, sample_data[data_type_0], **kwargs)
         ht = ht.annotate(dataType=data_type_0)
+        fields = {k for k in ht.row.keys()}
 
-        all_type_merge_fields = {
-            'dataType', 'rg37_locus', 'xpos', 'override_consequences', 'has_allowed_consequence',
-            'has_allowed_secondary_consequence',
-        }
-
-        merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
         for dt in data_type[1:]:
             data_type_cls = QUERY_CLASS_MAP[dt]
             sub_ht, new_family_guids = data_type_cls.import_filtered_table(dt, sample_data[dt], **kwargs)
@@ -1315,13 +1303,15 @@ class MultiDataTypeHailTableQuery(object):
             sub_ht = sub_ht.annotate(dataType=dt)
             ht = ht.join(sub_ht, how='outer')
 
-            new_merge_fields = cls.MERGE_FIELDS[dt]
-            to_merge = merge_fields.intersection(new_merge_fields)
-            to_merge.update(all_type_merge_fields)
-            merge_fields.update(new_merge_fields)
+            new_fields = {k for k in sub_ht.row.keys()}
+            to_merge = fields.intersection(new_fields)
+            fields.update(new_fields)
             logger.info(f'Merging fields: {", ".join(to_merge)}')
 
-            transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
+            transmute_expressions = {
+                k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge
+                if k not in 'sortedTranscriptConsequences', 'genotypes',
+            }
             transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences'))
             transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes'))
             ht = ht.transmute(**transmute_expressions)
