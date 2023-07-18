@@ -725,14 +725,16 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.filter(ch_ht.valid_families.any(lambda x: x))
 
         # Format pairs as lists and de-duplicate
-        ch_ht = ch_ht.annotate(
-            v1=self._format_comp_het_result(ch_ht, ch_ht.v1),
-            v2=self._format_comp_het_result(ch_ht, ch_ht.v2),
-        )
-        ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2], key=lambda x: x._sort)})
-        ch_ht = ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
-        ch_ht = ch_ht.key_by(
-            **{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
+        ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2]).map(
+            lambda v: v.annotate(
+                genotypes=hl.enumerate(ch_ht.valid_families).filter(lambda x: x[1]).flatmap(
+                    lambda x: v.family_genotypes[x[0]].map(lambda g: g.drop('affected_id'))
+                )
+            )
+        )})
+        ch_ht = ch_ht.key_by(**{
+            VARIANT_KEY_FIELD: hl.str(':').join(hl.sorted(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD])))
+        })
 
         self._comp_het_ht = ch_ht.distinct()
 
@@ -743,12 +745,12 @@ class BaseHailTableQuery(object):
             )
         )
 
-    def _format_comp_het_result(self, ch_ht, v):
-        return self._format_results(v.annotate(
-            genotypes=hl.enumerate(ch_ht.valid_families).filter(lambda x: x[1]).flatmap(
-                lambda x: v.family_genotypes[x[0]].map(lambda g: g.drop('affected_id'))
-            )
-        )).annotate(**{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
+    def _format_comp_het_results(self, ch_ht):
+        formatted_grouped_variants = ch_ht[GROUPED_VARIANTS_FIELD].map(
+            lambda v: self._format_results(v).annotate(**{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
+        )
+        ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted(formatted_grouped_variants, key=lambda x: x._sort)})
+        return ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
 
     def _format_results(self, ht):
         annotations = {k: v(ht) for k, v in self.annotation_fields.items()}
@@ -760,13 +762,17 @@ class BaseHailTableQuery(object):
         return results.select(*self.CORE_FIELDS, *list(annotations.keys()))
 
     def search(self):
+        ch_ht = None
+        if self._comp_het_ht:
+            ch_ht = self._format_comp_het_results(self._comp_het_ht)
+
         if self._ht:
             ht = self._format_results(self._ht)
-            if self._comp_het_ht:
-                ht = ht.join(self._comp_het_ht, 'outer')
+            if ch_ht:
+                ht = ht.join(ch_ht, 'outer')
                 ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
         else:
-            ht = self._comp_het_ht
+            ht = ch_ht
 
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}. Fetched: {self._num_results}')
@@ -778,8 +784,8 @@ class BaseHailTableQuery(object):
 
     def gene_counts(self):
         if self._comp_het_ht:
-            # TODO move comp het formatting into search function, prevent unnecessary format
             ht = self._comp_het_ht.explode(self._comp_het_ht[GROUPED_VARIANTS_FIELD])
+            ht = ht.transmute(**ht[GROUPED_VARIANTS_FIELD])
             if self._ht:
                 ht = ht.join(self._ht, 'outer')
         else:
