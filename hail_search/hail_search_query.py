@@ -64,7 +64,7 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _get_enum_lookup(ht, field, subfield):
-        enum_field = getattr(getattr(ht.enums, field, None), subfield, None)
+        enum_field = ht.enums.get(field, {}).get(subfield)
         if enum_field is None:
             return None
         return {v: i for i, v in enumerate(hl.eval(enum_field))}
@@ -81,7 +81,6 @@ class BaseHailTableQuery(object):
 
     @property
     def annotation_fields(self):
-        # TODO confirm enum approach works on real data
         enums = hl.eval(self._ht.enums)
 
         annotation_fields = {
@@ -126,7 +125,7 @@ class BaseHailTableQuery(object):
     def _enum_field(value, enum, r=None, annotate=None, format=None, drop_fields=None, **kwargs):
         annotations = {}
         drop = [] + (drop_fields or [])
-        value_keys = value.keys()  # TODO needs eval?
+        value_keys = value.keys()
         for field, field_enum in enum.items():
             is_array = f'{field}_ids' in value_keys
             value_field = f"{field}_id{'s' if is_array else ''}"
@@ -254,9 +253,11 @@ class BaseHailTableQuery(object):
 
         # logger.info(f'Prefiltered to {families_ht.count()} rows ({cls.__name__})')
 
-        annotation_ht_query_result = hl.query_table(
-            f'{tables_path}/annotations.ht', families_ht.key).first().drop(*families_ht.key)
+        annotations_ht_path = f'{tables_path}/annotations.ht'
+        annotation_ht_query_result = hl.query_table(annotations_ht_path, families_ht.key).first().drop(*families_ht.key)
         ht = families_ht.annotate(**annotation_ht_query_result)
+        # Add globals
+        ht = ht.join(hl.read_table(annotations_ht_path).head(0).select().select_globals('enums', 'versions'), how='left')
         # logger.info(f'Annotated {ht._force_count()} rows ({cls.__name__})')
 
         if clinvar_path_terms and quality_filter:
@@ -733,7 +734,6 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _get_allowed_consequence_ids(cls, ht, allowed_consequences):
-        # TODO confirm correct enum
         enum = cls._get_enum_lookup(ht, 'sorted_transcript_consequences', 'consequence_term')
         return {enum[c] for c in (allowed_consequences or []) if enum.get(c)}
 
@@ -938,7 +938,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
             'conflictingPathogenicities': value.conflictingPathogenicities.map(
                 lambda p: p.annotate(pathogenicity=hl.array(enum['pathogenicity'])[p.pathogenicity_id]).drop('pathogenicity_id')
             ),
-            'version': r.versions,  # TODO actually get from globals
+            'version': r.versions.clinvar,
         }},
     }
 
