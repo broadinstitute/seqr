@@ -776,6 +776,25 @@ class BaseHailTableQuery(object):
         ]
         return hail_results, total_results
 
+    def gene_counts(self):
+        if self._comp_het_ht:
+            # TODO move comp het formatting into search function, prevent unnecessary format
+            ht = self._comp_het_ht.explode(self._comp_het_ht[GROUPED_VARIANTS_FIELD])
+            if self._ht:
+                ht = ht.join(self._ht, 'outer')
+        else:
+            ht = self._ht
+
+        ht = ht.select(
+            gene_ids=hl.set(ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)),
+            families=self.BASE_ANNOTATION_FIELDS['familyGuids'](ht),
+        ).explode('gene_ids').explode('families')
+        gene_counts = ht.aggregate(hl.agg.group_by(
+            ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
+        ))
+
+        return self._json_serialize(gene_counts)
+
     def _sort_order(self, ht):
         sort_expressions = self._get_sort_expressions(ht, XPOS_SORT_KEY)
         if self._sort != XPOS_SORT_KEY:
@@ -1314,12 +1333,12 @@ class MultiDataTypeHailTableQuery(object):
 
             transmute_expressions = {
                 k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge
-                if k not in 'sortedTranscriptConsequences', 'genotypes',
+                if k not in {'sortedTranscriptConsequences', 'genotypes'}
             }
             transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences'))
             transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes'))
             ht = ht.transmute(**transmute_expressions)
-            ht = ht.transmute_globals(**{k: hl.struct(**ht[k], **ht[f'{k}_1') for k in to_merge_globals})
+            ht = ht.transmute_globals(**{k: hl.struct(**ht[k], **ht[f'{k}_1']) for k in to_merge_globals})
 
         return ht, family_guids
 

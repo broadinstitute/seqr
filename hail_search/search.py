@@ -3,7 +3,7 @@ from hail_search.hail_search_query import AllSvHailTableQuery, AllVariantHailTab
     QUERY_CLASS_MAP
 
 
-def search_hail_backend(request):
+def search_hail_backend(request, gene_counts=False):
     sample_data = request.pop('sample_data', {})
 
     data_types = list(sample_data.keys())
@@ -26,4 +26,9 @@ def search_hail_backend(request):
         else:
             query_cls = AllDataTypeHailTableQuery
 
-    return query_cls(data_type, sample_data=sample_data, **request).search()
+    query = query_cls(data_type, sample_data=sample_data, **request)
+
+    if gene_counts:
+        return query.gene_counts()
+    else:
+        return query.search()
