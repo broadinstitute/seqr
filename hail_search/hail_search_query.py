@@ -317,7 +317,7 @@ class BaseHailTableQuery(object):
             family_sample_indices[family_index].append(sample_index)
         family_sample_indices = hl.array(family_sample_indices)
 
-        ht = ht.annotate(
+        ht = ht.transmute(
             family_entries=family_sample_indices.map(lambda sample_indices: sample_indices.map(
                 lambda i: hl.or_else(ht.entries[i], cls._missing_entry(ht.entries[i])).annotate(
                     sampleId=sample_index_id_map.get(i),
@@ -1353,7 +1353,7 @@ class MultiDataTypeHailTableQuery(object):
 
             transmute_expressions = {
                 k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge
-                if k not in {'sortedTranscriptConsequences', 'genotypes'}
+                if k not in {'sortedTranscriptConsequences', 'genotypes', VARIANT_KEY_FIELD}
             }
             transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences'))
             transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes'))
