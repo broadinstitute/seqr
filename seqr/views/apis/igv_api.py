@@ -8,12 +8,12 @@ from django.http import StreamingHttpResponse, HttpResponse
 from seqr.models import Individual, IgvSample
 from seqr.utils.file_utils import file_iter, does_file_exist, is_google_bucket_file_path, run_command, get_google_project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.views.utils.file_utils import save_uploaded_file
+from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    login_and_policies_required, pm_or_data_manager_required
+    login_and_policies_required, pm_or_data_manager_required, get_project_guids_user_can_view
 
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 GS_STORAGE_URL = 'https://storage.googleapis.com'
@@ -22,51 +22,49 @@ CLOUD_STORAGE_URLS = {
     'gs': GS_STORAGE_URL,
 }
 
-@pm_or_data_manager_required
-def receive_igv_table_handler(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+
+def _process_alignment_records(rows, num_id_cols=1, **kwargs):
+    num_cols = num_id_cols + 1
+    invalid_row = next((row for row in rows if not num_cols <= len(row) <= num_cols+1), None)
+    if invalid_row:
+        raise ValueError(f"Must contain {num_cols} or {num_cols+1} columns: {', '.join(invalid_row)}")
+    parsed_records = defaultdict(list)
+    for row in rows:
+        row_id = row[0] if num_id_cols == 1 else tuple(row[:num_id_cols])
+        parsed_records[row_id].append({'filePath': row[num_id_cols], 'sampleId': row[num_cols] if len(row) > num_cols else None})
+    return parsed_records
+
+
+def _process_igv_table_handler(parse_uploaded_file, get_valid_matched_individuals):
     info = []
 
-    def _process_alignment_records(rows, **kwargs):
-        invalid_row = next((row for row in rows if not 2 <= len(row) <= 3), None)
-        if invalid_row:
-            raise ValueError("Must contain 2 or 3 columns: " + ', '.join(invalid_row))
-        parsed_records = defaultdict(list)
-        for row in rows:
-            parsed_records[row[0]].append({'filePath': row[1], 'sampleId': row[2] if len(row)> 2 else None})
-        return parsed_records
-
     try:
-        uploaded_file_id, filename, individual_dataset_mapping = save_uploaded_file(request, process_records=_process_alignment_records)
+        uploaded_file_id, filename, individual_dataset_mapping = parse_uploaded_file()
 
-        matched_individuals = Individual.objects.filter(family__project=project, individual_id__in=individual_dataset_mapping.keys())
-        unmatched_individuals = set(individual_dataset_mapping.keys()) - {i.individual_id for i in matched_individuals}
-        if len(unmatched_individuals) > 0:
-            raise Exception('The following Individual IDs do not exist: {}'.format(", ".join(unmatched_individuals)))
+        matched_individuals = get_valid_matched_individuals(individual_dataset_mapping)
 
-        info.append('Parsed {} rows in {} individuals from {}'.format(
-            sum([len(rows) for rows in individual_dataset_mapping.values()]), len(individual_dataset_mapping), filename))
+        message = f'Parsed {sum([len(rows) for rows in individual_dataset_mapping.values()])} rows in {len(matched_individuals)} individuals'
+        if filename:
+            message += f' from {filename}'
+        info.append(message)
 
         existing_sample_files = defaultdict(set)
-        for sample in IgvSample.objects.select_related('individual').filter(individual__in=matched_individuals):
-            existing_sample_files[sample.individual.individual_id].add(sample.file_path)
+        for sample in IgvSample.objects.select_related('individual').filter(individual__in=matched_individuals.keys()):
+            existing_sample_files[sample.individual].add(sample.file_path)
 
-        unchanged_rows = set()
-        for individual_id, updates in individual_dataset_mapping.items():
-            unchanged_rows.update([
-                (individual_id, update['filePath']) for update in updates
-                if update['filePath'] in existing_sample_files[individual_id]
-            ])
-
-        if unchanged_rows:
-            info.append('No change detected for {} rows'.format(len(unchanged_rows)))
-
+        num_unchanged_rows = 0
         all_updates = []
-        for i in matched_individuals:
-            all_updates += [
-                dict(individualGuid=i.guid, individualId=i.individual_id, **update) for update in individual_dataset_mapping[i.individual_id]
-                if (i.individual_id, update['filePath']) not in unchanged_rows
+        for individual, updates in matched_individuals.items():
+            changed_updates = [
+                dict(individualGuid=individual.guid, individualId=individual.individual_id, **update)
+                for update in updates
+                if update['filePath'] not in existing_sample_files[individual]
             ]
+            all_updates += changed_updates
+            num_unchanged_rows += len(updates) - len(changed_updates)
+
+        if num_unchanged_rows:
+            info.append('No change detected for {} rows'.format(num_unchanged_rows))
 
     except Exception as e:
         return create_json_response({'errors': [str(e)]}, status=400)
@@ -75,9 +73,56 @@ def receive_igv_table_handler(request, project_guid):
         'updates': all_updates,
         'uploadedFileId': uploaded_file_id,
         'errors': [],
+        'warnings': [],
         'info': info,
     }
     return create_json_response(response)
+
+
+@pm_or_data_manager_required
+def receive_igv_table_handler(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+
+    def _get_valid_matched_individuals(individual_dataset_mapping):
+        matched_individuals = Individual.objects.filter(
+            family__project=project, individual_id__in=individual_dataset_mapping.keys()
+        )
+        unmatched_individuals = set(individual_dataset_mapping.keys()) - {i.individual_id for i in matched_individuals}
+        if len(unmatched_individuals) > 0:
+            raise Exception('The following Individual IDs do not exist: {}'.format(", ".join(unmatched_individuals)))
+
+        return {i: individual_dataset_mapping[i.individual_id] for i in matched_individuals}
+
+    return _process_igv_table_handler(
+        lambda: save_uploaded_file(request, process_records=_process_alignment_records),
+        _get_valid_matched_individuals,
+    )
+
+
+@pm_or_data_manager_required
+def receive_bulk_igv_table_handler(request):
+    def _parse_uploaded_file():
+        uploaded_file_id = json.loads(request.body).get('mappingFile', {}).get('uploadedFileId')
+        if not uploaded_file_id:
+            raise ValueError('No file uploaded')
+        records = _process_alignment_records(load_uploaded_file(uploaded_file_id), num_id_cols=2)
+        return uploaded_file_id, None, records
+
+    def _get_valid_matched_individuals(individual_dataset_mapping):
+        individuals = Individual.objects.filter(
+            family__project__guid__in=get_project_guids_user_can_view(request.user, limit_data_manager=False),
+            family__project__name__in={k[0] for k in individual_dataset_mapping.keys()},
+            individual_id__in={k[1] for k in individual_dataset_mapping.keys()},
+        ).select_related('family__project')
+        individuals_by_project_id = {(i.family.project.name, i.individual_id): i for i in individuals}
+        unmatched = set(individual_dataset_mapping.keys()) - set(individuals_by_project_id.keys())
+        if len(unmatched) > 0:
+            raise Exception(
+                f'The following Individuals do not exist: {", ".join([f"{i} ({p})" for p, i in sorted(unmatched)])}')
+
+        return {v: individual_dataset_mapping[k] for k, v in individuals_by_project_id.items() if individual_dataset_mapping[k]}
+
+    return _process_igv_table_handler(_parse_uploaded_file, _get_valid_matched_individuals)
 
 
 SAMPLE_TYPE_MAP = [

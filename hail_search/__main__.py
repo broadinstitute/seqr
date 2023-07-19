@@ -1,35 +1,13 @@
 from aiohttp import web
-import hail as hl
-import logging
 
-from hail_search.search import search_hail_backend
-
-
-async def gene_counts(request: web.Request) -> web.Response:
-    return web.json_response(search_hail_backend(await request.json(), gene_counts=True))
-
-
-async def search(request: web.Request) -> web.Response:
-    hail_results, total_results = search_hail_backend(await request.json())
-    return web.json_response({'results': hail_results, 'total': total_results})
-
-
-async def status(request: web.Request) -> web.Response:
-    return web.json_response({'success': True})
+from hail_search.web_app import init_web_app
 
 
 def run():
-    logging.basicConfig(level=logging.INFO)
-    hl.init()
-    app = web.Application()
-    app.add_routes([
-        web.get('/status', status),
-        web.post('/search', search),
-        web.post('/gene_counts', gene_counts),
-    ])
+    app = init_web_app()
     web.run_app(
         app,
-        host='0.0.0.0',
+        host='0.0.0.0',  # nosec
         port=5000,
         access_log_format='%{From}i "%r" %s %Tfs',
     )

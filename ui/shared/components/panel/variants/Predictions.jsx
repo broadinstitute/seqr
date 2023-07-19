@@ -43,7 +43,9 @@ const predictionFieldValue = (
   return indicatorMap[value[0]] || indicatorMap[value]
 }
 
-const Prediction = ({ field, fieldTitle, value, color, infoValue, infoTitle, warningThreshold, dangerThreshold }) => {
+const Prediction = (
+  { field, fieldTitle, value, color, infoValue, infoTitle, warningThreshold, dangerThreshold, href },
+) => {
   const indicator = infoValue ? (
     <Popup
       header={infoTitle}
@@ -65,11 +67,13 @@ const Prediction = ({ field, fieldTitle, value, color, infoValue, infoTitle, war
     />
   ) : fieldName
 
+  const valueDisplay = href ? <a href={href} target="_blank" rel="noreferrer">{value}</a> : value
+
   return (
     <div>
       {indicator}
       {fieldDisplay}
-      <PredictionValue>{value}</PredictionValue>
+      <PredictionValue>{valueDisplay}</PredictionValue>
     </div>
   )
 }
@@ -83,6 +87,7 @@ Prediction.propTypes = {
   color: PropTypes.string,
   warningThreshold: PropTypes.number,
   dangerThreshold: PropTypes.number,
+  href: PropTypes.string,
 }
 
 class Predictions extends React.PureComponent {
@@ -116,9 +121,10 @@ class Predictions extends React.PureComponent {
       }
     }
 
-    const predictorFields = PREDICTOR_FIELDS.map(({ fieldTitle, ...predictorField }) => ({
+    const predictorFields = PREDICTOR_FIELDS.map(({ fieldTitle, getHref, ...predictorField }) => ({
       field: predictorField.field,
       fieldTitle,
+      href: getHref && getHref(variant),
       ...predictionFieldValue(predictions, genePredictors[predictorField.field] || predictorField),
     })).filter(predictorField => predictorField.value !== null && predictorField.value !== undefined)
     return (
