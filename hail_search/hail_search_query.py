@@ -1175,7 +1175,7 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
 
     @classmethod
     def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, variant_keys=None, **kwargs):
-        ht, family_guids = super(BaseSvHailTableQuery, cls).import_filtered_table(data_type, sample_data, **kwargs)
+        ht, family_guids = super(BaseSvHailTableQuery, cls).import_filtered_table(data_type, sample_data, variant_keys=variant_keys, **kwargs)
         # For searches with both variant_ids and variant_keys, intervals will cover the variant_ids only
         if intervals and not variant_keys:
             interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
