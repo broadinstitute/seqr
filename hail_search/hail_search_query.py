@@ -252,7 +252,7 @@ class BaseHailTableQuery(object):
     @classmethod
     def _filter_entries_table(cls, ht, sample_data=None, inheritance_mode=None, inheritance_filter=None,
                               genome_version=None, quality_filter=None, clinvar_path_terms=None, consequence_overrides=None,
-                              quality_affected_only=quality_affected_only, table_name=None, **kwargs):
+                              quality_affected_only=False, table_name=None, **kwargs):
         # logger.info(f'Initial count for {table_name}: {ht.count()}')
 
         ht, sample_id_family_index_map = cls._add_entry_sample_families(ht, sample_data)
