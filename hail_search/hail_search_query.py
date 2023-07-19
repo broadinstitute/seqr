@@ -122,7 +122,7 @@ class BaseHailTableQuery(object):
 
         self._load_filtered_table(data_type, sample_data, **kwargs)
 
-    def _load_filtered_table(self, data_type, sample_data, intervals=None, variant_ids=None, exclude_intervals=False,
+    def _load_filtered_table(self, data_type, sample_data, intervals=None, variant_ids=None,
                              inheritance_mode=None, pathogenicity=None, annotations=None, annotations_secondary=None,
                              **kwargs):
 
@@ -132,8 +132,7 @@ class BaseHailTableQuery(object):
             data_type, sample_data, intervals=self._parse_intervals(intervals, variant_ids), variant_ids=variant_ids,
             consequence_overrides=consequence_overrides, allowed_consequences=self._allowed_consequences,
             allowed_consequences_secondary=self._allowed_consequences_secondary, filtered_genes=self._filtered_genes,
-            inheritance_mode=inheritance_mode, has_location_search=bool(intervals) and not exclude_intervals,
-            exclude_intervals=exclude_intervals, genome_version=self._genome_version, **kwargs,
+            inheritance_mode=inheritance_mode, genome_version=self._genome_version, **kwargs,
         )
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
@@ -1171,13 +1170,22 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     SORTS.update(BaseHailTableQuery.SORTS)
 
     @classmethod
-    def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, **kwargs):
+    def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, variant_keys=None, **kwargs):
         ht, family_guids = super(BaseSvHailTableQuery, cls).import_filtered_table(data_type, sample_data, **kwargs)
-        if intervals:
+        # For searches with both variant_ids and variant_keys, intervals will cover the variant_ids only
+        if intervals and not variant_keys:
             interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
                 if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
             ht = ht.filter(interval_filter)
         return ht, family_guids
+
+    @classmethod
+    def _filter_entries_table(cls, ht, variant_keys=None, **kwargs):
+        if variant_keys:
+            variant_keys_set = hl.set(variant_keys)
+            ht = ht.filter(variant_keys_set.contains(ht[VARIANT_KEY_FIELD]))
+
+        return super(BaseSvHailTableQuery, cls)._filter_entries_table(ht, **kwargs)
 
     @staticmethod
     def get_x_chrom_filter(ht, x_interval):
