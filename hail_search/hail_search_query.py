@@ -157,12 +157,13 @@ class BaseHailTableQuery(object):
 
         quality_filter = quality_filter or {}
         vcf_quality_filter = quality_filter.get('vcf_filter')
+        quality_affected_only = quality_filter.get('affected_only')
         quality_filter = cls._format_quality_filter(quality_filter)
         clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides)
 
         family_filter_kwargs = dict(
             quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms, inheritance_mode=inheritance_mode,
-            consequence_overrides=consequence_overrides, genome_version=genome_version, **kwargs)
+            quality_affected_only=quality_affected_only, consequence_overrides=consequence_overrides, genome_version=genome_version, **kwargs)
         family_filter_kwargs.update(cls._get_family_table_filter_kwargs(
             load_table_kwargs=load_table_kwargs, clinvar_path_terms=clinvar_path_terms, **kwargs))
 
@@ -251,7 +252,7 @@ class BaseHailTableQuery(object):
     @classmethod
     def _filter_entries_table(cls, ht, sample_data=None, inheritance_mode=None, inheritance_filter=None,
                               genome_version=None, quality_filter=None, clinvar_path_terms=None, consequence_overrides=None,
-                              table_name=None, **kwargs):
+                              quality_affected_only=quality_affected_only, table_name=None, **kwargs):
         # logger.info(f'Initial count for {table_name}: {ht.count()}')
 
         ht, sample_id_family_index_map = cls._add_entry_sample_families(ht, sample_data)
@@ -268,7 +269,10 @@ class BaseHailTableQuery(object):
 
         if quality_filter:
             ht = ht.annotate(passes_quality_families=ht.family_entries.map(
-                lambda entries: entries.all(lambda gt: cls._genotype_passes_quality(gt, quality_filter)))
+                lambda entries: entries.all(
+                    lambda gt: (gt.affected_id == UNAFFECTED_ID if quality_affected_only else False) |
+                               cls._genotype_passes_quality(gt, quality_filter)
+                ))
             )
             if not clinvar_path_terms:
                 ht = ht.transmute(family_entries=hl.enumerate(ht.family_entries).map(
