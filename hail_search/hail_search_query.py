@@ -1021,7 +1021,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
 class VariantHailTableQuery(BaseVariantHailTableQuery):
 
-    GENOTYPE_FIELDS = {f.lower(): f for f in ['AB', 'AD', 'PL']}
+    GENOTYPE_FIELDS = {f.lower(): f for f in ['AB']}
     GENOTYPE_FIELDS.update(BaseVariantHailTableQuery.GENOTYPE_FIELDS)
     POPULATIONS = {
         'topmed': {'hemi': None, 'het': None},
