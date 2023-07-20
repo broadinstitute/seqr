@@ -549,37 +549,38 @@ class BaseHailTableQuery(object):
 
         for pop, freqs in sorted(frequencies.items()):
             pop_filter = None
+            pop_field = cls.POPULATION_FIELDS.get(pop, pop)
             if freqs.get('af') is not None:
                 af_field = populations_configs[pop].get('filter_af') or populations_configs[pop]['af']
-                pop_filter = ht[pop][af_field] <= freqs['af']
+                pop_filter = ht[pop_field][af_field] <= freqs['af']
                 if has_path_override and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                     pop_filter |= (
                         cls._has_clivar_terms_expr(ht, clinvar_path_terms) &
-                        (ht[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
+                        (ht[pop_field][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
                     )
             elif freqs.get('ac') is not None:
                 ac_field = populations_configs[pop]['ac']
                 if ac_field:
-                    pop_filter = ht[pop][ac_field] <= freqs['ac']
+                    pop_filter = ht[pop_field][ac_field] <= freqs['ac']
 
             if freqs.get('hh') is not None:
                 hom_field = populations_configs[pop]['hom']
                 hemi_field = populations_configs[pop]['hemi']
                 if hom_field:
-                    hh_filter = ht[pop][hom_field] <= freqs['hh']
+                    hh_filter = ht[pop_field][hom_field] <= freqs['hh']
                     if pop_filter is None:
                         pop_filter = hh_filter
                     else:
                         pop_filter &= hh_filter
                 if hemi_field:
-                    hh_filter = ht[pop][hemi_field] <= freqs['hh']
+                    hh_filter = ht[pop_field][hemi_field] <= freqs['hh']
                     if pop_filter is None:
                         pop_filter = hh_filter
                     else:
                         pop_filter &= hh_filter
 
             if pop_filter is not None:
-                ht = ht.filter(hl.is_missing(ht[pop]) | pop_filter)
+                ht = ht.filter(hl.is_missing(ht[pop_field]) | pop_filter)
 
         return ht
 
