@@ -142,12 +142,15 @@ class BaseProjectSavedVariants extends React.PureComponent {
       project.variantTagTypes.map(type => type.category).filter(category => category),
     )]
 
-    const isCategory = categoryOptions.includes(newTag)
-    updateTableField('categoryFilter')(isCategory ? newTag : null)
+    const tagString = newTag.map((tag) => {
+      const isCategory = categoryOptions.includes(tag)
+      updateTableField('categoryFilter')(isCategory ? newTag : null)
+      return !isCategory && tag !== ALL_FILTER && tag
+    }).filter(tag => tag).join(';')
     return getSavedVariantsLinkPath({
       projectGuid: project.projectGuid,
       analysisGroupGuid: match.params.analysisGroupGuid,
-      tag: !isCategory && newTag !== ALL_FILTER && newTag,
+      tag: tagString,
       familyGuid: match.params.familyGuid,
     })
   }

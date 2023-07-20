@@ -7,7 +7,7 @@ from random import randint
 from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissions, parse_mme_features, \
     get_mme_metrics, get_hpo_terms_by_id
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Family, Individual, VariantTagType, SavedVariant, FamilyAnalysedBy
+from seqr.models import Family, Individual, VariantTag, SavedVariant, FamilyAnalysedBy
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
@@ -87,8 +87,11 @@ def saved_variants_page(request, tag):
     if tag == 'ALL':
         saved_variant_models = SavedVariant.objects.exclude(varianttag=None)
     else:
-        tag_type = VariantTagType.objects.get(name=tag, project__isnull=True)
-        saved_variant_models = SavedVariant.objects.filter(varianttag__variant_tag_type=tag_type)
+        tags = tag.split(';')
+        saved_variant_models = SavedVariant.objects.filter(
+            varianttag__variant_tag_type__name__in=tags,
+            varianttag__variant_tag_type__project__isnull=True,
+        )
 
     saved_variant_models = saved_variant_models.filter(family__project__guid__in=get_project_guids_user_can_view(request.user))
 

@@ -81,9 +81,10 @@ class SavedVariants extends React.PureComponent {
     const { showAllFilters } = this.state
     const { familyGuid, variantGuid, tag } = match.params
 
-    const appliedTagCategoryFilter = tag || (variantGuid ? null : (tableState.categoryFilter || ALL_FILTER))
+    const tags = tag ? tag.split(';') : tag
+    const appliedTagCategoryFilter = tags || (variantGuid ? [] : [(tableState.categoryFilter || ALL_FILTER)])
 
-    let shownFilters = (discoveryFilters && appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME) ?
+    let shownFilters = (discoveryFilters && appliedTagCategoryFilter === [DISCOVERY_CATEGORY_NAME]) ?
       discoveryFilters : filters
     const hasHiddenFilters = !showAllFilters && shownFilters.length > MAX_FILTERS
     if (hasHiddenFilters) {
@@ -111,6 +112,7 @@ class SavedVariants extends React.PureComponent {
               {`Showing ${shownSummary} ${filteredVariantsCount}  `}
               <Dropdown
                 inline
+                multiple
                 options={tagOptions}
                 value={appliedTagCategoryFilter}
                 onChange={this.navigateToTag}

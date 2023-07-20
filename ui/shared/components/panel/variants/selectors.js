@@ -135,8 +135,12 @@ export const getPairedSelectedSavedVariants = createSelector(
     } else if (tag === MME_TAG_NAME) {
       pairedVariants = matchingVariants(pairedVariants, ({ mmeSubmissions = [] }) => mmeSubmissions.length)
     } else if (tag && tag !== SHOW_ALL) {
+      const tags = tag.split(';')
       pairedVariants = matchingVariants(
-        pairedVariants, ({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag),
+        pairedVariants, ({ tagGuids }) => {
+          const tagNames = tagGuids.map(tagGuid => tagsByGuid[tagGuid].name)
+          return tags.every(tagName => tagNames.includes(tagName))
+        },
       )
     } else if (!(familyGuid || analysisGroupGuid)) {
       pairedVariants = matchingVariants(pairedVariants, ({ tagGuids }) => tagGuids.length)
