@@ -101,10 +101,13 @@ class BaseHailTableQuery(object):
             )).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
+
+        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], enums[k], r=r, **enum_config)
         annotation_fields.update({
-            enum_config.get('response_key', k): lambda r: self._enum_field(r[k], enums[k], r=r, **enum_config)
+            enum_config.get('response_key', k): format_enum(k, enum_config)
             for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
         })
+
         if self._genome_version == GENOME_VERSION_GRCh38_DISPLAY:
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
@@ -958,9 +961,9 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         'ref': lambda r: r.alleles[0],
         'alt': lambda r: r.alleles[1],
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
-        'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
+        'mainTranscriptId': lambda r: r.sortedTranscriptConsequences.first().transcript_id,
         'selectedMainTranscriptId': lambda r: hl.or_missing(
-            r.selected_transcript != r.sortedTranscriptConsequences[0], r.selected_transcript.transcript_id,
+            r.selected_transcript != r.sortedTranscriptConsequences.first(), r.selected_transcript.transcript_id,
         ),
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
@@ -993,13 +996,13 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
         consequence_transcripts = None
         if self._allowed_consequences:
-            allowed_consequence_ids = hl.set(self._get_allowed_consequence_ids(ht, self._allowed_consequences))
+            allowed_consequence_ids = hl.set(self._get_allowed_consequence_ids(results, self._allowed_consequences))
             consequence_transcripts = all_transcripts.filter(
                 lambda t: allowed_consequence_ids.contains(self.get_major_consequence_id(t))
             )
             if self._allowed_consequences_secondary:
                 allowed_consequence_ids_secondary = hl.set(
-                    self._get_allowed_consequence_ids(ht, self._allowed_consequences_secondary)
+                    self._get_allowed_consequence_ids(results, self._allowed_consequences_secondary)
                 )
                 consequence_transcripts = hl.if_else(
                     results.has_allowed_consequence, consequence_transcripts,
