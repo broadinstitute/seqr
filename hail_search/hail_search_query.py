@@ -88,7 +88,7 @@ class BaseHailTableQuery(object):
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
             }),
             'predictions': lambda r: hl.struct(**{
-                prediction: hl.array(enums[path[0]][path[1]])[r[path[0]][path[1]]]
+                prediction: hl.array(enums[path[0]][path[1]])[r[path[0]][f'{path[1]}_id']]
                 if enums.get(path[0], {}).get(path[1]) else r[path[0]][path[1]]
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
