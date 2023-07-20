@@ -1282,6 +1282,11 @@ const INDICATOR_MAP = {
   T: { color: 'green', value: 'tolerated' },
 }
 
+const FATHMM_MAP = {
+  ...INDICATOR_MAP,
+  N: { color: 'green', value: 'neutral' },
+}
+
 const POLYPHEN_MAP = {
   D: { color: 'red', value: 'probably damaging' },
   P: { color: 'yellow', value: 'possibly damaging' },
@@ -1332,7 +1337,9 @@ export const PREDICTOR_FIELDS = [
   { field: 'polyphen', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: POLYPHEN_MAP },
   { field: 'sift', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
   { field: 'mut_taster', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: MUTTASTER_MAP },
-  { field: 'fathmm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
+  { field: 'fathmm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: FATHMM_MAP },
+  { field: 'vest', warningThreshold: 0.5, dangerThreshold: 0.764 },
+  { field: 'mut_pred', warningThreshold: 0.392, dangerThreshold: 0.737 },
   { field: 'apogee', warningThreshold: 0.5, dangerThreshold: 0.5 },
   { field: 'gnomad_noncoding', fieldTitle: 'gnomAD Constraint', displayOnly: true, warningThreshold: 2.18, dangerThreshold: 4 },
   { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
