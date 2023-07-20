@@ -65,7 +65,11 @@ class SavedVariants extends React.PureComponent {
 
   navigateToTag = (e, data) => {
     const { history, getUpdateTagUrl, match } = this.props
-    history.push(getUpdateTagUrl(data.value, match))
+    const { value } = data
+    if (value.length === 0) {
+      value.push(ALL_FILTER)
+    }
+    history.push(getUpdateTagUrl(value.length > 1 ? value.filter(tag => tag !== ALL_FILTER) : value, match))
   }
 
   showAllFilters = () => {

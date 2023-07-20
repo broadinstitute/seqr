@@ -7,7 +7,7 @@ from random import randint
 from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissions, parse_mme_features, \
     get_mme_metrics, get_hpo_terms_by_id
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Family, Individual, VariantTag, SavedVariant, FamilyAnalysedBy
+from seqr.models import Family, Individual, SavedVariant, FamilyAnalysedBy
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
