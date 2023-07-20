@@ -29,8 +29,6 @@ import CreateVariantButton from './CreateVariantButton'
 import VariantTagTypeBar from './VariantTagTypeBar'
 import RnaSeqResultPage from './RnaSeqResultPage'
 
-const READ_BUTTON_PROPS = { padding: '0.5em 0 1.5em 0' }
-
 const SearchLink = React.memo(({ family, disabled, children }) => (
   <ButtonLink as={Link} to={`/variant_search/family/${family.familyGuid}`} disabled={disabled}>{children}</ButtonLink>
 ))
@@ -140,7 +138,7 @@ FamilyReadsLayout.propTypes = {
 const BaseExpandedFamily = React.memo(({ familyDetail, familyGuid, family, individuals, tableName, loading, load }) => (
   <DataLoader load={load} contentId={familyGuid} content={family && family.detailsLoaded} loading={loading}>
     {familyDetail}
-    <FamilyReads layout={FamilyReadsLayout} familyGuid={familyGuid} buttonProps={READ_BUTTON_PROPS} />
+    <FamilyReads layout={FamilyReadsLayout} familyGuid={familyGuid} />
     {individuals && individuals.map(individual => (
       <IndividualRow
         key={individual.individualGuid}

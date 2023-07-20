@@ -1066,9 +1066,9 @@ export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectB
     familyGuid => projectByGuid[familiesByGuid[familyGuid].projectGuid].enableHgmd,
   )) && variant.hgmd && variant.hgmd.class
 
-export const clinvarSignificance = (clinvar = {}) => {
-  let { pathogenicity, assertions } = clinvar
-  const { clinicalSignificance } = clinvar
+export const clinvarSignificance = (clinvar) => {
+  let { pathogenicity, assertions } = clinvar || {}
+  const { clinicalSignificance } = clinvar || {}
   if (clinicalSignificance && !pathogenicity) {
     [pathogenicity, ...assertions] = clinicalSignificance.split(/[,|]/)
     if (pathogenicity === 'Pathogenic/Likely_pathogenic/Pathogenic') {
@@ -1322,6 +1322,9 @@ export const PREDICTOR_FIELDS = [
     infoField: 'splice_ai_consequence',
     infoTitle: 'Predicted Consequence',
     fieldTitle: 'SpliceAI',
+    getHref: ({ chrom, pos, ref, alt, genomeVersion }) => (
+      `https://spliceailookup.broadinstitute.org/#variant=${chrom}-${pos}-${ref}-${alt}&hg=${genomeVersion}&distance=1000&mask=1`
+    ),
   },
   { field: 'eigen', group: CODING_IN_SILICO_GROUP, warningThreshold: 1, dangerThreshold: 2, max: 99 },
   { field: 'dann', displayOnly: true, warningThreshold: 0.93, dangerThreshold: 0.96 },

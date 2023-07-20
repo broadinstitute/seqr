@@ -58,8 +58,8 @@ def _send_slack_msg_on_failure_trigger(e, dag_id, dag, error_message):
 def _check_dag_running_state(dag_id):
     endpoint = 'dags/{}/dagRuns'.format(dag_id)
     resp = _make_airflow_api_request(endpoint, method='GET')
-    lastest_dag_runs = resp['dag_runs'][-1]
-    if lastest_dag_runs['state'] == 'running':
+    dag_runs = resp['dag_runs']
+    if dag_runs and dag_runs[-1]['state'] == 'running':
         raise DagRunningException(f'{dag_id} is running and cannot be triggered again.')
 
 

@@ -164,7 +164,7 @@ class BaseHailTableQuery(object):
 
         self._load_filtered_table(data_type, sample_data, **kwargs)
 
-    def _load_filtered_table(self, data_type, sample_data, intervals=None, variant_ids=None, exclude_intervals=False,
+    def _load_filtered_table(self, data_type, sample_data, intervals=None, variant_ids=None,
                              inheritance_mode=None, pathogenicity=None, annotations=None, annotations_secondary=None,
                              **kwargs):
 
@@ -174,8 +174,7 @@ class BaseHailTableQuery(object):
             data_type, sample_data, intervals=self._parse_intervals(intervals, variant_ids), variant_ids=variant_ids,
             consequence_overrides=consequence_overrides, allowed_consequences=self._allowed_consequences,
             allowed_consequences_secondary=self._allowed_consequences_secondary, filtered_genes=self._filtered_genes,
-            inheritance_mode=inheritance_mode, has_location_search=bool(intervals) and not exclude_intervals,
-            exclude_intervals=exclude_intervals, genome_version=self._genome_version, **kwargs,
+            inheritance_mode=inheritance_mode, genome_version=self._genome_version, **kwargs,
         )
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
@@ -200,12 +199,13 @@ class BaseHailTableQuery(object):
 
         quality_filter = quality_filter or {}
         vcf_quality_filter = quality_filter.get('vcf_filter')
+        quality_affected_only = quality_filter.get('affected_only')
         quality_filter = cls._format_quality_filter(quality_filter)
         clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides)
 
         family_filter_kwargs = dict(
             quality_filter=quality_filter,  vcf_quality_filter=vcf_quality_filter, clinvar_path_terms=clinvar_path_terms, inheritance_mode=inheritance_mode,
-            consequence_overrides=consequence_overrides, genome_version=genome_version, **kwargs)
+            quality_affected_only=quality_affected_only, consequence_overrides=consequence_overrides, genome_version=genome_version, **kwargs)
         family_filter_kwargs.update(cls._get_family_table_filter_kwargs(
             load_table_kwargs=load_table_kwargs, clinvar_path_terms=clinvar_path_terms, **kwargs))
 
@@ -297,7 +297,7 @@ class BaseHailTableQuery(object):
     @classmethod
     def _filter_entries_table(cls, ht, sample_data=None, inheritance_mode=None, inheritance_filter=None,
                               genome_version=None, quality_filter=None, clinvar_path_terms=None, consequence_overrides=None,
-                              vcf_quality_filter=None, table_name=None, **kwargs):
+                              vcf_quality_filter=None, quality_affected_only=False, table_name=None, **kwargs):
         # logger.info(f'Initial count for {table_name}: {ht.count()}')
 
         ht, sample_id_family_index_map = cls._add_entry_sample_families(ht, sample_data)
@@ -317,7 +317,10 @@ class BaseHailTableQuery(object):
 
         if quality_filter:
             ht = ht.annotate(passes_quality_families=ht.family_entries.map(
-                lambda entries: entries.all(lambda gt: cls._genotype_passes_quality(gt, quality_filter)))
+                lambda entries: entries.all(
+                    lambda gt: (gt.affected_id == UNAFFECTED_ID if quality_affected_only else False) |
+                               cls._genotype_passes_quality(gt, quality_filter)
+                ))
             )
             if not clinvar_path_terms:
                 ht = ht.transmute(family_entries=hl.enumerate(ht.family_entries).map(
@@ -362,7 +365,7 @@ class BaseHailTableQuery(object):
             family_sample_indices[family_index].append(sample_index)
         family_sample_indices = hl.array(family_sample_indices)
 
-        ht = ht.annotate(
+        ht = ht.transmute(
             family_entries=family_sample_indices.map(lambda sample_indices: sample_indices.map(
                 lambda i: hl.or_else(ht.entries[i], cls._missing_entry(ht.entries[i])).annotate(
                     sampleId=sample_index_id_map.get(i),
@@ -936,6 +939,7 @@ class BaseHailTableQuery(object):
 
 class BaseVariantHailTableQuery(BaseHailTableQuery):
 
+    GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ']}
     POPULATIONS = {}
     PREDICTION_FIELDS_CONFIG = {
         'mut_taster': ('dbnsfp', 'MutationTaster_pred'),
@@ -1091,7 +1095,8 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
 class VariantHailTableQuery(BaseVariantHailTableQuery):
 
-    GENOTYPE_FIELDS = {f: f for f in ['ab', 'dp', 'gq']}
+    GENOTYPE_FIELDS = {f.lower(): f for f in ['AB']}
+    GENOTYPE_FIELDS.update(BaseVariantHailTableQuery.GENOTYPE_FIELDS)
     POPULATIONS = {
         'seqr': {'hom': 'hom', 'hemi': None, 'het': None},
         'topmed': {'hemi': None},
@@ -1183,7 +1188,7 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
         'mitoCn': 'mito_cn',
         'contamination': 'contamination',
     }
-    GENOTYPE_FIELDS.update({f.lower(): f for f in ['DP', 'GQ']})
+    GENOTYPE_FIELDS.update(BaseVariantHailTableQuery.GENOTYPE_FIELDS)
     POPULATIONS = {
         pop: {'hom': None, 'hemi': None, 'het': None} for pop in [
             'callset_heteroplasmy', 'gnomad_mito', 'gnomad_mito_heteroplasmy', 'helix', 'helix_heteroplasmy'
@@ -1258,13 +1263,22 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     SORTS.update(BaseHailTableQuery.SORTS)
 
     @classmethod
-    def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, **kwargs):
-        ht, family_guids = super(BaseSvHailTableQuery, cls).import_filtered_table(data_type, sample_data, **kwargs)
-        if intervals:
+    def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, variant_keys=None, **kwargs):
+        ht, family_guids = super(BaseSvHailTableQuery, cls).import_filtered_table(data_type, sample_data, variant_keys=variant_keys, **kwargs)
+        # For searches with both variant_ids and variant_keys, intervals will cover the variant_ids only
+        if intervals and not variant_keys:
             interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
                 if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
             ht = ht.filter(interval_filter)
         return ht, family_guids
+
+    @classmethod
+    def _filter_entries_table(cls, ht, variant_keys=None, **kwargs):
+        if variant_keys:
+            variant_keys_set = hl.set(variant_keys)
+            ht = ht.filter(variant_keys_set.contains(ht[VARIANT_KEY_FIELD]))
+
+        return super(BaseSvHailTableQuery, cls)._filter_entries_table(ht, **kwargs)
 
     @staticmethod
     def get_x_chrom_filter(ht, x_interval):
@@ -1422,7 +1436,7 @@ class MultiDataTypeHailTableQuery(object):
 
             transmute_expressions = {
                 k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge
-                if k not in {'sortedTranscriptConsequences', 'genotypes'}
+                if k not in {'sortedTranscriptConsequences', 'genotypes', VARIANT_KEY_FIELD}
             }
             transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences'))
             transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes'))

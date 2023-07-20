@@ -7,6 +7,7 @@ import { getUser, getElasticsearchEnabled } from 'redux/selectors'
 import { Error404, Error401 } from 'shared/components/page/Errors'
 import { SimplePageHeader } from 'shared/components/page/PageHeaderLayout'
 
+import AddIGV from './components/AddIGV'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
 import LoadData from './components/LoadData'
 import RnaSeq from './components/RnaSeq'
@@ -19,6 +20,7 @@ const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
 const PM_DATA_MANAGEMENT_PAGES = [
   { path: 'load_data', component: LoadData },
+  { path: 'add_igv', component: AddIGV },
 ]
 
 const DATA_MANAGEMENT_PAGES = [

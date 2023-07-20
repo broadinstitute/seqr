@@ -400,7 +400,7 @@ def write_pedigree(request, project_guid):
         )
 
     annotations = OrderedDict({
-        'Project_GUID': Value(project.guid), 'Family_ID': F('family__family_id'), 'Individual_ID': F('individual_id'),
+        'Project_GUID': Value(project.guid), 'Family_GUID': F('family__guid'), 'Family_ID': F('family__family_id'), 'Individual_ID': F('individual_id'),
         'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
     })
     data = Individual.objects.filter(family__project=project).order_by('family_id', 'individual_id').values(**dict(annotations))
@@ -449,7 +449,8 @@ def load_data(request):
 
     version_path_prefix = f'{SEQR_DATSETS_GS_PATH}/GRCh38/{dag_name}'
     version_paths = get_gs_file_list(version_path_prefix, user=request.user, allow_missing=True, check_subfolders=False)
-    curr_version = max([int(re.findall(f'{version_path_prefix}/v(\d\d)/', p)[0]) for p in version_paths] + [0])
+    versions = [re.findall(f'{version_path_prefix}/v(\d\d)/', p) for p in version_paths]
+    curr_version = max([int(v[0]) for v in versions if v] + [0])
     dag_variables = {'version_path': f'{version_path_prefix}/v{curr_version+1:02d}'}
 
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
