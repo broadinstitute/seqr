@@ -1413,7 +1413,8 @@ def _location_filter(genes, intervals, exclude_locations):
                     }
                 } for key in ['xpos', 'xstop']]
                 interval_q = _build_or_filter('range', range_filters)
-                interval_q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop})
+                interval_q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop}) &\
+                              Q('script', script="doc['xpos'].value / 1000000000 == doc['xstop'].value / 1000000000")
 
             if q:
                 q |= interval_q
