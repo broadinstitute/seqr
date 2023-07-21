@@ -266,7 +266,7 @@ class BaseHailTableQuery(object):
 
         if clinvar_path_terms and quality_filter:
             ht = ht.annotate(family_entries=hl.if_else(
-                cls._has_clivar_terms_expr(ht, clinvar_path_terms), ht.family_entries,
+                hl.is_defined(ht.clinvar) & cls._has_clivar_terms_expr(ht, clinvar_path_terms), ht.family_entries,
                 hl.enumerate(ht.family_entries).map(lambda x: hl.or_missing(ht.passes_quality_families[x[0]], x[1]))),
             ).drop('passes_quality_families')
             ht = ht.filter(ht.family_entries.any(lambda x: hl.is_defined(x)))
