@@ -707,7 +707,6 @@ class BaseHailTableQuery(object):
             if path_filter in terms:
                 if end is None:
                     # Filter for any value greater than start
-                    start = start + 1
                     end = len(enum_lookup)
                 range[1] = end
                 if not range[0]:

@@ -91,7 +91,7 @@ CLINVAR_PATH_RANGES = [
 HGMD_PATH_RANGES = [
     ('disease_causing', 'DM', 'DM'),
     ('likely_disease_causing', 'DM?', 'DM?'),
-    ('hgmd_other', 'DM?', None),
+    ('hgmd_other', 'DP', None),
 ]
 
 CHROMOSOMES = [
