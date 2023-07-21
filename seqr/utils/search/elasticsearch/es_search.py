@@ -1413,8 +1413,9 @@ def _location_filter(genes, intervals, exclude_locations):
                     }
                 } for key in ['xpos', 'xstop']]
                 interval_q = _build_or_filter('range', range_filters)
-                interval_q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop}) &
-                              Q('range', xpos={'gte': get_xpos(interval['chrom'], 0)}) & Q('range', xstop={'lte': get_xpos(interval['chrom'], MAX_POS)})
+                interval_q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop}) & \
+                              Q('range', xpos={'gte': get_xpos(interval['chrom'], MIN_POS)}) & \
+                              Q('range', xstop={'lte': get_xpos(interval['chrom'], MAX_POS)})
 
             if q:
                 q |= interval_q

@@ -1614,7 +1614,8 @@ class EsUtilsTest(TestCase):
                         {'bool': {'must': [
                             {'range': {'xpos': {'lte': 2000001234}}},
                             {'range': {'xstop': {'gte': 2000005678}}},
-                            {'script': {'script': "doc['xpos'].value / 1000000000 == doc['xstop'].value / 1000000000"}},
+                            {'range': {'xpos': {'gte': 2000000001}}},
+                            {'range': {'xstop': {'lte': 2300000000}}},
                         ]}},
                         {'terms': {'geneIds': ['ENSG00000223972']}},
                         {'bool': {'must': [
