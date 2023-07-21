@@ -1613,7 +1613,10 @@ class EsUtilsTest(TestCase):
                         {'range': {'xstop': {'gte': 2000001234, 'lte': 2000005678}}},
                         {'bool': {'must': [
                             {'range': {'xpos': {'lte': 2000001234}}},
-                            {'range': {'xstop': {'gte': 2000005678}}}]}},
+                            {'range': {'xstop': {'gte': 2000005678}}},
+                            {'range': {'xpos': {'gte': 2000000001}}},
+                            {'range': {'xstop': {'lte': 2300000000}}},
+                        ]}},
                         {'terms': {'geneIds': ['ENSG00000223972']}},
                         {'bool': {'must': [
                             {'range': {'xpos': {'gte': 7000000001, 'lte': 7000001100}}},
