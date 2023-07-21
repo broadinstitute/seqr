@@ -40,6 +40,7 @@ class BaseHailTableQuery(object):
     OMIT_TRANSCRIPT_FIELDS = []
     ANNOTATION_OVERRIDE_FIELDS = []
 
+    GLOBALS = ['enums']
     CORE_FIELDS = ['xpos']
     BASE_ANNOTATION_FIELDS = {
         'familyGuids': lambda r: r.genotypes.group_by(lambda x: x.familyGuid).keys(),
@@ -81,7 +82,8 @@ class BaseHailTableQuery(object):
 
     @property
     def annotation_fields(self):
-        enums = hl.eval(self._ht.enums)
+        globals = {k: hl.eval((self._ht or self._comp_het_ht)[k]) for k in self.GLOBALS}
+        enums = globals.pop('enums')
 
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
@@ -102,7 +104,7 @@ class BaseHailTableQuery(object):
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
 
-        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], enums[k], r=r, **enum_config)
+        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], enums[k], globals=globals, **enum_config)
         annotation_fields.update({
             enum_config.get('response_key', k): format_enum(k, enum_config)
             for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
@@ -125,7 +127,7 @@ class BaseHailTableQuery(object):
         return {}
 
     @staticmethod
-    def _enum_field(value, enum, r=None, annotate=None, format=None, drop_fields=None, **kwargs):
+    def _enum_field(value, enum, globals=None, annotate=None, format=None, drop_fields=None, **kwargs):
         annotations = {}
         drop = [] + (drop_fields or [])
         value_keys = value.keys()
@@ -142,7 +144,7 @@ class BaseHailTableQuery(object):
 
         value = value.annotate(**annotations)
         if annotate:
-            annotations = annotate(value, enum, r)
+            annotations = annotate(value, enum, globals)
             value = value.annotate(**annotations)
         value = value.drop(*drop)
 
@@ -261,7 +263,7 @@ class BaseHailTableQuery(object):
         annotation_ht_query_result = hl.query_table(annotations_ht_path, families_ht.key).first().drop(*families_ht.key)
         ht = families_ht.annotate(**annotation_ht_query_result)
         # Add globals
-        ht = ht.join(hl.read_table(annotations_ht_path).head(0).select().select_globals('enums', 'versions'), how='left')
+        ht = ht.join(hl.read_table(annotations_ht_path).head(0).select().select_globals(*cls.GLOBALS), how='left')
         # logger.info(f'Annotated {ht._force_count()} rows ({cls.__name__})')
 
         if clinvar_path_terms and quality_filter:
@@ -740,8 +742,8 @@ class BaseHailTableQuery(object):
         return False
 
     @classmethod
-    def _get_allowed_consequence_ids(cls, ht, allowed_consequences):
-        enum = cls._get_enum_lookup(ht, 'sorted_transcript_consequences', 'consequence_term')
+    def _get_allowed_consequence_ids(cls, ht, allowed_consequences, enum_ht=None):
+        enum = cls._get_enum_lookup(enum_ht or ht, 'sorted_transcript_consequences', 'consequence_term')
         return {enum[c] for c in (allowed_consequences or []) if enum.get(c)}
 
     @staticmethod
@@ -953,6 +955,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     OMIT_TRANSCRIPT_FIELDS = ['consequence_terms']
     ANNOTATION_OVERRIDE_FIELDS = [CLINVAR_KEY]
 
+    GLOBALS = BaseHailTableQuery.GLOBALS + ['versions']
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
     BASE_ANNOTATION_FIELDS = {
         'chrom': lambda r: r.locus.contig.replace("^chr", ""),
@@ -967,11 +970,11 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
-        'clinvar': {'annotate': lambda value, enum, r: {
+        'clinvar': {'annotate': lambda value, enum, globals: {
             'conflictingPathogenicities': value.conflictingPathogenicities.map(
                 lambda p: p.annotate(pathogenicity=hl.array(enum['pathogenicity'])[p.pathogenicity_id]).drop('pathogenicity_id')
             ),
-            'version': r.versions.clinvar,
+            'version': globals['versions'].clinvar,
         }},
     }
 
@@ -995,13 +998,16 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
         consequence_transcripts = None
         if self._allowed_consequences:
-            allowed_consequence_ids = hl.set(self._get_allowed_consequence_ids(results, self._allowed_consequences))
+            enum_ht = self._ht or self._comp_het_ht
+            allowed_consequence_ids = hl.set(
+                self._get_allowed_consequence_ids(results, self._allowed_consequences, enum_ht=enum_ht)
+            )
             consequence_transcripts = all_transcripts.filter(
                 lambda t: allowed_consequence_ids.contains(self.get_major_consequence_id(t))
             )
             if self._allowed_consequences_secondary:
                 allowed_consequence_ids_secondary = hl.set(
-                    self._get_allowed_consequence_ids(results, self._allowed_consequences_secondary)
+                    self._get_allowed_consequence_ids(results, self._allowed_consequences_secondary, enum_ht=enum_ht)
                 )
                 consequence_transcripts = hl.if_else(
                     results.has_allowed_consequence, consequence_transcripts,
