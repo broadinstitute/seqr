@@ -1066,9 +1066,9 @@ export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectB
     familyGuid => projectByGuid[familiesByGuid[familyGuid].projectGuid].enableHgmd,
   )) && variant.hgmd && variant.hgmd.class
 
-export const clinvarSignificance = (clinvar = {}) => {
-  let { pathogenicity, assertions } = clinvar
-  const { clinicalSignificance } = clinvar
+export const clinvarSignificance = (clinvar) => {
+  let { pathogenicity, assertions } = clinvar || {}
+  const { clinicalSignificance } = clinvar || {}
   if (clinicalSignificance && !pathogenicity) {
     [pathogenicity, ...assertions] = clinicalSignificance.split(/[,|]/)
     if (pathogenicity === 'Pathogenic/Likely_pathogenic/Pathogenic') {
