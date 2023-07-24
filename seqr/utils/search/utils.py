@@ -1,4 +1,5 @@
 from collections import defaultdict
+from copy import deepcopy
 from datetime import timedelta
 
 from seqr.models import Sample, Individual, Project
@@ -197,7 +198,7 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
 
 
 def _query_variants(search_model, user, previous_search_results, sort=None, num_results=100, **kwargs):
-    search = search_model.variant_search.search
+    search = deepcopy(search_model.variant_search.search)
 
     rs_ids = None
     variant_ids = None
