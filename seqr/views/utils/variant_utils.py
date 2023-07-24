@@ -155,15 +155,15 @@ def get_phenotype_prioritization(family_guids, gene_ids=None):
     return data_by_individual_gene
 
 
-def _add_family_has_rna_tpm(family_genes, response):
+def _get_family_has_rna_tpm(family_genes, gene_ids):
     tpm_family_genes = RnaSeqTpm.objects.filter(
-        sample__individual__family__guid__in=family_genes.keys(), gene_id__in=response['genesById'].keys(),
+        sample__individual__family__guid__in=family_genes.keys(), gene_id__in=gene_ids,
     ).values('sample__individual__family__guid').annotate(genes=ArrayAgg('gene_id', distinct=True))
-    for agg in tpm_family_genes:
-        family_guid = agg['sample__individual__family__guid']
-        response['familiesByGuid'][family_guid]['tpmGenes'] = {
-            gene for gene in agg['genes'] if gene in family_genes[family_guid]
-        }
+    return {
+        agg['sample__individual__family__guid']: {'tpmGenes': [
+            gene for gene in agg['genes'] if gene in family_genes[agg['sample__individual__family__guid']]
+        ]} for agg in tpm_family_genes
+    }
 
 
 def _add_discovery_tags(variants, discovery_tags):
@@ -226,6 +226,12 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         matchmakersubmissiongenes__saved_variant__guid__in=response['savedVariantsByGuid'].keys()))
     response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
+    rna_tpm = None
+    if include_individual_gene_scores:
+        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), family_genes.keys())
+        rna_tpm = _get_family_has_rna_tpm(family_genes, response)
+        response['phenotypeGeneScores'] = get_phenotype_prioritization(family_genes.keys(), gene_ids=genes.keys())
+
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
         project_fields = {'projectGuid': 'guid'}
         if include_project_name:
@@ -242,11 +248,11 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
             has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
         )
 
-    if include_individual_gene_scores:
-        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), family_genes.keys())
+    if rna_tpm:
         if response.get('familiesByGuid'):
-            _add_family_has_rna_tpm(family_genes, response)
-
-        response['phenotypeGeneScores'] = get_phenotype_prioritization(family_genes.keys(), gene_ids=genes.keys())
+            for family_guid, data in rna_tpm.items():
+                response['familiesByGuid'][family_guid].update(data)
+        else:
+            response['familiesByGuid'] = rna_tpm
 
     return response
