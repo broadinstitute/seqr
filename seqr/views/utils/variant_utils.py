@@ -229,7 +229,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     rna_tpm = None
     if include_individual_gene_scores:
         response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), family_genes.keys())
-        rna_tpm = _get_family_has_rna_tpm(family_genes, response)
+        rna_tpm = _get_family_has_rna_tpm(family_genes, genes.keys())
         response['phenotypeGeneScores'] = get_phenotype_prioritization(family_genes.keys(), gene_ids=genes.keys())
 
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
@@ -248,11 +248,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
             has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
         )
 
-    if rna_tpm:
-        if response.get('familiesByGuid'):
+        if rna_tpm:
             for family_guid, data in rna_tpm.items():
                 response['familiesByGuid'][family_guid].update(data)
-        else:
-            response['familiesByGuid'] = rna_tpm
 
     return response
