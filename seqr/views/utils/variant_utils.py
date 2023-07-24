@@ -1,6 +1,6 @@
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F
+from django.db.models import F, Q
 import logging
 import redis
 
@@ -82,6 +82,7 @@ def get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs)
 
 
 def _saved_variant_genes_transcripts(variants):
+    family_genes = defaultdict(set)
     gene_ids = set()
     transcript_ids = set()
     for variant in variants:
@@ -91,6 +92,8 @@ def _saved_variant_genes_transcripts(variants):
             for gene_id, transcripts in var.get('transcripts', {}).items():
                 gene_ids.add(gene_id)
                 transcript_ids.update([t['transcriptId'] for t in transcripts if t.get('transcriptId')])
+            for family_guid in var['familyGuids']:
+                family_genes[family_guid].update(var.get('transcripts', {}).keys())
 
     genes = get_genes_for_variants(gene_ids)
     for gene in genes.values():
@@ -104,7 +107,7 @@ def _saved_variant_genes_transcripts(variants):
         )
     }
 
-    return genes, transcripts
+    return genes, transcripts, family_genes
 
 
 def _add_locus_lists(projects, genes, add_list_detail=False, user=None):
@@ -152,12 +155,15 @@ def get_phenotype_prioritization(family_guids, gene_ids=None):
     return data_by_individual_gene
 
 
-def _add_family_has_rna_tpm(families_by_guid, gene_ids):
+def _add_family_has_rna_tpm(family_genes, response):
     tpm_family_genes = RnaSeqTpm.objects.filter(
-        sample__individual__family__guid__in=families_by_guid.keys(), gene_id__in=gene_ids,
+        sample__individual__family__guid__in=family_genes.keys(), gene_id__in=response['genesById'].keys(),
     ).values('sample__individual__family__guid').annotate(genes=ArrayAgg('gene_id', distinct=True))
     for agg in tpm_family_genes:
-        families_by_guid[agg['sample__individual__family__guid']]['tpmGenes'] = agg['genes']
+        family_guid = agg['sample__individual__family__guid']
+        response['familiesByGuid'][family_guid]['tpmGenes'] = {
+            gene for gene in agg['genes'] if gene in family_genes[family_guid]
+        }
 
 
 def _add_discovery_tags(variants, discovery_tags):
@@ -188,11 +194,9 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
 
     variants = list(response['savedVariantsByGuid'].values()) if response_variants is None else response_variants
+    genes, transcripts, family_genes = _saved_variant_genes_transcripts(variants)
 
-    loaded_family_guids = set()
-    for variant in variants:
-        loaded_family_guids.update(variant['familyGuids'])
-    projects = Project.objects.filter(family__guid__in=loaded_family_guids).distinct()
+    projects = Project.objects.filter(family__guid__in=family_genes.keys()).distinct()
     project = list(projects)[0] if len(projects) == 1 else None
 
     discovery_tags = None
@@ -201,7 +205,6 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values(), request.user)
         response.update(discovery_response)
 
-    genes, transcripts = _saved_variant_genes_transcripts(variants)
     response['transcriptsById'] = transcripts
     response['locusListsByGuid'] = _add_locus_lists(
         projects, genes, add_list_detail=add_locus_list_detail, user=request.user)
@@ -233,18 +236,17 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         add_project_tag_types(response['projectsByGuid'])
 
     if add_all_context or request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
-        families = Family.objects.filter(guid__in=loaded_family_guids)
+        families = Family.objects.filter(guid__in=family_genes.keys())
         add_families_context(
             response, families, project_guid=project.guid if project else None, user=request.user, is_analyst=is_analyst,
             has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
         )
 
     if include_individual_gene_scores:
-        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), loaded_family_guids)
-        families_by_guid = response.get('familiesByGuid')
-        if families_by_guid:
-            _add_family_has_rna_tpm(families_by_guid, genes.keys())
+        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), family_genes.keys())
+        if response.get('familiesByGuid'):
+            _add_family_has_rna_tpm(family_genes, response)
 
-        response['phenotypeGeneScores'] = get_phenotype_prioritization(loaded_family_guids, gene_ids=genes.keys())
+        response['phenotypeGeneScores'] = get_phenotype_prioritization(family_genes.keys(), gene_ids=genes.keys())
 
     return response
