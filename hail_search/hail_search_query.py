@@ -9,7 +9,6 @@ from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_
 class BaseHailTableQuery(object):
 
     GENOTYPE_FIELDS = {}
-    GENOTYPE_RESPONSE_KEYS = {}
     POPULATIONS = {}
     PREDICTION_FIELDS_CONFIG = {}
     OMIT_TRANSCRIPT_FIELDS = []
@@ -164,7 +163,7 @@ class BaseHailTableQuery(object):
             ).map(lambda gt: gt.select(
                 'sampleId', 'individualGuid', 'familyGuid',
                 numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
-                **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
+                **{k: gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
             ))
         )
 
