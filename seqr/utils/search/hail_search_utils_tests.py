@@ -27,8 +27,8 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'results': PARSED_VARIANTS, 'total': 5,
         })
 
-    def _test_minimal_search_call(self, search_body, **kwargs):
-        expected_search = get_hail_search_body(search_body=search_body, genome_version='GRCh37', **kwargs)
+    def _test_minimal_search_call(self, **kwargs):
+        expected_search = get_hail_search_body(genome_version='GRCh37', **kwargs)
 
         executed_request = responses.calls[-1].request
         self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')
@@ -57,7 +57,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         }
         expected_search.update({field: self.search_model.search[field] for field in search_fields or []})
 
-        self._test_minimal_search_call(expected_search, **kwargs)
+        self._test_minimal_search_call(**expected_search, **kwargs)
 
     @responses.activate
     def test_query_variants(self):
@@ -173,14 +173,14 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     def test_get_single_variant(self):
         variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
         self.assertDictEqual(variant, PARSED_VARIANTS[0])
-        self._test_minimal_search_call({
-            'variant_ids': [['2', 103343353, 'GAGA', 'G']], 'variant_keys': [],
-        }, num_results=1, sample_data=ALL_AFFECTED_SAMPLE_DATA, omit_sample_type='SV_WES')
+        self._test_minimal_search_call(
+            variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
+            num_results=1, sample_data=ALL_AFFECTED_SAMPLE_DATA, omit_sample_type='SV_WES')
 
         get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
-        self._test_minimal_search_call({
-            'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'],
-        }, num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='VARIANTS')
+        self._test_minimal_search_call(
+            variant_ids=[], variant_keys=['prefix_19107_DEL'],
+            num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='VARIANTS')
 
         with self.assertRaises(InvalidSearchException) as cm:
             get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
@@ -190,9 +190,9 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         )
 
         get_single_variant(self.families.filter(guid='F000003_3'), '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
-        self._test_minimal_search_call({
-            'variant_ids': [['2', 103343353, 'GAGA', 'G']], 'variant_keys': [],
-        }, num_results=1, sample_data={'VARIANTS': [FAMILY_3_SAMPLE]})
+        self._test_minimal_search_call(
+            variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
+            num_results=1, sample_data={'VARIANTS': [FAMILY_3_SAMPLE]})
 
         responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={'results': [], 'total': 0})
         with self.assertRaises(InvalidSearchException) as cm:
@@ -203,13 +203,13 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     def test_get_variants_for_variant_ids(self):
         variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']
         get_variants_for_variant_ids(self.families, variant_ids, user=self.user)
-        self._test_minimal_search_call({
-            'variant_ids': [['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
-            'variant_keys': ['prefix-938_DEL'],
-        }, num_results=3, sample_data=ALL_AFFECTED_SAMPLE_DATA)
+        self._test_minimal_search_call(
+            variant_ids=[['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
+            variant_keys=['prefix-938_DEL'],
+            num_results=3, sample_data=ALL_AFFECTED_SAMPLE_DATA)
 
         get_variants_for_variant_ids(self.families, variant_ids, user=self.user, dataset_type='VARIANTS')
-        self._test_minimal_search_call({
-            'variant_ids': [['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
-            'variant_keys': [],
-        }, num_results=2, sample_data=ALL_AFFECTED_SAMPLE_DATA, omit_sample_type='SV_WES')
+        self._test_minimal_search_call(
+            variant_ids=[['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
+            variant_keys=[],
+            num_results=2, sample_data=ALL_AFFECTED_SAMPLE_DATA, omit_sample_type='SV_WES')

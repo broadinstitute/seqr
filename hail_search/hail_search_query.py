@@ -12,6 +12,11 @@ DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 logger = logging.getLogger(__name__)
 
 
+def _to_camel_case(snake_case_str):
+    converted = snake_case_str.replace('_', ' ').title().replace(' ', '')
+    return converted[0].lower() + converted[1:]
+
+
 class BaseHailTableQuery(object):
 
     GENOTYPE_FIELDS = {}
@@ -27,7 +32,7 @@ class BaseHailTableQuery(object):
     }
     ENUM_ANNOTATION_FIELDS = {}
     LIFTOVER_ANNOTATION_FIELDS = {
-        'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
+        'liftedOverGenomeVersion': lambda r: hl.if_else(
             hl.is_defined(r.rg37_locus), '37', hl.missing(hl.dtype('str')),
         ),
         'liftedOverChrom': lambda r: hl.if_else(
@@ -41,10 +46,6 @@ class BaseHailTableQuery(object):
     SORTS = {
         XPOS_SORT_KEY: lambda r: [r.xpos],
     }
-
-    @classmethod
-    def populations_configs(cls):
-        return {pop: cls._format_population_config(pop_config) for pop, pop_config in cls.POPULATIONS.items()}
 
     @staticmethod
     def _format_population_config(pop_config):
@@ -305,11 +306,8 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'pos': lambda r: r.locus.position,
         'ref': lambda r: r.alleles[0],
         'alt': lambda r: r.alleles[1],
-        'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
+        'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'mainTranscriptId': lambda r: r.sorted_transcript_consequences.first().transcript_id,
-        'selectedMainTranscriptId': lambda r: hl.or_missing(
-            r.selected_transcript != r.sorted_transcript_consequences.first(), r.selected_transcript.transcript_id,
-        ),
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
