@@ -10,8 +10,8 @@ from seqr.utils.search.utils import get_variant_query_gene_counts, query_variant
     get_variants_for_variant_ids, InvalidSearchException
 from seqr.utils.search.search_utils_tests import SearchTestHelper, MOCK_COUNTS
 from seqr.views.utils.test_utils import PARSED_VARIANTS
-from hail_search.test_search import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, FAMILY_3_SAMPLE, \
-    FAMILY_5_SAMPLE, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA
+from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, FAMILY_3_SAMPLE, \
+    ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA
 
 MOCK_HOST = 'http://test-hail-host'
 
