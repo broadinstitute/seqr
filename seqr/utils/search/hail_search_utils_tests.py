@@ -28,7 +28,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         })
 
     def _test_minimal_search_call(self, search_body, **kwargs):
-        expected_search = get_hail_search_body(search_body=search_body, **kwargs)
+        expected_search = get_hail_search_body(search_body=search_body, genome_version='GRCh37', **kwargs)
 
         executed_request = responses.calls[-1].request
         self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')

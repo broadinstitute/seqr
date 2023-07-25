@@ -1,9 +1,15 @@
 from aiohttp.web import HTTPBadRequest
 from collections import defaultdict
 import hail as hl
+import logging
+import os
 
 from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, VARIANT_DATASET, VARIANT_KEY_FIELD,\
     GNOMAD_GENOMES_FIELD, XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY
+
+DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
+
+logger = logging.getLogger(__name__)
 
 
 class BaseHailTableQuery(object):
@@ -133,7 +139,7 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def import_filtered_table(cls, data_type, sample_data, genome_version=None, **kwargs):
-        tables_path = f'/hail_datasets/{genome_version}/{data_type}'
+        tables_path = f'{DATASETS_DIR}/{genome_version}/{data_type}'
 
         family_samples = defaultdict(list)
         project_samples = defaultdict(list)
@@ -144,7 +150,7 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading data for {len(family_samples)} families in {len(project_samples)} projects ({cls.__name__})')
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
-            family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht', **load_table_kwargs)
+            family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht')
             families_ht = cls._add_entry_sample_families(family_ht, family_sample_data)
             families_ht = families_ht.select_globals()
         else:
@@ -178,7 +184,7 @@ class BaseHailTableQuery(object):
         missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
         if missing_samples:
             raise HTTPBadRequest(
-                text=f'The following samples are available in seqr but missing the loaded data: {", ".join(missing_samples)}'
+                text=f'The following samples are available in seqr but missing the loaded data: {", ".join(sorted(missing_samples))}'
             )
 
         affected_id_map = {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID}
@@ -322,10 +328,8 @@ class VariantHailTableQuery(BaseHailTableQuery):
     }
 
     @classmethod
-    def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, **kwargs):
-        ht = super(BaseVariantHailTableQuery, cls).import_filtered_table(
-            data_type, sample_data, intervals=None if exclude_intervals else intervals,
-            excluded_intervals=intervals if exclude_intervals else None, **kwargs)
+    def import_filtered_table(cls, data_type, sample_data, **kwargs):
+        ht = super(VariantHailTableQuery, cls).import_filtered_table(data_type, sample_data, **kwargs)
         return ht.key_by(VARIANT_KEY_FIELD)
 
     @classmethod

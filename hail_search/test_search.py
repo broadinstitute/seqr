@@ -42,14 +42,14 @@ FAMILY_5_SAMPLE = {
 ALL_AFFECTED_SAMPLE_DATA['VARIANTS'].append(FAMILY_5_SAMPLE)
 
 
-def get_hail_search_body(search_body=None, num_results=100, sample_data=None, omit_sample_type=None):
+def get_hail_search_body(search_body=None, genome_version='GRCh38', num_results=100, sample_data=None, omit_sample_type=None):
     sample_data = sample_data or EXPECTED_SAMPLE_DATA
     if omit_sample_type:
         sample_data = {k: v for k, v in sample_data.items() if k != omit_sample_type}
 
     search = {
         'sample_data': sample_data,
-        'genome_version': 'GRCh37',
+        'genome_version': genome_version,
         'num_results': num_results,
     }
     search.update(search_body or {})
@@ -69,7 +69,14 @@ class HailSearchTestCase(AioHTTPTestCase):
 
     async def test_search(self):
         search_body = get_hail_search_body(sample_data=FAMILY_1_SAMPLE_DATA)
-        async with self.client.request('POST', '/search', data=search_body) as resp:
+        async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {'success': True})
+
+    async def test_search_missing_data(self):
+        search_body = get_hail_search_body(sample_data=FAMILY_1_SAMPLE_DATA)
+        async with self.client.request('POST', '/search', json=search_body) as resp:
+            self.assertEqual(resp.status, 400)
+            text = await resp.text()
+        self.assertEqual(text, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
