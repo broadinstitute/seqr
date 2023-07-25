@@ -75,7 +75,7 @@ jobs:
           pip install -r hail_search/requirements-test.txt
       - name: Run coverage tests
         run: |
-          coverage run --source="./hail_search" --omit="./hail_search/__main__.py" -m pytest hail_search/
+          coverage run --source="./hail_search" --omit="./hail_search/__main__.py","./hail_search/test_search.py" -m pytest hail_search/
           coverage report --fail-under=99
 
   nodejs:
