@@ -1,5 +1,4 @@
 from aiohttp.test_utils import AioHTTPTestCase
-from copy import deepcopy
 
 from hail_search.web_app import init_web_app
 
