@@ -7,7 +7,7 @@ UNAFFECTED_ID = 1
 
 VARIANT_DATASET = 'VARIANTS'
 
-VARIANT_KEY_FIELD = 'variant_id'
+VARIANT_KEY_FIELD = 'variantId'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
 
 XPOS_SORT_KEY = 'xpos'

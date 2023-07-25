@@ -328,7 +328,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
     @classmethod
     def import_filtered_table(cls, data_type, sample_data, **kwargs):
         ht = super(VariantHailTableQuery, cls).import_filtered_table(data_type, sample_data, **kwargs)
-        return ht.key_by(VARIANT_KEY_FIELD)
+        return ht.key_by(**{VARIANT_KEY_FIELD: ht.variant_id})
 
     @classmethod
     def _annotate_transcript(cls, transcript, *args):

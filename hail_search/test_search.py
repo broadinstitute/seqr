@@ -48,7 +48,7 @@ ALL_AFFECTED_SAMPLE_DATA['VARIANTS'].append(FAMILY_5_SAMPLE)
 
 
 VARIANT1 = {
-    'variant_id': '1-10439-AC-A',  # TODO
+    'variantId': '1-10439-AC-A',
     'chrom': '1',
     'pos': 10439,
     'ref': 'AC',
@@ -106,7 +106,7 @@ VARIANT1 = {
     '_sort': [1000010439],
 }
 VARIANT2 = {
-    'variant_id': '1-11794419-T-G',
+    'variantId': '1-11794419-T-G',
     'chrom': '1',
     'pos': 11794419,
     'ref': 'T',
@@ -138,7 +138,8 @@ VARIANT2 = {
        'conflictingPathogenicities': [
            {'count': 1, 'pathogenicity': 'Likely_pathogenic'},
            {'count': 1, 'pathogenicity': 'Uncertain_significance'},
-           {'count': 1, 'pathogenicity': 'Likely_benign'}, {'count': 5, 'pathogenicity': 'Benign'},
+           {'count': 1, 'pathogenicity': 'Likely_benign'},
+           {'count': 5, 'pathogenicity': 'Benign'},
        ],
        'goldStars': 1,
        'pathogenicity': 'Conflicting_interpretations_of_pathogenicity',
@@ -189,7 +190,7 @@ VARIANT2 = {
     '_sort': [1011794419],
 }
 VARIANT3 = {
-    'variant_id': '1-91511686-T-G',
+    'variantId': '1-91511686-T-G',
     'chrom': '1',
     'pos': 91511686,
     'ref': 'T',
