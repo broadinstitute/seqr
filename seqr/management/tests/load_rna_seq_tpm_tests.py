@@ -69,7 +69,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         self.assertEqual(new_sample.tissue_type, 'WB')
 
         models = RnaSeqTpm.objects.all()
-        self.assertEqual(models.count(), 4)
+        self.assertEqual(models.count(), 5)
         self.assertSetEqual({model.sample for model in models}, set(existing_rna_samples))
         self.assertEqual(models.filter(sample=existing_sample, gene_id='ENSG00000240361').count(), 0)
         self.assertEqual(models.get(sample=new_sample, gene_id='ENSG00000233750').tpm, 6.04)
