@@ -5,6 +5,7 @@ static/*
 !static/images/*
 deploy/*
 !deploy/docker/seqr/*
+hail_search/*
 .git
 .vscode
 .idea

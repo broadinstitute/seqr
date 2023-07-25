@@ -713,7 +713,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'M',
             'num_parsed_samples': 4,
-            'initial_model_count': 3,
+            'initial_model_count': 4,
             'deleted_count': 1,
             'extra_warnings': [
                 'Skipped data loading for the following 1 sample(s) due to mismatched tissue type: NA19678 (fibroblasts, muscle)',
