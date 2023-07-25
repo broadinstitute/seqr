@@ -127,8 +127,13 @@ const SHOW_DATA_MODAL_CONFIG = [
   },
 ]
 
+const BREAK_LINE_STYLING = { display: 'block' }
+
 const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) => (
-  <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
+  <Link
+    to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}
+    style={BREAK_LINE_STYLING}
+  >
     <VerticalSpacer height={5} />
     <Label color={color} size="small">
       {`${title}: ${new Date(mmeSubmission[dateField]).toLocaleDateString()}`}
@@ -169,6 +174,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
       <Link
         target="_blank"
         to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/rnaseq_results/${individual.individualGuid}`}
+        style={BREAK_LINE_STYLING}
       >
         RNAseq Results
       </Link>
@@ -183,7 +189,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
             modalName={modalName(titleIds)}
             title={title(titleIds)}
             size={modalSize}
-            trigger={<ButtonLink padding="1em 0 0 0" content={linkText} />}
+            trigger={<ButtonLink padding="0 0 0 0" content={linkText} />}
           >
             <React.Suspense fallback={<Loader />}>
               {React.createElement(component,
