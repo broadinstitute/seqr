@@ -294,7 +294,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         self.assertDictEqual(resp_json, {'success': True})
 
     async def test_search(self):
-        search_body = get_hail_search_body(sample_data=FAMILY_2_VARIANT_SAMPLE_DATA, sort='xpos')
+        search_body = get_hail_search_body(sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()

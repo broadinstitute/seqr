@@ -124,7 +124,7 @@ class BaseHailTableQuery(object):
 
         return value
 
-    def __init__(self, data_type, sample_data, genome_version, sort=None, num_results=100, **kwargs):
+    def __init__(self, data_type, sample_data, genome_version, sort=XPOS_SORT_KEY, num_results=100, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
         self._num_results = num_results
@@ -132,13 +132,10 @@ class BaseHailTableQuery(object):
         self._load_filtered_table(data_type, sample_data, **kwargs)
 
     def _load_filtered_table(self, data_type, sample_data, **kwargs):
-        self._ht = self.import_filtered_table(
-            data_type, sample_data, genome_version=self._genome_version, **kwargs,
-        )
+        self._ht = self.import_filtered_table(data_type, sample_data, **kwargs)
 
-    @classmethod
-    def import_filtered_table(cls, data_type, sample_data, genome_version=None, **kwargs):
-        tables_path = f'{DATASETS_DIR}/{genome_version}/{data_type}'
+    def import_filtered_table(self, data_type, sample_data, **kwargs):
+        tables_path = f'{DATASETS_DIR}/{self._genome_version}/{data_type}'
 
         family_samples = defaultdict(list)
         project_samples = defaultdict(list)
@@ -146,11 +143,11 @@ class BaseHailTableQuery(object):
             family_samples[s['family_guid']].append(s)
             project_samples[s['project_guid']].append(s)
 
-        logger.info(f'Loading data for {len(family_samples)} families in {len(project_samples)} projects ({cls.__name__})')
+        logger.info(f'Loading {data_type} data for {len(family_samples)} families in {len(project_samples)} projects')
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
             family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht')
-            families_ht = cls._add_entry_sample_families(family_ht, family_sample_data)
+            families_ht = self._add_entry_sample_families(family_ht, family_sample_data)
             families_ht = families_ht.select_globals()
         else:
             raise NotImplementedError
@@ -160,7 +157,7 @@ class BaseHailTableQuery(object):
             annotations_ht_path, families_ht.key).first().drop(*families_ht.key)
         ht = families_ht.annotate(**annotation_ht_query_result)
         # Add globals
-        ht = ht.join(hl.read_table(annotations_ht_path).head(0).select().select_globals(*cls.GLOBALS), how='left')
+        ht = ht.join(hl.read_table(annotations_ht_path).head(0).select().select_globals(*self.GLOBALS), how='left')
 
         ht = ht.transmute(
             genotypes=ht.family_entries.flatmap(lambda x: x).filter(
@@ -168,7 +165,7 @@ class BaseHailTableQuery(object):
             ).map(lambda gt: gt.select(
                 'sampleId', 'individualGuid', 'familyGuid',
                 numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
-                **{k: gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
+                **{k: gt[field] for k, field in self.GENOTYPE_FIELDS.items()}
             ))
         )
 
@@ -218,8 +215,8 @@ class BaseHailTableQuery(object):
 
         return ht
 
-    @classmethod
-    def _missing_entry(cls, entry):
+    @staticmethod
+    def _missing_entry(entry):
         entry_type = dict(**entry.dtype)
         return hl.struct(**{k: hl.missing(v) for k, v in entry_type.items()})
 
@@ -307,9 +304,8 @@ class VariantHailTableQuery(BaseHailTableQuery):
         },
     }
 
-    @classmethod
-    def import_filtered_table(cls, *args, **kwargs):
-        ht = super(VariantHailTableQuery, cls).import_filtered_table(*args, **kwargs)
+    def import_filtered_table(self, *args, **kwargs):
+        ht = super(VariantHailTableQuery, self).import_filtered_table(*args, **kwargs)
         return ht.key_by(**{VARIANT_KEY_FIELD: ht.variant_id})
 
     def _format_transcript_args(self):
