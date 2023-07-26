@@ -51,7 +51,7 @@ export default ConnectedSearchResultsLink
 const INITIAL_GENE_SEARCH = {
   inheritance: { mode: ANY_AFFECTED, filter: {} },
   freqs: {
-    ...FREQUENCIES.filter(({ name }) => name.startsWith('gnomad_') || name === THIS_CALLSET_FREQUENCY).reduce(
+    ...FREQUENCIES.filter(({ name }) => name !== 'topmed').reduce(
       (acc, { name }) => ({ ...acc, [name]: { af: 0.03 } }), {},
     ),
   },
