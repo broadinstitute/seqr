@@ -55,8 +55,8 @@ class BaseHailTableQuery(object):
 
     @property
     def annotation_fields(self):
-        globals = {k: hl.eval(self._ht[k]) for k in self.GLOBALS}
-        enums = globals.pop('enums')
+        ht_globals = {k: hl.eval(self._ht[k]) for k in self.GLOBALS}
+        enums = ht_globals.pop('enums')
 
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
@@ -77,7 +77,7 @@ class BaseHailTableQuery(object):
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
 
-        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], enums[k], globals=globals, **enum_config)
+        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], enums[k], ht_globals=ht_globals, **enum_config)
         annotation_fields.update({
             enum_config.get('response_key', k): format_enum(k, enum_config)
             for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
@@ -96,11 +96,11 @@ class BaseHailTableQuery(object):
         })
 
     @classmethod
-    def _annotate_transcript(cls, *args):
+    def _annotate_transcript(cls, *args, **kwargs):
         return {}
 
     @staticmethod
-    def _enum_field(value, enum, globals=None, annotate=None, format=None, drop_fields=None, **kwargs):
+    def _enum_field(value, enum, ht_globals=None, annotate=None, format=None, drop_fields=None, **kwargs):
         annotations = {}
         drop = [] + (drop_fields or [])
         value_keys = value.keys()
@@ -117,7 +117,7 @@ class BaseHailTableQuery(object):
 
         value = value.annotate(**annotations)
         if annotate:
-            annotations = annotate(value, enum, globals)
+            annotations = annotate(value, enum, ht_globals)
             value = value.annotate(**annotations)
         value = value.drop(*drop)
 
@@ -311,12 +311,12 @@ class VariantHailTableQuery(BaseHailTableQuery):
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
-        'clinvar': {'annotate': lambda value, enum, globals: {
+        'clinvar': {'annotate': lambda value, enum, ht_globals: {
             'conflictingPathogenicities': value.conflictingPathogenicities.map(
                 lambda p: p.annotate(pathogenicity=hl.array(enum['pathogenicity'])[p.pathogenicity_id]).drop(
                     'pathogenicity_id')
             ),
-            'version': globals['versions'].clinvar,
+            'version': ht_globals['versions'].clinvar,
         }},
         'hgmd': {},
         'screen': {
@@ -326,12 +326,12 @@ class VariantHailTableQuery(BaseHailTableQuery):
     }
 
     @classmethod
-    def import_filtered_table(cls, data_type, sample_data, **kwargs):
-        ht = super(VariantHailTableQuery, cls).import_filtered_table(data_type, sample_data, **kwargs)
+    def import_filtered_table(cls, *args, **kwargs):
+        ht = super(VariantHailTableQuery, cls).import_filtered_table(*args, **kwargs)
         return ht.key_by(**{VARIANT_KEY_FIELD: ht.variant_id})
 
     @classmethod
-    def _annotate_transcript(cls, transcript, *args):
+    def _annotate_transcript(cls, transcript, *args, **kwargs):
         return {'major_consequence': transcript.consequence_terms.first()}
 
 
