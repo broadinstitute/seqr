@@ -3,9 +3,9 @@ from aiohttp.test_utils import AioHTTPTestCase
 from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE_DATA, FAMILY_2_MISSING_SAMPLE_DATA
 from hail_search.web_app import init_web_app
 
-
+VARIANT_ID_1 = '1-10439-AC-A'
 VARIANT1 = {
-    'variantId': '1-10439-AC-A',
+    'variantId': VARIANT_ID_1,
     'chrom': '1',
     'pos': 10439,
     'ref': 'AC',
@@ -62,8 +62,9 @@ VARIANT1 = {
     'mainTranscriptId': None,
     '_sort': [1000010439],
 }
+VARIANT_ID_2 = '1-11794419-T-G'
 VARIANT2 = {
-    'variantId': '1-11794419-T-G',
+    'variantId': VARIANT_ID_2,
     'chrom': '1',
     'pos': 11794419,
     'ref': 'T',
@@ -78,7 +79,7 @@ VARIANT2 = {
     'genotypes': {
        'I000004_hg00731': {
            'sampleId': 'HG00731', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
-           'numAlt': 1, 'dp': 32, 'gq': 99, 'ab': 0.625,
+           'numAlt': 2, 'dp': 36, 'gq': 99, 'ab': 1.0,
        },
        'I000005_hg00732': {
            'sampleId': 'HG00732', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
@@ -86,7 +87,7 @@ VARIANT2 = {
        },
        'I000006_hg00733': {
            'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
-           'numAlt': 2, 'dp': 36, 'gq': 99, 'ab': 1.0,
+           'numAlt': 1, 'dp': 32, 'gq': 99, 'ab': 0.625,
        },
     },
     'genotypeFilters': '',
@@ -146,8 +147,77 @@ VARIANT2 = {
     'mainTranscriptId': 'ENST00000376585',
     '_sort': [1011794419],
 }
+VARIANT_ID_3 = '1-91502721-G-A'
 VARIANT3 = {
-    'variantId': '1-91511686-T-G',
+    'variantId': VARIANT_ID_3,
+    'chrom': '1',
+    'pos': 91502721,
+    'ref': 'G',
+    'alt': 'A',
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': '1',
+    'liftedOverPos': 91968278,
+    'xpos': 1091502721,
+    'rsid': 'rs13447464',
+    'familyGuids': ['F000002_2'],
+    'genotypes': {
+        'I000004_hg00731': {
+            'sampleId': 'HG00731', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
+            'numAlt': 1, 'dp': 40, 'gq': 99, 'ab': 1.0,
+        },
+        'I000005_hg00732': {
+            'sampleId': 'HG00732', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
+            'numAlt': 0, 'dp': 37, 'gq': 99, 'ab': 0.4594594594594595,
+        },
+        'I000006_hg00733': {
+            'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
+            'numAlt': 1, 'dp': 27, 'gq': 99, 'ab': 0.4074074074074074,
+        },
+    },
+    'genotypeFilters': '',
+    'clinvar': None,
+    'hgmd': None,
+    'screenRegionType': None,
+    'populations': {
+        'seqr': {'af': 0.6666666865348816, 'ac': 4, 'an': 6, 'hom': 1},
+        'topmed': {'af': 0.36268100142478943, 'ac': 95998, 'an': 264690, 'hom': 19369, 'het': 57260},
+        'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
+        'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
+        'gnomad_genomes': {'af': 0.38041073083877563, 'ac': 57757, 'an': 151828, 'hom': 12204, 'hemi': 0, 'filter_af': 0.4797786474227905},
+    },
+    'predictions': {
+        'cadd': 2.753999948501587,
+        'eigen': 1.378000020980835,
+        'fathmm': None,
+        'gnomad_noncoding': 0.7389647960662842,
+        'mpc': None,
+        'mut_pred': None,
+        'primate_ai': None,
+        'splice_ai': 0.009999999776482582,
+        'splice_ai_consequence': 'Donor gain',
+        'vest': None,
+        'mut_taster': None,
+        'polyphen': None,
+        'revel': None,
+        'sift': None,
+    },
+    'transcripts': {
+        'ENSG00000097046': [
+            {'aminoAcids': None, 'canonical': 1, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000428239.5:c.115+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000428239', 'isLofNagnag': None, 'transcriptRank': 0, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+            {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000234626.10:c.115+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000234626', 'isLofNagnag': None, 'transcriptRank': 1, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+            {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000426137.1:c.115+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000426137', 'isLofNagnag': None, 'transcriptRank': 2, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+        ],
+        'ENSG00000177000': [
+            {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000177000', 'hgvsc': 'ENST00000497611.1:n.501+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000497611', 'isLofNagnag': None, 'transcriptRank': 3, 'biotype': 'processed_transcript', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+        ],
+    },
+    'mainTranscriptId': 'ENST00000428239',
+    '_sort': [1091502721],
+}
+VARIANT_ID_4 = '1-91511686-T-G'
+VARIANT4 = {
+    'variantId': VARIANT_ID_4,
     'chrom': '1',
     'pos': 91511686,
     'ref': 'T',
@@ -229,8 +299,12 @@ class HailSearchTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
-        self.assertEqual(resp_json['total'], 3)
-        self.assertListEqual(resp_json['results'], [VARIANT1, VARIANT2, VARIANT3])
+        self.assertEqual(resp_json['total'], 4)
+        self.assertListEqual(
+            [v['variantId'] for v in resp_json['results']],
+            [VARIANT_ID_1, VARIANT_ID_2, VARIANT_ID_3, VARIANT_ID_4],
+        )
+        self.assertListEqual(resp_json['results'], [VARIANT1, VARIANT2, VARIANT3, VARIANT4])
 
     async def test_search_missing_data(self):
         search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)
