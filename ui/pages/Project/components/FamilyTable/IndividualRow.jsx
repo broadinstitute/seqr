@@ -127,13 +127,8 @@ const SHOW_DATA_MODAL_CONFIG = [
   },
 ]
 
-const BREAK_LINE_STYLING = { display: 'block' }
-
 const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) => (
-  <Link
-    to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}
-    style={BREAK_LINE_STYLING}
-  >
+  <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
     <VerticalSpacer height={5} />
     <Label color={color} size="small">
       {`${title}: ${new Date(mmeSubmission[dateField]).toLocaleDateString()}`}
@@ -159,7 +154,9 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         <Popup
           flowing
           trigger={
-            <MmeStatusLabel title="Removed from MME" dateField="deletedDate" color="red" individual={individual} mmeSubmission={mmeSubmission} />
+            <div>
+              <MmeStatusLabel title="Removed from MME" dateField="deletedDate" color="red" individual={individual} mmeSubmission={mmeSubmission} />
+            </div>
           }
           content={
             <div>
@@ -171,13 +168,14 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
     {individual.hasRnaOutlierData && (
-      <Link
-        target="_blank"
-        to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/rnaseq_results/${individual.individualGuid}`}
-        style={BREAK_LINE_STYLING}
-      >
-        RNAseq Results
-      </Link>
+      <div>
+        <Link
+          target="_blank"
+          to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/rnaseq_results/${individual.individualGuid}`}
+        >
+          RNAseq Results
+        </Link>
+      </div>
     )}
     {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
       ({ modalName, title, modalSize, linkText, component }) => {
