@@ -71,7 +71,7 @@ class BaseHailTableQuery(object):
                 r.sorted_transcript_consequences, hl.empty_array(r.sorted_transcript_consequences.dtype.element_type)
             ).map(lambda t: self._enum_field(
                 t, enums['sorted_transcript_consequences'], drop_fields=self.OMIT_TRANSCRIPT_FIELDS,
-                format=lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
+                format_value=lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
                 annotate=self._annotate_transcript,
             )).group_by(lambda t: t.geneId),
         }
@@ -100,7 +100,7 @@ class BaseHailTableQuery(object):
         return {}
 
     @staticmethod
-    def _enum_field(value, enum, ht_globals=None, annotate=None, format=None, drop_fields=None, **kwargs):
+    def _enum_field(value, enum, ht_globals=None, annotate=None, format_value=None, drop_fields=None, **kwargs):
         annotations = {}
         drop = [] + (drop_fields or [])
         value_keys = value.keys()
@@ -121,8 +121,8 @@ class BaseHailTableQuery(object):
             value = value.annotate(**annotations)
         value = value.drop(*drop)
 
-        if format:
-            value = format(value)
+        if format_value:
+            value = format_value(value)
 
         return value
 
@@ -321,7 +321,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'hgmd': {},
         'screen': {
             'response_key': 'screenRegionType',
-            'format': lambda value: value.region_types.first(),
+            'format_value': lambda value: value.region_types.first(),
         },
     }
 
@@ -331,7 +331,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         return ht.key_by(**{VARIANT_KEY_FIELD: ht.variant_id})
 
     @classmethod
-    def _annotate_transcript(cls, transcript, *args, **kwargs):
+    def _annotate_transcript(cls, transcript, enum, ht_globals):
         return {'major_consequence': transcript.consequence_terms.first()}
 
 
