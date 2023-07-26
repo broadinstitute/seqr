@@ -77,7 +77,7 @@ jobs:
         run: |
           export DATASETS_DIR=./hail_search/fixtures
           coverage run --source="./hail_search" --omit="./hail_search/__main__.py","./hail_search/test_utils.py" -m pytest hail_search/
-          coverage report --fail-under=98
+          coverage report --fail-under=99
 
   nodejs:
     runs-on: ubuntu-latest

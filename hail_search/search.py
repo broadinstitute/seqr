@@ -7,12 +7,9 @@ def search_hail_backend(request):
     data_types = list(sample_data.keys())
     single_data_type = data_types[0] if len(data_types) == 1 else None
 
-    if single_data_type:
-        sample_data = sample_data[single_data_type]
-        data_type = single_data_type
-        query_cls = QUERY_CLASS_MAP[single_data_type]
-    else:
-        raise NotImplementedError
+    sample_data = sample_data[single_data_type]
+    data_type = single_data_type
+    query_cls = QUERY_CLASS_MAP[single_data_type]
 
     query = query_cls(data_type, sample_data=sample_data, **request)
     return query.search()
