@@ -238,8 +238,7 @@ class BaseHailTableQuery(object):
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}. Fetched: {self._num_results}')
 
-        hail_results = [self._json_serialize(row) for row in collected]
-        return hail_results, total_results
+        return collected, total_results
 
     def _sort_order(self, ht):
         sort_expressions = self._get_sort_expressions(ht, XPOS_SORT_KEY)
@@ -249,20 +248,6 @@ class BaseHailTableQuery(object):
 
     def _get_sort_expressions(self, ht, sort):
         return self.SORTS[sort](ht)
-
-    # TODO For production: should use custom json serializer
-    @classmethod
-    def _json_serialize(cls, result):
-        if isinstance(result, list):
-            return [cls._json_serialize(o) for o in result]
-
-        if isinstance(result, hl.Struct) or isinstance(result, hl.utils.frozendict):
-            result = dict(result)
-
-        if isinstance(result, dict):
-            return {k: cls._json_serialize(v) for k, v in result.items()}
-
-        return result
 
 
 class VariantHailTableQuery(BaseHailTableQuery):
