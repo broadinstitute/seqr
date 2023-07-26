@@ -67,8 +67,12 @@ TAG_OPTIONS.push({
 
 const PAGE_URL = '/summary_data/saved_variants'
 
-const getUpdateTagUrl =
-  (selectedTag, match) => `${PAGE_URL}/${selectedTag.join(';')}${match.params.gene ? `/${match.params.gene}` : ''}`
+const getUpdateTagUrl = (selectedTag, match) => {
+  const lastTag = selectedTag.length > 0 ? selectedTag[selectedTag.length - 1] : null
+  const [firstTag, ...otherTag] = selectedTag
+  const updatedTag = firstTag === SHOW_ALL ? otherTag : lastTag !== SHOW_ALL && selectedTag
+  return `${PAGE_URL}/${(updatedTag || [SHOW_ALL]).join(';')}${match.params.gene ? `/${match.params.gene}` : ''}`
+}
 
 const getGeneHref = tag => selectedGene => `${PAGE_URL}/${tag || SHOW_ALL}/${selectedGene.key}`
 
