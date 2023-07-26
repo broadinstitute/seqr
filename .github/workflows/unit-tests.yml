@@ -76,11 +76,15 @@ jobs:
       - name: Run coverage tests
         run: |
           export DATASETS_DIR=./hail_search/fixtures
-          echo 'ls'
-          ls 
-          echo 'ls ./hail_search'
-          ls ./hail_search
-          echo 'ls fixtures'
+          echo '-- ./hail_search/fixtures'
+          ls ./hail_search/fixtures
+          echo '-- GRCh38'
+          ls ./hail_search/fixtures/GRCh38
+          echo '-- VARIANTS'
+          ls ./hail_search/fixtures/GRCh38/VARIANTS
+          echo '-- families'
+          ls ./hail_search/fixtures/GRCh38/VARIANTS/families
+          echo '-- F000002_2'
           ls ./hail_search/fixtures/GRCh38/VARIANTS/families/F000002_2.ht
           coverage run --source="./hail_search" --omit="./hail_search/__main__.py","./hail_search/test_utils.py" -m pytest hail_search/
           coverage report --fail-under=99
