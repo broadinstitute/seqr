@@ -22,7 +22,6 @@ class BaseHailTableQuery(object):
     GENOTYPE_FIELDS = {}
     POPULATIONS = {}
     PREDICTION_FIELDS_CONFIG = {}
-    OMIT_TRANSCRIPT_FIELDS = []
 
     GLOBALS = ['enums']
     CORE_FIELDS = ['xpos']
@@ -69,11 +68,9 @@ class BaseHailTableQuery(object):
             }),
             'transcripts': lambda r: hl.or_else(
                 r.sorted_transcript_consequences, hl.empty_array(r.sorted_transcript_consequences.dtype.element_type)
-            ).map(lambda t: self._enum_field(
-                t, enums['sorted_transcript_consequences'], drop_fields=self.OMIT_TRANSCRIPT_FIELDS,
-                format_value=lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
-                annotate=self._annotate_transcript,
-            )).group_by(lambda t: t.geneId),
+            ).map(
+                lambda t: self._enum_field(t, enums['sorted_transcript_consequences'], **self._format_transcript_args())
+            ).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
 
@@ -95,9 +92,10 @@ class BaseHailTableQuery(object):
             for response_key, field in pop_config.items() if field is not None
         })
 
-    @classmethod
-    def _annotate_transcript(cls, *args, **kwargs):
-        return {}
+    def _format_transcript_args(self):
+        return {
+            'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
+        }
 
     @staticmethod
     def _enum_field(value, enum, ht_globals=None, annotate=None, format_value=None, drop_fields=None, **kwargs):
@@ -297,7 +295,6 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'revel': ('dbnsfp', 'REVEL_score'),
         'sift': ('dbnsfp', 'SIFT_pred'),
     }
-    OMIT_TRANSCRIPT_FIELDS = ['consequence_terms']
 
     GLOBALS = BaseHailTableQuery.GLOBALS + ['versions']
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
@@ -330,9 +327,13 @@ class VariantHailTableQuery(BaseHailTableQuery):
         ht = super(VariantHailTableQuery, cls).import_filtered_table(*args, **kwargs)
         return ht.key_by(**{VARIANT_KEY_FIELD: ht.variant_id})
 
-    @classmethod
-    def _annotate_transcript(cls, transcript, enum, ht_globals):
-        return {'major_consequence': transcript.consequence_terms.first()}
+    def _format_transcript_args(self):
+        args = super(VariantHailTableQuery, self)._format_transcript_args()
+        args.update({
+            'annotate': lambda transcript, *args: {'major_consequence': transcript.consequence_terms.first()},
+            'drop_fields': ['consequence_terms'],
+        })
+        return args
 
 
 QUERY_CLASS_MAP = {
