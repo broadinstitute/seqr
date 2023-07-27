@@ -5,7 +5,8 @@ import logging
 import os
 
 from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, VARIANT_DATASET, VARIANT_KEY_FIELD,\
-    GNOMAD_GENOMES_FIELD, XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY
+    GNOMAD_GENOMES_FIELD, XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, \
+    HAS_ALT, HAS_REF
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -18,6 +19,15 @@ def _to_camel_case(snake_case_str):
 
 
 class BaseHailTableQuery(object):
+
+    GENOTYPE_QUERY_MAP = {
+        REF_REF: lambda gt: gt.is_hom_ref(),
+        REF_ALT: lambda gt: gt.is_het(),
+        COMP_HET_ALT: lambda gt: gt.is_het(),
+        ALT_ALT: lambda gt: gt.is_hom_var(),
+        HAS_ALT: lambda gt: gt.is_non_ref(),
+        HAS_REF: lambda gt: gt.is_hom_ref() | gt.is_het_ref(),
+    }
 
     GENOTYPE_FIELDS = {}
     POPULATIONS = {}

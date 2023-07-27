@@ -11,3 +11,10 @@ VARIANT_KEY_FIELD = 'variantId'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
 
 XPOS_SORT_KEY = 'xpos'
+
+ALT_ALT = 'alt_alt'
+REF_REF = 'ref_ref'
+REF_ALT = 'ref_alt'
+HAS_ALT = 'has_alt'
+HAS_REF = 'has_ref'
+COMP_HET_ALT = 'COMP_HET_ALT'
