@@ -156,7 +156,7 @@ class BaseHailTableQuery(object):
                 try:
                     filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data))
                 except HTTPBadRequest as e:
-                    exception_messages.add(str(e))
+                    exception_messages.add(e.text)
 
             if exception_messages:
                 raise HTTPBadRequest(text='; '.join(exception_messages))

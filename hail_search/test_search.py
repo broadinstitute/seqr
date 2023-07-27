@@ -2,7 +2,7 @@ from aiohttp.test_utils import AioHTTPTestCase
 from copy import deepcopy
 
 from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE_DATA, FAMILY_2_MISSING_SAMPLE_DATA, \
-    MULTI_PROJECT_SAMPLE_DATA
+    MULTI_PROJECT_SAMPLE_DATA, MULTI_PROJECT_MISSING_SAMPLE_DATA
 from hail_search.web_app import init_web_app
 
 VARIANT_ID_1 = '1-10439-AC-A'
@@ -396,6 +396,12 @@ class HailSearchTestCase(AioHTTPTestCase):
 
     async def test_search_missing_data(self):
         search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)
+        async with self.client.request('POST', '/search', json=search_body) as resp:
+            self.assertEqual(resp.status, 400)
+            text = await resp.text()
+        self.assertEqual(text, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
+
+        search_body = get_hail_search_body(sample_data=MULTI_PROJECT_MISSING_SAMPLE_DATA)
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
             text = await resp.text()
