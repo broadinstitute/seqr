@@ -28,8 +28,6 @@ import {
   MODERATE_IMPACT_GROUPS,
   SV_GROUPS,
   LOCUS_FIELD_NAME,
-  FREQUENCIES_NAME,
-  QUALITY_FILTER_NAME,
 } from './constants'
 
 const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
@@ -191,7 +189,7 @@ export const ANNOTATION_PANEL = {
 }
 
 export const FREQUENCY_PANEL = {
-  name: FREQUENCIES_NAME,
+  name: 'freqs',
   headerProps: {
     title: 'Frequency',
     inputSize: 10,
@@ -227,7 +225,7 @@ export const IN_SILICO_PANEL = {
 }
 
 export const QUALITY_PANEL = {
-  name: QUALITY_FILTER_NAME,
+  name: 'qualityFilter',
   headerProps: { title: 'Call Quality', inputProps: JsonSelectPropsWithAll(QUALITY_FILTER_OPTIONS, ALL_QUALITY_FILTER) },
   fields: QUALITY_FILTER_FIELDS,
   fieldProps: { control: LazyLabeledSlider, format: val => val || null },

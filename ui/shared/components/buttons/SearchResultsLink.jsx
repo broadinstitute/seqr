@@ -4,15 +4,7 @@ import { connect } from 'react-redux'
 
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import { VEP_GROUP_SV, ANY_AFFECTED } from 'shared/utils/constants'
-import {
-  FREQUENCIES,
-  FREQUENCIES_NAME,
-  TOPMED_FREQUENCY,
-  INHERITANCE_NAME,
-  QUALITY_FILTER_NAME,
-  QUALITY_MIN_GQ_NAME,
-  QUALITY_MIN_AB_NAME,
-} from '../panel/search/constants'
+import { FREQUENCIES, TOPMED_FREQUENCY } from '../panel/search/constants'
 import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({
@@ -57,13 +49,13 @@ const ConnectedSearchResultsLink = connect(null, mapDispatchToProps)(SearchResul
 export default ConnectedSearchResultsLink
 
 const INITIAL_GENE_SEARCH = {
-  [INHERITANCE_NAME]: { mode: ANY_AFFECTED, filter: {} },
-  [FREQUENCIES_NAME]: {
+  inheritance: { mode: ANY_AFFECTED, filter: {} },
+  freqs: {
     ...FREQUENCIES.filter(({ name }) => name !== TOPMED_FREQUENCY).reduce(
       (acc, { name }) => ({ ...acc, [name]: { af: 0.03 } }), {},
     ),
   },
-  [QUALITY_FILTER_NAME]: { [QUALITY_MIN_GQ_NAME]: 40, [QUALITY_MIN_AB_NAME]: 10 },
+  qualityFilter: { min_gq: 40, min_ab: 10 },
 }
 
 export const GeneSearchLink = props => <ConnectedSearchResultsLink initialSearch={INITIAL_GENE_SEARCH} {...props} />
