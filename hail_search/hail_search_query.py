@@ -207,7 +207,7 @@ class BaseHailTableQuery(object):
         ht, sample_id_family_index_map = self._add_entry_sample_families(ht, sample_data)
 
         ht = self._filter_inheritance(
-            ht, inheritance_mode, inheritance_filter or {}, sample_data, sample_id_family_index_map,
+            ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map,
         )
 
         return ht.select_globals()
@@ -292,12 +292,12 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data):
-        inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
-        individual_genotype_filter = inheritance_filter.get('genotype') or {}
+        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
         entry_indices_by_gt = defaultdict(lambda: defaultdict(list))
         for s in sample_data:
-            genotype = individual_genotype_filter.get(s['individual_guid']) or inheritance_filter.get(s['affected'])
+            genotype = individual_genotype_filter.get(s['individual_guid']) \
+                if individual_genotype_filter else INHERITANCE_FILTERS[inheritance_mode].get(s['affected'])
             if inheritance_mode == X_LINKED_RECESSIVE and s['affected'] == UNAFFECTED and s['sex'] == MALE:
                 genotype = REF_REF
             if genotype:
