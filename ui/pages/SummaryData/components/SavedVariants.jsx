@@ -7,12 +7,11 @@ import { Form, Button } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
 import {
-  REVIEW_TAG_NAME,
-  KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
   VARIANT_SORT_FIELD,
   VARIANT_PER_PAGE_FIELD,
   VARIANT_TAGGED_DATE_FIELD,
   SHOW_ALL,
+  SUMMARY_PAGE_SAVED_VARIANT_TAGS,
 } from 'shared/utils/constants'
 import { StyledForm } from 'shared/components/form/FormHelpers'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
@@ -29,29 +28,7 @@ const FILTER_FIELDS = [
   VARIANT_PER_PAGE_FIELD,
 ]
 
-const TAG_OPTIONS = [
-  'Tier 1 - Novel gene and phenotype',
-  'Tier 1 - Novel gene for known phenotype',
-  'Tier 1 - Phenotype expansion',
-  'Tier 1 - Phenotype not delineated',
-  'Tier 1 - Novel mode of inheritance',
-  'Tier 1 - Known gene, new phenotype',
-  'Tier 2 - Novel gene and phenotype',
-  'Tier 2 - Novel gene for known phenotype',
-  'Tier 2 - Phenotype expansion',
-  'Tier 2 - Phenotype not delineated',
-  'Tier 2 - Known gene, new phenotype',
-  KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
-  REVIEW_TAG_NAME,
-  'Send for Sanger validation',
-  'Sanger validated',
-  'Sanger did not confirm',
-  'Confident AR one hit',
-  'Analyst high priority',
-  'seqr MME (old)',
-  'Submit to Clinvar',
-  'Share with KOMP',
-].map(name => ({
+const TAG_OPTIONS = SUMMARY_PAGE_SAVED_VARIANT_TAGS.map(name => ({
   value: name,
   text: name,
   key: name,
