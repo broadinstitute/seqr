@@ -945,12 +945,18 @@ class BaseHailTableQuery(object):
 class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ']}
-    POPULATIONS = {}
+    POPULATIONS = {
+        'seqr': {'hom': 'hom', 'hemi': None, 'het': None},
+    }
+    POPULATION_FIELDS = {'seqr': 'gt_stats'}
     PREDICTION_FIELDS_CONFIG = {
+        'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),
+        'mut_pred': ('dbnsfp', 'MutPred_score'),
         'mut_taster': ('dbnsfp', 'MutationTaster_pred'),
         'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),
         'revel': ('dbnsfp', 'REVEL_score'),
         'sift': ('dbnsfp', 'SIFT_pred'),
+        'vest': ('dbnsfp', 'VEST4_score'),
     }
     OMIT_TRANSCRIPT_FIELDS = ['consequence_terms']
     ANNOTATION_OVERRIDE_FIELDS = [CLINVAR_KEY]
@@ -1067,6 +1073,9 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     @classmethod
     def _filter_annotated_table(cls, ht, rs_ids=None, **kwargs):
+        # TODO remove once all other data types have been updated
+        ht = ht.transmute(variantId=ht.variant_id, sortedTranscriptConsequences=ht.sorted_transcript_consequences)
+
         if rs_ids:
             rs_id_set = hl.set(rs_ids)
             ht = ht.filter(rs_id_set.contains(ht.rsid))
@@ -1107,7 +1116,6 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     GENOTYPE_FIELDS = {f.lower(): f for f in ['AB']}
     GENOTYPE_FIELDS.update(BaseVariantHailTableQuery.GENOTYPE_FIELDS)
     POPULATIONS = {
-        'seqr': {'hom': 'hom', 'hemi': None, 'het': None},
         'topmed': {'hemi': None},
         'exac': {
             'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': 'AC_Het',
@@ -1116,18 +1124,14 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         GNOMAD_GENOMES_FIELD: {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
     }
     POPULATIONS.update(BaseVariantHailTableQuery.POPULATIONS)
-    POPULATION_FIELDS = {'seqr': 'gt_stats'}
     PREDICTION_FIELDS_CONFIG = {
         'cadd': ('cadd', 'PHRED'),
         'eigen': ('eigen', 'Eigen_phred'),
-        'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),
         'gnomad_noncoding': ('gnomad_non_coding_constraint', 'z_score'),
         'mpc': ('mpc', 'MPC'),
-        'mut_pred': ('dbnsfp', 'MutPred_score'),
         'primate_ai': ('primate_ai', 'score'),
         'splice_ai': ('splice_ai', 'delta_score'),
         'splice_ai_consequence': ('splice_ai', 'splice_consequence'),
-        'vest': ('dbnsfp', 'VEST4_score'),
     }
     PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     ANNOTATION_OVERRIDE_FIELDS = [HGMD_KEY, SPLICE_AI_FIELD, SCREEN_KEY] + BaseVariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
@@ -1143,12 +1147,6 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
 
     SORTS = deepcopy(BaseVariantHailTableQuery.SORTS)
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: BaseVariantHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [r.hgmd.class_id]
-
-    @classmethod
-    def _filter_annotated_table(cls, ht, **kwargs):
-        # TODO remove once all other data types have been updated
-        ht = ht.transmute(variantId=ht.variant_id, sortedTranscriptConsequences=ht.sorted_transcript_consequences)
-        return super(VariantHailTableQuery, cls)._filter_annotated_table(ht, **kwargs)
 
     @classmethod
     def _get_family_table_filter_kwargs(cls, frequencies=None, load_table_kwargs=None, clinvar_path_terms=None, **kwargs):
@@ -1199,17 +1197,24 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
     }
     GENOTYPE_FIELDS.update(BaseVariantHailTableQuery.GENOTYPE_FIELDS)
     POPULATIONS = {
-        pop: {'hom': None, 'hemi': None, 'het': None} for pop in [
-            'callset_heteroplasmy', 'gnomad_mito', 'gnomad_mito_heteroplasmy', 'helix', 'helix_heteroplasmy'
-        ]
+        pop: {'hom': None, 'hemi': None, 'het': None} for pop in ['callset_heteroplasmy', 'gnomad_mito', 'helix']
     }
+    POPULATIONS.update({
+        f'{pop}_heteroplasmy': {
+            'af': 'AF_het', 'ac': 'AC_het', 'max_hl': 'max_hl', 'hom': None, 'hemi': None, 'het': None,
+        } for pop in ['gnomad_mito', 'helix']
+    })
     for pop in ['gnomad_mito_heteroplasmy', 'helix_heteroplasmy']:
         POPULATIONS[pop].update({'max_hl': 'max_hl'})
-    POPULATIONS['callset'] = {'hom': None, 'hemi': None, 'het': None}
     POPULATIONS.update(BaseVariantHailTableQuery.POPULATIONS)
+    POPULATION_FIELDS = {
+        'gnomad_mito_heteroplasmy': 'gnomad_mito',
+        'helix': 'helix_mito',
+        'helix_heteroplasmy': 'helix_mito',
+    }
+    POPULATION_FIELDS.update(BaseVariantHailTableQuery.POPULATION_FIELDS)
     PREDICTION_FIELDS_CONFIG = {
         'apogee': ('mitimpact', 'score'),
-        'fathmm': ('dbnsfp', 'FATHMM_pred'),
         'hmtvar': ('hmtvar', 'score'),
         'mitotip': ('mitotip', 'trna_prediction'),
         'haplogroup_defining': ('haplogroup', 'is_defining'),
