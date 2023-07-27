@@ -424,8 +424,6 @@ class HailSearchTestCase(AioHTTPTestCase):
             [PROJECT_2_VARIANT1, VARIANT2], inheritance_mode='homozygous_recessive', sample_data=MULTI_PROJECT_SAMPLE_DATA,
         )
 
-        # TODO test custom affected
-
         gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'has_alt', 'I000005_hg00732': 'ref_ref'}}
         await self._assert_expected_search(
             [VARIANT2, VARIANT3], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
