@@ -1,4 +1,5 @@
 from aiohttp.test_utils import AioHTTPTestCase
+from copy import deepcopy
 
 from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE_DATA, FAMILY_2_MISSING_SAMPLE_DATA
 from hail_search.web_app import init_web_app
@@ -281,6 +282,13 @@ VARIANT4 = {
     '_sort': [1091511686],
 }
 
+MULTI_FAMILY_VARIANT = deepcopy(VARIANT3)
+MULTI_FAMILY_VARIANT['familyGuids'].append('F000003_3')
+MULTI_FAMILY_VARIANT['genotypes']['I000007_na20870'] = {
+    'sampleId': 'NA20870', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
+    'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.6785714285714286,
+}
+
 
 class HailSearchTestCase(AioHTTPTestCase):
 
@@ -293,18 +301,28 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {'success': True})
 
-    async def test_search(self):
-        search_body = get_hail_search_body(sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
+    async def _assert_expected_search(self, results, **search_kwargs):
+        search_body = get_hail_search_body(**search_kwargs)
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
-        self.assertEqual(resp_json['total'], 4)
+        self.assertEqual(resp_json['total'], len(results))
         self.assertListEqual(
-            [v['variantId'] for v in resp_json['results']],
-            [VARIANT_ID_1, VARIANT_ID_2, VARIANT_ID_3, VARIANT_ID_4],
+            [v['variantId'] for v in resp_json['results']], [v['variantId'] for v in results],
         )
-        self.assertListEqual(resp_json['results'], [VARIANT1, VARIANT2, VARIANT3, VARIANT4])
+        for i, result in enumerate(resp_json['results']):
+            self.assertDictEqual(result, results[i])
+
+    async def test_single_family_search(self):
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], sample_data=FAMILY_2_VARIANT_SAMPLE_DATA,
+        )
+
+    async def test_single_project_search(self):
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_sample_type='SV_WES',
+        )
 
     async def test_search_missing_data(self):
         search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)

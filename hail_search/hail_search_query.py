@@ -147,10 +147,32 @@ class BaseHailTableQuery(object):
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
             family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht')
-            families_ht = self._add_entry_sample_families(family_ht, family_sample_data)
-            families_ht = families_ht.select_globals()
+            families_ht = self._filter_entries_table(family_ht, family_sample_data)
         else:
-            raise NotImplementedError
+            filtered_project_hts = []
+            exception_messages = set()
+            for project_guid, project_sample_data in project_samples.items():
+                project_ht = hl.read_table(f'{tables_path}/projects/{project_guid}.ht')
+                try:
+                    filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data))
+                except HTTPBadRequest as e:
+                    exception_messages.add(str(e))
+
+            if exception_messages:
+                raise HTTPBadRequest(text='; '.join(exception_messages))
+
+            families_ht = filtered_project_hts[0]
+            default_entries = hl.empty_array(families_ht.family_entries.dtype.element_type)
+            for project_ht in filtered_project_hts[1:]:
+                families_ht = families_ht.join(project_ht, how='outer')
+                families_ht = families_ht.select(
+                    filters=families_ht.filters.union(families_ht.filters_1),
+                    family_entries=hl.bind(
+                        lambda a1, a2: a1.extend(a2),
+                        hl.or_else(families_ht.family_entries, default_entries),
+                        hl.or_else(families_ht.family_entries_1, default_entries),
+                    ),
+                )
 
         annotations_ht_path = f'{tables_path}/annotations.ht'
         annotation_ht_query_result = hl.query_table(
@@ -170,6 +192,15 @@ class BaseHailTableQuery(object):
         )
 
         return ht
+
+    def _filter_entries_table(self, ht, sample_data):
+        ht = self._add_entry_sample_families(ht, sample_data)
+
+        ht = ht.annotate(family_entries=ht.family_entries.map(
+            lambda entries: hl.or_missing(entries.any(lambda x: x.GT.is_non_ref()), entries))
+        )
+
+        return ht.select_globals()
 
     @classmethod
     def _add_entry_sample_families(cls, ht, sample_data):
