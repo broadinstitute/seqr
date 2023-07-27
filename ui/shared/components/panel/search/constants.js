@@ -76,6 +76,8 @@ const COMPOUND_HET_FILTER = 'compound_het'
 const DE_NOVO_FILTER = 'de_novo'
 const ANY_AFFECTED = 'any_affected'
 
+export const INHERITANCE_NAME = 'inheritance'
+
 export const ALL_RECESSIVE_INHERITANCE_FILTERS = [RECESSIVE_FILTER, COMPOUND_HET_FILTER]
 
 export const INHERITANCE_LOOKUP = {
@@ -325,6 +327,7 @@ export const ALL_ANNOTATION_FILTER_DETAILS =
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
 export const SV_CALLSET_FREQUENCY = 'sv_callset'
+export const TOPMED_FREQUENCY = 'topmed'
 export const SNP_FREQUENCIES = [
   {
     name: 'gnomad_genomes',
@@ -339,7 +342,7 @@ export const SNP_FREQUENCIES = [
     labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD exomes, or by allele frequency (popmax AF) in any one of these five subpopulations defined for gnomAD exomes: AFR, AMR, EAS, NFE, SAS',
   },
   {
-    name: 'topmed',
+    name: TOPMED_FREQUENCY,
     label: 'TOPMed',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) or allele frequency (AF) in TOPMed',
@@ -379,6 +382,8 @@ export const SV_FREQUENCIES = [
 ]
 
 export const FREQUENCIES = [...SNP_FREQUENCIES, ...MITO_FREQUENCIES, ...SV_FREQUENCIES]
+
+export const FREQUENCIES_NAME = 'freqs'
 
 export const LOCUS_FIELD_NAME = 'locus'
 export const PANEL_APP_FIELD_NAME = 'panelAppItems'
@@ -492,6 +497,10 @@ export const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...PREDICTOR_FIELDS.filter
   },
 )]
 
+export const QUALITY_FILTER_NAME = 'qualityFilter'
+export const QUALITY_MIN_GQ_NAME = 'min_gq'
+export const QUALITY_MIN_AB_NAME = 'min_ab'
+
 export const SNP_QUALITY_FILTER_FIELDS = [
   {
     name: 'affected_only',
@@ -511,7 +520,7 @@ export const SNP_QUALITY_FILTER_FIELDS = [
     widths: 'equal',
   },
   {
-    name: 'min_gq',
+    name: QUALITY_MIN_GQ_NAME,
     label: 'Genotype Quality',
     labelHelp: 'Genotype Quality (GQ) is a statistical measure of confidence in the genotype call (eg. hom. or het) based on the read data',
     min: 0,
@@ -519,7 +528,7 @@ export const SNP_QUALITY_FILTER_FIELDS = [
     step: 5,
   },
   {
-    name: 'min_ab',
+    name: QUALITY_MIN_AB_NAME,
     label: 'Allele Balance',
     labelHelp: 'The allele balance represents the percentage of reads that support the alt allele out of the total number of sequencing reads overlapping a variant. Use this filter to set a minimum percentage for the allele balance in heterozygous individuals.',
     min: 0,
