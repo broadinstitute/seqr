@@ -288,7 +288,7 @@ class BaseHailTableQuery(object):
                 ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data,
             )
 
-        return ht.filter(ht.family_entries.any(lambda x: hl.is_defined(x)))
+        return ht.filter(ht.family_entries.any(hl.is_defined))
 
     @classmethod
     def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data):
