@@ -66,7 +66,10 @@ export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) =>
           updates: tags.reduce((acc, t) => ({ ...acc, [t]: true }), {}),
         })
       } else if (gene) {
-        dispatch({ type: RECEIVE_SAVED_VARIANT_TAGS, updates: {} })
+        dispatch({
+          type: RECEIVE_SAVED_VARIANT_TAGS,
+          updates: SUMMARY_PAGE_SAVED_VARIANT_TAGS.reduce((acc, t) => ({ ...acc, [t]: false }), {}),
+        })
       }
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
     },
