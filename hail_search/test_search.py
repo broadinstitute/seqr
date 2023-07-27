@@ -333,12 +333,18 @@ PROJECT_2_VARIANT = {
     '_sort': [1000010146],
 }
 
-MULTI_FAMILY_VARIANT = deepcopy(VARIANT3)
-MULTI_FAMILY_VARIANT['familyGuids'].append('F000003_3')
-MULTI_FAMILY_VARIANT['genotypes']['I000007_na20870'] = {
-    'sampleId': 'NA20870', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
-    'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.6785714285714286,
+FAMILY_3_VARIANT = deepcopy(VARIANT3)
+FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
+FAMILY_3_VARIANT['genotypes'] = {
+    'I000007_na20870': {
+        'sampleId': 'NA20870', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
+        'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.6785714285714286,
+    },
 }
+
+MULTI_FAMILY_VARIANT = deepcopy(VARIANT3)
+MULTI_FAMILY_VARIANT['familyGuids'] += FAMILY_3_VARIANT['familyGuids']
+MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
 
 MULTI_PROJECT_VARIANT1 = deepcopy(VARIANT1)
 MULTI_PROJECT_VARIANT1['familyGuids'].append('F000011_11')
@@ -393,6 +399,21 @@ class HailSearchTestCase(AioHTTPTestCase):
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4],
             sample_data=MULTI_PROJECT_SAMPLE_DATA,
         )
+
+    async def test_inheritance_filter(self):
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], inheritance_mode='any_affected', omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT1, FAMILY_3_VARIANT, VARIANT4], inheritance_mode='de_novo', omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2], inheritance_mode='homozygous_recessive', omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search([], inheritance_mode='x_linked_recessive', omit_sample_type='SV_WES')
 
     async def test_search_missing_data(self):
         search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)

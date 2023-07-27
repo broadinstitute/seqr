@@ -4,9 +4,9 @@ import hail as hl
 import logging
 import os
 
-from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, VARIANT_DATASET, VARIANT_KEY_FIELD,\
-    GNOMAD_GENOMES_FIELD, XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, \
-    HAS_ALT, HAS_REF
+from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, MALE, VARIANT_DATASET, \
+    VARIANT_KEY_FIELD,GNOMAD_GENOMES_FIELD, XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY, INHERITANCE_FILTERS, \
+    ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -157,14 +157,14 @@ class BaseHailTableQuery(object):
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
             family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht')
-            families_ht = self._filter_entries_table(family_ht, family_sample_data)
+            families_ht = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = []
             exception_messages = set()
             for project_guid, project_sample_data in project_samples.items():
                 project_ht = hl.read_table(f'{tables_path}/projects/{project_guid}.ht')
                 try:
-                    filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data))
+                    filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
                 except HTTPBadRequest as e:
                     exception_messages.add(e.text)
 
@@ -203,11 +203,11 @@ class BaseHailTableQuery(object):
 
         return ht
 
-    def _filter_entries_table(self, ht, sample_data):
-        ht = self._add_entry_sample_families(ht, sample_data)
+    def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, **kwargs):
+        ht, sample_id_family_index_map = self._add_entry_sample_families(ht, sample_data)
 
-        ht = ht.annotate(family_entries=ht.family_entries.map(
-            lambda entries: hl.or_missing(entries.any(lambda x: x.GT.is_non_ref()), entries))
+        ht = self._filter_inheritance(
+            ht, inheritance_mode, inheritance_filter or {}, sample_data, sample_id_family_index_map,
         )
 
         return ht.select_globals()
@@ -235,11 +235,13 @@ class BaseHailTableQuery(object):
         sample_index_family_map = hl.dict({sample_id_index_map[k]: v for k, v in sample_id_family_map.items()})
         family_index_map = {f: i for i, f in enumerate(sorted(set(sample_id_family_map.values())))}
         family_sample_indices = [None] * len(family_index_map)
+        sample_id_family_index_map = {}
         for sample_id, family_guid in sample_id_family_map.items():
             sample_index = sample_id_index_map[sample_id]
             family_index = family_index_map[family_guid]
             if not family_sample_indices[family_index]:
                 family_sample_indices[family_index] = []
+            sample_id_family_index_map[sample_id] = (family_index, len(family_sample_indices[family_index]))
             family_sample_indices[family_index].append(sample_index)
         family_sample_indices = hl.array(family_sample_indices)
 
@@ -254,12 +256,71 @@ class BaseHailTableQuery(object):
             ))
         )
 
-        return ht
+        return ht, sample_id_family_index_map
 
     @staticmethod
     def _missing_entry(entry):
         entry_type = dict(**entry.dtype)
         return hl.struct(**{k: hl.missing(v) for k, v in entry_type.items()})
+
+    def _filter_inheritance(self, ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map):
+        any_valid_entry = lambda x: self.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
+
+        is_any_affected = inheritance_mode == ANY_AFFECTED
+        if is_any_affected:
+            prev_any_valid_entry = any_valid_entry
+            any_valid_entry = lambda x: prev_any_valid_entry(x) & (x.affected_id == AFFECTED_ID)
+
+        ht = ht.annotate(family_entries=ht.family_entries.map(
+            lambda entries: hl.or_missing(entries.any(any_valid_entry), entries))
+        )
+
+        if not (inheritance_filter or inheritance_mode):
+            return ht
+
+        if inheritance_mode == X_LINKED_RECESSIVE:
+            x_chrom_interval = hl.parse_locus_interval(
+                hl.get_reference(self._genome_version).x_contigs[0], reference_genome=self._genome_version)
+            ht = ht.filter(self.get_x_chrom_filter(ht, x_chrom_interval))
+
+        if not is_any_affected:
+            ht = self._filter_families_inheritance(
+                ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data,
+            )
+
+        return ht.filter(ht.family_entries.any(lambda x: hl.is_defined(x)))
+
+    @classmethod
+    def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data):
+        inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
+        individual_genotype_filter = inheritance_filter.get('genotype') or {}
+
+        entry_indices_by_gt = defaultdict(lambda: defaultdict(list))
+        for s in sample_data:
+            genotype = individual_genotype_filter.get(s['individual_guid']) or inheritance_filter.get(s['affected'])
+            if inheritance_mode == X_LINKED_RECESSIVE and s['affected'] == UNAFFECTED and s['sex'] == MALE:
+                genotype = REF_REF
+            if genotype:
+                family_index, entry_index = sample_id_family_index_map[s['sample_id']]
+                entry_indices_by_gt[genotype][family_index].append(entry_index)
+
+        for genotype, entry_indices in entry_indices_by_gt.items():
+            entry_indices = hl.dict(entry_indices)
+            ht = ht.annotate(family_entries=hl.enumerate(ht.family_entries).map(
+                lambda x: cls._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype)))
+
+        return ht
+
+    @classmethod
+    def _valid_genotype_family_entries(cls, entries, gentoype_entry_indices, genotype):
+        is_valid = hl.is_missing(gentoype_entry_indices) | gentoype_entry_indices.all(
+            lambda i: cls.GENOTYPE_QUERY_MAP[genotype](entries[i].GT)
+        )
+        return hl.or_missing(is_valid, entries)
+
+    @staticmethod
+    def get_x_chrom_filter(ht, x_interval):
+        return x_interval.contains(ht.locus)
 
     def _format_results(self, ht):
         annotations = {k: v(ht) for k, v in self.annotation_fields.items()}
