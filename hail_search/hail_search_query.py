@@ -221,7 +221,7 @@ class BaseHailTableQuery(object):
             ht = ht.annotate(family_entries=ht.family_entries.map(
                 lambda entries: hl.or_missing(entries.all(passes_quality_filter), entries)
             ))
-            ht = ht.filter(ht.family_entries.any(lambda x: hl.is_defined(x)))
+            ht = ht.filter(ht.family_entries.any(hl.is_defined))
 
         return ht.select_globals()
 
