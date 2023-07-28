@@ -21,6 +21,7 @@ class BaseHailTableQuery(object):
 
     GENOTYPE_FIELDS = {}
     POPULATIONS = {}
+    POPULATION_FIELDS = {}
     PREDICTION_FIELDS_CONFIG = {}
 
     GLOBALS = ['enums']
@@ -98,7 +99,7 @@ class BaseHailTableQuery(object):
         }
 
     @staticmethod
-    def _enum_field(value, enum, ht_globals=None, annotate=None, format_value=None, drop_fields=None, **kwargs):
+    def _enum_field(value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, **kwargs):
         annotations = {}
         drop = [] + (drop_fields or [])
         value_keys = value.keys()
@@ -114,8 +115,8 @@ class BaseHailTableQuery(object):
                 annotations[field] = enum_array[value[value_field]]
 
         value = value.annotate(**annotations)
-        if annotate:
-            annotations = annotate(value, enum, ht_globals)
+        if annotate_value:
+            annotations = annotate_value(value, enum, ht_globals)
             value = value.annotate(**annotations)
         value = value.drop(*drop)
 
@@ -321,7 +322,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
-        'clinvar': {'annotate': lambda value, enum, ht_globals: {
+        'clinvar': {'annotate_value': lambda value, enum, ht_globals: {
             'conflictingPathogenicities': value.conflictingPathogenicities.map(
                 lambda p: p.annotate(pathogenicity=hl.array(enum['pathogenicity'])[p.pathogenicity_id]).drop(
                     'pathogenicity_id')
@@ -342,7 +343,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
     def _format_transcript_args(self):
         args = super(VariantHailTableQuery, self)._format_transcript_args()
         args.update({
-            'annotate': lambda transcript, *args: {'major_consequence': transcript.consequence_terms.first()},
+            'annotate_value': lambda transcript, *args: {'major_consequence': transcript.consequence_terms.first()},
             'drop_fields': ['consequence_terms'],
         })
         return args
