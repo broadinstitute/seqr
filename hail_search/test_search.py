@@ -117,6 +117,36 @@ class HailSearchTestCase(AioHTTPTestCase):
             sample_data=MULTI_PROJECT_SAMPLE_DATA,
         )
 
+    async def test_frequency_filter(self):
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT4], frequencies={'seqr': {'af': 0.2}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {'ac': 4}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {'hh': 1}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT4], frequencies={'seqr': {'ac': 4, 'hh': 0}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.41}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT4], frequencies={'gnomad_genomes': {'af': 0.41, 'hh': 1}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT4], frequencies={'seqr': {'af': 0.2}, 'gnomad_genomes': {'af': 0.41}},
+            omit_sample_type='SV_WES',
+        )
+
     async def test_search_missing_data(self):
         search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)
         async with self.client.request('POST', '/search', json=search_body) as resp:

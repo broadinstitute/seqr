@@ -129,6 +129,7 @@ class BaseHailTableQuery(object):
         self._genome_version = genome_version
         self._sort = sort
         self._num_results = num_results
+        self._ht = None
 
         self._load_filtered_table(data_type, sample_data, **kwargs)
 
@@ -259,12 +260,10 @@ class BaseHailTableQuery(object):
         if not frequencies:
             return
 
-        populations_configs = self.populations_configs()  # TODO property?
-
         for pop, freqs in sorted(frequencies.items()):
             pop_filter = None
             pop_expr = self._ht[self.POPULATION_FIELDS.get(pop, pop)]
-            pop_config = populations_configs[pop]
+            pop_config = self._format_population_config(self.POPULATIONS[pop])
             if freqs.get('af') is not None:
                 af_field = pop_config.get('filter_af') or pop_config['af']
                 pop_filter = pop_expr[af_field] <= freqs['af']
@@ -377,8 +376,8 @@ class VariantHailTableQuery(BaseHailTableQuery):
     }
 
     def import_filtered_table(self, *args, **kwargs):
-        ht = super(VariantHailTableQuery, self).import_filtered_table(*args, **kwargs)
-        return ht.key_by(**{VARIANT_KEY_FIELD: ht.variant_id})
+        super(VariantHailTableQuery, self).import_filtered_table(*args, **kwargs)
+        self._ht = self._ht.key_by(**{VARIANT_KEY_FIELD: self._ht.variant_id})
 
     def _format_transcript_args(self):
         args = super(VariantHailTableQuery, self)._format_transcript_args()
