@@ -219,8 +219,8 @@ class BaseHailTableQuery(object):
         passes_quality_filter = self._get_genotype_passes_quality_filter(quality_filter)
         if passes_quality_filter is not None:
             ht = ht.annotate(family_entries=ht.family_entries.map(
-                lambda entries: hl.or_missing(entries.all(passes_quality_filter)), entries)
-            )
+                lambda entries: hl.or_missing(entries.all(passes_quality_filter), entries)
+            ))
             ht = ht.filter(ht.family_entries.any(lambda x: hl.is_defined(x)))
 
         return ht.select_globals()
@@ -333,36 +333,32 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _get_genotype_passes_quality_filter(cls, quality_filter):
-        quality_filter_funcs = []
         affected_only = quality_filter.get('affected_only')
-
-        quality_filter_funcs = []
+        passes_quality = None
         for filter_k, value in quality_filter.items():
             field = cls.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
             if field and value:
-                field_config = cls.QUALITY_FILTER_FORMAT.get(field)
-                if field_config.get('scale'):
-                    value = value / scale
-
-                def passes_quality_field(gt):
-                    is_valid = (gt[field] >= value) | hl.is_missing(gt[field])
-                    if field_config.get('override'):
-                        is_valid |= field_config['override'](gt)
-                    if affected_only:
-                        is_valid |= gt.affected_id == UNAFFECTED_ID
-                    return is_valid
-
-                quality_filter_funcs.append(passes_quality_field)
-
-        if not quality_filter_funcs:
-            return None
-
-        def passes_quality(gt):
-            quality_filter_expr = quality_filter_funcs[0](gt)
-            for f in quality_filter_funcs[1:]:
-                quality_filter_expr &= f(gt)
+                passes_quality = cls._get_genotype_passes_quality_field(field, value, affected_only, passes_quality)
 
         return passes_quality
+
+    @classmethod
+    def _get_genotype_passes_quality_field(cls, field, value, affected_only, filter_func):
+        field_config = cls.QUALITY_FILTER_FORMAT.get(field) or {}
+        if field_config.get('scale'):
+            value = value / field_config['scale']
+
+        def passes_quality_field(gt):
+            is_valid = (gt[field] >= value) | hl.is_missing(gt[field])
+            if field_config.get('override'):
+                is_valid |= field_config['override'](gt)
+            if affected_only:
+                is_valid |= gt.affected_id == UNAFFECTED_ID
+            if filter_func:
+                is_valid &= filter_func(gt)
+            return is_valid
+
+        return passes_quality_field
 
     @staticmethod
     def _filter_vcf_filters(ht):
