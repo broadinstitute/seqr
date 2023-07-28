@@ -133,7 +133,7 @@ class BaseHailTableQuery(object):
         self._load_filtered_table(data_type, sample_data, **kwargs)
 
     def _load_filtered_table(self, data_type, sample_data, **kwargs):
-        self._ht = self.import_filtered_table(data_type, sample_data, **kwargs)
+        self.import_filtered_table(data_type, sample_data, **kwargs)
 
     def import_filtered_table(self, data_type, sample_data, **kwargs):
         tables_path = f'{DATASETS_DIR}/{self._genome_version}/{data_type}'
@@ -182,7 +182,7 @@ class BaseHailTableQuery(object):
         # Add globals
         ht = ht.join(hl.read_table(annotations_ht_path).head(0).select().select_globals(*self.GLOBALS), how='left')
 
-        ht = ht.transmute(
+        self._ht = ht.transmute(
             genotypes=ht.family_entries.flatmap(lambda x: x).filter(
                 lambda gt: hl.is_defined(gt.individualGuid)
             ).map(lambda gt: gt.select(
@@ -191,8 +191,7 @@ class BaseHailTableQuery(object):
                 **{k: gt[field] for k, field in self.GENOTYPE_FIELDS.items()}
             ))
         )
-
-        return ht
+        self._filter_annotated_table(**kwargs)
 
     def _filter_entries_table(self, ht, sample_data):
         ht = self._add_entry_sample_families(ht, sample_data)
@@ -251,6 +250,47 @@ class BaseHailTableQuery(object):
     def _missing_entry(entry):
         entry_type = dict(**entry.dtype)
         return hl.struct(**{k: hl.missing(v) for k, v in entry_type.items()})
+
+    def _filter_annotated_table(self, frequencies=None, **kwargs):
+        self._filter_by_frequency(frequencies)
+
+    def _filter_by_frequency(self, frequencies):
+        frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
+        if not frequencies:
+            return
+
+        populations_configs = self.populations_configs()  # TODO property?
+
+        for pop, freqs in sorted(frequencies.items()):
+            pop_filter = None
+            pop_expr = self._ht[self.POPULATION_FIELDS.get(pop, pop)]
+            pop_config = populations_configs[pop]
+            if freqs.get('af') is not None:
+                af_field = pop_config.get('filter_af') or pop_config['af']
+                pop_filter = pop_expr[af_field] <= freqs['af']
+            elif freqs.get('ac') is not None:
+                ac_field = pop_config['ac']
+                if ac_field:
+                    pop_filter = pop_expr[ac_field] <= freqs['ac']
+
+            if freqs.get('hh') is not None:
+                hom_field = pop_config['hom']
+                hemi_field = pop_config['hemi']
+                if hom_field:
+                    hh_filter = pop_expr[hom_field] <= freqs['hh']
+                    if pop_filter is None:
+                        pop_filter = hh_filter
+                    else:
+                        pop_filter &= hh_filter
+                if hemi_field:
+                    hh_filter = pop_expr[hemi_field] <= freqs['hh']
+                    if pop_filter is None:
+                        pop_filter = hh_filter
+                    else:
+                        pop_filter &= hh_filter
+
+            if pop_filter is not None:
+                self._ht = self._ht.filter(hl.is_missing(pop_expr) | pop_filter)
 
     def _format_results(self, ht):
         annotations = {k: v(ht) for k, v in self.annotation_fields.items()}
