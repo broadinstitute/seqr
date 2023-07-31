@@ -117,6 +117,14 @@ class HailSearchTestCase(AioHTTPTestCase):
             sample_data=MULTI_PROJECT_SAMPLE_DATA,
         )
 
+    # async def test_location_project_search(self):
+    #     # TODO gene_ids, intervals, exclude_intervals
+    #     await self._assert_expected_search(
+    #         [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_sample_type='SV_WES',
+    #     )
+
+    # TODO test variant_ids, rs_ids
+
     async def test_frequency_filter(self):
         await self._assert_expected_search(
             [VARIANT1, VARIANT4], frequencies={'seqr': {'af': 0.2}}, omit_sample_type='SV_WES',

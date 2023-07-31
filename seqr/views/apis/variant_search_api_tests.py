@@ -80,7 +80,10 @@ EXPECTED_SEARCH_RESPONSE = {
         'SV0000001_2103343353_r0390_100': expected_detail_saved_variant,
         'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT,
     },
-    'genesById': {'ENSG00000227232': expected_pa_gene, 'ENSG00000268903': EXPECTED_GENE, 'ENSG00000233653': EXPECTED_GENE},
+    'genesById': {
+        'ENSG00000227232': expected_pa_gene, 'ENSG00000268903': EXPECTED_GENE, 'ENSG00000233653': EXPECTED_GENE,
+        'ENSG00000177000': mock.ANY, 'ENSG00000097046': mock.ANY,
+    },
     'transcriptsById': {'ENST00000624735': {'isManeSelect': False, 'refseqId': None, 'transcriptId': 'ENST00000624735'}},
     'search': {
         'search': SEARCH,
@@ -717,7 +720,9 @@ class VariantSearchAPITest(object):
         expected_search_response['variantTagsByGuid'].pop('VT1726945_2103343353_r0390_100')
         expected_search_response['variantTagsByGuid'].pop('VT1726970_2103343353_r0004_tes')
         expected_search_response['variantNotesByGuid'] = {}
-        expected_search_response['genesById'].pop('ENSG00000233653')
+        expected_search_response['genesById'] = {
+            k: v for k, v in expected_search_response['genesById'].items() if k in {'ENSG00000227232', 'ENSG00000268903'}
+        }
         expected_search_response['searchedVariants'] = [single_family_variant]
         self.assertDictEqual(response_json, expected_search_response)
         self._assert_expected_results_family_context(response_json, locus_list_detail=True)
