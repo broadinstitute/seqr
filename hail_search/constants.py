@@ -10,4 +10,4 @@ VARIANT_DATASET = 'VARIANTS'
 VARIANT_KEY_FIELD = 'variantId'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
 
-XPOS_SORT_KEY = 'xpos'
+XPOS = 'xpos'

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import DataLoader from 'shared/components/DataLoader'
-import { RareGeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
+import { GeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
 import DataTable from 'shared/components/table/DataTable'
 import { BaseVariantGene } from 'shared/components/panel/variants/VariantGene'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
@@ -59,7 +59,7 @@ const BasePhenotypePriGenes = React.memo((
   { individualGuid, phenotypeGeneScores, familyGuid, loading, load },
 ) => (
   <DataLoader content={phenotypeGeneScores[individualGuid]} contentId={individualGuid} load={load} loading={loading}>
-    <RareGeneSearchLink
+    <GeneSearchLink
       buttonText="Search for variants in high-ranked genes"
       icon="search"
       location={[...(new Set((phenotypeGeneScores[individualGuid] || []).map(({ gene }) => gene.geneId)))].join(',')}
