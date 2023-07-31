@@ -2,7 +2,8 @@ from aiohttp.test_utils import AioHTTPTestCase
 from copy import deepcopy
 
 from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE_DATA, FAMILY_2_MISSING_SAMPLE_DATA, \
-    VARIANT1, VARIANT2, VARIANT3, VARIANT4, MULTI_PROJECT_SAMPLE_DATA, MULTI_PROJECT_MISSING_SAMPLE_DATA
+    VARIANT1, VARIANT2, VARIANT3, VARIANT4, MULTI_PROJECT_SAMPLE_DATA, MULTI_PROJECT_MISSING_SAMPLE_DATA, \
+    LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH
 from hail_search.web_app import init_web_app
 
 PROJECT_2_VARIANT = {
@@ -117,13 +118,32 @@ class HailSearchTestCase(AioHTTPTestCase):
             sample_data=MULTI_PROJECT_SAMPLE_DATA,
         )
 
-    # async def test_location_project_search(self):
-    #     # TODO gene_ids, intervals, exclude_intervals
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_sample_type='SV_WES',
-    #     )
+    async def test_location_search(self):
+        await self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_sample_type='SV_WES', **LOCATION_SEARCH,
+        )
 
-    # TODO test variant_ids, rs_ids
+        await self._assert_expected_search(
+            [VARIANT1], omit_sample_type='SV_WES', **EXCLUDE_LOCATION_SEARCH,
+        )
+
+        await self._assert_expected_search(
+            [MULTI_FAMILY_VARIANT],  omit_sample_type='SV_WES',
+            intervals=LOCATION_SEARCH['intervals'][-1:], gene_ids=LOCATION_SEARCH['gene_ids'][:1]
+        )
+
+    async def test_variant_id_search(self):
+        await self._assert_expected_search([VARIANT2], omit_sample_type='SV_WES', **RSID_SEARCH)
+
+        await self._assert_expected_search([VARIANT1], omit_sample_type='SV_WES', **VARIANT_ID_SEARCH)
+
+        await self._assert_expected_search(
+            [VARIANT1], omit_sample_type='SV_WES', variant_ids=VARIANT_ID_SEARCH['variant_ids'][:1],
+        )
+
+        await self._assert_expected_search(
+            [], omit_sample_type='SV_WES', variant_ids=VARIANT_ID_SEARCH['variant_ids'][1:],
+        )
 
     async def test_frequency_filter(self):
         await self._assert_expected_search(
@@ -155,7 +175,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             omit_sample_type='SV_WES',
         )
 
-    async def test_search_missing_data(self):
+    async def test_search_errors(self):
         search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
@@ -167,3 +187,11 @@ class HailSearchTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 400)
             text = await resp.text()
         self.assertEqual(text, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
+
+        search_body = get_hail_search_body(
+            intervals=LOCATION_SEARCH['intervals'] + ['1:1-99999999999'], omit_sample_type='SV_WES',
+        )
+        async with self.client.request('POST', '/search', json=search_body) as resp:
+            self.assertEqual(resp.status, 400)
+            text = await resp.text()
+        self.assertEqual(text, 'Invalid intervals: 1:1-99999999999')

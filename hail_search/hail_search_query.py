@@ -285,15 +285,22 @@ class BaseHailTableQuery(object):
                 variant_id_q |= q
         return ht.filter(variant_id_q)
 
-    def _filter_annotated_table(self, gene_ids=None, frequencies=None, **kwargs):
+    def _filter_annotated_table(self, gene_ids=None, rs_ids=None, frequencies=None, **kwargs):
         if gene_ids:
             self._filter_by_gene_ids(gene_ids)
 
+        if rs_ids:
+            self._filter_rs_ids(rs_ids)
+
         self._filter_by_frequency(frequencies)
 
-    def _filter_gene_ids(self, gene_ids):
+    def _filter_by_gene_ids(self, gene_ids):
         gene_ids = hl.set(gene_ids)
         self._ht = self._ht.filter(self._ht.sorted_transcript_consequences.any(lambda t: gene_ids.contains(t.gene_id)))
+
+    def _filter_rs_ids(self, rs_ids):
+        rs_id_set = hl.set(rs_ids)
+        self._ht = self._ht.filter(rs_id_set.contains(self._ht.rsid))
 
     @staticmethod
     def _formatted_chr_interval(interval):
