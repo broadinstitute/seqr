@@ -10,8 +10,8 @@ from seqr.utils.search.utils import get_variant_query_gene_counts, query_variant
     get_variants_for_variant_ids, InvalidSearchException
 from seqr.utils.search.search_utils_tests import SearchTestHelper, MOCK_COUNTS
 from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
-    FAMILY_2_ALL_SAMPLE_DATA, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS
-
+    FAMILY_2_ALL_SAMPLE_DATA, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
+    LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH
 MOCK_HOST = 'http://test-hail-host'
 
 
@@ -31,6 +31,10 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         executed_request = responses.calls[-1].request
         self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')
+        act = json.loads(executed_request.body)
+        if act != expected_search:
+            diff_k = {k for k, v in expected_search.items() if v != act[k]}
+            import pdb; pdb.set_trace()
         self.assertDictEqual(json.loads(executed_request.body), expected_search)
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
@@ -72,33 +76,27 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.assertListEqual(variants, HAIL_BACKEND_VARIANTS[1:])
         self._test_expected_search_call(sort='cadd', num_results=2)
 
-        self.search_model.search['locus'] = {'rawVariantItems': '1-248367227-TC-T,2-103343353-GAGA-G'}
+        self.search_model.search['locus'] = {'rawVariantItems': '1-10439-AC-A,1-91511686-TCA-G'}
         query_variants(self.results_model, user=self.user, sort='in_omim')
         self._test_expected_search_call(
-            num_results=2,  dataset_type='VARIANTS', omit_sample_type='SV_WES', rs_ids=[],
-            variant_ids=[['1', 248367227, 'TC', 'T'], ['2', 103343353, 'GAGA', 'G']],
+            num_results=2,  dataset_type='VARIANTS', omit_sample_type='SV_WES',
             sort='in_omim', sort_metadata=['ENSG00000223972', 'ENSG00000243485', 'ENSG00000268020'],
+            **VARIANT_ID_SEARCH,
         )
 
-        self.search_model.search['locus']['rawVariantItems'] = 'rs9876'
+        self.search_model.search['locus']['rawVariantItems'] = 'rs1801131'
         query_variants(self.results_model, user=self.user, sort='constraint')
         self._test_expected_search_call(
-            rs_ids=['rs9876'], variant_ids=[], sort='constraint', sort_metadata={'ENSG00000223972': 2},
+            sort='constraint', sort_metadata={'ENSG00000223972': 2}, **RSID_SEARCH,
         )
 
-        self.search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'
+        self.search_model.search['locus']['rawItems'] = 'CDC7, chr2:1234-5678, chr7:100-10100%10, ENSG00000177000'
         query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            gene_ids=['ENSG00000223972', 'ENSG00000186092'], intervals=[
-                '2:1234-5678', '7:1-11100', '1:11869-14409', '1:65419-71585'
-            ],
-        )
+        self._test_expected_search_call(**LOCATION_SEARCH)
 
         self.search_model.search['locus']['excludeLocations'] = True
         query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(
-            intervals=['2:1234-5678', '7:1-11100', '1:11869-14409', '1:65419-71585'], exclude_intervals=True,
-        )
+        self._test_expected_search_call(**EXCLUDE_LOCATION_SEARCH)
 
         self.search_model.search = {
             'inheritance': {'mode': 'recessive', 'filter': {'affected': {
