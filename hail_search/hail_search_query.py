@@ -326,34 +326,29 @@ class BaseHailTableQuery(object):
             return
 
         for pop, freqs in sorted(frequencies.items()):
-            pop_filter = None
+            pop_filters = []
             pop_expr = self._ht[self.POPULATION_FIELDS.get(pop, pop)]
             pop_config = self._format_population_config(self.POPULATIONS[pop])
             if freqs.get('af') is not None:
                 af_field = pop_config.get('filter_af') or pop_config['af']
-                pop_filter = pop_expr[af_field] <= freqs['af']
+                pop_filters.append(pop_expr[af_field] <= freqs['af'])
             elif freqs.get('ac') is not None:
                 ac_field = pop_config['ac']
                 if ac_field:
-                    pop_filter = pop_expr[ac_field] <= freqs['ac']
+                    pop_filters.append(pop_expr[ac_field] <= freqs['ac'])
 
             if freqs.get('hh') is not None:
                 hom_field = pop_config['hom']
                 hemi_field = pop_config['hemi']
                 if hom_field:
-                    hh_filter = pop_expr[hom_field] <= freqs['hh']
-                    if pop_filter is None:
-                        pop_filter = hh_filter
-                    else:
-                        pop_filter &= hh_filter
+                    pop_filters.append(pop_expr[hom_field] <= freqs['hh'])
                 if hemi_field:
-                    hh_filter = pop_expr[hemi_field] <= freqs['hh']
-                    if pop_filter is None:
-                        pop_filter = hh_filter
-                    else:
-                        pop_filter &= hh_filter
+                    pop_filters.append(pop_expr[hemi_field] <= freqs['hh'])
 
-            if pop_filter is not None:
+            if pop_filters is not None:
+                pop_filter = pop_filters[0]
+                for pf in pop_filters[1:]:
+                    pop_filter &= pf
                 self._ht = self._ht.filter(hl.is_missing(pop_expr) | pop_filter)
 
     def _format_results(self, ht):
