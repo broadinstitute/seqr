@@ -1,15 +1,18 @@
 from aiohttp.web import HTTPBadRequest
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import hail as hl
 import logging
 import os
 
 from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, VARIANT_DATASET, VARIANT_KEY_FIELD,\
-    GNOMAD_GENOMES_FIELD, XPOS_SORT_KEY, GENOME_VERSION_GRCh38_DISPLAY
+    GNOMAD_GENOMES_FIELD, XPOS, GENOME_VERSION_GRCh38_DISPLAY
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
 logger = logging.getLogger(__name__)
+
+
+PredictionPath = namedtuple('PredictionPath', ['source', 'field'])
 
 
 def _to_camel_case(snake_case_str):
@@ -22,34 +25,29 @@ class BaseHailTableQuery(object):
     GENOTYPE_FIELDS = {}
     POPULATIONS = {}
     POPULATION_FIELDS = {}
+    POPULATION_KEYS = ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']
     PREDICTION_FIELDS_CONFIG = {}
 
     GLOBALS = ['enums']
-    CORE_FIELDS = ['xpos']
+    CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
         'familyGuids': lambda r: r.genotypes.group_by(lambda x: x.familyGuid).keys(),
         'genotypes': lambda r: r.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
     }
     ENUM_ANNOTATION_FIELDS = {}
     LIFTOVER_ANNOTATION_FIELDS = {
-        'liftedOverGenomeVersion': lambda r: hl.if_else(
-            hl.is_defined(r.rg37_locus), '37', hl.missing(hl.dtype('str')),
-        ),
-        'liftedOverChrom': lambda r: hl.if_else(
-            hl.is_defined(r.rg37_locus), r.rg37_locus.contig, hl.missing(hl.dtype('str')),
-        ),
-        'liftedOverPos': lambda r: hl.if_else(
-            hl.is_defined(r.rg37_locus), r.rg37_locus.position, hl.missing(hl.dtype('int32')),
-        ),
+        'liftedOverGenomeVersion': lambda r: hl.or_missing(hl.is_defined(r.rg37_locus), '37'),
+        'liftedOverChrom': lambda r: hl.or_missing(hl.is_defined(r.rg37_locus), r.rg37_locus.contig),
+        'liftedOverPos': lambda r: hl.or_missing(hl.is_defined(r.rg37_locus), r.rg37_locus.position),
     }
 
     SORTS = {
-        XPOS_SORT_KEY: lambda r: [r.xpos],
+        XPOS: lambda r: [r.xpos],
     }
 
-    @staticmethod
-    def _format_population_config(pop_config):
-        base_pop_config = {field.lower(): field for field in ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']}
+    @classmethod
+    def _format_population_config(cls, pop_config):
+        base_pop_config = {field.lower(): field for field in cls.POPULATION_KEYS}
         base_pop_config.update(pop_config)
         return base_pop_config
 
@@ -63,8 +61,8 @@ class BaseHailTableQuery(object):
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
             }),
             'predictions': lambda r: hl.struct(**{
-                prediction: hl.array(enums[path[0]][path[1]])[r[path[0]][f'{path[1]}_id']]
-                if enums.get(path[0], {}).get(path[1]) else r[path[0]][path[1]]
+                prediction: hl.array(enums[path.source][path.field])[r[path.source][f'{path.field}_id']]
+                if enums.get(path.source, {}).get(path.field) else r[path.source][path.field]
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
             'transcripts': lambda r: hl.or_else(
@@ -125,7 +123,7 @@ class BaseHailTableQuery(object):
 
         return value
 
-    def __init__(self, data_type, sample_data, genome_version, sort=XPOS_SORT_KEY, num_results=100, **kwargs):
+    def __init__(self, data_type, sample_data, genome_version, sort=XPOS, num_results=100, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
         self._num_results = num_results
@@ -150,8 +148,6 @@ class BaseHailTableQuery(object):
             family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht')
             families_ht = self._add_entry_sample_families(family_ht, family_sample_data)
             families_ht = families_ht.select_globals()
-        else:
-            raise NotImplementedError
 
         annotations_ht_path = f'{tables_path}/annotations.ht'
         annotation_ht_query_result = hl.query_table(
@@ -239,8 +235,8 @@ class BaseHailTableQuery(object):
         return collected, total_results
 
     def _sort_order(self, ht):
-        sort_expressions = self._get_sort_expressions(ht, XPOS_SORT_KEY)
-        if self._sort != XPOS_SORT_KEY:
+        sort_expressions = self._get_sort_expressions(ht, XPOS)
+        if self._sort != XPOS:
             sort_expressions = self._get_sort_expressions(ht, self._sort) + sort_expressions
         return sort_expressions
 
@@ -263,20 +259,20 @@ class VariantHailTableQuery(BaseHailTableQuery):
     }
     POPULATION_FIELDS = {'seqr': 'gt_stats'}
     PREDICTION_FIELDS_CONFIG = {
-        'cadd': ('cadd', 'PHRED'),
-        'eigen': ('eigen', 'Eigen_phred'),
-        'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),
-        'gnomad_noncoding': ('gnomad_non_coding_constraint', 'z_score'),
-        'mpc': ('mpc', 'MPC'),
-        'mut_pred': ('dbnsfp', 'MutPred_score'),
-        'primate_ai': ('primate_ai', 'score'),
-        'splice_ai': ('splice_ai', 'delta_score'),
-        'splice_ai_consequence': ('splice_ai', 'splice_consequence'),
-        'vest': ('dbnsfp', 'VEST4_score'),
-        'mut_taster': ('dbnsfp', 'MutationTaster_pred'),
-        'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),
-        'revel': ('dbnsfp', 'REVEL_score'),
-        'sift': ('dbnsfp', 'SIFT_pred'),
+        'cadd': PredictionPath('cadd', 'PHRED'),
+        'eigen': PredictionPath('eigen', 'Eigen_phred'),
+        'fathmm': PredictionPath('dbnsfp', 'fathmm_MKL_coding_pred'),
+        'gnomad_noncoding': PredictionPath('gnomad_non_coding_constraint', 'z_score'),
+        'mpc': PredictionPath('mpc', 'MPC'),
+        'mut_pred': PredictionPath('dbnsfp', 'MutPred_score'),
+        'primate_ai': PredictionPath('primate_ai', 'score'),
+        'splice_ai': PredictionPath('splice_ai', 'delta_score'),
+        'splice_ai_consequence': PredictionPath('splice_ai', 'splice_consequence'),
+        'vest': PredictionPath('dbnsfp', 'VEST4_score'),
+        'mut_taster': PredictionPath('dbnsfp', 'MutationTaster_pred'),
+        'polyphen': PredictionPath('dbnsfp', 'Polyphen2_HVAR_pred'),
+        'revel': PredictionPath('dbnsfp', 'REVEL_score'),
+        'sift': PredictionPath('dbnsfp', 'SIFT_pred'),
     }
 
     GLOBALS = BaseHailTableQuery.GLOBALS + ['versions']
@@ -293,8 +289,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
     ENUM_ANNOTATION_FIELDS = {
         'clinvar': {'annotate_value': lambda value, enum, ht_globals: {
             'conflictingPathogenicities': value.conflictingPathogenicities.map(
-                lambda p: p.annotate(pathogenicity=hl.array(enum['pathogenicity'])[p.pathogenicity_id]).drop(
-                    'pathogenicity_id')
+                lambda p: VariantHailTableQuery._enum_field(p, {k: enum[k] for k in ['pathogenicity']})
             ),
             'version': ht_globals['versions'].clinvar,
         }},
