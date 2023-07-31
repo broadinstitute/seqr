@@ -147,6 +147,17 @@ class HailSearchTestCase(AioHTTPTestCase):
             omit_sample_type='SV_WES',
         )
 
+    async def test_in_silico_filter(self):
+        in_silico = {'eigen': '5.5', 'mut_taster': 'P'}
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT4], in_silico=in_silico, omit_sample_type='SV_WES',
+        )
+
+        in_silico['requireScore'] = True
+        await self._assert_expected_search(
+            [VARIANT2, VARIANT4], in_silico=in_silico, omit_sample_type='SV_WES',
+        )
+
     async def test_search_missing_data(self):
         search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)
         async with self.client.request('POST', '/search', json=search_body) as resp:
