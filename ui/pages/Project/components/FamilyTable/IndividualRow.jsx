@@ -154,7 +154,9 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         <Popup
           flowing
           trigger={
-            <MmeStatusLabel title="Removed from MME" dateField="deletedDate" color="red" individual={individual} mmeSubmission={mmeSubmission} />
+            <div>
+              <MmeStatusLabel title="Removed from MME" dateField="deletedDate" color="red" individual={individual} mmeSubmission={mmeSubmission} />
+            </div>
           }
           content={
             <div>
@@ -166,12 +168,14 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
     {individual.hasRnaOutlierData && (
-      <Link
-        target="_blank"
-        to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/rnaseq_results/${individual.individualGuid}`}
-      >
-        RNAseq Results
-      </Link>
+      <div>
+        <Link
+          target="_blank"
+          to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/rnaseq_results/${individual.individualGuid}`}
+        >
+          RNAseq Results
+        </Link>
+      </div>
     )}
     {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
       ({ modalName, title, modalSize, linkText, component }) => {
@@ -183,7 +187,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
             modalName={modalName(titleIds)}
             title={title(titleIds)}
             size={modalSize}
-            trigger={<ButtonLink padding="1em 0 0 0" content={linkText} />}
+            trigger={<ButtonLink padding="0 0 0 0" content={linkText} />}
           >
             <React.Suspense fallback={<Loader />}>
               {React.createElement(component,
