@@ -52,9 +52,16 @@ class BaseHailTableQuery(object):
         return base_pop_config
 
     @property
+    def ht_globals(self):
+        return {k: hl.eval(self._ht[k]) for k in self.GLOBALS if k != 'enums'}
+
+    @property
+    def enums(self):
+        return hl.eval(self._ht.enums)
+
+    @property
     def annotation_fields(self):
-        ht_globals = {k: hl.eval(self._ht[k]) for k in self.GLOBALS}
-        enums = ht_globals.pop('enums')
+        enums = self.enums
 
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
@@ -73,7 +80,7 @@ class BaseHailTableQuery(object):
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
 
-        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], enums[k], ht_globals=ht_globals, **enum_config)
+        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], enums[k], ht_globals=self.ht_globals, **enum_config)
         annotation_fields.update({
             enum_config.get('response_key', k): format_enum(k, enum_config)
             for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
@@ -95,6 +102,12 @@ class BaseHailTableQuery(object):
         return {
             'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
         }
+
+    def _get_enum_lookup(self, field, subfield):
+        enum_field = self.enums.get(field, {}).get(subfield)
+        if enum_field is None:
+            return None
+        return {v: i for i, v in enumerate(enum_field)}
 
     @staticmethod
     def _enum_field(value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, **kwargs):
@@ -250,8 +263,10 @@ class BaseHailTableQuery(object):
         entry_type = dict(**entry.dtype)
         return hl.struct(**{k: hl.missing(v) for k, v in entry_type.items()})
 
-    def _filter_annotated_table(self, frequencies=None, **kwargs):
+    def _filter_annotated_table(self, frequencies=None, in_silico=None, **kwargs):
         self._filter_by_frequency(frequencies)
+
+        self._filter_by_in_silico(in_silico)
 
     def _filter_by_frequency(self, frequencies):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
@@ -283,6 +298,43 @@ class BaseHailTableQuery(object):
                 for pf in pop_filters[1:]:
                     pop_filter &= pf
                 self._ht = self._ht.filter(hl.is_missing(pop_expr) | pop_filter)
+
+    def _filter_by_in_silico(self, in_silico_filters):
+        require_score = in_silico_filters.get('requireScore', False)
+        in_silico_filters = {
+            k: v for k, v in (in_silico_filters or {}).items()
+            if k in self.PREDICTION_FIELDS_CONFIG and v is not None and len(v) != 0
+        }
+        if not in_silico_filters:
+            return
+
+        in_silico_qs = []
+        missing_qs = []
+        for in_silico, value in in_silico_filters.items():
+            score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
+            enum_lookup = self._get_enum_lookup(*score_path)
+            if enum_lookup is not None:
+                ht_value = self._ht[score_path.source][f'{score_path.field}_id']
+                score_filter = ht_value == enum_lookup[value]
+            else:
+                ht_value = self._ht[score_path.source][score_path.field]
+                score_filter = ht_value >= float(value)
+
+            in_silico_qs.append(score_filter)
+            if not require_score:
+                missing_qs.append(hl.is_missing(ht_value))
+
+        if missing_qs:
+            missing_q = missing_qs[0]
+            for q in missing_qs[1:]:
+                missing_q &= q
+            in_silico_qs.append(missing_q)
+
+        in_silico_q = in_silico_qs[0]
+        for q in in_silico_qs[1:]:
+            in_silico_q |= q
+
+        self._ht = self._ht.filter(in_silico_q)
 
     def _format_results(self, ht):
         annotations = {k: v(ht) for k, v in self.annotation_fields.items()}
