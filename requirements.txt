@@ -10,7 +10,7 @@ async-timeout==4.0.2
     # via redis
 cachetools==5.3.0
     # via google-auth
-certifi==2022.12.7
+certifi==2023.7.22
     # via
     #   elasticsearch
     #   requests
@@ -18,7 +18,7 @@ cffi==1.15.1
     # via cryptography
 charset-normalizer==3.0.1
     # via requests
-cryptography==41.0.0
+cryptography==41.0.2
     # via social-auth-core
 defusedxml==0.7.1
     # via
@@ -156,3 +156,4 @@ whitenoise==6.3.0
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
