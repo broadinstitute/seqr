@@ -539,7 +539,7 @@ const GeneSearchLinkWithPopup = props => (
     trigger={
       <GeneSearchLink {...props} />
     }
-    content="Search for all variants with AF < 10% in this gene present in any affected individual"
+    content="Search for all variants with AF < 3% in this gene present in any affected individual"
     size="tiny"
   />
 )
