@@ -945,9 +945,6 @@ class BaseHailTableQuery(object):
 class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ']}
-    POPULATIONS = {
-        'seqr': {'hom': 'hom', 'hemi': None, 'het': None},
-    }
     POPULATION_FIELDS = {'seqr': 'gt_stats'}
     PREDICTION_FIELDS_CONFIG = {
         'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),
@@ -1116,6 +1113,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     GENOTYPE_FIELDS = {f.lower(): f for f in ['AB']}
     GENOTYPE_FIELDS.update(BaseVariantHailTableQuery.GENOTYPE_FIELDS)
     POPULATIONS = {
+        'seqr': {'hom': 'hom', 'hemi': None, 'het': None},
         'topmed': {'hemi': None},
         'exac': {
             'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': 'AC_Het',
@@ -1123,7 +1121,6 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         'gnomad_exomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
         GNOMAD_GENOMES_FIELD: {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
     }
-    POPULATIONS.update(BaseVariantHailTableQuery.POPULATIONS)
     PREDICTION_FIELDS_CONFIG = {
         'cadd': ('cadd', 'PHRED'),
         'eigen': ('eigen', 'Eigen_phred'),
@@ -1196,23 +1193,21 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
         'contamination': 'contamination',
     }
     GENOTYPE_FIELDS.update(BaseVariantHailTableQuery.GENOTYPE_FIELDS)
-    POPULATIONS = {
-        pop: {'hom': None, 'hemi': None, 'het': None} for pop in ['callset_heteroplasmy', 'gnomad_mito', 'helix']
-    }
-    POPULATIONS.update({
-        f'{pop}_heteroplasmy': {
-            'af': 'AF_het', 'ac': 'AC_het', 'max_hl': 'max_hl', 'hom': None, 'hemi': None, 'het': None,
-        } for pop in ['gnomad_mito', 'helix']
-    })
-    for pop in ['gnomad_mito_heteroplasmy', 'helix_heteroplasmy']:
-        POPULATIONS[pop].update({'max_hl': 'max_hl'})
-    POPULATIONS.update(BaseVariantHailTableQuery.POPULATIONS)
-    POPULATION_FIELDS = {
-        'gnomad_mito_heteroplasmy': 'gnomad_mito',
-        'helix': 'helix_mito',
-        'helix_heteroplasmy': 'helix_mito',
-    }
+    POPULATION_FIELDS = {'helix': 'helix_mito'}
     POPULATION_FIELDS.update(BaseVariantHailTableQuery.POPULATION_FIELDS)
+    POPULATIONS = {}
+    for pop in ['seqr', 'gnomad_mito', 'helix']:
+        pop_het = f'{pop}_heteroplasmy'
+        POPULATIONS.update({
+            pop: {'hom': None, 'hemi': None, 'het': None},
+            pop_het: {
+                'af': 'AF_het', 'ac': 'AC_het', 'max_hl': None if pop == 'seqr' else 'max_hl',
+                'hom': None, 'hemi': None, 'het': None,
+            },
+        })
+        POPULATION_FIELDS[pop_het] = POPULATION_FIELDS.get(pop, pop)
+    POPULATIONS['seqr'].update({'af': 'AF_hom', 'ac': 'AC_hom'})
+
     PREDICTION_FIELDS_CONFIG = {
         'apogee': ('mitimpact', 'score'),
         'hmtvar': ('hmtvar', 'score'),
