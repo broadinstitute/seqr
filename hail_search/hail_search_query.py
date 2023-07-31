@@ -125,6 +125,11 @@ class BaseHailTableQuery(object):
 
         return value
 
+    @property
+    def should_add_chr_prefix(self):
+        reference_genome = hl.get_reference(self._genome_version)
+        return any(c.startswith('chr') for c in reference_genome.contigs)
+
     def __init__(self, data_type, sample_data, genome_version, sort=XPOS_SORT_KEY, num_results=100, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
@@ -133,11 +138,19 @@ class BaseHailTableQuery(object):
 
         self._load_filtered_table(data_type, sample_data, **kwargs)
 
-    def _load_filtered_table(self, data_type, sample_data, **kwargs):
-        self.import_filtered_table(data_type, sample_data, **kwargs)
+    def _load_filtered_table(self, data_type, sample_data, intervals=None, exclude_intervals=False, variant_ids=None, **kwargs):
+        parsed_intervals = self._parse_intervals(intervals, variant_ids)
+        excluded_intervals = None
+        if exclude_intervals:
+            excluded_intervals = parsed_intervals
+            parsed_intervals = None
+        self.import_filtered_table(
+            data_type, sample_data, intervals=parsed_intervals, excluded_intervals=excluded_intervals,
+            variant_ids=variant_ids, **kwargs)
 
-    def import_filtered_table(self, data_type, sample_data, **kwargs):
+    def import_filtered_table(self, data_type, sample_data, intervals=None, **kwargs):
         tables_path = f'{DATASETS_DIR}/{self._genome_version}/{data_type}'
+        load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
         family_samples = defaultdict(list)
         project_samples = defaultdict(list)
@@ -148,15 +161,15 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {data_type} data for {len(family_samples)} families in {len(project_samples)} projects')
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
-            family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht')
-            families_ht = self._filter_entries_table(family_ht, family_sample_data)
+            family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht', **load_table_kwargs)
+            families_ht = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = []
             exception_messages = set()
             for project_guid, project_sample_data in project_samples.items():
-                project_ht = hl.read_table(f'{tables_path}/projects/{project_guid}.ht')
+                project_ht = hl.read_table(f'{tables_path}/projects/{project_guid}.ht', **load_table_kwargs)
                 try:
-                    filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data))
+                    filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
                 except HTTPBadRequest as e:
                     exception_messages.add(e.text)
 
@@ -194,7 +207,13 @@ class BaseHailTableQuery(object):
         )
         self._filter_annotated_table(**kwargs)
 
-    def _filter_entries_table(self, ht, sample_data):
+    def _filter_entries_table(self, ht, sample_data, excluded_intervals=None, variant_ids=None, **kwargs):
+        if excluded_intervals:
+            ht = hl.filter_intervals(ht, excluded_intervals, keep=False)
+
+        if variant_ids:
+            ht = self._filter_variant_ids(ht, variant_ids)
+
         ht = self._add_entry_sample_families(ht, sample_data)
 
         ht = ht.annotate(family_entries=ht.family_entries.map(
@@ -252,8 +271,49 @@ class BaseHailTableQuery(object):
         entry_type = dict(**entry.dtype)
         return hl.struct(**{k: hl.missing(v) for k, v in entry_type.items()})
 
-    def _filter_annotated_table(self, frequencies=None, **kwargs):
+    def _filter_variant_ids(self, ht, variant_ids):
+        if len(variant_ids) == 1:
+            variant_id_q = ht.alleles == [variant_ids[0][2], variant_ids[0][3]]
+        else:
+            if self.should_add_chr_prefix:
+                variant_ids = [(f'chr{chr}', *v_id) for chr, *v_id in variant_ids]
+            variant_id_qs = [
+                (ht.locus == hl.locus(chrom, pos, reference_genome=self._genome_version)) &
+                (ht.alleles == [ref, alt])
+                for chrom, pos, ref, alt in variant_ids
+            ]
+            variant_id_q = variant_id_qs[0]
+            for q in variant_id_qs[1:]:
+                variant_id_q |= q
+        return ht.filter(variant_id_q)
+
+    def _filter_annotated_table(self, gene_ids=None, frequencies=None, **kwargs):
+        if gene_ids:
+            self._filter_by_gene_ids(gene_ids)
+
         self._filter_by_frequency(frequencies)
+
+    def _filter_gene_ids(self, gene_ids):
+        gene_ids = hl.set(gene_ids)
+        self._ht = self._ht.filter(self._ht.sorted_transcript_consequences.any(lambda t: gene_ids.contains(t.gene_id)))
+
+    @staticmethod
+    def _formatted_chr_interval(interval):
+        return f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
+
+    def _parse_intervals(self, intervals, variant_ids):
+        if variant_ids:
+            intervals = [f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
+        if intervals:
+            raw_intervals = intervals
+            intervals = [hl.eval(hl.parse_locus_interval(
+                self._formatted_chr_interval(interval) if self.should_add_chr_prefix else interval,
+                reference_genome=self._genome_version, invalid_missing=True)
+            ) for interval in intervals]
+            invalid_intervals = [raw_intervals[i] for i, interval in enumerate(intervals) if interval is None]
+            if invalid_intervals:
+                raise HTTPBadRequest(text=f'Invalid intervals: {", ".join(invalid_intervals)}')
+        return intervals
 
     def _filter_by_frequency(self, frequencies):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
