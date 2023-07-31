@@ -980,7 +980,7 @@
     }
 }, {
     "model": "reference_data.geneinfo",
-    "pk": 50,
+    "pk": 60,
     "fields": {
         "gene_id": "ENSG00000177000",
         "gene_symbol": "MTHFR",
@@ -999,7 +999,7 @@
     }
 }, {
     "model": "reference_data.geneinfo",
-    "pk": 51,
+    "pk": 61,
     "fields": {
         "gene_id": "ENSG00000097046",
         "gene_symbol": "CDC7",
