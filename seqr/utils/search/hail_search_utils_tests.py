@@ -31,10 +31,6 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         executed_request = responses.calls[-1].request
         self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')
-        act = json.loads(executed_request.body)
-        if act != expected_search:
-            diff_k = {k for k, v in expected_search.items() if v != act[k]}
-            import pdb; pdb.set_trace()
         self.assertDictEqual(json.loads(executed_request.body), expected_search)
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
