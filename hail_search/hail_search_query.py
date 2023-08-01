@@ -956,13 +956,13 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ']}
     POPULATION_FIELDS = {'seqr': 'gt_stats'}
     PREDICTION_FIELDS_CONFIG = {
-        'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),  # TODO missing
-        'mut_pred': ('dbnsfp', 'MutPred_score'),  # TODO missing
+        'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),
+        'mut_pred': ('dbnsfp', 'MutPred_score'),
         'mut_taster': ('dbnsfp', 'MutationTaster_pred'),
-        'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),   # TODO missing
-        'revel': ('dbnsfp', 'REVEL_score'),   # TODO missing
+        'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),
+        'revel': ('dbnsfp', 'REVEL_score'),
         'sift': ('dbnsfp', 'SIFT_pred'),
-        'vest': ('dbnsfp', 'VEST4_score'),   # TODO missing
+        'vest': ('dbnsfp', 'VEST4_score'),
     }
     OMIT_TRANSCRIPT_FIELDS = ['consequence_terms']
     ANNOTATION_OVERRIDE_FIELDS = [CLINVAR_KEY]
@@ -1389,7 +1389,6 @@ DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_typ
 class MultiDataTypeHailTableQuery(object):
 
     DATA_TYPE_ANNOTATION_FIELDS = []
-    DATA_TYPE_POPULATIONS = {}
 
     def __init__(self, data_type, *args, **kwargs):
         self._data_types = data_type
@@ -1407,7 +1406,6 @@ class MultiDataTypeHailTableQuery(object):
             self.BASE_ANNOTATION_FIELDS.update(cls.BASE_ANNOTATION_FIELDS)
             self.CORE_FIELDS.update(cls.CORE_FIELDS)
             self.SORTS.update(cls.SORTS)
-        self.POPULATIONS.update({k: QUERY_CLASS_MAP[dt].POPULATIONS[k] for k, dt in self.DATA_TYPE_POPULATIONS.items()})
         self.BASE_ANNOTATION_FIELDS.update({
             k: self._annotation_for_data_type(k) for k in self.DATA_TYPE_ANNOTATION_FIELDS
         })
@@ -1514,17 +1512,33 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
 class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
 
-    DATA_TYPE_POPULATIONS = {'seqr': VARIANT_DATASET}
+    def __init__(self, *args, **kwargs):
+        super(AllVariantHailTableQuery, self).__init__(*args, **kwargs)
+        self.POPULATION_FIELDS.update({'seqr_heteroplasmy': 'mito_gt_stats'})
 
     @classmethod
     def _custom_transmute_expressions(cls, ht, to_merge):
         if 'gt_stats' not in to_merge:
             return {}
-        # TODO no hom for mito
-        gs, mito_gs = (ht.gt_stats, ht.gt_stats_1) if 'AF_hom' in ht.gt_stats_1.dtype else (ht.gt_stats_1, ht.gt_stats)
-        return {
-            'gt_stats': cls._merge_structs(gs, mito_gs.rename({'AF_hom': 'AF', 'AC_hom': 'AC'}))
-        }
+        gt_stats, mito_gt_stats = (ht.gt_stats, ht.gt_stats_1) \
+            if 'AF_hom' in ht.gt_stats_1.dtype else (ht.gt_stats_1, ht.gt_stats)
+        return {'gt_stats': gt_stats, 'mito_gt_stats': mito_gt_stats}
+
+    def population_expression(self, r, population):
+        if population != 'seqr':
+            return super(AllVariantHailTableQuery, self).population_expression(r, population)
+
+        gt_config = self._format_population_config(VariantHailTableQuery.POPULATIONS[population])
+        mito_config = self._format_population_config(MitoHailTableQuery.POPULATIONS[population])
+
+        return hl.struct(**{
+            response_key: hl.if_else(
+                hl.is_defined(r.gt_stats), hl.or_else(r.gt_stats[field], 0),
+                hl.or_else(r.mito_gt_stats[mito_config[response_key]], 0)
+                if mito_config[response_key] else hl.missing(r.gt_stats[field].dtype)
+            )
+            for response_key, field in gt_config.items() if field is not None
+        })
 
 
 class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
