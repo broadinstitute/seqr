@@ -1380,10 +1380,12 @@ DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_typ
 class MultiDataTypeHailTableQuery(object):
 
     DATA_TYPE_ANNOTATION_FIELDS = []
+    DATA_TYPE_POPULATIONS = {}
 
     def __init__(self, data_type, *args, **kwargs):
         self._data_types = data_type
         self.POPULATIONS = {}
+        self.POPULATION_FIELDS = {}
         self.PREDICTION_FIELDS_CONFIG = {}
         self.BASE_ANNOTATION_FIELDS = {}
         self.SORTS = {}
@@ -1391,10 +1393,12 @@ class MultiDataTypeHailTableQuery(object):
         self.CORE_FIELDS = set()
         for cls in [QUERY_CLASS_MAP[dt] for dt in self._data_types]:
             self.POPULATIONS.update(cls.POPULATIONS)
+            self.POPULATION_FIELDS.update(cls.POPULATION_FIELDS)
             self.PREDICTION_FIELDS_CONFIG.update(cls.PREDICTION_FIELDS_CONFIG)
             self.BASE_ANNOTATION_FIELDS.update(cls.BASE_ANNOTATION_FIELDS)
             self.CORE_FIELDS.update(cls.CORE_FIELDS)
             self.SORTS.update(cls.SORTS)
+        self.POPULATIONS.update({k: QUERY_CLASS_MAP[dt].POPULATIONS[k] for k, dt in self.DATA_TYPE_POPULATIONS.items()})
         self.BASE_ANNOTATION_FIELDS.update({
             k: self._annotation_for_data_type(k) for k in self.DATA_TYPE_ANNOTATION_FIELDS
         })
@@ -1423,20 +1427,13 @@ class MultiDataTypeHailTableQuery(object):
     def import_filtered_table(cls, data_type, sample_data, **kwargs):
         data_type_0 = data_type[0]
 
-        ht, family_guids = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type_0, sample_data[data_type_0], **kwargs)
-        ht = ht.annotate(dataType=data_type_0)
-        fields = {k for k in ht.row.keys()}
-        globals = {k for k in ht.globals.keys()}
+        ht, family_guids, fields, globals = cls._import_data_type(data_type_0, sample_data, **kwargs)
 
         for dt in data_type[1:]:
-            data_type_cls = QUERY_CLASS_MAP[dt]
-            sub_ht, new_family_guids = data_type_cls.import_filtered_table(dt, sample_data[dt], **kwargs)
-            family_guids.update(new_family_guids)
-            sub_ht = sub_ht.annotate(dataType=dt)
+            sub_ht, new_family_guids, new_fields, new_globals = cls._import_data_type(dt, sample_data, **kwargs)
             ht = ht.join(sub_ht, how='outer')
+            family_guids.update(new_family_guids)
 
-            new_fields = {k for k in sub_ht.row.keys()}
-            new_globals = {k for k in sub_ht.globals.keys()}
             to_merge = fields.intersection(new_fields)
             to_merge_globals = globals.intersection(new_globals)
             fields.update(new_fields)
@@ -1444,32 +1441,61 @@ class MultiDataTypeHailTableQuery(object):
             logger.info(f'Merging fields: {", ".join(to_merge)}')
 
             transmute_expressions = {
-                k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge
-                if k not in {'sortedTranscriptConsequences', 'genotypes', VARIANT_KEY_FIELD}
+                k: cls._merge_nested_structs(ht, k) for k in {'sortedTranscriptConsequences', 'genotypes'}
             }
-            transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences'))
-            transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes'))
+            transmute_expressions.update(cls._custom_transmute_expressions(ht, to_merge))
+            custom_merge = {VARIANT_KEY_FIELD}
+            custom_merge.update(transmute_expressions.keys())
+            transmute_expressions.update({
+                k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge if k not in custom_merge
+            })
             ht = ht.transmute(**transmute_expressions)
-            ht = ht.transmute_globals(**{k: hl.struct(**ht[k], **ht[f'{k}_1']) for k in to_merge_globals})
+            ht = ht.transmute_globals(**{
+                g: ht[g].annotate(**{k: v for k, v in dict(ht[f'{g}_1']).items() if k not in ht[g]})
+                for g in to_merge_globals
+            })
 
         return ht, family_guids
 
     @staticmethod
-    def _merge_nested_structs(ht, field):
-        struct_type = dict(**ht[field].dtype.element_type)
-        new_struct_type = dict(**ht[f'{field}_1'].dtype.element_type)
+    def _import_data_type(data_type, sample_data, **kwargs):
+        ht, family_guids = QUERY_CLASS_MAP[data_type].import_filtered_table(data_type, sample_data[data_type], **kwargs)
+        ht = ht.annotate(dataType=data_type)
+        fields = {k for k in ht.row.keys()}
+        globals = {k for k in ht.globals.keys()}
+        return ht, family_guids, fields, globals
+
+    @classmethod
+    def _custom_transmute_expressions(cls, ht, to_merge):
+        return {}
+
+    @classmethod
+    def _merge_nested_structs(cls, ht, field):
+        return cls._merge_structs(ht[field], ht[f'{field}_1'], is_array=True)
+
+    @staticmethod
+    def _merge_structs(s1, s2, is_array=False):
+        dt1 = s1.dtype
+        dt2 = s2.dtype
+        if is_array:
+            dt1 = dt1.element_type
+            dt2 = dt2.element_type
+        struct_type = dict(**dt1)
+        new_struct_type = dict(**dt2)
         is_same_type = struct_type == new_struct_type
         struct_type.update(new_struct_type)
 
-        def format_merged(merge_field):
-            table_field = ht[merge_field]
+        def annotate_struct(x):
+            return x.select(**{k: x.get(k, hl.missing(v)) for k, v in struct_type.items()})
+
+        def format_merged(table_field):
             if is_same_type:
                 return table_field
-            return table_field.map(
-                lambda x: x.select(**{k: x.get(k, hl.missing(v)) for k, v in struct_type.items()})
-            )
+            elif is_array:
+                return table_field.map(annotate_struct)
+            return annotate_struct(table_field)
 
-        return {field: hl.or_else(format_merged(field), format_merged(f'{field}_1'))}
+        return hl.or_else(format_merged(s1), format_merged(s2))
 
 
 class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
@@ -1478,7 +1504,18 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
 
 class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
-    pass
+
+    DATA_TYPE_POPULATIONS = {'seqr': VARIANT_DATASET}
+
+    @classmethod
+    def _custom_transmute_expressions(cls, ht, to_merge):
+        if 'gt_stats' not in to_merge:
+            return {}
+
+        gs, mito_gs = (ht.gt_stats, ht.gt_stats_1) if 'AF_hom' in ht.gt_stats_1.dtype else (ht.gt_stats_1, ht.gt_stats)
+        return {
+            'gt_stats': cls._merge_structs(gs, mito_gs.rename({'AF_hom': 'AF', 'AC_hom': 'AC'}))
+        }
 
 
 class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
