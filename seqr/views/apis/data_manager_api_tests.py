@@ -8,7 +8,7 @@ import responses
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree, validate_callset, \
     get_loaded_projects, load_data
-from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _get_json_for_models
+from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
@@ -284,21 +284,21 @@ SAMPLE_GENE_TPM_DATA = {
     'ENSG00000233750': {'gene_id': 'ENSG00000233750', 'tpm': '0.0'},
 }
 SAMPLE_GENE_SPLICE_DATA = {
-    'ENSG00000163092-2-167254166-167258349-*-psi3': {
+    'ENSG00000233750-2-167254166-167258349-*-psi3': {
         'chrom': '2', 'start': 167254166, 'end': 167258349, 'strand': '*', 'type': 'psi3',
-        'p_value': 1.56e-25, 'z_score': -4.9, 'delta_psi': -0.46, 'read_count': 166, 'gene_id': 'ENSG00000163092',
+        'p_value': 1.56e-25, 'z_score': -4.9, 'delta_psi': -0.46, 'read_count': 166, 'gene_id': 'ENSG00000233750',
         'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 1,
     },
-    'ENSG00000106554-7-132885746-132975168-*-psi5': {
+    'ENSG00000240361-7-132885746-132975168-*-psi5': {
         'chrom': '7', 'start': 132885746, 'end': 132975168, 'strand': '*', 'type': 'psi5',
-        'p_value': 1.08e-56, 'z_score': -6.53, 'delta_psi': -0.85, 'read_count': 231, 'gene_id': 'ENSG00000106554',
+        'p_value': 1.08e-56, 'z_score': -6.53, 'delta_psi': -0.85, 'read_count': 231, 'gene_id': 'ENSG00000240361',
         'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 0,
     },
 }
 SAMPLE_GENE_SPLICE_DATA2 = {
-    'ENSG00000163092-2-167258096-167258349-*-psi3': {
+    'ENSG00000233750-2-167258096-167258349-*-psi3': {
         'chrom': '2', 'start': 167258096, 'end': 167258349, 'strand': '*', 'type': 'psi3',
-        'p_value': 1.56e-25, 'z_score': 6.33, 'delta_psi': 0.45, 'read_count': 143, 'gene_id': 'ENSG00000163092',
+        'p_value': 1.56e-25, 'z_score': 6.33, 'delta_psi': 0.45, 'read_count': 143, 'gene_id': 'ENSG00000233750',
         'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 0,
     }
 }
@@ -713,7 +713,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'M',
             'num_parsed_samples': 4,
-            'initial_model_count': 3,
+            'initial_model_count': 4,
             'deleted_count': 1,
             'extra_warnings': [
                 'Skipped data loading for the following 1 sample(s) due to mismatched tissue type: NA19678 (fibroblasts, muscle)',
@@ -730,39 +730,39 @@ class DataManagerAPITest(AuthenticationTestCase):
                        'deltaPsi', 'readCount', 'tissue', 'dotSize', 'rareDiseaseSamplesWithJunction',
                        'rareDiseaseSamplesTotal'],
             'optional_headers': ['geneName', 'dotSize'],
-            'loaded_data_row': ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
+            'loaded_data_row': ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000240361', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
                                 'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
+            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000240361', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
                                 'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
             'duplicated_indiv_id_data': [
-                ['NA20870', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000163093', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000135953', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
             ],
-            'write_data': {'NA20870\t\t{"ENSG00000163092-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
+            'write_data': {'NA20870\t\t{"ENSG00000233750-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
-                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163092",'
+                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000233750",'
                            ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}\n',
-                           'NA20870\t\t{"ENSG00000163093-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
+                           'NA20870\t\t{"ENSG00000135953-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
-                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163093",'
+                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000135953",'
                            ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}\n',
             },
             'new_data': [
                 # existing sample NA19675_1
-                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000163092', 'chr2', 167254166, 167258349, '*', 'XIRP2', 'psi3',
+                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000233750', 'chr2', 167254166, 167258349, '*', 'XIRP2', 'psi3',
                  1.56E-25, -4.9, -0.46, 166, 'fibroblasts', 0.03850364, 1, 20],
-                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132975168, '*', 'CHCHD3', 'psi5',
+                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000240361', 'chr7', 132885746, 132975168, '*', 'CHCHD3', 'psi5',
                  1.08E-56, -6.53, -0.85, 231, 'fibroblasts', 0.53953638, 1, 20],
                 # no matched individual NA19675_D3
-                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
                 # a new sample NA20888
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                ['NA20888', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
                 # a project mismatched sample NA20878
-                ['NA20878', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3',
+                ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3',
                  1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
@@ -775,11 +775,11 @@ class DataManagerAPITest(AuthenticationTestCase):
                 models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'type', 'p_value', 'z_score', 'delta_psi',
                                    'read_count', 'rare_disease_samples_with_junction', 'rare_disease_samples_total')),
             'expected_models_json': [
-                ('ENSG00000163092', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
-                ('ENSG00000106554', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 1, 20)
+                ('ENSG00000233750', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
+                ('ENSG00000240361', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 1, 20)
             ],
             'sample_guid': RNA_SPLICE_SAMPLE_GUID,
-            'row_id': 'ENSG00000106554-7-132885746-132886973-*-psi5',
+            'row_id': 'ENSG00000240361-7-132885746-132886973-*-psi5',
         },
     }
 
@@ -870,6 +870,13 @@ class DataManagerAPITest(AuthenticationTestCase):
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {'error': 'Unable to find matches for the following samples: NA19675_D3'})
+
+                unknown_gene_id_row1 = loaded_data_row[:2] + ['NOT_A_GENE_ID1'] + loaded_data_row[3:]
+                unknown_gene_id_row2 = loaded_data_row[:2] + ['NOT_A_GENE_ID2'] + loaded_data_row[3:]
+                _set_file_iter_stdout([header, unknown_gene_id_row1, unknown_gene_id_row2])
+                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json()['errors'][0], 'Unknown Gene IDs: NOT_A_GENE_ID1, NOT_A_GENE_ID2')
 
                 mapping_body = {'mappingFile': {'uploadedFileId': 'map.tsv'}}
                 mapping_body.update(body)

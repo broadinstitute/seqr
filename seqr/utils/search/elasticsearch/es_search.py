@@ -13,11 +13,11 @@ from seqr.models import Sample, Individual
 from seqr.utils.search.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, NEW_SV_FIELD, ALL_DATA_TYPES
 from seqr.utils.search.elasticsearch.constants import X_LINKED_RECESSIVE, \
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
-    SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
+    SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_RESPONSE_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, \
-    PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
+    PREDICTION_FIELD_LOOKUP, MULTI_FIELD_PREDICTORS, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
     PATH_FREQ_OVERRIDE_CUTOFF, AFFECTED, UNAFFECTED, HAS_ALT, \
     get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS, SCREEN_KEY, MAX_INDEX_SEARCHES, PREFILTER_SEARCH_SIZE
 from seqr.utils.logging_utils import SeqrLogger
@@ -284,11 +284,33 @@ class EsSearch(object):
                 self._filter(Q(q_dict))
 
     def _filter_by_in_silico(self, in_silico_filters):
-        in_silico_filters = in_silico_filters or {}
+        in_silico_filters = deepcopy(in_silico_filters or {})
         require_score = in_silico_filters.pop('requireScore', False)
         in_silico_filters = {k: v for k, v in in_silico_filters.items() if v is not None and len(v) != 0}
         if in_silico_filters:
-            self._filter(_in_silico_filter(in_silico_filters, require_score=require_score))
+            self._filter(self._in_silico_filter(in_silico_filters, require_score=require_score))
+
+    def _in_silico_filter(self, in_silico_filters, require_score):
+        prediction_key_lookup = {
+            in_silico_filter: PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
+            for in_silico_filter in in_silico_filters.keys()
+        }
+
+        multi_predictor_fields = {
+            in_silico_filter: MULTI_FIELD_PREDICTORS[in_silico_filter.lower()]
+            for in_silico_filter in in_silico_filters.keys() if in_silico_filter.lower() in MULTI_FIELD_PREDICTORS
+        }
+        if multi_predictor_fields:
+            all_fields = set()
+            for metadata in self.index_metadata.values():
+                all_fields.update(metadata['fields'])
+            index_fields = {
+                k: next(field for field in fields if field in all_fields)
+                for k, fields in multi_predictor_fields.items()
+            }
+            prediction_key_lookup.update(index_fields)
+
+        return _in_silico_filter({prediction_key_lookup[k]: v for k, v in in_silico_filters.items()}, require_score)
 
     def _filter_by_frequency(self, frequencies):
         frequencies = {pop: v for pop, v in (frequencies or {}).items() if pop in POPULATIONS}
@@ -339,7 +361,7 @@ class EsSearch(object):
             filters.append(pathogenicity_filter)
         splice_ai = self._consequence_overrides.get(SPLICE_AI_FIELD)
         if splice_ai:
-            filters.append(_in_silico_filter({SPLICE_AI_FIELD: splice_ai}, require_score=True))
+            filters.append(self._in_silico_filter({SPLICE_AI_FIELD: splice_ai}, require_score=True))
         screen = self._consequence_overrides.get(SCREEN_KEY)
         if screen:
             filters.append(Q('terms', screen_region_type=screen))
@@ -800,7 +822,8 @@ class EsSearch(object):
             'selectedMainTranscriptId': selected_main_transcript_id,
             'populations': populations,
             'predictions': _get_field_values(
-                hit, PREDICTION_FIELDS_CONFIG, format_response_key=get_prediction_response_key
+                hit, PREDICTION_FIELDS_RESPONSE_CONFIG, format_response_key=get_prediction_response_key,
+                get_addl_fields=lambda field: MULTI_FIELD_PREDICTORS.get(field, [])
             ),
             'transcripts': dict(transcripts),
         })
@@ -1390,7 +1413,9 @@ def _location_filter(genes, intervals, exclude_locations):
                     }
                 } for key in ['xpos', 'xstop']]
                 interval_q = _build_or_filter('range', range_filters)
-                interval_q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop})
+                interval_q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop}) & \
+                              Q('range', xpos={'gte': get_xpos(interval['chrom'], MIN_POS)}) & \
+                              Q('range', xstop={'lte': get_xpos(interval['chrom'], MAX_POS)})
 
             if q:
                 q |= interval_q
@@ -1468,8 +1493,7 @@ def _annotations_filter(vep_consequences):
 
 def _in_silico_filter(in_silico_filters, require_score):
     in_silico_qs = []
-    for in_silico_filter, value in in_silico_filters.items():
-        prediction_key = PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
+    for prediction_key, value in in_silico_filters.items():
         try:
             score_q = Q('range', **{prediction_key: {'gte': float(value)}})
         except ValueError:
@@ -1533,7 +1557,7 @@ def _parse_es_sort(sort, sort_config):
 
 def _get_field_values(hit, field_configs, format_response_key=_to_camel_case, get_addl_fields=None, lookup_field_prefix='', existing_fields=None, skip_fields=None):
     return {
-        field_config.get('response_key', format_response_key(field)): _value_if_has_key(
+        field_config.get('response_key') or format_response_key(field): _value_if_has_key(
             hit,
             (get_addl_fields(field) if get_addl_fields else []) +
             ['{}_{}'.format(lookup_field_prefix, field) if lookup_field_prefix else field],

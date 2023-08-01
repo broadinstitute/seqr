@@ -6,6 +6,7 @@ from django.db import transaction
 from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 
+from hail_search.test_utils import HAIL_BACKEND_SINGLE_FAMILY_VARIANTS
 from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
 from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
@@ -23,7 +24,7 @@ SEARCH_HASH = 'd380ed0fd28c3127d07a64ea2ba907d7'
 SEARCH = {'filters': {}, 'inheritance': None}
 PROJECT_FAMILIES = [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1', 'F000002_2']}]
 
-VARIANTS_WITH_DISCOVERY_TAGS = deepcopy(VARIANTS)
+VARIANTS_WITH_DISCOVERY_TAGS = deepcopy(VARIANTS + HAIL_BACKEND_SINGLE_FAMILY_VARIANTS)
 DISCOVERY_TAGS = [{
     'savedVariant': {
         'variantGuid': 'SV0000006_1248367227_r0003_tes',
@@ -74,7 +75,7 @@ EXPECTED_LIRICAL_DATA = [
 ]
 
 EXPECTED_SEARCH_RESPONSE = {
-    'searchedVariants': VARIANTS,
+    'searchedVariants': VARIANTS + HAIL_BACKEND_SINGLE_FAMILY_VARIANTS,
     'savedVariantsByGuid': {
         'SV0000001_2103343353_r0390_100': expected_detail_saved_variant,
         'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT,
@@ -84,7 +85,7 @@ EXPECTED_SEARCH_RESPONSE = {
     'search': {
         'search': SEARCH,
         'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': mock.ANY}],
-        'totalResults': 3,
+        'totalResults': 5,
     },
     'variantTagsByGuid': {
         'VT1708633_2103343353_r0390_100': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
@@ -131,7 +132,7 @@ EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE.update(deepcopy(EXPECTED_SEARCH_RESPONSE
 
 def _get_es_variants(results_model, **kwargs):
     results_model.save()
-    return deepcopy(VARIANTS), len(VARIANTS)
+    return deepcopy(VARIANTS + HAIL_BACKEND_SINGLE_FAMILY_VARIANTS), len(VARIANTS + HAIL_BACKEND_SINGLE_FAMILY_VARIANTS)
 
 
 def _get_empty_es_variants(results_model, **kwargs):
@@ -373,16 +374,26 @@ class VariantSearchAPITest(object):
              'gnomad_exomes_freq', 'topmed_freq', 'cadd', 'revel', 'eigen', 'splice_ai', 'polyphen', 'sift', 'muttaster', 'fathmm',
              'rsid', 'hgvsc', 'hgvsp', 'clinvar_clinical_significance', 'clinvar_gold_stars', 'filter', 'family_id_1',
              'tags_1', 'notes_1', 'family_id_2', 'tags_2', 'notes_2', 'sample_1', 'num_alt_alleles_1', 'gq_1', 'ab_1',
-             'sample_2', 'num_alt_alleles_2', 'gq_2', 'ab_2'],
+             'sample_2', 'num_alt_alleles_2', 'gq_2', 'ab_2', 'sample_3', 'num_alt_alleles_3', 'gq_3', 'ab_3'],
             ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '0.13', '', '0.007', '', '', '', '', '', '', '', '', '',
              '', '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '1',
              'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', 'NA19675', '1', '46.0',
-             '0.702127659574', 'NA19679', '0', '99.0', '0.0'],
+             '0.702127659574', 'NA19679', '0', '99.0', '0.0', '', '', '', ''],
             ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-             '1', '', '', '', '', '', 'NA19679', '0', '99.0', '0.0', '', '', '', ''],
+             '1', '', '', '', '', '', 'NA19679', '0', '99.0', '0.0', '', '', '', '', '', '', '', ''],
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
              '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '', '', '',
-             '', '', '', '', '']]
+             '', '', '', '', '', '', '', '', ''],
+            ['1', '11794419', 'T', 'G', '', 'missense_variant', '', '0.29499998688697815', '0.2633855640888214',
+             '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
+             '2.000999927520752', '0.0', '', 'tolerated', '', 'damaging', 'rs1801131', 'ENST00000376585.6:c.1409A>C',
+             'ENSP00000365770.1:p.Glu470Ala', '', '1', '', '2', '', '', '', '', '', 'HG00731', '2', '99', '1.0',
+             'HG00732', '0', '40', '0.0', 'HG00733', '1', '99', '0.625'],
+            ['1', '91502721', 'G', 'A', '', 'intron_variant', '', '0.0', '0.38041073083877563', '0.0',
+             '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '', '',
+             '', 'rs13447464', 'ENST00000428239.5:c.115+890G>A', '', '', '', '', '2', '', '', '', '', '', 'HG00731',
+             '1', '99', '1.0', 'HG00732', '0', '99', '0.4594594594594595', 'HG00733', '1', '99', '0.4074074074074074'],
+        ]
         self.assertEqual(response.content, ('\n'.join(['\t'.join(line) for line in expected_content])+'\n').encode('utf-8'))
 
         # test export with max families
@@ -393,17 +404,31 @@ class VariantSearchAPITest(object):
                 ['chrom', 'pos', 'ref', 'alt', 'gene', 'worst_consequence', 'callset_freq', 'exac_freq', 'gnomad_genomes_freq',
                  'gnomad_exomes_freq', 'topmed_freq', 'cadd', 'revel', 'eigen', 'splice_ai', 'polyphen', 'sift', 'muttaster', 'fathmm',
                  'rsid', 'hgvsc', 'hgvsp', 'clinvar_clinical_significance', 'clinvar_gold_stars', 'filter', 'family_id_1',
-                 'tags_1', 'notes_1', 'sample_1', 'num_alt_alleles_1', 'gq_1', 'ab_1',],
+                 'tags_1', 'notes_1', 'sample_1', 'num_alt_alleles_1', 'gq_1', 'ab_1', 'sample_2', 'num_alt_alleles_2',
+                 'gq_2', 'ab_2', 'sample_3', 'num_alt_alleles_3', 'gq_3', 'ab_3'],
                 ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '0.13', '', '0.007', '', '', '', '', '', '', '', '', '', '',
                  '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '1',
-                 'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', 'NA19675', '1', '46.0', '0.702127659574',],
+                 'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', 'NA19675', '1', '46.0', '0.702127659574',
+                 '', '', '', '', '', '', '', '',],
                 ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '0.13', '', '0.007', '', '', '', '', '', '', '', '', '', '',
                  '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '2', '', '',
-                 'NA19679', '0', '99.0', '0.0'],
+                 'NA19679', '0', '99.0', '0.0', '', '', '', '', '', '', '', '',],
                 ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-                 '1', '', '', 'NA19679', '0', '99.0', '0.0',],
+                 '1', '', '', 'NA19679', '0', '99.0', '0.0', '', '', '', '', '', '', '', '',],
                 ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-                 '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '',]]
+                 '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)',
+                 '', '', '', '', '', '', '', '', '', '', '', '',],
+                ['1', '11794419', 'T', 'G', '', 'missense_variant', '', '0.29499998688697815', '0.2633855640888214',
+                 '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
+                 '2.000999927520752', '0.0', '', 'tolerated', '', 'damaging', 'rs1801131', 'ENST00000376585.6:c.1409A>C',
+                 'ENSP00000365770.1:p.Glu470Ala', '', '1', '', '2', '', '', 'HG00731', '2', '99', '1.0',
+                 'HG00732', '0', '40', '0.0', 'HG00733', '1', '99', '0.625'],
+                ['1', '91502721', 'G', 'A', '', 'intron_variant', '', '0.0', '0.38041073083877563', '0.0',
+                 '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '',
+                 '', '', 'rs13447464', 'ENST00000428239.5:c.115+890G>A', '', '', '', '', '2', '', '', 'HG00731',
+                 '1', '99', '1.0', 'HG00732', '0', '99', '0.4594594594594595', 'HG00733', '1', '99',
+                 '0.4074074074074074'],
+            ]
             self.assertEqual(response.content,
                              ('\n'.join(['\t'.join(line) for line in expected_content]) + '\n').encode('utf-8'))
 
@@ -497,7 +522,7 @@ class VariantSearchAPITest(object):
             results_model.save()
             self.assertSetEqual(expected_searched_families, {f.guid for f in results_model.families.all()})
             matched_variants = [
-                deepcopy(variant) for variant in VARIANTS
+                deepcopy(variant) for variant in VARIANTS + HAIL_BACKEND_SINGLE_FAMILY_VARIANTS
                 if any(family_guid in expected_searched_families for family_guid in variant['familyGuids'])
             ]
             return matched_variants, len(matched_variants)
@@ -573,7 +598,7 @@ class VariantSearchAPITest(object):
         self.assertDictEqual(response_json['search'], {
             'search': SEARCH,
             'projectFamilies': [{'projectGuid': 'R0003_test', 'familyGuids': mock.ANY}],
-            'totalResults': 3,
+            'totalResults': 5,
         })
         self.assertSetEqual(
             {'F000011_11', 'F000012_12'}, set(response_json['search']['projectFamilies'][0]['familyGuids']))

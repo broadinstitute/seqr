@@ -71,8 +71,14 @@ const clinvarUrl = (clinvar) => {
   return baseUrl + variantPath
 }
 
-const clinvarLabel = (pathogenicity, assertions) => {
+const clinvarLabel = (pathogenicity, assertions, conflictingPathogenicities) => {
   let label = snakecaseToTitlecase(pathogenicity)
+  if (conflictingPathogenicities && conflictingPathogenicities.length) {
+    const conflictingLabels = conflictingPathogenicities.map(
+      ({ pathogenicity: conflictingPath, count }) => `${snakecaseToTitlecase(conflictingPath)} (${count})`,
+    )
+    label = `${label} [${conflictingLabels.join('; ')}]`
+  }
   if (assertions && assertions.length) {
     label = `${label} (${assertions.map(snakecaseToTitlecase).join(', ')})`
   }
@@ -85,7 +91,7 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
   if ((clinvar.clinicalSignificance || clinvar.pathogenicity) && (clinvar.variationId || clinvar.alleleId)) {
     const { pathogenicity: clinvarPathogenicity, assertions, severity } = clinvarSignificance(clinvar)
     pathogenicity.push(['ClinVar', {
-      label: clinvarLabel(clinvarPathogenicity, assertions),
+      label: clinvarLabel(clinvarPathogenicity, assertions, clinvar.conflictingPathogenicities),
       color: clinvarColor(severity, 'red', 'orange', 'green'),
       href: clinvarUrl(clinvar),
       goldStars: clinvar.goldStars,

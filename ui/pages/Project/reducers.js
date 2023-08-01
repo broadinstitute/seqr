@@ -370,7 +370,10 @@ export const updateFamiliesTable = (updates, tableName) => (
   { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }
 )
 
-export const updateFamiliesTableFilters = updates => ({ type: UPDATE_FAMILY_TABLE_FILTER_STATE, updates })
+export const updateFamiliesTableFilters = updates => (dispatch, getState) => {
+  const { currentProjectGuid } = getState()
+  dispatch({ type: UPDATE_FAMILY_TABLE_FILTER_STATE, updatesById: { [currentProjectGuid]: updates } })
+}
 
 export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
 
@@ -396,7 +399,7 @@ export const reducers = {
     familiesSortOrder: SORT_BY_FAMILY_NAME,
     familiesSortDirection: 1,
   }, false),
-  familyTableFilterState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_FILTER_STATE),
+  familyTableFilterState: createObjectsByIdReducer(UPDATE_FAMILY_TABLE_FILTER_STATE),
   caseReviewTableState: createSingleObjectReducer(UPDATE_CASE_REVIEW_TABLE_STATE, {
     familiesFilter: SHOW_IN_REVIEW,
     familiesSortOrder: SORT_BY_FAMILY_ADDED_DATE,
