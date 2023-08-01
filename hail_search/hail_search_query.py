@@ -90,8 +90,7 @@ class BaseHailTableQuery(object):
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
             }),
             'predictions': lambda r: hl.struct(**{
-                prediction: hl.array(enums[path[0]][path[1]])[r[path[0]][f'{path[1]}_id']]
-                if enums.get(path[0], {}).get(path[1]) else r[path[0]][path[1]]
+                prediction: self._format_prediction(r, path, enums)
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
             'transcripts': lambda r: hl.or_else(
@@ -121,6 +120,16 @@ class BaseHailTableQuery(object):
             response_key: hl.or_else(r[pop_field][field], '' if response_key == 'id' else 0)
             for response_key, field in pop_config.items() if field is not None
         })
+
+    @staticmethod
+    def _format_prediction(r, path, enums):
+        pred_enum = enums.get(path[0], {}).get(path[1])
+        if pred_enum:
+            return hl.array(pred_enum)[r[path[0]][f'{path[1]}_id']]
+        value = r[path[0]][path[1]]
+        if len(path) > 2:
+            value = path[2](value)
+        return value
 
     @classmethod
     def _annotate_transcript(cls, *args):
@@ -947,13 +956,13 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ']}
     POPULATION_FIELDS = {'seqr': 'gt_stats'}
     PREDICTION_FIELDS_CONFIG = {
-        'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),
-        'mut_pred': ('dbnsfp', 'MutPred_score'),
+        'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),  # TODO missing
+        'mut_pred': ('dbnsfp', 'MutPred_score'),  # TODO missing
         'mut_taster': ('dbnsfp', 'MutationTaster_pred'),
-        'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),
-        'revel': ('dbnsfp', 'REVEL_score'),
+        'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),   # TODO missing
+        'revel': ('dbnsfp', 'REVEL_score'),   # TODO missing
         'sift': ('dbnsfp', 'SIFT_pred'),
-        'vest': ('dbnsfp', 'VEST4_score'),
+        'vest': ('dbnsfp', 'VEST4_score'),   # TODO missing
     }
     OMIT_TRANSCRIPT_FIELDS = ['consequence_terms']
     ANNOTATION_OVERRIDE_FIELDS = [CLINVAR_KEY]
@@ -1212,7 +1221,7 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
         'apogee': ('mitimpact', 'score'),
         'hmtvar': ('hmtvar', 'score'),
         'mitotip': ('mitotip', 'trna_prediction'),
-        'haplogroup_defining': ('haplogroup', 'is_defining'),
+        'haplogroup_defining': ('haplogroup', 'is_defining', lambda v: hl.or_missing(v, 'Y')),
     }
     PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     BASE_ANNOTATION_FIELDS = {
@@ -1511,7 +1520,7 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
     def _custom_transmute_expressions(cls, ht, to_merge):
         if 'gt_stats' not in to_merge:
             return {}
-
+        # TODO no hom for mito
         gs, mito_gs = (ht.gt_stats, ht.gt_stats_1) if 'AF_hom' in ht.gt_stats_1.dtype else (ht.gt_stats_1, ht.gt_stats)
         return {
             'gt_stats': cls._merge_structs(gs, mito_gs.rename({'AF_hom': 'AF', 'AC_hom': 'AC'}))
