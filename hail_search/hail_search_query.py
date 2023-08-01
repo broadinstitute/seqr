@@ -240,10 +240,10 @@ class BaseHailTableQuery(object):
                         project_ht, sample_data=project_sample_data, table_name=project_guid, **family_filter_kwargs))
                 except HTTPBadRequest as e:
                     logger.info(f'Skipped {project_guid}: {e}')
-                    exception_messages.add(str(e))
+                    exception_messages.add(e.reason)
 
             if len(filtered_project_hts) < 1:
-                raise HTTPBadRequest(text='; '.join(exception_messages))
+                raise HTTPBadRequest(reason='; '.join(exception_messages))
 
             families_ht = filtered_project_hts[0]
             for project_ht in filtered_project_hts[1:]:
@@ -346,7 +346,7 @@ class BaseHailTableQuery(object):
         missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
         if missing_samples:
             raise HTTPBadRequest(
-                text=f'The following samples are available in seqr but missing the loaded data: {", ".join(missing_samples)}'
+                reason=f'The following samples are available in seqr but missing the loaded data: {", ".join(missing_samples)}'
             )
 
         affected_id_map = {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID}
@@ -515,7 +515,7 @@ class BaseHailTableQuery(object):
             ) for interval in intervals]
             invalid_intervals = [raw_intervals[i] for i, interval in enumerate(intervals) if interval is None]
             if invalid_intervals:
-                raise HTTPBadRequest(text=f'Invalid intervals: {", ".join(invalid_intervals)}')
+                raise HTTPBadRequest(reason=f'Invalid intervals: {", ".join(invalid_intervals)}')
         return intervals
 
     def _parse_overrides(self, pathogenicity, annotations, annotations_secondary):
