@@ -10,7 +10,7 @@ async-timeout==4.0.2
     # via redis
 cachetools==5.3.0
     # via google-auth
-certifi==2022.12.7
+certifi==2023.7.22
     # via
     #   elasticsearch
     #   requests
