@@ -46,6 +46,13 @@ FAMILY_5_SAMPLE = {
     'sample_id': 'NA20874', 'individual_guid': 'I000009_na20874', 'family_guid': 'F000005_5', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M',
 }
 ALL_AFFECTED_SAMPLE_DATA['VARIANTS'].append(FAMILY_5_SAMPLE)
+FAMILY_11_SAMPLE = {
+    'sample_id': 'NA20885', 'individual_guid': 'I000015_na20885', 'family_guid': 'F000011_11', 'project_guid': 'R0003_test', 'affected': 'A', 'sex': 'M',
+}
+MULTI_PROJECT_SAMPLE_DATA = deepcopy(FAMILY_2_VARIANT_SAMPLE_DATA)
+MULTI_PROJECT_SAMPLE_DATA['VARIANTS'].append(FAMILY_11_SAMPLE)
+MULTI_PROJECT_MISSING_SAMPLE_DATA = deepcopy(FAMILY_2_MISSING_SAMPLE_DATA)
+MULTI_PROJECT_MISSING_SAMPLE_DATA['VARIANTS'].append(FAMILY_11_SAMPLE)
 
 VARIANT1 = {
     'variantId': '1-10439-AC-A',
