@@ -161,12 +161,11 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 60, 'affected_only': True},
-            omit_sample_type='SV_WES',
+            [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'}, omit_sample_type='SV_WES',
         )
 
         await self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40, 'affected_only': True, 'vcf_filter': 'pass'},
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 60, 'affected_only': True},
             omit_sample_type='SV_WES',
         )
 
