@@ -432,15 +432,7 @@ class BaseHailTableQuery(object):
         in_silico_qs = []
         missing_qs = []
         for in_silico, value in in_silico_filters.items():
-            score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
-            enum_lookup = self._get_enum_lookup(*score_path)
-            if enum_lookup is not None:
-                ht_value = self._ht[score_path.source][f'{score_path.field}_id']
-                score_filter = ht_value == enum_lookup[value]
-            else:
-                ht_value = self._ht[score_path.source][score_path.field]
-                score_filter = ht_value >= float(value)
-
+            score_filter, ht_value = self._get_in_silico_filter(in_silico, value)
             in_silico_qs.append(score_filter)
             if not require_score:
                 missing_qs.append(hl.is_missing(ht_value))
@@ -456,6 +448,18 @@ class BaseHailTableQuery(object):
             in_silico_q |= q
 
         self._ht = self._ht.filter(in_silico_q)
+
+    def _get_in_silico_filter(self, in_silico, value):
+        score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
+        enum_lookup = self._get_enum_lookup(*score_path)
+        if enum_lookup is not None:
+            ht_value = self._ht[score_path.source][f'{score_path.field}_id']
+            score_filter = ht_value == enum_lookup[value]
+        else:
+            ht_value = self._ht[score_path.source][score_path.field]
+            score_filter = ht_value >= float(value)
+
+        return score_filter, ht_value
 
     def _filter_by_annotations(self, pathogenicity, annotations, annotations_secondary):
         annotation_override_filters = self._get_annotation_override_filters(pathogenicity, annotations)
@@ -606,13 +610,11 @@ class VariantHailTableQuery(BaseHailTableQuery):
                 self._has_terms_range_expr('hgmd', 'class', hgmd, HGMD_PATH_RANGES)  # TODO
             )
         if annotations.get(SCREEN_KEY):
-            screen_enum = self._get_enum_lookup('screen', 'region_type')  # TODO
+            screen_enum = self._get_enum_lookup('screen', 'region_type')
             allowed_consequences = hl.set({screen_enum[c] for c in annotations[SCREEN_KEY]})
             annotation_filters.append(allowed_consequences.contains(self._ht.screen.region_type_ids.first()))
         if annotations.get(SPLICE_AI_FIELD):
-            splice_ai = float(annotations[SPLICE_AI_FIELD])
-            score_path = self.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
-            annotation_filters.append(self._ht[score_path.source][score_path.field] >= splice_ai)  # TODO shared
+            annotation_filters.append(self._get_in_silico_filter(SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD]))
 
         return annotation_filters
 
