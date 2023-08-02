@@ -422,10 +422,7 @@ class BaseHailTableQuery(object):
     def _filter_by_in_silico(self, in_silico_filters):
         in_silico_filters = in_silico_filters or {}
         require_score = in_silico_filters.get('requireScore', False)
-        in_silico_filters = {
-            k: v for k, v in in_silico_filters.items()
-            if k in self.PREDICTION_FIELDS_CONFIG and v is not None and len(v) != 0
-        }
+        in_silico_filters = {k: v for k, v in in_silico_filters.items() if k in self.PREDICTION_FIELDS_CONFIG and v}
         if not in_silico_filters:
             return
 
