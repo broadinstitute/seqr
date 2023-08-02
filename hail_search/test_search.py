@@ -181,6 +181,11 @@ class HailSearchTestCase(AioHTTPTestCase):
             omit_sample_type='SV_WES',
         )
 
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
+            omit_sample_type='SV_WES',
+        )
+
     async def test_search_missing_data(self):
         search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)
         async with self.client.request('POST', '/search', json=search_body) as resp:

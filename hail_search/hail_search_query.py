@@ -349,7 +349,7 @@ class BaseHailTableQuery(object):
                 if hemi_field:
                     pop_filters.append(pop_expr[hemi_field] <= freqs['hh'])
 
-            if pop_filters is not None:
+            if pop_filters:
                 pop_filter = pop_filters[0]
                 for pf in pop_filters[1:]:
                     pop_filter &= pf
