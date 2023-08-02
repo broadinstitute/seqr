@@ -6,7 +6,8 @@ import os
 
 from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, MALE, VARIANT_DATASET, \
     VARIANT_KEY_FIELD, GNOMAD_GENOMES_FIELD, XPOS, GENOME_VERSION_GRCh38_DISPLAY, INHERITANCE_FILTERS, \
-    ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF
+    ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF, \
+    ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -377,8 +378,10 @@ class BaseHailTableQuery(object):
     def get_x_chrom_filter(ht, x_interval):
         return x_interval.contains(ht.locus)
 
-    def _filter_annotated_table(self, frequencies=None, **kwargs):
+    def _filter_annotated_table(self, frequencies=None, pathogenicity=None, annotations=None, annotations_secondary=None, **kwargs):
         self._filter_by_frequency(frequencies)
+
+        self._filter_by_annotations(pathogenicity, annotations, annotations_secondary)
 
     def _filter_by_frequency(self, frequencies):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
@@ -410,6 +413,45 @@ class BaseHailTableQuery(object):
                 for pf in pop_filters[1:]:
                     pop_filter &= pf
                 self._ht = self._ht.filter(hl.is_missing(pop_expr) | pop_filter)
+
+    def _filter_by_annotations(self, pathogenicity, annotations, annotations_secondary):
+        annotation_override_filters = self._get_annotation_override_filters(pathogenicity, annotations)
+        annotation_override_filter = annotation_override_filters[0] if annotation_override_filters else False
+        for af in annotation_override_filters[1:]:
+            annotation_override_filter |= af
+
+        annotation_exprs = {
+            'override_consequences': annotation_override_filter,
+            'has_allowed_consequence': self._get_has_annotation_expr(annotations),
+            'has_allowed_secondary_consequence': self._get_has_annotation_expr(annotations_secondary),
+        }
+        self._ht = self._ht.annotate(**annotation_exprs)
+
+        filter_fields = [k for k, v in annotation_exprs.items() if v is not False]
+        if not filter_fields:
+            return
+        consequence_filter = ht[filter_fields[0]]
+        for field in filter_fields[1:]:
+            consequence_filter |= self._ht[field]
+        self._ht = self._ht.filter(consequence_filter)
+
+    def _get_annotation_override_filters(self, pathogenicity, annotations):
+        return []
+
+    def _get_has_annotation_expr(self, annotations):
+        allowed_consequences = {
+            ann for field, anns in annotations.items() for ann in anns
+            if anns and (field not in ANNOTATION_OVERRIDE_FIELDS)
+        }
+
+        consequence_enum = self._get_enum_lookup('sorted_transcript_consequences', 'consequence_term')
+        allowed_consequence_ids = {consequence_enum[c] for c in allowed_consequences if consequence_enum.get(c)}
+        if not allowed_consequence_ids:
+            return False
+
+        allowed_consequence_ids = hl.set(allowed_consequence_ids)
+        return self._ht.sorted_transcript_consequences.any(
+            lambda tc: allowed_consequence_ids.contains(tc.major_consequence_id))
 
     def _format_results(self, ht):
         annotations = {k: v(ht) for k, v in self.annotation_fields.items()}
@@ -463,8 +505,8 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'mpc': PredictionPath('mpc', 'MPC'),
         'mut_pred': PredictionPath('dbnsfp', 'MutPred_score'),
         'primate_ai': PredictionPath('primate_ai', 'score'),
-        'splice_ai': PredictionPath('splice_ai', 'delta_score'),
-        'splice_ai_consequence': PredictionPath('splice_ai', 'splice_consequence'),
+        SPLICE_AI_FIELD: PredictionPath(SPLICE_AI_FIELD, 'delta_score'),
+        'splice_ai_consequence': PredictionPath(SPLICE_AI_FIELD, 'splice_consequence'),
         'vest': PredictionPath('dbnsfp', 'VEST4_score'),
         'mut_taster': PredictionPath('dbnsfp', 'MutationTaster_pred'),
         'polyphen': PredictionPath('dbnsfp', 'Polyphen2_HVAR_pred'),
@@ -508,6 +550,28 @@ class VariantHailTableQuery(BaseHailTableQuery):
             'drop_fields': ['consequence_terms'],
         })
         return args
+
+    def _get_annotation_override_filters(self, pathogenicity, annotations):
+        annotation_filters = []
+
+        clinvar = (pathogenicity or {}).get('clinvar')
+        if clinvar:
+            annotation_filters.append(self._has_clivar_terms_expr(clinvar))  # TODO
+        hgmd = (pathogenicity or {}).get('hgmd')
+        if hgmd:
+            annotation_filters.append(
+                self._has_terms_range_expr('hgmd', 'class', hgmd, HGMD_PATH_RANGES)  # TODO
+            )
+        if annotations.get(SCREEN_KEY):
+            screen_enum = self._get_enum_lookup('screen', 'region_type')  # TODO
+            allowed_consequences = hl.set({screen_enum[c] for c in annotations[SCREEN_KEY]})
+            annotation_filters.append(allowed_consequences.contains(self._ht.screen.region_type_ids.first()))
+        if annotations.get(SPLICE_AI_FIELD):
+            splice_ai = float(annotations[SPLICE_AI_FIELD])
+            score_path = self.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
+            annotation_filters.append(self._ht[score_path.source][score_path.field] >= splice_ai)  # TODO shared
+
+        return annotation_filters
 
 
 QUERY_CLASS_MAP = {
