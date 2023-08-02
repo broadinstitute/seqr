@@ -422,7 +422,7 @@ class BaseHailTableQuery(object):
 
         annotation_exprs = {
             'override_consequences': annotation_override_filter,
-            'has_allowed_consequence': self._get_has_annotation_expr(annotations),
+            'has_allowed_consequence': self._get_has_annotation_expr(annotations),  # TODO reusable for selected_main_transcript_expr
             'has_allowed_secondary_consequence': self._get_has_annotation_expr(annotations_secondary),
         }
         self._ht = self._ht.annotate(**annotation_exprs)
