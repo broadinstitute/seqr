@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 PredictionPath = namedtuple('PredictionPath', ['source', 'field'])
+QualityFilterFormat = namedtuple('QualityFilterFormat', ['scale', 'override'], defaults=[None, None])
 
 
 def _to_camel_case(snake_case_str):
@@ -333,28 +334,35 @@ class BaseHailTableQuery(object):
     @classmethod
     def _get_genotype_passes_quality_filter(cls, quality_filter):
         affected_only = quality_filter.get('affected_only')
-        passes_quality = None
+        passes_quality_filters = []
         for filter_k, value in quality_filter.items():
             field = cls.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
             if field and value:
-                passes_quality = cls._get_genotype_passes_quality_field(field, value, affected_only, passes_quality)
+                passes_quality_filters.append(cls._get_genotype_passes_quality_field(field, value, affected_only))
+
+        if not passes_quality_filters:
+            return None
+
+        def passes_quality(gt):
+            pq = passes_quality_filters[0](gt)
+            for q in passes_quality_filters[1:]:
+                pq &= q(gt)
+            return pq
 
         return passes_quality
 
     @classmethod
-    def _get_genotype_passes_quality_field(cls, field, value, affected_only, filter_func):
-        field_config = cls.QUALITY_FILTER_FORMAT.get(field) or {}
-        if field_config.get('scale'):
-            value = value / field_config['scale']
+    def _get_genotype_passes_quality_field(cls, field, value, affected_only):
+        field_config = cls.QUALITY_FILTER_FORMAT.get(field) or QualityFilterFormat()
+        if field_config.scale:
+            value = value / field_config.scale
 
         def passes_quality_field(gt):
             is_valid = (gt[field] >= value) | hl.is_missing(gt[field])
-            if field_config.get('override'):
-                is_valid |= field_config['override'](gt)
+            if field_config.override:
+                is_valid |= field_config.override(gt)
             if affected_only:
                 is_valid |= gt.affected_id == UNAFFECTED_ID
-            if filter_func:
-                is_valid &= filter_func(gt)
             return is_valid
 
         return passes_quality_field
@@ -398,7 +406,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ', 'AB']}
     QUALITY_FILTER_FORMAT = {
-        'AB': {'override': lambda gt: ~gt.GT.is_het(), 'scale': 100},
+        'AB': QualityFilterFormat(override=lambda gt: ~gt.GT.is_het(), scale=100),
     }
     POPULATIONS = {
         'seqr': {'hom': 'hom', 'hemi': None, 'het': None},
