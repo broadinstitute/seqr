@@ -1,5 +1,6 @@
 from aiohttp.web import HTTPBadRequest
 from collections import defaultdict, namedtuple
+from functools import cached_property
 import hail as hl
 import logging
 import os
@@ -63,7 +64,6 @@ class BaseHailTableQuery(object):
         base_pop_config.update(pop_config)
         return base_pop_config
 
-    @property
     def annotation_fields(self):
         ht_globals = {k: hl.eval(self._ht[k]) for k in self.GLOBALS}
         enums = ht_globals.pop('enums')
@@ -135,7 +135,7 @@ class BaseHailTableQuery(object):
 
         return value
 
-    @property
+    @cached_property
     def should_add_chr_prefix(self):
         reference_genome = hl.get_reference(self._genome_version)
         return any(c.startswith('chr') for c in reference_genome.contigs)
@@ -477,7 +477,7 @@ class BaseHailTableQuery(object):
                 self._ht = self._ht.filter(hl.is_missing(pop_expr) | pop_filter)
 
     def _format_results(self, ht):
-        annotations = {k: v(ht) for k, v in self.annotation_fields.items()}
+        annotations = {k: v(ht) for k, v in self.annotation_fields().items()}
         annotations.update({
             '_sort': self._sort_order(ht),
             'genomeVersion': self._genome_version.replace('GRCh', ''),
