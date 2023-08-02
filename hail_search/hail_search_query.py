@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 PredictionPath = namedtuple('PredictionPath', ['source', 'field'])
+QualityFilterFormat = namedtuple('QualityFilterFormat', ['scale', 'override'], defaults=[None, None])
 
 
 def _to_camel_case(snake_case_str):
@@ -33,6 +34,7 @@ class BaseHailTableQuery(object):
     }
 
     GENOTYPE_FIELDS = {}
+    QUALITY_FILTER_FORMAT = {}
     POPULATIONS = {}
     POPULATION_FIELDS = {}
     POPULATION_KEYS = ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']
@@ -202,12 +204,24 @@ class BaseHailTableQuery(object):
         )
         self._filter_annotated_table(**kwargs)
 
-    def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, **kwargs):
+    def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, quality_filter=None,
+                              **kwargs):
         ht, sample_id_family_index_map = self._add_entry_sample_families(ht, sample_data)
 
         ht = self._filter_inheritance(
             ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map,
         )
+
+        quality_filter = quality_filter or {}
+        if quality_filter.get('vcf_filter'):
+            ht = self._filter_vcf_filters(ht)
+
+        passes_quality_filter = self._get_genotype_passes_quality_filter(quality_filter)
+        if passes_quality_filter is not None:
+            ht = ht.annotate(family_entries=ht.family_entries.map(
+                lambda entries: hl.or_missing(entries.all(passes_quality_filter), entries)
+            ))
+            ht = ht.filter(ht.family_entries.any(hl.is_defined))
 
         return ht.select_globals()
 
@@ -317,6 +331,46 @@ class BaseHailTableQuery(object):
         )
         return hl.or_missing(is_valid, entries)
 
+    @classmethod
+    def _get_genotype_passes_quality_filter(cls, quality_filter):
+        affected_only = quality_filter.get('affected_only')
+        passes_quality_filters = []
+        for filter_k, value in quality_filter.items():
+            field = cls.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
+            if field and value:
+                passes_quality_filters.append(cls._get_genotype_passes_quality_field(field, value, affected_only))
+
+        if not passes_quality_filters:
+            return None
+
+        def passes_quality(gt):
+            pq = passes_quality_filters[0](gt)
+            for q in passes_quality_filters[1:]:
+                pq &= q(gt)
+            return pq
+
+        return passes_quality
+
+    @classmethod
+    def _get_genotype_passes_quality_field(cls, field, value, affected_only):
+        field_config = cls.QUALITY_FILTER_FORMAT.get(field) or QualityFilterFormat()
+        if field_config.scale:
+            value = value / field_config.scale
+
+        def passes_quality_field(gt):
+            is_valid = (gt[field] >= value) | hl.is_missing(gt[field])
+            if field_config.override:
+                is_valid |= field_config.override(gt)
+            if affected_only:
+                is_valid |= gt.affected_id == UNAFFECTED_ID
+            return is_valid
+
+        return passes_quality_field
+
+    @staticmethod
+    def _filter_vcf_filters(ht):
+        return ht.filter(hl.is_missing(ht.filters) | (ht.filters.length() < 1))
+
     @staticmethod
     def get_x_chrom_filter(ht, x_interval):
         return x_interval.contains(ht.locus)
@@ -385,6 +439,9 @@ class BaseHailTableQuery(object):
 class VariantHailTableQuery(BaseHailTableQuery):
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ', 'AB']}
+    QUALITY_FILTER_FORMAT = {
+        'AB': QualityFilterFormat(override=lambda gt: ~gt.GT.is_het(), scale=100),
+    }
     POPULATIONS = {
         'seqr': {'hom': 'hom', 'hemi': None, 'het': None},
         'topmed': {'hemi': None},
