@@ -139,11 +139,12 @@ class BaseHailTableQuery(object):
         self._genome_version = genome_version
         self._sort = sort
         self._num_results = num_results
+        self._ht = None
 
         self._load_filtered_table(data_type, sample_data, **kwargs)
 
     def _load_filtered_table(self, data_type, sample_data, **kwargs):
-        self._ht = self.import_filtered_table(data_type, sample_data, **kwargs)
+        self.import_filtered_table(data_type, sample_data, **kwargs)
 
     def import_filtered_table(self, data_type, sample_data, **kwargs):
         tables_path = f'{DATASETS_DIR}/{self._genome_version}/{data_type}'
@@ -192,7 +193,7 @@ class BaseHailTableQuery(object):
         # Add globals
         ht = ht.join(hl.read_table(annotations_ht_path).head(0).select().select_globals(*self.GLOBALS), how='left')
 
-        ht = ht.transmute(
+        self._ht = ht.transmute(
             genotypes=ht.family_entries.flatmap(lambda x: x).filter(
                 lambda gt: hl.is_defined(gt.individualGuid)
             ).map(lambda gt: gt.select(
@@ -201,8 +202,7 @@ class BaseHailTableQuery(object):
                 **{k: gt[field] for k, field in self.GENOTYPE_FIELDS.items()}
             ))
         )
-
-        return ht
+        self._filter_annotated_table(**kwargs)
 
     def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, quality_filter=None,
                               **kwargs):
@@ -375,6 +375,40 @@ class BaseHailTableQuery(object):
     def get_x_chrom_filter(ht, x_interval):
         return x_interval.contains(ht.locus)
 
+    def _filter_annotated_table(self, frequencies=None, **kwargs):
+        self._filter_by_frequency(frequencies)
+
+    def _filter_by_frequency(self, frequencies):
+        frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
+        if not frequencies:
+            return
+
+        for pop, freqs in sorted(frequencies.items()):
+            pop_filters = []
+            pop_expr = self._ht[self.POPULATION_FIELDS.get(pop, pop)]
+            pop_config = self._format_population_config(self.POPULATIONS[pop])
+            if freqs.get('af') is not None:
+                af_field = pop_config.get('filter_af') or pop_config['af']
+                pop_filters.append(pop_expr[af_field] <= freqs['af'])
+            elif freqs.get('ac') is not None:
+                ac_field = pop_config['ac']
+                if ac_field:
+                    pop_filters.append(pop_expr[ac_field] <= freqs['ac'])
+
+            if freqs.get('hh') is not None:
+                hom_field = pop_config['hom']
+                hemi_field = pop_config['hemi']
+                if hom_field:
+                    pop_filters.append(pop_expr[hom_field] <= freqs['hh'])
+                if hemi_field:
+                    pop_filters.append(pop_expr[hemi_field] <= freqs['hh'])
+
+            if pop_filters:
+                pop_filter = pop_filters[0]
+                for pf in pop_filters[1:]:
+                    pop_filter &= pf
+                self._ht = self._ht.filter(hl.is_missing(pop_expr) | pop_filter)
+
     def _format_results(self, ht):
         annotations = {k: v(ht) for k, v in self.annotation_fields.items()}
         annotations.update({
@@ -462,8 +496,8 @@ class VariantHailTableQuery(BaseHailTableQuery):
     }
 
     def import_filtered_table(self, *args, **kwargs):
-        ht = super(VariantHailTableQuery, self).import_filtered_table(*args, **kwargs)
-        return ht.key_by(**{VARIANT_KEY_FIELD: ht.variant_id})
+        super(VariantHailTableQuery, self).import_filtered_table(*args, **kwargs)
+        self._ht = self._ht.key_by(**{VARIANT_KEY_FIELD: self._ht.variant_id})
 
     def _format_transcript_args(self):
         args = super(VariantHailTableQuery, self)._format_transcript_args()
