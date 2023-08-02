@@ -4,6 +4,7 @@ AFFECTED = 'A'
 UNAFFECTED = 'N'
 AFFECTED_ID = 0
 UNAFFECTED_ID = 1
+MALE = 'M'
 
 VARIANT_DATASET = 'VARIANTS'
 
@@ -11,3 +12,32 @@ VARIANT_KEY_FIELD = 'variantId'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
 
 XPOS = 'xpos'
+
+ALT_ALT = 'alt_alt'
+REF_REF = 'ref_ref'
+REF_ALT = 'ref_alt'
+HAS_ALT = 'has_alt'
+HAS_REF = 'has_ref'
+COMP_HET_ALT = 'COMP_HET_ALT'
+
+RECESSIVE = 'recessive'
+X_LINKED_RECESSIVE = 'x_linked_recessive'
+COMPOUND_HET = 'compound_het'
+ANY_AFFECTED = 'any_affected'
+RECESSIVE_FILTER = {
+    AFFECTED: ALT_ALT,
+    UNAFFECTED: HAS_REF,
+}
+INHERITANCE_FILTERS = {
+    RECESSIVE: RECESSIVE_FILTER,
+    X_LINKED_RECESSIVE: RECESSIVE_FILTER,
+    'homozygous_recessive': RECESSIVE_FILTER,
+    COMPOUND_HET: {
+        AFFECTED: COMP_HET_ALT,
+        UNAFFECTED: HAS_REF,
+    },
+    'de_novo': {
+        AFFECTED: HAS_ALT,
+        UNAFFECTED: REF_REF,
+    },
+}
