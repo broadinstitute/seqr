@@ -64,35 +64,25 @@ class BaseHailTableQuery(object):
         return base_pop_config
 
     @property
-    def ht_globals(self):
-        return {k: hl.eval(self._ht[k]) for k in self.GLOBALS if k != 'enums'}
-
-    @property
-    def enums(self):
-        return hl.eval(self._ht.enums)
-
-    @property
     def annotation_fields(self):
-        enums = self.enums
-
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
             }),
             'predictions': lambda r: hl.struct(**{
-                prediction: hl.array(enums[path.source][path.field])[r[path.source][f'{path.field}_id']]
-                if enums.get(path.source, {}).get(path.field) else r[path.source][path.field]
+                prediction: hl.array(self._enums[path.source][path.field])[r[path.source][f'{path.field}_id']]
+                if self._enums.get(path.source, {}).get(path.field) else r[path.source][path.field]
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
             'transcripts': lambda r: hl.or_else(
                 r.sorted_transcript_consequences, hl.empty_array(r.sorted_transcript_consequences.dtype.element_type)
             ).map(
-                lambda t: self._enum_field(t, enums['sorted_transcript_consequences'], **self._format_transcript_args())
+                lambda t: self._enum_field(t, self._enums['sorted_transcript_consequences'], **self._format_transcript_args())
             ).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
 
-        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], enums[k], ht_globals=self.ht_globals, **enum_config)
+        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], self._enums[k], globals=self._globals, **enum_config)
         annotation_fields.update({
             enum_config.get('response_key', k): format_enum(k, enum_config)
             for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
@@ -116,13 +106,13 @@ class BaseHailTableQuery(object):
         }
 
     def _get_enum_lookup(self, field, subfield):
-        enum_field = self.enums.get(field, {}).get(subfield)
+        enum_field = self._enums.get(field, {}).get(subfield)
         if enum_field is None:
             return None
         return {v: i for i, v in enumerate(enum_field)}
 
     @staticmethod
-    def _enum_field(value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, **kwargs):
+    def _enum_field(value, enum, globals=None, annotate_value=None, format_value=None, drop_fields=None, **kwargs):
         annotations = {}
         drop = [] + (drop_fields or [])
         value_keys = value.keys()
@@ -139,7 +129,7 @@ class BaseHailTableQuery(object):
 
         value = value.annotate(**annotations)
         if annotate_value:
-            annotations = annotate_value(value, enum, ht_globals)
+            annotations = annotate_value(value, enum, globals)
             value = value.annotate(**annotations)
         value = value.drop(*drop)
 
@@ -153,6 +143,8 @@ class BaseHailTableQuery(object):
         self._sort = sort
         self._num_results = num_results
         self._ht = None
+        self._enums = None
+        self._globals = None
 
         self._load_filtered_table(data_type, sample_data, **kwargs)
 
@@ -203,8 +195,11 @@ class BaseHailTableQuery(object):
         annotation_ht_query_result = hl.query_table(
             annotations_ht_path, families_ht.key).first().drop(*families_ht.key)
         ht = families_ht.annotate(**annotation_ht_query_result)
-        # Add globals
-        ht = ht.join(hl.read_table(annotations_ht_path).head(0).select().select_globals(*self.GLOBALS), how='left')
+
+        # Get globals
+        annotation_globals_ht = hl.read_table(annotations_ht_path).head(0).select()
+        self._globals = {k: hl.eval(annotation_globals_ht[k]) for k in self.GLOBALS}
+        self._enums = self._globals.pop('enums')
 
         self._ht = ht.transmute(
             genotypes=ht.family_entries.flatmap(lambda x: x).filter(
@@ -535,11 +530,11 @@ class VariantHailTableQuery(BaseHailTableQuery):
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
-        'clinvar': {'annotate_value': lambda value, enum, ht_globals: {
+        'clinvar': {'annotate_value': lambda value, enum, globals: {
             'conflictingPathogenicities': value.conflictingPathogenicities.map(
                 lambda p: VariantHailTableQuery._enum_field(p, {k: enum[k] for k in ['pathogenicity']})
             ),
-            'version': ht_globals['versions'].clinvar,
+            'version': globals['versions'].clinvar,
         }},
         'hgmd': {},
         'screen': {
