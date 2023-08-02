@@ -151,6 +151,37 @@ class HailSearchTestCase(AioHTTPTestCase):
         await self._assert_expected_search(
             [VARIANT2, VARIANT3], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 
+    async def test_quality_filter(self):
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'vcf_filter': 'pass'}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 60, 'affected_only': True},
+            omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, FAMILY_3_VARIANT], quality_filter={'min_ab': 50}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, VARIANT3], quality_filter={'min_ab': 70, 'affected_only': True},
+            omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, FAMILY_3_VARIANT], quality_filter={'min_gq': 40, 'min_ab': 50}, omit_sample_type='SV_WES',
+        )
+
     async def test_frequency_filter(self):
         await self._assert_expected_search(
             [VARIANT1, VARIANT4], frequencies={'seqr': {'af': 0.2}}, omit_sample_type='SV_WES',
