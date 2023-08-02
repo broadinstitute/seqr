@@ -9,9 +9,8 @@ from seqr.models import Family
 from seqr.utils.search.utils import get_variant_query_gene_counts, query_variants, get_single_variant, \
     get_variants_for_variant_ids, InvalidSearchException
 from seqr.utils.search.search_utils_tests import SearchTestHelper, MOCK_COUNTS
-from seqr.views.utils.test_utils import PARSED_VARIANTS
-from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, FAMILY_3_SAMPLE, \
-    ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA
+from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
+    FAMILY_2_ALL_SAMPLE_DATA, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS
 
 MOCK_HOST = 'http://test-hail-host'
 
@@ -24,7 +23,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     def setUp(self):
         super(HailSearchUtilsTests, self).set_up()
         responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={
-            'results': PARSED_VARIANTS, 'total': 5,
+            'results': HAIL_BACKEND_VARIANTS, 'total': 5,
         })
 
     def _test_minimal_search_call(self, **kwargs):
@@ -62,15 +61,15 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     @responses.activate
     def test_query_variants(self):
         variants, total = query_variants(self.results_model, user=self.user)
-        self.assertListEqual(variants, PARSED_VARIANTS)
+        self.assertListEqual(variants, HAIL_BACKEND_VARIANTS)
         self.assertEqual(total, 5)
-        self.assert_cached_results({'all_results': PARSED_VARIANTS, 'total_results': 5})
+        self.assert_cached_results({'all_results': HAIL_BACKEND_VARIANTS, 'total_results': 5})
         self._test_expected_search_call()
 
         variants, _ = query_variants(
             self.results_model, user=self.user, sort='cadd', skip_genotype_filter=True, page=2, num_results=1,
         )
-        self.assertListEqual(variants, PARSED_VARIANTS[1:])
+        self.assertListEqual(variants, HAIL_BACKEND_VARIANTS[1:])
         self._test_expected_search_call(sort='cadd', num_results=2)
 
         self.search_model.search['locus'] = {'rawVariantItems': '1-248367227-TC-T,2-103343353-GAGA-G'}
@@ -172,7 +171,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     @responses.activate
     def test_get_single_variant(self):
         variant = get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user)
-        self.assertDictEqual(variant, PARSED_VARIANTS[0])
+        self.assertDictEqual(variant, HAIL_BACKEND_VARIANTS[0])
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
             num_results=1, sample_data=ALL_AFFECTED_SAMPLE_DATA, omit_sample_type='SV_WES')
@@ -183,16 +182,16 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='VARIANTS')
 
         with self.assertRaises(InvalidSearchException) as cm:
-            get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
+            get_single_variant(self.families, '1-91502721-G-A', user=self.user, return_all_queried_families=True)
         self.assertEqual(
             str(cm.exception),
-            'Unable to return all families for the following variants: 1-248367227-TC-T (F000002_2; F000005_5), 2-103343353-GAGA-G (F000005_5)',
+            'Unable to return all families for the following variants: 1-11794419-T-G (F000003_3; F000005_5), 1-91502721-G-A (F000005_5)',
         )
 
-        get_single_variant(self.families.filter(guid='F000003_3'), '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
+        get_single_variant(self.families.filter(guid='F000002_2'), '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
-            num_results=1, sample_data={'VARIANTS': [FAMILY_3_SAMPLE]})
+            num_results=1, sample_data=FAMILY_2_ALL_SAMPLE_DATA)
 
         responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={'results': [], 'total': 0})
         with self.assertRaises(InvalidSearchException) as cm:
