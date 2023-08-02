@@ -1,6 +1,5 @@
 from aiohttp.web import HTTPBadRequest
 from collections import defaultdict, namedtuple
-from functools import cached_property
 import hail as hl
 import logging
 import os
@@ -135,11 +134,6 @@ class BaseHailTableQuery(object):
 
         return value
 
-    @cached_property
-    def should_add_chr_prefix(self):
-        reference_genome = hl.get_reference(self._genome_version)
-        return any(c.startswith('chr') for c in reference_genome.contigs)
-
     def __init__(self, data_type, sample_data, genome_version, sort=XPOS, num_results=100, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
@@ -149,7 +143,7 @@ class BaseHailTableQuery(object):
         self._load_filtered_table(data_type, sample_data, **kwargs)
 
     def _load_filtered_table(self, data_type, sample_data, intervals=None, exclude_intervals=False, variant_ids=None, **kwargs):
-        parsed_intervals = self._parse_intervals(intervals, variant_ids)
+        parsed_intervals, variant_ids = self._parse_intervals(intervals, variant_ids)
         excluded_intervals = None
         if exclude_intervals:
             excluded_intervals = parsed_intervals
@@ -398,8 +392,6 @@ class BaseHailTableQuery(object):
         if len(variant_ids) == 1:
             variant_id_q = ht.alleles == [variant_ids[0][2], variant_ids[0][3]]
         else:
-            if self.should_add_chr_prefix:
-                variant_ids = [(f'chr{chr}', *v_id) for chr, *v_id in variant_ids]
             variant_id_qs = [
                 (ht.locus == hl.locus(chrom, pos, reference_genome=self._genome_version)) &
                 (ht.alleles == [ref, alt])
@@ -432,18 +424,32 @@ class BaseHailTableQuery(object):
         return f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
 
     def _parse_intervals(self, intervals, variant_ids):
+        if not (intervals or variant_ids):
+            return intervals, variant_ids
+
+        reference_genome = hl.get_reference(self._genome_version)
+        should_add_chr_prefix = any(c.startswith('chr') for c in reference_genome.contigs)
+
+        raw_intervals = intervals
         if variant_ids:
+            if should_add_chr_prefix:
+                variant_ids = [(f'chr{chr}', *v_id) for chr, *v_id in variant_ids]
             intervals = [f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
-        if intervals:
-            raw_intervals = intervals
-            intervals = [hl.eval(hl.parse_locus_interval(
-                self._formatted_chr_interval(interval) if self.should_add_chr_prefix else interval,
-                reference_genome=self._genome_version, invalid_missing=True)
-            ) for interval in intervals]
-            invalid_intervals = [raw_intervals[i] for i, interval in enumerate(intervals) if interval is None]
-            if invalid_intervals:
-                raise HTTPBadRequest(text=f'Invalid intervals: {", ".join(invalid_intervals)}')
-        return intervals
+        elif should_add_chr_prefix:
+            intervals = [
+                f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
+                for interval in intervals
+            ]
+
+        parsed_intervals = [
+            hl.eval(hl.parse_locus_interval(interval, reference_genome=self._genome_version, invalid_missing=True))
+            for interval in intervals
+        ]
+        invalid_intervals = [raw_intervals[i] for i, interval in enumerate(parsed_intervals) if interval is None]
+        if invalid_intervals:
+            raise HTTPBadRequest(text=f'Invalid intervals: {", ".join(invalid_intervals)}')
+
+        return parsed_intervals, variant_ids
 
     def _filter_by_frequency(self, frequencies):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
