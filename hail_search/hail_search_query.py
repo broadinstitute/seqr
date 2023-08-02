@@ -82,7 +82,7 @@ class BaseHailTableQuery(object):
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
 
-        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], self._enums[k], globals=self._globals, **enum_config)
+        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], self._enums[k], ht_globals=self._globals, **enum_config)
         annotation_fields.update({
             enum_config.get('response_key', k): format_enum(k, enum_config)
             for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
@@ -106,7 +106,7 @@ class BaseHailTableQuery(object):
         }
 
     @staticmethod
-    def _enum_field(value, enum, globals=None, annotate_value=None, format_value=None, drop_fields=None, **kwargs):
+    def _enum_field(value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, **kwargs):
         annotations = {}
         drop = [] + (drop_fields or [])
         value_keys = value.keys()
@@ -123,7 +123,7 @@ class BaseHailTableQuery(object):
 
         value = value.annotate(**annotations)
         if annotate_value:
-            annotations = annotate_value(value, enum, globals)
+            annotations = annotate_value(value, enum, ht_globals)
             value = value.annotate(**annotations)
         value = value.drop(*drop)
 
@@ -484,11 +484,11 @@ class VariantHailTableQuery(BaseHailTableQuery):
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
-        'clinvar': {'annotate_value': lambda value, enum, globals: {
+        'clinvar': {'annotate_value': lambda value, enum, ht_globals: {
             'conflictingPathogenicities': value.conflictingPathogenicities.map(
                 lambda p: VariantHailTableQuery._enum_field(p, {k: enum[k] for k in ['pathogenicity']})
             ),
-            'version': globals['versions'].clinvar,
+            'version': ht_globals['versions'].clinvar,
         }},
         'hgmd': {},
         'screen': {
