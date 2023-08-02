@@ -106,6 +106,12 @@ class BaseHailTableQuery(object):
             'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
         }
 
+    def _get_enum_lookup(self, field, subfield):
+        enum_field = self._enums.get(field, {}).get(subfield)
+        if enum_field is None:
+            return None
+        return {v: i for i, v in enumerate(enum_field)}
+
     @staticmethod
     def _enum_field(value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, **kwargs):
         annotations = {}
@@ -378,8 +384,10 @@ class BaseHailTableQuery(object):
     def get_x_chrom_filter(ht, x_interval):
         return x_interval.contains(ht.locus)
 
-    def _filter_annotated_table(self, frequencies=None, pathogenicity=None, annotations=None, annotations_secondary=None, **kwargs):
+    def _filter_annotated_table(self, frequencies=None, in_silico=None, pathogenicity=None, annotations=None, annotations_secondary=None, **kwargs):
         self._filter_by_frequency(frequencies)
+
+        self._filter_by_in_silico(in_silico)
 
         self._filter_by_annotations(pathogenicity, annotations, annotations_secondary)
 
@@ -413,6 +421,41 @@ class BaseHailTableQuery(object):
                 for pf in pop_filters[1:]:
                     pop_filter &= pf
                 self._ht = self._ht.filter(hl.is_missing(pop_expr) | pop_filter)
+
+    def _filter_by_in_silico(self, in_silico_filters):
+        in_silico_filters = in_silico_filters or {}
+        require_score = in_silico_filters.get('requireScore', False)
+        in_silico_filters = {k: v for k, v in in_silico_filters.items() if k in self.PREDICTION_FIELDS_CONFIG and v}
+        if not in_silico_filters:
+            return
+
+        in_silico_qs = []
+        missing_qs = []
+        for in_silico, value in in_silico_filters.items():
+            score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
+            enum_lookup = self._get_enum_lookup(*score_path)
+            if enum_lookup is not None:
+                ht_value = self._ht[score_path.source][f'{score_path.field}_id']
+                score_filter = ht_value == enum_lookup[value]
+            else:
+                ht_value = self._ht[score_path.source][score_path.field]
+                score_filter = ht_value >= float(value)
+
+            in_silico_qs.append(score_filter)
+            if not require_score:
+                missing_qs.append(hl.is_missing(ht_value))
+
+        if missing_qs:
+            missing_q = missing_qs[0]
+            for q in missing_qs[1:]:
+                missing_q &= q
+            in_silico_qs.append(missing_q)
+
+        in_silico_q = in_silico_qs[0]
+        for q in in_silico_qs[1:]:
+            in_silico_q |= q
+
+        self._ht = self._ht.filter(in_silico_q)
 
     def _filter_by_annotations(self, pathogenicity, annotations, annotations_secondary):
         annotation_override_filters = self._get_annotation_override_filters(pathogenicity, annotations)
