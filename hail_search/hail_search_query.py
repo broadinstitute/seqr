@@ -417,6 +417,8 @@ class BaseHailTableQuery(object):
         if rs_ids:
             self._filter_rs_ids(rs_ids)
 
+        self._filter_by_frequency(frequencies)
+
         self._filter_by_in_silico(in_silico)
 
     def _filter_by_gene_ids(self, gene_ids):
