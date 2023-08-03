@@ -596,7 +596,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
                 lambda tc: allowed_consequence_ids.contains(tc.major_consequence_id)
             )
             annotation_exprs['allowed_transcripts'] = allowed_transcripts
-            annotation_filters.append(hl.is_defined(allowed_transcripts.first()))
+            annotation_filters = annotation_filters + [hl.is_defined(allowed_transcripts.first())]
 
         consequence_filter = self._or_filter(annotation_filters)
         if consequence_filter is not None:
