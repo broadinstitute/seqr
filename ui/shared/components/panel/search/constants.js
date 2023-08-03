@@ -325,6 +325,7 @@ export const ALL_ANNOTATION_FILTER_DETAILS =
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
 export const SV_CALLSET_FREQUENCY = 'sv_callset'
+export const TOPMED_FREQUENCY = 'topmed'
 export const SNP_FREQUENCIES = [
   {
     name: 'gnomad_genomes',
@@ -339,7 +340,7 @@ export const SNP_FREQUENCIES = [
     labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD exomes, or by allele frequency (popmax AF) in any one of these five subpopulations defined for gnomAD exomes: AFR, AMR, EAS, NFE, SAS',
   },
   {
-    name: 'topmed',
+    name: TOPMED_FREQUENCY,
     label: 'TOPMed',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) or allele frequency (AF) in TOPMed',

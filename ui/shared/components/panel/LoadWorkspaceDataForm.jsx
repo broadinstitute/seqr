@@ -148,7 +148,7 @@ const onProjectCreateSuccess = (responseJson) => {
 
 const formatAddDataUrl = ({ projectGuid }) => (`/api/project/${projectGuid}/add_workspace_data`)
 
-const onAddDataFromWorkspace = dispatch => (responseJson) => {
+const onAddDataFromWorkspace = responseJson => (dispatch) => {
   dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
 }
 
