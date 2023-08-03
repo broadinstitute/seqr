@@ -43,7 +43,7 @@ export const loadSuccessStory = successStoryTypes => (dispatch) => {
 
 export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) => {
   // Do not load if already loaded
-  const stateKey = `${tag ? tag.split(TAG_URL_DELIMITER).sort().join(TAG_URL_DELIMITER) : ''}${gene}`
+  const stateKey = tag && `${tag.split(TAG_URL_DELIMITER).sort().join(TAG_URL_DELIMITER)}${gene}`
   if (tag) {
     if (getState().savedVariantTags[stateKey]) {
       return
