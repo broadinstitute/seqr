@@ -384,12 +384,12 @@ class BaseHailTableQuery(object):
     def get_x_chrom_filter(ht, x_interval):
         return x_interval.contains(ht.locus)
 
-    def _filter_annotated_table(self, frequencies=None, in_silico=None, pathogenicity=None, annotations=None, annotations_secondary=None, **kwargs):
+    def _filter_annotated_table(self, frequencies=None, in_silico=None, pathogenicity=None, annotations=None, **kwargs):
         self._filter_by_frequency(frequencies)
 
         self._filter_by_in_silico(in_silico)
 
-        self._filter_by_annotations(pathogenicity, annotations, annotations_secondary)
+        self._filter_by_annotations(pathogenicity, annotations)
 
     def _filter_by_frequency(self, frequencies):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
@@ -457,30 +457,22 @@ class BaseHailTableQuery(object):
 
         return score_filter, ht_value
 
-    def _filter_by_annotations(self, pathogenicity, annotations, annotations_secondary):
-        tc_annotation_exprs = {
-            'has_allowed_consequence': self._get_is_allowed_consequence(annotations),
-            'has_allowed_secondary_consequence': self._get_is_allowed_consequence(annotations_secondary),
-        }
-        if any(v is not None for v in tc_annotation_exprs.items()):
-            self._ht = self._ht.annotate(sorted_transcript_consequences=self._ht.sorted_transcript_consequences.map(
-                lambda tc: tc.annotate(**{k: v(tc) for k, v in tc_annotation_exprs.items()})
-            ))
+    def _filter_by_annotations(self, pathogenicity, annotations):
+        consequence_filter_fields = []
+        has_allowed_consequence = self._annotate_allowed_transcripts(annotations)
+        if has_allowed_consequence:
+            consequence_filter_fields.append('has_allowed_consequence')
 
-        annotation_exprs = {
-            k: None if v is None else self._ht.sorted_transcript_consequences.any(lambda tc: tc[k])
-            for k, v in tc_annotation_exprs.items()
-        }
-        annotation_exprs['override_consequences'] = self._or_filter(
-            self._get_annotation_override_filters(pathogenicity, annotations)
-        )
-        self._ht = self._ht.annotate(**annotation_exprs)
+        has_override_filter = self._or_filter(self._get_annotation_override_filters(pathogenicity, annotations))
+        if has_override_filter is not None:
+            self._ht = self._ht.annotate(override_consequences=has_override_filter)
+            consequence_filter_fields.append('override_consequences')
 
-        consequence_filter = self._or_filter([self._ht[k] for k, v in annotation_exprs.items() if v is not None])
+        consequence_filter = self._or_filter([self._ht[k] for k in consequence_filter_fields])
         if consequence_filter is not None:
             self._ht = self._ht.filter(consequence_filter)
 
-    def _get_is_allowed_consequence(self, annotations):
+    def _annotate_allowed_transcripts(self, annotations):
         allowed_consequences = {
             ann for field, anns in annotations.items() for ann in anns
             if anns and (field not in ANNOTATION_OVERRIDE_FIELDS)
@@ -489,9 +481,17 @@ class BaseHailTableQuery(object):
         consequence_enum = self._get_enum_lookup('sorted_transcript_consequences', 'consequence_term')
         allowed_consequence_ids = {consequence_enum[c] for c in allowed_consequences if consequence_enum.get(c)}
         if not allowed_consequence_ids:
-            return None
+            return False
 
-        return lambda tc: allowed_consequence_ids.contains(tc.major_consequence_id)
+        allowed_consequence_ids = hl.set(allowed_consequence_ids)
+        allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
+            lambda tc: allowed_consequence_ids.contains(tc.major_consequence_id)
+        )
+        self._ht = self._ht.annotate(
+            allowed_transcripts=allowed_transcripts,
+            has_allowed_consequence=hl.is_defined(allowed_transcripts.first()),
+        )
+        return True
 
     def _get_annotation_override_filters(self, pathogenicity, annotations):
         return []
