@@ -979,6 +979,44 @@
         "gencode_release": 27
     }
 }, {
+    "model": "reference_data.geneinfo",
+    "pk": 60,
+    "fields": {
+        "gene_id": "ENSG00000177000",
+        "gene_symbol": "MTHFR",
+        "chrom_grch37": "1",
+        "start_grch37": 11785723,
+        "end_grch37": 11806455,
+        "strand_grch37": "+",
+        "coding_region_size_grch37": 0,
+        "chrom_grch38": "1",
+        "start_grch38": 11785723,
+        "end_grch38": 11806455,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0,
+        "gencode_gene_type": "protein_coding",
+        "gencode_release": 27
+    }
+}, {
+    "model": "reference_data.geneinfo",
+    "pk": 61,
+    "fields": {
+        "gene_id": "ENSG00000097046",
+        "gene_symbol": "CDC7",
+        "chrom_grch37": "1",
+        "start_grch37": 91500851,
+        "end_grch37": 91525764,
+        "strand_grch37": "+",
+        "coding_region_size_grch37": 0,
+        "chrom_grch38": "1",
+        "start_grch38": 91500851,
+        "end_grch38": 91525764,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0,
+        "gencode_gene_type": "protein_coding",
+        "gencode_release": 27
+    }
+}, {
     "model": "reference_data.transcriptinfo",
     "pk": 1,
     "fields": {
