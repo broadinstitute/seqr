@@ -443,11 +443,7 @@ class BaseHailTableQuery(object):
                 missing_q &= q
             in_silico_qs.append(missing_q)
 
-        in_silico_q = in_silico_qs[0]
-        for q in in_silico_qs[1:]:
-            in_silico_q |= q
-
-        self._ht = self._ht.filter(in_silico_q)
+        self._ht = self._ht.filter(self._or_filter(in_silico_q))
 
     def _get_in_silico_filter(self, in_silico, value):
         score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
@@ -462,25 +458,18 @@ class BaseHailTableQuery(object):
         return score_filter, ht_value
 
     def _filter_by_annotations(self, pathogenicity, annotations, annotations_secondary):
-        annotation_override_filters = self._get_annotation_override_filters(pathogenicity, annotations)
-        annotation_override_filter = annotation_override_filters[0] if annotation_override_filters else False
-        for af in annotation_override_filters[1:]:
-            annotation_override_filter |= af
+        annotation_override_filter = self._or_filter(self._get_annotation_override_filters(pathogenicity, annotations))
 
         annotation_exprs = {
-            'override_consequences': annotation_override_filter,
+            'override_consequences': False if annotation_override_filter is None else annotation_override_filter,
             'has_allowed_consequence': self._get_has_annotation_expr(annotations),  # TODO reusable for selected_main_transcript_expr
             'has_allowed_secondary_consequence': self._get_has_annotation_expr(annotations_secondary),
         }
         self._ht = self._ht.annotate(**annotation_exprs)
 
-        filter_fields = [k for k, v in annotation_exprs.items() if v is not False]
-        if not filter_fields:
-            return
-        consequence_filter = ht[filter_fields[0]]
-        for field in filter_fields[1:]:
-            consequence_filter |= self._ht[field]
-        self._ht = self._ht.filter(consequence_filter)
+        consequence_filter = self._or_filter([self._ht[k] for k, v in annotation_exprs.items() if v is not False])
+        if consequence_filter is not None:
+            self._ht = self._ht.filter(consequence_filter)
 
     def _get_annotation_override_filters(self, pathogenicity, annotations):
         return []
@@ -499,6 +488,15 @@ class BaseHailTableQuery(object):
         allowed_consequence_ids = hl.set(allowed_consequence_ids)
         return self._ht.sorted_transcript_consequences.any(
             lambda tc: allowed_consequence_ids.contains(tc.major_consequence_id))
+
+    @staticmethod
+    def _or_filter(filters):
+        if not filters:
+            return None
+        filter_expr = filters[0]
+        for f in filters[1:]:
+            filter_expr |= f
+        return filter_expr
 
     def _format_results(self, ht):
         annotations = {k: v(ht) for k, v in self.annotation_fields.items()}
@@ -639,11 +637,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
             return True
 
         value = self._ht[field][f'{subfield}_id']
-        q = (value >= ranges[0][0]) & (value <= ranges[0][1])
-        for range in ranges[1:]:
-            q |= (value >= range[0]) & (value <= range[1])  # TODO
-
-        return q
+        return self._or_filter([(value >= range[0]) & (value <= range[1]) for range in ranges])
 
 
 QUERY_CLASS_MAP = {
