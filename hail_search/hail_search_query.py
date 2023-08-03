@@ -459,7 +459,7 @@ class BaseHailTableQuery(object):
 
     def _filter_by_annotations(self, pathogenicity, annotations):
         consequence_filter_fields = []
-        has_allowed_consequence = self._annotate_allowed_transcripts(annotations)
+        has_allowed_consequence = self._annotate_allowed_consequences(annotations)
         if has_allowed_consequence:
             consequence_filter_fields.append('has_allowed_consequence')
 
@@ -472,26 +472,8 @@ class BaseHailTableQuery(object):
         if consequence_filter is not None:
             self._ht = self._ht.filter(consequence_filter)
 
-    def _annotate_allowed_transcripts(self, annotations):
-        allowed_consequences = {
-            ann for field, anns in annotations.items() for ann in anns
-            if anns and (field not in ANNOTATION_OVERRIDE_FIELDS)
-        }
-
-        consequence_enum = self._get_enum_lookup('sorted_transcript_consequences', 'consequence_term')
-        allowed_consequence_ids = {consequence_enum[c] for c in allowed_consequences if consequence_enum.get(c)}
-        if not allowed_consequence_ids:
-            return False
-
-        allowed_consequence_ids = hl.set(allowed_consequence_ids)
-        allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
-            lambda tc: allowed_consequence_ids.contains(tc.major_consequence_id)
-        )
-        self._ht = self._ht.annotate(
-            allowed_transcripts=allowed_transcripts,
-            has_allowed_consequence=hl.is_defined(allowed_transcripts.first()),
-        )
-        return True
+    def _annotate_allowed_consequences(self, annotations):
+        return False
 
     def _get_annotation_override_filters(self, pathogenicity, annotations):
         return []
@@ -602,6 +584,27 @@ class VariantHailTableQuery(BaseHailTableQuery):
             'drop_fields': ['consequence_terms'],
         })
         return args
+    
+    def _annotate_allowed_consequences(self, annotations):
+        allowed_consequences = {
+            ann for field, anns in annotations.items() for ann in anns
+            if anns and (field not in ANNOTATION_OVERRIDE_FIELDS)
+        }
+
+        consequence_enum = self._get_enum_lookup('sorted_transcript_consequences', 'consequence_term')
+        allowed_consequence_ids = {consequence_enum[c] for c in allowed_consequences if consequence_enum.get(c)}
+        if not allowed_consequence_ids:
+            return False
+
+        allowed_consequence_ids = hl.set(allowed_consequence_ids)
+        allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
+            lambda tc: allowed_consequence_ids.contains(tc.major_consequence_id)
+        )
+        self._ht = self._ht.annotate(
+            allowed_transcripts=allowed_transcripts,
+            has_allowed_consequence=hl.is_defined(allowed_transcripts.first()),
+        )
+        return True
 
     def _get_annotation_override_filters(self, pathogenicity, annotations):
         annotation_filters = []
