@@ -7,7 +7,7 @@ import os
 from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, MALE, VARIANT_DATASET, \
     VARIANT_KEY_FIELD, GNOMAD_GENOMES_FIELD, XPOS, GENOME_VERSION_GRCh38_DISPLAY, INHERITANCE_FILTERS, \
     ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF, \
-    ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD
+    ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -603,12 +603,12 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
         clinvar = (pathogenicity or {}).get('clinvar')
         if clinvar:
-            annotation_filters.append(self._has_clivar_terms_expr(clinvar))  # TODO
+            annotation_filters.append(
+                self._has_terms_range_expr('clinvar', 'pathogenicity', clinvar_terms, CLINVAR_PATH_RANGES)
+            )
         hgmd = (pathogenicity or {}).get('hgmd')
         if hgmd:
-            annotation_filters.append(
-                self._has_terms_range_expr('hgmd', 'class', hgmd, HGMD_PATH_RANGES)  # TODO
-            )
+            annotation_filters.append(self._has_terms_range_expr('hgmd', 'class', hgmd, HGMD_PATH_RANGES))
         if annotations.get(SCREEN_KEY):
             screen_enum = self._get_enum_lookup('screen', 'region_type')
             allowed_consequences = hl.set({screen_enum[c] for c in annotations[SCREEN_KEY]})
@@ -617,6 +617,33 @@ class VariantHailTableQuery(BaseHailTableQuery):
             annotation_filters.append(self._get_in_silico_filter(SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD]))
 
         return annotation_filters
+
+    def _has_terms_range_expr(self, field, subfield, terms, range_configs):
+        enum_lookup = self._get_enum_lookup(field, subfield)
+
+        ranges = []
+        range = [None, None]
+        for path_filter, start, end in range_configs:
+            if path_filter in terms:
+                if end is None:
+                    # Filter for any value greater than start
+                    end = len(enum_lookup)
+                range[1] = end
+                if not range[0]:
+                    range[0] = start
+            elif range[0]:
+                ranges.append([enum_lookup[range[0]], enum_lookup[range[1]]])
+                range = [None, None]
+
+        if not ranges:
+            return True
+
+        value = self._ht[field][f'{subfield}_id']
+        q = (value >= ranges[0][0]) & (value <= ranges[0][1])
+        for range in ranges[1:]:
+            q |= (value >= range[0]) & (value <= range[1])  # TODO
+
+        return q
 
 
 QUERY_CLASS_MAP = {

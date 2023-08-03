@@ -51,3 +51,16 @@ INHERITANCE_FILTERS = {
         UNAFFECTED: REF_REF,
     },
 }
+
+CLINVAR_PATH_RANGES = [
+    ('pathogenic', 'Pathogenic', 'Pathogenic/Likely_risk_allele'),
+    ('likely_pathogenic', 'Pathogenic/Likely_pathogenic', 'Likely_risk_allele'),
+    ('vus_or_conflicting', 'Conflicting_interpretations_of_pathogenicity', 'No_pathogenic_assertion'),
+    ('likely_benign', 'Likely_benign', 'Benign/Likely_benign'),
+    ('benign', 'Benign/Likely_benign', 'Benign'),
+]
+HGMD_PATH_RANGES = [
+    ('disease_causing', 'DM', 'DM'),
+    ('likely_disease_causing', 'DM?', 'DM?'),
+    ('hgmd_other', 'DP', None),
+]
