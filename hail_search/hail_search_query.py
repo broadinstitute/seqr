@@ -7,7 +7,7 @@ import os
 from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, MALE, VARIANT_DATASET, \
     VARIANT_KEY_FIELD, GNOMAD_GENOMES_FIELD, XPOS, GENOME_VERSION_GRCh38_DISPLAY, INHERITANCE_FILTERS, \
     ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF, \
-    ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES
+    ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -443,7 +443,7 @@ class BaseHailTableQuery(object):
                 missing_q &= q
             in_silico_qs.append(missing_q)
 
-        self._ht = self._ht.filter(self._or_filter(in_silico_q))
+        self._ht = self._ht.filter(self._or_filter(in_silico_qs))
 
     def _get_in_silico_filter(self, in_silico, value):
         score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
@@ -458,22 +458,14 @@ class BaseHailTableQuery(object):
         return score_filter, ht_value
 
     def _filter_by_annotations(self, pathogenicity, annotations):
-        consequence_filter_fields = []
-        has_allowed_consequence = self._annotate_allowed_consequences(annotations)
-        if has_allowed_consequence:
-            consequence_filter_fields.append('has_allowed_consequence')
+        annotation_override_filters = self._get_annotation_override_filters(pathogenicity, annotations)
 
-        has_override_filter = self._or_filter(self._get_annotation_override_filters(pathogenicity, annotations))
-        if has_override_filter is not None:
-            self._ht = self._ht.annotate(override_consequences=has_override_filter)
-            consequence_filter_fields.append('override_consequences')
+        self._annotate_allowed_consequences(annotations, annotation_override_filters)
+        if 'has_allowed_annotation' in self._ht.row:
+            self._ht = self._ht.filter(self._ht.has_allowed_annotation)
 
-        consequence_filter = self._or_filter([self._ht[k] for k in consequence_filter_fields])
-        if consequence_filter is not None:
-            self._ht = self._ht.filter(consequence_filter)
-
-    def _annotate_allowed_consequences(self, annotations):
-        return False
+    def _annotate_allowed_consequences(self, annotations, annotation_filters):
+        raise NotImplementedError
 
     def _get_annotation_override_filters(self, pathogenicity, annotations):
         return []
@@ -547,6 +539,10 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'revel': PredictionPath('dbnsfp', 'REVEL_score'),
         'sift': PredictionPath('dbnsfp', 'SIFT_pred'),
     }
+    PATHOGENICITY_FILTERS = [
+        (CLINVAR_KEY, 'pathogenicity', CLINVAR_PATH_RANGES),
+        (HGMD_KEY, 'class', HGMD_PATH_RANGES),
+    ]
 
     GLOBALS = BaseHailTableQuery.GLOBALS + ['versions']
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
@@ -585,48 +581,47 @@ class VariantHailTableQuery(BaseHailTableQuery):
         })
         return args
     
-    def _annotate_allowed_consequences(self, annotations):
+    def _annotate_allowed_consequences(self, annotations, annotation_filters):
         allowed_consequences = {
-            ann for field, anns in annotations.items() for ann in anns
+            ann for field, anns in (annotations or {}).items() for ann in anns
             if anns and (field not in ANNOTATION_OVERRIDE_FIELDS)
         }
-
         consequence_enum = self._get_enum_lookup('sorted_transcript_consequences', 'consequence_term')
         allowed_consequence_ids = {consequence_enum[c] for c in allowed_consequences if consequence_enum.get(c)}
-        if not allowed_consequence_ids:
-            return False
 
-        allowed_consequence_ids = hl.set(allowed_consequence_ids)
-        allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
-            lambda tc: allowed_consequence_ids.contains(tc.major_consequence_id)
-        )
-        self._ht = self._ht.annotate(
-            allowed_transcripts=allowed_transcripts,
-            has_allowed_consequence=hl.is_defined(allowed_transcripts.first()),
-        )
-        return True
+        annotation_exprs = {}
+        if allowed_consequence_ids:
+            allowed_consequence_ids = hl.set(allowed_consequence_ids)
+            allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
+                lambda tc: allowed_consequence_ids.contains(tc.major_consequence_id)
+            )
+            annotation_exprs['allowed_transcripts'] = allowed_transcripts
+            annotation_filters.append(hl.is_defined(allowed_transcripts.first()))
+
+        consequence_filter = self._or_filter(annotation_filters)
+        if consequence_filter is not None:
+            annotation_exprs['has_allowed_annotation'] = consequence_filter
+
+        if annotation_exprs:
+            self._ht = self._ht.annotate(**annotation_exprs)
 
     def _get_annotation_override_filters(self, pathogenicity, annotations):
         annotation_filters = []
 
-        clinvar = (pathogenicity or {}).get('clinvar')
-        if clinvar:
-            annotation_filters.append(
-                self._has_terms_range_expr('clinvar', 'pathogenicity', clinvar_terms, CLINVAR_PATH_RANGES)
-            )
-        hgmd = (pathogenicity or {}).get('hgmd')
-        if hgmd:
-            annotation_filters.append(self._has_terms_range_expr('hgmd', 'class', hgmd, HGMD_PATH_RANGES))
-        if annotations.get(SCREEN_KEY):
-            screen_enum = self._get_enum_lookup('screen', 'region_type')
+        for key, *args in self.PATHOGENICITY_FILTERS:
+            path_terms = (pathogenicity or {}).get(key)
+            if path_terms:
+                annotation_filters.append(self._has_terms_range_expr(path_terms, key, *args))
+        if (annotations or {}).get(SCREEN_KEY):
+            screen_enum = self._get_enum_lookup(SCREEN_KEY.lower(), 'region_type')
             allowed_consequences = hl.set({screen_enum[c] for c in annotations[SCREEN_KEY]})
             annotation_filters.append(allowed_consequences.contains(self._ht.screen.region_type_ids.first()))
-        if annotations.get(SPLICE_AI_FIELD):
+        if (annotations or {}).get(SPLICE_AI_FIELD):
             annotation_filters.append(self._get_in_silico_filter(SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD]))
 
         return annotation_filters
 
-    def _has_terms_range_expr(self, field, subfield, terms, range_configs):
+    def _has_terms_range_expr(self, terms, field, subfield, range_configs):
         enum_lookup = self._get_enum_lookup(field, subfield)
 
         ranges = []
