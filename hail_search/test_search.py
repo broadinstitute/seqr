@@ -217,6 +217,29 @@ class HailSearchTestCase(AioHTTPTestCase):
             omit_sample_type='SV_WES',
         )
 
+    async def test_annotations_filter(self):
+        await self._assert_expected_search([VARIANT2], pathogenicity={'hgmd': ['hgmd_other']}, omit_sample_type='SV_WES')
+
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting', 'benign']}
+        await self._assert_expected_search([VARIANT2], pathogenicity=pathogenicity, omit_sample_type='SV_WES')
+
+        await self._assert_expected_search(
+            [VARIANT2, VARIANT4], pathogenicity=pathogenicity, annotations={'SCREEN': ['CTCF-only', 'DNase-only']},
+            omit_sample_type='SV_WES',
+        )
+
+        annotations = {'missense': ['missense_variant'], 'in_frame': ['inframe_insertion', 'inframe_deletion'], 'frameshift': None}
+        await self._assert_expected_search(
+            [VARIANT2, VARIANT4], pathogenicity=pathogenicity, annotations=annotations, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search([VARIANT2, VARIANT4], annotations=annotations, omit_sample_type='SV_WES')
+
+        annotations['splice_ai'] = '0.005'
+        await self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], annotations=annotations, omit_sample_type='SV_WES',
+        )
+
     async def test_in_silico_filter(self):
         in_silico = {'eigen': '5.5', 'mut_taster': 'P'}
         await self._assert_expected_search(

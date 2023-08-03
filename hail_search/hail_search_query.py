@@ -583,8 +583,8 @@ class VariantHailTableQuery(BaseHailTableQuery):
     
     def _annotate_allowed_consequences(self, annotations, annotation_filters):
         allowed_consequences = {
-            ann for field, anns in (annotations or {}).items() for ann in anns
-            if anns and (field not in ANNOTATION_OVERRIDE_FIELDS)
+            ann for field, anns in (annotations or {}).items()
+            if anns and (field not in ANNOTATION_OVERRIDE_FIELDS) for ann in anns
         }
         consequence_enum = self._get_enum_lookup('sorted_transcript_consequences', 'consequence_term')
         allowed_consequence_ids = {consequence_enum[c] for c in allowed_consequences if consequence_enum.get(c)}
@@ -593,7 +593,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         if allowed_consequence_ids:
             allowed_consequence_ids = hl.set(allowed_consequence_ids)
             allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
-                lambda tc: allowed_consequence_ids.contains(tc.major_consequence_id)
+                lambda tc: tc.consequence_term_ids.any(lambda c: allowed_consequence_ids.contains(c))
             )
             annotation_exprs['allowed_transcripts'] = allowed_transcripts
             annotation_filters = annotation_filters + [hl.is_defined(allowed_transcripts.first())]
@@ -617,30 +617,25 @@ class VariantHailTableQuery(BaseHailTableQuery):
             allowed_consequences = hl.set({screen_enum[c] for c in annotations[SCREEN_KEY]})
             annotation_filters.append(allowed_consequences.contains(self._ht.screen.region_type_ids.first()))
         if (annotations or {}).get(SPLICE_AI_FIELD):
-            annotation_filters.append(self._get_in_silico_filter(SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD]))
+            score_filter, _ = self._get_in_silico_filter(SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD])
+            annotation_filters.append(score_filter)
 
         return annotation_filters
 
     def _has_terms_range_expr(self, terms, field, subfield, range_configs):
         enum_lookup = self._get_enum_lookup(field, subfield)
 
-        ranges = []
-        range = [None, None]
+        ranges = [[None, None]]
         for path_filter, start, end in range_configs:
             if path_filter in terms:
-                if end is None:
-                    # Filter for any value greater than start
-                    end = len(enum_lookup)
-                range[1] = end
+                range = ranges[-1]
+                range[1] = len(enum_lookup) if end is None else enum_lookup[end]
                 if not range[0]:
-                    range[0] = start
-            elif range[0]:
-                ranges.append([enum_lookup[range[0]], enum_lookup[range[1]]])
-                range = [None, None]
+                    range[0] = enum_lookup[start]
+            else:
+                ranges.append([None, None])
 
-        if not ranges:
-            return True
-
+        ranges = [r for r in ranges if r[0] is not None]
         value = self._ht[field][f'{subfield}_id']
         return self._or_filter([(value >= range[0]) & (value <= range[1]) for range in ranges])
 
