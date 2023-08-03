@@ -137,7 +137,6 @@ class SummaryDataAPITest(object):
         multi_tag_url = reverse(saved_variants_page, args=['Review;Tier 1 - Novel gene and phenotype'])
         response = self.client.get('{}?gene=ENSG00000135953'.format(multi_tag_url))
         self.assertEqual(response.status_code, 200)
-        expected_variant_guids.remove('SV0000002_1248367227_r0390_100')
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
 
     def test_hpo_summary_data(self):
@@ -237,14 +236,18 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
 
 
-def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
+def assert_has_expected_calls(self, users, skip_group_call_idxs=None, has_ws_access_level_call=False):
     calls = [mock.call(user) for user in users]
     self.mock_list_workspaces.assert_has_calls(calls)
     group_calls = [call for i, call in enumerate(calls) if i in skip_group_call_idxs] if skip_group_call_idxs else calls
     self.mock_get_groups.assert_has_calls(group_calls)
     self.mock_get_ws_acl.assert_not_called()
     self.mock_get_group_members.assert_not_called()
-    self.mock_get_ws_access_level.assert_not_called()
+    if has_ws_access_level_call:
+        self.mock_get_ws_access_level.assert_called_with(
+            self.analyst_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde')
+    else:
+        self.mock_get_ws_access_level.assert_not_called()
 
 # Test for permissions from AnVIL only
 class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
@@ -260,4 +263,4 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
         super(AnvilSummaryDataAPITest, self).test_saved_variants_page()
         assert_has_expected_calls(self, [
             self.no_access_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
-        ], skip_group_call_idxs=[2])
+        ], skip_group_call_idxs=[2], has_ws_access_level_call=True)
