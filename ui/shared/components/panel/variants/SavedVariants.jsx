@@ -8,6 +8,7 @@ import { getSavedVariantsIsLoading, getSavedVariantsLoadingError } from 'redux/s
 import {
   DISCOVERY_CATEGORY_NAME,
   VARIANT_PAGINATION_FIELD,
+  TAG_URL_DELIMITER,
 } from 'shared/utils/constants'
 
 import ExportTableButton from '../../buttons/ExportTableButton'
@@ -81,7 +82,7 @@ class SavedVariants extends React.PureComponent {
     const { showAllFilters } = this.state
     const { familyGuid, variantGuid, tag } = match.params
 
-    const tags = tag ? tag.split(';') : tag
+    const tags = tag ? tag.split(TAG_URL_DELIMITER) : tag
     const appliedTagCategoryFilter = tags || (variantGuid ? [] : [(tableState.categoryFilter || ALL_FILTER)])
 
     let shownFilters = (discoveryFilters && appliedTagCategoryFilter === [DISCOVERY_CATEGORY_NAME]) ?

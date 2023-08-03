@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 
 import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
 import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS } from 'redux/utils/reducerUtils'
-import { SHOW_ALL, SORT_BY_XPOS, SUMMARY_PAGE_SAVED_VARIANT_TAGS } from 'shared/utils/constants'
+import { SHOW_ALL, SORT_BY_XPOS, TAG_URL_DELIMITER } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -43,11 +43,9 @@ export const loadSuccessStory = successStoryTypes => (dispatch) => {
 
 export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) => {
   // Do not load if already loaded
-  let tags = [SHOW_ALL]
+  const stateKey = `${tag ? tag.split(TAG_URL_DELIMITER).sort().join(TAG_URL_DELIMITER) : ''}${gene}`
   if (tag) {
-    const { savedVariantTags } = getState()
-    tags = tag.split(';').filter(t => !savedVariantTags[t])
-    if (tags.length === 0) {
+    if (getState().savedVariantTags[stateKey]) {
       return
     }
   } else if (!gene) {
@@ -55,20 +53,12 @@ export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) =>
   }
 
   dispatch({ type: REQUEST_SAVED_VARIANTS })
-  new HttpRequestHelper(`/api/summary_data/saved_variants/${tags.join(';')}`,
+  new HttpRequestHelper(`/api/summary_data/saved_variants/${tag}`,
     (responseJson) => {
       if (tag && !gene) {
-        if (tags[0] === SHOW_ALL) {
-          tags = SUMMARY_PAGE_SAVED_VARIANT_TAGS
-        }
         dispatch({
           type: RECEIVE_SAVED_VARIANT_TAGS,
-          updates: tags.reduce((acc, t) => ({ ...acc, [t]: true }), {}),
-        })
-      } else if (gene) {
-        dispatch({
-          type: RECEIVE_SAVED_VARIANT_TAGS,
-          updates: SUMMARY_PAGE_SAVED_VARIANT_TAGS.reduce((acc, t) => ({ ...acc, [t]: false }), {}),
+          updates: { [stateKey]: true },
         })
       }
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })

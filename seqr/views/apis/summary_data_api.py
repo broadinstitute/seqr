@@ -88,10 +88,11 @@ def saved_variants_page(request, tag):
         saved_variant_models = SavedVariant.objects.exclude(varianttag=None)
     else:
         tags = tag.split(';')
-        saved_variant_models = SavedVariant.objects.filter(
-            varianttag__variant_tag_type__name__in=tags,
-            varianttag__variant_tag_type__project__isnull=True,
-        ).distinct()
+        saved_variant_models = SavedVariant.objects.all()
+        for t in tags:
+            saved_variant_models = saved_variant_models.filter(
+                varianttag__variant_tag_type__name=t, varianttag__variant_tag_type__project__isnull=True,
+            ).distinct()
 
     saved_variant_models = saved_variant_models.filter(family__project__guid__in=get_project_guids_user_can_view(request.user))
 

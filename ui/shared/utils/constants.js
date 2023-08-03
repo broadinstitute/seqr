@@ -1041,29 +1041,8 @@ export const REVIEW_TAG_NAME = 'Review'
 export const KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME = 'Known gene for phenotype'
 export const DISCOVERY_CATEGORY_NAME = 'CMG Discovery Tags'
 export const MME_TAG_NAME = 'MME Submission'
-export const SUMMARY_PAGE_SAVED_VARIANT_TAGS = [
-  'Tier 1 - Novel gene and phenotype',
-  'Tier 1 - Novel gene for known phenotype',
-  'Tier 1 - Phenotype expansion',
-  'Tier 1 - Phenotype not delineated',
-  'Tier 1 - Novel mode of inheritance',
-  'Tier 1 - Known gene, new phenotype',
-  'Tier 2 - Novel gene and phenotype',
-  'Tier 2 - Novel gene for known phenotype',
-  'Tier 2 - Phenotype expansion',
-  'Tier 2 - Phenotype not delineated',
-  'Tier 2 - Known gene, new phenotype',
-  KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
-  REVIEW_TAG_NAME,
-  'Send for Sanger validation',
-  'Sanger validated',
-  'Sanger did not confirm',
-  'Confident AR one hit',
-  'Analyst high priority',
-  'seqr MME (old)',
-  'Submit to Clinvar',
-  'Share with KOMP',
-]
+
+export const TAG_URL_DELIMITER = ';'
 
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'

@@ -11,7 +11,7 @@ import {
   VARIANT_PER_PAGE_FIELD,
   VARIANT_TAGGED_DATE_FIELD,
   SHOW_ALL,
-  SUMMARY_PAGE_SAVED_VARIANT_TAGS,
+  TAG_URL_DELIMITER,
 } from 'shared/utils/constants'
 import { StyledForm } from 'shared/components/form/FormHelpers'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
@@ -19,6 +19,7 @@ import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
 import { loadSavedVariants, updateAllProjectSavedVariantTable } from '../reducers'
+import { SUMMARY_PAGE_SAVED_VARIANT_TAGS } from '../constants'
 
 const GENE_SEARCH_CATEGORIES = ['genes']
 
@@ -48,7 +49,7 @@ const getUpdateTagUrl = (selectedTag, match) => {
   const lastTag = selectedTag.length > 0 ? selectedTag[selectedTag.length - 1] : null
   const [firstTag, ...otherTag] = selectedTag
   const updatedTag = firstTag === SHOW_ALL ? otherTag : lastTag !== SHOW_ALL && selectedTag
-  return `${PAGE_URL}/${(updatedTag || [SHOW_ALL]).join(';')}${match.params.gene ? `/${match.params.gene}` : ''}`
+  return `${PAGE_URL}/${(updatedTag || [SHOW_ALL]).join(TAG_URL_DELIMITER)}${match.params.gene ? `/${match.params.gene}` : ''}`
 }
 
 const getGeneHref = tag => selectedGene => `${PAGE_URL}/${tag || SHOW_ALL}/${selectedGene.key}`

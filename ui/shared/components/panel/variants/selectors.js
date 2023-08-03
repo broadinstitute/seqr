@@ -12,6 +12,7 @@ import {
   VARIANT_SORT_LOOKUP,
   SHOW_ALL,
   VARIANT_EXPORT_DATA,
+  TAG_URL_DELIMITER,
 } from 'shared/utils/constants'
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
@@ -135,7 +136,7 @@ export const getPairedSelectedSavedVariants = createSelector(
     } else if (tag === MME_TAG_NAME) {
       pairedVariants = matchingVariants(pairedVariants, ({ mmeSubmissions = [] }) => mmeSubmissions.length)
     } else if (tag && tag !== SHOW_ALL) {
-      const tags = tag.split(';')
+      const tags = tag.split(TAG_URL_DELIMITER)
       pairedVariants = matchingVariants(
         pairedVariants, ({ tagGuids }) => {
           const tagNames = tagGuids.map(tagGuid => tagsByGuid[tagGuid].name)

@@ -138,7 +138,7 @@ class SummaryDataAPITest(object):
         response = self.client.get('{}?gene=ENSG00000135953'.format(multi_tag_url))
         self.assertEqual(response.status_code, 200)
         expected_variant_guids.remove('SV0000002_1248367227_r0390_100')
-        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
+        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
 
     def test_hpo_summary_data(self):
         url = reverse(hpo_summary_data, args=['HP:0002011'])
