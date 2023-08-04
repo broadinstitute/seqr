@@ -666,7 +666,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         if allowed_consequence_ids:
             allowed_consequence_ids = hl.set(allowed_consequence_ids)
             allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
-                lambda tc: tc.consequence_term_ids.any(lambda c: allowed_consequence_ids.contains(c))
+                lambda tc: tc.consequence_term_ids.any(allowed_consequence_ids.contains)
             )
             annotation_exprs['allowed_transcripts'] = allowed_transcripts
             annotation_filters = annotation_filters + [hl.is_defined(allowed_transcripts.first())]
@@ -701,16 +701,15 @@ class VariantHailTableQuery(BaseHailTableQuery):
         ranges = [[None, None]]
         for path_filter, start, end in range_configs:
             if path_filter in terms:
-                range = ranges[-1]
-                range[1] = len(enum_lookup) if end is None else enum_lookup[end]
-                if not range[0]:
-                    range[0] = enum_lookup[start]
+                ranges[-1][1] = len(enum_lookup) if end is None else enum_lookup[end]
+                if ranges[-1][0] is None:
+                    ranges[-1][0] = enum_lookup[start]
             else:
                 ranges.append([None, None])
 
         ranges = [r for r in ranges if r[0] is not None]
         value = self._ht[field][f'{subfield}_id']
-        return self._or_filter([(value >= range[0]) & (value <= range[1]) for range in ranges])
+        return self._or_filter([(value >= r[0]) & (value <= r[1]) for r in ranges])
 
 
 QUERY_CLASS_MAP = {
