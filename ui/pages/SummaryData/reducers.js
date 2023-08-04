@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 
 import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
 import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS } from 'redux/utils/reducerUtils'
-import { SHOW_ALL, SORT_BY_XPOS, TAG_URL_DELIMITER } from 'shared/utils/constants'
+import { SHOW_ALL, SORT_BY_XPOS } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -43,9 +43,8 @@ export const loadSuccessStory = successStoryTypes => (dispatch) => {
 
 export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) => {
   // Do not load if already loaded
-  const stateKey = tag && `${tag.split(TAG_URL_DELIMITER).sort().join(TAG_URL_DELIMITER)}${gene}`
   if (tag) {
-    if (getState().savedVariantTags[stateKey]) {
+    if (getState().savedVariantTags[tag]) {
       return
     }
   } else if (!gene) {
@@ -58,7 +57,7 @@ export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) =>
       if (tag && !gene) {
         dispatch({
           type: RECEIVE_SAVED_VARIANT_TAGS,
-          updates: { [stateKey]: true },
+          updates: { [tag]: true },
         })
       }
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
