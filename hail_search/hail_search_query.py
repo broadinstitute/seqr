@@ -432,10 +432,6 @@ class BaseHailTableQuery(object):
         rs_id_set = hl.set(rs_ids)
         self._ht = self._ht.filter(rs_id_set.contains(self._ht.rsid))
 
-    @staticmethod
-    def _formatted_chr_interval(interval):
-        return f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
-
     def _parse_intervals(self, intervals, variant_ids):
         if not (intervals or variant_ids):
             return intervals, variant_ids
@@ -531,6 +527,7 @@ class BaseHailTableQuery(object):
         return score_filter, ht_value
 
     def _filter_by_annotations(self, pathogenicity, annotations):
+        annotations = annotations or {}
         annotation_override_filters = self._get_annotation_override_filters(pathogenicity, annotations)
 
         self._annotate_allowed_consequences(annotations, annotation_override_filters)
@@ -656,7 +653,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     def _annotate_allowed_consequences(self, annotations, annotation_filters):
         allowed_consequences = {
-            ann for field, anns in (annotations or {}).items()
+            ann for field, anns in annotations.items()
             if anns and (field not in ANNOTATION_OVERRIDE_FIELDS) for ann in anns
         }
         consequence_enum = self._get_enum_lookup('sorted_transcript_consequences', 'consequence_term')
@@ -685,11 +682,11 @@ class VariantHailTableQuery(BaseHailTableQuery):
             path_terms = (pathogenicity or {}).get(key)
             if path_terms:
                 annotation_filters.append(self._has_terms_range_expr(path_terms, key, *args))
-        if (annotations or {}).get(SCREEN_KEY):
+        if annotations.get(SCREEN_KEY):
             screen_enum = self._get_enum_lookup(SCREEN_KEY.lower(), 'region_type')
             allowed_consequences = hl.set({screen_enum[c] for c in annotations[SCREEN_KEY]})
             annotation_filters.append(allowed_consequences.contains(self._ht.screen.region_type_ids.first()))
-        if (annotations or {}).get(SPLICE_AI_FIELD):
+        if annotations.get(SPLICE_AI_FIELD):
             score_filter, _ = self._get_in_silico_filter(SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD])
             annotation_filters.append(score_filter)
 
