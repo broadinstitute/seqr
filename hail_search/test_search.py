@@ -182,8 +182,20 @@ class HailSearchTestCase(AioHTTPTestCase):
             omit_sample_type='SV_WES',
         )
 
+        quality_filter = {'min_gq': 40, 'min_ab': 50}
         await self._assert_expected_search(
-            [VARIANT2, FAMILY_3_VARIANT], quality_filter={'min_gq': 40, 'min_ab': 50}, omit_sample_type='SV_WES',
+            [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_sample_type='SV_WES',
+        )
+
+        annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_sample_type='SV_WES',
+            annotations=annotations, pathogenicity={'clinvar': ['likely_pathogenic', 'vus_or_conflicting']},
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_sample_type='SV_WES',
+            annotations=annotations, pathogenicity={'clinvar': ['pathogenic']},
         )
 
     async def test_location_search(self):

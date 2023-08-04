@@ -672,8 +672,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         if not clinvar_path_ht:
             return passes_quality
 
-        # TODO add ht clinvar filter - hl.is_defined(clinvar_path_ht[ht.key])
-        return lambda entries: passes_quality(entries)
+        return lambda entries: hl.is_defined(clinvar_path_ht[ht.key]) | passes_quality(entries)
 
     def _get_clinvar_filter_ht(self, pathogenicity):
         if self._filter_hts.get(CLINVAR_KEY) is not None:
