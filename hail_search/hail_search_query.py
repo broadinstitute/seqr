@@ -365,13 +365,7 @@ class BaseHailTableQuery(object):
         if not passes_quality_filters:
             return None
 
-        def passes_quality(gt):
-            pq = passes_quality_filters[0](gt)
-            for q in passes_quality_filters[1:]:
-                pq &= q(gt)
-            return pq
-
-        return passes_quality
+        return lambda gt: hl.all([f(gt) for f in passes_quality_filters])
 
     @classmethod
     def _get_genotype_passes_quality_field(cls, field, value, affected_only):
@@ -486,10 +480,7 @@ class BaseHailTableQuery(object):
                     pop_filters.append(pop_expr[hemi_field] <= freqs['hh'])
 
             if pop_filters:
-                pop_filter = pop_filters[0]
-                for pf in pop_filters[1:]:
-                    pop_filter &= pf
-                self._ht = self._ht.filter(hl.is_missing(pop_expr) | pop_filter)
+                self._ht = self._ht.filter(hl.is_missing(pop_expr) | hl.all(pop_filters))
 
     def _filter_by_in_silico(self, in_silico_filters):
         in_silico_filters = in_silico_filters or {}
@@ -536,15 +527,6 @@ class BaseHailTableQuery(object):
 
     def _get_annotation_override_filters(self, pathogenicity, annotations):
         return []
-
-    @staticmethod
-    def _or_filter(filters):
-        if not filters:
-            return None
-        filter_expr = filters[0]
-        for f in filters[1:]:
-            filter_expr |= f
-        return filter_expr
 
     def _format_results(self, ht):
         annotations = {k: v(ht) for k, v in self.annotation_fields().items()}
@@ -665,9 +647,8 @@ class VariantHailTableQuery(BaseHailTableQuery):
             annotation_exprs['allowed_transcripts'] = allowed_transcripts
             annotation_filters = annotation_filters + [hl.is_defined(allowed_transcripts.first())]
 
-        consequence_filter = self._or_filter(annotation_filters)
-        if consequence_filter is not None:
-            annotation_exprs['has_allowed_annotation'] = consequence_filter
+        if annotation_filters:
+            annotation_exprs['has_allowed_annotation'] = hl.any(annotation_filters)
 
         if annotation_exprs:
             self._ht = self._ht.annotate(**annotation_exprs)
@@ -703,7 +684,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
         ranges = [r for r in ranges if r[0] is not None]
         value = self._ht[field][f'{subfield}_id']
-        return self._or_filter([(value >= r[0]) & (value <= r[1]) for r in ranges])
+        return hl.any(lambda r: (value >= r[0]) & (value <= r[1]), ranges)
 
 
 QUERY_CLASS_MAP = {
