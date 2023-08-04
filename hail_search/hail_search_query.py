@@ -630,6 +630,9 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'alt': lambda r: r.alleles[1],
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'mainTranscriptId': lambda r: r.sorted_transcript_consequences.first().transcript_id,
+        'selectedMainTranscriptId': lambda r: hl.or_missing(
+            r.selected_transcript != r.sorted_transcript_consequences.first(), r.selected_transcript.transcript_id,
+        ),
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {

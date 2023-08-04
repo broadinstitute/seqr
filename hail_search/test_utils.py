@@ -82,7 +82,14 @@ VARIANT1 = {
         },
     },
     'genotypeFilters': '',
-    'clinvar': None,
+    'clinvar': {
+       'alleleId': 19473,
+       'conflictingPathogenicities': None,
+       'goldStars': None,
+       'pathogenicity': 'Likely_pathogenic',
+       'assertions': None,
+       'version': '2023-07-10',
+    },
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
@@ -110,6 +117,7 @@ VARIANT1 = {
     },
     'transcripts': {},
     'mainTranscriptId': None,
+    'selectedMainTranscriptId': None,
     '_sort': [1000010439],
 }
 VARIANT2 = {
@@ -194,6 +202,7 @@ VARIANT2 = {
        ],
     },
     'mainTranscriptId': 'ENST00000376585',
+    'selectedMainTranscriptId': None,
     '_sort': [1011794419],
 }
 VARIANT3 = {
@@ -254,13 +263,14 @@ VARIANT3 = {
         'ENSG00000097046': [
             {'aminoAcids': None, 'canonical': 1, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000428239.5:c.115+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000428239', 'isLofNagnag': None, 'transcriptRank': 0, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
             {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000234626.10:c.115+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000234626', 'isLofNagnag': None, 'transcriptRank': 1, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
-            {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000426137.1:c.115+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000426137', 'isLofNagnag': None, 'transcriptRank': 2, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+            {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000426137.1:c.115+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000426137', 'isLofNagnag': None, 'transcriptRank': 2, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'non_coding_transcript_exon_variant'},
         ],
         'ENSG00000177000': [
             {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000177000', 'hgvsc': 'ENST00000497611.1:n.501+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000497611', 'isLofNagnag': None, 'transcriptRank': 3, 'biotype': 'processed_transcript', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
         ],
     },
     'mainTranscriptId': 'ENST00000428239',
+    'selectedMainTranscriptId': None,
     '_sort': [1091502721],
 }
 VARIANT4 = {
@@ -325,6 +335,7 @@ VARIANT4 = {
         ],
     },
     'mainTranscriptId': 'ENST00000428239',
+    'selectedMainTranscriptId': None,
     '_sort': [1091511686],
 }
 
