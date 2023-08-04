@@ -426,7 +426,11 @@ class BaseHailTableQuery(object):
 
     def _filter_by_gene_ids(self, gene_ids):
         gene_ids = hl.set(gene_ids)
-        self._ht = self._ht.filter(self._ht.sorted_transcript_consequences.any(lambda t: gene_ids.contains(t.gene_id)))
+        gene_id_filter = self._get_gene_id_filter(gene_ids)
+        self._ht = self._ht.filter(gene_id_filter)
+
+    def _get_gene_id_filter(self, gene_ids):
+        raise NotImplementedError
 
     def _filter_rs_ids(self, rs_ids):
         rs_id_set = hl.set(rs_ids)
@@ -642,6 +646,27 @@ class VariantHailTableQuery(BaseHailTableQuery):
         },
     }
 
+    @staticmethod
+    def _selected_main_transcript_expr(ht):
+        has_gene_transcripts = 'gene_transcripts' in ht.row
+        has_allowed_transcripts = 'allowed_transcripts' in ht.row
+
+        main_transcript = ht.sorted_transcript_consequences.first()
+        if has_gene_transcripts:
+            matched_transcript = ht.gene_transcripts.first()
+            if has_allowed_transcripts:
+                allowed_transcript_ids = hl.set(ht.allowed_transcripts.map(lambda t: t.transcript_id))
+                matched_transcript = hl.or_else(
+                    ht.gene_transcripts.find(lambda t: allowed_transcript_ids.contains(t.transcript_id)),
+                    matched_transcript,
+                )
+        elif has_allowed_transcripts:
+            matched_transcript = ht.allowed_transcripts.first()
+        else:
+            matched_transcript = main_transcript
+
+        return hl.or_else(matched_transcript, main_transcript)
+
     def import_filtered_table(self, *args, **kwargs):
         super(VariantHailTableQuery, self).import_filtered_table(*args, **kwargs)
         self._ht = self._ht.key_by(**{VARIANT_KEY_FIELD: self._ht.variant_id})
@@ -653,6 +678,12 @@ class VariantHailTableQuery(BaseHailTableQuery):
             'drop_fields': ['consequence_terms'],
         })
         return args
+
+    def _get_gene_id_filter(self, gene_ids):
+        self._ht = self._ht.annotate(
+            gene_transcripts=self._ht.sorted_transcript_consequences.filter(lambda t: gene_ids.contains(t.gene_id))
+        )
+        return hl.is_defined(self._ht.gene_transcripts.first())
 
     def _annotate_allowed_consequences(self, annotations, annotation_filters):
         allowed_consequences = {
@@ -710,6 +741,10 @@ class VariantHailTableQuery(BaseHailTableQuery):
         ranges = [r for r in ranges if r[0] is not None]
         value = self._ht[field][f'{subfield}_id']
         return self._or_filter([(value >= r[0]) & (value <= r[1]) for r in ranges])
+
+    def _format_results(self, ht):
+        ht = ht.annotate(selected_transcript=self._selected_main_transcript_expr(ht))
+        return super(VariantHailTableQuery, self)._format_results(ht)
 
 
 QUERY_CLASS_MAP = {
