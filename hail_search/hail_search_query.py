@@ -365,13 +365,7 @@ class BaseHailTableQuery(object):
         if not passes_quality_filters:
             return None
 
-        def passes_quality(gt):
-            pq = passes_quality_filters[0](gt)
-            for q in passes_quality_filters[1:]:
-                pq &= q(gt)
-            return pq
-
-        return passes_quality
+        return lambda gt: hl.all([f(gt) for f in passes_quality_filters])
 
     @classmethod
     def _get_genotype_passes_quality_field(cls, field, value, affected_only):
@@ -436,10 +430,6 @@ class BaseHailTableQuery(object):
         rs_id_set = hl.set(rs_ids)
         self._ht = self._ht.filter(rs_id_set.contains(self._ht.rsid))
 
-    @staticmethod
-    def _formatted_chr_interval(interval):
-        return f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
-
     def _parse_intervals(self, intervals, variant_ids):
         if not (intervals or variant_ids):
             return intervals, variant_ids
@@ -494,10 +484,7 @@ class BaseHailTableQuery(object):
                     pop_filters.append(pop_expr[hemi_field] <= freqs['hh'])
 
             if pop_filters:
-                pop_filter = pop_filters[0]
-                for pf in pop_filters[1:]:
-                    pop_filter &= pf
-                self._ht = self._ht.filter(hl.is_missing(pop_expr) | pop_filter)
+                self._ht = self._ht.filter(hl.is_missing(pop_expr) | hl.all(pop_filters))
 
     def _filter_by_in_silico(self, in_silico_filters):
         in_silico_filters = in_silico_filters or {}
@@ -515,12 +502,9 @@ class BaseHailTableQuery(object):
                 missing_qs.append(hl.is_missing(ht_value))
 
         if missing_qs:
-            missing_q = missing_qs[0]
-            for q in missing_qs[1:]:
-                missing_q &= q
-            in_silico_qs.append(missing_q)
+            in_silico_qs.append(hl.all(missing_qs))
 
-        self._ht = self._ht.filter(self._or_filter(in_silico_qs))
+        self._ht = self._ht.filter(hl.any(in_silico_qs))
 
     def _get_in_silico_filter(self, in_silico, value):
         score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
@@ -535,6 +519,7 @@ class BaseHailTableQuery(object):
         return score_filter, ht_value
 
     def _filter_by_annotations(self, pathogenicity, annotations):
+        annotations = annotations or {}
         annotation_override_filters = self._get_annotation_override_filters(pathogenicity, annotations)
 
         self._annotate_allowed_consequences(annotations, annotation_override_filters)
@@ -546,15 +531,6 @@ class BaseHailTableQuery(object):
 
     def _get_annotation_override_filters(self, pathogenicity, annotations):
         return []
-
-    @staticmethod
-    def _or_filter(filters):
-        if not filters:
-            return None
-        filter_expr = filters[0]
-        for f in filters[1:]:
-            filter_expr |= f
-        return filter_expr
 
     def _format_results(self, ht):
         annotations = {k: v(ht) for k, v in self.annotation_fields().items()}
@@ -690,7 +666,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     def _annotate_allowed_consequences(self, annotations, annotation_filters):
         allowed_consequences = {
-            ann for field, anns in (annotations or {}).items()
+            ann for field, anns in annotations.items()
             if anns and (field not in ANNOTATION_OVERRIDE_FIELDS) for ann in anns
         }
         consequence_enum = self._get_enum_lookup('sorted_transcript_consequences', 'consequence_term')
@@ -705,9 +681,8 @@ class VariantHailTableQuery(BaseHailTableQuery):
             annotation_exprs['allowed_transcripts'] = allowed_transcripts
             annotation_filters = annotation_filters + [hl.is_defined(allowed_transcripts.first())]
 
-        consequence_filter = self._or_filter(annotation_filters)
-        if consequence_filter is not None:
-            annotation_exprs['has_allowed_annotation'] = consequence_filter
+        if annotation_filters:
+            annotation_exprs['has_allowed_annotation'] = hl.any(annotation_filters)
 
         if annotation_exprs:
             self._ht = self._ht.annotate(**annotation_exprs)
@@ -719,11 +694,11 @@ class VariantHailTableQuery(BaseHailTableQuery):
             path_terms = (pathogenicity or {}).get(key)
             if path_terms:
                 annotation_filters.append(self._has_terms_range_expr(path_terms, key, *args))
-        if (annotations or {}).get(SCREEN_KEY):
+        if annotations.get(SCREEN_KEY):
             screen_enum = self._get_enum_lookup(SCREEN_KEY.lower(), 'region_type')
             allowed_consequences = hl.set({screen_enum[c] for c in annotations[SCREEN_KEY]})
             annotation_filters.append(allowed_consequences.contains(self._ht.screen.region_type_ids.first()))
-        if (annotations or {}).get(SPLICE_AI_FIELD):
+        if annotations.get(SPLICE_AI_FIELD):
             score_filter, _ = self._get_in_silico_filter(SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD])
             annotation_filters.append(score_filter)
 
@@ -743,7 +718,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
         ranges = [r for r in ranges if r[0] is not None]
         value = self._ht[field][f'{subfield}_id']
-        return self._or_filter([(value >= r[0]) & (value <= r[1]) for r in ranges])
+        return hl.any(lambda r: (value >= r[0]) & (value <= r[1]), ranges)
 
     def _format_results(self, ht):
         ht = ht.annotate(selected_transcript=self._selected_main_transcript_expr(ht))
