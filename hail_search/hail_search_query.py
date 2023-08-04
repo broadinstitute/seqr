@@ -507,12 +507,9 @@ class BaseHailTableQuery(object):
                 missing_qs.append(hl.is_missing(ht_value))
 
         if missing_qs:
-            missing_q = missing_qs[0]
-            for q in missing_qs[1:]:
-                missing_q &= q
-            in_silico_qs.append(missing_q)
+            in_silico_qs.append(hl.all(missing_qs))
 
-        self._ht = self._ht.filter(self._or_filter(in_silico_qs))
+        self._ht = self._ht.filter(hl.any(in_silico_qs))
 
     def _get_in_silico_filter(self, in_silico, value):
         score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
