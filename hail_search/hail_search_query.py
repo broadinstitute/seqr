@@ -521,11 +521,7 @@ class BaseHailTableQuery(object):
                 missing_q &= q
             in_silico_qs.append(missing_q)
 
-        in_silico_q = in_silico_qs[0]
-        for q in in_silico_qs[1:]:
-            in_silico_q |= q
-
-        self._ht = self._ht.filter(in_silico_q)
+        self._ht = self._ht.filter(hl.any(in_silico_qs))
 
     def _format_results(self, ht):
         annotations = {k: v(ht) for k, v in self.annotation_fields().items()}
