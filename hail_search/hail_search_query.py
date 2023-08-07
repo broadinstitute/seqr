@@ -193,7 +193,7 @@ class BaseHailTableQuery(object):
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
             family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht', **load_table_kwargs)
-            families_ht = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
+            families_ht, _ = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = []
             exception_messages = set()
@@ -207,19 +207,29 @@ class BaseHailTableQuery(object):
             if exception_messages:
                 raise HTTPBadRequest(text='; '.join(exception_messages))
 
-            families_ht = filtered_project_hts[0]
-            default_entries = hl.empty_array(families_ht.family_entries.dtype.element_type)
-            for project_ht in filtered_project_hts[1:]:
+            families_ht, num_families = filtered_project_hts[0]
+            entry_type = families_ht.family_entries.dtype.element_type
+            for project_ht, num_project_families in filtered_project_hts[1:]:
                 families_ht = families_ht.join(project_ht, how='outer')
-                families_ht = families_ht.select(
-                    filters=families_ht.filters.union(families_ht.filters_1),
-                    family_entries=hl.bind(
+                select_fields = {
+                    'filters': families_ht.filters.union(families_ht.filters_1),
+                    'family_entries': hl.bind(
                         lambda a1, a2: a1.extend(a2),
-                        hl.or_else(families_ht.family_entries, default_entries),
-                        hl.or_else(families_ht.family_entries_1, default_entries),
+                        hl.or_else(families_ht.family_entries, hl.empty_array(entry_type)),
+                        hl.or_else(families_ht.family_entries_1, hl.empty_array(entry_type)),
                     ),
-                )
-                # TODO comp_het_family_entries - merge and maintain orderwhen missing
+                }
+                if 'comp_het_family_entries_1' in families_ht.row:
+                    select_fields['comp_het_family_entries'] = hl.bind(
+                        lambda a1, a2: a1.extend(a2),
+                        hl.or_else(families_ht.comp_het_family_entries, hl.range(num_families).map(hl.missing(entry_type))),
+                        hl.or_else(
+                            families_ht.comp_het_family_entries_1,
+                            hl.range(num_families).map(hl.missing(num_project_families)),
+                        ),
+                    )
+                families_ht = families_ht.select(**select_fields)
+                num_families += num_project_families
 
         annotations_ht_path = f'{tables_path}/annotations.ht'
         annotation_ht_query_result = hl.query_table(
@@ -241,7 +251,7 @@ class BaseHailTableQuery(object):
         if variant_ids:
             ht = self._filter_variant_ids(ht, variant_ids)
 
-        ht, sample_id_family_index_map = self._add_entry_sample_families(ht, sample_data)
+        ht, sample_id_family_index_map, num_families = self._add_entry_sample_families(ht, sample_data)
 
         quality_filter = quality_filter or {}
         if quality_filter.get('vcf_filter'):
@@ -258,7 +268,7 @@ class BaseHailTableQuery(object):
             ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map,
         )
 
-        return ht.select_globals()
+        return ht.select_globals(), num_families
 
     @classmethod
     def _add_entry_sample_families(cls, ht, sample_data):
@@ -282,7 +292,8 @@ class BaseHailTableQuery(object):
         sample_id_family_map = {s['sample_id']: s['family_guid'] for s in sample_data}
         sample_index_family_map = hl.dict({sample_id_index_map[k]: v for k, v in sample_id_family_map.items()})
         family_index_map = {f: i for i, f in enumerate(sorted(set(sample_id_family_map.values())))}
-        family_sample_indices = [None] * len(family_index_map)
+        num_families = len(family_index_map)
+        family_sample_indices = [None] * num_families
         sample_id_family_index_map = {}
         for sample_id, family_guid in sample_id_family_map.items():
             sample_index = sample_id_index_map[sample_id]
@@ -304,7 +315,7 @@ class BaseHailTableQuery(object):
             ))
         )
 
-        return ht, sample_id_family_index_map
+        return ht, sample_id_family_index_map, num_families
 
     @staticmethod
     def _missing_entry(entry):
