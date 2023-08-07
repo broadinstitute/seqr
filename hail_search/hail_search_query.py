@@ -626,8 +626,15 @@ class BaseHailTableQuery(object):
             self.GENOTYPE_QUERY_MAP[REF_REF](entries_2[x[0]].GT),
         ]))
 
+    def _format_comp_het_results(self, ch_ht):
+        formatted_grouped_variants = ch_ht[GROUPED_VARIANTS_FIELD].map(
+            lambda v: self._format_results(v).annotate(**{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
+        )
+        ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted(formatted_grouped_variants, key=lambda x: x._sort)})
+        return ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
+
     def _format_results(self, ht):
-        annotations = {k: v(ht) for k, v in self.annotation_fields().items()}
+        annotations = {k: v(ht) for k, v in self.annotation_fields().items()}  # TODO don't recompte annotations
         annotations.update({
             '_sort': self._sort_order(ht),
             'genomeVersion': self._genome_version.replace('GRCh', ''),
@@ -636,16 +643,17 @@ class BaseHailTableQuery(object):
         return results.select(*self.CORE_FIELDS, *list(annotations.keys()))
 
     def search(self):
-        # TODO
-        # if self._comp_het_ht:
-        #     ch_ht = self._format_comp_het_results(self._comp_het_ht)
-        #
-        # if self._ht:
-        #     ht = self._format_results(self._ht)
-        #     if ch_ht:
-        #         ht = ht.join(ch_ht, 'outer')
-        #         ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
-        ht = self._format_results(self._ht)
+        ch_ht = None
+        if self._comp_het_ht:
+            ch_ht = self._format_comp_het_results(self._comp_het_ht)
+
+        if self._ht:
+            ht = self._format_results(self._ht)
+            if ch_ht:
+                ht = ht.join(ch_ht, 'outer')
+                ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
+        else:
+            ht = ch_ht
 
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}. Fetched: {self._num_results}')
