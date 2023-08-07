@@ -8,7 +8,7 @@ from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_
     VARIANT_KEY_FIELD, GNOMAD_GENOMES_FIELD, XPOS, GENOME_VERSION_GRCh38_DISPLAY, INHERITANCE_FILTERS, \
     ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF, \
     ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
-    CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES
+    CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES, PATH_FREQ_OVERRIDE_CUTOFF
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -416,7 +416,7 @@ class BaseHailTableQuery(object):
         if rs_ids:
             self._filter_rs_ids(rs_ids)
 
-        self._filter_by_frequency(frequencies)
+        self._filter_by_frequency(frequencies, pathogenicity)
 
         self._filter_by_in_silico(in_silico)
 
@@ -462,18 +462,23 @@ class BaseHailTableQuery(object):
 
         return parsed_intervals, variant_ids
 
-    def _filter_by_frequency(self, frequencies):
+    def _filter_by_frequency(self, frequencies, pathogenicity):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
         if not frequencies:
             return
 
+        path_override_filter = self._frequency_override_filter(pathogenicity)
+        filters = []
         for pop, freqs in sorted(frequencies.items()):
             pop_filters = []
             pop_expr = self._ht[self.POPULATION_FIELDS.get(pop, pop)]
             pop_config = self._format_population_config(self.POPULATIONS[pop])
             if freqs.get('af') is not None:
                 af_field = pop_config.get('filter_af') or pop_config['af']
-                pop_filters.append(pop_expr[af_field] <= freqs['af'])
+                pop_filter = pop_expr[af_field] <= freqs['af']
+                if path_override_filter is not None and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
+                    pop_filter |= path_override_filter & (pop_expr[af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
+                pop_filters.append(pop_filter)
             elif freqs.get('ac') is not None:
                 ac_field = pop_config['ac']
                 if ac_field:
@@ -488,7 +493,13 @@ class BaseHailTableQuery(object):
                     pop_filters.append(pop_expr[hemi_field] <= freqs['hh'])
 
             if pop_filters:
-                self._ht = self._ht.filter(hl.is_missing(pop_expr) | hl.all(pop_filters))
+                filters.append(hl.is_missing(pop_expr) | hl.all(pop_filters))
+
+        if filters:
+            self._ht = self._ht.filter(hl.all(filters))
+
+    def _frequency_override_filter(self, pathogenicity):
+        return None
 
     def _filter_by_in_silico(self, in_silico_filters):
         in_silico_filters = in_silico_filters or {}
@@ -596,10 +607,10 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'revel': PredictionPath('dbnsfp', 'REVEL_score'),
         'sift': PredictionPath('dbnsfp', 'SIFT_pred'),
     }
-    PATHOGENICITY_FILTERS = [
-        (CLINVAR_KEY, 'pathogenicity', CLINVAR_PATH_RANGES),
-        (HGMD_KEY, 'class', HGMD_PATH_RANGES),
-    ]
+    PATHOGENICITY_FILTERS = {
+        CLINVAR_KEY: ('pathogenicity', CLINVAR_PATH_RANGES),
+        HGMD_KEY: ('class', HGMD_PATH_RANGES),
+    }
 
     GLOBALS = BaseHailTableQuery.GLOBALS + ['versions']
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
@@ -724,10 +735,10 @@ class VariantHailTableQuery(BaseHailTableQuery):
     def _get_annotation_override_filters(self, pathogenicity, annotations):
         annotation_filters = []
 
-        for key, *args in self.PATHOGENICITY_FILTERS:
+        for key in self.PATHOGENICITY_FILTERS.keys():
             path_terms = (pathogenicity or {}).get(key)
             if path_terms:
-                annotation_filters.append(self._has_terms_range_expr(path_terms, key, *args))
+                annotation_filters.append(self._has_path_expr(path_terms, key))
         if annotations.get(SCREEN_KEY):
             screen_enum = self._get_enum_lookup(SCREEN_KEY.lower(), 'region_type')
             allowed_consequences = hl.set({screen_enum[c] for c in annotations[SCREEN_KEY]})
@@ -738,13 +749,18 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
         return annotation_filters
 
+    def _frequency_override_filter(self, pathogenicity):
+        path_terms = self._get_clinvar_path_filters(pathogenicity)
+        return self._has_path_expr(path_terms, CLINVAR_KEY) if path_terms else None
+
     @staticmethod
     def _get_clinvar_path_filters(pathogenicity):
         return {
             f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
         }
 
-    def _has_terms_range_expr(self, terms, field, subfield, range_configs):
+    def _has_path_expr(self, terms, field):
+        subfield, range_configs = self.PATHOGENICITY_FILTERS[field]
         enum_lookup = self._get_enum_lookup(field, subfield)
 
         ranges = [[None, None]]
