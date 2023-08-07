@@ -323,9 +323,6 @@ class BaseHailTableQuery(object):
             lambda entries: hl.or_missing(entries.any(any_valid_entry), entries))
         )
 
-        if not (inheritance_filter or inheritance_mode):
-            return ht
-
         if inheritance_mode == X_LINKED_RECESSIVE:
             x_chrom_interval = hl.parse_locus_interval(
                 hl.get_reference(self._genome_version).x_contigs[0], reference_genome=self._genome_version)
@@ -335,7 +332,7 @@ class BaseHailTableQuery(object):
             return self._filter_comp_het_inheritance(
                 ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data,
             )
-        elif not is_any_affected:
+        elif (inheritance_filter or inheritance_mode) and not is_any_affected:
             ht = self._filter_families_inheritance(
                 ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data,
             )
