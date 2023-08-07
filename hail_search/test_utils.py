@@ -343,6 +343,14 @@ MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
 HAIL_BACKEND_VARIANTS = [VARIANT2, MULTI_FAMILY_VARIANT]
 HAIL_BACKEND_SINGLE_FAMILY_VARIANTS = [VARIANT2, VARIANT3]
 
+LOCATION_SEARCH = {
+    'gene_ids': ['ENSG00000177000', 'ENSG00000097046'],
+    'intervals': ['2:1234-5678', '7:1-11100', '1:11785723-11806455', '1:91500851-91525764'],
+}
+EXCLUDE_LOCATION_SEARCH = {'intervals': LOCATION_SEARCH['intervals'], 'exclude_intervals': True}
+VARIANT_ID_SEARCH = {'variant_ids': [['1', 10439, 'AC', 'A'], ['1', 91511686, 'TCA', 'G']], 'rs_ids': []}
+RSID_SEARCH = {'variant_ids': [], 'rs_ids': ['rs1801131']}
+
 
 def get_hail_search_body(genome_version='GRCh38', num_results=100, sample_data=None, omit_sample_type=None, **search_body):
     sample_data = sample_data or EXPECTED_SAMPLE_DATA

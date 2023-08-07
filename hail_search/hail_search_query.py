@@ -63,29 +63,25 @@ class BaseHailTableQuery(object):
         base_pop_config.update(pop_config)
         return base_pop_config
 
-    @property
     def annotation_fields(self):
-        ht_globals = {k: hl.eval(self._ht[k]) for k in self.GLOBALS}
-        enums = ht_globals.pop('enums')
-
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
             }),
             'predictions': lambda r: hl.struct(**{
-                prediction: hl.array(enums[path.source][path.field])[r[path.source][f'{path.field}_id']]
-                if enums.get(path.source, {}).get(path.field) else r[path.source][path.field]
+                prediction: hl.array(self._enums[path.source][path.field])[r[path.source][f'{path.field}_id']]
+                if self._enums.get(path.source, {}).get(path.field) else r[path.source][path.field]
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
             'transcripts': lambda r: hl.or_else(
                 r.sorted_transcript_consequences, hl.empty_array(r.sorted_transcript_consequences.dtype.element_type)
             ).map(
-                lambda t: self._enum_field(t, enums['sorted_transcript_consequences'], **self._format_transcript_args())
+                lambda t: self._enum_field(t, self._enums['sorted_transcript_consequences'], **self._format_transcript_args())
             ).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
 
-        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], enums[k], ht_globals=ht_globals, **enum_config)
+        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], self._enums[k], ht_globals=self._globals, **enum_config)
         annotation_fields.update({
             enum_config.get('response_key', k): format_enum(k, enum_config)
             for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
@@ -107,6 +103,12 @@ class BaseHailTableQuery(object):
         return {
             'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
         }
+
+    def _get_enum_lookup(self, field, subfield):
+        enum_field = self._enums.get(field, {}).get(subfield)
+        if enum_field is None:
+            return None
+        return {v: i for i, v in enumerate(enum_field)}
 
     @staticmethod
     def _enum_field(value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, **kwargs):
@@ -140,14 +142,24 @@ class BaseHailTableQuery(object):
         self._sort = sort
         self._num_results = num_results
         self._ht = None
+        self._enums = None
+        self._globals = None
 
         self._load_filtered_table(data_type, sample_data, **kwargs)
 
-    def _load_filtered_table(self, data_type, sample_data, **kwargs):
-        self.import_filtered_table(data_type, sample_data, **kwargs)
+    def _load_filtered_table(self, data_type, sample_data, intervals=None, exclude_intervals=False, variant_ids=None, **kwargs):
+        parsed_intervals, variant_ids = self._parse_intervals(intervals, variant_ids)
+        excluded_intervals = None
+        if exclude_intervals:
+            excluded_intervals = parsed_intervals
+            parsed_intervals = None
+        self.import_filtered_table(
+            data_type, sample_data, intervals=parsed_intervals, excluded_intervals=excluded_intervals,
+            variant_ids=variant_ids, **kwargs)
 
-    def import_filtered_table(self, data_type, sample_data, **kwargs):
+    def import_filtered_table(self, data_type, sample_data, intervals=None, **kwargs):
         tables_path = f'{DATASETS_DIR}/{self._genome_version}/{data_type}'
+        load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
         family_samples = defaultdict(list)
         project_samples = defaultdict(list)
@@ -158,13 +170,13 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {data_type} data for {len(family_samples)} families in {len(project_samples)} projects')
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
-            family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht')
+            family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht', **load_table_kwargs)
             families_ht = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = []
             exception_messages = set()
             for project_guid, project_sample_data in project_samples.items():
-                project_ht = hl.read_table(f'{tables_path}/projects/{project_guid}.ht')
+                project_ht = hl.read_table(f'{tables_path}/projects/{project_guid}.ht', **load_table_kwargs)
                 try:
                     filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
                 except HTTPBadRequest as e:
@@ -190,8 +202,11 @@ class BaseHailTableQuery(object):
         annotation_ht_query_result = hl.query_table(
             annotations_ht_path, families_ht.key).first().drop(*families_ht.key)
         ht = families_ht.annotate(**annotation_ht_query_result)
-        # Add globals
-        ht = ht.join(hl.read_table(annotations_ht_path).head(0).select().select_globals(*self.GLOBALS), how='left')
+
+        # Get globals
+        annotation_globals_ht = hl.read_table(annotations_ht_path).head(0).select()
+        self._globals = {k: hl.eval(annotation_globals_ht[k]) for k in self.GLOBALS}
+        self._enums = self._globals.pop('enums')
 
         self._ht = ht.transmute(
             genotypes=ht.family_entries.flatmap(lambda x: x).filter(
@@ -204,8 +219,14 @@ class BaseHailTableQuery(object):
         )
         self._filter_annotated_table(**kwargs)
 
-    def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, quality_filter=None,
-                              **kwargs):
+    def _filter_entries_table(self, ht, sample_data,  inheritance_mode=None, inheritance_filter=None, quality_filter=None,
+                              excluded_intervals=None, variant_ids=None, **kwargs):
+        if excluded_intervals:
+            ht = hl.filter_intervals(ht, excluded_intervals, keep=False)
+
+        if variant_ids:
+            ht = self._filter_variant_ids(ht, variant_ids)
+
         ht, sample_id_family_index_map = self._add_entry_sample_families(ht, sample_data)
 
         ht = self._filter_inheritance(
@@ -375,8 +396,70 @@ class BaseHailTableQuery(object):
     def get_x_chrom_filter(ht, x_interval):
         return x_interval.contains(ht.locus)
 
-    def _filter_annotated_table(self, frequencies=None, **kwargs):
+    def _filter_variant_ids(self, ht, variant_ids):
+        if len(variant_ids) == 1:
+            variant_id_q = ht.alleles == [variant_ids[0][2], variant_ids[0][3]]
+        else:
+            variant_id_qs = [
+                (ht.locus == hl.locus(chrom, pos, reference_genome=self._genome_version)) &
+                (ht.alleles == [ref, alt])
+                for chrom, pos, ref, alt in variant_ids
+            ]
+            variant_id_q = variant_id_qs[0]
+            for q in variant_id_qs[1:]:
+                variant_id_q |= q
+        return ht.filter(variant_id_q)
+
+    def _filter_annotated_table(self, gene_ids=None, rs_ids=None, frequencies=None, in_silico=None, **kwargs):
+        if gene_ids:
+            self._filter_by_gene_ids(gene_ids)
+
+        if rs_ids:
+            self._filter_rs_ids(rs_ids)
+
         self._filter_by_frequency(frequencies)
+
+        self._filter_by_in_silico(in_silico)
+
+    def _filter_by_gene_ids(self, gene_ids):
+        gene_ids = hl.set(gene_ids)
+        self._ht = self._ht.filter(self._ht.sorted_transcript_consequences.any(lambda t: gene_ids.contains(t.gene_id)))
+
+    def _filter_rs_ids(self, rs_ids):
+        rs_id_set = hl.set(rs_ids)
+        self._ht = self._ht.filter(rs_id_set.contains(self._ht.rsid))
+
+    @staticmethod
+    def _formatted_chr_interval(interval):
+        return f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
+
+    def _parse_intervals(self, intervals, variant_ids):
+        if not (intervals or variant_ids):
+            return intervals, variant_ids
+
+        reference_genome = hl.get_reference(self._genome_version)
+        should_add_chr_prefix = any(c.startswith('chr') for c in reference_genome.contigs)
+
+        raw_intervals = intervals
+        if variant_ids:
+            if should_add_chr_prefix:
+                variant_ids = [(f'chr{chr}', *v_id) for chr, *v_id in variant_ids]
+            intervals = [f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
+        elif should_add_chr_prefix:
+            intervals = [
+                f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
+                for interval in intervals
+            ]
+
+        parsed_intervals = [
+            hl.eval(hl.parse_locus_interval(interval, reference_genome=self._genome_version, invalid_missing=True))
+            for interval in intervals
+        ]
+        invalid_intervals = [raw_intervals[i] for i, interval in enumerate(parsed_intervals) if interval is None]
+        if invalid_intervals:
+            raise HTTPBadRequest(text=f'Invalid intervals: {", ".join(invalid_intervals)}')
+
+        return parsed_intervals, variant_ids
 
     def _filter_by_frequency(self, frequencies):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
@@ -409,8 +492,36 @@ class BaseHailTableQuery(object):
                     pop_filter &= pf
                 self._ht = self._ht.filter(hl.is_missing(pop_expr) | pop_filter)
 
+    def _filter_by_in_silico(self, in_silico_filters):
+        in_silico_filters = in_silico_filters or {}
+        require_score = in_silico_filters.get('requireScore', False)
+        in_silico_filters = {k: v for k, v in in_silico_filters.items() if k in self.PREDICTION_FIELDS_CONFIG and v}
+        if not in_silico_filters:
+            return
+
+        in_silico_qs = []
+        missing_qs = []
+        for in_silico, value in in_silico_filters.items():
+            score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
+            enum_lookup = self._get_enum_lookup(*score_path)
+            if enum_lookup is not None:
+                ht_value = self._ht[score_path.source][f'{score_path.field}_id']
+                score_filter = ht_value == enum_lookup[value]
+            else:
+                ht_value = self._ht[score_path.source][score_path.field]
+                score_filter = ht_value >= float(value)
+
+            in_silico_qs.append(score_filter)
+            if not require_score:
+                missing_qs.append(hl.is_missing(ht_value))
+
+        if missing_qs:
+            in_silico_qs.append(hl.all(missing_qs))
+
+        self._ht = self._ht.filter(hl.any(in_silico_qs))
+
     def _format_results(self, ht):
-        annotations = {k: v(ht) for k, v in self.annotation_fields.items()}
+        annotations = {k: v(ht) for k, v in self.annotation_fields().items()}
         annotations.update({
             '_sort': self._sort_order(ht),
             'genomeVersion': self._genome_version.replace('GRCh', ''),

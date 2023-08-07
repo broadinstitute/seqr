@@ -222,7 +222,7 @@ class UpdateGencodeTest(TestCase):
         ])
         calls = [
             mock.call('Dropping the 3 existing TranscriptInfo entries'),
-            mock.call('Dropping the 50 existing GeneInfo entries'),
+            mock.call('Dropping the 52 existing GeneInfo entries'),
             mock.call('Creating 2 GeneInfo records'),
             mock.call('Done'),
             mock.call('Stats: '),
