@@ -45,8 +45,9 @@ class BaseHailTableQuery(object):
     GLOBALS = ['enums']
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
-        'familyGuids': lambda r: r.genotypes.group_by(lambda x: x.familyGuid).keys(),
-        'genotypes': lambda r: r.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
+        'familyGuids': lambda r: r.family_entries.filter(
+            lambda entries: hl.is_defined(entries)
+        ).map(lambda entries: entries.first().familyGuid),
     }
     ENUM_ANNOTATION_FIELDS = {}
     LIFTOVER_ANNOTATION_FIELDS = {
@@ -67,6 +68,13 @@ class BaseHailTableQuery(object):
 
     def annotation_fields(self):
         annotation_fields = {
+            'genotypes': lambda r: r.family_entries.flatmap(lambda x: x).filter(
+                lambda gt: hl.is_defined(gt.individualGuid)
+            ).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0].select(
+                'sampleId', 'individualGuid', 'familyGuid',
+                numAlt=hl.if_else(hl.is_defined(x[0].GT), x[0].GT.n_alt_alleles(), -1),
+                **{k: x[0][field] for k, field in self.GENOTYPE_FIELDS.items()}
+            )),
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
             }),
@@ -165,7 +173,7 @@ class BaseHailTableQuery(object):
         if self._has_comp_het_search:
             self._comp_het_ht = self._filter_compound_hets()
             if self._is_recessive_search:
-                self._ht = self._ht.filter(self._ht.genotypes.size() > 0)
+                self._ht = self._ht.filter(self._ht.family_entries.any(hl.is_defined))
                 if 'has_allowed_annotation_secondary' in self._ht.row:
                     self._ht = self._ht.filter(self._ht.has_allowed_annotation)
             else:
@@ -205,45 +213,25 @@ class BaseHailTableQuery(object):
                 families_ht = families_ht.join(project_ht, how='outer')
                 families_ht = families_ht.select(
                     filters=families_ht.filters.union(families_ht.filters_1),
-                    family_entries=hl.bind(  # TODO won't work for comp hets
+                    family_entries=hl.bind(
                         lambda a1, a2: a1.extend(a2),
                         hl.or_else(families_ht.family_entries, default_entries),
                         hl.or_else(families_ht.family_entries_1, default_entries),
                     ),
                 )
+                # TODO comp_het_family_entries - merge and maintain orderwhen missing
 
         annotations_ht_path = f'{tables_path}/annotations.ht'
         annotation_ht_query_result = hl.query_table(
             annotations_ht_path, families_ht.key).first().drop(*families_ht.key)
-        ht = families_ht.annotate(**annotation_ht_query_result)
+        self._ht = families_ht.annotate(**annotation_ht_query_result)
 
         # Get globals
         annotation_globals_ht = hl.read_table(annotations_ht_path).head(0).select()
         self._globals = {k: hl.eval(annotation_globals_ht[k]) for k in self.GLOBALS}
         self._enums = self._globals.pop('enums')
 
-        if self._is_recessive_search:
-            self._ht = ht.transmute(
-                comp_het_family_entries=ht.family_entries.map(
-                    lambda entries: hl.or_missing(entries.first().is_comp_het)
-                ),
-                genotypes=self._annotate_genotypes(ht.family_entries.filter(lambda entries: entries.first().is_recessive)),
-            )
-        elif self._has_comp_het_search:
-            self._ht = ht.transmute(comp_het_family_entries=ht.family_entries)
-        else:
-            self._ht = ht.transmute(genotypes=self._annotate_genotypes(ht.family_entries))
-
         self._filter_annotated_table(**kwargs)
-
-    def _annotate_genotypes(self, entries):
-        return entries.flatmap(lambda x: x).filter(
-            lambda gt: hl.is_defined(gt.individualGuid)
-        ).map(lambda gt: gt.select(
-            'sampleId', 'individualGuid', 'familyGuid',
-            numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
-            **{k: gt[field] for k, field in self.GENOTYPE_FIELDS.items()}
-        ))
 
     def _filter_entries_table(self, ht, sample_data,  inheritance_mode=None, inheritance_filter=None, quality_filter=None,
                               excluded_intervals=None, variant_ids=None, **kwargs):
@@ -255,10 +243,6 @@ class BaseHailTableQuery(object):
 
         ht, sample_id_family_index_map = self._add_entry_sample_families(ht, sample_data)
 
-        ht = self._filter_inheritance(
-            ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map,
-        )
-
         quality_filter = quality_filter or {}
         if quality_filter.get('vcf_filter'):
             ht = self._filter_vcf_filters(ht)
@@ -269,6 +253,10 @@ class BaseHailTableQuery(object):
                 lambda entries: hl.or_missing(entries.all(passes_quality_filter), entries)
             ))
             ht = ht.filter(ht.family_entries.any(hl.is_defined))
+
+        ht = self._filter_inheritance(
+            ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map,
+        )
 
         return ht.select_globals()
 
@@ -343,31 +331,33 @@ class BaseHailTableQuery(object):
                 hl.get_reference(self._genome_version).x_contigs[0], reference_genome=self._genome_version)
             ht = ht.filter(self.get_x_chrom_filter(ht, x_chrom_interval))
 
-        if self._is_recessive_search:
-            ht = ht.annotate(all_family_entries=ht.family_entries)
-
-        if not is_any_affected:
+        if self._has_comp_het_search:
+            return self._filter_comp_het_inheritance(
+                ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data,
+            )
+        elif not is_any_affected:
             ht = self._filter_families_inheritance(
                 ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data,
             )
 
-        if self._is_recessive_search:
-            ht = ht.annotate(family_entries=ht.all_family_entries, recessive_family_entries=ht.family_entries)
-            ht = self._filter_families_inheritance(
-                ht, COMPOUND_HET, inheritance_filter, sample_id_family_index_map, sample_data)
-            ht = ht.transmute(family_entries=hl.enumerate(ht.all_family_entries).map(lambda x: hl.bind(
-                lambda is_recessive, is_comp_het: hl.or_missing(
-                    is_recessive | is_comp_het,
-                    x[1].map(lambda e: e.annotate(is_recessive=is_recessive, is_comp_het=is_comp_het))
-                ),
-                hl.is_defined(ht.recessive_family_entries[x[0]]),
-                hl.is_defined(ht.family_entries[x[0]]),
-            )))
-
         return ht.filter(ht.family_entries.any(hl.is_defined))
 
+    def _filter_comp_het_inheritance(self, ht, *args):
+        ht = self._filter_families_inheritance(ht, COMPOUND_HET, *args, filtered_field='comp_het_family_entries')
+
+        recessive_filter = None
+        if self._is_recessive_search:
+            ht = self._filter_families_inheritance(ht, RECESSIVE, *args)
+            recessive_filter = ht.family_entries.any(hl.is_defined)
+        else:
+            ht = ht.drop('family_entries')
+
+        ch_filter = ht.comp_het_family_entries.any(hl.is_defined)
+        return ht.filter(ch_filter if recessive_filter is None else (ch_filter | recessive_filter))
+
     @classmethod
-    def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data):
+    def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data,
+                                     filtered_field='family_entries'):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
         entry_indices_by_gt = defaultdict(lambda: defaultdict(list))
@@ -382,10 +372,10 @@ class BaseHailTableQuery(object):
 
         for genotype, entry_indices in entry_indices_by_gt.items():
             entry_indices = hl.dict(entry_indices)
-            ht = ht.annotate(family_entries=hl.enumerate(ht.family_entries).map(
+            ht = ht.annotate(**{filtered_field: hl.enumerate(ht.family_entries).map(
                 lambda x: cls._valid_genotype_family_entries(
                     x[1], entry_indices.get(x[0]), genotype, inheritance_mode,
-                )))
+                ))})
 
         return ht
 
@@ -620,9 +610,8 @@ class BaseHailTableQuery(object):
 
         # Format pairs as lists and de-duplicate
         ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2]).map(
-            lambda v: v.annotate(genotypes=self._annotate_genotypes(
-                hl.enumerate(ch_ht.valid_families).filter(lambda x: x[1]).map(lambda x: v.comp_het_family_entries[x[0]])
-            ))
+            lambda v: v.annotate(family_entries=hl.enumerate(ch_ht.valid_families).filter(lambda x: x[1]).map(
+                lambda x: v.comp_het_family_entries[x[0]]))
         )})
         ch_ht = ch_ht.key_by(**{
             VARIANT_KEY_FIELD: hl.str(':').join(
