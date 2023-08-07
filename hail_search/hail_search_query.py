@@ -627,11 +627,9 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
-        has_gene_transcripts = 'gene_transcripts' in ht.row
         has_allowed_transcripts = 'allowed_transcripts' in ht.row
-
         main_transcript = ht.sorted_transcript_consequences.first()
-        if has_gene_transcripts:
+        if 'gene_transcripts' in ht.row:
             matched_transcript = ht.gene_transcripts.first()
             if has_allowed_transcripts:
                 allowed_transcript_ids = hl.set(ht.allowed_transcripts.map(lambda t: t.transcript_id))
