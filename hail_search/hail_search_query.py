@@ -452,7 +452,8 @@ class BaseHailTableQuery(object):
                 variant_id_q |= q
         return ht.filter(variant_id_q)
 
-    def _filter_annotated_table(self, gene_ids=None, rs_ids=None, frequencies=None, in_silico=None, pathogenicity=None, annotations=None, **kwargs):
+    def _filter_annotated_table(self, gene_ids=None, rs_ids=None, frequencies=None, in_silico=None, pathogenicity=None,
+                                annotations=None, annotations_secondary=None, **kwargs):
         if gene_ids:
             self._filter_by_gene_ids(gene_ids)
 
@@ -463,7 +464,7 @@ class BaseHailTableQuery(object):
 
         self._filter_by_in_silico(in_silico)
 
-        self._filter_by_annotations(pathogenicity, annotations)
+        self._filter_by_annotations(pathogenicity, annotations, annotations_secondary)
 
     def _filter_by_gene_ids(self, gene_ids):
         gene_ids = hl.set(gene_ids)
@@ -565,16 +566,27 @@ class BaseHailTableQuery(object):
 
         return score_filter, ht_value
 
-    def _filter_by_annotations(self, pathogenicity, annotations):
+    def _filter_by_annotations(self, pathogenicity, annotations, annotations_secondary):
         annotations = annotations or {}
         annotation_override_filters = self._get_annotation_override_filters(pathogenicity, annotations)
 
-        self._annotate_allowed_consequences(annotations, annotation_override_filters)
-        if 'has_allowed_annotation' in self._ht.row:
-            self._ht = self._ht.filter(self._ht.has_allowed_annotation)
+        annotation_exprs = self._get_allowed_consequences_annotations(annotations, annotation_override_filters)
+        secondary_exprs = self._get_allowed_consequences_annotations(annotations_secondary or {}, annotation_override_filters)
+        has_secondary_annotations = 'allowed_transcripts' in secondary_exprs
+        if has_secondary_annotations:
+            annotation_exprs.update({f'{k}_secondary': v for k, v in secondary_exprs.items()})
 
-    def _annotate_allowed_consequences(self, annotations, annotation_filters):
-        raise NotImplementedError
+        if not annotation_exprs:
+            return
+
+        self._ht = self._ht.annotate(**annotation_exprs)
+        annotation_filter = self._ht.has_allowed_annotation
+        if has_secondary_annotations:
+            annotation_filter |= self._ht.has_allowed_annotation_secondary
+        self._ht = self._ht.filter(annotation_filter)
+
+    def _get_allowed_consequences_annotations(self, annotations, annotation_filters):
+        return {}
 
     def _get_annotation_override_filters(self, pathogenicity, annotations):
         return []
@@ -588,7 +600,7 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.annotate(gene_ids=hl.set(ch_ht.sorted_transcript_consequences.map(lambda t: t.gene_id)))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
         formatted_rows_expr = hl.agg.collect(ch_ht.row)
-        if 'has_allowed_annotation_secondary' in self._ht.row:  # TODO
+        if 'has_allowed_annotation_secondary' in self._ht.row:
             v1_expr = hl.agg.filter(ch_ht.has_allowed_annotation, formatted_rows_expr)
             v2_expr = hl.agg.filter(ch_ht.has_allowed_annotation_secondary, formatted_rows_expr)
         else:
@@ -626,15 +638,15 @@ class BaseHailTableQuery(object):
             self.GENOTYPE_QUERY_MAP[REF_REF](entries_2[x[0]].GT),
         ]))
 
-    def _format_comp_het_results(self, ch_ht):
+    def _format_comp_het_results(self, ch_ht, annotation_fields):
         formatted_grouped_variants = ch_ht[GROUPED_VARIANTS_FIELD].map(
-            lambda v: self._format_results(v).annotate(**{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
+            lambda v: self._format_results(v, annotation_fields).annotate(**{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
         )
         ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted(formatted_grouped_variants, key=lambda x: x._sort)})
         return ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
 
-    def _format_results(self, ht):
-        annotations = {k: v(ht) for k, v in self.annotation_fields().items()}  # TODO don't recompte annotations
+    def _format_results(self, ht, annotation_fields):
+        annotations = {k: v(ht) for k, v in annotation_fields.items()}
         annotations.update({
             '_sort': self._sort_order(ht),
             'genomeVersion': self._genome_version.replace('GRCh', ''),
@@ -644,11 +656,12 @@ class BaseHailTableQuery(object):
 
     def search(self):
         ch_ht = None
+        annotation_fields = self.annotation_fields()
         if self._comp_het_ht:
-            ch_ht = self._format_comp_het_results(self._comp_het_ht)
+            ch_ht = self._format_comp_het_results(self._comp_het_ht, annotation_fields)
 
         if self._ht:
-            ht = self._format_results(self._ht)
+            ht = self._format_results(self._ht, annotation_fields)
             if ch_ht:
                 ht = ht.join(ch_ht, 'outer')
                 ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
@@ -773,7 +786,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         )
         return hl.is_defined(self._ht.gene_transcripts.first())
 
-    def _annotate_allowed_consequences(self, annotations, annotation_filters):
+    def _get_allowed_consequences_annotations(self, annotations, annotation_filters):
         allowed_consequences = {
             ann for field, anns in annotations.items()
             if anns and (field not in ANNOTATION_OVERRIDE_FIELDS) for ann in anns
@@ -787,14 +800,13 @@ class VariantHailTableQuery(BaseHailTableQuery):
             allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
                 lambda tc: tc.consequence_term_ids.any(allowed_consequence_ids.contains)
             )
-            annotation_exprs['allowed_transcripts'] = allowed_transcripts
+            annotation_exprs[f'allowed_transcripts'] = allowed_transcripts
             annotation_filters = annotation_filters + [hl.is_defined(allowed_transcripts.first())]
 
         if annotation_filters:
-            annotation_exprs['has_allowed_annotation'] = hl.any(annotation_filters)
+            annotation_exprs[f'has_allowed_annotation'] = hl.any(annotation_filters)
 
-        if annotation_exprs:
-            self._ht = self._ht.annotate(**annotation_exprs)
+        return annotation_exprs
 
     def _get_annotation_override_filters(self, pathogenicity, annotations):
         annotation_filters = []
@@ -829,9 +841,9 @@ class VariantHailTableQuery(BaseHailTableQuery):
         value = self._ht[field][f'{subfield}_id']
         return hl.any(lambda r: (value >= r[0]) & (value <= r[1]), ranges)
 
-    def _format_results(self, ht):
+    def _format_results(self, ht, annotation_fields):
         ht = ht.annotate(selected_transcript=self._selected_main_transcript_expr(ht))
-        return super(VariantHailTableQuery, self)._format_results(ht)
+        return super(VariantHailTableQuery, self)._format_results(ht, annotation_fields)
 
 
 QUERY_CLASS_MAP = {
