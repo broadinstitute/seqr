@@ -97,7 +97,7 @@ VARIANT1 = {
         'topmed': {'af': 0.0784199982881546, 'ac': 20757, 'an': 264690, 'hom': 0, 'het': 20757},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
-        'gnomad_genomes': {'af': 0.34449315071105957, 'ac': 9271, 'an': 26912, 'hom': 480, 'hemi': 0, 'filter_af': 0.40276646614074707},
+        'gnomad_genomes': {'af': 0.034449315071105957, 'ac': 927, 'an': 26912, 'hom': 48, 'hemi': 0, 'filter_af': 0.040276646614074707},
     },
     'predictions': {
         'cadd': 4.668000221252441,
@@ -168,7 +168,7 @@ VARIANT2 = {
        'topmed': {'af': 0.24615199863910675, 'ac': 65154, 'an': 264690, 'hom': 8775, 'het': 47604},
        'exac': {'af': 0.29499998688697815, 'ac': 35805, 'an': 121372, 'hom': 5872, 'hemi': 0, 'het': 24061, 'filter_af': 0.4153035283088684},
        'gnomad_exomes': {'af': 0.28899794816970825, 'ac': 72672, 'an': 251462, 'hom': 11567, 'hemi': 0, 'filter_af': 0.4116474986076355},
-       'gnomad_genomes': {'af': 0.2633855640888214, 'ac': 40003, 'an': 151880, 'hom': 5754, 'hemi': 0, 'filter_af': 0.4067690968513489},
+       'gnomad_genomes': {'af': 0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0},
     },
     'predictions': {
        'cadd': 20.899999618530273,
