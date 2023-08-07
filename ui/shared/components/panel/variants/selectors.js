@@ -137,12 +137,18 @@ export const getPairedSelectedSavedVariants = createSelector(
       pairedVariants = matchingVariants(pairedVariants, ({ mmeSubmissions = [] }) => mmeSubmissions.length)
     } else if (tag && tag !== SHOW_ALL) {
       const tags = tag.split(TAG_URL_DELIMITER)
-      pairedVariants = matchingVariants(
-        pairedVariants, ({ tagGuids }) => {
-          const tagNames = tagGuids.map(tagGuid => tagsByGuid[tagGuid].name)
-          return tags.every(tagName => tagNames.includes(tagName))
-        },
-      )
+      if (tags.length === 1) {
+        pairedVariants = matchingVariants(
+          pairedVariants, ({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag),
+        )
+      } else {
+        pairedVariants = matchingVariants(
+          pairedVariants, ({ tagGuids }) => {
+            const tagNames = tagGuids.map(tagGuid => tagsByGuid[tagGuid].name)
+            return tags.every(tagName => tagNames.includes(tagName))
+          },
+        )
+      }
     } else if (!(familyGuid || analysisGroupGuid)) {
       pairedVariants = matchingVariants(pairedVariants, ({ tagGuids }) => tagGuids.length)
     }

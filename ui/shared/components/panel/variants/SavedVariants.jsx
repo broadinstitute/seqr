@@ -60,13 +60,14 @@ class SavedVariants extends React.PureComponent {
     loadVariants: PropTypes.func,
     additionalFilter: PropTypes.node,
     tableSummaryComponent: PropTypes.elementType,
+    multiple: PropTypes.bool,
   }
 
   state = { showAllFilters: false }
 
   navigateToTag = (e, data) => {
     const { history, getUpdateTagUrl, match } = this.props
-    history.push(getUpdateTagUrl(data.value.length > 0 ? data.value : [ALL_FILTER], match))
+    history.push(getUpdateTagUrl(data.value, match))
   }
 
   showAllFilters = () => {
@@ -77,15 +78,17 @@ class SavedVariants extends React.PureComponent {
     const {
       match, tableState, filters, discoveryFilters, totalPages, variantsToDisplay, totalVariantsCount, firstRecordIndex,
       tableSummaryComponent, loading, filteredVariantsCount, tagOptions, additionalFilter, updateTableField,
-      variantExportConfig, loadVariants, error,
+      variantExportConfig, loadVariants, error, multiple,
     } = this.props
     const { showAllFilters } = this.state
     const { familyGuid, variantGuid, tag } = match.params
 
     const tags = tag ? tag.split(TAG_URL_DELIMITER) : tag
-    const appliedTagCategoryFilter = tags || (variantGuid ? [] : [(tableState.categoryFilter || ALL_FILTER)])
+    const tagCategoryFilters = tags || (variantGuid ? [] : [(tableState.categoryFilter || ALL_FILTER)])
+    const firstAppliedTagCategoryFilter = tagCategoryFilters.length > 0 ? tagCategoryFilters[0] : null
+    const appliedTagCategoryFilter = multiple ? tagCategoryFilters : firstAppliedTagCategoryFilter
 
-    let shownFilters = (discoveryFilters && appliedTagCategoryFilter === [DISCOVERY_CATEGORY_NAME]) ?
+    let shownFilters = (discoveryFilters && firstAppliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME) ?
       discoveryFilters : filters
     const hasHiddenFilters = !showAllFilters && shownFilters.length > MAX_FILTERS
     if (hasHiddenFilters) {
@@ -113,7 +116,7 @@ class SavedVariants extends React.PureComponent {
               {`Showing ${shownSummary} ${filteredVariantsCount}  `}
               <Dropdown
                 inline
-                multiple
+                multiple={multiple}
                 options={tagOptions}
                 value={appliedTagCategoryFilter}
                 onChange={this.navigateToTag}

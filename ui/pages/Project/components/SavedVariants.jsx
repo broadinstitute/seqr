@@ -15,7 +15,6 @@ import {
   VARIANT_PER_PAGE_FIELD,
   EXCLUDED_TAG_NAME,
   REVIEW_TAG_NAME,
-  TAG_URL_DELIMITER,
 } from 'shared/utils/constants'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { LargeMultiselect, Dropdown } from 'shared/components/form/Inputs'
@@ -143,15 +142,12 @@ class BaseProjectSavedVariants extends React.PureComponent {
       project.variantTagTypes.map(type => type.category).filter(category => category),
     )]
 
-    const lastNewTag = newTag.length > 0 ? newTag[newTag.length - 1] : null
-    const isCategory = categoryOptions.includes(lastNewTag)
-    const [firstTag, ...otherTag] = newTag
-    const updatedTag = firstTag === ALL_FILTER || categoryOptions.includes(firstTag) ? otherTag : newTag
-    updateTableField('categoryFilter')(isCategory ? lastNewTag : null)
+    const isCategory = categoryOptions.includes(newTag)
+    updateTableField('categoryFilter')(isCategory ? newTag : null)
     return getSavedVariantsLinkPath({
       projectGuid: project.projectGuid,
       analysisGroupGuid: match.params.analysisGroupGuid,
-      tag: !isCategory && lastNewTag !== ALL_FILTER && (updatedTag || []).join(TAG_URL_DELIMITER),
+      tag: !isCategory && newTag !== ALL_FILTER && newTag,
       familyGuid: match.params.familyGuid,
     })
   }

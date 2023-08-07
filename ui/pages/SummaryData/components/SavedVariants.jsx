@@ -87,6 +87,7 @@ const BaseSavedVariants = React.memo(({ loadVariants, geneDetail, ...props }) =>
       filters={FILTER_FIELDS}
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
+      multiple
       additionalFilter={
         <StyledForm inline>
           <Form.Field
