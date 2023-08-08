@@ -45,9 +45,7 @@ class BaseHailTableQuery(object):
     GLOBALS = ['enums']
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
-        'familyGuids': lambda r: r.family_entries.filter(
-            lambda entries: hl.is_defined(entries)
-        ).map(lambda entries: entries.first().familyGuid),
+        'familyGuids': lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
     }
     ENUM_ANNOTATION_FIELDS = {}
     LIFTOVER_ANNOTATION_FIELDS = {
