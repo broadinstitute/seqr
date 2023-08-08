@@ -72,6 +72,9 @@ MULTI_FAMILY_VARIANT['familyGuids'] += FAMILY_3_VARIANT['familyGuids']
 MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
 
 SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
+SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000426137'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000641759'}
 
 PROJECT_2_VARIANT1 = deepcopy(VARIANT1)
 PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
@@ -281,17 +284,58 @@ class HailSearchTestCase(AioHTTPTestCase):
             [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], annotations=annotations, omit_sample_type='SV_WES',
         )
 
-        selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000641759'}
-        selected_transcript_variant_3 = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
         annotations = {'other': ['non_coding_transcript_exon_variant']}
         await self._assert_expected_search(
-            [VARIANT1, selected_transcript_variant_2, selected_transcript_variant_3],
+            [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT],
             pathogenicity=pathogenicity, annotations=annotations, omit_sample_type='SV_WES',
         )
 
         await self._assert_expected_search(
-            [selected_transcript_variant_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
             gene_ids=LOCATION_SEARCH['gene_ids'][:1], annotations=annotations, omit_sample_type='SV_WES',
+        )
+
+    async def test_secondary_annotations_filter(self):
+        annotations_1 = {'missense': ['missense_variant']}
+        annotations_2 = {'other': ['intron_variant']}
+        await self._assert_expected_search(
+            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=annotations_1, annotations_secondary=annotations_2,
+        )
+
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=annotations_2, annotations_secondary=annotations_1,
+        )
+
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}
+        await self._assert_expected_search(
+            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=annotations_2, annotations_secondary=annotations_1, pathogenicity=pathogenicity,
+        )
+
+        screen_annotations = {'SCREEN': ['CTCF-only']}
+        await self._assert_expected_search(
+            [], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=screen_annotations, annotations_secondary=annotations_1,
+        )
+
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=screen_annotations, annotations_secondary=annotations_2,
+        )
+
+        selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
+        await self._assert_expected_search(
+            [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]], inheritance_mode='recessive',
+            annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,
+            pathogenicity=pathogenicity, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]],
+            annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
+            inheritance_mode='recessive', omit_sample_type='SV_WES',
         )
 
     async def test_in_silico_filter(self):

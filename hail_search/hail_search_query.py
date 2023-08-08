@@ -175,7 +175,7 @@ class BaseHailTableQuery(object):
             if self._is_recessive_search:
                 self._ht = self._ht.filter(self._ht.family_entries.any(hl.is_defined))
                 if 'has_allowed_annotation_secondary' in self._ht.row:
-                    self._ht = self._ht.filter(self._ht.has_allowed_annotation)
+                    self._ht = self._ht.filter(self._ht.has_allowed_annotation).drop('has_allowed_annotation_secondary')
             else:
                 self._ht = None
 
@@ -741,13 +741,17 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
-        gene_transcripts = getattr(ht, 'gene_transcripts', None)  # TODO comp het match gene
+        gene_id = getattr(ht, 'gene_id', None)
+        if gene_id is not None:
+            gene_transcripts = ht.sorted_transcript_consequences.filter(lambda t: t.gene_id == ht.gene_id)
+        else:
+            gene_transcripts = getattr(ht, 'gene_transcripts', None)
+
         allowed_transcripts = getattr(ht, 'allowed_transcripts', None)
-        allowed_transcripts_secondary = getattr(ht, 'allowed_transcripts_secondary', None)
-        if allowed_transcripts_secondary:
+        if hasattr(ht, 'has_allowed_annotation_secondary'):
             allowed_transcripts = hl.if_else(
                 allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht.allowed_transcripts_secondary,
-            )
+            ) if allowed_transcripts is not None else ht.allowed_transcripts_secondary
 
         main_transcript = ht.sorted_transcript_consequences.first()
         if gene_transcripts is not None:
