@@ -748,18 +748,23 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
-        has_allowed_transcripts = 'allowed_transcripts' in ht.row
+        allowed_transcripts = ht.allowed_transcripts if 'allowed_transcripts' in ht.row else None
+        if 'allowed_transcripts_secondary' in ht.row:
+            allowed_transcripts = hl.if_else(
+                allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht.allowed_transcripts_secondary,
+            )
+
         main_transcript = ht.sorted_transcript_consequences.first()
         if 'gene_transcripts' in ht.row:
             matched_transcript = ht.gene_transcripts.first()
-            if has_allowed_transcripts:
-                allowed_transcript_ids = hl.set(ht.allowed_transcripts.map(lambda t: t.transcript_id))
+            if allowed_transcripts is not None:
+                allowed_transcript_ids = hl.set(allowed_transcripts.map(lambda t: t.transcript_id))
                 matched_transcript = hl.or_else(
                     ht.gene_transcripts.find(lambda t: allowed_transcript_ids.contains(t.transcript_id)),
                     matched_transcript,
                 )
-        elif has_allowed_transcripts:
-            matched_transcript = ht.allowed_transcripts.first()
+        elif allowed_transcripts is not None:
+            matched_transcript = allowed_transcripts.first()
         else:
             matched_transcript = main_transcript
 
@@ -797,11 +802,11 @@ class VariantHailTableQuery(BaseHailTableQuery):
             allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
                 lambda tc: tc.consequence_term_ids.any(allowed_consequence_ids.contains)
             )
-            annotation_exprs[f'allowed_transcripts'] = allowed_transcripts
+            annotation_exprs['allowed_transcripts'] = allowed_transcripts
             annotation_filters = annotation_filters + [hl.is_defined(allowed_transcripts.first())]
 
         if annotation_filters:
-            annotation_exprs[f'has_allowed_annotation'] = hl.any(annotation_filters)
+            annotation_exprs['has_allowed_annotation'] = hl.any(annotation_filters)
 
         return annotation_exprs
 
