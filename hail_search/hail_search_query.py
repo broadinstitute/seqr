@@ -8,7 +8,7 @@ from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_
     VARIANT_KEY_FIELD, GNOMAD_GENOMES_FIELD, XPOS, GENOME_VERSION_GRCh38_DISPLAY, INHERITANCE_FILTERS, \
     ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF, \
     ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES, \
-    COMPOUND_HET, RECESSIVE
+    COMPOUND_HET, RECESSIVE, GROUPED_VARIANTS_FIELD
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -220,13 +220,11 @@ class BaseHailTableQuery(object):
                     ),
                 }
                 if 'comp_het_family_entries_1' in families_ht.row:
+                    missing_arr = lambda count: hl.range(count).map(lambda i: hl.missing(entry_type))
                     select_fields['comp_het_family_entries'] = hl.bind(
                         lambda a1, a2: a1.extend(a2),
-                        hl.or_else(families_ht.comp_het_family_entries, hl.range(num_families).map(hl.missing(entry_type))),
-                        hl.or_else(
-                            families_ht.comp_het_family_entries_1,
-                            hl.range(num_families).map(hl.missing(num_project_families)),
-                        ),
+                        hl.or_else(families_ht.comp_het_family_entries, missing_arr(num_families)),
+                        hl.or_else(families_ht.comp_het_family_entries_1, missing_arr(num_project_families)),
                     )
                 families_ht = families_ht.select(**select_fields)
                 num_families += num_project_families
@@ -345,7 +343,7 @@ class BaseHailTableQuery(object):
         if self._has_comp_het_search:
             filter_mode_map[COMPOUND_HET] = 'comp_het_family_entries'
 
-        for mode, field in filter_mode_map.items():
+        for mode, field in sorted(filter_mode_map.items()):
             ht = self._filter_families_inheritance(
                 ht, mode, inheritance_filter, sample_id_family_index_map, sample_data, field,
             )
@@ -584,7 +582,7 @@ class BaseHailTableQuery(object):
     def _filter_compound_hets(self):
         ch_ht = self._ht
         if self._is_recessive_search:
-            ch_ht = ch_ht.filter(ht.comp_het_family_entries.any(hl.is_defined))
+            ch_ht = ch_ht.filter(ch_ht.comp_het_family_entries.any(hl.is_defined))
 
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.annotate(gene_ids=hl.set(ch_ht.sorted_transcript_consequences.map(lambda t: t.gene_id)))
@@ -609,19 +607,20 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.filter(ch_ht.valid_families.any(lambda x: x))
 
         # Format pairs as lists and de-duplicate
-        ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2]).map(
-            lambda v: v.annotate(family_entries=hl.enumerate(ch_ht.valid_families).filter(lambda x: x[1]).map(
-                lambda x: v.comp_het_family_entries[x[0]]))
-        )})
         ch_ht = ch_ht.key_by(**{
-            VARIANT_KEY_FIELD: hl.str(':').join(
-                hl.sorted(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD])))
+            VARIANT_KEY_FIELD: hl.str(':').join(hl.sorted([ch_ht.v1[VARIANT_KEY_FIELD], ch_ht.v2[VARIANT_KEY_FIELD]]))
         })
+        ch_ht = ch_ht.distinct()
+        ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2]).map(lambda v: v.annotate(
+            gene_id=ch_ht.gene_ids,
+            family_entries=hl.enumerate(ch_ht.valid_families).filter(
+                lambda x: x[1]).map(lambda x: v.comp_het_family_entries[x[0]]),
+        ))})
 
-        return ch_ht.distinct()
+        return ch_ht
 
     def _is_valid_comp_het_family(self, entries_1, entries_2):
-        return hl.is_defined(entries_1) & hl.is_defined(entries_2) & hl.enmerate(entries_1).all(lambda x: hl.any([
+        return hl.is_defined(entries_1) & hl.is_defined(entries_2) & hl.enumerate(entries_1).all(lambda x: hl.any([
             (x[1].affected_id != UNAFFECTED_ID),
             self.GENOTYPE_QUERY_MAP[REF_REF](x[1].GT),
             self.GENOTYPE_QUERY_MAP[REF_REF](entries_2[x[0]].GT),
@@ -660,6 +659,8 @@ class BaseHailTableQuery(object):
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}. Fetched: {self._num_results}')
 
+        if self._comp_het_ht:
+            collected = [row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD) for row in collected]
         return collected, total_results
 
     def _sort_order(self, ht):
@@ -740,19 +741,21 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
-        allowed_transcripts = ht.allowed_transcripts if 'allowed_transcripts' in ht.row else None
-        if 'allowed_transcripts_secondary' in ht.row:
+        gene_transcripts = getattr(ht, 'gene_transcripts', None)  # TODO comp het match gene
+        allowed_transcripts = getattr(ht, 'allowed_transcripts', None)
+        allowed_transcripts_secondary = getattr(ht, 'allowed_transcripts_secondary', None)
+        if allowed_transcripts_secondary:
             allowed_transcripts = hl.if_else(
                 allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht.allowed_transcripts_secondary,
             )
 
         main_transcript = ht.sorted_transcript_consequences.first()
-        if 'gene_transcripts' in ht.row:
-            matched_transcript = ht.gene_transcripts.first()
+        if gene_transcripts is not None:
+            matched_transcript = gene_transcripts.first()
             if allowed_transcripts is not None:
                 allowed_transcript_ids = hl.set(allowed_transcripts.map(lambda t: t.transcript_id))
                 matched_transcript = hl.or_else(
-                    ht.gene_transcripts.find(lambda t: allowed_transcript_ids.contains(t.transcript_id)),
+                    gene_transcripts.find(lambda t: allowed_transcript_ids.contains(t.transcript_id)),
                     matched_transcript,
                 )
         elif allowed_transcripts is not None:

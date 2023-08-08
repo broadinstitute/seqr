@@ -110,11 +110,8 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
         self.assertEqual(resp_json['total'], len(results))
-        self.assertListEqual(
-            [v['variantId'] for v in resp_json['results']], [v['variantId'] for v in results],
-        )
         for i, result in enumerate(resp_json['results']):
-            self.assertDictEqual(result, results[i])
+            self.assertEqual(result, results[i])
 
     async def test_single_family_search(self):
         await self._assert_expected_search(
@@ -154,6 +151,18 @@ class HailSearchTestCase(AioHTTPTestCase):
         gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'has_alt', 'I000005_hg00732': 'ref_ref'}}
         await self._assert_expected_search(
             [VARIANT2, VARIANT3], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
+
+        # Ensures no variants are filtered out by annotation/path filters for compound hets
+        comp_het_filters = {'annotations': {'splice_ai': '0.0'}, 'pathogenicity': {'clinvar': ['likely_pathogenic']}}
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='compound_het', sample_data=MULTI_PROJECT_SAMPLE_DATA,
+            **comp_het_filters,
+        )
+
+        await self._assert_expected_search(
+            [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive',
+            sample_data=MULTI_PROJECT_SAMPLE_DATA, **comp_het_filters,
+        )
 
     async def test_quality_filter(self):
         await self._assert_expected_search(

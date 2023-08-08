@@ -9,6 +9,7 @@ MALE = 'M'
 VARIANT_DATASET = 'VARIANTS'
 
 VARIANT_KEY_FIELD = 'variantId'
+GROUPED_VARIANTS_FIELD = 'variants'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
 SPLICE_AI_FIELD = 'splice_ai'
 NEW_SV_FIELD = 'new_structural_variants'
