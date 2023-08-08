@@ -679,7 +679,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
                 ranges[-1][1] = len(enum_lookup) if end is None else enum_lookup[end]
                 if ranges[-1][0] is None:
                     ranges[-1][0] = enum_lookup[start]
-            else:
+            elif ranges[-1] != [None, None]:
                 ranges.append([None, None])
 
         ranges = [r for r in ranges if r[0] is not None]
