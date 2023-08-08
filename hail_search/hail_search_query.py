@@ -339,33 +339,26 @@ class BaseHailTableQuery(object):
                 hl.get_reference(self._genome_version).x_contigs[0], reference_genome=self._genome_version)
             ht = ht.filter(self.get_x_chrom_filter(ht, x_chrom_interval))
 
+        filter_mode_map = {}
+        if (inheritance_filter or inheritance_mode) and not is_any_affected:
+            filter_mode_map[inheritance_mode] = 'family_entries'
         if self._has_comp_het_search:
-            return self._filter_comp_het_inheritance(
-                ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data,
-            )
-        elif (inheritance_filter or inheritance_mode) and not is_any_affected:
+            filter_mode_map[COMPOUND_HET] = 'comp_het_family_entries'
+
+        for mode, field in filter_mode_map.items():
             ht = self._filter_families_inheritance(
-                ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data,
+                ht, mode, inheritance_filter, sample_id_family_index_map, sample_data, field,
             )
 
-        return ht.filter(ht.family_entries.any(hl.is_defined))
+        filter_expr = ht.family_entries.any(hl.is_defined)
+        if self._has_comp_het_search:
+            ch_filter = ht.comp_het_family_entries.any(hl.is_defined)
+            filter_expr = (filter_expr | ch_filter) if self._is_recessive_search else ch_filter
 
-    def _filter_comp_het_inheritance(self, ht, *args):
-        ht = self._filter_families_inheritance(ht, COMPOUND_HET, *args, filtered_field='comp_het_family_entries')
-
-        recessive_filter = None
-        if self._is_recessive_search:
-            ht = self._filter_families_inheritance(ht, RECESSIVE, *args)
-            recessive_filter = ht.family_entries.any(hl.is_defined)
-        else:
-            ht = ht.drop('family_entries')
-
-        ch_filter = ht.comp_het_family_entries.any(hl.is_defined)
-        return ht.filter(ch_filter if recessive_filter is None else (ch_filter | recessive_filter))
+        return ht.filter(filter_expr)
 
     @classmethod
-    def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data,
-                                     filtered_field='family_entries'):
+    def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data, field):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
         entry_indices_by_gt = defaultdict(lambda: defaultdict(list))
@@ -380,10 +373,9 @@ class BaseHailTableQuery(object):
 
         for genotype, entry_indices in entry_indices_by_gt.items():
             entry_indices = hl.dict(entry_indices)
-            ht = ht.annotate(**{filtered_field: hl.enumerate(ht.family_entries).map(
-                lambda x: cls._valid_genotype_family_entries(
-                    x[1], entry_indices.get(x[0]), genotype, inheritance_mode,
-                ))})
+            ht = ht.annotate(**{field: hl.enumerate(ht.family_entries).map(
+                lambda x: cls._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, inheritance_mode)
+            )})
 
         return ht
 
