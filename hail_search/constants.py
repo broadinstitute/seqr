@@ -10,6 +10,16 @@ VARIANT_DATASET = 'VARIANTS'
 
 VARIANT_KEY_FIELD = 'variantId'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
+SPLICE_AI_FIELD = 'splice_ai'
+NEW_SV_FIELD = 'new_structural_variants'
+SCREEN_KEY = 'SCREEN'  # uses all caps to match filter provided by the seqr UI
+CLINVAR_KEY = 'clinvar'
+HGMD_KEY = 'hgmd'
+STRUCTURAL_ANNOTATION_FIELD = 'structural'
+
+ANNOTATION_OVERRIDE_FIELDS = [
+    SCREEN_KEY, SPLICE_AI_FIELD, NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD,
+]
 
 XPOS = 'xpos'
 
@@ -41,3 +51,16 @@ INHERITANCE_FILTERS = {
         UNAFFECTED: REF_REF,
     },
 }
+
+CLINVAR_PATH_RANGES = [
+    ('pathogenic', 'Pathogenic', 'Pathogenic/Likely_risk_allele'),
+    ('likely_pathogenic', 'Pathogenic/Likely_pathogenic', 'Likely_risk_allele'),
+    ('vus_or_conflicting', 'Conflicting_interpretations_of_pathogenicity', 'No_pathogenic_assertion'),
+    ('likely_benign', 'Likely_benign', 'Benign/Likely_benign'),
+    ('benign', 'Benign/Likely_benign', 'Benign'),
+]
+HGMD_PATH_RANGES = [
+    ('disease_causing', 'DM', 'DM'),
+    ('likely_disease_causing', 'DM?', 'DM?'),
+    ('hgmd_other', 'DP', None),
+]
