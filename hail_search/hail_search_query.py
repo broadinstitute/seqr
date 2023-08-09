@@ -7,7 +7,8 @@ import os
 from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, MALE, VARIANT_DATASET, \
     VARIANT_KEY_FIELD, GNOMAD_GENOMES_FIELD, XPOS, GENOME_VERSION_GRCh38_DISPLAY, INHERITANCE_FILTERS, \
     ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF, \
-    ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES
+    ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
+    CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES, PATH_FREQ_OVERRIDE_CUTOFF
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -142,42 +143,46 @@ class BaseHailTableQuery(object):
         self._genome_version = genome_version
         self._sort = sort
         self._num_results = num_results
+        self._data_type = data_type
         self._ht = None
         self._enums = None
         self._globals = None
 
-        self._load_filtered_table(data_type, sample_data, **kwargs)
+        self._load_filtered_table(sample_data, **kwargs)
 
-    def _load_filtered_table(self, data_type, sample_data, intervals=None, exclude_intervals=False, variant_ids=None, **kwargs):
+    def _load_filtered_table(self, sample_data, intervals=None, exclude_intervals=False, variant_ids=None, **kwargs):
         parsed_intervals, variant_ids = self._parse_intervals(intervals, variant_ids)
         excluded_intervals = None
         if exclude_intervals:
             excluded_intervals = parsed_intervals
             parsed_intervals = None
+        self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': bool(parsed_intervals)}
         self.import_filtered_table(
-            data_type, sample_data, intervals=parsed_intervals, excluded_intervals=excluded_intervals,
-            variant_ids=variant_ids, **kwargs)
+            sample_data, excluded_intervals=excluded_intervals, variant_ids=variant_ids, **kwargs)
 
-    def import_filtered_table(self, data_type, sample_data, intervals=None, **kwargs):
-        tables_path = f'{DATASETS_DIR}/{self._genome_version}/{data_type}'
-        load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
+    def _get_table_path(self, path):
+        return f'{DATASETS_DIR}/{self._genome_version}/{self._data_type}/{path}'
 
+    def _read_table(self, path):
+        return hl.read_table(self._get_table_path(path), **self._load_table_kwargs)
+
+    def import_filtered_table(self, sample_data, **kwargs):
         family_samples = defaultdict(list)
         project_samples = defaultdict(list)
         for s in sample_data:
             family_samples[s['family_guid']].append(s)
             project_samples[s['project_guid']].append(s)
 
-        logger.info(f'Loading {data_type} data for {len(family_samples)} families in {len(project_samples)} projects')
+        logger.info(f'Loading {self._data_type} data for {len(family_samples)} families in {len(project_samples)} projects')
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
-            family_ht = hl.read_table(f'{tables_path}/families/{family_guid}.ht', **load_table_kwargs)
+            family_ht = self._read_table(f'families/{family_guid}.ht')
             families_ht = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = []
             exception_messages = set()
             for project_guid, project_sample_data in project_samples.items():
-                project_ht = hl.read_table(f'{tables_path}/projects/{project_guid}.ht', **load_table_kwargs)
+                project_ht = self._read_table(f'projects/{project_guid}.ht')
                 try:
                     filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
                 except HTTPBadRequest as e:
@@ -199,7 +204,7 @@ class BaseHailTableQuery(object):
                     ),
                 )
 
-        annotations_ht_path = f'{tables_path}/annotations.ht'
+        annotations_ht_path = self._get_table_path('annotations.ht')
         annotation_ht_query_result = hl.query_table(
             annotations_ht_path, families_ht.key).first().drop(*families_ht.key)
         ht = families_ht.annotate(**annotation_ht_query_result)
@@ -220,7 +225,7 @@ class BaseHailTableQuery(object):
         )
         self._filter_annotated_table(**kwargs)
 
-    def _filter_entries_table(self, ht, sample_data,  inheritance_mode=None, inheritance_filter=None, quality_filter=None,
+    def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, quality_filter=None,
                               excluded_intervals=None, variant_ids=None, **kwargs):
         if excluded_intervals:
             ht = hl.filter_intervals(ht, excluded_intervals, keep=False)
@@ -238,10 +243,10 @@ class BaseHailTableQuery(object):
         if quality_filter.get('vcf_filter'):
             ht = self._filter_vcf_filters(ht)
 
-        passes_quality_filter = self._get_genotype_passes_quality_filter(quality_filter)
+        passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht=ht, **kwargs)
         if passes_quality_filter is not None:
             ht = ht.annotate(family_entries=ht.family_entries.map(
-                lambda entries: hl.or_missing(entries.all(passes_quality_filter), entries)
+                lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
             ))
             ht = ht.filter(ht.family_entries.any(hl.is_defined))
 
@@ -353,19 +358,18 @@ class BaseHailTableQuery(object):
         )
         return hl.or_missing(is_valid, entries)
 
-    @classmethod
-    def _get_genotype_passes_quality_filter(cls, quality_filter):
+    def _get_family_passes_quality_filter(self, quality_filter, **kwargs):
         affected_only = quality_filter.get('affected_only')
         passes_quality_filters = []
         for filter_k, value in quality_filter.items():
-            field = cls.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
+            field = self.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
             if field and value:
-                passes_quality_filters.append(cls._get_genotype_passes_quality_field(field, value, affected_only))
+                passes_quality_filters.append(self._get_genotype_passes_quality_field(field, value, affected_only))
 
         if not passes_quality_filters:
             return None
 
-        return lambda gt: hl.all([f(gt) for f in passes_quality_filters])
+        return lambda entries: entries.all(lambda gt: hl.all([f(gt) for f in passes_quality_filters]))
 
     @classmethod
     def _get_genotype_passes_quality_field(cls, field, value, affected_only):
@@ -412,7 +416,7 @@ class BaseHailTableQuery(object):
         if rs_ids:
             self._filter_rs_ids(rs_ids)
 
-        self._filter_by_frequency(frequencies)
+        self._filter_by_frequency(frequencies, pathogenicity)
 
         self._filter_by_in_silico(in_silico)
 
@@ -458,18 +462,23 @@ class BaseHailTableQuery(object):
 
         return parsed_intervals, variant_ids
 
-    def _filter_by_frequency(self, frequencies):
+    def _filter_by_frequency(self, frequencies, pathogenicity):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
         if not frequencies:
             return
 
+        path_override_filter = self._frequency_override_filter(pathogenicity)
+        filters = []
         for pop, freqs in sorted(frequencies.items()):
             pop_filters = []
             pop_expr = self._ht[self.POPULATION_FIELDS.get(pop, pop)]
             pop_config = self._format_population_config(self.POPULATIONS[pop])
             if freqs.get('af') is not None:
                 af_field = pop_config.get('filter_af') or pop_config['af']
-                pop_filters.append(pop_expr[af_field] <= freqs['af'])
+                pop_filter = pop_expr[af_field] <= freqs['af']
+                if path_override_filter is not None and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
+                    pop_filter |= path_override_filter & (pop_expr[af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
+                pop_filters.append(pop_filter)
             elif freqs.get('ac') is not None:
                 ac_field = pop_config['ac']
                 if ac_field:
@@ -484,7 +493,13 @@ class BaseHailTableQuery(object):
                     pop_filters.append(pop_expr[hemi_field] <= freqs['hh'])
 
             if pop_filters:
-                self._ht = self._ht.filter(hl.is_missing(pop_expr) | hl.all(pop_filters))
+                filters.append(hl.is_missing(pop_expr) | hl.all(pop_filters))
+
+        if filters:
+            self._ht = self._ht.filter(hl.all(filters))
+
+    def _frequency_override_filter(self, pathogenicity):
+        return None
 
     def _filter_by_in_silico(self, in_silico_filters):
         in_silico_filters = in_silico_filters or {}
@@ -592,10 +607,10 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'revel': PredictionPath('dbnsfp', 'REVEL_score'),
         'sift': PredictionPath('dbnsfp', 'SIFT_pred'),
     }
-    PATHOGENICITY_FILTERS = [
-        (CLINVAR_KEY, 'pathogenicity', CLINVAR_PATH_RANGES),
-        (HGMD_KEY, 'class', HGMD_PATH_RANGES),
-    ]
+    PATHOGENICITY_FILTERS = {
+        CLINVAR_KEY: ('pathogenicity', CLINVAR_PATH_RANGES),
+        HGMD_KEY: ('class', HGMD_PATH_RANGES),
+    }
 
     GLOBALS = BaseHailTableQuery.GLOBALS + ['versions']
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
@@ -644,6 +659,10 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
         return hl.or_else(matched_transcript, main_transcript)
 
+    def __init__(self, *args, **kwargs):
+        self._filter_hts = {}
+        super(VariantHailTableQuery, self).__init__(*args, **kwargs)
+
     def import_filtered_table(self, *args, **kwargs):
         super().import_filtered_table(*args, **kwargs)
         self._ht = self._ht.key_by(**{VARIANT_KEY_FIELD: self._ht.variant_id})
@@ -655,6 +674,32 @@ class VariantHailTableQuery(BaseHailTableQuery):
             'drop_fields': ['consequence_terms'],
         })
         return args
+
+    def _get_family_passes_quality_filter(self, quality_filter, ht=None, pathogenicity=None, **kwargs):
+        passes_quality = super(VariantHailTableQuery, self)._get_family_passes_quality_filter(quality_filter)
+        clinvar_path_ht = False if passes_quality is None else self._get_clinvar_filter_ht(pathogenicity)
+        if not clinvar_path_ht:
+            return passes_quality
+
+        return lambda entries: hl.is_defined(clinvar_path_ht[ht.key]) | passes_quality(entries)
+
+    def _get_clinvar_filter_ht(self, pathogenicity):
+        if self._filter_hts.get(CLINVAR_KEY) is not None:
+            return self._filter_hts[CLINVAR_KEY]
+
+        clinvar_path_filters = self._get_clinvar_path_filters(pathogenicity)
+        if not clinvar_path_filters:
+            self._filter_hts[CLINVAR_KEY] = False
+            return False
+
+        clinvar_path_ht = self._read_table('clinvar_path_variants.ht')
+        if CLINVAR_LIKELY_PATH_FILTER not in clinvar_path_filters:
+            clinvar_path_ht = clinvar_path_ht.filter(clinvar_path_ht.is_pathogenic)
+        elif CLINVAR_PATH_FILTER not in clinvar_path_filters:
+            clinvar_path_ht = clinvar_path_ht.filter(clinvar_path_ht.is_likely_pathogenic)
+        self._filter_hts[CLINVAR_KEY] = clinvar_path_ht
+
+        return clinvar_path_ht
 
     def _get_gene_id_filter(self, gene_ids):
         self._ht = self._ht.annotate(
@@ -688,10 +733,10 @@ class VariantHailTableQuery(BaseHailTableQuery):
     def _get_annotation_override_filters(self, pathogenicity, annotations):
         annotation_filters = []
 
-        for key, *args in self.PATHOGENICITY_FILTERS:
+        for key in self.PATHOGENICITY_FILTERS.keys():
             path_terms = (pathogenicity or {}).get(key)
             if path_terms:
-                annotation_filters.append(self._has_terms_range_expr(path_terms, key, *args))
+                annotation_filters.append(self._has_path_expr(path_terms, key))
         if annotations.get(SCREEN_KEY):
             screen_enum = self._get_enum_lookup(SCREEN_KEY.lower(), 'region_type')
             allowed_consequences = hl.set({screen_enum[c] for c in annotations[SCREEN_KEY]})
@@ -702,7 +747,18 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
         return annotation_filters
 
-    def _has_terms_range_expr(self, terms, field, subfield, range_configs):
+    def _frequency_override_filter(self, pathogenicity):
+        path_terms = self._get_clinvar_path_filters(pathogenicity)
+        return self._has_path_expr(path_terms, CLINVAR_KEY) if path_terms else None
+
+    @staticmethod
+    def _get_clinvar_path_filters(pathogenicity):
+        return {
+            f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
+        }
+
+    def _has_path_expr(self, terms, field):
+        subfield, range_configs = self.PATHOGENICITY_FILTERS[field]
         enum_lookup = self._get_enum_lookup(field, subfield)
 
         ranges = [[None, None]]
