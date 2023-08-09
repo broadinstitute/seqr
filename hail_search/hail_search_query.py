@@ -768,11 +768,11 @@ class VariantHailTableQuery(BaseHailTableQuery):
         return hl.or_else(matched_transcript, main_transcript)
 
     def import_filtered_table(self, *args, **kwargs):
-        super(VariantHailTableQuery, self).import_filtered_table(*args, **kwargs)
+        super().import_filtered_table(*args, **kwargs)
         self._ht = self._ht.key_by(**{VARIANT_KEY_FIELD: self._ht.variant_id})
 
     def _format_transcript_args(self):
-        args = super(VariantHailTableQuery, self)._format_transcript_args()
+        args = super()._format_transcript_args()
         args.update({
             'annotate_value': lambda transcript, *args: {'major_consequence': transcript.consequence_terms.first()},
             'drop_fields': ['consequence_terms'],
@@ -833,7 +833,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
                 ranges[-1][1] = len(enum_lookup) if end is None else enum_lookup[end]
                 if ranges[-1][0] is None:
                     ranges[-1][0] = enum_lookup[start]
-            else:
+            elif ranges[-1] != [None, None]:
                 ranges.append([None, None])
 
         ranges = [r for r in ranges if r[0] is not None]
@@ -842,7 +842,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     def _format_results(self, ht, annotation_fields):
         ht = ht.annotate(selected_transcript=self._selected_main_transcript_expr(ht))
-        return super(VariantHailTableQuery, self)._format_results(ht, annotation_fields)
+        return super()._format_results(ht, annotation_fields)
 
 
 QUERY_CLASS_MAP = {
