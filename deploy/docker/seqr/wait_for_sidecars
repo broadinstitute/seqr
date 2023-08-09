@@ -1,7 +1,8 @@
 #!/bin/bash
 
 ###
-# Usage: ./wait_for_routes https://www.google.com/ https://www.broadinstitute.org https://www.broadins.org
+# Waits for network 
+# Usage: ./wait_for_sidecars https://www.google.com/ https://www.broadinstitute.org https://www.broadins.org
 ###
 
 RETRY_COUNT=10
