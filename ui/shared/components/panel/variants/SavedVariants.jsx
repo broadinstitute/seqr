@@ -5,11 +5,7 @@ import { Grid, Dropdown, Message } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { getSavedVariantsIsLoading, getSavedVariantsLoadingError } from 'redux/selectors'
-import {
-  DISCOVERY_CATEGORY_NAME,
-  VARIANT_PAGINATION_FIELD,
-  TAG_URL_DELIMITER,
-} from 'shared/utils/constants'
+import { VARIANT_PAGINATION_FIELD } from 'shared/utils/constants'
 
 import ExportTableButton from '../../buttons/ExportTableButton'
 import StateChangeForm from '../../form/StateChangeForm'
@@ -44,8 +40,8 @@ class SavedVariants extends React.PureComponent {
     match: PropTypes.object,
     history: PropTypes.object,
     tagOptions: PropTypes.arrayOf(PropTypes.object),
+    getSelectedTag: PropTypes.func,
     filters: PropTypes.arrayOf(PropTypes.object),
-    discoveryFilters: PropTypes.arrayOf(PropTypes.object),
     loading: PropTypes.bool,
     error: PropTypes.string,
     variantsToDisplay: PropTypes.arrayOf(PropTypes.any),
@@ -76,20 +72,15 @@ class SavedVariants extends React.PureComponent {
 
   render() {
     const {
-      match, tableState, filters, discoveryFilters, totalPages, variantsToDisplay, totalVariantsCount, firstRecordIndex,
+      match, tableState, filters, totalPages, variantsToDisplay, totalVariantsCount, firstRecordIndex,
       tableSummaryComponent, loading, filteredVariantsCount, tagOptions, additionalFilter, updateTableField,
-      variantExportConfig, loadVariants, error, multiple,
+      variantExportConfig, loadVariants, error, multiple, getSelectedTag,
     } = this.props
     const { showAllFilters } = this.state
-    const { familyGuid, variantGuid, tag } = match.params
+    const { familyGuid, variantGuid } = match.params
+    const optionValue = getSelectedTag(variantGuid ? null : (tableState.categoryFilter || ALL_FILTER))
 
-    const tags = tag ? tag.split(TAG_URL_DELIMITER) : tag
-    const tagCategoryFilters = tags || (variantGuid ? [] : [(tableState.categoryFilter || ALL_FILTER)])
-    const firstAppliedTagCategoryFilter = tagCategoryFilters.length > 0 ? tagCategoryFilters[0] : null
-    const appliedTagCategoryFilter = multiple ? tagCategoryFilters : firstAppliedTagCategoryFilter
-
-    let shownFilters = (discoveryFilters && firstAppliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME) ?
-      discoveryFilters : filters
+    let shownFilters = filters
     const hasHiddenFilters = !showAllFilters && shownFilters.length > MAX_FILTERS
     if (hasHiddenFilters) {
       shownFilters = shownFilters.slice(0, MAX_FILTERS)
@@ -118,7 +109,7 @@ class SavedVariants extends React.PureComponent {
                 inline
                 multiple={multiple}
                 options={tagOptions}
-                value={appliedTagCategoryFilter}
+                value={optionValue}
                 onChange={this.navigateToTag}
               />
               {` variants ${allShown ? '' : `(${totalVariantsCount} total)`}`}

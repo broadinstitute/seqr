@@ -88,9 +88,9 @@ def saved_variants_page(request, tag):
         saved_variant_models = SavedVariant.objects.exclude(varianttag=None)
     else:
         tags = tag.split(';')
-        tag_type = VariantTagType.objects.filter(name__in=tags, project__isnull=True)
+        tag_types = VariantTagType.objects.filter(name__in=tags, project__isnull=True)
         saved_variant_models = SavedVariant.objects.all()
-        for tt in tag_type:
+        for tt in tag_types:
             saved_variant_models = saved_variant_models.filter(varianttag__variant_tag_type=tt).distinct()
 
     saved_variant_models = saved_variant_models.filter(family__project__guid__in=get_project_guids_user_can_view(request.user))

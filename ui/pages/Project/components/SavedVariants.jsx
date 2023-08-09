@@ -15,6 +15,7 @@ import {
   VARIANT_PER_PAGE_FIELD,
   EXCLUDED_TAG_NAME,
   REVIEW_TAG_NAME,
+  DISCOVERY_CATEGORY_NAME,
 } from 'shared/utils/constants'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { LargeMultiselect, Dropdown } from 'shared/components/form/Inputs'
@@ -233,15 +234,18 @@ class BaseProjectSavedVariants extends React.PureComponent {
     )
   }
 
+  getSelectedTag = tag => defaultTag => (tag || defaultTag)
+
   render() {
     const { project, analysisGroup, loadProjectSavedVariants, ...props } = this.props
-    const { familyGuid } = props.match.params
+    const { familyGuid, tag } = props.match.params
+    const filters = (tag === DISCOVERY_CATEGORY_NAME) ? FILTER_FIELDS : NON_DISCOVERY_FILTER_FIELDS
 
     return (
       <SavedVariants
         tagOptions={this.tagOptions()}
-        filters={NON_DISCOVERY_FILTER_FIELDS}
-        discoveryFilters={FILTER_FIELDS}
+        filters={filters}
+        getSelectedTag={this.getSelectedTag(tag)}
         additionalFilter={
           (project.canEdit && familyGuid) ? <LinkSavedVariants familyGuid={familyGuid} {...props} /> : null
         }

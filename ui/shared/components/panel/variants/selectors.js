@@ -131,24 +131,22 @@ export const getPairedSelectedSavedVariants = createSelector(
       return acc
     }, [])
 
-    if (tag === NOTE_TAG_NAME) {
+    const tags = (tag || '').split(TAG_URL_DELIMITER)
+    if (tags.length > 1) {
+      pairedVariants = matchingVariants(
+        pairedVariants, ({ tagGuids }) => {
+          const tagNames = tagGuids.map(tagGuid => tagsByGuid[tagGuid].name)
+          return tags.every(tagName => tagNames.includes(tagName))
+        },
+      )
+    } else if (tag === NOTE_TAG_NAME) {
       pairedVariants = matchingVariants(pairedVariants, ({ noteGuids }) => noteGuids.length)
     } else if (tag === MME_TAG_NAME) {
       pairedVariants = matchingVariants(pairedVariants, ({ mmeSubmissions = [] }) => mmeSubmissions.length)
     } else if (tag && tag !== SHOW_ALL) {
-      const tags = tag.split(TAG_URL_DELIMITER)
-      if (tags.length === 1) {
-        pairedVariants = matchingVariants(
-          pairedVariants, ({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag),
-        )
-      } else {
-        pairedVariants = matchingVariants(
-          pairedVariants, ({ tagGuids }) => {
-            const tagNames = tagGuids.map(tagGuid => tagsByGuid[tagGuid].name)
-            return tags.every(tagName => tagNames.includes(tagName))
-          },
-        )
-      }
+      pairedVariants = matchingVariants(
+        pairedVariants, ({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag),
+      )
     } else if (!(familyGuid || analysisGroupGuid)) {
       pairedVariants = matchingVariants(pairedVariants, ({ tagGuids }) => tagGuids.length)
     }

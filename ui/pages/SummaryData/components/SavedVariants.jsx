@@ -72,10 +72,12 @@ const getUpdateTagUrl = (selectedTag, match) => {
   const lastTag = selectedTag.length > 0 ? selectedTag[selectedTag.length - 1] : null
   const [firstTag, ...otherTag] = selectedTag
   const updatedTag = firstTag === SHOW_ALL ? otherTag : lastTag !== SHOW_ALL && selectedTag
-  return `${PAGE_URL}/${(updatedTag || [SHOW_ALL]).join(TAG_URL_DELIMITER)}${match.params.gene ? `/${match.params.gene}` : ''}`
+  return `${PAGE_URL}/${updatedTag.join(TAG_URL_DELIMITER) || SHOW_ALL}${match.params.gene ? `/${match.params.gene}` : ''}`
 }
 
 const getGeneHref = tag => selectedGene => `${PAGE_URL}/${tag || SHOW_ALL}/${selectedGene.key}`
+
+const getSelectedTag = tag => defaultTag => (tag ? tag.split(TAG_URL_DELIMITER) : [defaultTag])
 
 const BaseSavedVariants = React.memo(({ loadVariants, geneDetail, ...props }) => {
   const { params } = props.match
@@ -88,6 +90,7 @@ const BaseSavedVariants = React.memo(({ loadVariants, geneDetail, ...props }) =>
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
       multiple
+      getSelectedTag={getSelectedTag(tag)}
       additionalFilter={
         <StyledForm inline>
           <Form.Field
