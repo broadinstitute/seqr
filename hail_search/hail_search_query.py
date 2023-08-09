@@ -121,15 +121,19 @@ class BaseHailTableQuery(object):
             for response_key, field in pop_config.items() if field is not None
         })
 
-    @staticmethod
-    def _format_prediction(r, path, enums):
+    @classmethod
+    def _format_prediction(cls, r, path, enums):
         pred_enum = enums.get(path[0], {}).get(path[1])
         if pred_enum:
-            return hl.array(pred_enum)[r[path[0]][f'{path[1]}_id']]
-        value = r[path[0]][path[1]]
+            path = (path[0], f'{path[1]}_id', lambda val: hl.array(pred_enum)[val])
+        value = cls._get_pred_path_value(r, path)
         if len(path) > 2:
             value = path[2](value)
         return value
+
+    @classmethod
+    def _get_pred_path_value(cls, r, path):
+        return r[path[0]][path[1]]
 
     @classmethod
     def _annotate_transcript(cls, *args):
@@ -955,15 +959,6 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ']}
     POPULATION_FIELDS = {'seqr': 'gt_stats'}
-    PREDICTION_FIELDS_CONFIG = {
-        'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),
-        'mut_pred': ('dbnsfp', 'MutPred_score'),
-        'mut_taster': ('dbnsfp', 'MutationTaster_pred'),
-        'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),
-        'revel': ('dbnsfp', 'REVEL_score'),
-        'sift': ('dbnsfp', 'SIFT_pred'),
-        'vest': ('dbnsfp', 'VEST4_score'),
-    }
     OMIT_TRANSCRIPT_FIELDS = ['consequence_terms']
     ANNOTATION_OVERRIDE_FIELDS = [CLINVAR_KEY]
 
@@ -1133,13 +1128,19 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     PREDICTION_FIELDS_CONFIG = {
         'cadd': ('cadd', 'PHRED'),
         'eigen': ('eigen', 'Eigen_phred'),
+        'fathmm': ('dbnsfp', 'fathmm_MKL_coding_pred'),
         'gnomad_noncoding': ('gnomad_non_coding_constraint', 'z_score'),
         'mpc': ('mpc', 'MPC'),
+        'mut_pred': ('dbnsfp', 'MutPred_score'),
+        'mut_taster': ('dbnsfp', 'MutationTaster_pred'),
+        'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),
         'primate_ai': ('primate_ai', 'score'),
+        'revel': ('dbnsfp', 'REVEL_score'),
+        'sift': ('dbnsfp', 'SIFT_pred'),
         'splice_ai': ('splice_ai', 'delta_score'),
         'splice_ai_consequence': ('splice_ai', 'splice_consequence'),
+        'vest': ('dbnsfp', 'VEST4_score'),
     }
-    PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     ANNOTATION_OVERRIDE_FIELDS = [HGMD_KEY, SPLICE_AI_FIELD, SCREEN_KEY] + BaseVariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
 
     ENUM_ANNOTATION_FIELDS = {
@@ -1219,11 +1220,12 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
 
     PREDICTION_FIELDS_CONFIG = {
         'apogee': ('mitimpact', 'score'),
+        'haplogroup_defining': ('haplogroup', 'is_defining', lambda v: hl.or_missing(v, 'Y')),
         'hmtvar': ('hmtvar', 'score'),
         'mitotip': ('mitotip', 'trna_prediction'),
-        'haplogroup_defining': ('haplogroup', 'is_defining', lambda v: hl.or_missing(v, 'Y')),
+        'mut_taster': ('dbnsfp_mito', 'MutationTaster_pred'),
+        'sift': ('dbnsfp_mito', 'SIFT_pred'),
     }
-    PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     BASE_ANNOTATION_FIELDS = {
         'commonLowHeteroplasmy': lambda r: r.common_low_heteroplasmy,
         'highConstraintRegion': lambda r: r.high_constraint_region,
@@ -1539,6 +1541,12 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
             )
             for response_key, field in gt_config.items() if field is not None
         })
+
+    @classmethod
+    def _get_pred_path_value(cls, r, path):
+        if 'dbnsfp' in path[0] and path[1] in r.dbnsfp_mito:
+            return hl.or_else(r.dbnsfp[path[1]], r.dbnsfp_mito[path[1]])
+        return super(AllVariantHailTableQuery, cls)._get_pred_path_value(r, path)
 
 
 class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
