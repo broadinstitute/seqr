@@ -186,9 +186,6 @@ class BaseHailTableQuery(object):
         return hl.read_table(self._get_table_path(path), **self._load_table_kwargs)
 
     def import_filtered_table(self, sample_data, intervals=None, **kwargs):
-        tables_path = f'{DATASETS_DIR}/{self._genome_version}/{data_type}'
-        load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
-
         family_samples = defaultdict(list)
         project_samples = defaultdict(list)
         for s in sample_data:
