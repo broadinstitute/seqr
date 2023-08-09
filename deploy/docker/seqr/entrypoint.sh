@@ -86,7 +86,7 @@ if [ "$RUN_CRON_JOBS" ]; then
 0 0 * * 0 /opt/venv/bin/python /seqr/manage.py import_all_panels https://panelapp.agha.umccr.org/api/v1 --label=AU >> /proc/1/fd/1 2>&1
 0 0 * * 0 /opt/venv/bin/python /seqr/manage.py import_all_panels https://panelapp.genomicsengland.co.uk/api/v1 --label=UK >> /proc/1/fd/1 2>&1
 0 12 * * 1 /opt/venv/bin/python /seqr/manage.py detect_inactive_privileged_users >> /proc/1/fd/1 2>&1
-0 2 * * * /opt/venv/bin/python /seqr/manage.py check_bam_cram_paths >> /proc/1/fd/1 2>&1
+0 2 * * 0 /opt/venv/bin/python /seqr/manage.py check_bam_cram_paths >> /proc/1/fd/1 2>&1
 0 0 1 1,4,7,10 * /opt/venv/bin/python /seqr/manage.py clear_project_tags ALL_USER_DEMO --skip-confirm >> /proc/1/fd/1 2>&1
 ' | crontab -
 
