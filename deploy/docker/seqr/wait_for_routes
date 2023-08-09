@@ -2,7 +2,7 @@
 
 ###
 # Waits for network 
-# Usage: ./wait_for_sidecars https://www.google.com/ https://www.broadinstitute.org https://www.broadins.org
+# Usage: ./wait_for_routes https://www.google.com/ https://www.broadinstitute.org https://www.broadins.org
 ###
 
 RETRY_COUNT=10
@@ -19,7 +19,7 @@ do
             exit 1
         else
             echo "Unable to connect to ${route}, retrying. Attempt ${retries}/${RETRY_COUNT}"
-            sleep 1
+            sleep 2
         fi
     done
 done
