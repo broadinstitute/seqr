@@ -147,9 +147,10 @@ class BaseHailTableQuery(object):
 
         return value
 
-    def __init__(self, data_type, sample_data, genome_version, sort=XPOS, num_results=100, inheritance_mode=None, **kwargs):
+    def __init__(self, data_type, sample_data, genome_version, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
+        self._sort_metadata = sort_metadata
         self._num_results = num_results
         self._data_type = data_type
         self._ht = None
@@ -686,15 +687,16 @@ class BaseHailTableQuery(object):
     def _get_sort_expressions(self, ht, sort):
         sort_expressions = []
         if sort in self.SORTS:
-            sort_expressions = self.SORTS[sort](ht, self._sort_metadata)
+            sort_expressions = self.SORTS[sort](ht)
 
         elif sort in POPULATION_SORTS:
-            if pop in self.POPULATIONS:
-                sort_expressions = [self.population_expression(ht, pop).af]
+            sort_field = POPULATION_SORTS[sort]
+            if sort_field in self.POPULATIONS:
+                sort_expressions = [hl.float64(self.population_expression(ht, sort_field).af)]
 
         elif sort in self.PREDICTION_FIELDS_CONFIG:
             prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
-            sort_expressions = [-ht[prediction_path.source][prediction_path.field]]
+            sort_expressions = [-hl.float64(ht[prediction_path.source][prediction_path.field])]
 
         elif sort == 'in_omim':
             sort_expressions = self._omim_sort(ht, hl.set(set(self._sort_metadata)))
@@ -780,14 +782,13 @@ class VariantHailTableQuery(BaseHailTableQuery):
     }
 
     SORTS = {
-        PATHOGENICTY_SORT_KEY: lambda r: [hl.or_else(r.clinvar.pathogenicity_id, ABSENT_PATH_SORT_OFFSET)],
-        'in_omim': VariantHailTableQuery._omim_sort,
         'protein_consequence': lambda r: [
-            hl.min(r.sorted_transcript_consequences.flatmap(lambda t: consequence_term_ids)),
-            hl.min(r.selected_transcript.map(lambda t: consequence_term_ids)),
+            hl.min(r.sorted_transcript_consequences.flatmap(lambda t: t.consequence_term_ids)),
+            hl.min(r.selected_transcript.consequence_term_ids),
         ],
+        PATHOGENICTY_SORT_KEY: lambda r: [hl.or_else(r.clinvar.pathogenicity_id, ABSENT_PATH_SORT_OFFSET)],
     }
-    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: SORTS[PATHOGENICTY_SORT_KEY](r) + [r.hgmd.class_id]
+    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: VariantHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [r.hgmd.class_id]
     SORTS.update(BaseHailTableQuery.SORTS)
 
     @staticmethod
