@@ -5,7 +5,7 @@ import logging
 import os
 
 from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, MALE, VARIANT_DATASET, \
-    VARIANT_KEY_FIELD, GNOMAD_GENOMES_FIELD, XPOS, GENOME_VERSION_GRCh38_DISPLAY, INHERITANCE_FILTERS, \
+    VARIANT_KEY_FIELD, GNOMAD_GENOMES_FIELD, XPOS, GENOME_VERSION_GRCh38, INHERITANCE_FILTERS, \
     ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF, \
     ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
     CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES, PATH_FREQ_OVERRIDE_CUTOFF
@@ -26,6 +26,8 @@ def _to_camel_case(snake_case_str):
 
 class BaseHailTableQuery(object):
 
+    DATA_TYPE = None
+
     GENOTYPE_QUERY_MAP = {
         REF_REF: lambda gt: gt.is_hom_ref(),
         REF_ALT: lambda gt: gt.is_het(),
@@ -42,6 +44,7 @@ class BaseHailTableQuery(object):
     POPULATION_KEYS = ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']
     PREDICTION_FIELDS_CONFIG = {}
 
+    GENOME_VERSIONS = [GENOME_VERSION_GRCh38]
     GLOBALS = ['enums']
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
@@ -58,6 +61,15 @@ class BaseHailTableQuery(object):
     SORTS = {
         XPOS: lambda r: [r.xpos],
     }
+
+    @classmethod
+    def load_globals(cls):
+        globals = {}
+        for genome_version in cls.GENOME_VERSIONS:
+            ht_path = cls._get_generic_table_path(genome_version, 'annotations.ht')
+            globals_ht = hl.read_table(ht_path).head(0).select()
+            globals[genome_version] = {k: hl.eval(globals_ht[k]) for k in cls.GLOBALS}
+        return globals
 
     @classmethod
     def _format_population_config(cls, pop_config):
@@ -89,7 +101,7 @@ class BaseHailTableQuery(object):
             for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
         })
 
-        if self._genome_version == GENOME_VERSION_GRCh38_DISPLAY:
+        if self._genome_version == GENOME_VERSION_GRCh38:
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
 
@@ -139,16 +151,18 @@ class BaseHailTableQuery(object):
 
         return value
 
-    def __init__(self, data_type, sample_data, genome_version, sort=XPOS, num_results=100, **kwargs):
+    def __init__(self, sample_data, genome_version, globals, sort=XPOS, num_results=100, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
         self._num_results = num_results
-        self._data_type = data_type
         self._ht = None
-        self._enums = None
-        self._globals = None
+        self._globals = globals
 
         self._load_filtered_table(sample_data, **kwargs)
+
+    @property
+    def _enums(self):
+        return self._globals['enums']
 
     def _load_filtered_table(self, sample_data, intervals=None, exclude_intervals=False, variant_ids=None, **kwargs):
         parsed_intervals, variant_ids = self._parse_intervals(intervals, variant_ids)
@@ -160,8 +174,12 @@ class BaseHailTableQuery(object):
         self.import_filtered_table(
             sample_data, excluded_intervals=excluded_intervals, variant_ids=variant_ids, **kwargs)
 
+    @classmethod
+    def _get_generic_table_path(cls, genome_version, path):
+        return f'{DATASETS_DIR}/{genome_version}/{cls.DATA_TYPE}/{path}'
+
     def _get_table_path(self, path):
-        return f'{DATASETS_DIR}/{self._genome_version}/{self._data_type}/{path}'
+        return self._get_generic_table_path(self._genome_version, path)
 
     def _read_table(self, path):
         return hl.read_table(self._get_table_path(path), **self._load_table_kwargs)
@@ -173,7 +191,7 @@ class BaseHailTableQuery(object):
             family_samples[s['family_guid']].append(s)
             project_samples[s['project_guid']].append(s)
 
-        logger.info(f'Loading {self._data_type} data for {len(family_samples)} families in {len(project_samples)} projects')
+        logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
             family_ht = self._read_table(f'families/{family_guid}.ht')
@@ -208,11 +226,6 @@ class BaseHailTableQuery(object):
         annotation_ht_query_result = hl.query_table(
             annotations_ht_path, families_ht.key).first().drop(*families_ht.key)
         ht = families_ht.annotate(**annotation_ht_query_result)
-
-        # Get globals
-        annotation_globals_ht = hl.read_table(annotations_ht_path).head(0).select()
-        self._globals = {k: hl.eval(annotation_globals_ht[k]) for k in self.GLOBALS}
-        self._enums = self._globals.pop('enums')
 
         self._ht = ht.transmute(
             genotypes=ht.family_entries.flatmap(lambda x: x).filter(
@@ -576,6 +589,8 @@ class BaseHailTableQuery(object):
 
 class VariantHailTableQuery(BaseHailTableQuery):
 
+    DATA_TYPE = VARIANT_DATASET
+
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ', 'AB']}
     QUALITY_FILTER_FORMAT = {
         'AB': QualityFilterFormat(override=lambda gt: ~gt.GT.is_het(), scale=100),
@@ -779,6 +794,4 @@ class VariantHailTableQuery(BaseHailTableQuery):
         return super()._format_results(ht)
 
 
-QUERY_CLASS_MAP = {
-    VARIANT_DATASET: VariantHailTableQuery,
-}
+QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery]}
