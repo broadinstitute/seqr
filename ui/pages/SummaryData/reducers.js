@@ -44,7 +44,7 @@ export const loadSuccessStory = successStoryTypes => (dispatch) => {
 export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) => {
   // Do not load if already loaded
   if (tag) {
-    if (getState().savedVariantTags[tag]) {
+    if (getState().savedVariantsByTag[tag]) {
       return
     }
   } else if (!gene) {
@@ -54,13 +54,8 @@ export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) =>
   dispatch({ type: REQUEST_SAVED_VARIANTS })
   new HttpRequestHelper(`/api/summary_data/saved_variants/${tag}`,
     (responseJson) => {
-      if (tag && !gene) {
-        dispatch({
-          type: RECEIVE_SAVED_VARIANT_TAGS,
-          updates: { [tag]: true },
-        })
-      }
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      dispatch({ type: RECEIVE_SAVED_VARIANT_TAGS, updates: { [tag]: responseJson.savedVariantsByGuid } })
     },
     (e) => {
       dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
@@ -83,7 +78,7 @@ export const reducers = {
   mmeLoading: loadingReducer(REQUEST_MME, RECEIVE_MME),
   mmeMetrics: createSingleValueReducer(RECEIVE_MME, {}, 'metrics'),
   mmeSubmissions: createSingleValueReducer(RECEIVE_MME, [], 'submissions'),
-  savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
+  savedVariantsByTag: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
   externalAnalysisUploadStats: createSingleValueReducer(RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS, {}),
   allProjectSavedVariantTableState: createSingleObjectReducer(UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, {
     categoryFilter: SHOW_ALL,

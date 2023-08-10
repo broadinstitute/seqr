@@ -12,7 +12,6 @@ import {
   VARIANT_SORT_LOOKUP,
   SHOW_ALL,
   VARIANT_EXPORT_DATA,
-  TAG_URL_DELIMITER,
 } from 'shared/utils/constants'
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
@@ -74,8 +73,13 @@ export const getPairedSelectedSavedVariants = createSelector(
   (state, props) => (props.project || {}).projectGuid,
   getVariantTagsByGuid,
   getVariantNotesByGuid,
+  state => state.savedVariantsByTag,
   (savedVariants, { tag, gene, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid,
-    projectGuid, tagsByGuid, notesByGuid) => {
+    projectGuid, tagsByGuid, notesByGuid, savedVariantsByTags) => {
+    if (!projectGuid) {
+      return Object.values(savedVariantsByTags[tag] || {})
+    }
+
     let variants = Object.values(savedVariants)
     if (variantGuid) {
       variants = variants.filter(o => variantGuid.split(',').includes(o.variantGuid))
@@ -131,15 +135,7 @@ export const getPairedSelectedSavedVariants = createSelector(
       return acc
     }, [])
 
-    const tags = (tag || '').split(TAG_URL_DELIMITER)
-    if (tags.length > 1) {
-      pairedVariants = matchingVariants(
-        pairedVariants, ({ tagGuids }) => {
-          const tagNames = tagGuids.map(tagGuid => tagsByGuid[tagGuid].name)
-          return tags.every(tagName => tagNames.includes(tagName))
-        },
-      )
-    } else if (tag === NOTE_TAG_NAME) {
+    if (tag === NOTE_TAG_NAME) {
       pairedVariants = matchingVariants(pairedVariants, ({ noteGuids }) => noteGuids.length)
     } else if (tag === MME_TAG_NAME) {
       pairedVariants = matchingVariants(pairedVariants, ({ mmeSubmissions = [] }) => mmeSubmissions.length)
