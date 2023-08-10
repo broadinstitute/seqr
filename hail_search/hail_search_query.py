@@ -64,12 +64,12 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def load_globals(cls):
-        globals = {}
+        loaded_globals = {}
         for genome_version in cls.GENOME_VERSIONS:
             ht_path = cls._get_generic_table_path(genome_version, 'annotations.ht')
             globals_ht = hl.read_table(ht_path).head(0).select()
-            globals[genome_version] = {k: hl.eval(globals_ht[k]) for k in cls.GLOBALS}
-        return globals
+            loaded_globals[genome_version] = {k: hl.eval(globals_ht[k]) for k in cls.GLOBALS}
+        return loaded_globals
 
     @classmethod
     def _format_population_config(cls, pop_config):
@@ -151,12 +151,12 @@ class BaseHailTableQuery(object):
 
         return value
 
-    def __init__(self, sample_data, genome_version, globals, sort=XPOS, num_results=100, **kwargs):
+    def __init__(self, sample_data, genome_version, data_type_globals, sort=XPOS, num_results=100, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
         self._num_results = num_results
         self._ht = None
-        self._globals = globals
+        self._globals = data_type_globals
 
         self._load_filtered_table(sample_data, **kwargs)
 

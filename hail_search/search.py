@@ -10,9 +10,9 @@ def search_hail_backend(request, all_globals):
 
     sample_data = sample_data[single_data_type]
     query_cls = QUERY_CLASS_MAP[single_data_type]
-    globals = all_globals[single_data_type][genome_version]
+    data_type_globals = all_globals[single_data_type][genome_version]
 
-    query = query_cls(sample_data, genome_version, globals, **request)
+    query = query_cls(sample_data, genome_version, data_type_globals, **request)
     return query.search()
 
 
