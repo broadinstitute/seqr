@@ -160,7 +160,7 @@ def _get_family_has_rna_tpm(family_genes, gene_ids, sample_family_map):
         sample_id__in=sample_family_map.keys(), gene_id__in=gene_ids,
     ).values('sample_id').annotate(genes=ArrayAgg('gene_id', distinct=True))
     family_tpms = defaultdict(lambda: {'tpmGenes': []})
-    for agg in tpm_family_genes:
+    for agg in tpm_family_genes.iterator():
         family_guid = sample_family_map[agg['sample_id']]
         genes = [gene for gene in agg['genes'] if gene in family_genes[family_guid]]
         if genes:
@@ -231,11 +231,11 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     rna_tpm = None
     if include_individual_gene_scores:
         present_family_genes = {k: v for k, v in family_genes.items() if v}
-        sample_family_map = dict(Sample.objects.filter(
-            individual__family__guid__in=present_family_genes.keys()).values_list('id', 'individual__family__guid')
-        )
-        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), sample_family_map.keys())
-        rna_tpm = _get_family_has_rna_tpm(present_family_genes, genes.keys(), sample_family_map)
+        rna_sample_family_map = dict(Sample.objects.filter(
+            individual__family__guid__in=present_family_genes.keys(), sample_type=Sample.SAMPLE_TYPE_RNA, is_active=True,
+        ).values_list('id', 'individual__family__guid'))
+        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), rna_sample_family_map.keys())
+        rna_tpm = _get_family_has_rna_tpm(present_family_genes, genes.keys(), rna_sample_family_map)
         response['phenotypeGeneScores'] = get_phenotype_prioritization(present_family_genes.keys(), gene_ids=genes.keys())
 
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
