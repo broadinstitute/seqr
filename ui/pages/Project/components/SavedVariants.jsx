@@ -16,6 +16,7 @@ import {
   EXCLUDED_TAG_NAME,
   REVIEW_TAG_NAME,
   DISCOVERY_CATEGORY_NAME,
+  SHOW_ALL,
 } from 'shared/utils/constants'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { LargeMultiselect, Dropdown } from 'shared/components/form/Inputs'
@@ -37,8 +38,6 @@ const LabelLink = styled(Link)`
     color: black;
   }
 `
-
-const ALL_FILTER = 'ALL'
 
 const mapSavedByInputStateToProps = state => ({
   options: getProjectVariantSavedByOptions(state),
@@ -148,7 +147,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
     return getSavedVariantsLinkPath({
       projectGuid: project.projectGuid,
       analysisGroupGuid: match.params.analysisGroupGuid,
-      tag: !isCategory && newTag !== ALL_FILTER && newTag,
+      tag: !isCategory && newTag !== SHOW_ALL && newTag,
       familyGuid: match.params.familyGuid,
     })
   }
@@ -192,7 +191,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
       })
       return acc
     }, [{
-      value: ALL_FILTER,
+      value: SHOW_ALL,
       text: 'All Saved',
       content: (
         <LabelLink
@@ -234,18 +233,20 @@ class BaseProjectSavedVariants extends React.PureComponent {
     )
   }
 
-  getSelectedTag = tag => defaultTag => (tag || defaultTag)
+  getSelectedTag = (tag, variantGuid) => categoryFilter => (
+    tag || (variantGuid ? null : (categoryFilter || SHOW_ALL))
+  )
 
   render() {
     const { project, analysisGroup, loadProjectSavedVariants, ...props } = this.props
-    const { familyGuid, tag } = props.match.params
+    const { familyGuid, tag, variantGuid } = props.match.params
     const filters = (tag === DISCOVERY_CATEGORY_NAME) ? FILTER_FIELDS : NON_DISCOVERY_FILTER_FIELDS
 
     return (
       <SavedVariants
         tagOptions={this.tagOptions()}
         filters={filters}
-        getSelectedTag={this.getSelectedTag(tag)}
+        getSelectedTag={this.getSelectedTag(tag, variantGuid)}
         additionalFilter={
           (project.canEdit && familyGuid) ? <LinkSavedVariants familyGuid={familyGuid} {...props} /> : null
         }

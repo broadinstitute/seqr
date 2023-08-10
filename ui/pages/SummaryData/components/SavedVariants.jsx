@@ -13,7 +13,6 @@ import {
   VARIANT_PER_PAGE_FIELD,
   VARIANT_TAGGED_DATE_FIELD,
   SHOW_ALL,
-  TAG_URL_DELIMITER,
 } from 'shared/utils/constants'
 import { StyledForm } from 'shared/components/form/FormHelpers'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
@@ -72,12 +71,12 @@ const getUpdateTagUrl = (selectedTag, match) => {
   const lastTag = selectedTag.length > 0 ? selectedTag[selectedTag.length - 1] : null
   const [firstTag, ...otherTag] = selectedTag
   const updatedTag = firstTag === SHOW_ALL ? otherTag : lastTag !== SHOW_ALL && selectedTag
-  return `${PAGE_URL}/${updatedTag.join(TAG_URL_DELIMITER) || SHOW_ALL}${match.params.gene ? `/${match.params.gene}` : ''}`
+  return `${PAGE_URL}/${updatedTag.join(';') || SHOW_ALL}${match.params.gene ? `/${match.params.gene}` : ''}`
 }
 
 const getGeneHref = tag => selectedGene => `${PAGE_URL}/${tag || SHOW_ALL}/${selectedGene.key}`
 
-const getSelectedTag = tag => defaultTag => (tag ? tag.split(TAG_URL_DELIMITER) : [defaultTag])
+const getSelectedTag = tag => categoryFilter => (tag ? tag.split(';') : [categoryFilter || SHOW_ALL])
 
 const BaseSavedVariants = React.memo(({ loadVariants, geneDetail, ...props }) => {
   const { params } = props.match

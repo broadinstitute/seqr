@@ -19,7 +19,6 @@ import {
   getVisibleSortedSavedVariants,
 } from './selectors'
 
-const ALL_FILTER = 'ALL'
 const MAX_FILTERS = 4
 
 const ControlsRow = styled(Grid.Row)`
@@ -78,7 +77,7 @@ class SavedVariants extends React.PureComponent {
     } = this.props
     const { showAllFilters } = this.state
     const { familyGuid, variantGuid } = match.params
-    const optionValue = getSelectedTag(variantGuid ? null : (tableState.categoryFilter || ALL_FILTER))
+    const optionValue = getSelectedTag(tableState.categoryFilter)
 
     let shownFilters = filters
     const hasHiddenFilters = !showAllFilters && shownFilters.length > MAX_FILTERS
