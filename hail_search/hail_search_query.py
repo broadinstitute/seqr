@@ -9,7 +9,8 @@ from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_
     ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF, \
     ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
     CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES, PATH_FREQ_OVERRIDE_CUTOFF, \
-    COMPOUND_HET, RECESSIVE, GROUPED_VARIANTS_FIELD
+    COMPOUND_HET, RECESSIVE, GROUPED_VARIANTS_FIELD, POPULATION_SORTS, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
+    ABSENT_PATH_SORT_OFFSET
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -683,7 +684,33 @@ class BaseHailTableQuery(object):
         return sort_expressions
 
     def _get_sort_expressions(self, ht, sort):
-        return self.SORTS[sort](ht)
+        sort_expressions = []
+        if sort in self.SORTS:
+            sort_expressions = self.SORTS[sort](ht, self._sort_metadata)
+
+        elif sort in POPULATION_SORTS:
+            if pop in self.POPULATIONS:
+                sort_expressions = [self.population_expression(ht, pop).af]
+
+        elif sort in self.PREDICTION_FIELDS_CONFIG:
+            prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
+            sort_expressions = [-ht[prediction_path.source][prediction_path.field]]
+
+        elif sort == 'in_omim':
+            sort_expressions = self._omim_sort(ht, hl.set(set(self._sort_metadata)))
+
+        elif self._sort_metadata:
+            sort_expressions = self._gene_rank_sort(ht, hl.dict(self._sort_metadata))
+
+        return sort_expressions
+
+    @staticmethod
+    def _omim_sort(*args):
+        return []
+
+    @staticmethod
+    def _gene_rank_sort(*args):
+        return []
 
 
 class VariantHailTableQuery(BaseHailTableQuery):
@@ -751,6 +778,17 @@ class VariantHailTableQuery(BaseHailTableQuery):
             'format_value': lambda value: value.region_types.first(),
         },
     }
+
+    SORTS = {
+        PATHOGENICTY_SORT_KEY: lambda r: [hl.or_else(r.clinvar.pathogenicity_id, ABSENT_PATH_SORT_OFFSET)],
+        'in_omim': VariantHailTableQuery._omim_sort,
+        'protein_consequence': lambda r: [
+            hl.min(r.sorted_transcript_consequences.flatmap(lambda t: consequence_term_ids)),
+            hl.min(r.selected_transcript.map(lambda t: consequence_term_ids)),
+        ],
+    }
+    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: SORTS[PATHOGENICTY_SORT_KEY](r) + [r.hgmd.class_id]
+    SORTS.update(BaseHailTableQuery.SORTS)
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
@@ -899,6 +937,21 @@ class VariantHailTableQuery(BaseHailTableQuery):
     def _format_results(self, ht, annotation_fields):
         ht = ht.annotate(selected_transcript=self._selected_main_transcript_expr(ht))
         return super()._format_results(ht, annotation_fields)
+
+    @staticmethod
+    def _omim_sort(r, omim_gene_set):
+        omim_gene_set = hl.set(set(sort_metadata))
+        return [
+            hl.if_else(omim_gene_set.contains(r.selected_transcript.gene_id), 0, 1),
+            -r.sorted_transcript_consequences.filter(lambda t: omim_gene_set.contains(t.gene_id)).size(),
+        ]
+
+    @staticmethod
+    def _gene_rank_sort(r, gene_ranks):
+        return [
+            hl.min(r.sorted_transcript_consequences.map(lambda t: gene_ranks.get(t.gene_id))),
+            gene_ranks.get(r.selected_transcript.gene_id),
+        ]
 
 
 QUERY_CLASS_MAP = {
