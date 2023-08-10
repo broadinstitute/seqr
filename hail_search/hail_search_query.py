@@ -27,6 +27,7 @@ def _to_camel_case(snake_case_str):
 class BaseHailTableQuery(object):
 
     DATA_TYPE = None
+    LOADED_GLOBALS = None
 
     GENOTYPE_QUERY_MAP = {
         REF_REF: lambda gt: gt.is_hom_ref(),
@@ -64,12 +65,11 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def load_globals(cls):
-        loaded_globals = {}
+        cls.LOADED_GLOBALS = {}
         for genome_version in cls.GENOME_VERSIONS:
             ht_path = cls._get_generic_table_path(genome_version, 'annotations.ht')
-            globals_ht = hl.read_table(ht_path).head(0).select()
-            loaded_globals[genome_version] = {k: hl.eval(globals_ht[k]) for k in cls.GLOBALS}
-        return loaded_globals
+            ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
+            cls.LOADED_GLOBALS[genome_version] = {k: ht_globals[k] for k in cls.GLOBALS}
 
     @classmethod
     def _format_population_config(cls, pop_config):
@@ -151,14 +151,17 @@ class BaseHailTableQuery(object):
 
         return value
 
-    def __init__(self, sample_data, genome_version, data_type_globals, sort=XPOS, num_results=100, **kwargs):
+    def __init__(self, sample_data, genome_version, sort=XPOS, num_results=100, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
         self._num_results = num_results
         self._ht = None
-        self._globals = data_type_globals
 
         self._load_filtered_table(sample_data, **kwargs)
+
+    @property
+    def _globals(self):
+        return self.LOADED_GLOBALS[self._genome_version]
 
     @property
     def _enums(self):
