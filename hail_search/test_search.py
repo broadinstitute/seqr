@@ -321,6 +321,12 @@ class HailSearchTestCase(AioHTTPTestCase):
     async def test_secondary_annotations_filter(self):
         annotations_1 = {'missense': ['missense_variant']}
         annotations_2 = {'other': ['intron_variant']}
+
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='compound_het', omit_sample_type='SV_WES',
+            annotations=annotations_1, annotations_secondary=annotations_2,
+        )
+
         await self._assert_expected_search(
             [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
             annotations=annotations_1, annotations_secondary=annotations_2,
