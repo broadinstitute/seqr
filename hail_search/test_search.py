@@ -54,6 +54,7 @@ PROJECT_2_VARIANT = {
     },
     'transcripts': {},
     'mainTranscriptId': None,
+    'selectedMainTranscriptId': None,
     '_sort': [1000010146],
 }
 
@@ -69,6 +70,8 @@ FAMILY_3_VARIANT['genotypes'] = {
 MULTI_FAMILY_VARIANT = deepcopy(VARIANT3)
 MULTI_FAMILY_VARIANT['familyGuids'] += FAMILY_3_VARIANT['familyGuids']
 MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
+
+SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
 
 PROJECT_2_VARIANT1 = deepcopy(VARIANT1)
 PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
@@ -193,7 +196,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [MULTI_FAMILY_VARIANT],  omit_sample_type='SV_WES',
+            [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],  omit_sample_type='SV_WES',
             intervals=LOCATION_SEARCH['intervals'][-1:], gene_ids=LOCATION_SEARCH['gene_ids'][:1]
         )
 
@@ -243,6 +246,43 @@ class HailSearchTestCase(AioHTTPTestCase):
         await self._assert_expected_search(
             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
             omit_sample_type='SV_WES',
+        )
+
+    async def test_annotations_filter(self):
+        await self._assert_expected_search([VARIANT2], pathogenicity={'hgmd': ['hgmd_other']}, omit_sample_type='SV_WES')
+
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting', 'benign']}
+        await self._assert_expected_search([VARIANT1, VARIANT2], pathogenicity=pathogenicity, omit_sample_type='SV_WES')
+
+        pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT4], pathogenicity=pathogenicity, annotations={'SCREEN': ['CTCF-only', 'DNase-only']},
+            omit_sample_type='SV_WES',
+        )
+
+        annotations = {'missense': ['missense_variant'], 'in_frame': ['inframe_insertion', 'inframe_deletion'], 'frameshift': None}
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT4], pathogenicity=pathogenicity, annotations=annotations, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search([VARIANT2, VARIANT4], annotations=annotations, omit_sample_type='SV_WES')
+
+        annotations['splice_ai'] = '0.005'
+        await self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], annotations=annotations, omit_sample_type='SV_WES',
+        )
+
+        selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000641759'}
+        selected_transcript_variant_3 = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
+        annotations = {'other': ['non_coding_transcript_exon_variant']}
+        await self._assert_expected_search(
+            [VARIANT1, selected_transcript_variant_2, selected_transcript_variant_3],
+            pathogenicity=pathogenicity, annotations=annotations, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [selected_transcript_variant_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
+            gene_ids=LOCATION_SEARCH['gene_ids'][:1], annotations=annotations, omit_sample_type='SV_WES',
         )
 
     async def test_in_silico_filter(self):
