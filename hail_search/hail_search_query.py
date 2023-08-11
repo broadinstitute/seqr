@@ -728,7 +728,7 @@ class BaseHailTableQuery(object):
             ht = self._ht
 
         ht = ht.select(
-            gene_ids=hl.set(ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)),
+            gene_ids=self._gene_ids_expr(ht),
             families=self.BASE_ANNOTATION_FIELDS['familyGuids'](ht),
         ).explode('gene_ids').explode('families')
         return ht.aggregate(hl.agg.group_by(
