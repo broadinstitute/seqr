@@ -711,11 +711,11 @@ class BaseHailTableQuery(object):
         return sort_expressions
 
     @classmethod
-    def _omim_sort(*args):
+    def _omim_sort(cls, r, omim_gene_set):
         return []
 
     @classmethod
-    def _gene_rank_sort(*args):
+    def _gene_rank_sort(cls, r, gene_ranks):
         return []
 
 
@@ -958,7 +958,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
     def _gene_rank_sort(cls, r, gene_ranks):
         return [
             gene_ranks.get(r.selected_transcript.gene_id),
-            hl.min(cls._gene_ids_expr(r).map(lambda gene_id: gene_ranks.get(gene_id))),
+            hl.min(cls._gene_ids_expr(r).map(gene_ranks.get)),
         ]
 
 
