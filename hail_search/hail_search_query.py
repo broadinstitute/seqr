@@ -229,9 +229,10 @@ class BaseHailTableQuery(object):
                               excluded_intervals=None, variant_ids=None, **kwargs):
         if excluded_intervals:
             ht = hl.filter_intervals(ht, excluded_intervals, keep=False)
-
-        if variant_ids:
+        elif variant_ids:
             ht = self._filter_variant_ids(ht, variant_ids)
+        elif not self._load_table_kwargs['_intervals']:
+            ht = self._prefilter_entries_table(ht, **kwargs)
 
         ht, sample_id_family_index_map = self._add_entry_sample_families(ht, sample_data)
 
@@ -408,6 +409,9 @@ class BaseHailTableQuery(object):
             for q in variant_id_qs[1:]:
                 variant_id_q |= q
         return ht.filter(variant_id_q)
+
+    def _prefilter_entries_table(self, ht, **kwargs):
+        return ht
 
     def _filter_annotated_table(self, gene_ids=None, rs_ids=None, frequencies=None, in_silico=None, pathogenicity=None, annotations=None, **kwargs):
         if gene_ids:
@@ -677,15 +681,63 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     def _get_family_passes_quality_filter(self, quality_filter, ht=None, pathogenicity=None, **kwargs):
         passes_quality = super(VariantHailTableQuery, self)._get_family_passes_quality_filter(quality_filter)
-        clinvar_path_ht = False if passes_quality is None else self._get_clinvar_filter_ht(pathogenicity)
+        clinvar_path_ht = False if passes_quality is None else self._get_loaded_filter_ht(
+            CLINVAR_KEY, 'clinvar_path_variants.ht', self._get_clinvar_prefilter, pathogenicity=pathogenicity)
         if not clinvar_path_ht:
             return passes_quality
 
         return lambda entries: hl.is_defined(clinvar_path_ht[ht.key]) | passes_quality(entries)
 
-    def _get_clinvar_filter_ht(self, pathogenicity):
-        if self._filter_hts.get(CLINVAR_KEY) is not None:
-            return self._filter_hts[CLINVAR_KEY]
+    def _get_loaded_filter_ht(self, key, table_path, get_filters, **kwargs):
+        if self._filter_hts.get(key) is not None:
+            return self._filter_hts[key]
+
+        ht_filter = get_filters(**kwargs)
+        if ht_filter is False:
+            self._filter_hts[key] = False
+            return False
+
+        ht = self._read_table(table_path)
+        if ht_filter is not True:
+            ht = ht.filter(ht[ht_filter])
+        self._filter_hts[key] = ht
+
+        return ht
+
+    def _get_clinvar_prefilter(self, pathogenicity=None):
+        clinvar_path_filters = self._get_clinvar_path_filters(pathogenicity)
+        if not clinvar_path_filters:
+            return False
+
+        if CLINVAR_LIKELY_PATH_FILTER not in clinvar_path_filters:
+            return 'is_pathogenic'
+        elif CLINVAR_PATH_FILTER not in clinvar_path_filters:
+            return 'is_likely_pathogenic'
+        return True
+
+    def _prefilter_entries_table(self, ht, **kwargs):
+        af_ht = self._get_loaded_filter_ht(
+            GNOMAD_GENOMES_FIELD, 'high_af_variants.ht', self._get_gnomad_af_prefilter, **kwargs)
+        if af_ht:
+            ht = ht.filter(hl.is_missing(high_af_ht[ht.key]))
+        return ht
+
+    def _get_gnomad_af_prefilter(self, frequencies=None, pathogenicity=None, **kwargs):
+        gnomad_genomes_filter = (frequencies or {}).get(GNOMAD_GENOMES_FIELD, {})
+        af_cutoff = gnomad_genomes_filter.get('af')
+        if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
+            af_cutoff = 0.01
+        if af_cutoff is None:
+            return False
+
+        if self._get_clinvar_path_filters(pathogenicity):
+            af_cutoff = max(af_cutoff, PATH_FREQ_OVERRIDE_CUTOFF)
+
+        return 'is_gt_10_percent' if af_cutoff > 0.01 else True
+
+    def _get_af_prefilter_ht(self, frequencies):
+        if self._filter_hts.get(GNOMAD_GENOMES_FIELD) is not None:
+            return self._filter_hts[GNOMAD_GENOMES_FIELD]
 
         clinvar_path_filters = self._get_clinvar_path_filters(pathogenicity)
         if not clinvar_path_filters:
