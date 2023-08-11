@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
 
-import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
+import { loadingReducer, createSingleValueReducer, createSingleObjectReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
 import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_XPOS } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -10,7 +10,6 @@ const REQUEST_SUCCESS_STORY = 'REQUEST_SUCCESS_STORY'
 const RECEIVE_SUCCESS_STORY = 'RECEIVE_SUCCESS_STORY'
 const REQUEST_MME = 'REQUEST_MME'
 const RECEIVE_MME = 'RECEIVE_MME'
-const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
 const UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE = 'UPDATE_ALL_PROJECT_VARIANT_STATE'
 const RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS = 'RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS'
 
@@ -54,8 +53,10 @@ export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) =>
   dispatch({ type: REQUEST_SAVED_VARIANTS })
   new HttpRequestHelper(`/api/summary_data/saved_variants/${tag}`,
     (responseJson) => {
-      dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-      dispatch({ type: RECEIVE_SAVED_VARIANT_TAGS, updates: { [tag]: responseJson.savedVariantsByGuid } })
+      dispatch({
+        type: RECEIVE_DATA,
+        updatesById: { ...responseJson, multiTagVariants: { [tag]: Object.keys(responseJson.savedVariantsByGuid) } },
+      })
     },
     (e) => {
       dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
@@ -78,7 +79,7 @@ export const reducers = {
   mmeLoading: loadingReducer(REQUEST_MME, RECEIVE_MME),
   mmeMetrics: createSingleValueReducer(RECEIVE_MME, {}, 'metrics'),
   mmeSubmissions: createSingleValueReducer(RECEIVE_MME, [], 'submissions'),
-  savedVariantsByTag: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
+  savedVariantsByTag: createObjectsByIdReducer(RECEIVE_DATA, 'multiTagVariants'),
   externalAnalysisUploadStats: createSingleValueReducer(RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS, {}),
   allProjectSavedVariantTableState: createSingleObjectReducer(UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, {
     categoryFilter: SHOW_ALL,

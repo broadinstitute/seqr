@@ -77,7 +77,7 @@ export const getPairedSelectedSavedVariants = createSelector(
   (savedVariants, { tag, gene, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid,
     projectGuid, tagsByGuid, notesByGuid, savedVariantsByTags) => {
     if (!projectGuid) {
-      return Object.values((savedVariantsByTags || {})[tag] || {})
+      return Object.values((savedVariantsByTags || {})[tag] || {}).map(guid => savedVariants[guid])
     }
 
     let variants = Object.values(savedVariants)
