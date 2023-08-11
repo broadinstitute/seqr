@@ -263,7 +263,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
         await self._assert_expected_search(
             [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01}}, omit_sample_type='SV_WES',
-            annotations=annotations, pathogenicity={'clinvar': ['likely_pathogenic', 'vus_or_conflicting']},
+            annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting']},
         )
 
         await self._assert_expected_search(

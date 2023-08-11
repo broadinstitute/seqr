@@ -735,24 +735,6 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
         return 'is_gt_10_percent' if af_cutoff > 0.01 else True
 
-    def _get_af_prefilter_ht(self, frequencies):
-        if self._filter_hts.get(GNOMAD_GENOMES_FIELD) is not None:
-            return self._filter_hts[GNOMAD_GENOMES_FIELD]
-
-        clinvar_path_filters = self._get_clinvar_path_filters(pathogenicity)
-        if not clinvar_path_filters:
-            self._filter_hts[CLINVAR_KEY] = False
-            return False
-
-        clinvar_path_ht = self._read_table('clinvar_path_variants.ht')
-        if CLINVAR_LIKELY_PATH_FILTER not in clinvar_path_filters:
-            clinvar_path_ht = clinvar_path_ht.filter(clinvar_path_ht.is_pathogenic)
-        elif CLINVAR_PATH_FILTER not in clinvar_path_filters:
-            clinvar_path_ht = clinvar_path_ht.filter(clinvar_path_ht.is_likely_pathogenic)
-        self._filter_hts[CLINVAR_KEY] = clinvar_path_ht
-
-        return clinvar_path_ht
-
     def _get_gene_id_filter(self, gene_ids):
         self._ht = self._ht.annotate(
             gene_transcripts=self._ht.sorted_transcript_consequences.filter(lambda t: gene_ids.contains(t.gene_id))
