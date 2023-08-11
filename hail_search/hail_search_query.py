@@ -189,7 +189,7 @@ class BaseHailTableQuery(object):
                     exception_messages.add(e.reason)
 
             if exception_messages:
-                raise HTTPBadRequest(text='; '.join(exception_messages))
+                raise HTTPBadRequest(reason='; '.join(exception_messages))
 
             families_ht = filtered_project_hts[0]
             default_entries = hl.empty_array(families_ht.family_entries.dtype.element_type)
