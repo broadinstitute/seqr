@@ -719,7 +719,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         af_ht = self._get_loaded_filter_ht(
             GNOMAD_GENOMES_FIELD, 'high_af_variants.ht', self._get_gnomad_af_prefilter, **kwargs)
         if af_ht:
-            ht = ht.filter(hl.is_missing(high_af_ht[ht.key]))
+            ht = ht.filter(hl.is_missing(af_ht[ht.key]))
         return ht
 
     def _get_gnomad_af_prefilter(self, frequencies=None, pathogenicity=None, **kwargs):
