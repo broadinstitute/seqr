@@ -186,7 +186,7 @@ class BaseHailTableQuery(object):
                 try:
                     filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
                 except HTTPBadRequest as e:
-                    exception_messages.add(e.text)
+                    exception_messages.add(e.reason)
 
             if exception_messages:
                 raise HTTPBadRequest(text='; '.join(exception_messages))
@@ -261,7 +261,7 @@ class BaseHailTableQuery(object):
         missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
         if missing_samples:
             raise HTTPBadRequest(
-                text=f'The following samples are available in seqr but missing the loaded data: {", ".join(sorted(missing_samples))}'
+                reason=f'The following samples are available in seqr but missing the loaded data: {", ".join(sorted(missing_samples))}'
             )
 
         affected_id_map = {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID}
@@ -458,7 +458,7 @@ class BaseHailTableQuery(object):
         ]
         invalid_intervals = [raw_intervals[i] for i, interval in enumerate(parsed_intervals) if interval is None]
         if invalid_intervals:
-            raise HTTPBadRequest(text=f'Invalid intervals: {", ".join(invalid_intervals)}')
+            raise HTTPBadRequest(reason=f'Invalid intervals: {", ".join(invalid_intervals)}')
 
         return parsed_intervals, variant_ids
 
