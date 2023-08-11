@@ -8,6 +8,14 @@ import {
   getIndividualGeneDataByFamilyGene,
 } from './selectors'
 
+const STATE_WITH_2_FAMILIES_AND_VARIANT_TAGS = {
+  ...STATE_WITH_2_FAMILIES,
+  savedVariantsByTag: {
+    Review: ['SV0000004_116042722_r0390_1000', 'SV0000002_1248367227_r0390_100'],
+    'Review;Tier 1 - Phenotype not delineated': ['SV0000002_1248367227_r0390_100'],
+  },
+}
+
 test('getPairedSelectedSavedVariants', () => {
 
   const savedAllVariants = getPairedSelectedSavedVariants(STATE_WITH_2_FAMILIES,
@@ -66,6 +74,20 @@ test('getPairedSelectedSavedVariants', () => {
   )
   expect(savedVariants.length).toEqual(1)
   expect(savedFamilyVariants[0].variantGuid).toEqual('SV0000004_116042722_r0390_1000')
+
+  const tagSavedVariants = getPairedSelectedSavedVariants(
+    STATE_WITH_2_FAMILIES_AND_VARIANT_TAGS,
+    { match: { params: { tag: 'Review' } } },
+  )
+  expect(tagSavedVariants.length).toEqual(2)
+  expect(tagSavedVariants[0].variantGuid).toEqual('SV0000004_116042722_r0390_1000')
+
+  const multiTagSavedVariants = getPairedSelectedSavedVariants(
+    STATE_WITH_2_FAMILIES_AND_VARIANT_TAGS,
+    { match: { params: { tag: 'Review;Tier 1 - Phenotype not delineated' } } },
+  )
+  expect(multiTagSavedVariants.length).toEqual(1)
+  expect(multiTagSavedVariants[0].variantGuid).toEqual('SV0000002_1248367227_r0390_100')
 })
 
 test('getPairedFilteredSavedVariants', () => {
