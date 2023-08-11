@@ -1070,8 +1070,8 @@ class BulkOperationBase(models.Model):
 class DeletableSampleMetadataModel(BulkOperationBase):
     PARENT_FIELD = 'sample'
 
-    sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
-    gene_id = models.CharField(max_length=20, db_index=True)  # ensembl ID
+    sample = models.ForeignKey('Sample', on_delete=models.CASCADE)
+    gene_id = models.CharField(max_length=20)  # ensembl ID
 
     def __unicode__(self):
         return "%s:%s" % (self.sample.sample_id, self.gene_id)
@@ -1093,7 +1093,7 @@ class RnaSeqOutlier(DeletableSampleMetadataModel):
 
         json_fields = ['gene_id', 'p_value', 'p_adjust', 'z_score']
 
-        indexes = [models.Index(fields=['gene_id']), models.Index(fields=['p_adjust'])]
+        indexes = [models.Index(fields=['sample_id', 'gene_id']), models.Index(fields=['p_adjust'])]
 
 
 class RnaSeqTpm(DeletableSampleMetadataModel):
@@ -1103,6 +1103,8 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
         unique_together = ('sample', 'gene_id')
 
         json_fields = ['gene_id', 'tpm']
+
+        indexes = [models.Index(fields=['sample_id', 'gene_id'])]
 
 
 class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
