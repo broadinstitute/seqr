@@ -600,7 +600,7 @@ class BaseHailTableQuery(object):
             ch_ht = ch_ht.filter(ch_ht.comp_het_family_entries.any(hl.is_defined))
 
         # Get possible pairs of variants within the same gene
-        ch_ht = ch_ht.annotate(gene_ids=hl.set(ch_ht.sorted_transcript_consequences.map(lambda t: t.gene_id)))
+        ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
         formatted_rows_expr = hl.agg.collect(ch_ht.row)
         if 'has_allowed_annotation_secondary' in self._ht.row:
@@ -633,6 +633,10 @@ class BaseHailTableQuery(object):
         ))})
 
         return ch_ht
+
+    @staticmethod
+    def _gene_ids_expr(ht):
+        raise NotImplementedError
 
     def _is_valid_comp_het_family(self, entries_1, entries_2):
         return hl.is_defined(entries_1) & hl.is_defined(entries_2) & hl.enumerate(entries_1).all(lambda x: hl.any([
@@ -706,11 +710,11 @@ class BaseHailTableQuery(object):
 
         return sort_expressions
 
-    @staticmethod
+    @classmethod
     def _omim_sort(*args):
         return []
 
-    @staticmethod
+    @classmethod
     def _gene_rank_sort(*args):
         return []
 
@@ -940,18 +944,21 @@ class VariantHailTableQuery(BaseHailTableQuery):
         return super()._format_results(ht, annotation_fields)
 
     @staticmethod
-    def _omim_sort(r, omim_gene_set):
-        omim_gene_set = hl.set(set(sort_metadata))
+    def _gene_ids_expr(ht):
+        return hl.set(ht.sorted_transcript_consequences.map(lambda t: t.gene_id))
+
+    @classmethod
+    def _omim_sort(cls, r, omim_gene_set):
         return [
             hl.if_else(omim_gene_set.contains(r.selected_transcript.gene_id), 0, 1),
-            -r.sorted_transcript_consequences.filter(lambda t: omim_gene_set.contains(t.gene_id)).size(),
+            -cls._gene_ids_expr(r).intersection(omim_gene_set).size(),
         ]
 
-    @staticmethod
-    def _gene_rank_sort(r, gene_ranks):
+    @classmethod
+    def _gene_rank_sort(cls, r, gene_ranks):
         return [
-            hl.min(r.sorted_transcript_consequences.map(lambda t: gene_ranks.get(t.gene_id))),
             gene_ranks.get(r.selected_transcript.gene_id),
+            hl.min(cls._gene_ids_expr(r).map(lambda gene_id: gene_ranks.get(gene_id))),
         ]
 
 
