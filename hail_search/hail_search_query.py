@@ -685,6 +685,23 @@ class BaseHailTableQuery(object):
     def _get_sort_expressions(self, ht, sort):
         return self.SORTS[sort](ht)
 
+    def gene_counts(self):
+        if self._comp_het_ht:
+            ht = self._comp_het_ht.explode(self._comp_het_ht[GROUPED_VARIANTS_FIELD])
+            ht = ht.transmute(**ht[GROUPED_VARIANTS_FIELD])
+            if self._ht:
+                ht = ht.join(self._ht, 'outer')
+        else:
+            ht = self._ht
+
+        ht = ht.select(
+            gene_ids=hl.set(ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)),
+            families=self.BASE_ANNOTATION_FIELDS['familyGuids'](ht),
+        ).explode('gene_ids').explode('families')
+        return ht.aggregate(hl.agg.group_by(
+            ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
+        ))
+
 
 class VariantHailTableQuery(BaseHailTableQuery):
 
