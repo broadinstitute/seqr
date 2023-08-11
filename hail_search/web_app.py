@@ -15,7 +15,7 @@ def hl_json_dumps(obj):
 
 
 async def gene_counts(request: web.Request) -> web.Response:
-    return web.json_response(search_hail_backend(await request.json(), gene_counts=True))
+    return web.json_response(search_hail_backend(await request.json(), gene_counts=True), dumps=hl_json_dumps)
 
 
 async def search(request: web.Request) -> web.Response:
@@ -32,5 +32,6 @@ def init_web_app():
     app.add_routes([
         web.get('/status', status),
         web.post('/search', search),
+        web.post('/gene_counts', gene_counts),
     ])
     return app

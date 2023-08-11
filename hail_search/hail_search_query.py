@@ -719,18 +719,24 @@ class BaseHailTableQuery(object):
         return []
 
     def gene_counts(self):
+        selects = {
+            'gene_ids': self._gene_ids_expr,
+            'families': self.BASE_ANNOTATION_FIELDS['familyGuids'],
+        }
+        ch_ht = None
         if self._comp_het_ht:
-            ht = self._comp_het_ht.explode(self._comp_het_ht[GROUPED_VARIANTS_FIELD])
-            ht = ht.transmute(**ht[GROUPED_VARIANTS_FIELD])
-            if self._ht:
-                ht = ht.join(self._ht, 'outer')
-        else:
-            ht = self._ht
+            ch_ht = self._comp_het_ht.explode(self._comp_het_ht[GROUPED_VARIANTS_FIELD])
+            ch_ht = ch_ht.select(**{k: v(ch_ht[GROUPED_VARIANTS_FIELD]) for k, v in selects.items()})
 
-        ht = ht.select(
-            gene_ids=self._gene_ids_expr(ht),
-            families=self.BASE_ANNOTATION_FIELDS['familyGuids'](ht),
-        ).explode('gene_ids').explode('families')
+        if self._ht:
+            ht = self._ht.select(**{k: v(self._ht) for k, v in selects.items()})
+            if ch_ht:
+                ht = ht.join(ch_ht, 'outer')
+                ht = ht.transmute(**{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in selects})
+        else:
+            ht = ch_ht
+
+        ht = ht.explode('gene_ids').explode('families')
         return ht.aggregate(hl.agg.group_by(
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
         ))

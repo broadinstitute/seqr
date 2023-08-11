@@ -362,6 +362,11 @@ EXCLUDE_LOCATION_SEARCH = {'intervals': LOCATION_SEARCH['intervals'], 'exclude_i
 VARIANT_ID_SEARCH = {'variant_ids': [['1', 10439, 'AC', 'A'], ['1', 91511686, 'TCA', 'G']], 'rs_ids': []}
 RSID_SEARCH = {'variant_ids': [], 'rs_ids': ['rs1801131']}
 
+GENE_COUNTS = {
+    'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+    'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 2, 'F000011_11': 1}},
+}
+
 
 def get_hail_search_body(genome_version='GRCh38', num_results=100, sample_data=None, omit_sample_type=None, **search_body):
     sample_data = sample_data or EXPECTED_SAMPLE_DATA
