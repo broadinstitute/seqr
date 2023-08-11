@@ -24,6 +24,15 @@ ANNOTATION_OVERRIDE_FIELDS = [
 
 XPOS = 'xpos'
 
+POPULATION_SORTS = {
+    'gnomad': GNOMAD_GENOMES_FIELD,
+    'gnomad_exomes': 'gnomad_exomes',
+    'callset_af': 'seqr',
+}
+PATHOGENICTY_SORT_KEY = 'pathogenicity'
+PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
+ABSENT_PATH_SORT_OFFSET = 12.5
+
 ALT_ALT = 'alt_alt'
 REF_REF = 'ref_ref'
 REF_ALT = 'ref_alt'

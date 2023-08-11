@@ -94,6 +94,13 @@ MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = {
     'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5,
 }
 
+# Ensures no variants are filtered out by annotation/path filters for compound hets
+COMP_HET_ALL_PASS_FILTERS = {'annotations': {'splice_ai': '0.0'}, 'pathogenicity': {'clinvar': ['likely_pathogenic']}}
+
+
+def _sorted(variant, sorts):
+    return {**variant, '_sort': sorts + variant['_sort']}
+
 
 class HailSearchTestCase(AioHTTPTestCase):
 
@@ -155,16 +162,14 @@ class HailSearchTestCase(AioHTTPTestCase):
         await self._assert_expected_search(
             [VARIANT2, VARIANT3], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 
-        # Ensures no variants are filtered out by annotation/path filters for compound hets
-        comp_het_filters = {'annotations': {'splice_ai': '0.0'}, 'pathogenicity': {'clinvar': ['likely_pathogenic']}}
         await self._assert_expected_search(
             [[VARIANT3, VARIANT4]], inheritance_mode='compound_het', sample_data=MULTI_PROJECT_SAMPLE_DATA,
-            **comp_het_filters,
+            **COMP_HET_ALL_PASS_FILTERS,
         )
 
         await self._assert_expected_search(
             [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive',
-            sample_data=MULTI_PROJECT_SAMPLE_DATA, **comp_het_filters,
+            sample_data=MULTI_PROJECT_SAMPLE_DATA, **COMP_HET_ALL_PASS_FILTERS,
         )
 
     async def test_quality_filter(self):
@@ -398,3 +403,103 @@ class HailSearchTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 400)
             text = await resp.text()
         self.assertEqual(text, 'Invalid intervals: 1:1-99999999999')
+
+    async def test_sort(self):
+        await self._assert_expected_search(
+            [_sorted(VARIANT2, [11, 11]),  _sorted(VARIANT4, [11, 11]), _sorted(MULTI_FAMILY_VARIANT, [22, 24]),
+             _sorted(VARIANT1, [None, None])], omit_sample_type='SV_WES', sort='protein_consequence',
+        )
+
+        await self._assert_expected_search(
+            [_sorted(VARIANT4, [11, 11]), _sorted(SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [11, 22]),
+             _sorted(SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, [22, 22])],
+            omit_sample_type='SV_WES', sort='protein_consequence',
+            annotations={'other': ['non_coding_transcript_exon_variant'], 'splice_ai': '0'},
+        )
+
+        await self._assert_expected_search(
+            [_sorted(VARIANT1, [4]), _sorted(VARIANT2, [8]), _sorted(MULTI_FAMILY_VARIANT, [12.5]),
+             _sorted(VARIANT4, [12.5])], omit_sample_type='SV_WES', sort='pathogenicity',
+        )
+
+        await self._assert_expected_search(
+            [_sorted(VARIANT1, [4, None]), _sorted(VARIANT2, [8, 3]), _sorted(MULTI_FAMILY_VARIANT, [12.5, None]),
+             _sorted(VARIANT4, [12.5, None])], omit_sample_type='SV_WES', sort='pathogenicity_hgmd',
+        )
+
+        await self._assert_expected_search(
+            [_sorted(VARIANT2, [0]), _sorted(VARIANT4, [0.00026519427774474025]),
+             _sorted(VARIANT1, [0.034449315071105957]), _sorted(MULTI_FAMILY_VARIANT, [0.38041073083877563])],
+            omit_sample_type='SV_WES', sort='gnomad',
+        )
+
+        await self._assert_expected_search(
+            [_sorted(VARIANT1, [0]), _sorted(MULTI_FAMILY_VARIANT, [0]), _sorted(VARIANT4, [0]),
+             _sorted(VARIANT2, [0.28899794816970825])], omit_sample_type='SV_WES', sort='gnomad_exomes',
+        )
+
+        await self._assert_expected_search(
+            [_sorted(VARIANT4, [0.02222222276031971]), _sorted(VARIANT1, [0.10000000149011612]),
+             _sorted(VARIANT2, [0.31111112236976624]), _sorted(MULTI_FAMILY_VARIANT, [0.6666666865348816])],
+            omit_sample_type='SV_WES', sort='callset_af',
+        )
+
+        await self._assert_expected_search(
+            [_sorted(VARIANT4, [-29.899999618530273]), _sorted(VARIANT2, [-20.899999618530273]),
+             _sorted(VARIANT1, [-4.668000221252441]), _sorted(MULTI_FAMILY_VARIANT, [-2.753999948501587]), ],
+            omit_sample_type='SV_WES', sort='cadd',
+        )
+
+        await self._assert_expected_search(
+            [_sorted(VARIANT4, [-0.5260000228881836]), _sorted(VARIANT2, [-0.19699999690055847]),
+             _sorted(VARIANT1, [None]), _sorted(MULTI_FAMILY_VARIANT, [None])], omit_sample_type='SV_WES', sort='revel',
+        )
+
+        await self._assert_expected_search(
+            [_sorted(MULTI_FAMILY_VARIANT, [-0.009999999776482582]), _sorted(VARIANT2, [0]), _sorted(VARIANT4, [0]),
+             _sorted(VARIANT1, [None])], omit_sample_type='SV_WES', sort='splice_ai',
+        )
+
+        await self._assert_expected_search(
+            [_sorted(MULTI_FAMILY_VARIANT, [0, -2]), _sorted(VARIANT2, [0, -1]), _sorted(VARIANT4, [0, -1]), _sorted(VARIANT1, [1, 0])],
+            omit_sample_type='SV_WES', sort='in_omim', sort_metadata=['ENSG00000177000', 'ENSG00000097046'],
+        )
+
+        await self._assert_expected_search(
+            [_sorted(VARIANT2, [0, -1]), _sorted(MULTI_FAMILY_VARIANT, [1, -1]), _sorted(VARIANT1, [1, 0]), _sorted(VARIANT4, [1, 0])],
+            omit_sample_type='SV_WES', sort='in_omim', sort_metadata=['ENSG00000177000'],
+        )
+
+        await self._assert_expected_search(
+            [_sorted(VARIANT2, [2, 2]), _sorted(MULTI_FAMILY_VARIANT, [4, 2]), _sorted(VARIANT4, [4, 4]),
+             _sorted(VARIANT1, [None, None])], omit_sample_type='SV_WES', sort='constraint',
+            sort_metadata={'ENSG00000177000': 2, 'ENSG00000097046': 4},
+        )
+
+        await self._assert_expected_search(
+            [_sorted(VARIANT2, [3, 3]), _sorted(MULTI_FAMILY_VARIANT, [None, 3]), _sorted(VARIANT1, [None, None]),
+             _sorted(VARIANT4, [None, None])], omit_sample_type='SV_WES', sort='prioritized_gene',
+            sort_metadata={'ENSG00000177000': 3},
+        )
+
+        # size sort only applies to SVs, so has no impact on other variants
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], sort='size', omit_sample_type='SV_WES',
+        )
+
+        # sort applies to compound hets
+        await self._assert_expected_search(
+            [_sorted(VARIANT2, [11, 11]), [_sorted(VARIANT4, [11, 11]),  _sorted(VARIANT3, [22, 24])]],
+            sort='protein_consequence', inheritance_mode='recessive', omit_sample_type='SV_WES', **COMP_HET_ALL_PASS_FILTERS,
+        )
+
+        await self._assert_expected_search(
+            [[_sorted(VARIANT4, [-0.5260000228881836]), _sorted(VARIANT3, [None])],
+             _sorted(VARIANT2, [-0.19699999690055847])],
+            sort='revel', inheritance_mode='recessive', omit_sample_type='SV_WES', **COMP_HET_ALL_PASS_FILTERS,
+        )
+
+        await self._assert_expected_search(
+            [[_sorted(VARIANT3, [-0.009999999776482582]),  _sorted(VARIANT4, [0])], _sorted(VARIANT2, [0])],
+            sort='splice_ai', inheritance_mode='recessive', omit_sample_type='SV_WES', **COMP_HET_ALL_PASS_FILTERS,
+        )
