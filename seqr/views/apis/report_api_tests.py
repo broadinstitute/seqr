@@ -204,12 +204,14 @@ AIRTABLE_GREGOR_RECORDS = {
         'variant_types': 'SNV',
       },
     },
-    # {
-    #   "id": "rec2B6OGmCVzkQW3s",
-    #   "fields": {
-    #     'SMID': 'SM-AGHT',
-    #   },
-    # },
+    {
+      "id": "rec2B6OGmCVzkQW3s",
+      "fields": {
+        'CollaboratorParticipantID': 'NA19675',
+        'CollaboratorSampleID_wgs': 'NA19675_1',
+        'SMID_wgs': 'SM-AGHT-2',
+      },
+    },
 ]}
 
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
