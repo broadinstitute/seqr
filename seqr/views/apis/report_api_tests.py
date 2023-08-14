@@ -172,8 +172,6 @@ AIRTABLE_GREGOR_SAMPLE_RECORDS = {
     }
 ]}
 # TODO test grouped individuals multi data type
-# TODO test has data type in airtable but not seqr samples
-# TODO test analyte id fallback from airtable sample
 AIRTABLE_GREGOR_RECORDS = {
   "records": [
     {
@@ -210,6 +208,7 @@ AIRTABLE_GREGOR_RECORDS = {
         'CollaboratorParticipantID': 'NA19675',
         'CollaboratorSampleID_wgs': 'NA19675_1',
         'SMID_wgs': 'SM-AGHT-2',
+        'experiment_type_wgs': 'genome',
       },
     },
 ]}
