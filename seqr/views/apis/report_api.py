@@ -655,7 +655,10 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
 
 # GREGoR metadata
 
+GREGOR_DATA_TYPES = ['wes', 'wgs']
 SMID_FIELD = 'SMID'
+PARTICIPANT_ID_FIELD = 'CollaboratorParticipantID'
+COLLABORATOR_SAMPLE_ID_FIELD = 'CollaboratorSampleID'
 PARTICIPANT_TABLE_COLUMNS = [
     'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
     'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
@@ -694,7 +697,22 @@ CALLED_TABLE_COLUMNS = [
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
     'caller_software', 'variant_types', 'analysis_details',
 ]
-ALL_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + CALLED_TABLE_COLUMNS
+
+DATA_TYPE_OMIT = {'wgs': ['targeted_regions_method'], 'wes': []}
+MAPPED_AIRTABLE_FIELDS = {'alignment_software': 'alignment_software_dna'}
+NO_DATA_TYPE_FIELDS = {'targeted_region_bed_file', 'reference_assembly', 'analysis_details'}
+
+DATA_TYPE_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + [
+    COLLABORATOR_SAMPLE_ID_FIELD, SMID_FIELD]
+ALL_AIRTABLE_COLUMNS = DATA_TYPE_AIRTABLE_COLUMNS + CALLED_TABLE_COLUMNS
+AIRTABLE_QUERY_COLUMNS = set(CALLED_TABLE_COLUMNS)
+AIRTABLE_QUERY_COLUMNS.remove('md5sum')
+AIRTABLE_QUERY_COLUMNS.update(NO_DATA_TYPE_FIELDS)
+AIRTABLE_QUERY_COLUMNS.update(MAPPED_AIRTABLE_FIELDS.values())
+for data_type in GREGOR_DATA_TYPES:
+    data_type_columns = set(DATA_TYPE_AIRTABLE_COLUMNS) - NO_DATA_TYPE_FIELDS - set(
+        MAPPED_AIRTABLE_FIELDS.keys()) - set(DATA_TYPE_OMIT[data_type])
+    AIRTABLE_QUERY_COLUMNS.update({f'{field}_{data_type}' for field in data_type_columns})
 
 TABLE_COLUMNS = {
     'participant': PARTICIPANT_TABLE_COLUMNS,
@@ -789,18 +807,31 @@ def gregor_export(request):
         consent_code=consent_code[0],
         projectcategory__name='GREGoR',
     )
-    individuals = Individual.objects.filter(
-        sample__in=get_search_samples(projects, active_only=False),
-    ).distinct().prefetch_related('family__project', 'mother', 'father')
+    sample_types = get_search_samples(projects, active_only=False).values_list('individual_id', 'sample_type')
+    individual_data_types = defaultdict(set)
+    for individual_db_id, sample_type in sample_types:
+        individual_data_types[individual_db_id].add(sample_type)
+    individuals = Individual.objects.filter(id__in=individual_data_types).prefetch_related(
+        'family__project', 'mother', 'father')
 
-    airtable_sample_records, airtable_metadata_by_smid = _get_gregor_airtable_data(individuals, request.user)
+    grouped_data_type_individuals = defaultdict(dict)
+    for i in individuals:
+        grouped_data_type_individuals[i.individual_id].update({data_type: i for data_type in individual_data_types[i.id]})
+
+    airtable_sample_records, airtable_metadata_by_participant = _get_gregor_airtable_data(
+        grouped_data_type_individuals.keys(), request.user)
 
     participant_rows = []
     family_map = {}
     phenotype_rows = []
     analyte_rows = []
     airtable_rows = []
-    for individual in individuals:
+    for data_type_individuals in grouped_data_type_individuals.values():
+        # If multiple individual records, prefer WGS
+        individual = next(
+            data_type_individuals[data_type] for data_type in ['WGS', 'WES'] if data_type_individuals.get(data_type)
+        )
+
         # family table
         family = individual.family
         if family not in family_map:
@@ -830,18 +861,24 @@ def gregor_export(request):
             dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.absent_features or []
         ]
 
-        analyte_id = None
+        analyte_ids = set()
         # airtable data
         if airtable_sample:
-            sm_id = airtable_sample[SMID_FIELD]
-            analyte_id = f'Broad_{sm_id}'
-            airtable_metadata = airtable_metadata_by_smid.get(sm_id)
-            if airtable_metadata:
-                experiment_ids = _get_experiment_ids(airtable_sample, airtable_metadata)
-                airtable_rows.append(dict(analyte_id=analyte_id, **airtable_metadata, **experiment_ids))
+            airtable_metadata = airtable_metadata_by_participant.get(airtable_sample[PARTICIPANT_ID_FIELD]) or {}
+            for data_type in data_type_individuals:
+                data_type_metadata = airtable_metadata.get(data_type)
+                if data_type_metadata:
+                    experiment_ids = _get_experiment_ids(data_type_metadata)
+                    analyte_ids.add(experiment_ids['analyte_id'])
+                    row = {**airtable_metadata, **data_type_metadata, **experiment_ids}
+                    row.update({k: row[v] for k, v in MAPPED_AIRTABLE_FIELDS.items()})
+                    airtable_rows.append(row)
 
         # analyte table
-        analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
+        if not analyte_ids:
+            analyte_ids.add(_get_analyte_id(airtable_sample))
+        for analyte_id in analyte_ids:
+            analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
     files, warnings = _get_validated_gregor_files([
         ('participant', participant_rows),
@@ -861,21 +898,25 @@ def gregor_export(request):
     })
 
 
-def _get_gregor_airtable_data(individuals, user):
+def _get_gregor_airtable_data(individual_ids, user):
     sample_records, session = _get_airtable_samples(
-        individuals.order_by('individual_id').values_list('individual_id', flat=True), user,
-        fields=[SMID_FIELD, 'CollaboratorSampleID', 'Recontactable'],
+        individual_ids, user, fields=[SMID_FIELD, PARTICIPANT_ID_FIELD, 'Recontactable'],
     )
 
-    fields = ALL_AIRTABLE_COLUMNS
     airtable_metadata = session.fetch_records(
         'GREGoR Data Model',
-        fields=[SMID_FIELD] + sorted(fields),
-        or_filters={f'{SMID_FIELD}': {r[SMID_FIELD] for r in sample_records.values()}},
+        fields=[PARTICIPANT_ID_FIELD] + sorted(AIRTABLE_QUERY_COLUMNS),
+        or_filters={f'{PARTICIPANT_ID_FIELD}': {r[PARTICIPANT_ID_FIELD] for r in sample_records.values()}},
     )
-    airtable_metadata_by_smid = {r[SMID_FIELD]: r for r in airtable_metadata.values()}
 
-    return sample_records, airtable_metadata_by_smid
+    airtable_metadata_by_participant = {r[PARTICIPANT_ID_FIELD]: r for r in airtable_metadata.values()}
+    for data_type in GREGOR_DATA_TYPES:
+        for r in airtable_metadata_by_participant.values():
+            data_type_fields = [f for f in r if f.endswith(f'_{data_type}')]
+            if data_type_fields:
+                r[data_type.upper()] = {f.replace(f'_{data_type}', ''): r.pop(f) for f in data_type_fields}
+
+    return sample_records, airtable_metadata_by_participant
 
 
 def _get_gregor_family_row(family):
@@ -932,14 +973,20 @@ def _get_analyte_row(individual):
     }
 
 
-def _get_experiment_ids(airtable_sample, airtable_metadata):
-    collaborator_sample_id = airtable_sample['CollaboratorSampleID']
-    experiment_dna_short_read_id = f'Broad_{airtable_metadata.get("experiment_type", "NA")}_{collaborator_sample_id}'
+def _get_experiment_ids(data_type_metadata):
+    collaborator_sample_id = data_type_metadata[COLLABORATOR_SAMPLE_ID_FIELD]
+    experiment_dna_short_read_id = f'Broad_{data_type_metadata.get("experiment_type", "NA")}_{collaborator_sample_id}'
     return {
+        'analyte_id': _get_analyte_id(data_type_metadata),
         'experiment_dna_short_read_id': experiment_dna_short_read_id,
         'experiment_sample_id': collaborator_sample_id,
         'aligned_dna_short_read_id': f'{experiment_dna_short_read_id}_1'
     }
+
+
+def _get_analyte_id(airtable_metadata):
+    sm_id = airtable_metadata[SMID_FIELD]
+    return f'Broad_{sm_id}' if sm_id else None
 
 
 def _get_validated_gregor_files(file_data):
