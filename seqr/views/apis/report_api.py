@@ -985,7 +985,7 @@ def _get_experiment_ids(data_type_metadata):
 
 
 def _get_analyte_id(airtable_metadata):
-    sm_id = airtable_metadata[SMID_FIELD]
+    sm_id = airtable_metadata.get(SMID_FIELD)
     return f'Broad_{sm_id}' if sm_id else None
 
 

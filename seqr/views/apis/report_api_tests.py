@@ -156,6 +156,7 @@ AIRTABLE_GREGOR_SAMPLE_RECORDS = {
       "fields": {
         "SeqrCollaboratorSampleID": "VCGS_FAM203_621_D1",
         "CollaboratorSampleID": "NA19675_1",
+        'CollaboratorParticipantID': 'NA19675',
         'SMID': 'SM-AGHT',
         'Recontactable': 'Yes',
       },
@@ -165,30 +166,36 @@ AIRTABLE_GREGOR_SAMPLE_RECORDS = {
       "fields": {
         "SeqrCollaboratorSampleID": "HG00731",
         "CollaboratorSampleID": "VCGS_FAM203_621_D2",
+        'CollaboratorParticipantID': 'VCGS_FAM203_621',
         'SMID': 'SM-JDBTM',
       },
     }
 ]}
+# TODO test grouped individuals multi data type
+# TODO test has data type in airtable but not seqr samples
+# TODO test analyte id fallback from airtable sample
 AIRTABLE_GREGOR_RECORDS = {
   "records": [
     {
       "id": "rec2B6OGmQpAkQW3s",
       "fields": {
-        'SMID': 'SM-JDBTM',
-        'seq_library_prep_kit_method': 'Kapa HyperPrep',
-        'read_length': '151',
-        'experiment_type': 'exome',
-        'targeted_regions_method': 'Twist',
+        'CollaboratorParticipantID': 'VCGS_FAM203_621',
+        'CollaboratorSampleID_wes': 'VCGS_FAM203_621_D2',
+        'SMID_wes': 'SM-JDBTM',
+        'seq_library_prep_kit_method_wes': 'Kapa HyperPrep',
+        'read_length_wes': '151',
+        'experiment_type_wes': 'exome',
+        'targeted_regions_method_wes': 'Twist',
         'targeted_region_bed_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed',
-        'date_data_generation': '2022-08-15',
-        'target_insert_size': '385',
-        'sequencing_platform': 'NovaSeq',
-        'aligned_dna_short_read_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
-        'aligned_dna_short_read_index_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai',
-        'md5sum': '129c28163df082',
+        'date_data_generation_wes': '2022-08-15',
+        'target_insert_size_wes': '385',
+        'sequencing_platform_wes': 'NovaSeq',
+        'aligned_dna_short_read_file_wes': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
+        'aligned_dna_short_read_index_file_wes': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai',
+        'md5sum_wes': '129c28163df082',
         'reference_assembly': 'GRCh38',
-        'alignment_software': 'BWA-MEM-2.3',
-        'mean_coverage': '42.4',
+        'alignment_software_dna': 'BWA-MEM-2.3',
+        'mean_coverage_wgs': '42.4',
         'analysis_details': 'DOI:10.5281/zenodo.4469317',
         'called_variants_dna_short_read_id': 'SX2-3',
         'aligned_dna_short_read_set_id': 'BCM_H7YG5DSX2',
@@ -197,12 +204,12 @@ AIRTABLE_GREGOR_RECORDS = {
         'variant_types': 'SNV',
       },
     },
-    {
-      "id": "rec2B6OGmCVzkQW3s",
-      "fields": {
-        'SMID': 'SM-AGHT',
-      },
-    },
+    # {
+    #   "id": "rec2B6OGmCVzkQW3s",
+    #   "fields": {
+    #     'SMID': 'SM-AGHT',
+    #   },
+    # },
 ]}
 
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
@@ -297,6 +304,23 @@ MOCK_DATA_MODEL = {
                 {'column': 'affected_status', 'required': True, 'enumerations': ['Affected', 'Unaffected', 'Unknown']},
                 {'column': 'phenotype_description'},
                 {'column': 'age_at_enrollment'},
+            ],
+        },
+        {
+            'table': 'aligned_dna_short_read',
+            'columns': [
+                {'column': 'aligned_dna_short_read_id', 'required': True},
+                {'column': 'experiment_dna_short_read_id', 'required': True},
+                {'column': 'aligned_dna_short_read_file'},
+                {'column': 'aligned_dna_short_read_index_file'},
+                {'column': 'alignment_software'},
+                {'column': 'analysis_details'},
+                {'column': 'md5sum'},
+                {'column': 'mean_coverage', 'required': True},
+                {'column': 'reference_assembly'},
+                {'column': 'reference_assembly_details'},
+                {'column': 'reference_assembly_uri'},
+                {'column': 'quality_issues'},
             ],
         },
         {
@@ -691,11 +715,11 @@ class ReportAPITest(object):
             'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
             'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
             'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
-        ] + skipped_file_validation_warnings[1:6] + skipped_file_validation_warnings[7:])
+        ] + skipped_file_validation_warnings[1:5] + skipped_file_validation_warnings[7:])
         self.assertListEqual(response.json()['errors'], [
             'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
             'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
-            'The following entries are missing required "aligned_dna_short_read_set_id" (from Airtable) in the "aligned_dna_short_read_set" table: NA19675_1',
+            'The following entries are missing required "mean_coverage" (from Airtable) in the "aligned_dna_short_read" table: VCGS_FAM203_621_D2',
         ])
 
         responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
@@ -769,7 +793,7 @@ class ReportAPITest(object):
             ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', '', ''],
             row)
 
-        self.assertEqual(len(experiment_file), 3)
+        self.assertEqual(len(experiment_file), 2)
         self.assertEqual(experiment_file[0], [
             'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
             'read_length', 'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file',
@@ -779,22 +803,21 @@ class ReportAPITest(object):
             'Broad_exome_VCGS_FAM203_621_D2', 'Broad_SM-JDBTM', 'VCGS_FAM203_621_D2', 'Kapa HyperPrep', '151', 'exome',
             'Twist', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2022-08-15', '385', 'NovaSeq',
         ], experiment_file)
-        self.assertIn(['Broad_NA_NA19675_1', 'Broad_SM-AGHT', 'NA19675_1', '', '', '', '', '', '', '', ''], experiment_file)
 
-        self.assertEqual(len(read_file), 3)
+        self.assertEqual(len(read_file), 2)
         self.assertEqual(read_file[0], [
             'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
             'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri', 'reference_assembly_details',
             'alignment_software', 'mean_coverage', 'analysis_details',  'quality_issues',
         ])
-        self.assertIn([
+        self.assertEqual(read_file[1], [
             'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38',
-            '', '', 'BWA-MEM-2.3', '42.4', 'DOI:10.5281/zenodo.4469317', '',
-        ], read_file)
+            '', '', 'BWA-MEM-2.3', '', 'DOI:10.5281/zenodo.4469317', '',
+        ])
 
-        self.assertEqual(len(read_set_file), 3)
+        self.assertEqual(len(read_set_file), 2)
         self.assertEqual(read_set_file[0], ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'])
         self.assertIn(['BCM_H7YG5DSX2', 'Broad_exome_VCGS_FAM203_621_D2_1'], read_set_file)
 
@@ -815,7 +838,7 @@ class ReportAPITest(object):
                         "{CollaboratorSampleID}='NA20870',{CollaboratorSampleID}='NA20872',{CollaboratorSampleID}='NA20874'," \
                         "{CollaboratorSampleID}='NA20875',{CollaboratorSampleID}='NA20876',{CollaboratorSampleID}='NA20877'," \
                         "{CollaboratorSampleID}='NA20881')"
-        sample_fields = ['CollaboratorSampleID', 'SMID', 'CollaboratorSampleID', 'Recontactable']
+        sample_fields = ['CollaboratorSampleID', 'SMID', 'CollaboratorParticipantID', 'Recontactable']
         self._assert_expected_airtable_call(0, sample_filter, sample_fields)
         secondary_sample_filter = "OR({SeqrCollaboratorSampleID}='HG00731',{SeqrCollaboratorSampleID}='HG00732'," \
                         "{SeqrCollaboratorSampleID}='HG00733',{SeqrCollaboratorSampleID}='NA19678'," \
@@ -825,14 +848,17 @@ class ReportAPITest(object):
         sample_fields[0] = 'SeqrCollaboratorSampleID'
         self._assert_expected_airtable_call(1, secondary_sample_filter, sample_fields)
         metadata_fields = [
-            'SMID', 'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'aligned_dna_short_read_set_id',
-            'alignment_software', 'analysis_details', 'analysis_details', 'called_variants_dna_file',
-            'called_variants_dna_short_read_id', 'caller_software', 'date_data_generation', 'experiment_type',
-            'md5sum', 'md5sum', 'mean_coverage', 'read_length', 'reference_assembly', 'seq_library_prep_kit_method',
-            'sequencing_platform', 'target_insert_size', 'targeted_region_bed_file', 'targeted_regions_method',
-            'variant_types',
+            'CollaboratorParticipantID', 'CollaboratorSampleID_wes', 'CollaboratorSampleID_wgs', 'SMID_wes', 'SMID_wgs',
+            'aligned_dna_short_read_file_wes', 'aligned_dna_short_read_file_wgs', 'aligned_dna_short_read_index_file_wes',
+            'aligned_dna_short_read_index_file_wgs', 'aligned_dna_short_read_set_id', 'alignment_software_dna',
+            'analysis_details', 'called_variants_dna_file', 'called_variants_dna_short_read_id', 'caller_software',
+            'date_data_generation_wes', 'date_data_generation_wgs', 'experiment_type_wes', 'experiment_type_wgs',
+            'md5sum_wes', 'md5sum_wgs', 'mean_coverage_wes', 'mean_coverage_wgs', 'read_length_wes', 'read_length_wgs',
+            'reference_assembly', 'seq_library_prep_kit_method_wes', 'seq_library_prep_kit_method_wgs',
+            'sequencing_platform_wes', 'sequencing_platform_wgs', 'target_insert_size_wes', 'target_insert_size_wgs',
+            'targeted_region_bed_file', 'targeted_regions_method_wes', 'variant_types',
         ]
-        self._assert_expected_airtable_call(2, "OR(SMID='SM-AGHT',SMID='SM-JDBTM')", metadata_fields)
+        self._assert_expected_airtable_call(2, "OR(CollaboratorParticipantID='NA19675',CollaboratorParticipantID='VCGS_FAM203_621')", metadata_fields)
 
         self.assertEqual(responses.calls[3].request.url, MOCK_DATA_MODEL_URL)
 
