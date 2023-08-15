@@ -181,7 +181,7 @@ AIRTABLE_GREGOR_SAMPLE_RECORDS = {
       },
     },
 ]}
-# TODO test grouped individuals multi data type
+
 AIRTABLE_GREGOR_RECORDS = {
   "records": [
     {
@@ -262,6 +262,10 @@ AIRTABLE_GREGOR_RECORDS = {
       },
     },
 ]}
+EXPECTED_GREGOR_FILES = [
+    'participant', 'family', 'phenotype', 'analyte', 'experiment_dna_short_read',
+    'aligned_dna_short_read', 'aligned_dna_short_read_set', 'called_variants_dna_short_read',
+]
 
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "project_guid": "R0003_test",
@@ -693,7 +697,7 @@ class ReportAPITest(object):
             'NA20872', 'NA20881', 'HG00733',
         })
         if self.ADDITIONAL_SAMPLES:
-            expected_samples.remove('NA20888')
+            expected_samples.remove('NA20888')  # TODO investigate
             expected_samples.update(self.ADDITIONAL_SAMPLES)
         self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
         test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
@@ -753,12 +757,8 @@ class ReportAPITest(object):
         mock_google_authenticated.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        expected_files = [
-            'participant', 'family', 'phenotype', 'analyte', 'experiment_dna_short_read',
-            'aligned_dna_short_read', 'aligned_dna_short_read_set', 'called_variants_dna_short_read',
-        ]
         skipped_file_validation_warnings = [
-            f'No data model found for "{file}" table so no validation was performed' for file in expected_files
+            f'No data model found for "{file}" table so no validation was performed' for file in EXPECTED_GREGOR_FILES
         ]
         self.assertListEqual(response.json()['warnings'], [
             'The following tables are required in the data model but absent from the reports: subject',
@@ -781,15 +781,29 @@ class ReportAPITest(object):
         mock_google_authenticated.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
+        expected_response = {
             'info': ['Successfully validated and uploaded Gregor Report for 9 families'],
             'warnings': [
                 'Unable to load data model for validation: 404 Client Error: Not Found for url: http://raw.githubusercontent.com/gregor_data_model.json',
             ] + skipped_file_validation_warnings,
-        })
+        }
+        self.assertDictEqual(response.json(), expected_response)
+        self._assert_expected_gregor_files(mock_open)
+        self._test_expected_gregor_airtable_calls()
 
+        # test gsutil commands
+        mock_subprocess.assert_has_calls([
+            mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+        ])
+
+        self.check_no_analyst_no_access(url)
+
+    def _assert_expected_gregor_files(self, mock_open):
         self.assertListEqual(
-            mock_open.call_args_list, [mock.call(f'/mock/tmp/{file}.tsv', 'w') for file in expected_files])
+            mock_open.call_args_list, [mock.call(f'/mock/tmp/{file}.tsv', 'w') for file in EXPECTED_GREGOR_FILES])
         files = [
             [row.split('\t') for row in write_call.args[0].split('\n')]
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
@@ -896,7 +910,7 @@ class ReportAPITest(object):
         ], called_file)
         self.assertIn(['NA', 'Broad_NA20888_D1', 'NA', 'a6f6308866765ce8', 'NA', 'SNV', ''], called_file)
 
-        # test airtable calls
+    def _test_expected_gregor_airtable_calls(self):
         self.assertEqual(len(responses.calls), 4)
         sample_filter = "OR({CollaboratorSampleID}='HG00731',{CollaboratorSampleID}='HG00732',{CollaboratorSampleID}='HG00733'," \
                         "{CollaboratorSampleID}='NA19675_1',{CollaboratorSampleID}='NA19678',{CollaboratorSampleID}='NA19679'," \
@@ -926,16 +940,6 @@ class ReportAPITest(object):
         self._assert_expected_airtable_call(2, "OR(CollaboratorParticipantID='NA19675',CollaboratorParticipantID='NA20888',CollaboratorParticipantID='VCGS_FAM203_621')", metadata_fields)
 
         self.assertEqual(responses.calls[3].request.url, MOCK_DATA_MODEL_URL)
-
-        # test gsutil commands
-        mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
-            mock.call().wait(),
-            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
-            mock.call().wait(),
-        ])
-
-        self.check_no_analyst_no_access(url)
 
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
