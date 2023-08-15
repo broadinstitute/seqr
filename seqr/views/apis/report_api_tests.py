@@ -692,6 +692,7 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertEqual(len(response_json['rows']), 16 + len(self.ADDITIONAL_SAMPLES))
         expected_samples.update({
             'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
             'NA20872', 'NA20881', 'HG00733',
@@ -700,6 +701,7 @@ class ReportAPITest(object):
         self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
         test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
         self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
+        self.assertEqual(len([r['subject_id'] for r in response_json['rows'] if r['subject_id'] == 'NA20888']), 2)
 
         self.check_no_analyst_no_access(url)
 
