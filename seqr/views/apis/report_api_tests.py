@@ -799,9 +799,23 @@ class ReportAPITest(object):
             mock.call().wait(),
         ])
 
+        # Test multiple project with shared sample IDs
+        project = Project.objects.get(id=3)
+        project.consent_code = 'H'
+        project.save()
+
+        responses.calls.reset()
+        mock_open.reset_mock()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        expected_response['info'][0] = expected_response['info'][0].replace('9', '10')
+        self.assertDictEqual(response.json(), expected_response)
+        self._assert_expected_gregor_files(mock_open, has_second_project=True)
+        self._test_expected_gregor_airtable_calls(additional_samples=['NA20885', 'NA20889'])
+
         self.check_no_analyst_no_access(url)
 
-    def _assert_expected_gregor_files(self, mock_open):
+    def _assert_expected_gregor_files(self, mock_open, has_second_project=False):
         self.assertListEqual(
             mock_open.call_args_list, [mock.call(f'/mock/tmp/{file}.tsv', 'w') for file in EXPECTED_GREGOR_FILES])
         files = [
@@ -810,7 +824,7 @@ class ReportAPITest(object):
         ]
         participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, called_file = files
 
-        self.assertEqual(len(participant_file), 14)
+        self.assertEqual(len(participant_file), 16 if has_second_project else 14)
         self.assertEqual(participant_file[0], [
             'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
             'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
@@ -828,15 +842,29 @@ class ReportAPITest(object):
             'Broad_HG00731', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_2', 'Broad_HG00732',
             'Broad_HG00733', '', '', '', 'Female', '', '', 'Hispanic or Latino', 'Other', '', 'Affected', '', '',
         ], hispanic_row)
+        multi_data_type_row = next(r for r in participant_file if r[0] == 'Broad_NA20888')
+        self.assertListEqual([
+            'Broad_NA20888', 'Broad_Test Reprocessed Project' if has_second_project else 'Broad_1kg project nme with unide',
+            'BROAD', 'HMB', 'No', '', '', 'Broad_12' if has_second_project else 'Broad_8', '0', '0', '', '', '',
+            'Male' if has_second_project else 'Female', '', '', '', '', '', 'Affected', '', '',
+        ], multi_data_type_row)
 
-        self.assertEqual(len(family_file), 10)
+        self.assertEqual(len(family_file), 11 if has_second_project else 10)
         self.assertEqual(family_file[0], [
             'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_file', 'pedigree_file_detail',
             'family_history_detail',
         ])
         self.assertIn(['Broad_1', 'Present', '', '', '', ''], family_file)
+        fam_8_row = ['Broad_8', 'Unknown', '', '', '', '']
+        fam_11_row = ['Broad_11', 'None suspected', '', '', '', '']
+        if has_second_project:
+            self.assertIn(fam_11_row, family_file)
+            self.assertNotIn(fam_8_row, family_file)
+        else:
+            self.assertIn(fam_8_row, family_file)
+            self.assertNotIn(fam_11_row, family_file)
 
-        self.assertEqual(len(phenotype_file), 10)
+        self.assertEqual(len(phenotype_file), 14 if has_second_project else 10)
         self.assertEqual(phenotype_file[0], [
             'phenotype_id', 'participant_id', 'term_id', 'presence', 'ontology', 'additional_details',
             'onset_age_range', 'additional_modifiers',
@@ -848,7 +876,7 @@ class ReportAPITest(object):
             '', 'Broad_NA19675_1', 'HP:0001674', 'Absent', 'HPO', 'originally indicated', '', '',
         ], phenotype_file)
 
-        self.assertEqual(len(analyte_file), 14)
+        self.assertEqual(len(analyte_file), 17 if has_second_project else 14)
         self.assertEqual(analyte_file[0], [
             'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
             'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status', 'age_at_collection',
@@ -859,8 +887,15 @@ class ReportAPITest(object):
         self.assertListEqual(
             ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', '', ''],
             row)
+        self.assertIn(
+            ['Broad_SM-L5QMP', 'Broad_NA20888', '', '', '', '', '', 'No', '', '', '', '', '', '', '', ''], analyte_file)
+        self.assertEqual(
+            ['Broad_SM-L5QMWP', 'Broad_NA20888', '', '', '', '', '', 'No', '', '', '', '', '', '', '', ''] in analyte_file,
+            has_second_project
+        )
 
-        self.assertEqual(len(experiment_file), 3)
+        num_airtable_rows = 4 if has_second_project else 3
+        self.assertEqual(len(experiment_file), num_airtable_rows)
         self.assertEqual(experiment_file[0], [
             'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
             'read_length', 'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file',
@@ -874,8 +909,12 @@ class ReportAPITest(object):
             'Broad_exome_NA20888', 'Broad_SM-L5QMP', 'NA20888', 'Kapa HyperPrep', '151', 'exome',
             'Twist', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2022-06-05', '380', 'NovaSeq',
         ], experiment_file)
+        self.assertEqual([
+             'Broad_genome_NA20888_1', 'Broad_SM-L5QMWP', 'NA20888_1', 'Kapa HyperPrep w/o amplification', '200', 'genome',
+             '', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2023-03-13', '450', 'NovaSeq2',
+        ] in experiment_file, has_second_project)
 
-        self.assertEqual(len(read_file), 3)
+        self.assertEqual(len(read_file), num_airtable_rows)
         self.assertEqual(read_file[0], [
             'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
             'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri', 'reference_assembly_details',
@@ -890,16 +929,23 @@ class ReportAPITest(object):
         self.assertIn([
             'Broad_exome_NA20888_1', 'Broad_exome_NA20888',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888.cram',
-            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888.crai', 'a6f6308866765ce8', 'GRCh38',
-            '', '', 'BWA 0.7.15.r1140', '42.8', '', '',
+            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888.crai', 'a6f6308866765ce8', 'GRCh38', '', '',
+            'BWA 0.7.15.r1140', '42.8', '', '',
         ], read_file)
+        self.assertEqual([
+             'Broad_genome_NA20888_1_1', 'Broad_genome_NA20888_1',
+             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888_1.cram',
+             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888_1.crai', '2aa33e8c32020b1c', 'GRCh38', '', '',
+             'BWA 0.7.15.r1140', '36.1', '', '',
+        ] in read_file, has_second_project)
 
-        self.assertEqual(len(read_set_file), 3)
+        self.assertEqual(len(read_set_file), num_airtable_rows)
         self.assertEqual(read_set_file[0], ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'])
         self.assertIn(['BCM_H7YG5DSX2', 'Broad_exome_VCGS_FAM203_621_D2_1'], read_set_file)
         self.assertIn(['Broad_NA20888_D1', 'Broad_exome_NA20888_1'], read_set_file)
+        self.assertEqual(['Broad_NA20888_D1', 'Broad_genome_NA20888_1_1'] in read_set_file, has_second_project)
 
-        self.assertEqual(len(called_file), 3)
+        self.assertEqual(len(called_file), num_airtable_rows)
         self.assertEqual(called_file[0], [
             'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
             'caller_software', 'variant_types', 'analysis_details',
@@ -909,23 +955,23 @@ class ReportAPITest(object):
             '129c28163df082', 'gatk4.1.2', 'SNV', 'DOI:10.5281/zenodo.4469317',
         ], called_file)
         self.assertIn(['NA', 'Broad_NA20888_D1', 'NA', 'a6f6308866765ce8', 'NA', 'SNV', ''], called_file)
+        self.assertEqual(
+            ['NA', 'Broad_NA20888_D1', 'NA', '2aa33e8c32020b1c', 'NA', 'SNV', ''] in called_file, has_second_project)
 
-    def _test_expected_gregor_airtable_calls(self):
+    def _test_expected_gregor_airtable_calls(self, additional_samples=None):
         self.assertEqual(len(responses.calls), 4)
-        sample_filter = "OR({CollaboratorSampleID}='HG00731',{CollaboratorSampleID}='HG00732',{CollaboratorSampleID}='HG00733'," \
-                        "{CollaboratorSampleID}='NA19675_1',{CollaboratorSampleID}='NA19678',{CollaboratorSampleID}='NA19679'," \
-                        "{CollaboratorSampleID}='NA20870',{CollaboratorSampleID}='NA20872',{CollaboratorSampleID}='NA20874'," \
-                        "{CollaboratorSampleID}='NA20875',{CollaboratorSampleID}='NA20876',{CollaboratorSampleID}='NA20881'," \
-                        "{CollaboratorSampleID}='NA20888')"
+        sample_ids = {
+             'HG00731', 'HG00732', 'HG00733', 'NA19675_1', 'NA19678', 'NA19679', 'NA20870', 'NA20872', 'NA20874',
+             'NA20875', 'NA20876', 'NA20881', 'NA20888',
+        }
+        sample_ids.update(additional_samples or [])
+        sample_filter = ','.join([f"{{CollaboratorSampleID}}='{sample_id}'" for sample_id in sorted(sample_ids)])
         sample_fields = ['CollaboratorSampleID', 'SMID', 'CollaboratorParticipantID', 'Recontactable']
-        self._assert_expected_airtable_call(0, sample_filter, sample_fields)
-        secondary_sample_filter = "OR({SeqrCollaboratorSampleID}='HG00731',{SeqrCollaboratorSampleID}='HG00732'," \
-                        "{SeqrCollaboratorSampleID}='HG00733',{SeqrCollaboratorSampleID}='NA19678'," \
-                        "{SeqrCollaboratorSampleID}='NA19679',{SeqrCollaboratorSampleID}='NA20870',{SeqrCollaboratorSampleID}='NA20872'," \
-                        "{SeqrCollaboratorSampleID}='NA20874',{SeqrCollaboratorSampleID}='NA20875',{SeqrCollaboratorSampleID}='NA20876'," \
-                        "{SeqrCollaboratorSampleID}='NA20881')"
+        self._assert_expected_airtable_call(0, f"OR({sample_filter})", sample_fields)
+        sample_ids -= {'NA19675_1', 'NA20888'}
+        secondary_sample_filter = ','.join([f"{{SeqrCollaboratorSampleID}}='{sample_id}'" for sample_id in sorted(sample_ids)])
         sample_fields[0] = 'SeqrCollaboratorSampleID'
-        self._assert_expected_airtable_call(1, secondary_sample_filter, sample_fields)
+        self._assert_expected_airtable_call(1, f"OR({secondary_sample_filter})", sample_fields)
         metadata_fields = [
             'CollaboratorParticipantID', 'CollaboratorSampleID_wes', 'CollaboratorSampleID_wgs', 'SMID_wes', 'SMID_wgs',
             'aligned_dna_short_read_file_wes', 'aligned_dna_short_read_file_wgs', 'aligned_dna_short_read_index_file_wes',
