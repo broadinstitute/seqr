@@ -604,13 +604,13 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
         formatted_rows_expr = hl.agg.collect(ch_ht.row)
         if 'has_allowed_annotation_secondary' in self._ht.row:
-            v1_expr = hl.agg.filter(ch_ht.has_allowed_annotation, formatted_rows_expr)
-            v2_expr = hl.agg.filter(ch_ht.has_allowed_annotation_secondary, formatted_rows_expr)
+            primary_variants = hl.agg.filter(ch_ht.has_allowed_annotation, formatted_rows_expr)
+            secondary_variants = hl.agg.filter(ch_ht.has_allowed_annotation_secondary, formatted_rows_expr)
         else:
-            v1_expr = formatted_rows_expr
-            v2_expr = formatted_rows_expr
+            primary_variants = formatted_rows_expr
+            secondary_variants = formatted_rows_expr
 
-        ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=v1_expr, v2=v2_expr)
+        ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
         ch_ht = ch_ht.explode(ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v2)
         ch_ht = ch_ht.filter(ch_ht.v1[VARIANT_KEY_FIELD] != ch_ht.v2[VARIANT_KEY_FIELD])

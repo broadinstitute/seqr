@@ -9,7 +9,11 @@ import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/sele
 import DataTable from 'shared/components/table/DataTable'
 import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
-  MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
+  MISSENSE_THRESHHOLD,
+  LOF_THRESHHOLD,
+  PANEL_APP_CONFIDENCE_LEVEL_COLORS,
+  PANEL_APP_CONFIDENCE_DESCRIPTION,
+  getDecipherGeneLink,
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
@@ -589,7 +593,7 @@ export const BaseVariantGene = React.memo(({
   } else {
     summaryDetail = (
       <GeneLinks>
-        <a href={`https://decipher.sanger.ac.uk/gene/${gene.geneId}/overview/protein-genomic-info`} target="_blank" rel="noreferrer">
+        <a href={getDecipherGeneLink(gene)} target="_blank" rel="noreferrer">
           Decipher
         </a>
         &nbsp; | &nbsp;
