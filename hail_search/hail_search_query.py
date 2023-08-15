@@ -9,7 +9,7 @@ from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_
     ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF, \
     ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
     CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES, PATH_FREQ_OVERRIDE_CUTOFF, \
-    COMPOUND_HET, RECESSIVE, GROUPED_VARIANTS_FIELD, POPULATION_SORTS, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
+    COMPOUND_HET, RECESSIVE, GROUPED_VARIANTS_FIELD, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     ABSENT_PATH_SORT_OFFSET
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
@@ -64,6 +64,7 @@ class BaseHailTableQuery(object):
     def _format_population_config(cls, pop_config):
         base_pop_config = {field.lower(): field for field in cls.POPULATION_KEYS}
         base_pop_config.update(pop_config)
+        base_pop_config.pop('sort', None)
         return base_pop_config
 
     def annotation_fields(self):
@@ -693,11 +694,6 @@ class BaseHailTableQuery(object):
         if sort in self.SORTS:
             sort_expressions = self.SORTS[sort](ht)
 
-        elif sort in POPULATION_SORTS:
-            sort_field = POPULATION_SORTS[sort]
-            if sort_field in self.POPULATIONS:
-                sort_expressions = [hl.float64(self.population_expression(ht, sort_field).af)]
-
         elif sort in self.PREDICTION_FIELDS_CONFIG:
             prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
             sort_expressions = [-hl.float64(ht[prediction_path.source][prediction_path.field])]
@@ -707,6 +703,11 @@ class BaseHailTableQuery(object):
 
         elif self._sort_metadata:
             sort_expressions = self._gene_rank_sort(ht, hl.dict(self._sort_metadata))
+
+        else:
+            sort_field = next((field for field, config in self.POPULATIONS.items() if config.get('sort') == sort), None)
+            if sort_field:
+                sort_expressions = [hl.float64(self.population_expression(ht, sort_field).af)]
 
         return sort_expressions
 
@@ -726,14 +727,14 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'AB': QualityFilterFormat(override=lambda gt: ~gt.GT.is_het(), scale=100),
     }
     POPULATIONS = {
-        'seqr': {'hom': 'hom', 'hemi': None, 'het': None},
+        'seqr': {'hom': 'hom', 'hemi': None, 'het': None, 'sort': 'callset_af'},
         'topmed': {'hemi': None},
         'exac': {
             'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi',
             'het': 'AC_Het',
         },
-        'gnomad_exomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
-        GNOMAD_GENOMES_FIELD: {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
+        'gnomad_exomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None, 'sort': 'gnomad_exomes'},
+        GNOMAD_GENOMES_FIELD: {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None, 'sort': 'gnomad'},
     }
     POPULATION_FIELDS = {'seqr': 'gt_stats'}
     PREDICTION_FIELDS_CONFIG = {
