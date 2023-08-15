@@ -688,6 +688,12 @@ EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
 EXPERIMENT_TABLE_COLUMNS = [
     'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id',
 ] + EXPERIMENT_TABLE_AIRTABLE_FIELDS
+EXPERIMENT_RNA_TABLE_COLUMNS = ['experiment_rna_short_read_id'] + [
+    c for c in EXPERIMENT_TABLE_COLUMNS[1:] if not c.startswith('target')] + [
+    'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size', 'total_reads', 'percent_rRNA',
+    'percent_mRNA', 'percent_mtRNA', 'percent_Globin', 'percent_UMI', '5prime3prime_bias', 'percent_GC', 'percent_chrX_Y',
+]
+EXPERIMENT_RNA_TABLE_COLUMNS.insert(4, 'library_prep_type')
 READ_TABLE_AIRTABLE_FIELDS = [
     'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
     'alignment_software', 'mean_coverage', 'analysis_details',
@@ -695,6 +701,14 @@ READ_TABLE_AIRTABLE_FIELDS = [
 READ_TABLE_COLUMNS = ['aligned_dna_short_read_id', 'experiment_dna_short_read_id'] + READ_TABLE_AIRTABLE_FIELDS + ['quality_issues']
 READ_TABLE_COLUMNS.insert(6, 'reference_assembly_details')
 READ_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')
+READ_RNA_TABLE_COLUMNS = [
+    'aligned_rna_short_read_id', 'experiment_rna_short_read_id', 'aligned_rna_short_read_file',
+    'aligned_rna_short_read_index_file',
+] + READ_TABLE_COLUMNS[4:-2] + ['percent_uniquely_aligned', 'percent_multimapped', 'percent_unaligned', 'quality_issues']
+READ_RNA_TABLE_COLUMNS.insert(6, 'gene_annotation_details')
+READ_RNA_TABLE_COLUMNS.insert(6, 'gene_annotation')
+READ_RNA_TABLE_COLUMNS.insert(7, 'alignment_postprocessing')
+READ_RNA_TABLE_COLUMNS.insert(7, 'alignment_log_file')
 READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
 CALLED_TABLE_COLUMNS = [
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
@@ -726,6 +740,8 @@ TABLE_COLUMNS = {
     'aligned_dna_short_read': READ_TABLE_COLUMNS,
     'aligned_dna_short_read_set': READ_SET_TABLE_COLUMNS,
     'called_variants_dna_short_read': CALLED_TABLE_COLUMNS,
+    'experiment_rna_short_read': EXPERIMENT_RNA_TABLE_COLUMNS,
+    'aligned_rna_short_read': READ_RNA_TABLE_COLUMNS,
 }
 WARN_MISSING_TABLE_COLUMNS = {
     'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
@@ -892,6 +908,8 @@ def gregor_export(request):
         ('aligned_dna_short_read', airtable_rows),
         ('aligned_dna_short_read_set', airtable_rows),
         ('called_variants_dna_short_read', airtable_rows),
+        ('aligned_rna_short_read', airtable_rows),
+        ('experiment_rna_short_read', airtable_rows),
     ])
     write_multiple_files_to_gs(files, file_path, request.user, file_format='tsv')
 
