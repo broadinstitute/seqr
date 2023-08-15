@@ -8,6 +8,7 @@ from django.db.models import Prefetch, Count, F, Q, Value, CharField
 from django.db.models.functions import Replace, JSONObject
 from django.utils import timezone
 import json
+import re
 import requests
 
 from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist
@@ -999,9 +1000,12 @@ def _get_validated_gregor_files(file_data):
     except Exception as e:
         warnings.append(f'Unable to load data model for validation: {e}')
         validators = {}
-        required_tables = set()
+        required_tables = {}
 
-    missing_tables = required_tables.difference({f[0] for f in file_data})
+    tables = {f[0] for f in file_data}
+    missing_tables = [
+        table for table, validator in required_tables.items() if not _has_required_table(table, validator, tables)
+    ]
     if missing_tables:
         warnings.append(
             f'The following tables are required in the data model but absent from the reports: {", ".join(missing_tables)}'
@@ -1050,8 +1054,24 @@ def _load_data_model_validators():
         t['table']: {c['column']: c for c in t['columns']}
         for t in table_models
     }
-    required_tables = {t['table'] for t in table_models if t.get('required')}
+    required_tables = {t['table']: _parse_table_required(t['required']) for t in table_models if t.get('required')}
     return validators, required_tables
+
+
+def _parse_table_required(required_validator):
+    if required_validator is True:
+        return True
+
+    match = re.match(r'CONDITIONAL \(([\w+(\s,)?]+)\)', required_validator)
+    return match and match.group(1).split(', ')
+
+
+def _has_required_table(table, validator, tables):
+    if table in tables:
+        return True
+    if validator is True:
+        return False
+    return tables.isdisjoint(validator)
 
 
 def _validate_column_data(column, file_name, data, column_validator, warnings, errors):

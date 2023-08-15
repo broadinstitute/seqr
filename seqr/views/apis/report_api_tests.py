@@ -363,6 +363,7 @@ MOCK_DATA_MODEL = {
         },
         {
             'table': 'aligned_dna_short_read',
+            'required': 'CONDITIONAL (aligned_dna_short_read_set, called_variants_dna_short_read)',
             'columns': [
                 {'column': 'aligned_dna_short_read_id', 'required': True},
                 {'column': 'experiment_dna_short_read_id', 'required': True},
@@ -387,6 +388,11 @@ MOCK_DATA_MODEL = {
         },
         {
             'table': 'dna_read_data',
+            'columns': [{'column': 'analyte_id', 'required': True}],
+        },
+        {
+            'table': 'dna_read_data_set',
+            'required': 'CONDITIONAL (aligned_dna_short_read_set, dna_read_data)',
             'columns': [{'column': 'analyte_id', 'required': True}],
         },
     ]
@@ -761,7 +767,7 @@ class ReportAPITest(object):
             f'No data model found for "{file}" table so no validation was performed' for file in EXPECTED_GREGOR_FILES
         ]
         self.assertListEqual(response.json()['warnings'], [
-            'The following tables are required in the data model but absent from the reports: subject',
+            'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
             'The following columns are included in the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id, proband_relationship_detail, sex_detail, twin_id',
             'The following columns are included in the "participant" data model but are missing in the report: ancestry_metadata',
             'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
