@@ -265,6 +265,7 @@ AIRTABLE_GREGOR_RECORDS = {
 EXPECTED_GREGOR_FILES = [
     'participant', 'family', 'phenotype', 'analyte', 'experiment_dna_short_read',
     'aligned_dna_short_read', 'aligned_dna_short_read_set', 'called_variants_dna_short_read',
+    'experiment_rna_short_read', 'aligned_rna_short_read',
 ]
 
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
@@ -828,7 +829,8 @@ class ReportAPITest(object):
             [row.split('\t') for row in write_call.args[0].split('\n')]
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
         ]
-        participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, called_file = files
+        participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, \
+        called_file, experiment_rna_file, aligned_rna_file = files
 
         self.assertEqual(len(participant_file), 16 if has_second_project else 14)
         self.assertEqual(participant_file[0], [
@@ -924,25 +926,25 @@ class ReportAPITest(object):
         self.assertEqual(read_file[0], [
             'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
             'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri', 'reference_assembly_details',
-            'alignment_software', 'mean_coverage', 'analysis_details',  'quality_issues',
+            'mean_coverage', 'alignment_software', 'analysis_details',  'quality_issues',
         ])
         self.assertIn([
             'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38',
-            '', '', 'BWA-MEM-2.3', '', 'DOI:10.5281/zenodo.4469317', '',
+            '', '', '', 'BWA-MEM-2.3', 'DOI:10.5281/zenodo.4469317', '',
         ], read_file)
         self.assertIn([
             'Broad_exome_NA20888_1', 'Broad_exome_NA20888',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888.crai', 'a6f6308866765ce8', 'GRCh38', '', '',
-            'BWA 0.7.15.r1140', '42.8', '', '',
+            '42.8', 'BWA 0.7.15.r1140', '', '',
         ], read_file)
         self.assertEqual([
              'Broad_genome_NA20888_1_1', 'Broad_genome_NA20888_1',
              'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888_1.cram',
              'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888_1.crai', '2aa33e8c32020b1c', 'GRCh38', '', '',
-             'BWA 0.7.15.r1140', '36.1', '', '',
+             '36.1', 'BWA 0.7.15.r1140', '', '',
         ] in read_file, has_second_project)
 
         self.assertEqual(len(read_set_file), num_airtable_rows)
@@ -979,15 +981,22 @@ class ReportAPITest(object):
         sample_fields[0] = 'SeqrCollaboratorSampleID'
         self._assert_expected_airtable_call(1, f"OR({secondary_sample_filter})", sample_fields)
         metadata_fields = [
-            'CollaboratorParticipantID', 'CollaboratorSampleID_wes', 'CollaboratorSampleID_wgs', 'SMID_wes', 'SMID_wgs',
-            'aligned_dna_short_read_file_wes', 'aligned_dna_short_read_file_wgs', 'aligned_dna_short_read_index_file_wes',
-            'aligned_dna_short_read_index_file_wgs', 'aligned_dna_short_read_set_id', 'alignment_software_dna',
-            'analysis_details', 'called_variants_dna_file', 'called_variants_dna_short_read_id', 'caller_software',
-            'date_data_generation_wes', 'date_data_generation_wgs', 'experiment_type_wes', 'experiment_type_wgs',
-            'md5sum_wes', 'md5sum_wgs', 'mean_coverage_wes', 'mean_coverage_wgs', 'read_length_wes', 'read_length_wgs',
-            'reference_assembly', 'seq_library_prep_kit_method_wes', 'seq_library_prep_kit_method_wgs',
-            'sequencing_platform_wes', 'sequencing_platform_wgs', 'target_insert_size_wes', 'target_insert_size_wgs',
-            'targeted_region_bed_file', 'targeted_regions_method_wes', 'variant_types',
+            'CollaboratorParticipantID', '5prime3prime_bias_rna', 'CollaboratorSampleID_rna', 'CollaboratorSampleID_wes',
+            'CollaboratorSampleID_wgs', 'RIN_rna', 'SMID_rna', 'SMID_wes', 'SMID_wgs', 'aligned_dna_short_read_file_wes',
+            'aligned_dna_short_read_file_wgs', 'aligned_dna_short_read_index_file_wes',
+            'aligned_dna_short_read_index_file_wgs', 'aligned_dna_short_read_set_id',
+            'aligned_rna_short_read_file', 'aligned_rna_short_read_index_file', 'alignment_log_file_rna',
+            'alignment_software_dna', 'alignment_software_rna', 'analysis_details', 'called_variants_dna_file',
+            'called_variants_dna_short_read_id', 'caller_software', 'date_data_generation_rna', 'date_data_generation_wes',
+            'date_data_generation_wgs', 'estimated_library_size_rna', 'experiment_type_rna', 'experiment_type_wes',
+            'experiment_type_wgs', 'gene_annotation_rna', 'library_prep_type_rna', 'md5sum_rna', 'md5sum_wes',
+            'md5sum_wgs', 'mean_coverage_wes', 'mean_coverage_wgs', 'percent_mRNA', 'percent_multimapped_rna',
+            'percent_rRNA', 'percent_unaligned_rna', 'percent_uniquely_aligned_rna', 'read_length_rna', 'read_length_wes',
+            'read_length_wgs', 'reference_assembly', 'reference_assembly_uri_rna', 'seq_library_prep_kit_method_rna',
+            'seq_library_prep_kit_method_wes', 'seq_library_prep_kit_method_wgs', 'sequencing_platform_rna',
+            'sequencing_platform_wes', 'sequencing_platform_wgs', 'single_or_paired_ends_rna', 'target_insert_size_wes',
+            'target_insert_size_wgs', 'targeted_region_bed_file', 'targeted_regions_method_wes', 'total_reads_rna',
+            'variant_types', 'within_site_batch_name_rna',
         ]
         self._assert_expected_airtable_call(2, "OR(CollaboratorParticipantID='NA19675',CollaboratorParticipantID='NA20888',CollaboratorParticipantID='VCGS_FAM203_621')", metadata_fields)
 

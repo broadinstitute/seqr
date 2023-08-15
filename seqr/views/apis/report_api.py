@@ -751,7 +751,7 @@ TABLE_COLUMNS = {
     'called_variants_dna_short_read': CALLED_TABLE_COLUMNS,
     'experiment_rna_short_read': EXPERIMENT_RNA_TABLE_COLUMNS,
     'aligned_rna_short_read': READ_RNA_TABLE_COLUMNS,
-}
+}  # TODO add experiment table
 WARN_MISSING_TABLE_COLUMNS = {
     'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
 }
@@ -922,8 +922,8 @@ def gregor_export(request):
         ('aligned_dna_short_read', airtable_rows),
         ('aligned_dna_short_read_set', airtable_rows),
         ('called_variants_dna_short_read', airtable_rows),
-        ('aligned_rna_short_read', airtable_rna_rows),
         ('experiment_rna_short_read', airtable_rna_rows),
+        ('aligned_rna_short_read', airtable_rna_rows),
     ])
     write_multiple_files_to_gs(files, file_path, request.user, file_format='tsv')
 
