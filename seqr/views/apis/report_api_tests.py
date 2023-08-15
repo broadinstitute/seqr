@@ -613,6 +613,7 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertEqual(len(response_json['rows']), 16 + len(self.ADDITIONAL_SAMPLES))
         expected_samples.update({
             'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
             'NA20872', 'NA20881', 'HG00733',
@@ -621,6 +622,7 @@ class ReportAPITest(object):
         self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
         test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
         self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
+        self.assertEqual(len([r['subject_id'] for r in response_json['rows'] if r['subject_id'] == 'NA20888']), 2)
 
         self.check_no_analyst_no_access(url)
 
@@ -687,13 +689,13 @@ class ReportAPITest(object):
             'The following tables are required in the data model but absent from the reports: subject',
             'The following columns are included in the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id, proband_relationship_detail, sex_detail, twin_id',
             'The following columns are included in the "participant" data model but are missing in the report: ancestry_metadata',
-            'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
-            'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
-            'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
-            'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
+            'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
+            'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
+            'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
+            'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
         ] + skipped_file_validation_warnings[1:6] + skipped_file_validation_warnings[7:])
         self.assertListEqual(response.json()['errors'], [
-            'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
+            'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
             'The following entries are missing required "aligned_dna_short_read_set_id" (from Airtable) in the "aligned_dna_short_read_set" table: NA19675_1',
         ])
@@ -813,15 +815,15 @@ class ReportAPITest(object):
         sample_filter = "OR({CollaboratorSampleID}='HG00731',{CollaboratorSampleID}='HG00732',{CollaboratorSampleID}='HG00733'," \
                         "{CollaboratorSampleID}='NA19675_1',{CollaboratorSampleID}='NA19678',{CollaboratorSampleID}='NA19679'," \
                         "{CollaboratorSampleID}='NA20870',{CollaboratorSampleID}='NA20872',{CollaboratorSampleID}='NA20874'," \
-                        "{CollaboratorSampleID}='NA20875',{CollaboratorSampleID}='NA20876',{CollaboratorSampleID}='NA20877'," \
-                        "{CollaboratorSampleID}='NA20881')"
+                        "{CollaboratorSampleID}='NA20875',{CollaboratorSampleID}='NA20876',{CollaboratorSampleID}='NA20881'," \
+                        "{CollaboratorSampleID}='NA20888')"
         sample_fields = ['CollaboratorSampleID', 'SMID', 'CollaboratorSampleID', 'Recontactable']
         self._assert_expected_airtable_call(0, sample_filter, sample_fields)
         secondary_sample_filter = "OR({SeqrCollaboratorSampleID}='HG00731',{SeqrCollaboratorSampleID}='HG00732'," \
                         "{SeqrCollaboratorSampleID}='HG00733',{SeqrCollaboratorSampleID}='NA19678'," \
                         "{SeqrCollaboratorSampleID}='NA19679',{SeqrCollaboratorSampleID}='NA20870',{SeqrCollaboratorSampleID}='NA20872'," \
                         "{SeqrCollaboratorSampleID}='NA20874',{SeqrCollaboratorSampleID}='NA20875',{SeqrCollaboratorSampleID}='NA20876'," \
-                        "{SeqrCollaboratorSampleID}='NA20877',{SeqrCollaboratorSampleID}='NA20881')"
+                        "{SeqrCollaboratorSampleID}='NA20881',{SeqrCollaboratorSampleID}='NA20888')"
         sample_fields[0] = 'SeqrCollaboratorSampleID'
         self._assert_expected_airtable_call(1, secondary_sample_filter, sample_fields)
         metadata_fields = [
