@@ -696,9 +696,7 @@ class ReportAPITest(object):
             'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
             'NA20872', 'NA20881', 'HG00733',
         })
-        if self.ADDITIONAL_SAMPLES:
-            expected_samples.remove('NA20888')  # TODO investigate
-            expected_samples.update(self.ADDITIONAL_SAMPLES)
+        expected_samples.update(self.ADDITIONAL_SAMPLES)
         self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
         test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
         self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
