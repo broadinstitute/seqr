@@ -265,7 +265,7 @@ AIRTABLE_GREGOR_RECORDS = {
 EXPECTED_GREGOR_FILES = [
     'participant', 'family', 'phenotype', 'analyte', 'experiment_dna_short_read',
     'aligned_dna_short_read', 'aligned_dna_short_read_set', 'called_variants_dna_short_read',
-    'experiment_rna_short_read', 'aligned_rna_short_read',
+    'experiment_rna_short_read', 'aligned_rna_short_read', 'experiment',
 ]
 
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
@@ -830,7 +830,7 @@ class ReportAPITest(object):
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
         ]
         participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, \
-        called_file, experiment_rna_file, aligned_rna_file = files
+        called_file, experiment_rna_file, aligned_rna_file, experiment_lookup_file = files
 
         self.assertEqual(len(participant_file), 16 if has_second_project else 14)
         self.assertEqual(participant_file[0], [
