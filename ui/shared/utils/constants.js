@@ -1316,16 +1316,37 @@ export const SV_IN_SILICO_GROUP = 'Structural'
 export const NO_SV_IN_SILICO_GROUPS = [MISSENSE_IN_SILICO_GROUP, CODING_IN_SILICO_GROUP]
 export const SPLICE_AI_FIELD = 'splice_ai'
 
+const PRED_COLOR_MAP = ['green', '#90ee90', 'grey', 'yellow', 'red', '#8b0000']
+
+export const getPredictColor = (value, pathHigher, thresholds) => {
+  let colorIndex = 0
+  const v = pathHigher ? value : -1 * value
+  if (v <= thresholds[1]) {
+    if (v > thresholds[0]) {
+      colorIndex = 1
+    }
+  } else {
+    colorIndex = 5
+    if (v < thresholds[2]) {
+      colorIndex = 2
+    } else if (v < thresholds[3]) {
+      colorIndex = 3
+    } else if (v < thresholds[4]) {
+      colorIndex = 4
+    }
+  }
+  return PRED_COLOR_MAP[colorIndex]
+}
+
 export const PREDICTOR_FIELDS = [
-  { field: 'cadd', group: CODING_IN_SILICO_GROUP, warningThreshold: 10, dangerThreshold: 20, min: 1, max: 99 },
-  { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.75 },
-  { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.7 },
-  { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 1, dangerThreshold: 2, max: 5 },
+  { field: 'cadd', group: CODING_IN_SILICO_GROUP, thresholds: [0.15, 22.7, 25.3, 28.1, null], min: 1, max: 99 },
+  { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, thresholds: [0.016, 0.29, 0.644, 0.773, 0.932] },
+  { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, thresholds: [null, 0.483, 0.79, 0.867, null] },
+  { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, thresholds: [null, null, 1.36, 1.828, null], max: 5 },
   {
     field: SPLICE_AI_FIELD,
     group: SPLICING_IN_SILICO_GROUP,
-    warningThreshold: 0.5,
-    dangerThreshold: 0.8,
+    thresholds: [null, null, 0.5, 0.8, null],
     infoField: 'splice_ai_consequence',
     infoTitle: 'Predicted Consequence',
     fieldTitle: 'SpliceAI',
@@ -1333,21 +1354,32 @@ export const PREDICTOR_FIELDS = [
       `https://spliceailookup.broadinstitute.org/#variant=${chrom}-${pos}-${ref}-${alt}&hg=${genomeVersion}&distance=1000&mask=1`
     ),
   },
-  { field: 'eigen', group: CODING_IN_SILICO_GROUP, warningThreshold: 1, dangerThreshold: 2, max: 99 },
-  { field: 'dann', displayOnly: true, warningThreshold: 0.93, dangerThreshold: 0.96 },
-  { field: 'strvctvre', group: SV_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.75 },
-  { field: 'polyphen', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: POLYPHEN_MAP },
-  { field: 'sift', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
+  { field: 'eigen', group: CODING_IN_SILICO_GROUP, thresholds: [null, null, 1, 2, null], max: 99 },
+  { field: 'dann', displayOnly: true, thresholds: [null, null, 0.93, 0.96, null] },
+  { field: 'strvctvre', group: SV_IN_SILICO_GROUP, thresholds: [null, null, 0.5, 0.75, null] },
+  { field: 'polyphen', group: MISSENSE_IN_SILICO_GROUP, thresholds: [null, 0.113, 0.978, 0.999, null], indicatorMap: POLYPHEN_MAP },
+  { field: 'sift', group: MISSENSE_IN_SILICO_GROUP, thresholds: [null, 0.08, 0.001, 0, null], indicatorMap: INDICATOR_MAP },
   { field: 'mut_taster', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: MUTTASTER_MAP },
-  { field: 'fathmm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: FATHMM_MAP },
-  { field: 'vest', warningThreshold: 0.5, dangerThreshold: 0.764 },
-  { field: 'mut_pred', warningThreshold: 0.392, dangerThreshold: 0.737 },
-  { field: 'apogee', warningThreshold: 0.5, dangerThreshold: 0.5 },
-  { field: 'gnomad_noncoding', fieldTitle: 'gnomAD Constraint', displayOnly: true, warningThreshold: 2.18, dangerThreshold: 4 },
+  { field: 'fathmm', group: MISSENSE_IN_SILICO_GROUP, thresholds: [null, 3.32, -4.14, -5.04, null], indicatorMap: FATHMM_MAP },
+  { field: 'vest', thresholds: [null, 0.449, 0.764, 0.861, 0.965] },
+  { field: 'mut_pred', thresholds: [0.01, 0.391, 0.737, 0.829, 0.932] },
+  { field: 'apogee', thresholds: [null, null, 0.5, 0.5, null] },
+  { field: 'gnomad_noncoding', fieldTitle: 'gnomAD Constraint', displayOnly: true, thresholds: [null, null, 2.18, 4, null], warningThreshold: 2.18, dangerThreshold: 4 },
   { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP },
-  { field: 'hmtvar', warningThreshold: 0.35, dangerThreshold: 0.35 },
-]
+  { field: 'hmtvar', thresholds: [null, null, 0.35, 0.35, null] },
+].map(({ thresholds, ...pred }) => {
+  if (!thresholds) {
+    return pred
+  }
+  const noneNullThresholds = thresholds.filter(t => t)
+  const pathHigher = noneNullThresholds[1] >= noneNullThresholds[0]
+  return {
+    ...pred,
+    pathHigher,
+    thresholds: pathHigher ? thresholds : thresholds.map(t => (t === null ? null : -1 * t)),
+  }
+})
 
 export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {
   if (selectedMainTranscriptId || mainTranscriptId) {
