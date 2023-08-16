@@ -251,6 +251,10 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
+            [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.005}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
             [VARIANT4], frequencies={'seqr': {'af': 0.2}, 'gnomad_genomes': {'ac': 50}},
             omit_sample_type='SV_WES',
         )

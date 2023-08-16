@@ -8,7 +8,8 @@ from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_
     VARIANT_KEY_FIELD, GNOMAD_GENOMES_FIELD, XPOS, GENOME_VERSION_GRCh38_DISPLAY, INHERITANCE_FILTERS, \
     ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF, \
     ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
-    CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES, PATH_FREQ_OVERRIDE_CUTOFF
+    CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES, PATH_FREQ_OVERRIDE_CUTOFF, \
+    PREFILTER_FREQ_CUTOFF
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -689,20 +690,17 @@ class VariantHailTableQuery(BaseHailTableQuery):
         return lambda entries: hl.is_defined(clinvar_path_ht[ht.key]) | passes_quality(entries)
 
     def _get_loaded_filter_ht(self, key, table_path, get_filters, **kwargs):
-        if self._filter_hts.get(key) is not None:
-            return self._filter_hts[key]
+        if self._filter_hts.get(key) is None:
+            ht_filter = get_filters(**kwargs)
+            if ht_filter is False:
+                self._filter_hts[key] = False
+            else:
+                ht = self._read_table(table_path)
+                if ht_filter is not True:
+                    ht = ht.filter(ht[ht_filter])
+                self._filter_hts[key] = ht
 
-        ht_filter = get_filters(**kwargs)
-        if ht_filter is False:
-            self._filter_hts[key] = False
-            return False
-
-        ht = self._read_table(table_path)
-        if ht_filter is not True:
-            ht = ht.filter(ht[ht_filter])
-        self._filter_hts[key] = ht
-
-        return ht
+        return self._filter_hts[key]
 
     def _get_clinvar_prefilter(self, pathogenicity=None):
         clinvar_path_filters = self._get_clinvar_path_filters(pathogenicity)
@@ -726,14 +724,14 @@ class VariantHailTableQuery(BaseHailTableQuery):
         gnomad_genomes_filter = (frequencies or {}).get(GNOMAD_GENOMES_FIELD, {})
         af_cutoff = gnomad_genomes_filter.get('af')
         if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
-            af_cutoff = 0.01
+            af_cutoff = PREFILTER_FREQ_CUTOFF
         if af_cutoff is None:
             return False
 
         if self._get_clinvar_path_filters(pathogenicity):
             af_cutoff = max(af_cutoff, PATH_FREQ_OVERRIDE_CUTOFF)
 
-        return 'is_gt_10_percent' if af_cutoff > 0.01 else True
+        return 'is_gt_10_percent' if af_cutoff > PREFILTER_FREQ_CUTOFF else True
 
     def _get_gene_id_filter(self, gene_ids):
         self._ht = self._ht.annotate(
