@@ -740,18 +740,7 @@ for data_type in GREGOR_DATA_TYPES:
     data_type_columns = set(DATA_TYPE_AIRTABLE_COLUMNS) - NO_DATA_TYPE_FIELDS - set(DATA_TYPE_OMIT[data_type])
     AIRTABLE_QUERY_COLUMNS.update({f'{field}_{data_type}' for field in data_type_columns})
 
-TABLE_COLUMNS = {
-    'participant': PARTICIPANT_TABLE_COLUMNS,
-    'family': GREGOR_FAMILY_TABLE_COLUMNS,
-    'phenotype': PHENOTYPE_TABLE_COLUMNS,
-    'analyte': ANALYTE_TABLE_COLUMNS,
-    'experiment_dna_short_read': EXPERIMENT_TABLE_COLUMNS,
-    'aligned_dna_short_read': READ_TABLE_COLUMNS,
-    'aligned_dna_short_read_set': READ_SET_TABLE_COLUMNS,
-    'called_variants_dna_short_read': CALLED_TABLE_COLUMNS,
-    'experiment_rna_short_read': EXPERIMENT_RNA_TABLE_COLUMNS,
-    'aligned_rna_short_read': READ_RNA_TABLE_COLUMNS,
-}  # TODO add experiment table
+# 'experiment': ['experiment_id', 'table_name', 'id_in_table', 'participant_id'], # TODO
 WARN_MISSING_TABLE_COLUMNS = {
     'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
 }
@@ -913,18 +902,19 @@ def gregor_export(request):
         for analyte_id in analyte_ids:
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
-    files, warnings = _get_validated_gregor_files([
-        ('participant', participant_rows),
-        ('family', list(family_map.values())),
-        ('phenotype', phenotype_rows),
-        ('analyte', analyte_rows),
-        ('experiment_dna_short_read', airtable_rows),
-        ('aligned_dna_short_read', airtable_rows),
-        ('aligned_dna_short_read_set', airtable_rows),
-        ('called_variants_dna_short_read', airtable_rows),
-        ('experiment_rna_short_read', airtable_rna_rows),
-        ('aligned_rna_short_read', airtable_rna_rows),
-    ])
+    files = [
+        ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),
+        ('family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())),
+        ('phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows),
+        ('analyte', ANALYTE_TABLE_COLUMNS, analyte_rows),
+        ('experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, airtable_rows),
+        ('aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows),
+        ('aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows),
+        ('called_variants_dna_short_read', CALLED_TABLE_COLUMNS, airtable_rows),
+        ('experiment_rna_short_read', EXPERIMENT_RNA_TABLE_COLUMNS, airtable_rna_rows),
+        ('aligned_rna_short_read', READ_RNA_TABLE_COLUMNS, airtable_rna_rows),
+    ]
+    warnings = _validate_gregor_files(files)
     write_multiple_files_to_gs(files, file_path, request.user, file_format='tsv')
 
     return create_json_response({
@@ -1024,7 +1014,7 @@ def _get_analyte_id(airtable_metadata):
     return f'Broad_{sm_id}' if sm_id else None
 
 
-def _get_validated_gregor_files(file_data):
+def _validate_gregor_files(file_data):
     errors = []
     warnings = []
     try:
@@ -1043,11 +1033,7 @@ def _get_validated_gregor_files(file_data):
             f'The following tables are required in the data model but absent from the reports: {", ".join(missing_tables)}'
         )
 
-    files = []
-    for file_name, data in file_data:
-        columns = TABLE_COLUMNS[file_name]
-        files.append([file_name, columns, data])
-
+    for file_name, columns, data in file_data:
         table_validator = validators.get(file_name)
         if not table_validator:
             warnings.append(f'No data model found for "{file_name}" table so no validation was performed')
@@ -1075,7 +1061,7 @@ def _get_validated_gregor_files(file_data):
     if errors:
         raise ErrorsWarningsException(errors, warnings)
 
-    return files, warnings
+    return warnings
 
 
 def _load_data_model_validators():
