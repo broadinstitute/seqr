@@ -966,6 +966,39 @@ class ReportAPITest(object):
         self.assertEqual(
             ['NA', 'Broad_NA20888_D1', 'NA', '2aa33e8c32020b1c', 'NA', 'SNV', ''] in called_file, has_second_project)
 
+        self.assertEqual(len(experiment_rna_file), 1)
+        self.assertEqual(experiment_rna_file[0], [
+            'experiment_rna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
+            'read_length', 'experiment_type', 'date_data_generation', 'sequencing_platform', 'library_prep_type',
+            'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size', 'total_reads',
+            'percent_rRNA', 'percent_mRNA', '5prime3prime_bias', 'percent_mtRNA', 'percent_Globin', 'percent_UMI',
+            'percent_GC', 'percent_chrX_Y',
+        ])
+
+        self.assertEqual(len(aligned_rna_file), 1)
+        self.assertEqual(aligned_rna_file[0], [
+            'aligned_rna_short_read_id', 'experiment_rna_short_read_id', 'aligned_rna_short_read_file',
+            'aligned_rna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri',
+            'reference_assembly_details', 'mean_coverage', 'gene_annotation', 'gene_annotation_details',
+            'alignment_software', 'alignment_log_file', 'alignment_postprocessing', 'percent_uniquely_aligned',
+            'percent_multimapped', 'percent_unaligned', 'quality_issues'
+        ])
+
+        self.assertEqual(len(experiment_lookup_file), num_airtable_rows)
+        self.assertEqual(experiment_lookup_file[0], ['experiment_id', 'table_name', 'id_in_table', 'participant_id'])
+        self.assertIn([
+            'experiment_dna_short_read.Broad_exome_VCGS_FAM203_621_D2', 'experiment_dna_short_read',
+            'Broad_exome_VCGS_FAM203_621_D2', 'Broad_HG00731',
+        ], experiment_lookup_file)
+        self.assertIn([
+            'experiment_dna_short_read.Broad_exome_NA20888', 'experiment_dna_short_read',
+            'Broad_exome_NA20888', 'Broad_NA20888',
+        ], experiment_lookup_file)
+        self.assertEqual([
+            'experiment_dna_short_read.Broad_genome_NA20888_1', 'experiment_dna_short_read', 'Broad_genome_NA20888_1',
+            'Broad_NA20888',
+        ] in experiment_lookup_file, has_second_project)
+
     def _test_expected_gregor_airtable_calls(self, additional_samples=None):
         self.assertEqual(len(responses.calls), 4)
         sample_ids = {
