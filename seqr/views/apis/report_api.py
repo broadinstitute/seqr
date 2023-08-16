@@ -1034,19 +1034,16 @@ def _get_experiment_lookup_row(is_rna, row_data):
 
 
 DATA_TYPE_VALIDATORS = {
-    'string': (
-        lambda val, validator: (not validator.get('is_bucket_path')) or val.startswith('gs://'),
-        lambda validator: ' are a google bucket path starting with gs://'
-    ),
-    'enumeration': (
-        lambda val, validator: val in validator['enumerations'],
-        lambda validator: f': {", ".join(column_validator["enumerations"])}',
-    ),
-    'integer': (lambda val, validator: val.replace(',', '').isnumeric(), None),
-    'float': (lambda val, validator: val.replace(',', '').replace('.', '').isnumeric(), None),
-    'date': (lambda val, validator: bool(re.match(r'^\d{4}-\d{2}-\d{2}$', val)), None),
+    'string': lambda val, validator: (not validator.get('is_bucket_path')) or val.startswith('gs://'),
+    'enumeration': lambda val, validator: val in validator['enumerations'],
+    'integer': lambda val, validator: val.replace(',', '').isnumeric(),
+    'float': lambda val, validator: val.replace(',', '').replace('.', '').isnumeric(),
+    'date': lambda val, validator: bool(re.match(r'^\d{4}-\d{2}-\d{2}$', val)),
 }
-
+DATA_TYPE_ERROR_FORMATTERS = {
+    'string': lambda validator: ' are a google bucket path starting with gs://',
+    'enumeration': lambda validator: f': {", ".join(validator["enumerations"])}',
+}
 
 def _validate_gregor_files(file_data):
     errors = []
@@ -1148,7 +1145,7 @@ def _has_required_table(table, validator, tables):
 
 def _validate_column_data(column, file_name, data, column_validator, warnings, errors):
     data_type = column_validator.get('data_type')
-    data_type_validator, allowed_formatter = DATA_TYPE_VALIDATORS.get(data_type)
+    data_type_validator = DATA_TYPE_VALIDATORS.get(data_type)
     unique = column_validator.get('is_unique')
     required = column_validator.get('required')
     recommended = column in WARN_MISSING_TABLE_COLUMNS.get(file_name, [])
@@ -1173,7 +1170,7 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
         elif unique:
             grouped_values[value].add(_get_row_id(row))
 
-    duplicates = [f'{k} ({", ".join(v)})' for k, v in grouped_values.items() if len(v) > 1]
+    duplicates = [f'{k} ({", ".join(sorted(v))})' for k, v in grouped_values.items() if len(v) > 1]
     if missing or warn_missing or invalid or duplicates:
         airtable_summary = ' (from Airtable)' if column in ALL_AIRTABLE_COLUMNS else ''
         error_template = f'The following entries {{issue}} "{column}"{airtable_summary} in the "{file_name}" table'
@@ -1183,7 +1180,8 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
             )
         if invalid:
             invalid_values = f'Invalid values: {", ".join(sorted(invalid))}'
-            allowed = allowed_formatter(column_validator) if allowed_formatter else f' have data type {data_type}'
+            allowed = DATA_TYPE_ERROR_FORMATTERS[data_type](column_validator) \
+                if data_type in DATA_TYPE_ERROR_FORMATTERS else f' have data type {data_type}'
             errors.append(
                 f'{error_template.format(issue="have invalid values for")}. Allowed values{allowed}. {invalid_values}'
             )
