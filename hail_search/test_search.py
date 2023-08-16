@@ -382,19 +382,19 @@ class HailSearchTestCase(AioHTTPTestCase):
         search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
-            text = await resp.text()
-        self.assertEqual(text, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
+            reason = resp.reason
+        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
 
         search_body = get_hail_search_body(sample_data=MULTI_PROJECT_MISSING_SAMPLE_DATA)
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
-            text = await resp.text()
-        self.assertEqual(text, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
+            reason = resp.reason
+        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
 
         search_body = get_hail_search_body(
             intervals=LOCATION_SEARCH['intervals'] + ['1:1-99999999999'], omit_sample_type='SV_WES',
         )
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
-            text = await resp.text()
-        self.assertEqual(text, 'Invalid intervals: 1:1-99999999999')
+            reason = resp.reason
+        self.assertEqual(reason, 'Invalid intervals: 1:1-99999999999')
