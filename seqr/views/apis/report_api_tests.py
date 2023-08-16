@@ -162,6 +162,16 @@ AIRTABLE_GREGOR_SAMPLE_RECORDS = {
       },
     },
     {
+      "id": "rec2B67GmXpAkQW8z",
+      "fields": {
+        'SeqrCollaboratorSampleID': 'NA19679',
+        'CollaboratorSampleID': 'NA19679',
+        'CollaboratorParticipantID': 'NA19679',
+        'SMID': 'SM-N1P91',
+        'Recontactable': 'Yes',
+      },
+    },
+    {
       "id": "rec2Nkg10N1KssPc3",
       "fields": {
         "SeqrCollaboratorSampleID": "HG00731",
@@ -219,6 +229,41 @@ AIRTABLE_GREGOR_RECORDS = {
         'CollaboratorSampleID_wgs': 'NA19675_1',
         'SMID_wgs': 'SM-AGHT-2',
         'experiment_type_wgs': 'genome',
+      },
+    },
+    {
+      "id": "rec4B7OGmQpVkQW7z",
+      "fields": {
+        'CollaboratorParticipantID': 'NA19679',
+        'CollaboratorSampleID_rna': 'NA19679',
+        'SMID_rna': 'SM-N1P91',
+        'seq_library_prep_kit_method_rna': 'Unknown',
+        'library_prep_type_rna': 'stranded poly-A pulldown',
+        'read_length_rna': '151',
+        'experiment_type_rna': 'paired-end',
+        'single_or_paired_ends_rna': 'paired-end',
+        'date_data_generation_rna': '2023-02-11',
+        'sequencing_platform_rna': 'NovaSeq',
+        'aligned_rna_short_read_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.cram',
+        'aligned_rna_short_read_index_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.crai',
+        'aligned_rna_short_read_id': '',
+        'md5sum_rna': 'f6490b8ebdf2',
+        '5prime3prime_bias_rna': '1.05',
+        'gene_annotation_rna': 'GENCODEv26',
+        'reference_assembly': 'GRCh38',
+        'reference_assembly_uri_rna': 'gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta',
+        'alignment_software_rna': 'STARv2.7.10b',
+        'alignment_log_file_rna': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Log.final.out',
+        'percent_uniquely_aligned_rna': '80.53',
+        'percent_multimapped_rna': '17.08',
+        'percent_unaligned_rna': '1.71',
+        'percent_mRNA': '80.2',
+        'percent_rRNA': '5.9',
+        'RIN_rna': '8.9818',
+        'total_reads_rna': '106,842,386',
+        'within_site_batch_name_rna': 'LCSET-26942',
+        'estimated_library_size_rna': '19,480,858',
+        'variant_types': 'SNV',
       },
     },
     {
@@ -771,7 +816,7 @@ class ReportAPITest(object):
             'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
             'The following columns are included in the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id, proband_relationship_detail, sex_detail, twin_id',
             'The following columns are included in the "participant" data model but are missing in the report: ancestry_metadata',
-            'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
+            'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
             'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
@@ -966,7 +1011,7 @@ class ReportAPITest(object):
         self.assertEqual(
             ['NA', 'Broad_NA20888_D1', 'NA', '2aa33e8c32020b1c', 'NA', 'SNV', ''] in called_file, has_second_project)
 
-        self.assertEqual(len(experiment_rna_file), 1)
+        self.assertEqual(len(experiment_rna_file), 2)
         self.assertEqual(experiment_rna_file[0], [
             'experiment_rna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
             'read_length', 'experiment_type', 'date_data_generation', 'sequencing_platform', 'library_prep_type',
@@ -974,8 +1019,13 @@ class ReportAPITest(object):
             'percent_rRNA', 'percent_mRNA', '5prime3prime_bias', 'percent_mtRNA', 'percent_Globin', 'percent_UMI',
             'percent_GC', 'percent_chrX_Y',
         ])
+        self.assertEqual(experiment_rna_file[1], [
+            'Broad_paired-end_NA19679', 'Broad_SM-N1P91', 'NA19679', 'Unknown', '151', 'paired-end', '2023-02-11',
+            'NovaSeq', 'stranded poly-A pulldown', 'paired-end', 'LCSET-26942', '8.9818', '19,480,858', '106,842,386',
+            '5.9', '80.2', '1.05', '', '', '', '', '',
+        ])
 
-        self.assertEqual(len(aligned_rna_file), 1)
+        self.assertEqual(len(aligned_rna_file), 2)
         self.assertEqual(aligned_rna_file[0], [
             'aligned_rna_short_read_id', 'experiment_rna_short_read_id', 'aligned_rna_short_read_file',
             'aligned_rna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri',
@@ -983,16 +1033,27 @@ class ReportAPITest(object):
             'alignment_software', 'alignment_log_file', 'alignment_postprocessing', 'percent_uniquely_aligned',
             'percent_multimapped', 'percent_unaligned', 'quality_issues'
         ])
+        self.assertEqual(aligned_rna_file[1], [
+            '', 'Broad_paired-end_NA19679', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.cram',
+            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.crai', 'f6490b8ebdf2', 'GRCh38',
+            'gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta', '', '', 'GENCODEv26', '',
+            'STARv2.7.10b', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Log.final.out', '', '80.53', '17.08',
+            '1.71', ''
+        ])
 
-        self.assertEqual(len(experiment_lookup_file), num_airtable_rows)
+        self.assertEqual(len(experiment_lookup_file), num_airtable_rows + 1)
         self.assertEqual(experiment_lookup_file[0], ['experiment_id', 'table_name', 'id_in_table', 'participant_id'])
+        self.assertIn([
+            'experiment_rna_short_read.Broad_paired-end_NA19679', 'experiment_rna_short_read',
+            'Broad_paired-end_NA19679', 'Broad_NA19679',
+        ], experiment_lookup_file)
         self.assertIn([
             'experiment_dna_short_read.Broad_exome_VCGS_FAM203_621_D2', 'experiment_dna_short_read',
             'Broad_exome_VCGS_FAM203_621_D2', 'Broad_HG00731',
         ], experiment_lookup_file)
         self.assertIn([
-            'experiment_dna_short_read.Broad_exome_NA20888', 'experiment_dna_short_read',
-            'Broad_exome_NA20888', 'Broad_NA20888',
+            'experiment_dna_short_read.Broad_exome_NA20888', 'experiment_dna_short_read', 'Broad_exome_NA20888',
+            'Broad_NA20888',
         ], experiment_lookup_file)
         self.assertEqual([
             'experiment_dna_short_read.Broad_genome_NA20888_1', 'experiment_dna_short_read', 'Broad_genome_NA20888_1',
@@ -1009,7 +1070,7 @@ class ReportAPITest(object):
         sample_filter = ','.join([f"{{CollaboratorSampleID}}='{sample_id}'" for sample_id in sorted(sample_ids)])
         sample_fields = ['CollaboratorSampleID', 'SMID', 'CollaboratorParticipantID', 'Recontactable']
         self._assert_expected_airtable_call(0, f"OR({sample_filter})", sample_fields)
-        sample_ids -= {'NA19675_1', 'NA20888'}
+        sample_ids -= {'NA19675_1', 'NA19679', 'NA20888'}
         secondary_sample_filter = ','.join([f"{{SeqrCollaboratorSampleID}}='{sample_id}'" for sample_id in sorted(sample_ids)])
         sample_fields[0] = 'SeqrCollaboratorSampleID'
         self._assert_expected_airtable_call(1, f"OR({secondary_sample_filter})", sample_fields)
@@ -1031,7 +1092,10 @@ class ReportAPITest(object):
             'target_insert_size_wgs', 'targeted_region_bed_file', 'targeted_regions_method_wes', 'total_reads_rna',
             'variant_types', 'within_site_batch_name_rna',
         ]
-        self._assert_expected_airtable_call(2, "OR(CollaboratorParticipantID='NA19675',CollaboratorParticipantID='NA20888',CollaboratorParticipantID='VCGS_FAM203_621')", metadata_fields)
+        self._assert_expected_airtable_call(
+            2, "OR(CollaboratorParticipantID='NA19675',CollaboratorParticipantID='NA19679',CollaboratorParticipantID='NA20888',CollaboratorParticipantID='VCGS_FAM203_621')",
+            metadata_fields,
+        )
 
         self.assertEqual(responses.calls[3].request.url, MOCK_DATA_MODEL_URL)
 
