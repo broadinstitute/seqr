@@ -1033,6 +1033,21 @@ def _get_experiment_lookup_row(is_rna, row_data):
     }
 
 
+DATA_TYPE_VALIDATORS = {
+    'string': (
+        lambda val, validator: (not validator.get('is_bucket_path')) or val.startswith('gs://'),
+        lambda validator: ' are a google bucket path starting with gs://'
+    ),
+    'enumeration': (
+        lambda val, validator: val in validator['enumerations'],
+        lambda validator: f': {", ".join(column_validator["enumerations"])}',
+    ),
+    'integer': (lambda val, validator: val.replace(',', '').isnumeric(), None),
+    'float': (lambda val, validator: val.replace(',', '').replace('.', '').isnumeric(), None),
+    'date': (lambda val, validator: bool(re.match(r'^\d{4}-\d{2}-\d{2}$', val)), None),
+}
+
+
 def _validate_gregor_files(file_data):
     errors = []
     warnings = []
@@ -1069,6 +1084,26 @@ def _validate_gregor_files(file_data):
             col_summary = ', '.join(sorted(missing_columns))
             warnings.append(
                 f'The following columns are included in the "{file_name}" data model but are missing in the report: {col_summary}'
+            )
+        invalid_data_type_columns = {
+            col: validator['data_type'] for col, validator in table_validator.items()
+            if validator.get('data_type') and validator['data_type'] not in DATA_TYPE_VALIDATORS
+        }
+        if invalid_data_type_columns:
+            col_summary = ', '.join(sorted([f'{col} ({data_type})' for col, data_type in invalid_data_type_columns.items()]))
+            warnings.append(
+                f'The following columns are included in the "{file_name}" data model but have an unsupported data type: {col_summary}'
+            )
+        invalid_enum_columns = [
+            col for col, validator in table_validator.items()
+            if validator.get('data_type') == 'enumeration' and not validator.get('enumerations')
+        ]
+        if invalid_enum_columns:
+            for col in invalid_enum_columns:
+                table_validator[col]['data_type'] = None
+            col_summary = ', '.join(sorted(invalid_enum_columns))
+            warnings.append(
+                f'The following columns are specified as "enumeration" in the "{file_name}" data model but are missing the allowed values definition: {col_summary}'
             )
 
         for column in columns:
@@ -1112,15 +1147,18 @@ def _has_required_table(table, validator, tables):
 
 
 def _validate_column_data(column, file_name, data, column_validator, warnings, errors):
-    enum = column_validator.get('enumerations')
+    data_type = column_validator.get('data_type')
+    data_type_validator, allowed_formatter = DATA_TYPE_VALIDATORS.get(data_type)
+    unique = column_validator.get('is_unique')
     required = column_validator.get('required')
     recommended = column in WARN_MISSING_TABLE_COLUMNS.get(file_name, [])
-    if not (required or enum or recommended):
+    if not (required or unique or recommended or data_type_validator):
         return
 
     missing = []
     warn_missing = []
     invalid = []
+    grouped_values = defaultdict(set)
     for row in data:
         value = row.get(column)
         if not value:
@@ -1130,9 +1168,13 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
                 check_recommend_condition = WARN_MISSING_CONDITIONAL_COLUMNS.get(column)
                 if not check_recommend_condition or check_recommend_condition(row):
                     warn_missing.append(_get_row_id(row))
-        elif enum and value not in enum:
+        elif data_type_validator and not data_type_validator(value, column_validator):
             invalid.append(f'{_get_row_id(row)} ({value})')
-    if missing or warn_missing or invalid:
+        elif unique:
+            grouped_values[value].add(_get_row_id(row))
+
+    duplicates = [f'{k} ({", ".join(v)})' for k, v in grouped_values.items() if len(v) > 1]
+    if missing or warn_missing or invalid or duplicates:
         airtable_summary = ' (from Airtable)' if column in ALL_AIRTABLE_COLUMNS else ''
         error_template = f'The following entries {{issue}} "{column}"{airtable_summary} in the "{file_name}" table'
         if missing:
@@ -1141,8 +1183,13 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
             )
         if invalid:
             invalid_values = f'Invalid values: {", ".join(sorted(invalid))}'
+            allowed = allowed_formatter(column_validator) if allowed_formatter else f' have data type {data_type}'
             errors.append(
-                f'{error_template.format(issue="have invalid values for")}. Allowed values: {", ".join(enum)}. {invalid_values}'
+                f'{error_template.format(issue="have invalid values for")}. Allowed values{allowed}. {invalid_values}'
+            )
+        if duplicates:
+            errors.append(
+                f'{error_template.format(issue="have non-unique values for")}: {", ".join(sorted(duplicates))}'
             )
         if warn_missing:
             warnings.append(
