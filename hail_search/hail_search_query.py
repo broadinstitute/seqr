@@ -478,11 +478,10 @@ class BaseHailTableQuery(object):
 
     def _filter_by_gene_ids(self, gene_ids):
         gene_ids = hl.set(gene_ids)
-        gene_id_filter = self._get_gene_id_filter(gene_ids)
-        self._ht = self._ht.filter(gene_id_filter)
-
-    def _get_gene_id_filter(self, gene_ids):
-        raise NotImplementedError
+        self._ht = self._ht.annotate(
+            gene_transcripts=self._ht[self.TRANSCRIPTS_FIELD].filter(lambda t: gene_ids.contains(t.gene_id))
+        )
+        self._ht = self._ht.filter(hl.is_defined(self._ht.gene_transcripts.first()))
 
     def _filter_rs_ids(self, rs_ids):
         rs_id_set = hl.set(rs_ids)
@@ -652,9 +651,9 @@ class BaseHailTableQuery(object):
 
         return ch_ht
 
-    @staticmethod
-    def _gene_ids_expr(ht):
-        raise NotImplementedError
+    @classmethod
+    def _gene_ids_expr(cls, ht):
+        return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
 
     def _is_valid_comp_het_family(self, entries_1, entries_2):
         return hl.is_defined(entries_1) & hl.is_defined(entries_2) & hl.enumerate(entries_1).all(lambda x: hl.any([
@@ -730,11 +729,11 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _omim_sort(cls, r, omim_gene_set):
-        return []
+        return [-cls._gene_ids_expr(r).intersection(omim_gene_set).size()]
 
     @classmethod
     def _gene_rank_sort(cls, r, gene_ranks):
-        return []
+        return [hl.min(cls._gene_ids_expr(r).map(gene_ranks.get))]
 
 
 class VariantHailTableQuery(BaseHailTableQuery):
@@ -933,12 +932,6 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
         return 'is_gt_10_percent' if af_cutoff > PREFILTER_FREQ_CUTOFF else True
 
-    def _get_gene_id_filter(self, gene_ids):
-        self._ht = self._ht.annotate(
-            gene_transcripts=self._ht.sorted_transcript_consequences.filter(lambda t: gene_ids.contains(t.gene_id))
-        )
-        return hl.is_defined(self._ht.gene_transcripts.first())
-
     def _get_allowed_consequences_annotations(self, annotations, annotation_filters):
         allowed_consequences = {
             ann for field, anns in annotations.items()
@@ -1009,23 +1002,15 @@ class VariantHailTableQuery(BaseHailTableQuery):
         ht = ht.annotate(selected_transcript=self._selected_main_transcript_expr(ht))
         return super()._format_results(ht, annotation_fields)
 
-    @staticmethod
-    def _gene_ids_expr(ht):
-        return hl.set(ht.sorted_transcript_consequences.map(lambda t: t.gene_id))
-
     @classmethod
     def _omim_sort(cls, r, omim_gene_set):
         return [
             hl.if_else(omim_gene_set.contains(r.selected_transcript.gene_id), 0, 1),
-            -cls._gene_ids_expr(r).intersection(omim_gene_set).size(),
-        ]
+        ] + super()._omim_sort(r, omim_gene_set)
 
     @classmethod
     def _gene_rank_sort(cls, r, gene_ranks):
-        return [
-            gene_ranks.get(r.selected_transcript.gene_id),
-            hl.min(cls._gene_ids_expr(r).map(gene_ranks.get)),
-        ]
+        return [gene_ranks.get(r.selected_transcript.gene_id)] + super()._gene_rank_sort(r, gene_ranks)
 
 
 class GcnvHailTableQuery(BaseHailTableQuery):
@@ -1142,6 +1127,10 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     def _missing_entry(cls, entry):
         #  gCNV data has no ref/ref calls so a missing entry indicates ref/ref
         return super()._missing_entry(entry).annotate(GT=hl.Call([0, 0]))
+
+    # TODO
+    def _get_annotation_override_filters(self, pathogenicity, annotations):
+        return super()._get_annotation_override_filters(pathogenicity, annotations)
 
 
 QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery,]} #GcnvHailTableQuery]}  # TODO
