@@ -1051,9 +1051,6 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         'strvctvre': PredictionPath('strvctvre', 'score'),
     }
 
-    # TODO refactor
-    #ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, STRUCTURAL_ANNOTATION_FIELD_SECONDARY, NEW_SV_FIELD]
-
     SORTS = {
         'protein_consequence': lambda r: [hl.min(r.sorted_gene_consequences.map(lambda g: g.major_consequence_id))],
         'size': lambda r: [hl.if_else(
@@ -1130,6 +1127,8 @@ class GcnvHailTableQuery(BaseHailTableQuery):
 
     # TODO
     def _get_annotation_override_filters(self, pathogenicity, annotations):
+        # ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, STRUCTURAL_ANNOTATION_FIELD_SECONDARY, NEW_SV_FIELD]
+
         return super()._get_annotation_override_filters(pathogenicity, annotations)
 
 
