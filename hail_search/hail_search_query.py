@@ -717,26 +717,24 @@ class BaseHailTableQuery(object):
         return sort_expressions
 
     def _get_sort_expressions(self, ht, sort):
-        sort_expressions = []
         if sort in self.SORTS:
-            sort_expressions = self.SORTS[sort](ht)
+            return self.SORTS[sort](ht)
 
-        elif sort in self.PREDICTION_FIELDS_CONFIG:
+        if sort in self.PREDICTION_FIELDS_CONFIG:
             prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
-            sort_expressions = [-hl.float64(ht[prediction_path.source][prediction_path.field])]
+            return [-hl.float64(ht[prediction_path.source][prediction_path.field])]
 
-        elif sort == 'in_omim':
-            sort_expressions = self._omim_sort(ht, hl.set(set(self._sort_metadata)))
+        if sort == 'in_omim':
+            return self._omim_sort(ht, hl.set(set(self._sort_metadata)))
 
-        elif self._sort_metadata:
-            sort_expressions = self._gene_rank_sort(ht, hl.dict(self._sort_metadata))
+        if self._sort_metadata:
+            return self._gene_rank_sort(ht, hl.dict(self._sort_metadata))
 
-        else:
-            sort_field = next((field for field, config in self.POPULATIONS.items() if config.get('sort') == sort), None)
-            if sort_field:
-                sort_expressions = [hl.float64(self.population_expression(ht, sort_field).af)]
+        sort_field = next((field for field, config in self.POPULATIONS.items() if config.get('sort') == sort), None)
+        if sort_field:
+            return [hl.float64(self.population_expression(ht, sort_field).af)]
 
-        return sort_expressions
+        return []
 
     @classmethod
     def _omim_sort(cls, r, omim_gene_set):
