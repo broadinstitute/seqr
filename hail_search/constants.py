@@ -26,6 +26,10 @@ HAS_ALLOWED_SECONDARY_ANNOTATION = f'{HAS_ALLOWED_ANNOTATION}_secondary'
 
 XPOS = 'xpos'
 
+PATHOGENICTY_SORT_KEY = 'pathogenicity'
+PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
+ABSENT_PATH_SORT_OFFSET = 12.5
+
 ALT_ALT = 'alt_alt'
 REF_REF = 'ref_ref'
 REF_ALT = 'ref_alt'
