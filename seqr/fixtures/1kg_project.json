@@ -698,7 +698,7 @@
         "individual_id": "NA20888",
         "mother_id": null,
         "father_id": null,
-        "sex": "M",
+        "sex": "F",
         "affected": "A",
         "display_name": "",
 	"notes": "",
@@ -1144,7 +1144,7 @@
         "last_modified_date": "2017-03-13T09:07:50.277Z",
 
         "sample_id": "NA20888",
-        "sample_type": "WES",
+        "sample_type": "WGS",
         "is_active": false,
         "individual": 16,
         "dataset_type": "VARIANTS",
