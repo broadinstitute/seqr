@@ -72,6 +72,9 @@ MULTI_FAMILY_VARIANT['familyGuids'] += FAMILY_3_VARIANT['familyGuids']
 MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
 
 SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
+SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000426137'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000641759'}
 
 PROJECT_2_VARIANT1 = deepcopy(VARIANT1)
 PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
@@ -110,11 +113,8 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
         self.assertEqual(resp_json['total'], len(results))
-        self.assertListEqual(
-            [v['variantId'] for v in resp_json['results']], [v['variantId'] for v in results],
-        )
         for i, result in enumerate(resp_json['results']):
-            self.assertDictEqual(result, results[i])
+            self.assertEqual(result, results[i])
 
     async def test_single_family_search(self):
         await self._assert_expected_search(
@@ -154,6 +154,18 @@ class HailSearchTestCase(AioHTTPTestCase):
         gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'has_alt', 'I000005_hg00732': 'ref_ref'}}
         await self._assert_expected_search(
             [VARIANT2, VARIANT3], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
+
+        # Ensures no variants are filtered out by annotation/path filters for compound hets
+        comp_het_filters = {'annotations': {'splice_ai': '0.0'}, 'pathogenicity': {'clinvar': ['likely_pathogenic']}}
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='compound_het', sample_data=MULTI_PROJECT_SAMPLE_DATA,
+            **comp_het_filters,
+        )
+
+        await self._assert_expected_search(
+            [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive',
+            sample_data=MULTI_PROJECT_SAMPLE_DATA, **comp_het_filters,
+        )
 
     async def test_quality_filter(self):
         await self._assert_expected_search(
@@ -243,15 +255,19 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.41}}, omit_sample_type='SV_WES',
+            [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.05}}, omit_sample_type='SV_WES',
         )
 
         await self._assert_expected_search(
-            [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.41, 'hh': 1}}, omit_sample_type='SV_WES',
+            [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.05, 'hh': 1}}, omit_sample_type='SV_WES',
         )
 
         await self._assert_expected_search(
-            [VARIANT1, VARIANT4], frequencies={'seqr': {'af': 0.2}, 'gnomad_genomes': {'af': 0.41}},
+            [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.005}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT4], frequencies={'seqr': {'af': 0.2}, 'gnomad_genomes': {'ac': 50}},
             omit_sample_type='SV_WES',
         )
 
@@ -263,7 +279,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
         await self._assert_expected_search(
             [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01}}, omit_sample_type='SV_WES',
-            annotations=annotations, pathogenicity={'clinvar': ['likely_pathogenic', 'vus_or_conflicting']},
+            annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting']},
         )
 
         await self._assert_expected_search(
@@ -295,17 +311,64 @@ class HailSearchTestCase(AioHTTPTestCase):
             [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], annotations=annotations, omit_sample_type='SV_WES',
         )
 
-        selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000641759'}
-        selected_transcript_variant_3 = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
         annotations = {'other': ['non_coding_transcript_exon_variant']}
         await self._assert_expected_search(
-            [VARIANT1, selected_transcript_variant_2, selected_transcript_variant_3],
+            [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT],
             pathogenicity=pathogenicity, annotations=annotations, omit_sample_type='SV_WES',
         )
 
         await self._assert_expected_search(
-            [selected_transcript_variant_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
             gene_ids=LOCATION_SEARCH['gene_ids'][:1], annotations=annotations, omit_sample_type='SV_WES',
+        )
+
+    async def test_secondary_annotations_filter(self):
+        annotations_1 = {'missense': ['missense_variant']}
+        annotations_2 = {'other': ['intron_variant']}
+
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='compound_het', omit_sample_type='SV_WES',
+            annotations=annotations_1, annotations_secondary=annotations_2,
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=annotations_1, annotations_secondary=annotations_2,
+        )
+
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=annotations_2, annotations_secondary=annotations_1,
+        )
+
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}
+        await self._assert_expected_search(
+            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=annotations_2, annotations_secondary=annotations_1, pathogenicity=pathogenicity,
+        )
+
+        screen_annotations = {'SCREEN': ['CTCF-only']}
+        await self._assert_expected_search(
+            [], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=screen_annotations, annotations_secondary=annotations_1,
+        )
+
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=screen_annotations, annotations_secondary=annotations_2,
+        )
+
+        selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
+        await self._assert_expected_search(
+            [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]], inheritance_mode='recessive',
+            annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,
+            pathogenicity=pathogenicity, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]],
+            annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
+            inheritance_mode='recessive', omit_sample_type='SV_WES',
         )
 
     async def test_in_silico_filter(self):
@@ -323,19 +386,19 @@ class HailSearchTestCase(AioHTTPTestCase):
         search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
-            text = await resp.text()
-        self.assertEqual(text, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
+            reason = resp.reason
+        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
 
         search_body = get_hail_search_body(sample_data=MULTI_PROJECT_MISSING_SAMPLE_DATA)
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
-            text = await resp.text()
-        self.assertEqual(text, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
+            reason = resp.reason
+        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
 
         search_body = get_hail_search_body(
             intervals=LOCATION_SEARCH['intervals'] + ['1:1-99999999999'], omit_sample_type='SV_WES',
         )
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
-            text = await resp.text()
-        self.assertEqual(text, 'Invalid intervals: 1:1-99999999999')
+            reason = resp.reason
+        self.assertEqual(reason, 'Invalid intervals: 1:1-99999999999')

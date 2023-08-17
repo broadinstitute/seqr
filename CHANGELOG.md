@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add db indices to optimize RNA data queries (REQUIRES DB MIGRATION)
 
 ## 7/11/23
 * Add internal UI to trigger airflow data loading
