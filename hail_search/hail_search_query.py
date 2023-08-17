@@ -10,7 +10,8 @@ from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_
     ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
     CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES, PATH_FREQ_OVERRIDE_CUTOFF, \
     PREFILTER_FREQ_CUTOFF, COMPOUND_HET, RECESSIVE, GROUPED_VARIANTS_FIELD, NEW_SV_FIELD, HAS_ALLOWED_ANNOTATION, \
-    HAS_ALLOWED_SECONDARY_ANNOTATION, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, ABSENT_PATH_SORT_OFFSET
+    HAS_ALLOWED_SECONDARY_ANNOTATION, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, ABSENT_PATH_SORT_OFFSET, \
+    STRUCTURAL_ANNOTATION_FIELD
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -133,10 +134,16 @@ class BaseHailTableQuery(object):
         }
 
     def _get_enum_lookup(self, field, subfield):
-        enum_field = self._enums.get(field, {}).get(subfield)
+        enum_field = self._enums.get(field, {})
+        if subfield:
+            enum_field = enum_field.get(subfield)
         if enum_field is None:
             return None
         return {v: i for i, v in enumerate(enum_field)}
+
+    def _get_enum_terms_ids(self, field, subfield, terms):
+        enum = self._get_enum_lookup(field, subfield)
+        return {enum[t] for t in terms if enum.get(t)}
 
     @staticmethod
     def _enum_field(value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, **kwargs):
@@ -588,10 +595,10 @@ class BaseHailTableQuery(object):
 
     def _filter_by_annotations(self, pathogenicity, annotations, annotations_secondary):
         annotations = annotations or {}
-        annotation_override_filters = self._get_annotation_override_filters(pathogenicity, annotations)
+        annotation_override_filters = self._get_annotation_override_filters(annotations, pathogenicity=pathogenicity)
 
         annotation_exprs = self._get_allowed_consequences_annotations(annotations, annotation_override_filters)
-        secondary_exprs = self._get_allowed_consequences_annotations(annotations_secondary or {}, annotation_override_filters)
+        secondary_exprs = self._get_allowed_consequences_annotations(annotations_secondary or {}, annotation_override_filters, is_secondary=True)
         has_secondary_annotations = 'allowed_transcripts' in secondary_exprs
         if has_secondary_annotations:
             annotation_exprs.update({f'{k}_secondary': v for k, v in secondary_exprs.items()})
@@ -605,10 +612,29 @@ class BaseHailTableQuery(object):
             annotation_filter |= self._ht[HAS_ALLOWED_SECONDARY_ANNOTATION]
         self._ht = self._ht.filter(annotation_filter)
 
-    def _get_allowed_consequences_annotations(self, annotations, annotation_filters):
-        return {}
+    def _get_allowed_consequences_annotations(self, annotations, annotation_filters, is_secondary=False):
+        allowed_consequences = {
+            ann for field, anns in annotations.items()
+            if anns and (field not in ANNOTATION_OVERRIDE_FIELDS) for ann in anns
+        }
+        allowed_consequence_ids = self._get_enum_terms_ids(
+            self.TRANSCRIPTS_FIELD, self.TRANSCRIPT_CONSEQUENCE_FIELD, allowed_consequences)
 
-    def _get_annotation_override_filters(self, pathogenicity, annotations):
+        annotation_exprs = {}
+        if allowed_consequence_ids:
+            allowed_consequence_ids = hl.set(allowed_consequence_ids)
+            consequence_filter = self._get_consequence_filter(allowed_consequence_ids, annotation_exprs)
+            annotation_filters = annotation_filters + [consequence_filter]
+
+        if annotation_filters:
+            annotation_exprs[HAS_ALLOWED_ANNOTATION] = hl.any(annotation_filters)
+
+        return annotation_exprs
+
+    def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
+        raise NotImplementedError
+
+    def _get_annotation_override_filters(self, annotations, **kwargs):
         return []
 
     def _filter_compound_hets(self):
@@ -741,6 +767,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
     DATA_TYPE = VARIANT_DATASET
 
     TRANSCRIPTS_FIELD = 'sorted_transcript_consequences'
+    TRANSCRIPT_CONSEQUENCE_FIELD = 'consequence_term'
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ', 'AB']}
     QUALITY_FILTER_FORMAT = {
         'AB': QualityFilterFormat(override=lambda gt: ~gt.GT.is_het(), scale=100),
@@ -932,29 +959,14 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
         return 'is_gt_10_percent' if af_cutoff > PREFILTER_FREQ_CUTOFF else True
 
-    def _get_allowed_consequences_annotations(self, annotations, annotation_filters):
-        allowed_consequences = {
-            ann for field, anns in annotations.items()
-            if anns and (field not in ANNOTATION_OVERRIDE_FIELDS) for ann in anns
-        }
-        consequence_enum = self._get_enum_lookup('sorted_transcript_consequences', 'consequence_term')
-        allowed_consequence_ids = {consequence_enum[c] for c in allowed_consequences if consequence_enum.get(c)}
+    def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
+        allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
+            lambda tc: tc.consequence_term_ids.any(allowed_consequence_ids.contains)
+        )
+        annotation_exprs['allowed_transcripts'] = allowed_transcripts
+        return hl.is_defined(allowed_transcripts.first())
 
-        annotation_exprs = {}
-        if allowed_consequence_ids:
-            allowed_consequence_ids = hl.set(allowed_consequence_ids)
-            allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
-                lambda tc: tc.consequence_term_ids.any(allowed_consequence_ids.contains)
-            )
-            annotation_exprs['allowed_transcripts'] = allowed_transcripts
-            annotation_filters = annotation_filters + [hl.is_defined(allowed_transcripts.first())]
-
-        if annotation_filters:
-            annotation_exprs[HAS_ALLOWED_ANNOTATION] = hl.any(annotation_filters)
-
-        return annotation_exprs
-
-    def _get_annotation_override_filters(self, pathogenicity, annotations):
+    def _get_annotation_override_filters(self, annotations, pathogenicity=None):
         annotation_filters = []
 
         for key in self.PATHOGENICITY_FILTERS.keys():
@@ -962,8 +974,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
             if path_terms:
                 annotation_filters.append(self._has_path_expr(path_terms, key))
         if annotations.get(SCREEN_KEY):
-            screen_enum = self._get_enum_lookup(SCREEN_KEY.lower(), 'region_type')
-            allowed_consequences = hl.set({screen_enum[c] for c in annotations[SCREEN_KEY]})
+            allowed_consequences = hl.set(self._get_enum_terms_ids(SCREEN_KEY.lower(), 'region_type', annotations[SCREEN_KEY]))
             annotation_filters.append(allowed_consequences.contains(self._ht.screen.region_type_ids.first()))
         if annotations.get(SPLICE_AI_FIELD):
             score_filter, _ = self._get_in_silico_filter(SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD])
@@ -1030,6 +1041,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     GENOTYPE_RESPONSE_KEYS = {'gq_sv': 'gq'}
 
     TRANSCRIPTS_FIELD = 'sorted_gene_consequences'
+    TRANSCRIPT_CONSEQUENCE_FIELD = 'major_consequence'
     BASE_ANNOTATION_FIELDS = {
         'chrom': lambda r: r.start_locus.contig.replace('^chr', ''),
         'endChrom': lambda r: hl.or_missing(r.start_locus.contig != r.end_locus.contig, r.end_locus.contig.replace('^chr', '')),
@@ -1125,11 +1137,25 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         #  gCNV data has no ref/ref calls so a missing entry indicates ref/ref
         return super()._missing_entry(entry).annotate(GT=hl.Call([0, 0]))
 
-    # TODO
-    def _get_annotation_override_filters(self, pathogenicity, annotations):
-        # ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, STRUCTURAL_ANNOTATION_FIELD_SECONDARY, NEW_SV_FIELD]
+    def _get_allowed_consequences_annotations(self, annotations, annotation_filters, is_secondary=False):
+        if is_secondary:
+            # SV search can specify secondary SV types, as well as secondary consequences
+            annotation_filters = self._get_annotation_override_filters(annotations)
+        return super()._get_allowed_consequences_annotations(annotations, annotation_filters)
 
-        return super()._get_annotation_override_filters(pathogenicity, annotations)
+    def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
+        return self._ht.sorted_gene_consequences.any(
+            lambda gc: allowed_consequence_ids.contain(gc.major_consequence_id)
+        )
+
+    def _get_annotation_override_filters(self, annotations, **kwargs):
+        annotation_filters = []
+        if annotations.get(STRUCTURAL_ANNOTATION_FIELD):
+            allowed_type_ids = self._get_enum_terms_ids('sv_type', None, annotations[STRUCTURAL_ANNOTATION_FIELD])
+            if allowed_type_ids:
+                annotation_filters.append(hl.set(allowed_type_ids).contains(self._ht.sv_type_id))
+
+        return annotation_filters
 
 
 QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery,]} #GcnvHailTableQuery]}  # TODO
