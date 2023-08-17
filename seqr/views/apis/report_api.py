@@ -205,9 +205,9 @@ def sample_metadata_export(request, project_guid):
     )
     family_rows_by_id = {row['family_id']: row for row in family_rows}
 
-    rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
+    rows_by_subject_family_id = {(row['subject_id'], row['family_guid']): row for row in subject_rows}
     for row in sample_rows:
-        rows_by_subject_id[row['subject_id']].update(row)
+        rows_by_subject_family_id[(row['subject_id'], row['family_guid'])].update(row)
 
     for rows in discovery_rows:
         for i, row in enumerate(rows):
@@ -216,9 +216,9 @@ def sample_metadata_export(request, project_guid):
                 parsed_row.update({
                     '{}-{}'.format(k, i + 1): row[k] for k in DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS if row.get(k)
                 })
-                rows_by_subject_id[row['subject_id']].update(parsed_row)
+                rows_by_subject_family_id[(row['subject_id'], row['family_guid'])].update(parsed_row)
 
-    rows = list(rows_by_subject_id.values())
+    rows = list(rows_by_subject_family_id.values())
     all_features = set()
     for row in rows:
         row.update(family_rows_by_id[row['family_id']])
@@ -349,9 +349,10 @@ def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, 
             subject_rows.append(subject_row)
 
             sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata)
+            sample_row['family_guid'] = family_subject_row['family_guid']
             sample_rows.append(sample_row)
 
-            discovery_row = _get_discovery_rows(sample, parsed_variants, male_individual_guids)
+            discovery_row = _get_discovery_rows(sample, parsed_variants, male_individual_guids, family_subject_row['family_guid'])
             discovery_rows.append(discovery_row)
 
     return subject_rows, sample_rows, family_rows, discovery_rows
@@ -561,12 +562,13 @@ def _get_sample_row(sample, has_dbgap_submission, airtable_metadata):
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
     return sample_row
 
-def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
+def _get_discovery_rows(sample, parsed_variants, male_individual_guids, family_guid):
     individual = sample.individual
     discovery_row = {
         'entity:discovery_id': individual.individual_id,
         'subject_id': individual.individual_id,
         'sample_id': sample.sample_id,
+        'family_guid': family_guid,
     }
     discovery_rows = []
     for genotypes, parsed_variant in parsed_variants:
