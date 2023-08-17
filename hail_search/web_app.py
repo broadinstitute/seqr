@@ -2,7 +2,7 @@ from aiohttp import web
 import json
 import hail as hl
 
-from hail_search.search import search_hail_backend
+from hail_search.search import search_hail_backend, load_globals
 
 
 def _hl_json_default(o):
@@ -29,4 +29,5 @@ def init_web_app():
         web.get('/status', status),
         web.post('/search', search),
     ])
+    load_globals()
     return app
