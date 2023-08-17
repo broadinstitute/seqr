@@ -112,9 +112,8 @@ class BaseHailTableQuery(object):
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
 
-        format_enum = lambda k, enum_config: lambda r: self._enum_field(r[k], self._enums[k], ht_globals=self._globals, **enum_config)
         annotation_fields.update({
-            enum_config.get('response_key', k): format_enum(k, enum_config)
+            enum_config.get('response_key', k): self._format_enum(k, enum_config)
             for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
         })
 
@@ -146,6 +145,12 @@ class BaseHailTableQuery(object):
     def _get_enum_terms_ids(self, field, subfield, terms):
         enum = self._get_enum_lookup(field, subfield)
         return {enum[t] for t in terms if enum.get(t)}
+
+    def _format_enum(self, field, enum_config):
+        enums = self._enums[field]
+        if enum_config.get('top_level'):
+            return lambda r: hl.array(enums)[r[f'{field}_id']]
+        return lambda r: self._enum_field(r[field], enums, ht_globals=self._globals, **enum_config)
 
     @staticmethod
     def _enum_field(value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, **kwargs):
@@ -1054,7 +1059,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
-        'sv_type': {'response_key': 'svType'},
+        'sv_type': {'response_key': 'svType', 'top_level': True},
     }
 
     POPULATIONS = {
