@@ -49,6 +49,7 @@ class BaseHailTableQuery(object):
 
     GENOME_VERSIONS = [GENOME_VERSION_GRCh38]
     GLOBALS = ['enums']
+    TRANSCRIPTS_FIELD = None
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
         'familyGuids': lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
@@ -71,6 +72,10 @@ class BaseHailTableQuery(object):
             ht_path = cls._get_generic_table_path(genome_version, 'annotations.ht')
             ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
             cls.LOADED_GLOBALS[genome_version] = {k: ht_globals[k] for k in cls.GLOBALS}
+            # TODO remove once data reformatted
+            enums = cls.LOADED_GLOBALS[genome_version]['enums']
+            if 'sv_consequence_rank' in enums:
+                enums['sorted_gene_consequences'] = hl.struct(major_consequence=enums['sv_consequence_rank'])
 
     @classmethod
     def _format_population_config(cls, pop_config):
@@ -97,9 +102,9 @@ class BaseHailTableQuery(object):
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
             'transcripts': lambda r: hl.or_else(
-                r.sorted_transcript_consequences, hl.empty_array(r.sorted_transcript_consequences.dtype.element_type)
+                r[self.TRANSCRIPTS_FIELD], hl.empty_array(r[self.TRANSCRIPTS_FIELD].dtype.element_type)
             ).map(
-                lambda t: self._enum_field(t, self._enums['sorted_transcript_consequences'], **self._format_transcript_args())
+                lambda t: self._enum_field(t, self._enums[self.TRANSCRIPTS_FIELD], **self._format_transcript_args())
             ).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
@@ -269,6 +274,7 @@ class BaseHailTableQuery(object):
         self._ht = families_ht.annotate(**annotation_ht_query_result)
 
         self._filter_annotated_table(**kwargs)
+        self._ht = self._ht.key_by(**{VARIANT_KEY_FIELD: self._ht.variant_id})
 
     def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, quality_filter=None,
                               excluded_intervals=None, variant_ids=None, **kwargs):
@@ -751,6 +757,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     DATA_TYPE = VARIANT_DATASET
 
+    TRANSCRIPTS_FIELD = 'sorted_transcript_consequences'
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ', 'AB']}
     QUALITY_FILTER_FORMAT = {
         'AB': QualityFilterFormat(override=lambda gt: ~gt.GT.is_het(), scale=100),
@@ -858,10 +865,6 @@ class VariantHailTableQuery(BaseHailTableQuery):
     def __init__(self, *args, **kwargs):
         self._filter_hts = {}
         super(VariantHailTableQuery, self).__init__(*args, **kwargs)
-
-    def import_filtered_table(self, *args, **kwargs):
-        super().import_filtered_table(*args, **kwargs)
-        self._ht = self._ht.key_by(**{VARIANT_KEY_FIELD: self._ht.variant_id})
 
     def _format_transcript_args(self):
         args = super()._format_transcript_args()
@@ -1019,4 +1022,127 @@ class VariantHailTableQuery(BaseHailTableQuery):
         ]
 
 
-QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery]}
+class GcnvHailTableQuery(BaseHailTableQuery):
+
+    DATA_TYPE = 'SV_WES'
+
+    GENOTYPE_QUERY_MAP = deepcopy(BaseHailTableQuery.GENOTYPE_QUERY_MAP)
+    GENOTYPE_QUERY_MAP[COMP_HET_ALT] = GENOTYPE_QUERY_MAP[HAS_ALT]
+
+    # TODO concordance struct
+    GENOTYPE_FIELDS = {_to_camel_case(f): f for f in ['CN', 'QS', 'defragged', 'new_call', 'prev_call', 'prev_overlap']}
+    GENOTYPE_FIELDS.update({
+        _to_camel_case(f): f'sample_{f}' for f in ['start', 'end', 'num_exon', 'gene_ids']
+    })
+    GENOTYPE_RESPONSE_KEYS = {'gq_sv': 'gq'}
+
+    TRANSCRIPTS_FIELD = 'sorted_gene_consequences'
+    BASE_ANNOTATION_FIELDS = {
+        'chrom': lambda r: r.start_locus.contig.replace('^chr', ''),
+        'endChrom': lambda r: hl.or_missing(r.start_locus.contig != r.end_locus.contig, r.end_locus.contig.replace('^chr', '')),
+        'pos': lambda r: GcnvHailTableQuery._get_genotype_override_field(r, 'start', hl.min, default=r.start_locus.position),
+        'end': lambda r: GcnvHailTableQuery._get_genotype_override_field(r, 'end', hl.max, default=r.end_locus.position),
+        'numExon': lambda r: GcnvHailTableQuery._get_genotype_override_field(r, 'num_exon', hl.max),
+        'rg37LocusEnd': r.rg37_locus_end,
+    }
+    BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
+    ENUM_ANNOTATION_FIELDS = {
+        'sv_type': {'response_key': 'svType'},
+    }
+
+    POPULATIONS = {
+        'sv_callset': {'hemi': None, 'sort': 'callset_af'},
+    }
+    POPULATION_FIELDS = {'sv_callset': 'gt_stats'}
+    PREDICTION_FIELDS_CONFIG = {
+        'strvctvre': PredictionPath('strvctvre', 'score'),
+    }
+
+    # TODO refactor
+    ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, STRUCTURAL_ANNOTATION_FIELD_SECONDARY, NEW_SV_FIELD]
+
+    SORTS = {
+        'protein_consequence': lambda r: [hl.min(r.sorted_gene_consequences.map(lambda g: g.major_consequence_id))],
+        'size': lambda r: [hl.if_else(
+            r.start_locus.contig == r.end_locus.contig, r.start_locus.position - r.end_locus.position, -50,
+        )],
+    }
+    SORTS.update(BaseHailTableQuery.SORTS)
+
+    @staticmethod
+    def _get_genotype_override_field(r, field, agg, default=None):
+        sample_field = f'sample_{field}'
+        entries = r.family_entries.flatmap(lambda x: x)
+        if default is None:
+            default = r[field]
+        return hl.if_else(
+            entries.any(lambda g: g.GT.is_non_ref() & hl.is_missing(g[sample_field])),
+            default, agg(entries.map(lambda g: g[sample_field]))
+        )
+
+    # TODO
+
+    @classmethod
+    def import_filtered_table(cls, data_type, sample_data, intervals=None, exclude_intervals=False, variant_keys=None,
+                              **kwargs):
+        ht, family_guids = super(BaseSvHailTableQuery, cls).import_filtered_table(data_type, sample_data,
+                                                                                  variant_keys=variant_keys, **kwargs)
+        # For searches with both variant_ids and variant_keys, intervals will cover the variant_ids only
+        if intervals and not variant_keys:
+            interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
+                if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
+            ht = ht.filter(interval_filter)
+        return ht, family_guids
+
+    @classmethod
+    def _filter_entries_table(cls, ht, variant_keys=None, **kwargs):
+        if variant_keys:
+            variant_keys_set = hl.set(variant_keys)
+            ht = ht.filter(variant_keys_set.contains(ht[VARIANT_KEY_FIELD]))
+
+        return super(BaseSvHailTableQuery, cls)._filter_entries_table(ht, **kwargs)
+
+    @staticmethod
+    def get_x_chrom_filter(ht, x_interval):
+        return ht.interval.overlaps(x_interval)
+
+    @staticmethod
+    def get_major_consequence_id(transcript):
+        return transcript.major_consequence_id
+
+    @classmethod
+    def _filter_inheritance(cls, ht, *args, consequence_overrides=None):
+        ht = super(BaseSvHailTableQuery, cls)._filter_inheritance(ht, *args)
+        if consequence_overrides[NEW_SV_FIELD]:
+            ht = ht.annotate(family_entries=ht.family_entries.map(
+                lambda entries: hl.or_missing(entries.any(lambda x: x.newCall), entries))
+            )
+            ht = ht.filter(ht.family_entries.any(lambda x: hl.is_defined(x)))
+        return ht
+
+    @classmethod
+    def _missing_entry(cls, entry):
+        #  gCNV data has no ref/ref calls so a missing entry indicates that call
+        return super(GcnvHailTableQuery, cls)._missing_entry(entry).annotate(GT=hl.Call([0, 0]))
+
+    @classmethod
+    def _filter_vcf_filters(cls, ht):
+        return ht
+
+    @classmethod
+    def _filter_annotated_table(cls, ht, **kwargs):
+        chrom_to_xpos_offset = hl.dict(CHROM_TO_XPOS_OFFSET)
+        ht = ht.annotate(
+            sortedTranscriptConsequences=hl.if_else(
+                _no_genotype_override(ht.genotypes, 'geneIds'), ht.sortedTranscriptConsequences, hl.bind(
+                    lambda gene_ids: ht.sortedTranscriptConsequences.filter(lambda t: gene_ids.contains(t.gene_id)),
+                    ht.genotypes.flatmap(lambda g: g.geneIds)
+                ),
+            ),
+            # Remove once data is reloaded
+            xpos=chrom_to_xpos_offset.get(ht.interval.start.contig.replace('^chr', '')) + ht.interval.start.position,
+        )
+        return super(GcnvHailTableQuery, cls)._filter_annotated_table(ht, **kwargs)
+
+
+QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery, GcnvHailTableQuery]}
