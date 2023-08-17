@@ -710,8 +710,8 @@ READ_RNA_TABLE_AIRTABLE_FIELDS = [
 ]
 READ_RNA_TABLE_COLUMNS = ['aligned_rna_short_read_id', 'experiment_rna_short_read_id'] + \
     READ_RNA_TABLE_AIRTABLE_ID_FIELDS + READ_TABLE_COLUMNS[4:-3] + READ_RNA_TABLE_AIRTABLE_FIELDS + ['quality_issues']
-READ_RNA_TABLE_COLUMNS.insert(10, 'gene_annotation_details')
-READ_RNA_TABLE_COLUMNS.insert(13, 'alignment_postprocessing')
+READ_RNA_TABLE_COLUMNS.insert(READ_RNA_TABLE_COLUMNS.index('gene_annotation')+1, 'gene_annotation_details')
+READ_RNA_TABLE_COLUMNS.insert(READ_RNA_TABLE_COLUMNS.index('alignment_log_file')+1, 'alignment_postprocessing')
 READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
 CALLED_TABLE_COLUMNS = [
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
