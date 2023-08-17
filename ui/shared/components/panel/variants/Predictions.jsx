@@ -5,10 +5,10 @@ import { connect } from 'react-redux'
 import { Icon, Transition, Popup } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
-import { PREDICTOR_FIELDS, getPredictColor, getVariantMainGeneId } from 'shared/utils/constants'
+import { PREDICTOR_FIELDS, PRED_COLOR_MAP, getVariantMainGeneId } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
-import { ButtonLink } from '../../StyledComponents'
+import { ButtonLink, ColoredIcon } from '../../StyledComponents'
 
 const PredictionValue = styled.span`
   margin-left: 5px;
@@ -19,8 +19,27 @@ const PredictionValue = styled.span`
 
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
 
+const comparePathScores = (value, i, thresholds) => {
+  if (i < 2) { // Benign thresholds
+    if (i === 0) {
+      return value <= thresholds[0]
+    }
+    return (thresholds[0] === undefined || value > thresholds[0]) && value <= thresholds[1]
+  }
+
+  if (i === 2) { // Grey area
+    return (thresholds[1] === undefined || value > thresholds[1]) && value < thresholds[2]
+  }
+
+  // Pathogenic thresholds
+  if (i === 5) {
+    return true
+  }
+  return value >= thresholds[i - 1] && (thresholds[i] === undefined || value < thresholds[i])
+}
+
 const predictionFieldValue = (
-  predictions, { field, pathHigher, thresholds, indicatorMap, infoField, infoTitle },
+  predictions, { field, thresholds, indicatorMap, infoField, infoTitle },
 ) => {
   let value = predictions[field]
   if (value === null || value === undefined) {
@@ -31,17 +50,17 @@ const predictionFieldValue = (
 
   if (thresholds) {
     value = parseFloat(value).toPrecision(3)
-    const color = getPredictColor(value, pathHigher, thresholds)
-    return { value, color, infoValue, infoTitle, pathHigher, thresholds }
+    const color = PRED_COLOR_MAP.find((clr, i) => comparePathScores(value, i, thresholds))
+    return { value, color, infoValue, infoTitle, thresholds }
   }
 
   return indicatorMap[value[0]] || indicatorMap[value]
 }
 
-const PATHOGENIC_COLORS = ['green', 'light green', 'grey', 'yellow', 'red', 'dark red']
+const coloredIcon = color => <ColoredIcon name="circle" size="small" color={color} />
 
 const Prediction = (
-  { field, fieldTitle, value, color, infoValue, infoTitle, pathHigher, thresholds, href },
+  { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, href },
 ) => {
   const indicator = infoValue ? (
     <Popup
@@ -49,23 +68,32 @@ const Prediction = (
       content={infoValue}
       trigger={<Icon name="question circle" size="small" color={color} />}
     />
-  ) : <Icon name="circle" size="small" color={color} />
+  ) : coloredIcon(color)
   const fieldName = fieldTitle || snakecaseToTitlecase(field)
   const fieldDisplay = thresholds ? (
     <Popup
       header={`${fieldName} Color Ranges`}
       content={
         <div>
-          {thresholds.map((th, i) => {
-            if (!th) {
-              return null
-            }
-            const t = pathHigher ? th : -1 * th
-            if (i < 3) {
-              return <div>{`${PATHOGENIC_COLORS[i]} ${pathHigher ? '<' : '>'}= ${t}`}</div>
-            }
-            return <div>{`${PATHOGENIC_COLORS[i]} ${pathHigher ? '>' : '<'}= ${t}`}</div>
-          }).filter(e => !!e)}
+          {[0, 1].map(i => thresholds[i] !== undefined && (
+            <div>
+              {coloredIcon(PRED_COLOR_MAP[i])}
+              {i > 0 && thresholds[i - 1] !== undefined && ` > ${thresholds[i - 1]} and`}
+              {` <= ${thresholds[i]}`}
+            </div>
+          ))}
+          <div>
+            {coloredIcon(PRED_COLOR_MAP[2])}
+            {thresholds[1] === undefined ? '' : ` > ${thresholds[1]} and`}
+            {` < ${thresholds[2]}`}
+          </div>
+          {[2, 3, 4].map(i => thresholds[i] !== undefined && (
+            <div>
+              {coloredIcon(PRED_COLOR_MAP[i + 1])}
+              {` >= ${thresholds[i]}`}
+              {i < 4 && thresholds[i + 1] !== undefined && ` and < ${thresholds[i + 1]}`}
+            </div>
+          ))}
         </div>
       }
       trigger={<span>{fieldName}</span>}
@@ -90,7 +118,6 @@ Prediction.propTypes = {
   infoTitle: PropTypes.string,
   fieldTitle: PropTypes.string,
   color: PropTypes.string,
-  pathHigher: PropTypes.bool,
   thresholds: PropTypes.arrayOf(PropTypes.number),
   href: PropTypes.string,
 }
@@ -121,8 +148,8 @@ class Predictions extends React.PureComponent {
     if (gene && gene.primateAi) {
       genePredictors.primate_ai = {
         field: 'primate_ai',
-        pathHigher: gene.primateAi.percentile75 >= gene.primateAi.percentile25,
-        thresholds: [null, null, gene.primateAi.percentile25, gene.primateAi.percentile75, null],
+        thresholds: [undefined, undefined, gene.primateAi.percentile25.toPrecision(3),
+          gene.primateAi.percentile75.toPrecision(3), undefined],
       }
     }
 
