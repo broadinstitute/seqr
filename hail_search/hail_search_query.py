@@ -75,8 +75,10 @@ class BaseHailTableQuery(object):
             cls.LOADED_GLOBALS[genome_version] = {k: ht_globals[k] for k in cls.GLOBALS}
             # TODO remove once data reformatted
             enums = cls.LOADED_GLOBALS[genome_version]['enums']
-            if 'sv_consequence_rank' in enums:
-                enums['sorted_gene_consequences'] = hl.struct(major_consequence=enums['sv_consequence_rank'])
+            if 'sv_consequence_rank' in cls.LOADED_GLOBALS[genome_version]['enums']:
+                enums = dict(enums)
+                enums['sorted_gene_consequences'] = {'major_consequence': enums['sv_consequence_rank']}
+                cls.LOADED_GLOBALS[genome_version]['enums'] = enums
 
     @classmethod
     def _format_population_config(cls, pop_config):
@@ -234,7 +236,7 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
-            family_ht = self._read_table(f'families/{family_guid}.ht')
+            family_ht = self._read_table(f'families/{family_guid}/samples.ht')  # TODO undo
             families_ht, _ = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = []
@@ -1103,7 +1105,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
 
         # sorted_gene_consequences may contain genes absent from the queried families, so remove those before filtering
         empty_gene_set = hl.empty_set(hl.tstr)
-        geneotype_gene_ids_expr = _get_genotype_override_field(
+        geneotype_gene_ids_expr = self._get_genotype_override_field(
             self._ht, 'gene_ids',
             lambda entry_gene_ids: entry_gene_ids.fold(lambda s1, s2: s1.union(s2), empty_gene_set),
             default=hl.missing(empty_gene_set.dtype))
@@ -1145,7 +1147,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
 
     def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
         return self._ht.sorted_gene_consequences.any(
-            lambda gc: allowed_consequence_ids.contain(gc.major_consequence_id)
+            lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
         )
 
     def _get_annotation_override_filters(self, annotations, **kwargs):
@@ -1158,4 +1160,4 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         return annotation_filters
 
 
-QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery,]} #GcnvHailTableQuery]}  # TODO
+QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery, GcnvHailTableQuery]}
