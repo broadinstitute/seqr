@@ -6,6 +6,7 @@
 ###
 
 RETRY_COUNT=10
+SLEEP_S=2
 
 for route in "$@"
 do
@@ -19,7 +20,7 @@ do
             exit 1
         else
             echo "Unable to connect to ${route}, retrying. Attempt ${retries}/${RETRY_COUNT}"
-            sleep 2
+            sleep $SLEEP_S
         fi
     done
 done
