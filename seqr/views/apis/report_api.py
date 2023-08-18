@@ -1033,11 +1033,12 @@ def _get_experiment_lookup_row(is_rna, row_data):
     }
 
 
+is_integer = lambda val, *args: val.isnumeric() or re.match(r'^[\d{3},]*\d{3}$', val)
 DATA_TYPE_VALIDATORS = {
     'string': lambda val, validator: (not validator.get('is_bucket_path')) or val.startswith('gs://'),
     'enumeration': lambda val, validator: val in validator['enumerations'],
-    'integer': lambda val, validator: val.replace(',', '').isnumeric(),
-    'float': lambda val, validator: val.replace(',', '').replace('.', '').isnumeric(),
+    'integer': is_integer,
+    'float': lambda val, validator: is_integer(val) or re.match(r'^\d+.\d+$', val),
     'date': lambda val, validator: bool(re.match(r'^\d{4}-\d{2}-\d{2}$', val)),
 }
 DATA_TYPE_ERROR_FORMATTERS = {

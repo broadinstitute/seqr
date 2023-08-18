@@ -441,6 +441,33 @@ MOCK_DATA_MODEL = {
             'required': 'CONDITIONAL (aligned_dna_short_read_set, dna_read_data)',
             'columns': [{'column': 'analyte_id', 'required': True}],
         },
+        {
+            'table': 'experiment_rna_short_read',
+            'columns': [
+                {'column': 'experiment_rna_short_read_id', 'required': True},
+                {'column': 'analyte_id', 'required': True},
+                {'column': 'experiment_sample_id'},
+                {'column': 'seq_library_prep_kit_method'},
+                {'column': 'library_prep_type'},
+                {'column': 'experiment_type'},
+                {'column': 'read_length', 'data_type': 'integer'},
+                {'column': 'single_or_paired_ends'},
+                {'column': 'date_data_generation', 'data_type': 'float'},
+                {'column': 'sequencing_platform'},
+                {'column': 'within_site_batch_name'},
+                {'column': 'RIN', 'data_type': 'float'},
+                {'column': 'estimated_library_size'},
+                {'column': 'total_reads', 'data_type': 'integer'},
+                {'column': 'percent_rRNA', 'data_type': 'float'},
+                {'column': 'percent_mRNA', 'data_type': 'float'},
+                {'column': 'percent_mtRNA', 'data_type': 'float'},
+                {'column': 'percent_Globin', 'data_type': 'float'},
+                {'column': 'percent_UMI', 'data_type': 'float'},
+                {'column': '5prime3prime_bias', 'data_type': 'float'},
+                {'column': 'percent_GC', 'data_type': 'float'},
+                {'column': 'percent_chrX_Y', 'data_type': 'float'},
+            ],
+        },
     ]
 }
 
@@ -822,7 +849,7 @@ class ReportAPITest(object):
             'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
-        ] + skipped_file_validation_warnings[1:5] + skipped_file_validation_warnings[7:])
+        ] + skipped_file_validation_warnings[1:5] + skipped_file_validation_warnings[7:8] + skipped_file_validation_warnings[9:])
         self.assertListEqual(response.json()['errors'], [
             'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
@@ -831,6 +858,7 @@ class ReportAPITest(object):
             'The following entries have invalid values for "reference_assembly" (from Airtable) in the "aligned_dna_short_read" table. Allowed values have data type integer. Invalid values: NA20888 (GRCh38), VCGS_FAM203_621_D2 (GRCh38)',
             'The following entries are missing required "mean_coverage" (from Airtable) in the "aligned_dna_short_read" table: VCGS_FAM203_621_D2',
             'The following entries have non-unique values for "alignment_software" (from Airtable) in the "aligned_dna_short_read" table: BWA-MEM-2.3 (NA20888, VCGS_FAM203_621_D2)',
+            'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)',
         ])
 
         responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
