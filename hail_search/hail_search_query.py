@@ -42,6 +42,7 @@ class BaseHailTableQuery(object):
     }
 
     GENOTYPE_FIELDS = {}
+    NESTED_GENOTYPE_FIELDS = {}
     QUALITY_FILTER_FORMAT = {}
     POPULATIONS = {}
     POPULATION_FIELDS = {}
@@ -95,7 +96,8 @@ class BaseHailTableQuery(object):
             ).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0].select(
                 'sampleId', 'individualGuid', 'familyGuid',
                 numAlt=hl.if_else(hl.is_defined(x[0].GT), x[0].GT.n_alt_alleles(), -1),
-                **{k: x[0][field] for k, field in self.GENOTYPE_FIELDS.items()}
+                **{k: x[0][field] for k, field in self.GENOTYPE_FIELDS.items()},
+                **{_to_camel_case(k): x[0][field][k] for field, v in self.NESTED_GENOTYPE_FIELDS.items() for k in v},
             )),
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
@@ -1038,8 +1040,8 @@ class SvHailTableQuery(BaseHailTableQuery):
         COMP_HET_ALT: BaseHailTableQuery.GENOTYPE_QUERY_MAP[HAS_ALT],
     }
 
-    # TODO concordance struct
-    GENOTYPE_FIELDS = {_to_camel_case(f): f for f in ['CN', 'GQ', 'concordance.new_call', 'concordance.prev_call', 'concordance.prev_overlap']}
+    GENOTYPE_FIELDS = {_to_camel_case(f): f for f in ['CN', 'GQ']}
+    NESTED_GENOTYPE_FIELDS = {'concordance': ['new_call', 'prev_call', 'prev_overlap']}
     GENOTYPE_RESPONSE_KEYS = {'gq_sv': 'gq'}
 
     TRANSCRIPTS_FIELD = 'sorted_gene_consequences'
