@@ -19,25 +19,6 @@ const PredictionValue = styled.span`
 
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
 
-const comparePathScores = (value, i, thresholds) => {
-  if (i < 2) { // Benign thresholds
-    if (i === 0) {
-      return value <= thresholds[0]
-    }
-    return (thresholds[0] === undefined || value > thresholds[0]) && value <= thresholds[1]
-  }
-
-  if (i === 2) { // Grey area
-    return (thresholds[1] === undefined || value > thresholds[1]) && value < thresholds[2]
-  }
-
-  // Pathogenic thresholds
-  if (i === 5) {
-    return true
-  }
-  return value >= thresholds[i - 1] && (thresholds[i] === undefined || value < thresholds[i])
-}
-
 const predictionFieldValue = (
   predictions, { field, thresholds, indicatorMap, infoField, infoTitle },
 ) => {
@@ -50,14 +31,19 @@ const predictionFieldValue = (
 
   if (thresholds) {
     value = parseFloat(value).toPrecision(3)
-    const color = PRED_COLOR_MAP.find((clr, i) => comparePathScores(value, i, thresholds))
+    const color = PRED_COLOR_MAP.find(
+      (clr, i) => (thresholds[i - 1] || thresholds[i - 1]) &&
+        (thresholds[i - 1] === undefined || value >= thresholds[i - 1]) &&
+        (thresholds[i] === undefined || value < thresholds[i]),
+    )
     return { value, color, infoValue, infoTitle, thresholds }
   }
 
   return indicatorMap[value[0]] || indicatorMap[value]
 }
 
-const coloredIcon = color => <ColoredIcon name="circle" size="small" color={color} />
+const coloredIcon = color => (color === 'darkred' ? <ColoredIcon name="circle" size="small" color="#8b0000" /> :
+<Icon name="circle" size="small" color={color} />)
 
 const Prediction = (
   { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, href },
@@ -74,27 +60,17 @@ const Prediction = (
     <Popup
       header={`${fieldName} Color Ranges`}
       content={
-        <div>
-          {[0, 1].map(i => thresholds[i] !== undefined && (
-            <div>
-              {coloredIcon(PRED_COLOR_MAP[i])}
-              {i > 0 && thresholds[i - 1] !== undefined && ` > ${thresholds[i - 1]} and`}
-              {` <= ${thresholds[i]}`}
+        PRED_COLOR_MAP.map((c, i) => {
+          if (thresholds[i] === undefined && thresholds[i - 1] === undefined) {
+            return null
+          }
+          return (
+            <div key={c}>
+              {coloredIcon(c)}
+              {thresholds[i] === undefined ? ` >= ${thresholds[i - 1]}` : ` < ${thresholds[i]}`}
             </div>
-          ))}
-          <div>
-            {coloredIcon(PRED_COLOR_MAP[2])}
-            {thresholds[1] === undefined ? '' : ` > ${thresholds[1]} and`}
-            {` < ${thresholds[2]}`}
-          </div>
-          {[2, 3, 4].map(i => thresholds[i] !== undefined && (
-            <div>
-              {coloredIcon(PRED_COLOR_MAP[i + 1])}
-              {` >= ${thresholds[i]}`}
-              {i < 4 && thresholds[i + 1] !== undefined && ` and < ${thresholds[i + 1]}`}
-            </div>
-          ))}
-        </div>
+          )
+        })
       }
       trigger={<span>{fieldName}</span>}
     />
