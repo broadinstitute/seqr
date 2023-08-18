@@ -82,7 +82,14 @@ VARIANT1 = {
         },
     },
     'genotypeFilters': '',
-    'clinvar': None,
+    'clinvar': {
+       'alleleId': 19473,
+       'conflictingPathogenicities': None,
+       'goldStars': None,
+       'pathogenicity': 'Likely_pathogenic',
+       'assertions': None,
+       'version': '2023-07-10',
+    },
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
@@ -90,7 +97,7 @@ VARIANT1 = {
         'topmed': {'af': 0.0784199982881546, 'ac': 20757, 'an': 264690, 'hom': 0, 'het': 20757},
         'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
         'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
-        'gnomad_genomes': {'af': 0.34449315071105957, 'ac': 9271, 'an': 26912, 'hom': 480, 'hemi': 0, 'filter_af': 0.40276646614074707},
+        'gnomad_genomes': {'af': 0.034449315071105957, 'ac': 927, 'an': 26912, 'hom': 48, 'hemi': 0, 'filter_af': 0.040276646614074707},
     },
     'predictions': {
         'cadd': 4.668000221252441,
@@ -110,6 +117,7 @@ VARIANT1 = {
     },
     'transcripts': {},
     'mainTranscriptId': None,
+    'selectedMainTranscriptId': None,
     '_sort': [1000010439],
 }
 VARIANT2 = {
@@ -160,7 +168,7 @@ VARIANT2 = {
        'topmed': {'af': 0.24615199863910675, 'ac': 65154, 'an': 264690, 'hom': 8775, 'het': 47604},
        'exac': {'af': 0.29499998688697815, 'ac': 35805, 'an': 121372, 'hom': 5872, 'hemi': 0, 'het': 24061, 'filter_af': 0.4153035283088684},
        'gnomad_exomes': {'af': 0.28899794816970825, 'ac': 72672, 'an': 251462, 'hom': 11567, 'hemi': 0, 'filter_af': 0.4116474986076355},
-       'gnomad_genomes': {'af': 0.2633855640888214, 'ac': 40003, 'an': 151880, 'hom': 5754, 'hemi': 0, 'filter_af': 0.4067690968513489},
+       'gnomad_genomes': {'af': 0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0},
     },
     'predictions': {
        'cadd': 20.899999618530273,
@@ -194,6 +202,7 @@ VARIANT2 = {
        ],
     },
     'mainTranscriptId': 'ENST00000376585',
+    'selectedMainTranscriptId': None,
     '_sort': [1011794419],
 }
 VARIANT3 = {
@@ -254,13 +263,14 @@ VARIANT3 = {
         'ENSG00000097046': [
             {'aminoAcids': None, 'canonical': 1, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000428239.5:c.115+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000428239', 'isLofNagnag': None, 'transcriptRank': 0, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
             {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000234626.10:c.115+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000234626', 'isLofNagnag': None, 'transcriptRank': 1, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
-            {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000426137.1:c.115+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000426137', 'isLofNagnag': None, 'transcriptRank': 2, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+            {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000097046', 'hgvsc': 'ENST00000426137.1:c.115+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000426137', 'isLofNagnag': None, 'transcriptRank': 2, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'non_coding_transcript_exon_variant'},
         ],
         'ENSG00000177000': [
             {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000177000', 'hgvsc': 'ENST00000497611.1:n.501+890G>A', 'hgvsp': None, 'transcriptId': 'ENST00000497611', 'isLofNagnag': None, 'transcriptRank': 3, 'biotype': 'processed_transcript', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
         ],
     },
     'mainTranscriptId': 'ENST00000428239',
+    'selectedMainTranscriptId': None,
     '_sort': [1091502721],
 }
 VARIANT4 = {
@@ -325,6 +335,7 @@ VARIANT4 = {
         ],
     },
     'mainTranscriptId': 'ENST00000428239',
+    'selectedMainTranscriptId': None,
     '_sort': [1091511686],
 }
 
@@ -342,6 +353,14 @@ MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
 
 HAIL_BACKEND_VARIANTS = [VARIANT2, MULTI_FAMILY_VARIANT]
 HAIL_BACKEND_SINGLE_FAMILY_VARIANTS = [VARIANT2, VARIANT3]
+
+LOCATION_SEARCH = {
+    'gene_ids': ['ENSG00000177000', 'ENSG00000097046'],
+    'intervals': ['2:1234-5678', '7:1-11100', '1:11785723-11806455', '1:91500851-91525764'],
+}
+EXCLUDE_LOCATION_SEARCH = {'intervals': LOCATION_SEARCH['intervals'], 'exclude_intervals': True}
+VARIANT_ID_SEARCH = {'variant_ids': [['1', 10439, 'AC', 'A'], ['1', 91511686, 'TCA', 'G']], 'rs_ids': []}
+RSID_SEARCH = {'variant_ids': [], 'rs_ids': ['rs1801131']}
 
 
 def get_hail_search_body(genome_version='GRCh38', num_results=100, sample_data=None, omit_sample_type=None, **search_body):

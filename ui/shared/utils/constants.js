@@ -1113,6 +1113,8 @@ export const LOF_THRESHHOLD = 0.35
 
 const PRIORITIZED_GENE_MAX_RANK = 1000
 
+export const getDecipherGeneLink = ({ geneId }) => `https://www.deciphergenomics.org/gene/${geneId}/overview/protein-genomic-info`
+
 const getGeneConstraintSortScore = ({ constraints }) => {
   if (!constraints || constraints.louef === undefined) {
     return Infinity
