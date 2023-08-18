@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ###
-# Waits for network endpoints.  Intended useage is within Kubernetes CronJobs to wait for sidecar availability.
+# Waits for network endpoints.  Intended usage is within Kubernetes CronJobs to wait for sidecar availability.
 # Usage: ./wait_for_routes https://www.google.com/ https://www.broadinstitute.org https://www.broadins.org
 ###
 
