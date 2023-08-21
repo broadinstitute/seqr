@@ -32,7 +32,7 @@ const predictionFieldValue = (
   if (thresholds) {
     value = parseFloat(value).toPrecision(3)
     const color = PRED_COLOR_MAP.find(
-      (clr, i) => (thresholds[i - 1] || thresholds[i - 1]) &&
+      (clr, i) => (thresholds[i - 1] || thresholds[i]) &&
         (thresholds[i - 1] === undefined || value >= thresholds[i - 1]) &&
         (thresholds[i] === undefined || value < thresholds[i]),
     )
@@ -42,8 +42,7 @@ const predictionFieldValue = (
   return indicatorMap[value[0]] || indicatorMap[value]
 }
 
-const coloredIcon = color => (color === 'darkred' ? <ColoredIcon name="circle" size="small" color="#8b0000" /> :
-<Icon name="circle" size="small" color={color} />)
+const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
 
 const Prediction = (
   { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, href },
