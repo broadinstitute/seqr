@@ -57,7 +57,15 @@ class BaseHailTableQuery(object):
         'familyGuids': lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
     }
-    ENUM_ANNOTATION_FIELDS = {}
+    ENUM_ANNOTATION_FIELDS = {
+        'transcripts': {
+            'response_key': 'transcripts',
+            'is_array': True,
+            'empty_array': True,
+            'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
+            'format_values': lambda values: values.group_by(lambda t: t.geneId),
+        },
+    }
     LIFTOVER_ANNOTATION_FIELDS = {
         'liftedOverGenomeVersion': lambda r: hl.or_missing(hl.is_defined(r.rg37_locus), '37'),
         'liftedOverChrom': lambda r: hl.or_missing(hl.is_defined(r.rg37_locus), r.rg37_locus.contig),
@@ -107,16 +115,11 @@ class BaseHailTableQuery(object):
                 if self._enums.get(path.source, {}).get(path.field) else r[path.source][path.field]
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
-            'transcripts': lambda r: hl.or_else(
-                r[self.TRANSCRIPTS_FIELD], hl.empty_array(r[self.TRANSCRIPTS_FIELD].dtype.element_type)
-            ).map(
-                lambda t: self._enum_field(t, self._enums[self.TRANSCRIPTS_FIELD], **self._format_transcript_args())
-            ).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
 
         annotation_fields.update({
-            enum_config.get('response_key', k): self._format_enum(k, enum_config)
+            enum_config.get('response_key', k): self._format_enum(k, **enum_config)
             for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
         })
 
@@ -132,11 +135,6 @@ class BaseHailTableQuery(object):
             for response_key, field in pop_config.items() if field is not None
         })
 
-    def _format_transcript_args(self):
-        return {
-            'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
-        }
-
     def _get_enum_lookup(self, field, subfield):
         enum_field = self._enums.get(field, {})
         if subfield:
@@ -149,11 +147,24 @@ class BaseHailTableQuery(object):
         enum = self._get_enum_lookup(field, subfield)
         return {enum[t] for t in terms if enum.get(t)}
 
-    def _format_enum(self, field, enum_config):
-        enums = self._enums[field]
-        if enum_config.get('top_level'):
-            return lambda r: hl.array(enums)[r[f'{field}_id']]
-        return lambda r: self._enum_field(r[field], enums, ht_globals=self._globals, **enum_config)
+    def _format_enum(self, field, top_level=False, is_array=False, **kwargs):
+        enum = self._enums[field]
+        if top_level:
+            return lambda r: hl.array(enum)[r[f'{field}_id']]
+
+        if is_array:
+            return lambda r: self._enum_array_field(r[field], enum, **kwargs)
+
+        return lambda r: self._enum_field(r[field], enum, ht_globals=self._globals, **kwargs)
+
+    @classmethod
+    def _enum_array_field(cls, value, enum, empty_array=False, format_values=None, **kwargs):
+        if empty_array:
+            value = hl.or_else(value, hl.empty_array(value.dtype.element_type))
+        value = value.map(lambda x: cls._enum_field(x, enum, **kwargs))
+        if format_values:
+            value = format_values(value)
+        return value
 
     @staticmethod
     def _enum_field(value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, **kwargs):
@@ -244,7 +255,8 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
-            family_ht = self._read_table(f'families/{family_guid}/samples.ht')  # TODO undo
+            # family_ht = self._read_table(f'families/{family_guid}/samples.ht')  # TODO redo
+            family_ht = self._read_table(f'families/{family_guid}.ht')
             families_ht, _ = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = []
@@ -827,8 +839,8 @@ class VariantHailTableQuery(BaseHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
         'clinvar': {'annotate_value': lambda value, enum, ht_globals: {
-            'conflictingPathogenicities': value.conflictingPathogenicities.map(
-                lambda p: VariantHailTableQuery._enum_field(p, {k: enum[k] for k in ['pathogenicity']})
+            'conflictingPathogenicities': VariantHailTableQuery._enum_array_field(
+                value.conflictingPathogenicities, {k: enum[k] for k in ['pathogenicity']}
             ),
             'version': ht_globals['versions'].clinvar,
         }},
@@ -837,6 +849,11 @@ class VariantHailTableQuery(BaseHailTableQuery):
             'response_key': 'screenRegionType',
             'format_value': lambda value: value.region_types.first(),
         },
+        TRANSCRIPTS_FIELD: {
+            **BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
+            'annotate_value': lambda transcript, *args: {'major_consequence': transcript.consequence_terms.first()},
+            'drop_fields': ['consequence_terms'],
+        }
     }
 
     SORTS = {
@@ -888,14 +905,6 @@ class VariantHailTableQuery(BaseHailTableQuery):
         if parsed_intervals and not exclude_intervals:
             self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
         return parsed_intervals, variant_ids
-
-    def _format_transcript_args(self):
-        args = super()._format_transcript_args()
-        args.update({
-            'annotate_value': lambda transcript, *args: {'major_consequence': transcript.consequence_terms.first()},
-            'drop_fields': ['consequence_terms'],
-        })
-        return args
 
     def _get_family_passes_quality_filter(self, quality_filter, ht=None, pathogenicity=None, **kwargs):
         passes_quality = super(VariantHailTableQuery, self)._get_family_passes_quality_filter(quality_filter)
@@ -1061,7 +1070,8 @@ class SvHailTableQuery(BaseHailTableQuery):
     ENUM_ANNOTATION_FIELDS = {
         'sv_type': {'response_key': 'svType', 'top_level': True},
         'sv_type_detail': {'response_key': 'svType', 'top_level': True},
-        'cpx_intervals': {'response_key': 'cpxIntervals'},  # TODO support enum array
+        'cpx_intervals': {'response_key': 'cpxIntervals'},  # TODO use enum array
+        TRANSCRIPTS_FIELD: BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
     }
 
     POPULATIONS = {
@@ -1161,7 +1171,9 @@ class GcnvHailTableQuery(SvHailTableQuery):
     }
     del BASE_ANNOTATION_FIELDS['bothsidesSupport']
     del BASE_ANNOTATION_FIELDS['svSourceDetail']
-    ENUM_ANNOTATION_FIELDS = {'sv_type': SvHailTableQuery.ENUM_ANNOTATION_FIELDS['sv_type']}
+    ENUM_ANNOTATION_FIELDS = {
+        k: v for k, v in SvHailTableQuery.ENUM_ANNOTATION_FIELDS.items() if k not in {'sv_type_detail': 'cpx_intervals'}
+    }
 
     POPULATIONS = {k: v for k, v in SvHailTableQuery.POPULATIONS.items() if k != 'gnomad_svs'}
 
@@ -1198,4 +1210,4 @@ class GcnvHailTableQuery(SvHailTableQuery):
         return super()._filter_annotated_table(**kwargs)
 
 
-QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]}
+QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery]} # TODO, SvHailTableQuery, GcnvHailTableQuery]}
