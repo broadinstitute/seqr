@@ -60,7 +60,6 @@ class BaseHailTableQuery(object):
     ENUM_ANNOTATION_FIELDS = {
         'transcripts': {
             'response_key': 'transcripts',
-            'is_array': True,
             'empty_array': True,
             'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
             'format_values': lambda values: values.group_by(lambda t: t.geneId),
@@ -111,17 +110,18 @@ class BaseHailTableQuery(object):
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
             }),
             'predictions': lambda r: hl.struct(**{
-                prediction: hl.array(self._enums[path.source][path.field])[r[path.source][f'{path.field}_id']]
+                prediction: self._format_enum(r[path.source], path.field, self._enums[path.source][path.field])
                 if self._enums.get(path.source, {}).get(path.field) else r[path.source][path.field]
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
 
-        annotation_fields.update({
-            enum_config.get('response_key', k): self._format_enum(k, **enum_config)
-            for k, enum_config in self.ENUM_ANNOTATION_FIELDS.items()
-        })
+        prediction_fields = {path.source for path in self.PREDICTION_FIELDS_CONFIG.values()}
+        annotation_fields.update([
+            self._format_enum_response(k, enum) for k, enum in self._enums.items()
+            if enum and k not in prediction_fields
+        ])
 
         if self._genome_version == GENOME_VERSION_GRCh38:
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
@@ -147,31 +147,34 @@ class BaseHailTableQuery(object):
         enum = self._get_enum_lookup(field, subfield)
         return {enum[t] for t in terms if enum.get(t)}
 
-    def _format_enum(self, field, top_level=False, is_array=False, **kwargs):
-        enum = self._enums[field]
-        if top_level:
-            return lambda r: hl.array(enum)[r[f'{field}_id']]
-
-        if is_array:
-            return lambda r: self._enum_array_field(r[field], enum, **kwargs)
-
-        return lambda r: self._enum_field(r[field], enum, ht_globals=self._globals, **kwargs)
+    def _format_enum_response(self, k, enum):
+        enum_config = self.ENUM_ANNOTATION_FIELDS.get(k, {})
+        value = lambda r: self._format_enum(r, k, enum, ht_globals=self._globals, **enum_config)
+        return enum_config.get('response_key', _to_camel_case(k)), value
 
     @classmethod
-    def _enum_array_field(cls, value, enum, empty_array=False, format_values=None, **kwargs):
-        if empty_array:
-            value = hl.or_else(value, hl.empty_array(value.dtype.element_type))
-        value = value.map(lambda x: cls._enum_field(x, enum, **kwargs))
-        if format_values:
-            value = format_values(value)
-        return value
+    def _format_enum(cls, r, field, enum, empty_array=False, format_values=None, **kwargs):
+        if hasattr(r, f'{field}_id'):
+            return hl.array(enum)[r[f'{field}_id']]
+
+        value = r[field]
+        if hasattr(value, 'map'):
+            if empty_array:
+                value = hl.or_else(value, hl.empty_array(value.dtype.element_type))
+            value = value.map(lambda x: cls._enum_field(x, enum, **kwargs))
+            if format_values:
+                value = format_values(value)
+            return value
+
+        return cls._enum_field(value, enum, **kwargs)
 
     @staticmethod
-    def _enum_field(value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, **kwargs):
+    def _enum_field(value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, enum_keys=None, **kwargs):
         annotations = {}
         drop = [] + (drop_fields or [])
         value_keys = value.keys()
-        for field, field_enum in enum.items():
+        for field in (enum_keys or enum.keys()):
+            field_enum = enum[field]
             is_array = f'{field}_ids' in value_keys
             value_field = f"{field}_id{'s' if is_array else ''}"
             drop.append(value_field)
@@ -839,12 +842,10 @@ class VariantHailTableQuery(BaseHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
         'clinvar': {'annotate_value': lambda value, enum, ht_globals: {
-            'conflictingPathogenicities': VariantHailTableQuery._enum_array_field(
-                value.conflictingPathogenicities, {k: enum[k] for k in ['pathogenicity']}
-            ),
+            'conflictingPathogenicities': VariantHailTableQuery._format_enum(
+                value, 'conflictingPathogenicities', enum, enum_keys=['pathogenicity']),
             'version': ht_globals['versions'].clinvar,
         }},
-        'hgmd': {},
         'screen': {
             'response_key': 'screenRegionType',
             'format_value': lambda value: value.region_types.first(),
@@ -1065,12 +1066,11 @@ class SvHailTableQuery(BaseHailTableQuery):
         'rg37LocusEnd': lambda r: r.rg37_locus_end,
         # TODO access other enum in annotation?
         'svSourceDetail': lambda r: hl.or_missing((r.start_locus.contig != r.end_locus.contig & r.sv_type != 'INS'), r.end_locus.contig.replace('^chr', '')),
+        # TODO enum, format?
+        'cpxIntervals': lambda r: r.cpx_intervals,
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
-        'sv_type': {'response_key': 'svType', 'top_level': True},
-        'sv_type_detail': {'response_key': 'svType', 'top_level': True},
-        'cpx_intervals': {'response_key': 'cpxIntervals'},  # TODO use enum array
         TRANSCRIPTS_FIELD: BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
     }
 
@@ -1171,9 +1171,7 @@ class GcnvHailTableQuery(SvHailTableQuery):
     }
     del BASE_ANNOTATION_FIELDS['bothsidesSupport']
     del BASE_ANNOTATION_FIELDS['svSourceDetail']
-    ENUM_ANNOTATION_FIELDS = {
-        k: v for k, v in SvHailTableQuery.ENUM_ANNOTATION_FIELDS.items() if k not in {'sv_type_detail': 'cpx_intervals'}
-    }
+    del BASE_ANNOTATION_FIELDS['cpxIntervals']
 
     POPULATIONS = {k: v for k, v in SvHailTableQuery.POPULATIONS.items() if k != 'gnomad_svs'}
 
