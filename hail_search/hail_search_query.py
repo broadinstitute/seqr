@@ -1081,7 +1081,7 @@ class SvHailTableQuery(BaseHailTableQuery):
             BASE_ANNOTATION_FIELDS['endChrom'](r),
         )),
         # TODO format once reloaded
-        'cpxIntervals': lambda r, enums: r.cpx_intervals,
+        'cpxIntervals': lambda r, enums: SvHailTableQuery._format_enum(r, 'cpx_intervals', enums, enum_keys=[]),
     }
 
     POPULATIONS = {
