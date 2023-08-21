@@ -65,6 +65,7 @@ class BaseHailTableQuery(object):
             'format_values': lambda values: values.group_by(lambda t: t.geneId),
         },
     }
+    DERIVED_ENUM_ANNOTATION_FIELDS = {}
     LIFTOVER_ANNOTATION_FIELDS = {
         'liftedOverGenomeVersion': lambda r: hl.or_missing(hl.is_defined(r.rg37_locus), '37'),
         'liftedOverChrom': lambda r: hl.or_missing(hl.is_defined(r.rg37_locus), r.rg37_locus.contig),
@@ -86,7 +87,7 @@ class BaseHailTableQuery(object):
             enums = cls.LOADED_GLOBALS[genome_version]['enums']
             if 'sv_consequence_rank' in cls.LOADED_GLOBALS[genome_version]['enums']:
                 enums = dict(enums)
-                enums['sorted_gene_consequences'] = {'major_consequence': enums['sv_consequence_rank']}
+                enums['sorted_gene_consequences'] = {'major_consequence': enums.pop('sv_consequence_rank')}
                 cls.LOADED_GLOBALS[genome_version]['enums'] = enums
 
     @classmethod
@@ -116,6 +117,7 @@ class BaseHailTableQuery(object):
             }),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
+        annotation_fields.update({k: lambda r: v(r, self._enums) for k, v in self.DERIVED_ENUM_ANNOTATION_FIELDS.items()})
 
         prediction_fields = {path.source for path in self.PREDICTION_FIELDS_CONFIG.values()}
         annotation_fields.update([
@@ -1060,18 +1062,26 @@ class SvHailTableQuery(BaseHailTableQuery):
     BASE_ANNOTATION_FIELDS = {
         'bothsidesSupport': lambda r: r.bothsides_support,
         'chrom': lambda r: r.start_locus.contig.replace('^chr', ''),
-        'endChrom': lambda r: hl.or_missing(r.start_locus.contig != r.end_locus.contig, r.end_locus.contig.replace('^chr', '')), # TODO with svSourceDetail
+        'endChrom': lambda r: hl.or_missing(r.start_locus.contig != r.end_locus.contig, r.end_locus.contig.replace('^chr', '')),
         'pos': lambda r: r.start_locus.position,
         'end': lambda r: r.end_locus.position,
         'rg37LocusEnd': lambda r: r.rg37_locus_end,
-        # TODO access other enum in annotation?
-        'svSourceDetail': lambda r: hl.or_missing((r.start_locus.contig != r.end_locus.contig & r.sv_type != 'INS'), r.end_locus.contig.replace('^chr', '')),
-        # TODO enum, format?
-        'cpxIntervals': lambda r: r.cpx_intervals,
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
         TRANSCRIPTS_FIELD: BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
+    }
+    DERIVED_ENUM_ANNOTATION_FIELDS = {
+        # For insertions, end_locus represents the svSourceDetail, otherwise represents the endChrom
+        'endChrom': lambda r, enums: hl.or_missing(
+            r.sv_type_id != enums['sv_type'].index('INS'),
+            BASE_ANNOTATION_FIELDS['endChrom'](r)),
+        'svSourceDetail': lambda r, enums: hl.or_missing(r.sv_type_id == enums['sv_type'].index('INS'), hl.bind(
+            lambda end_chrom: hl.or_missing(hl.is_defined(end_chrom), hl.struct(chrom=end_chrom)),
+            BASE_ANNOTATION_FIELDS['endChrom'](r),
+        )),
+        # TODO format once reloaded
+        'cpxIntervals': lambda r, enums: r.cpx_intervals,
     }
 
     POPULATIONS = {
@@ -1170,8 +1180,7 @@ class GcnvHailTableQuery(SvHailTableQuery):
         'numExon': lambda r: GcnvHailTableQuery._get_genotype_override_field(r, 'num_exon', hl.max),
     }
     del BASE_ANNOTATION_FIELDS['bothsidesSupport']
-    del BASE_ANNOTATION_FIELDS['svSourceDetail']
-    del BASE_ANNOTATION_FIELDS['cpxIntervals']
+    DERIVED_ENUM_ANNOTATION_FIELDS = {}
 
     POPULATIONS = {k: v for k, v in SvHailTableQuery.POPULATIONS.items() if k != 'gnomad_svs'}
 
