@@ -299,9 +299,9 @@ AIRTABLE_GREGOR_RECORDS = {
         'mean_coverage_wes': '42.8',
         'mean_coverage_wgs': '36.1',
         'analysis_details': '',
-        'called_variants_dna_short_read_id': 'NA',
+        'called_variants_dna_short_read_id': '',
         'aligned_dna_short_read_set_id': 'Broad_NA20888_D1',
-        'called_variants_dna_file': 'NA',
+        'called_variants_dna_file': '',
         'caller_software': 'NA',
         'variant_types': 'SNV',
       },
@@ -1031,7 +1031,7 @@ class ReportAPITest(object):
         self.assertIn(['Broad_NA20888_D1', 'Broad_exome_NA20888_1'], read_set_file)
         self.assertEqual(['Broad_NA20888_D1', 'Broad_genome_NA20888_1_1'] in read_set_file, has_second_project)
 
-        self.assertEqual(len(called_file), num_airtable_rows)
+        self.assertEqual(len(called_file), 2)
         self.assertEqual(called_file[0], [
             'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
             'caller_software', 'variant_types', 'analysis_details',
@@ -1040,9 +1040,6 @@ class ReportAPITest(object):
             'SX2-3', 'BCM_H7YG5DSX2', 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
             '129c28163df082', 'gatk4.1.2', 'SNV', 'DOI:10.5281/zenodo.4469317',
         ], called_file)
-        self.assertIn(['NA', 'Broad_NA20888_D1', 'NA', 'a6f6308866765ce8', 'NA', 'SNV', ''], called_file)
-        self.assertEqual(
-            ['NA', 'Broad_NA20888_D1', 'NA', '2aa33e8c32020b1c', 'NA', 'SNV', ''] in called_file, has_second_project)
 
         self.assertEqual(len(experiment_rna_file), 2)
         self.assertEqual(experiment_rna_file[0], [

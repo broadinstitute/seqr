@@ -713,8 +713,9 @@ READ_RNA_TABLE_COLUMNS = ['aligned_rna_short_read_id', 'experiment_rna_short_rea
 READ_RNA_TABLE_COLUMNS.insert(READ_RNA_TABLE_COLUMNS.index('gene_annotation')+1, 'gene_annotation_details')
 READ_RNA_TABLE_COLUMNS.insert(READ_RNA_TABLE_COLUMNS.index('alignment_log_file')+1, 'alignment_postprocessing')
 READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
+CALLED_VARIANT_FILE_COLUMN = 'called_variants_dna_file'
 CALLED_TABLE_COLUMNS = [
-    'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
+    'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', CALLED_VARIANT_FILE_COLUMN, 'md5sum',
     'caller_software', 'variant_types', 'analysis_details',
 ]
 
@@ -912,7 +913,9 @@ def gregor_export(request):
         ('experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, airtable_rows),
         ('aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows),
         ('aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows),
-        ('called_variants_dna_short_read', CALLED_TABLE_COLUMNS, airtable_rows),
+        ('called_variants_dna_short_read', CALLED_TABLE_COLUMNS, [
+            row for row in airtable_rows if row.get(CALLED_VARIANT_FILE_COLUMN)
+        ]),
         ('experiment_rna_short_read', EXPERIMENT_RNA_TABLE_COLUMNS, airtable_rna_rows),
         ('aligned_rna_short_read', READ_RNA_TABLE_COLUMNS, airtable_rna_rows),
         ('experiment', EXPERIMENT_LOOKUP_TABLE_COLUMNS, experiment_lookup_rows),
