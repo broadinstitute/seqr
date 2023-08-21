@@ -1,7 +1,7 @@
 from hail_search.hail_search_query import QUERY_CLASS_MAP
 
 
-def search_hail_backend(request):
+def search_hail_backend(request, gene_counts=False):
     sample_data = request.pop('sample_data', {})
     genome_version = request.pop('genome_version')
 
@@ -12,7 +12,10 @@ def search_hail_backend(request):
     query_cls = QUERY_CLASS_MAP[single_data_type]
 
     query = query_cls(sample_data, genome_version, **request)
-    return query.search()
+    if gene_counts:
+        return query.gene_counts()
+    else:
+        return query.search()
 
 
 def load_globals():

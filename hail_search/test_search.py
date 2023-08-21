@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE_DATA, FAMILY_2_MISSING_SAMPLE_DATA, \
     VARIANT1, VARIANT2, VARIANT3, VARIANT4, MULTI_PROJECT_SAMPLE_DATA, MULTI_PROJECT_MISSING_SAMPLE_DATA, \
-    LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH
+    LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS
 from hail_search.web_app import init_web_app
 
 PROJECT_2_VARIANT = {
@@ -113,7 +113,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {'success': True})
 
-    async def _assert_expected_search(self, results, **search_kwargs):
+    async def _assert_expected_search(self, results, gene_counts=None, **search_kwargs):
         search_body = get_hail_search_body(**search_kwargs)
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 200)
@@ -123,20 +123,32 @@ class HailSearchTestCase(AioHTTPTestCase):
         for i, result in enumerate(resp_json['results']):
             self.assertEqual(result, results[i])
 
+        if gene_counts:
+            async with self.client.request('POST', '/gene_counts', json=search_body) as resp:
+                self.assertEqual(resp.status, 200)
+                gene_counts_json = await resp.json()
+            self.assertDictEqual(gene_counts_json, gene_counts)
+
     async def test_single_family_search(self):
         await self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], sample_data=FAMILY_2_VARIANT_SAMPLE_DATA,
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], sample_data=FAMILY_2_VARIANT_SAMPLE_DATA, gene_counts={
+                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
+            }
         )
 
     async def test_single_project_search(self):
         await self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_sample_type='SV_WES',
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_sample_type='SV_WES', gene_counts={
+                'ENSG00000097046': {'total': 3, 'families': {'F000002_2': 2, 'F000003_3': 1}},
+                'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 2, 'F000003_3': 1}},
+            }
         )
 
     async def test_multi_project_search(self):
         await self._assert_expected_search(
             [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4],
-            sample_data=MULTI_PROJECT_SAMPLE_DATA,
+            gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_DATA,
         )
 
     async def test_inheritance_filter(self):
@@ -163,13 +175,17 @@ class HailSearchTestCase(AioHTTPTestCase):
             [VARIANT2, VARIANT3], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 
         await self._assert_expected_search(
-            [[VARIANT3, VARIANT4]], inheritance_mode='compound_het', sample_data=MULTI_PROJECT_SAMPLE_DATA,
-            **COMP_HET_ALL_PASS_FILTERS,
+            [[VARIANT3, VARIANT4]], inheritance_mode='compound_het', sample_data=MULTI_PROJECT_SAMPLE_DATA, gene_counts={
+                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
+            }, **COMP_HET_ALL_PASS_FILTERS,
         )
 
         await self._assert_expected_search(
-            [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive',
-            sample_data=MULTI_PROJECT_SAMPLE_DATA, **COMP_HET_ALL_PASS_FILTERS,
+            [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', gene_counts={
+                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
+            }, sample_data=MULTI_PROJECT_SAMPLE_DATA, **COMP_HET_ALL_PASS_FILTERS,
         )
 
     async def test_quality_filter(self):
