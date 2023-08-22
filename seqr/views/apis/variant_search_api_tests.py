@@ -80,7 +80,10 @@ EXPECTED_SEARCH_RESPONSE = {
         'SV0000001_2103343353_r0390_100': expected_detail_saved_variant,
         'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT,
     },
-    'genesById': {'ENSG00000227232': expected_pa_gene, 'ENSG00000268903': EXPECTED_GENE, 'ENSG00000233653': EXPECTED_GENE},
+    'genesById': {
+        'ENSG00000227232': expected_pa_gene, 'ENSG00000268903': EXPECTED_GENE, 'ENSG00000233653': EXPECTED_GENE,
+        'ENSG00000177000': mock.ANY, 'ENSG00000097046': mock.ANY,
+    },
     'transcriptsById': {'ENST00000624735': {'isManeSelect': False, 'refseqId': None, 'transcriptId': 'ENST00000624735'}},
     'search': {
         'search': SEARCH,
@@ -384,12 +387,12 @@ class VariantSearchAPITest(object):
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
              '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '', '', '',
              '', '', '', '', '', '', '', '', ''],
-            ['1', '11794419', 'T', 'G', '', 'missense_variant', '', '0.29499998688697815', '0.2633855640888214',
+            ['1', '11794419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
              '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
              '2.000999927520752', '0.0', '', 'tolerated', '', 'damaging', 'rs1801131', 'ENST00000376585.6:c.1409A>C',
-             'ENSP00000365770.1:p.Glu470Ala', '', '1', '', '2', '', '', '', '', '', 'HG00731', '2', '99', '1.0',
+             'ENSP00000365770.1:p.Glu470Ala', 'Conflicting_interpretations_of_pathogenicity', '1', '', '2', '', '', '', '', '', 'HG00731', '2', '99', '1.0',
              'HG00732', '0', '40', '0.0', 'HG00733', '1', '99', '0.625'],
-            ['1', '91502721', 'G', 'A', '', 'intron_variant', '', '0.0', '0.38041073083877563', '0.0',
+            ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
              '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '', '',
              '', 'rs13447464', 'ENST00000428239.5:c.115+890G>A', '', '', '', '', '2', '', '', '', '', '', 'HG00731',
              '1', '99', '1.0', 'HG00732', '0', '99', '0.4594594594594595', 'HG00733', '1', '99', '0.4074074074074074'],
@@ -418,12 +421,12 @@ class VariantSearchAPITest(object):
                 ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
                  '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)',
                  '', '', '', '', '', '', '', '', '', '', '', '',],
-                ['1', '11794419', 'T', 'G', '', 'missense_variant', '', '0.29499998688697815', '0.2633855640888214',
+                ['1', '11794419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
                  '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
                  '2.000999927520752', '0.0', '', 'tolerated', '', 'damaging', 'rs1801131', 'ENST00000376585.6:c.1409A>C',
-                 'ENSP00000365770.1:p.Glu470Ala', '', '1', '', '2', '', '', 'HG00731', '2', '99', '1.0',
+                 'ENSP00000365770.1:p.Glu470Ala', 'Conflicting_interpretations_of_pathogenicity', '1', '', '2', '', '', 'HG00731', '2', '99', '1.0',
                  'HG00732', '0', '40', '0.0', 'HG00733', '1', '99', '0.625'],
-                ['1', '91502721', 'G', 'A', '', 'intron_variant', '', '0.0', '0.38041073083877563', '0.0',
+                ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
                  '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '',
                  '', '', 'rs13447464', 'ENST00000428239.5:c.115+890G>A', '', '', '', '', '2', '', '', 'HG00731',
                  '1', '99', '1.0', 'HG00732', '0', '99', '0.4594594594594595', 'HG00733', '1', '99',
@@ -717,7 +720,9 @@ class VariantSearchAPITest(object):
         expected_search_response['variantTagsByGuid'].pop('VT1726945_2103343353_r0390_100')
         expected_search_response['variantTagsByGuid'].pop('VT1726970_2103343353_r0004_tes')
         expected_search_response['variantNotesByGuid'] = {}
-        expected_search_response['genesById'].pop('ENSG00000233653')
+        expected_search_response['genesById'] = {
+            k: v for k, v in expected_search_response['genesById'].items() if k in {'ENSG00000227232', 'ENSG00000268903'}
+        }
         expected_search_response['searchedVariants'] = [single_family_variant]
         self.assertDictEqual(response_json, expected_search_response)
         self._assert_expected_results_family_context(response_json, locus_list_detail=True)

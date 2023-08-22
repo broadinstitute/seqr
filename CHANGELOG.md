@@ -2,6 +2,9 @@
 
 ## dev
 
+## 8/22/23
+* Add db indices to optimize RNA data queries (REQUIRES DB MIGRATION)
+
 ## 7/11/23
 * Add internal UI to trigger airflow data loading
 * Add RnaSeqSpliceOutlier display

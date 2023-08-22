@@ -8,6 +8,7 @@ from django.db.models import Prefetch, Count, F, Q, Value, CharField
 from django.db.models.functions import Replace, JSONObject
 from django.utils import timezone
 import json
+import re
 import requests
 
 from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist
@@ -205,9 +206,9 @@ def sample_metadata_export(request, project_guid):
     )
     family_rows_by_id = {row['family_id']: row for row in family_rows}
 
-    rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
+    rows_by_subject_family_id = {(row['subject_id'], row['family_guid']): row for row in subject_rows}
     for row in sample_rows:
-        rows_by_subject_id[row['subject_id']].update(row)
+        rows_by_subject_family_id[(row['subject_id'], row['family_guid'])].update(row)
 
     for rows in discovery_rows:
         for i, row in enumerate(rows):
@@ -216,9 +217,9 @@ def sample_metadata_export(request, project_guid):
                 parsed_row.update({
                     '{}-{}'.format(k, i + 1): row[k] for k in DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS if row.get(k)
                 })
-                rows_by_subject_id[row['subject_id']].update(parsed_row)
+                rows_by_subject_family_id[(row['subject_id'], row['family_guid'])].update(parsed_row)
 
-    rows = list(rows_by_subject_id.values())
+    rows = list(rows_by_subject_family_id.values())
     all_features = set()
     for row in rows:
         row.update(family_rows_by_id[row['family_id']])
@@ -349,9 +350,10 @@ def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, 
             subject_rows.append(subject_row)
 
             sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata)
+            sample_row['family_guid'] = family_subject_row['family_guid']
             sample_rows.append(sample_row)
 
-            discovery_row = _get_discovery_rows(sample, parsed_variants, male_individual_guids)
+            discovery_row = _get_discovery_rows(sample, parsed_variants, male_individual_guids, family_subject_row['family_guid'])
             discovery_rows.append(discovery_row)
 
     return subject_rows, sample_rows, family_rows, discovery_rows
@@ -561,12 +563,13 @@ def _get_sample_row(sample, has_dbgap_submission, airtable_metadata):
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
     return sample_row
 
-def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
+def _get_discovery_rows(sample, parsed_variants, male_individual_guids, family_guid):
     individual = sample.individual
     discovery_row = {
         'entity:discovery_id': individual.individual_id,
         'subject_id': individual.individual_id,
         'sample_id': sample.sample_id,
+        'family_guid': family_guid,
     }
     discovery_rows = []
     for genotypes, parsed_variant in parsed_variants:
@@ -655,7 +658,10 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
 
 # GREGoR metadata
 
+GREGOR_DATA_TYPES = ['wgs', 'wes', 'rna']
 SMID_FIELD = 'SMID'
+PARTICIPANT_ID_FIELD = 'CollaboratorParticipantID'
+COLLABORATOR_SAMPLE_ID_FIELD = 'CollaboratorSampleID'
 PARTICIPANT_TABLE_COLUMNS = [
     'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
     'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
@@ -682,30 +688,60 @@ EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
 EXPERIMENT_TABLE_COLUMNS = [
     'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id',
 ] + EXPERIMENT_TABLE_AIRTABLE_FIELDS
+EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS = [
+    'library_prep_type', 'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size',
+    'total_reads', 'percent_rRNA', 'percent_mRNA', '5prime3prime_bias',
+]
+EXPERIMENT_RNA_TABLE_COLUMNS = ['experiment_rna_short_read_id'] + [
+    c for c in EXPERIMENT_TABLE_COLUMNS[1:] if not c.startswith('target')] + EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + [
+    'percent_mtRNA', 'percent_Globin', 'percent_UMI',  'percent_GC', 'percent_chrX_Y',
+]
+EXPERIMENT_LOOKUP_TABLE_COLUMNS = ['experiment_id', 'table_name', 'id_in_table', 'participant_id']
 READ_TABLE_AIRTABLE_FIELDS = [
     'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
-    'alignment_software', 'mean_coverage', 'analysis_details',
+    'mean_coverage', 'alignment_software', 'analysis_details',
 ]
 READ_TABLE_COLUMNS = ['aligned_dna_short_read_id', 'experiment_dna_short_read_id'] + READ_TABLE_AIRTABLE_FIELDS + ['quality_issues']
 READ_TABLE_COLUMNS.insert(6, 'reference_assembly_details')
 READ_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')
+READ_RNA_TABLE_AIRTABLE_ID_FIELDS = ['aligned_rna_short_read_file', 'aligned_rna_short_read_index_file']
+READ_RNA_TABLE_AIRTABLE_FIELDS = [
+    'gene_annotation', 'alignment_software', 'alignment_log_file', 'percent_uniquely_aligned', 'percent_multimapped', 'percent_unaligned',
+]
+READ_RNA_TABLE_COLUMNS = ['aligned_rna_short_read_id', 'experiment_rna_short_read_id'] + \
+    READ_RNA_TABLE_AIRTABLE_ID_FIELDS + READ_TABLE_COLUMNS[4:-3] + READ_RNA_TABLE_AIRTABLE_FIELDS + ['quality_issues']
+READ_RNA_TABLE_COLUMNS.insert(READ_RNA_TABLE_COLUMNS.index('gene_annotation')+1, 'gene_annotation_details')
+READ_RNA_TABLE_COLUMNS.insert(READ_RNA_TABLE_COLUMNS.index('alignment_log_file')+1, 'alignment_postprocessing')
 READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
+CALLED_VARIANT_FILE_COLUMN = 'called_variants_dna_file'
 CALLED_TABLE_COLUMNS = [
-    'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
+    'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', CALLED_VARIANT_FILE_COLUMN, 'md5sum',
     'caller_software', 'variant_types', 'analysis_details',
 ]
-ALL_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + CALLED_TABLE_COLUMNS
 
-TABLE_COLUMNS = {
-    'participant': PARTICIPANT_TABLE_COLUMNS,
-    'family': GREGOR_FAMILY_TABLE_COLUMNS,
-    'phenotype': PHENOTYPE_TABLE_COLUMNS,
-    'analyte': ANALYTE_TABLE_COLUMNS,
-    'experiment_dna_short_read': EXPERIMENT_TABLE_COLUMNS,
-    'aligned_dna_short_read': READ_TABLE_COLUMNS,
-    'aligned_dna_short_read_set': READ_SET_TABLE_COLUMNS,
-    'called_variants_dna_short_read': CALLED_TABLE_COLUMNS,
+RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS + ['reference_assembly_uri']
+DATA_TYPE_OMIT = {
+    'wgs': ['targeted_regions_method'] + RNA_ONLY, 'wes': RNA_ONLY, 'rna': [
+        'targeted_regions_method', 'target_insert_size', 'mean_coverage', 'aligned_dna_short_read_file',
+        'aligned_dna_short_read_index_file',
+    ],
 }
+NO_DATA_TYPE_FIELDS = {
+    'targeted_region_bed_file', 'reference_assembly', 'analysis_details', 'percent_rRNA', 'percent_mRNA',
+    'alignment_software_dna',
+}
+NO_DATA_TYPE_FIELDS.update(READ_RNA_TABLE_AIRTABLE_ID_FIELDS)
+
+DATA_TYPE_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + RNA_ONLY + [
+    COLLABORATOR_SAMPLE_ID_FIELD, SMID_FIELD]
+ALL_AIRTABLE_COLUMNS = DATA_TYPE_AIRTABLE_COLUMNS + CALLED_TABLE_COLUMNS
+AIRTABLE_QUERY_COLUMNS = set(CALLED_TABLE_COLUMNS)
+AIRTABLE_QUERY_COLUMNS.remove('md5sum')
+AIRTABLE_QUERY_COLUMNS.update(NO_DATA_TYPE_FIELDS)
+for data_type in GREGOR_DATA_TYPES:
+    data_type_columns = set(DATA_TYPE_AIRTABLE_COLUMNS) - NO_DATA_TYPE_FIELDS - set(DATA_TYPE_OMIT[data_type])
+    AIRTABLE_QUERY_COLUMNS.update({f'{field}_{data_type}' for field in data_type_columns})
+
 WARN_MISSING_TABLE_COLUMNS = {
     'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
 }
@@ -789,18 +825,34 @@ def gregor_export(request):
         consent_code=consent_code[0],
         projectcategory__name='GREGoR',
     )
-    individuals = Individual.objects.filter(
-        sample__in=get_search_samples(projects, active_only=False),
-    ).distinct().prefetch_related('family__project', 'mother', 'father')
+    sample_types = Sample.objects.filter(individual__family__project__in=projects).values_list('individual_id', 'sample_type')
+    individual_data_types = defaultdict(set)
+    for individual_db_id, sample_type in sample_types:
+        individual_data_types[individual_db_id].add(sample_type)
+    individuals = Individual.objects.filter(id__in=individual_data_types).prefetch_related(
+        'family__project', 'mother', 'father')
 
-    airtable_sample_records, airtable_metadata_by_smid = _get_gregor_airtable_data(individuals, request.user)
+    grouped_data_type_individuals = defaultdict(dict)
+    for i in individuals:
+        grouped_data_type_individuals[i.individual_id].update({data_type: i for data_type in individual_data_types[i.id]})
+
+    airtable_sample_records, airtable_metadata_by_participant = _get_gregor_airtable_data(
+        grouped_data_type_individuals.keys(), request.user)
 
     participant_rows = []
     family_map = {}
     phenotype_rows = []
     analyte_rows = []
     airtable_rows = []
-    for individual in individuals:
+    airtable_rna_rows = []
+    experiment_lookup_rows = []
+    for data_type_individuals in grouped_data_type_individuals.values():
+        # If multiple individual records, prefer WGS
+        individual = next(
+            data_type_individuals[data_type.upper()] for data_type in GREGOR_DATA_TYPES
+            if data_type_individuals.get(data_type.upper())
+        )
+
         # family table
         family = individual.family
         if family not in family_map:
@@ -830,29 +882,45 @@ def gregor_export(request):
             dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.absent_features or []
         ]
 
-        analyte_id = None
+        analyte_ids = set()
         # airtable data
         if airtable_sample:
-            sm_id = airtable_sample[SMID_FIELD]
-            analyte_id = f'Broad_{sm_id}'
-            airtable_metadata = airtable_metadata_by_smid.get(sm_id)
-            if airtable_metadata:
-                experiment_ids = _get_experiment_ids(airtable_sample, airtable_metadata)
-                airtable_rows.append(dict(analyte_id=analyte_id, **airtable_metadata, **experiment_ids))
+            airtable_metadata = airtable_metadata_by_participant.get(airtable_sample[PARTICIPANT_ID_FIELD]) or {}
+            for data_type in data_type_individuals:
+                if data_type not in airtable_metadata:
+                    continue
+                row = _get_airtable_row(data_type, airtable_metadata)
+                analyte_ids.add(row['analyte_id'])
+                is_rna = data_type == 'RNA'
+                if not is_rna:
+                    row['alignment_software'] = row['alignment_software_dna']
+                (airtable_rna_rows if is_rna else airtable_rows).append(row)
+                experiment_lookup_rows.append(
+                    {'participant_id': participant_id, **_get_experiment_lookup_row(is_rna, row)}
+                )
 
         # analyte table
-        analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
+        if not analyte_ids:
+            analyte_ids.add(_get_analyte_id(airtable_sample))
+        for analyte_id in analyte_ids:
+            analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
-    files, warnings = _get_validated_gregor_files([
-        ('participant', participant_rows),
-        ('family', list(family_map.values())),
-        ('phenotype', phenotype_rows),
-        ('analyte', analyte_rows),
-        ('experiment_dna_short_read', airtable_rows),
-        ('aligned_dna_short_read', airtable_rows),
-        ('aligned_dna_short_read_set', airtable_rows),
-        ('called_variants_dna_short_read', airtable_rows),
-    ])
+    files = [
+        ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),
+        ('family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())),
+        ('phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows),
+        ('analyte', ANALYTE_TABLE_COLUMNS, analyte_rows),
+        ('experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, airtable_rows),
+        ('aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows),
+        ('aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows),
+        ('called_variants_dna_short_read', CALLED_TABLE_COLUMNS, [
+            row for row in airtable_rows if row.get(CALLED_VARIANT_FILE_COLUMN)
+        ]),
+        ('experiment_rna_short_read', EXPERIMENT_RNA_TABLE_COLUMNS, airtable_rna_rows),
+        ('aligned_rna_short_read', READ_RNA_TABLE_COLUMNS, airtable_rna_rows),
+        ('experiment', EXPERIMENT_LOOKUP_TABLE_COLUMNS, experiment_lookup_rows),
+    ]
+    warnings = _validate_gregor_files(files)
     write_multiple_files_to_gs(files, file_path, request.user, file_format='tsv')
 
     return create_json_response({
@@ -861,21 +929,25 @@ def gregor_export(request):
     })
 
 
-def _get_gregor_airtable_data(individuals, user):
+def _get_gregor_airtable_data(individual_ids, user):
     sample_records, session = _get_airtable_samples(
-        individuals.order_by('individual_id').values_list('individual_id', flat=True), user,
-        fields=[SMID_FIELD, 'CollaboratorSampleID', 'Recontactable'],
+        individual_ids, user, fields=[SMID_FIELD, PARTICIPANT_ID_FIELD, 'Recontactable'],
     )
 
-    fields = ALL_AIRTABLE_COLUMNS
     airtable_metadata = session.fetch_records(
         'GREGoR Data Model',
-        fields=[SMID_FIELD] + sorted(fields),
-        or_filters={f'{SMID_FIELD}': {r[SMID_FIELD] for r in sample_records.values()}},
+        fields=[PARTICIPANT_ID_FIELD] + sorted(AIRTABLE_QUERY_COLUMNS),
+        or_filters={f'{PARTICIPANT_ID_FIELD}': {r[PARTICIPANT_ID_FIELD] for r in sample_records.values()}},
     )
-    airtable_metadata_by_smid = {r[SMID_FIELD]: r for r in airtable_metadata.values()}
 
-    return sample_records, airtable_metadata_by_smid
+    airtable_metadata_by_participant = {r[PARTICIPANT_ID_FIELD]: r for r in airtable_metadata.values()}
+    for data_type in GREGOR_DATA_TYPES:
+        for r in airtable_metadata_by_participant.values():
+            data_type_fields = [f for f in r if f.endswith(f'_{data_type}')]
+            if data_type_fields:
+                r[data_type.upper()] = {f.replace(f'_{data_type}', ''): r.pop(f) for f in data_type_fields}
+
+    return sample_records, airtable_metadata_by_participant
 
 
 def _get_gregor_family_row(family):
@@ -932,17 +1004,52 @@ def _get_analyte_row(individual):
     }
 
 
-def _get_experiment_ids(airtable_sample, airtable_metadata):
-    collaborator_sample_id = airtable_sample['CollaboratorSampleID']
-    experiment_dna_short_read_id = f'Broad_{airtable_metadata.get("experiment_type", "NA")}_{collaborator_sample_id}'
+def _get_airtable_row(data_type, airtable_metadata):
+    data_type_metadata = airtable_metadata[data_type]
+    collaborator_sample_id = data_type_metadata[COLLABORATOR_SAMPLE_ID_FIELD]
+    experiment_short_read_id = f'Broad_{data_type_metadata.get("experiment_type", "NA")}_{collaborator_sample_id}'
+    aligned_short_read_id = f'{experiment_short_read_id}_1'
     return {
-        'experiment_dna_short_read_id': experiment_dna_short_read_id,
+        'analyte_id': _get_analyte_id(data_type_metadata),
+        'experiment_dna_short_read_id': experiment_short_read_id,
+        'experiment_rna_short_read_id': experiment_short_read_id,
         'experiment_sample_id': collaborator_sample_id,
-        'aligned_dna_short_read_id': f'{experiment_dna_short_read_id}_1'
+        'aligned_dna_short_read_id': aligned_short_read_id,
+        'aligned_rna_short_read_id': aligned_short_read_id,
+        **airtable_metadata,
+        **data_type_metadata,
     }
 
 
-def _get_validated_gregor_files(file_data):
+def _get_analyte_id(airtable_metadata):
+    sm_id = airtable_metadata.get(SMID_FIELD)
+    return f'Broad_{sm_id}' if sm_id else None
+
+
+def _get_experiment_lookup_row(is_rna, row_data):
+    table_name = f'experiment_{"rna" if is_rna else "dna"}_short_read'
+    id_in_table = row_data[f'{table_name}_id']
+    return {
+        'table_name': table_name,
+        'id_in_table': id_in_table,
+        'experiment_id': f'{table_name}.{id_in_table}',
+    }
+
+
+is_integer = lambda val, *args: val.isnumeric() or re.match(r'^[\d{3},]*\d{3}$', val)
+DATA_TYPE_VALIDATORS = {
+    'string': lambda val, validator: (not validator.get('is_bucket_path')) or val.startswith('gs://'),
+    'enumeration': lambda val, validator: val in validator['enumerations'],
+    'integer': is_integer,
+    'float': lambda val, validator: is_integer(val) or re.match(r'^\d+.\d+$', val),
+    'date': lambda val, validator: bool(re.match(r'^\d{4}-\d{2}-\d{2}$', val)),
+}
+DATA_TYPE_ERROR_FORMATTERS = {
+    'string': lambda validator: ' are a google bucket path starting with gs://',
+    'enumeration': lambda validator: f': {", ".join(validator["enumerations"])}',
+}
+
+def _validate_gregor_files(file_data):
     errors = []
     warnings = []
     try:
@@ -950,19 +1057,18 @@ def _get_validated_gregor_files(file_data):
     except Exception as e:
         warnings.append(f'Unable to load data model for validation: {e}')
         validators = {}
-        required_tables = set()
+        required_tables = {}
 
-    missing_tables = required_tables.difference({f[0] for f in file_data})
+    tables = {f[0] for f in file_data}
+    missing_tables = [
+        table for table, validator in required_tables.items() if not _has_required_table(table, validator, tables)
+    ]
     if missing_tables:
         warnings.append(
             f'The following tables are required in the data model but absent from the reports: {", ".join(missing_tables)}'
         )
 
-    files = []
-    for file_name, data in file_data:
-        columns = TABLE_COLUMNS[file_name]
-        files.append([file_name, columns, data])
-
+    for file_name, columns, data in file_data:
         table_validator = validators.get(file_name)
         if not table_validator:
             warnings.append(f'No data model found for "{file_name}" table so no validation was performed')
@@ -980,6 +1086,26 @@ def _get_validated_gregor_files(file_data):
             warnings.append(
                 f'The following columns are included in the "{file_name}" data model but are missing in the report: {col_summary}'
             )
+        invalid_data_type_columns = {
+            col: validator['data_type'] for col, validator in table_validator.items()
+            if validator.get('data_type') and validator['data_type'] not in DATA_TYPE_VALIDATORS
+        }
+        if invalid_data_type_columns:
+            col_summary = ', '.join(sorted([f'{col} ({data_type})' for col, data_type in invalid_data_type_columns.items()]))
+            warnings.append(
+                f'The following columns are included in the "{file_name}" data model but have an unsupported data type: {col_summary}'
+            )
+        invalid_enum_columns = [
+            col for col, validator in table_validator.items()
+            if validator.get('data_type') == 'enumeration' and not validator.get('enumerations')
+        ]
+        if invalid_enum_columns:
+            for col in invalid_enum_columns:
+                table_validator[col]['data_type'] = None
+            col_summary = ', '.join(sorted(invalid_enum_columns))
+            warnings.append(
+                f'The following columns are specified as "enumeration" in the "{file_name}" data model but are missing the allowed values definition: {col_summary}'
+            )
 
         for column in columns:
             _validate_column_data(
@@ -990,7 +1116,7 @@ def _get_validated_gregor_files(file_data):
     if errors:
         raise ErrorsWarningsException(errors, warnings)
 
-    return files, warnings
+    return warnings
 
 
 def _load_data_model_validators():
@@ -1001,20 +1127,39 @@ def _load_data_model_validators():
         t['table']: {c['column']: c for c in t['columns']}
         for t in table_models
     }
-    required_tables = {t['table'] for t in table_models if t.get('required')}
+    required_tables = {t['table']: _parse_table_required(t['required']) for t in table_models if t.get('required')}
     return validators, required_tables
 
 
+def _parse_table_required(required_validator):
+    if required_validator is True:
+        return True
+
+    match = re.match(r'CONDITIONAL \(([\w+(\s,)?]+)\)', required_validator)
+    return match and match.group(1).split(', ')
+
+
+def _has_required_table(table, validator, tables):
+    if table in tables:
+        return True
+    if validator is True:
+        return False
+    return tables.isdisjoint(validator)
+
+
 def _validate_column_data(column, file_name, data, column_validator, warnings, errors):
-    enum = column_validator.get('enumerations')
+    data_type = column_validator.get('data_type')
+    data_type_validator = DATA_TYPE_VALIDATORS.get(data_type)
+    unique = column_validator.get('is_unique')
     required = column_validator.get('required')
     recommended = column in WARN_MISSING_TABLE_COLUMNS.get(file_name, [])
-    if not (required or enum or recommended):
+    if not (required or unique or recommended or data_type_validator):
         return
 
     missing = []
     warn_missing = []
     invalid = []
+    grouped_values = defaultdict(set)
     for row in data:
         value = row.get(column)
         if not value:
@@ -1024,9 +1169,13 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
                 check_recommend_condition = WARN_MISSING_CONDITIONAL_COLUMNS.get(column)
                 if not check_recommend_condition or check_recommend_condition(row):
                     warn_missing.append(_get_row_id(row))
-        elif enum and value not in enum:
+        elif data_type_validator and not data_type_validator(value, column_validator):
             invalid.append(f'{_get_row_id(row)} ({value})')
-    if missing or warn_missing or invalid:
+        elif unique:
+            grouped_values[value].add(_get_row_id(row))
+
+    duplicates = [f'{k} ({", ".join(sorted(v))})' for k, v in grouped_values.items() if len(v) > 1]
+    if missing or warn_missing or invalid or duplicates:
         airtable_summary = ' (from Airtable)' if column in ALL_AIRTABLE_COLUMNS else ''
         error_template = f'The following entries {{issue}} "{column}"{airtable_summary} in the "{file_name}" table'
         if missing:
@@ -1035,8 +1184,14 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
             )
         if invalid:
             invalid_values = f'Invalid values: {", ".join(sorted(invalid))}'
+            allowed = DATA_TYPE_ERROR_FORMATTERS[data_type](column_validator) \
+                if data_type in DATA_TYPE_ERROR_FORMATTERS else f' have data type {data_type}'
             errors.append(
-                f'{error_template.format(issue="have invalid values for")}. Allowed values: {", ".join(enum)}. {invalid_values}'
+                f'{error_template.format(issue="have invalid values for")}. Allowed values{allowed}. {invalid_values}'
+            )
+        if duplicates:
+            errors.append(
+                f'{error_template.format(issue="have non-unique values for")}: {", ".join(sorted(duplicates))}'
             )
         if warn_missing:
             warnings.append(
