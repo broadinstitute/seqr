@@ -43,6 +43,7 @@ class BaseHailTableQuery(object):
 
     GENOTYPE_FIELDS = {}
     NESTED_GENOTYPE_FIELDS = {}
+    GENOTYPE_QUERY_FIELDS = {}
     QUALITY_FILTER_FORMAT = {}
     POPULATIONS = {}
     POPULATION_FIELDS = {}
@@ -65,7 +66,6 @@ class BaseHailTableQuery(object):
             'format_values': lambda values: values.group_by(lambda t: t.geneId),
         },
     }
-    DERIVED_ENUM_ANNOTATION_FIELDS = {}
     LIFTOVER_ANNOTATION_FIELDS = {
         'liftedOverGenomeVersion': lambda r: hl.or_missing(hl.is_defined(r.rg37_locus), '37'),
         'liftedOverChrom': lambda r: hl.or_missing(hl.is_defined(r.rg37_locus), r.rg37_locus.contig),
@@ -83,12 +83,6 @@ class BaseHailTableQuery(object):
             ht_path = cls._get_generic_table_path(genome_version, 'annotations.ht')
             ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
             cls.LOADED_GLOBALS[genome_version] = {k: ht_globals[k] for k in cls.GLOBALS}
-            # TODO remove once data reformatted
-            enums = cls.LOADED_GLOBALS[genome_version]['enums']
-            if 'sv_consequence_rank' in cls.LOADED_GLOBALS[genome_version]['enums']:
-                enums = dict(enums)
-                enums['sorted_gene_consequences'] = {'major_consequence': enums.pop('sv_consequence_rank')}
-                cls.LOADED_GLOBALS[genome_version]['enums'] = enums
 
     @classmethod
     def _format_population_config(cls, pop_config):
@@ -117,7 +111,7 @@ class BaseHailTableQuery(object):
             }),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
-        annotation_fields.update({k: lambda r: v(r, self._enums) for k, v in self.DERIVED_ENUM_ANNOTATION_FIELDS.items()})
+        annotation_fields.update(self._additional_annotation_fields())
 
         prediction_fields = {path.source for path in self.PREDICTION_FIELDS_CONFIG.values()}
         annotation_fields.update([
@@ -128,6 +122,9 @@ class BaseHailTableQuery(object):
         if self._genome_version == GENOME_VERSION_GRCh38:
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
+
+    def _additional_annotation_fields(self):
+        return {}
 
     def population_expression(self, r, population):
         pop_config = self._format_population_config(self.POPULATIONS[population])
@@ -260,8 +257,7 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
-            family_ht = self._read_table(f'families/{family_guid}/samples.ht')  # TODO undo
-            # family_ht = self._read_table(f'families/{family_guid}.ht')
+            family_ht = self._read_table(f'families/{family_guid}.ht')
             families_ht, _ = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = []
@@ -457,7 +453,8 @@ class BaseHailTableQuery(object):
         affected_only = quality_filter.get('affected_only')
         passes_quality_filters = []
         for filter_k, value in quality_filter.items():
-            field = self.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
+            genotype_key = filter_k.replace('min_', '')
+            field = self.GENOTYPE_QUERY_FIELDS.get(genotype_key, self.GENOTYPE_FIELDS.get(genotype_key))
             if field and value:
                 passes_quality_filters.append(self._get_genotype_passes_quality_field(field, value, affected_only))
 
@@ -1047,14 +1044,9 @@ class SvHailTableQuery(BaseHailTableQuery):
 
     DATA_TYPE = 'SV_WGS'
 
-    GENOTYPE_QUERY_MAP = {
-        **BaseHailTableQuery.GENOTYPE_QUERY_MAP,
-        COMP_HET_ALT: BaseHailTableQuery.GENOTYPE_QUERY_MAP[HAS_ALT],
-    }
-
     GENOTYPE_FIELDS = {_to_camel_case(f): f for f in ['CN', 'GQ']}
     NESTED_GENOTYPE_FIELDS = {'concordance': ['new_call', 'prev_call', 'prev_num_alt']}
-    GENOTYPE_RESPONSE_KEYS = {'gq_sv': 'gq'}
+    GENOTYPE_QUERY_FIELDS = {'gq_sv': 'GQ', 'gq': None}
 
     TRANSCRIPTS_FIELD = 'sorted_gene_consequences'
     TRANSCRIPT_CONSEQUENCE_FIELD = 'major_consequence'
@@ -1070,19 +1062,6 @@ class SvHailTableQuery(BaseHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
         TRANSCRIPTS_FIELD: BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
-    }
-    DERIVED_ENUM_ANNOTATION_FIELDS = {
-        # For insertions, end_locus represents the svSourceDetail, otherwise represents the endChrom
-        'endChrom': lambda r, enums: hl.or_missing(
-            r.sv_type_id != enums['sv_type'].index('INS'),
-            BASE_ANNOTATION_FIELDS['endChrom'](r)),
-        'svSourceDetail': lambda r, enums: hl.or_missing(r.sv_type_id == enums['sv_type'].index('INS'), hl.bind(
-            lambda end_chrom: hl.or_missing(hl.is_defined(end_chrom), hl.struct(chrom=end_chrom)),
-            BASE_ANNOTATION_FIELDS['endChrom'](r),
-        )),
-        # TODO format once reloaded
-        #'cpxIntervals': lambda r, enums: SvHailTableQuery._format_enum(r, 'cpx_intervals', enums, enum_keys=[]),
-        'cpxIntervals': lambda r, enums: r.cpx_intervals,
     }
 
     POPULATIONS = {
@@ -1110,8 +1089,13 @@ class SvHailTableQuery(BaseHailTableQuery):
         variant_ids_set = hl.set(variant_ids)
         return ht.filter(variant_ids_set.contains(ht.variant_id))
 
+    def _filter_entries_table(self, ht, *args, **kwargs):
+        # TODO remove once data updated
+        if self.DATA_TYPE == 'SV_WGS':
+            ht = ht.key_by(variant_id=ht.rsid)
+        return super()._filter_entries_table(ht, *args, **kwargs)
+
     def _filter_annotated_table(self, parsed_intervals=None, exclude_intervals=False, **kwargs):
-        self._ht = self._ht.annotate(variant_id=self._ht.rsid)  # TODO remove once data updated
         if parsed_intervals:
             interval_filter = hl.array(parsed_intervals).any(lambda interval: hl.if_else(
                 self._ht.start_locus.contig == self._ht.end_locus.contig,
@@ -1159,10 +1143,35 @@ class SvHailTableQuery(BaseHailTableQuery):
 
         return annotation_filters
 
+    def _additional_annotation_fields(self):
+        sv_type_enum = self._enums['sv_type']
+        insertion_type_id = sv_type_enum.index('INS')
+        get_end_chrom = self.BASE_ANNOTATION_FIELDS['endChrom']
+        return {
+            'cpxIntervals': lambda r: self._format_enum(
+                r, 'cpx_intervals', {'type': sv_type_enum}, annotate_value=lambda val, *args: {
+                    'chrom': val.start.contig,
+                    'start': val.start.position,
+                    'end': val.end.position,
+                },
+            ),
+            # For insertions, end_locus represents the svSourceDetail, otherwise represents the endChrom
+            'endChrom': lambda r: hl.or_missing(r.sv_type_id != insertion_type_id, get_end_chrom(r)),
+            'svSourceDetail': lambda r: hl.or_missing(r.sv_type_id == insertion_type_id, hl.bind(
+                lambda end_chrom: hl.or_missing(hl.is_defined(end_chrom), hl.struct(chrom=end_chrom)),
+                get_end_chrom(r),
+            )),
+        }
+
 
 class GcnvHailTableQuery(SvHailTableQuery):
 
     DATA_TYPE = 'SV_WES'
+
+    GENOTYPE_QUERY_MAP = {
+        **BaseHailTableQuery.GENOTYPE_QUERY_MAP,
+        COMP_HET_ALT: BaseHailTableQuery.GENOTYPE_QUERY_MAP[HAS_ALT],
+    }
 
     GENOTYPE_FIELDS = {
         **SvHailTableQuery.GENOTYPE_FIELDS,
@@ -1182,7 +1191,6 @@ class GcnvHailTableQuery(SvHailTableQuery):
         'numExon': lambda r: GcnvHailTableQuery._get_genotype_override_field(r, 'num_exon', hl.max),
     }
     del BASE_ANNOTATION_FIELDS['bothsidesSupport']
-    DERIVED_ENUM_ANNOTATION_FIELDS = {}
 
     POPULATIONS = {k: v for k, v in SvHailTableQuery.POPULATIONS.items() if k != 'gnomad_svs'}
 
@@ -1217,6 +1225,9 @@ class GcnvHailTableQuery(SvHailTableQuery):
         ))
 
         return super()._filter_annotated_table(**kwargs)
+
+    def _additional_annotation_fields(self):
+        return {}
 
 
 QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]}
