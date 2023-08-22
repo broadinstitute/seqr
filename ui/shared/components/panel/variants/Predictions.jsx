@@ -19,7 +19,7 @@ const PredictionValue = styled.span`
 
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
 
-export const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
+const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
 
 const predictionFieldValue = (
   predictions, { field, thresholds, indicatorMap, infoField, infoTitle },
