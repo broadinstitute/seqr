@@ -1179,7 +1179,9 @@ class GcnvHailTableQuery(SvHailTableQuery):
         **{_to_camel_case(f): f'sample_{f}' for f in ['start', 'end', 'num_exon', 'gene_ids']},
     }
     del GENOTYPE_FIELDS['gq']
-    # TODO prev_overlap?
+    NESTED_GENOTYPE_FIELDS = {
+        'concordance': SvHailTableQuery.NESTED_GENOTYPE_FIELDS['concordance'][:-1] + ['prev_overlap']
+    }
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS
     BASE_ANNOTATION_FIELDS = {
