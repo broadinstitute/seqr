@@ -260,8 +260,8 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
-            # family_ht = self._read_table(f'families/{family_guid}/samples.ht')  # TODO redo
-            family_ht = self._read_table(f'families/{family_guid}.ht')
+            family_ht = self._read_table(f'families/{family_guid}/samples.ht')  # TODO undo
+            # family_ht = self._read_table(f'families/{family_guid}.ht')
             families_ht, _ = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = []
@@ -1053,7 +1053,7 @@ class SvHailTableQuery(BaseHailTableQuery):
     }
 
     GENOTYPE_FIELDS = {_to_camel_case(f): f for f in ['CN', 'GQ']}
-    NESTED_GENOTYPE_FIELDS = {'concordance': ['new_call', 'prev_call', 'prev_overlap']}
+    NESTED_GENOTYPE_FIELDS = {'concordance': ['new_call', 'prev_call', 'prev_num_alt']}
     GENOTYPE_RESPONSE_KEYS = {'gq_sv': 'gq'}
 
     TRANSCRIPTS_FIELD = 'sorted_gene_consequences'
@@ -1081,7 +1081,8 @@ class SvHailTableQuery(BaseHailTableQuery):
             BASE_ANNOTATION_FIELDS['endChrom'](r),
         )),
         # TODO format once reloaded
-        'cpxIntervals': lambda r, enums: SvHailTableQuery._format_enum(r, 'cpx_intervals', enums, enum_keys=[]),
+        #'cpxIntervals': lambda r, enums: SvHailTableQuery._format_enum(r, 'cpx_intervals', enums, enum_keys=[]),
+        'cpxIntervals': lambda r, enums: r.cpx_intervals,
     }
 
     POPULATIONS = {
@@ -1169,6 +1170,7 @@ class GcnvHailTableQuery(SvHailTableQuery):
         **{_to_camel_case(f): f'sample_{f}' for f in ['start', 'end', 'num_exon', 'gene_ids']},
     }
     del GENOTYPE_FIELDS['gq']
+    # TODO prev_overlap?
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS
     BASE_ANNOTATION_FIELDS = {
@@ -1217,4 +1219,4 @@ class GcnvHailTableQuery(SvHailTableQuery):
         return super()._filter_annotated_table(**kwargs)
 
 
-QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery]} # TODO, SvHailTableQuery, GcnvHailTableQuery]}
+QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]}
