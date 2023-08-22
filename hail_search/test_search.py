@@ -121,10 +121,6 @@ class HailSearchTestCase(AioHTTPTestCase):
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
         self.assertEqual(resp_json['total'], len(results))
         for i, result in enumerate(resp_json['results']):
-            if result != results[i]:
-                self.assertSetEqual(set(result.keys()), set(results[i].keys()))
-                diff_k = {k for k, v in results[i].items() if v != result[k]}
-                import pdb; pdb.set_trace()
             self.assertEqual(result, results[i])
 
     async def test_single_family_search(self):
