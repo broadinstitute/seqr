@@ -1089,12 +1089,6 @@ class SvHailTableQuery(BaseHailTableQuery):
         variant_ids_set = hl.set(variant_ids)
         return ht.filter(variant_ids_set.contains(ht.variant_id))
 
-    def _filter_entries_table(self, ht, *args, **kwargs):
-        # TODO remove once data updated
-        if self.DATA_TYPE == 'SV_WGS':
-            ht = ht.key_by(variant_id=ht.rsid)
-        return super()._filter_entries_table(ht, *args, **kwargs)
-
     def _filter_annotated_table(self, parsed_intervals=None, exclude_intervals=False, **kwargs):
         if parsed_intervals:
             interval_filter = hl.array(parsed_intervals).any(lambda interval: hl.if_else(
