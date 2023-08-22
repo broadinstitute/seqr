@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Icon, Transition, Popup } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
-import { PREDICTOR_FIELDS, PRED_COLOR_MAP, getVariantMainGeneId } from 'shared/utils/constants'
+import { PREDICTOR_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink, ColoredIcon } from '../../StyledComponents'
@@ -18,6 +18,8 @@ const PredictionValue = styled.span`
 `
 
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
+
+export const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
 
 const predictionFieldValue = (
   predictions, { field, thresholds, indicatorMap, infoField, infoTitle },
