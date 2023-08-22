@@ -1339,7 +1339,7 @@ export const PREDICTOR_FIELDS = [
   { field: 'sift', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
   { field: 'mut_taster', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: MUTTASTER_MAP },
   { field: 'fathmm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: FATHMM_MAP },
-  { field: 'vest', thresholds: [undefined, 0.450, 0.764, 0.861, 0.965] },
+  { field: 'vest', thresholds: [undefined, 0.45, 0.764, 0.861, 0.965] },
   { field: 'mut_pred', thresholds: [0.0101, 0.392, 0.737, 0.829, 0.932] },
   { field: 'apogee', thresholds: [undefined, undefined, 0.5, 0.5, undefined] },
   {
