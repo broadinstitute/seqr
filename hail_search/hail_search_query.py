@@ -40,6 +40,7 @@ class BaseHailTableQuery(object):
         HAS_ALT: lambda gt: gt.is_non_ref(),
         HAS_REF: lambda gt: gt.is_hom_ref() | gt.is_het_ref(),
     }
+    MISSING_NUM_ALT = -1
 
     GENOTYPE_FIELDS = {}
     NESTED_GENOTYPE_FIELDS = {}
@@ -97,7 +98,7 @@ class BaseHailTableQuery(object):
                 lambda gt: hl.is_defined(gt.individualGuid)
             ).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0].select(
                 'sampleId', 'individualGuid', 'familyGuid',
-                numAlt=hl.if_else(hl.is_defined(x[0].GT), x[0].GT.n_alt_alleles(), -1),
+                numAlt=hl.if_else(hl.is_defined(x[0].GT), x[0].GT.n_alt_alleles(), self.MISSING_NUM_ALT),
                 **{k: x[0][field] for k, field in self.GENOTYPE_FIELDS.items()},
                 **{_to_camel_case(k): x[0][field][k] for field, v in self.NESTED_GENOTYPE_FIELDS.items() for k in v},
             )),
@@ -365,7 +366,7 @@ class BaseHailTableQuery(object):
 
         ht = ht.transmute(
             family_entries=family_sample_indices.map(lambda sample_indices: sample_indices.map(
-                lambda i: hl.or_else(ht.entries[i], cls._missing_entry(ht.entries[i])).annotate(
+                lambda i: ht.entries[i].annotate(
                     sampleId=sample_index_id_map.get(i),
                     individualGuid=sample_index_individual_map.get(i),
                     familyGuid=sample_index_family_map.get(i),
@@ -375,11 +376,6 @@ class BaseHailTableQuery(object):
         )
 
         return ht, sample_id_family_index_map, num_families
-
-    @classmethod
-    def _missing_entry(cls, entry):
-        entry_type = dict(**entry.dtype)
-        return hl.struct(**{k: hl.missing(v) for k, v in entry_type.items()})
 
     def _filter_inheritance(self, ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map):
         any_valid_entry = lambda x: self.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
@@ -1162,10 +1158,14 @@ class GcnvHailTableQuery(SvHailTableQuery):
 
     DATA_TYPE = 'SV_WES'
 
+    #  gCNV data has no ref/ref calls so a missing entry indicates ref/ref
     GENOTYPE_QUERY_MAP = {
         **BaseHailTableQuery.GENOTYPE_QUERY_MAP,
+        REF_REF: hl.is_missing,
+        HAS_REF: lambda gt: hl.is_missing(gt) | gt.is_het_ref(),
         COMP_HET_ALT: BaseHailTableQuery.GENOTYPE_QUERY_MAP[HAS_ALT],
     }
+    MISSING_NUM_ALT = 0
 
     GENOTYPE_FIELDS = {
         **SvHailTableQuery.GENOTYPE_FIELDS,
@@ -1173,6 +1173,7 @@ class GcnvHailTableQuery(SvHailTableQuery):
         **{_to_camel_case(f): f'sample_{f}' for f in ['start', 'end', 'num_exon', 'gene_ids']},
     }
     del GENOTYPE_FIELDS['gq']
+    GENOTYPE_QUERY_FIELDS = {}
     NESTED_GENOTYPE_FIELDS = {
         'concordance': SvHailTableQuery.NESTED_GENOTYPE_FIELDS['concordance'][:-1] + ['prev_overlap']
     }
@@ -1197,14 +1198,9 @@ class GcnvHailTableQuery(SvHailTableQuery):
         if default is None:
             default = r[field]
         return hl.if_else(
-            entries.any(lambda g: g.GT.is_non_ref() & hl.is_missing(g[sample_field])),
+            entries.any(lambda g: hl.is_defined(g.GT) & hl.is_missing(g[sample_field])),
             default, agg(entries.map(lambda g: g[sample_field]))
         )
-
-    @classmethod
-    def _missing_entry(cls, entry):
-        #  gCNV data has no ref/ref calls so a missing entry indicates ref/ref
-        return super()._missing_entry(entry).annotate(GT=hl.Call([0, 0]))
 
     def _filter_annotated_table(self, **kwargs):
         # sorted_gene_consequences may contain genes absent from the queried families, so remove those before filtering
