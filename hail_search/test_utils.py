@@ -360,6 +360,175 @@ MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
 HAIL_BACKEND_VARIANTS = [VARIANT2, MULTI_FAMILY_VARIANT]
 HAIL_BACKEND_SINGLE_FAMILY_VARIANTS = [VARIANT2, VARIANT3]
 
+SV_VARIANT1 = {
+    'variantId': 'phase2_DEL_chr1_625',
+    'chrom': '1',
+    'endChrom': None,
+    'pos': 9310023,
+    'end': 9310127,
+    'rg37LocusEnd': {'contig': '1', 'position': 9370186},
+    'xpos': 1009310023,
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': '1',
+    'liftedOverPos': 9370082,
+    'algorithms': 'manta',
+    'bothsidesSupport': False,
+    'familyGuids': ['F000011_11'],
+    'genotypeFilters': 'HIGH_SR_BACKGROUND',
+    'genotypes': {
+        'I000015_na20885': {
+            'sampleId': 'NA20885', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+            'numAlt': 1, 'cn': 2, 'gq': 0, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
+        }, 'I000025_na20884': {
+            'sampleId': 'NA20884', 'individualGuid': 'I000025_na20884', 'familyGuid': 'F000011_11',
+            'numAlt': 0, 'cn': 2, 'gq': 6, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
+        }, 'I000035_na20883': {
+            'sampleId': 'NA20883', 'individualGuid': 'I000035_na20883', 'familyGuid': 'F000011_11',
+            'numAlt': 0, 'cn': 2, 'gq': 99, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
+        },
+    },
+    'populations': {
+        'sv_callset': {'af': 0.02421800047159195, 'ac': 141, 'an': 5822, 'hom': 0, 'het': 141},
+        'gnomad_svs': {'af': 0.0, 'id': ''},
+    },
+    'predictions': {'strvctvre': None},
+    'cpxIntervals': None,
+    'svSourceDetail': None,
+    'svType': 'DEL',
+    'svTypeDetail': None,
+    'transcripts': {
+        'ENSG00000171621': [{'geneId': 'ENSG00000171621', 'majorConsequence': 'INTRONIC'}],
+    },
+    '_sort': [1009310023],
+}
+SV_VARIANT2 = {
+    'variantId': 'cohort_2911.chr1.final_cleanup_INS_chr1_160',
+    'chrom': '1',
+    'endChrom': None,
+    'pos': 9380254,
+    'end': 9380286,
+    'rg37LocusEnd': {'contig': '4', 'position': 9382012},
+    'xpos': 1009380254,
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': '1',
+    'liftedOverPos': 9440313,
+    'algorithms': 'manta',
+    'bothsidesSupport': True,
+    'familyGuids': ['F000011_11'],
+    'genotypeFilters': 'HIGH_SR_BACKGROUND',
+    'genotypes': {
+        'I000015_na20885': {
+            'sampleId': 'NA20885', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+            'numAlt': 1, 'cn': None, 'gq': 0, 'newCall': True, 'prevCall': False, 'prevNumAlt': None,
+        }, 'I000025_na20884': {
+            'sampleId': 'NA20884', 'individualGuid': 'I000025_na20884', 'familyGuid': 'F000011_11',
+            'numAlt': 0, 'cn': None, 'gq': 99, 'newCall': True, 'prevCall': False, 'prevNumAlt': None,
+        }, 'I000035_na20883': {
+            'sampleId': 'NA20883', 'individualGuid': 'I000035_na20883', 'familyGuid': 'F000011_11',
+            'numAlt': 1, 'cn': None, 'gq': 0, 'newCall': True, 'prevCall': False, 'prevNumAlt': None,
+        },
+    },
+    'populations': {
+        'sv_callset': {'af': 0.199072003364563, 'ac': 1159, 'an': 5822, 'hom': 0, 'het': 1159},
+        'gnomad_svs': {'af': 0.005423000082373619, 'id': 'gnomAD-SV_v2.1_INS_1_299'},
+    },
+    'predictions': {'strvctvre': None},
+    'cpxIntervals': None,
+    'svSourceDetail': {'chrom': '4'},
+    'svType': 'INS',
+    'svTypeDetail': None,
+    'transcripts': {
+        'ENSG00000171621': [{'geneId': 'ENSG00000171621', 'majorConsequence': 'NEAREST_TSS'}],
+    },
+    '_sort': [1009380254],
+}
+SV_VARIANT3 = {
+    'variantId': 'phase2_CPX_chr13_35',
+    'chrom': '13',
+    'endChrom': '17',
+    'pos': 63036002,
+    'end': 63036041,
+    'rg37LocusEnd': {'contig': '17', 'position': 61113402},
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': '13',
+    'liftedOverPos': 63610135,
+    'xpos': 13063036002,
+    'algorithms': 'manta',
+    'bothsidesSupport': False,
+    'familyGuids': ['F000011_11'],
+    'genotypeFilters': 'HIGH_SR_BACKGROUND',
+    'genotypes': {
+        'I000015_na20885': {
+            'sampleId': 'NA20885', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+            'numAlt': 1, 'cn': None, 'gq': 62, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
+        }, 'I000025_na20884': {
+            'sampleId': 'NA20884', 'individualGuid': 'I000025_na20884', 'familyGuid': 'F000011_11',
+            'numAlt': 2, 'cn': None, 'gq': 42, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
+        }, 'I000035_na20883': {
+            'sampleId': 'NA20883', 'individualGuid': 'I000035_na20883', 'familyGuid': 'F000011_11',
+            'numAlt': 1, 'cn': None, 'gq': 79, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
+        },
+    }, 'populations': {
+        'sv_callset': {'af': 0.5778080224990845, 'ac': 3364, 'an': 5822, 'hom': 459, 'het': 2446},
+        'gnomad_svs': {'af': 0.0, 'id': ''},
+    },
+    'predictions': {'strvctvre': None},
+    'cpxIntervals': [{'chrom': 'chr17', 'start': 22150735, 'end': 22151179, 'type': 'DUP'}],
+    'svSourceDetail': None,
+    'svType': 'CPX',
+    'svTypeDetail': 'dDUP',
+    'transcripts': {
+        'ENSG00000083544': [{'geneId': 'ENSG00000083544', 'majorConsequence': 'NEAREST_TSS'}],
+        'null': [{'geneId': None, 'majorConsequence': 'NEAREST_TSS'}],
+    },
+    '_sort': [13063036002],
+}
+SV_VARIANT4 = {
+    'variantId': 'phase2_DEL_chr14_4640',
+    'chrom': '14',
+    'endChrom': None,
+    'pos': 106694244,
+    'end': 106740587,
+    'rg37LocusEnd': None,
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': '14',
+    'liftedOverPos': 107150261,
+    'xpos': 14106694244,
+    'algorithms': 'depth,manta',
+    'bothsidesSupport': False,
+    'familyGuids': ['F000011_11'],
+    'genotypeFilters': '',
+    'genotypes': {
+        'I000015_na20885': {
+            'sampleId': 'NA20885', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+            'numAlt': 2, 'cn': 0, 'gq': 99, 'newCall': False, 'prevCall': True, 'prevNumAlt': None,
+        }, 'I000025_na20884': {
+            'sampleId': 'NA20884', 'individualGuid': 'I000025_na20884', 'familyGuid': 'F000011_11',
+            'numAlt': 1, 'cn': 1, 'gq': 99, 'newCall': False, 'prevCall': False, 'prevNumAlt': 2,
+        }, 'I000035_na20883': {
+            'sampleId': 'NA20883', 'individualGuid': 'I000035_na20883', 'familyGuid': 'F000011_11',
+            'numAlt': 1, 'cn': 1, 'gq': 99, 'newCall': False, 'prevCall': False, 'prevNumAlt': 2,
+        },
+    },
+    'populations': {
+        'sv_callset': {'af': 0.6100999712944031, 'ac': 3552, 'an': 5822, 'hom': 1053, 'het': 1446},
+        'gnomad_svs': {'af': 0.0, 'id': ''},
+    },
+    'predictions': {'strvctvre': 0.16099999845027924},
+    'cpxIntervals': None,
+    'svSourceDetail': None,
+    'svType': 'DEL',
+    'svTypeDetail': None,
+    'transcripts': {
+        'ENSG00000184986': [{'geneId': 'ENSG00000184986', 'majorConsequence': 'NEAREST_TSS'}],
+    },
+    '_sort': [14106694244],
+}
+
 LOCATION_SEARCH = {
     'gene_ids': ['ENSG00000177000', 'ENSG00000097046'],
     'intervals': ['2:1234-5678', '7:1-11100', '1:11785723-11806455', '1:91500851-91525764'],

@@ -393,11 +393,6 @@ class BaseHailTableQuery(object):
             lambda entries: hl.or_missing(entries.any(any_valid_entry), entries))
         )
 
-        if inheritance_mode == X_LINKED_RECESSIVE:
-            x_chrom_interval = hl.parse_locus_interval(
-                hl.get_reference(self._genome_version).x_contigs[0], reference_genome=self._genome_version)
-            ht = ht.filter(self.get_x_chrom_filter(ht, x_chrom_interval))
-
         filter_mode_map = {}
         if (inheritance_filter or inheritance_mode) and not is_any_affected:
             filter_mode_map[inheritance_mode] = 'family_entries'
@@ -483,10 +478,6 @@ class BaseHailTableQuery(object):
     def _filter_vcf_filters(ht):
         return ht.filter(hl.is_missing(ht.filters) | (ht.filters.length() < 1))
 
-    @staticmethod
-    def get_x_chrom_filter(ht, x_interval):
-        return x_interval.contains(ht.locus)
-
     def _filter_variant_ids(self, ht, variant_ids):
         raise NotImplementedError
 
@@ -519,7 +510,8 @@ class BaseHailTableQuery(object):
         self._ht = self._ht.filter(rs_id_set.contains(self._ht.rsid))
 
     def _parse_intervals(self, intervals, variant_ids, **kwargs):
-        if not (intervals or variant_ids):
+        is_x_linked = self._inheritance_mode == X_LINKED_RECESSIVE
+        if not (intervals or variant_ids or is_x_linked):
             return intervals, variant_ids
 
         reference_genome = hl.get_reference(self._genome_version)
@@ -533,8 +525,11 @@ class BaseHailTableQuery(object):
         elif should_add_chr_prefix:
             intervals = [
                 f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
-                for interval in intervals
+                for interval in (intervals or [])
             ]
+
+        if is_x_linked:
+            intervals = (intervals or []) + [reference_genome.x_contigs[0]]
 
         parsed_intervals = [
             hl.eval(hl.parse_locus_interval(interval, reference_genome=self._genome_version, invalid_missing=True))
@@ -1054,7 +1049,9 @@ class SvHailTableQuery(BaseHailTableQuery):
         'endChrom': lambda r: hl.or_missing(r.start_locus.contig != r.end_locus.contig, r.end_locus.contig.replace('^chr', '')),
         'pos': lambda r: r.start_locus.position,
         'end': lambda r: r.end_locus.position,
-        'rg37LocusEnd': lambda r: r.rg37_locus_end,
+        'rg37LocusEnd': lambda r: hl.or_missing(
+            hl.is_defined(r.rg37_locus_end), hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position)
+        ),
         **BaseHailTableQuery.BASE_ANNOTATION_FIELDS,
     }
     ENUM_ANNOTATION_FIELDS = {
@@ -1099,13 +1096,9 @@ class SvHailTableQuery(BaseHailTableQuery):
 
         return super()._filter_annotated_table(*args, **kwargs)
 
-    @staticmethod
-    def get_x_chrom_filter(ht, x_interval):
-        return x_interval.contains(ht.start_locus)
-
     def _get_family_passes_quality_filter(self, quality_filter, annotations=None, **kwargs):
         passes_quality = super()._get_family_passes_quality_filter(quality_filter)
-        if not annotations.get(NEW_SV_FIELD):
+        if not (annotations or {}).get(NEW_SV_FIELD):
             return passes_quality
 
         entries_has_new_call = lambda entries: entries.any(lambda x: x.concordance.new_call)
