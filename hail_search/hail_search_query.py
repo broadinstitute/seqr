@@ -630,7 +630,6 @@ class BaseHailTableQuery(object):
         annotation_filter = self._ht[HAS_ALLOWED_ANNOTATION]
         if has_secondary_annotations:
             annotation_filter |= self._ht[HAS_ALLOWED_SECONDARY_ANNOTATION]
-
         self._ht = self._ht.filter(annotation_filter)
 
     def _get_allowed_consequences_annotations(self, annotations, annotation_filters, is_secondary=False):
