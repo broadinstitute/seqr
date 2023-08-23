@@ -54,6 +54,12 @@ MULTI_PROJECT_SAMPLE_DATA['VARIANTS'].append(FAMILY_11_SAMPLE)
 MULTI_PROJECT_MISSING_SAMPLE_DATA = deepcopy(FAMILY_2_MISSING_SAMPLE_DATA)
 MULTI_PROJECT_MISSING_SAMPLE_DATA['VARIANTS'].append(FAMILY_11_SAMPLE)
 
+SV_WGS_SAMPLE_DATA = {'SV_WGS': [FAMILY_11_SAMPLE, {
+    'sample_id': 'NA20884', 'individual_guid': 'I000025_na20884', 'family_guid': 'F000011_11', 'project_guid': 'R0003_test', 'affected': 'N', 'sex': 'M',
+}, {
+    'sample_id': 'NA20883', 'individual_guid': 'I000035_na20883', 'family_guid': 'F000011_11', 'project_guid': 'R0003_test', 'affected': 'N', 'sex': 'F',
+}]}
+
 VARIANT1 = {
     'variantId': '1-10439-AC-A',
     'chrom': '1',
