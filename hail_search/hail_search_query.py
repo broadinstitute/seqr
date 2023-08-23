@@ -64,7 +64,7 @@ class BaseHailTableQuery(object):
             'response_key': 'transcripts',
             'empty_array': True,
             'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
-            'format_values': lambda values: values.group_by(lambda t: t.geneId),
+            'format_values': lambda values, *args: values.group_by(lambda t: t.geneId),
         },
     }
     LIFTOVER_ANNOTATION_FIELDS = {
@@ -145,7 +145,7 @@ class BaseHailTableQuery(object):
 
     def _get_enum_terms_ids(self, field, subfield, terms):
         enum = self._get_enum_lookup(field, subfield)
-        return {enum[t] for t in terms if enum.get(t)}
+        return {enum[t] for t in terms if enum.get(t) is not None}
 
     def _format_enum_response(self, k, enum):
         enum_config = self.ENUM_ANNOTATION_FIELDS.get(k, {})
@@ -163,7 +163,7 @@ class BaseHailTableQuery(object):
                 value = hl.or_else(value, hl.empty_array(value.dtype.element_type))
             value = value.map(lambda x: cls._enum_field(x, enum, **kwargs))
             if format_values:
-                value = format_values(value)
+                value = format_values(value, r)
             return value
 
         return cls._enum_field(value, enum, **kwargs)
@@ -630,6 +630,7 @@ class BaseHailTableQuery(object):
         annotation_filter = self._ht[HAS_ALLOWED_ANNOTATION]
         if has_secondary_annotations:
             annotation_filter |= self._ht[HAS_ALLOWED_SECONDARY_ANNOTATION]
+
         self._ht = self._ht.filter(annotation_filter)
 
     def _get_allowed_consequences_annotations(self, annotations, annotation_filters, is_secondary=False):
@@ -1163,7 +1164,8 @@ class GcnvHailTableQuery(SvHailTableQuery):
         **BaseHailTableQuery.GENOTYPE_QUERY_MAP,
         REF_REF: hl.is_missing,
         HAS_REF: lambda gt: hl.is_missing(gt) | gt.is_het_ref(),
-        COMP_HET_ALT: BaseHailTableQuery.GENOTYPE_QUERY_MAP[HAS_ALT],
+        HAS_ALT: hl.is_defined,
+        COMP_HET_ALT: hl.is_defined,
     }
     MISSING_NUM_ALT = 0
 
@@ -1189,6 +1191,14 @@ class GcnvHailTableQuery(SvHailTableQuery):
     }
     del BASE_ANNOTATION_FIELDS['bothsidesSupport']
 
+    TRANSCRIPTS_ENUM_FIELD = SvHailTableQuery.ENUM_ANNOTATION_FIELDS[SvHailTableQuery.TRANSCRIPTS_FIELD]
+    ENUM_ANNOTATION_FIELDS = {SvHailTableQuery.TRANSCRIPTS_FIELD: {
+        **TRANSCRIPTS_ENUM_FIELD,
+        'format_values': lambda values, r: GcnvHailTableQuery.TRANSCRIPTS_ENUM_FIELD['format_values'](
+            GcnvHailTableQuery._get_gene_id_transcripts_override(values, r), r
+        ),
+    }}
+
     POPULATIONS = {k: v for k, v in SvHailTableQuery.POPULATIONS.items() if k != 'gnomad_svs'}
 
     @staticmethod
@@ -1202,21 +1212,19 @@ class GcnvHailTableQuery(SvHailTableQuery):
             default, agg(entries.map(lambda g: g[sample_field]))
         )
 
-    def _filter_annotated_table(self, **kwargs):
-        # sorted_gene_consequences may contain genes absent from the queried families, so remove those before filtering
+    @classmethod
+    def _get_gene_id_transcripts_override(cls, transcripts, r):
         empty_gene_set = hl.empty_set(hl.tstr)
-        geneotype_gene_ids_expr = self._get_genotype_override_field(
-            self._ht, 'gene_ids',
+        geneotype_gene_ids_expr = cls._get_genotype_override_field(
+            r, 'gene_ids',
             lambda entry_gene_ids: entry_gene_ids.fold(lambda s1, s2: s1.union(s2), empty_gene_set),
             default=hl.missing(empty_gene_set.dtype))
-        self._ht = self._ht.annotate(sorted_gene_consequences=hl.bind(
+        return hl.bind(
             lambda gene_ids: hl.if_else(
-                hl.is_missing(gene_ids), self._ht.sorted_gene_consequences,
-                self._ht.sorted_gene_consequences.filter(lambda t: gene_ids.contains(t.gene_id)),
+                hl.is_missing(gene_ids), transcripts,
+                transcripts.filter(lambda t: gene_ids.contains(t.geneId)),
             ), geneotype_gene_ids_expr,
-        ))
-
-        return super()._filter_annotated_table(**kwargs)
+        )
 
     def _additional_annotation_fields(self):
         return {}
