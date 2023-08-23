@@ -63,7 +63,7 @@ class BaseHailTableQuery(object):
             'response_key': 'transcripts',
             'empty_array': True,
             'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
-            'format_values': lambda values: values.group_by(lambda t: t.geneId),
+            'format_array_values': lambda values: values.group_by(lambda t: t.geneId),
         },
     }
     LIFTOVER_ANNOTATION_FIELDS = {
@@ -152,7 +152,7 @@ class BaseHailTableQuery(object):
         return enum_config.get('response_key', _to_camel_case(k)), value
 
     @classmethod
-    def _format_enum(cls, r, field, enum, empty_array=False, format_values=None, **kwargs):
+    def _format_enum(cls, r, field, enum, empty_array=False, format_array_values=None, **kwargs):
         if hasattr(r, f'{field}_id'):
             return hl.array(enum)[r[f'{field}_id']]
 
@@ -161,8 +161,8 @@ class BaseHailTableQuery(object):
             if empty_array:
                 value = hl.or_else(value, hl.empty_array(value.dtype.element_type))
             value = value.map(lambda x: cls._enum_field(x, enum, **kwargs))
-            if format_values:
-                value = format_values(value)
+            if format_array_values:
+                value = format_array_values(value)
             return value
 
         return cls._enum_field(value, enum, **kwargs)
@@ -943,14 +943,11 @@ class VariantHailTableQuery(BaseHailTableQuery):
         if len(variant_ids) == 1:
             variant_id_q = ht.alleles == [variant_ids[0][2], variant_ids[0][3]]
         else:
-            variant_id_qs = [
+            variant_id_q = hl.any([
                 (ht.locus == hl.locus(chrom, pos, reference_genome=self._genome_version)) &
                 (ht.alleles == [ref, alt])
                 for chrom, pos, ref, alt in variant_ids
-            ]
-            variant_id_q = variant_id_qs[0]
-            for q in variant_id_qs[1:]:
-                variant_id_q |= q
+            ])
         return ht.filter(variant_id_q)
 
     def _prefilter_entries_table(self, ht, parsed_intervals=None, exclude_intervals=False, **kwargs):
@@ -1058,8 +1055,8 @@ class SvHailTableQuery(BaseHailTableQuery):
         'pos': lambda r: r.start_locus.position,
         'end': lambda r: r.end_locus.position,
         'rg37LocusEnd': lambda r: r.rg37_locus_end,
+        **BaseHailTableQuery.BASE_ANNOTATION_FIELDS,
     }
-    BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
         TRANSCRIPTS_FIELD: BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
     }
@@ -1074,12 +1071,12 @@ class SvHailTableQuery(BaseHailTableQuery):
     }
 
     SORTS = {
+        **BaseHailTableQuery.SORTS,
         'protein_consequence': lambda r: [hl.min(r.sorted_gene_consequences.map(lambda g: g.major_consequence_id))],
         'size': lambda r: [hl.if_else(
             r.start_locus.contig == r.end_locus.contig, r.start_locus.position - r.end_locus.position, -50,
         )],
     }
-    SORTS.update(BaseHailTableQuery.SORTS)
 
     def _parse_intervals(self, intervals, variant_ids, variant_keys=None, **kwargs):
         parsed_intervals, _ = super()._parse_intervals(intervals, variant_ids=None, **kwargs)
