@@ -979,7 +979,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         annotation_exprs['allowed_transcripts'] = allowed_transcripts
         return hl.is_defined(allowed_transcripts.first())
 
-    def _get_annotation_override_filters(self, annotations, pathogenicity=None):
+    def _get_annotation_override_filters(self, annotations, pathogenicity=None, **kwargs):
         annotation_filters = []
 
         for key in self.PATHOGENICITY_FILTERS.keys():
@@ -1086,7 +1086,7 @@ class SvHailTableQuery(BaseHailTableQuery):
         variant_ids_set = hl.set(variant_ids)
         return ht.filter(variant_ids_set.contains(ht.variant_id))
 
-    def _filter_annotated_table(self, parsed_intervals=None, exclude_intervals=False, **kwargs):
+    def _filter_annotated_table(self, *args, parsed_intervals=None, exclude_intervals=False, **kwargs):
         if parsed_intervals:
             interval_filter = hl.array(parsed_intervals).any(lambda interval: hl.if_else(
                 self._ht.start_locus.contig == self._ht.end_locus.contig,
@@ -1097,7 +1097,7 @@ class SvHailTableQuery(BaseHailTableQuery):
                 interval_filter = ~interval_filter
             self._ht = self._ht.filter(interval_filter)
 
-        return super()._filter_annotated_table(**kwargs)
+        return super()._filter_annotated_table(*args, **kwargs)
 
     @staticmethod
     def get_x_chrom_filter(ht, x_interval):
