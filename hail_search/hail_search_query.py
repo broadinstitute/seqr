@@ -1069,7 +1069,7 @@ class SvHailTableQuery(BaseHailTableQuery):
 
     SORTS = {
         **BaseHailTableQuery.SORTS,
-        'protein_consequence': lambda r: [hl.min(r.sorted_gene_consequences.map(lambda g: g.major_consequence_id))],
+        'protein_consequence': lambda r: [hl.min(r[TRANSCRIPTS_FIELD].map(lambda g: g.major_consequence_id))],
         'size': lambda r: [hl.if_else(
             r.start_locus.contig == r.end_locus.contig, r.start_locus.position - r.end_locus.position, -50,
         )],
@@ -1114,7 +1114,7 @@ class SvHailTableQuery(BaseHailTableQuery):
         return super()._get_allowed_consequences_annotations(annotations, annotation_filters)
 
     def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
-        return self._ht.sorted_gene_consequences.any(
+        return self._ht[self.TRANSCRIPTS_FIELD].any(
             lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
         )
 
