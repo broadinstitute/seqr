@@ -1065,7 +1065,6 @@ class SvHailTableQuery(BaseHailTableQuery):
     BASE_ANNOTATION_FIELDS = {
         'bothsidesSupport': lambda r: r.bothsides_support,
         'chrom': lambda r: r.start_locus.contig.replace('^chr', ''),
-        'endChrom': lambda r: hl.or_missing(r.start_locus.contig != r.end_locus.contig, r.end_locus.contig.replace('^chr', '')),
         'pos': lambda r: r.start_locus.position,
         'end': lambda r: r.end_locus.position,
         'rg37LocusEnd': lambda r: hl.or_missing(
@@ -1149,7 +1148,7 @@ class SvHailTableQuery(BaseHailTableQuery):
     def _additional_annotation_fields(self):
         sv_type_enum = self._enums['sv_type']
         insertion_type_id = sv_type_enum.index('INS')
-        get_end_chrom = self.BASE_ANNOTATION_FIELDS['endChrom']
+        get_end_chrom = lambda r: hl.or_missing(r.start_locus.contig != r.end_locus.contig, r.end_locus.contig.replace('^chr', ''))
         return {
             'cpxIntervals': lambda r: self._format_enum(
                 r, 'cpx_intervals', {'type': sv_type_enum}, annotate_value=lambda val, *args: {
