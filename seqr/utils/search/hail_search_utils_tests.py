@@ -8,10 +8,10 @@ import responses
 from seqr.models import Family
 from seqr.utils.search.utils import get_variant_query_gene_counts, query_variants, get_single_variant, \
     get_variants_for_variant_ids, InvalidSearchException
-from seqr.utils.search.search_utils_tests import SearchTestHelper, MOCK_COUNTS
+from seqr.utils.search.search_utils_tests import SearchTestHelper
 from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
     FAMILY_2_ALL_SAMPLE_DATA, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
-    LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH
+    LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS
 MOCK_HOST = 'http://test-hail-host'
 
 
@@ -155,10 +155,10 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
     @responses.activate
     def test_get_variant_query_gene_counts(self):
-        responses.add(responses.POST, f'{MOCK_HOST}:5000/gene_counts', json=MOCK_COUNTS, status=200)
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/gene_counts', json=GENE_COUNTS, status=200)
 
         gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
-        self.assertDictEqual(gene_counts, MOCK_COUNTS)
+        self.assertDictEqual(gene_counts, GENE_COUNTS)
         self.assert_cached_results({'gene_aggs': gene_counts})
         self._test_expected_search_call(sort=None)
 
