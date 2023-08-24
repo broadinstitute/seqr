@@ -64,7 +64,7 @@ class BaseHailTableQuery(object):
             'response_key': 'transcripts',
             'empty_array': True,
             'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
-            'format_values': lambda values, *args: values.group_by(lambda t: t.geneId),
+            'format_array_values': lambda values, *args: values.group_by(lambda t: t.geneId),
         },
     }
     LIFTOVER_ANNOTATION_FIELDS = {
@@ -153,7 +153,7 @@ class BaseHailTableQuery(object):
         return enum_config.get('response_key', _to_camel_case(k)), value
 
     @classmethod
-    def _format_enum(cls, r, field, enum, empty_array=False, format_values=None, **kwargs):
+    def _format_enum(cls, r, field, enum, empty_array=False, format_array_values=None, **kwargs):
         if hasattr(r, f'{field}_id'):
             return hl.array(enum)[r[f'{field}_id']]
 
@@ -162,8 +162,8 @@ class BaseHailTableQuery(object):
             if empty_array:
                 value = hl.or_else(value, hl.empty_array(value.dtype.element_type))
             value = value.map(lambda x: cls._enum_field(x, enum, **kwargs))
-            if format_values:
-                value = format_values(value, r)
+            if format_array_values:
+                value = format_array_values(value, r)
             return value
 
         return cls._enum_field(value, enum, **kwargs)
@@ -389,11 +389,6 @@ class BaseHailTableQuery(object):
             lambda entries: hl.or_missing(entries.any(any_valid_entry), entries))
         )
 
-        if inheritance_mode == X_LINKED_RECESSIVE:
-            x_chrom_interval = hl.parse_locus_interval(
-                hl.get_reference(self._genome_version).x_contigs[0], reference_genome=self._genome_version)
-            ht = ht.filter(self.get_x_chrom_filter(ht, x_chrom_interval))
-
         filter_mode_map = {}
         if (inheritance_filter or inheritance_mode) and not is_any_affected:
             filter_mode_map[inheritance_mode] = 'family_entries'
@@ -479,10 +474,6 @@ class BaseHailTableQuery(object):
     def _filter_vcf_filters(ht):
         return ht.filter(hl.is_missing(ht.filters) | (ht.filters.length() < 1))
 
-    @staticmethod
-    def get_x_chrom_filter(ht, x_interval):
-        return x_interval.contains(ht.locus)
-
     def _filter_variant_ids(self, ht, variant_ids):
         raise NotImplementedError
 
@@ -515,7 +506,8 @@ class BaseHailTableQuery(object):
         self._ht = self._ht.filter(rs_id_set.contains(self._ht.rsid))
 
     def _parse_intervals(self, intervals, variant_ids, **kwargs):
-        if not (intervals or variant_ids):
+        is_x_linked = self._inheritance_mode == X_LINKED_RECESSIVE
+        if not (intervals or variant_ids or is_x_linked):
             return intervals, variant_ids
 
         reference_genome = hl.get_reference(self._genome_version)
@@ -529,8 +521,11 @@ class BaseHailTableQuery(object):
         elif should_add_chr_prefix:
             intervals = [
                 f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
-                for interval in intervals
+                for interval in (intervals or [])
             ]
+
+        if is_x_linked:
+            intervals = (intervals or []) + [reference_genome.x_contigs[0]]
 
         parsed_intervals = [
             hl.eval(hl.parse_locus_interval(interval, reference_genome=self._genome_version, invalid_missing=True))
@@ -619,8 +614,7 @@ class BaseHailTableQuery(object):
 
         annotation_exprs = self._get_allowed_consequences_annotations(annotations, annotation_override_filters)
         secondary_exprs = self._get_allowed_consequences_annotations(annotations_secondary or {}, annotation_override_filters, is_secondary=True)
-        has_secondary_annotations = 'allowed_transcripts' in secondary_exprs
-        if has_secondary_annotations:
+        if secondary_exprs:
             annotation_exprs.update({f'{k}_secondary': v for k, v in secondary_exprs.items()})
 
         if not annotation_exprs:
@@ -628,7 +622,7 @@ class BaseHailTableQuery(object):
 
         self._ht = self._ht.annotate(**annotation_exprs)
         annotation_filter = self._ht[HAS_ALLOWED_ANNOTATION]
-        if has_secondary_annotations:
+        if secondary_exprs:
             annotation_filter |= self._ht[HAS_ALLOWED_SECONDARY_ANNOTATION]
         self._ht = self._ht.filter(annotation_filter)
 
@@ -641,12 +635,13 @@ class BaseHailTableQuery(object):
             self.TRANSCRIPTS_FIELD, self.TRANSCRIPT_CONSEQUENCE_FIELD, allowed_consequences)
 
         annotation_exprs = {}
-        if allowed_consequence_ids:
+        has_consequence_filter = bool(allowed_consequence_ids)
+        if has_consequence_filter:
             allowed_consequence_ids = hl.set(allowed_consequence_ids)
             consequence_filter = self._get_consequence_filter(allowed_consequence_ids, annotation_exprs)
             annotation_filters = annotation_filters + [consequence_filter]
 
-        if annotation_filters:
+        if has_consequence_filter or (annotation_filters and not is_secondary):
             annotation_exprs[HAS_ALLOWED_ANNOTATION] = hl.any(annotation_filters)
 
         return annotation_exprs
@@ -778,6 +773,29 @@ class BaseHailTableQuery(object):
     @classmethod
     def _gene_rank_sort(cls, r, gene_ranks):
         return [hl.min(cls._gene_ids_expr(r).map(gene_ranks.get))]
+
+    def gene_counts(self):
+        selects = {
+            'gene_ids': self._gene_ids_expr,
+            'families': self.BASE_ANNOTATION_FIELDS['familyGuids'],
+        }
+        ch_ht = None
+        if self._comp_het_ht:
+            ch_ht = self._comp_het_ht.explode(self._comp_het_ht[GROUPED_VARIANTS_FIELD])
+            ch_ht = ch_ht.select(**{k: v(ch_ht[GROUPED_VARIANTS_FIELD]) for k, v in selects.items()})
+
+        if self._ht:
+            ht = self._ht.select(**{k: v(self._ht) for k, v in selects.items()})
+            if ch_ht:
+                ht = ht.join(ch_ht, 'outer')
+                ht = ht.transmute(**{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in selects})
+        else:
+            ht = ch_ht
+
+        ht = ht.explode('gene_ids').explode('families')
+        return ht.aggregate(hl.agg.group_by(
+            ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
+        ))
 
 
 class VariantHailTableQuery(BaseHailTableQuery):
@@ -939,14 +957,11 @@ class VariantHailTableQuery(BaseHailTableQuery):
         if len(variant_ids) == 1:
             variant_id_q = ht.alleles == [variant_ids[0][2], variant_ids[0][3]]
         else:
-            variant_id_qs = [
+            variant_id_q = hl.any([
                 (ht.locus == hl.locus(chrom, pos, reference_genome=self._genome_version)) &
                 (ht.alleles == [ref, alt])
                 for chrom, pos, ref, alt in variant_ids
-            ]
-            variant_id_q = variant_id_qs[0]
-            for q in variant_id_qs[1:]:
-                variant_id_q |= q
+            ])
         return ht.filter(variant_id_q)
 
     def _prefilter_entries_table(self, ht, parsed_intervals=None, exclude_intervals=False, **kwargs):
@@ -1053,9 +1068,11 @@ class SvHailTableQuery(BaseHailTableQuery):
         'endChrom': lambda r: hl.or_missing(r.start_locus.contig != r.end_locus.contig, r.end_locus.contig.replace('^chr', '')),
         'pos': lambda r: r.start_locus.position,
         'end': lambda r: r.end_locus.position,
-        'rg37LocusEnd': lambda r: r.rg37_locus_end,
+        'rg37LocusEnd': lambda r: hl.or_missing(
+            hl.is_defined(r.rg37_locus_end), hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position)
+        ),
+        **BaseHailTableQuery.BASE_ANNOTATION_FIELDS,
     }
-    BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ENUM_ANNOTATION_FIELDS = {
         TRANSCRIPTS_FIELD: BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
     }
@@ -1070,12 +1087,12 @@ class SvHailTableQuery(BaseHailTableQuery):
     }
 
     SORTS = {
+        **BaseHailTableQuery.SORTS,
         'protein_consequence': lambda r: [hl.min(r.sorted_gene_consequences.map(lambda g: g.major_consequence_id))],
         'size': lambda r: [hl.if_else(
             r.start_locus.contig == r.end_locus.contig, r.start_locus.position - r.end_locus.position, -50,
         )],
     }
-    SORTS.update(BaseHailTableQuery.SORTS)
 
     def _parse_intervals(self, intervals, variant_ids, variant_keys=None, **kwargs):
         parsed_intervals, _ = super()._parse_intervals(intervals, variant_ids=None, **kwargs)
@@ -1098,13 +1115,9 @@ class SvHailTableQuery(BaseHailTableQuery):
 
         return super()._filter_annotated_table(*args, **kwargs)
 
-    @staticmethod
-    def get_x_chrom_filter(ht, x_interval):
-        return x_interval.contains(ht.start_locus)
-
     def _get_family_passes_quality_filter(self, quality_filter, annotations=None, **kwargs):
         passes_quality = super()._get_family_passes_quality_filter(quality_filter)
-        if not annotations.get(NEW_SV_FIELD):
+        if not (annotations or {}).get(NEW_SV_FIELD):
             return passes_quality
 
         entries_has_new_call = lambda entries: entries.any(lambda x: x.concordance.new_call)
@@ -1120,7 +1133,7 @@ class SvHailTableQuery(BaseHailTableQuery):
         return super()._get_allowed_consequences_annotations(annotations, annotation_filters)
 
     def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
-        return self._ht.sorted_gene_consequences.any(
+        return self._ht[self.TRANSCRIPTS_FIELD].any(
             lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
         )
 

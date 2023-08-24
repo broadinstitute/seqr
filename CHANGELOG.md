@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 8/22/23
 * Add db indices to optimize RNA data queries (REQUIRES DB MIGRATION)
 
 ## 7/11/23
