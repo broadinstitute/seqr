@@ -1069,7 +1069,7 @@ class SvHailTableQuery(BaseHailTableQuery):
 
     SORTS = {
         **BaseHailTableQuery.SORTS,
-        'protein_consequence': lambda r: [hl.min(r[TRANSCRIPTS_FIELD].map(lambda g: g.major_consequence_id))],
+        'protein_consequence': lambda r: [hl.min(r.sorted_gene_consequences.map(lambda g: g.major_consequence_id))],
         'size': lambda r: [hl.if_else(
             r.start_locus.contig == r.end_locus.contig, r.start_locus.position - r.end_locus.position, -50,
         )],
@@ -1101,6 +1101,7 @@ class SvHailTableQuery(BaseHailTableQuery):
         if not (annotations or {}).get(NEW_SV_FIELD):
             return passes_quality
 
+        # TODO
         entries_has_new_call = lambda entries: entries.any(lambda x: x.concordance.new_call)
         if passes_quality is None:
             return entries_has_new_call

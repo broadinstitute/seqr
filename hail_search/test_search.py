@@ -111,11 +111,11 @@ class HailSearchTestCase(AioHTTPTestCase):
     async def get_application(self):
         return init_web_app()
 
-    # async def test_status(self):
-    #     async with self.client.request('GET', '/status') as resp:
-    #         self.assertEqual(resp.status, 200)
-    #         resp_json = await resp.json()
-    #     self.assertDictEqual(resp_json, {'success': True})
+    async def test_status(self):
+        async with self.client.request('GET', '/status') as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {'success': True})
 
     async def _assert_expected_search(self, results, **search_kwargs):
         search_body = get_hail_search_body(**search_kwargs)
@@ -127,385 +127,390 @@ class HailSearchTestCase(AioHTTPTestCase):
         for i, result in enumerate(resp_json['results']):
             self.assertEqual(result, results[i])
 
-    # async def test_single_family_search(self):
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, VARIANT3, VARIANT4], sample_data=FAMILY_2_VARIANT_SAMPLE_DATA,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA,
-    #     )
+    async def test_single_family_search(self):
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4], sample_data=FAMILY_2_VARIANT_SAMPLE_DATA,
+        )
 
-    # async def test_single_project_search(self):
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_sample_type='SV_WES',
-    #     )
-    #
-    # async def test_multi_project_search(self):
-    #     await self._assert_expected_search(
-    #         [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4],
-    #         sample_data=MULTI_PROJECT_SAMPLE_DATA,
-    #     )
-    #
-    # async def test_inheritance_filter(self):
-    #     inheritance_mode = 'any_affected'
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], inheritance_mode=inheritance_mode, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-    #     )
-    #
-    #     inheritance_mode = 'de_novo'
-    #     await self._assert_expected_search(
-    #         [VARIANT1, FAMILY_3_VARIANT, VARIANT4], inheritance_mode=inheritance_mode, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SV_VARIANT1], inheritance_mode=inheritance_mode,  sample_data=SV_WGS_SAMPLE_DATA,
-    #     )
-    #
-    #     inheritance_mode = 'x_linked_recessive'
-    #     await self._assert_expected_search([], inheritance_mode=inheritance_mode, omit_sample_type='SV_WES')
-    #     await self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA)
-    #
-    #     inheritance_mode = 'homozygous_recessive'
-    #     await self._assert_expected_search(
-    #         [VARIANT2], inheritance_mode=inheritance_mode, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [PROJECT_2_VARIANT1, VARIANT2], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-    #     )
-    #
-    #     gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'has_alt', 'I000005_hg00732': 'ref_ref'}}
-    #     await self._assert_expected_search(
-    #         [VARIANT2, VARIANT3], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
-    #
-    #     inheritance_mode = 'compound_het'
-    #     await self._assert_expected_search(
-    #         [[VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA,
-    #         **COMP_HET_ALL_PASS_FILTERS,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [[SV_VARIANT1, SV_VARIANT2]], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-    #         **COMP_HET_ALL_PASS_FILTERS,
-    #     )
-    #
-    #     inheritance_mode = 'recessive'
-    #     await self._assert_expected_search(
-    #         [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode,
-    #         sample_data=MULTI_PROJECT_SAMPLE_DATA, **COMP_HET_ALL_PASS_FILTERS,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-    #         **COMP_HET_ALL_PASS_FILTERS,
-    #     )
-    #
-    # async def test_quality_filter(self):
-    #     quality_filter = {'vcf_filter': 'pass'}
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT], quality_filter=quality_filter, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search([SV_VARIANT4], quality_filter=quality_filter, sample_data=SV_WGS_SAMPLE_DATA)
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40}, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SV_VARIANT3, SV_VARIANT4], quality_filter={'min_gq_sv': 40}, sample_data=SV_WGS_SAMPLE_DATA,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'}, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 60, 'affected_only': True},
-    #         omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SV_VARIANT3, SV_VARIANT4], quality_filter={'min_gq_sv': 60, 'affected_only': True}, sample_data=SV_WGS_SAMPLE_DATA,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, FAMILY_3_VARIANT], quality_filter={'min_ab': 50}, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT2, VARIANT3], quality_filter={'min_ab': 70, 'affected_only': True},
-    #         omit_sample_type='SV_WES',
-    #     )
-    #
-    #     quality_filter = {'min_gq': 40, 'min_ab': 50}
-    #     await self._assert_expected_search(
-    #         [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_sample_type='SV_WES',
-    #         annotations=annotations, pathogenicity={'clinvar': ['likely_pathogenic', 'vus_or_conflicting']},
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_sample_type='SV_WES',
-    #         annotations=annotations, pathogenicity={'clinvar': ['pathogenic']},
-    #     )
+        await self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA,
+        )
 
-    # async def test_location_search(self):
-    #     await self._assert_expected_search(
-    #         [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_sample_type='SV_WES', **LOCATION_SEARCH,
-    #     )
-    #
-    #     sv_intervals = ['1:9310023-9380264']
-    #     await self._assert_expected_search(
-    #         [SV_VARIANT1, SV_VARIANT2], sample_data=SV_WGS_SAMPLE_DATA, intervals=sv_intervals, gene_ids=['ENSG00000171621'],
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT1], omit_sample_type='SV_WES', **EXCLUDE_LOCATION_SEARCH,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SV_VARIANT3, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, intervals=sv_intervals, exclude_intervals=True,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],  omit_sample_type='SV_WES',
-    #         intervals=LOCATION_SEARCH['intervals'][-1:], gene_ids=LOCATION_SEARCH['gene_ids'][:1]
-    #     )
+    async def test_single_project_search(self):
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_sample_type='SV_WES',
+        )
 
-    # async def test_variant_id_search(self):
-    #     await self._assert_expected_search([VARIANT2], omit_sample_type='SV_WES', **RSID_SEARCH)
-    #
-    #     await self._assert_expected_search([VARIANT1], omit_sample_type='SV_WES', **VARIANT_ID_SEARCH)
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT1], omit_sample_type='SV_WES', variant_ids=VARIANT_ID_SEARCH['variant_ids'][:1],
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [], omit_sample_type='SV_WES', variant_ids=VARIANT_ID_SEARCH['variant_ids'][1:],
-    #     )
-    #
-    #     await self._assert_expected_search([SV_VARIANT2, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, variant_keys=[
-    #         'cohort_2911.chr1.final_cleanup_INS_chr1_160', 'phase2_DEL_chr14_4640',
-    #     ])
-    #
-    # async def test_frequency_filter(self):
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT4], frequencies={'seqr': {'af': 0.2}}, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {'ac': 4}}, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {'hh': 1}}, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT4], frequencies={'seqr': {'ac': 4, 'hh': 0}}, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SV_VARIANT1], frequencies={'sv_callset': {'af': 0.05}}, sample_data=SV_WGS_SAMPLE_DATA,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.05}}, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.05, 'hh': 1}}, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.005}}, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SV_VARIANT1, SV_VARIANT3, SV_VARIANT4], frequencies={'gnomad_svs': {'af': 0.001}}, sample_data=SV_WGS_SAMPLE_DATA,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT4], frequencies={'seqr': {'af': 0.2}, 'gnomad_genomes': {'ac': 50}},
-    #         omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
-    #         omit_sample_type='SV_WES',
-    #     )
-    #
-    #     annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01}}, omit_sample_type='SV_WES',
-    #         annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting']},
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01}}, omit_sample_type='SV_WES',
-    #         annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'vus_or_conflicting']},
-    #     )
-    #
-    # async def test_annotations_filter(self):
-    #     await self._assert_expected_search([VARIANT2], pathogenicity={'hgmd': ['hgmd_other']}, omit_sample_type='SV_WES')
-    #
-    #     pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting', 'benign']}
-    #     await self._assert_expected_search([VARIANT1, VARIANT2], pathogenicity=pathogenicity, omit_sample_type='SV_WES')
-    #
-    #     pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT4], pathogenicity=pathogenicity, annotations={'SCREEN': ['CTCF-only', 'DNase-only']},
-    #         omit_sample_type='SV_WES',
-    #     )
-    #
-    #     annotations = {
-    #         'missense': ['missense_variant'], 'in_frame': ['inframe_insertion', 'inframe_deletion'], 'frameshift': None,
-    #         'structural_consequence': ['INTRONIC'],
-    #     }
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, VARIANT4], pathogenicity=pathogenicity, annotations=annotations, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search([VARIANT2, VARIANT4], annotations=annotations, omit_sample_type='SV_WES')
-    #
-    #     await self._assert_expected_search([SV_VARIANT1], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
-    #
-    #     annotations['splice_ai'] = '0.005'
-    #     await self._assert_expected_search(
-    #         [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], annotations=annotations, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     annotations['structural'] = ['DEL']
-    #     await self._assert_expected_search([SV_VARIANT1, SV_VARIANT4], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
-    #
-    #     annotations = {'other': ['non_coding_transcript_exon_variant']}
-    #     await self._assert_expected_search(
-    #         [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT],
-    #         pathogenicity=pathogenicity, annotations=annotations, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
-    #         gene_ids=LOCATION_SEARCH['gene_ids'][:1], annotations=annotations, omit_sample_type='SV_WES',
-    #     )
+    async def test_multi_project_search(self):
+        await self._assert_expected_search(
+            [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4],
+            sample_data=MULTI_PROJECT_SAMPLE_DATA,
+        )
 
-    # async def test_secondary_annotations_filter(self):
-    #     annotations_1 = {'missense': ['missense_variant']}
-    #     annotations_2 = {'other': ['intron_variant']}
-    #
-    #     await self._assert_expected_search(
-    #         [[VARIANT3, VARIANT4]], inheritance_mode='compound_het', omit_sample_type='SV_WES',
-    #         annotations=annotations_1, annotations_secondary=annotations_2,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
-    #         annotations=annotations_1, annotations_secondary=annotations_2,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
-    #         annotations=annotations_2, annotations_secondary=annotations_1,
-    #     )
-    #
-    #     sv_annotations_1 = {'structural': ['INS']}
-    #     sv_annotations_2 = {'structural': ['DEL'], 'structural_consequence': ['INTRONIC']}
-    #
-    #     await self._assert_expected_search(
-    #         [[SV_VARIANT1, SV_VARIANT2]], sample_data=SV_WGS_SAMPLE_DATA, inheritance_mode='compound_het',
-    #         annotations=sv_annotations_1, annotations_secondary=sv_annotations_2,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, inheritance_mode='recessive',
-    #         annotations=sv_annotations_2, annotations_secondary=sv_annotations_1,
-    #     )
-    #
-    #     pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}
-    #     await self._assert_expected_search(
-    #         [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
-    #         annotations=annotations_2, annotations_secondary=annotations_1, pathogenicity=pathogenicity,
-    #     )
-    #
-    #     screen_annotations = {'SCREEN': ['CTCF-only']}
-    #     await self._assert_expected_search(
-    #         [], inheritance_mode='recessive', omit_sample_type='SV_WES',
-    #         annotations=screen_annotations, annotations_secondary=annotations_1,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
-    #         annotations=screen_annotations, annotations_secondary=annotations_2,
-    #     )
-    #
-    #     selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
-    #     await self._assert_expected_search(
-    #         [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]], inheritance_mode='recessive',
-    #         annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,
-    #         pathogenicity=pathogenicity, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]],
-    #         annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
-    #         inheritance_mode='recessive', omit_sample_type='SV_WES',
-    #     )
+    async def test_inheritance_filter(self):
+        inheritance_mode = 'any_affected'
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], inheritance_mode=inheritance_mode, omit_sample_type='SV_WES',
+        )
 
-    # async def test_in_silico_filter(self):
-    #     in_silico = {'eigen': '5.5', 'mut_taster': 'P'}
-    #     await self._assert_expected_search(
-    #         [VARIANT1, VARIANT2, VARIANT4], in_silico=in_silico, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     in_silico['requireScore'] = True
-    #     await self._assert_expected_search(
-    #         [VARIANT2, VARIANT4], in_silico=in_silico, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, in_silico={'strvctvre': 0.1, 'requireScore': True},
-    #     )
+        await self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+        )
 
-    # async def test_search_errors(self):
-    #     search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)
-    #     async with self.client.request('POST', '/search', json=search_body) as resp:
-    #         self.assertEqual(resp.status, 400)
-    #         reason = resp.reason
-    #     self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
-    #
-    #     search_body = get_hail_search_body(sample_data=MULTI_PROJECT_MISSING_SAMPLE_DATA)
-    #     async with self.client.request('POST', '/search', json=search_body) as resp:
-    #         self.assertEqual(resp.status, 400)
-    #         reason = resp.reason
-    #     self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
-    #
-    #     search_body = get_hail_search_body(
-    #         intervals=LOCATION_SEARCH['intervals'] + ['1:1-99999999999'], omit_sample_type='SV_WES',
-    #     )
-    #     async with self.client.request('POST', '/search', json=search_body) as resp:
-    #         self.assertEqual(resp.status, 400)
-    #         reason = resp.reason
-    #     self.assertEqual(reason, 'Invalid intervals: 1:1-99999999999')
-    #
+        inheritance_mode = 'de_novo'
+        await self._assert_expected_search(
+            [VARIANT1, FAMILY_3_VARIANT, VARIANT4], inheritance_mode=inheritance_mode, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [SV_VARIANT1], inheritance_mode=inheritance_mode,  sample_data=SV_WGS_SAMPLE_DATA,
+        )
+
+        inheritance_mode = 'x_linked_recessive'
+        await self._assert_expected_search([], inheritance_mode=inheritance_mode, omit_sample_type='SV_WES')
+        await self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA)
+
+        inheritance_mode = 'homozygous_recessive'
+        await self._assert_expected_search(
+            [VARIANT2], inheritance_mode=inheritance_mode, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [PROJECT_2_VARIANT1, VARIANT2], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA,
+        )
+
+        await self._assert_expected_search(
+            [SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+        )
+
+        gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'has_alt', 'I000005_hg00732': 'ref_ref'}}
+        await self._assert_expected_search(
+            [VARIANT2, VARIANT3], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
+
+        inheritance_mode = 'compound_het'
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA,
+            **COMP_HET_ALL_PASS_FILTERS,
+        )
+
+        await self._assert_expected_search(
+            [[SV_VARIANT1, SV_VARIANT2]], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+            **COMP_HET_ALL_PASS_FILTERS,
+        )
+
+        inheritance_mode = 'recessive'
+        await self._assert_expected_search(
+            [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode,
+            sample_data=MULTI_PROJECT_SAMPLE_DATA, **COMP_HET_ALL_PASS_FILTERS,
+        )
+
+        await self._assert_expected_search(
+            [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+            **COMP_HET_ALL_PASS_FILTERS,
+        )
+
+    async def test_quality_filter(self):
+        quality_filter = {'vcf_filter': 'pass'}
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT], quality_filter=quality_filter, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search([SV_VARIANT4], quality_filter=quality_filter, sample_data=SV_WGS_SAMPLE_DATA)
+
+        await self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [SV_VARIANT3, SV_VARIANT4], quality_filter={'min_gq_sv': 40}, sample_data=SV_WGS_SAMPLE_DATA,
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40, 'vcf_filter': 'pass'}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 60, 'affected_only': True},
+            omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [SV_VARIANT3, SV_VARIANT4], quality_filter={'min_gq_sv': 60, 'affected_only': True}, sample_data=SV_WGS_SAMPLE_DATA,
+        )
+
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, FAMILY_3_VARIANT], quality_filter={'min_ab': 50}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, VARIANT3], quality_filter={'min_ab': 70, 'affected_only': True},
+            omit_sample_type='SV_WES',
+        )
+
+        quality_filter = {'min_gq': 40, 'min_ab': 50}
+        await self._assert_expected_search(
+            [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_sample_type='SV_WES',
+        )
+
+        annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_sample_type='SV_WES',
+            annotations=annotations, pathogenicity={'clinvar': ['likely_pathogenic', 'vus_or_conflicting']},
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, FAMILY_3_VARIANT], quality_filter=quality_filter, omit_sample_type='SV_WES',
+            annotations=annotations, pathogenicity={'clinvar': ['pathogenic']},
+        )
+
+    async def test_location_search(self):
+        await self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_sample_type='SV_WES', **LOCATION_SEARCH,
+        )
+
+        sv_intervals = ['1:9310023-9380264']
+        await self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2], sample_data=SV_WGS_SAMPLE_DATA, intervals=sv_intervals, gene_ids=['ENSG00000171621'],
+        )
+
+        await self._assert_expected_search(
+            [VARIANT1], omit_sample_type='SV_WES', **EXCLUDE_LOCATION_SEARCH,
+        )
+
+        await self._assert_expected_search(
+            [SV_VARIANT3, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, intervals=sv_intervals, exclude_intervals=True,
+        )
+
+        await self._assert_expected_search(
+            [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],  omit_sample_type='SV_WES',
+            intervals=LOCATION_SEARCH['intervals'][-1:], gene_ids=LOCATION_SEARCH['gene_ids'][:1]
+        )
+
+    async def test_variant_id_search(self):
+        await self._assert_expected_search([VARIANT2], omit_sample_type='SV_WES', **RSID_SEARCH)
+
+        await self._assert_expected_search([VARIANT1], omit_sample_type='SV_WES', **VARIANT_ID_SEARCH)
+
+        await self._assert_expected_search(
+            [VARIANT1], omit_sample_type='SV_WES', variant_ids=VARIANT_ID_SEARCH['variant_ids'][:1],
+        )
+
+        await self._assert_expected_search(
+            [], omit_sample_type='SV_WES', variant_ids=VARIANT_ID_SEARCH['variant_ids'][1:],
+        )
+
+        await self._assert_expected_search([SV_VARIANT2, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, variant_keys=[
+            'cohort_2911.chr1.final_cleanup_INS_chr1_160', 'phase2_DEL_chr14_4640',
+        ])
+
+    async def test_frequency_filter(self):
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT4], frequencies={'seqr': {'af': 0.2}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {'ac': 4}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {'hh': 1}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT4], frequencies={'seqr': {'ac': 4, 'hh': 0}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [SV_VARIANT1], frequencies={'sv_callset': {'af': 0.05}}, sample_data=SV_WGS_SAMPLE_DATA,
+        )
+
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.05}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.05, 'hh': 1}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.005}}, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT3, SV_VARIANT4], frequencies={'gnomad_svs': {'af': 0.001}}, sample_data=SV_WGS_SAMPLE_DATA,
+        )
+
+        await self._assert_expected_search(
+            [VARIANT4], frequencies={'seqr': {'af': 0.2}, 'gnomad_genomes': {'ac': 50}},
+            omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], frequencies={'seqr': {}, 'gnomad_genomes': {'af': None}},
+            omit_sample_type='SV_WES',
+        )
+
+        annotations = {'splice_ai': '0.0'}  # Ensures no variants are filtered out by annotation/path filters
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01}}, omit_sample_type='SV_WES',
+            annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting']},
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, VARIANT4], frequencies={'gnomad_genomes': {'af': 0.01}}, omit_sample_type='SV_WES',
+            annotations=annotations, pathogenicity={'clinvar': ['pathogenic', 'vus_or_conflicting']},
+        )
+
+    async def test_annotations_filter(self):
+        await self._assert_expected_search([VARIANT2], pathogenicity={'hgmd': ['hgmd_other']}, omit_sample_type='SV_WES')
+
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting', 'benign']}
+        await self._assert_expected_search([VARIANT1, VARIANT2], pathogenicity=pathogenicity, omit_sample_type='SV_WES')
+
+        pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT4], pathogenicity=pathogenicity, annotations={'SCREEN': ['CTCF-only', 'DNase-only']},
+            omit_sample_type='SV_WES',
+        )
+
+        annotations = {
+            'missense': ['missense_variant'], 'in_frame': ['inframe_insertion', 'inframe_deletion'], 'frameshift': None,
+            'structural_consequence': ['INTRONIC'],
+        }
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT4], pathogenicity=pathogenicity, annotations=annotations, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search([VARIANT2, VARIANT4], annotations=annotations, omit_sample_type='SV_WES')
+
+        await self._assert_expected_search([SV_VARIANT1], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
+
+        annotations['splice_ai'] = '0.005'
+        await self._assert_expected_search(
+            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], annotations=annotations, omit_sample_type='SV_WES',
+        )
+
+        annotations['structural'] = ['DEL']
+        await self._assert_expected_search([SV_VARIANT1, SV_VARIANT4], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
+
+        annotations = {'other': ['non_coding_transcript_exon_variant']}
+        await self._assert_expected_search(
+            [VARIANT1, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT],
+            pathogenicity=pathogenicity, annotations=annotations, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],
+            gene_ids=LOCATION_SEARCH['gene_ids'][:1], annotations=annotations, omit_sample_type='SV_WES',
+        )
+
+    async def test_secondary_annotations_filter(self):
+        annotations_1 = {'missense': ['missense_variant']}
+        annotations_2 = {'other': ['intron_variant']}
+
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='compound_het', omit_sample_type='SV_WES',
+            annotations=annotations_1, annotations_secondary=annotations_2,
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=annotations_1, annotations_secondary=annotations_2,
+        )
+
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=annotations_2, annotations_secondary=annotations_1,
+        )
+
+        sv_annotations_1 = {'structural': ['INS']}
+        sv_annotations_2 = {'structural': ['DEL'], 'structural_consequence': ['INTRONIC']}
+
+        await self._assert_expected_search(
+            [[SV_VARIANT1, SV_VARIANT2]], sample_data=SV_WGS_SAMPLE_DATA, inheritance_mode='compound_het',
+            annotations=sv_annotations_1, annotations_secondary=sv_annotations_2,
+        )
+
+        await self._assert_expected_search(
+            [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, inheritance_mode='recessive',
+            annotations=sv_annotations_2, annotations_secondary=sv_annotations_1,
+        )
+
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}
+        await self._assert_expected_search(
+            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=annotations_2, annotations_secondary=annotations_1, pathogenicity=pathogenicity,
+        )
+
+        screen_annotations = {'SCREEN': ['CTCF-only']}
+        await self._assert_expected_search(
+            [], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=screen_annotations, annotations_secondary=annotations_1,
+        )
+
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=screen_annotations, annotations_secondary=annotations_2,
+        )
+
+        selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
+        await self._assert_expected_search(
+            [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]], inheritance_mode='recessive',
+            annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,
+            pathogenicity=pathogenicity, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]],
+            annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
+            inheritance_mode='recessive', omit_sample_type='SV_WES',
+        )
+
+    async def test_in_silico_filter(self):
+        in_silico = {'eigen': '5.5', 'mut_taster': 'P'}
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT2, VARIANT4], in_silico=in_silico, omit_sample_type='SV_WES',
+        )
+
+        in_silico['requireScore'] = True
+        await self._assert_expected_search(
+            [VARIANT2, VARIANT4], in_silico=in_silico, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, in_silico={'strvctvre': 0.1, 'requireScore': True},
+        )
+
+    async def test_search_errors(self):
+        search_body = get_hail_search_body(sample_data=FAMILY_2_MISSING_SAMPLE_DATA)
+        async with self.client.request('POST', '/search', json=search_body) as resp:
+            self.assertEqual(resp.status, 400)
+            reason = resp.reason
+        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
+
+        search_body = get_hail_search_body(sample_data=MULTI_PROJECT_MISSING_SAMPLE_DATA)
+        async with self.client.request('POST', '/search', json=search_body) as resp:
+            self.assertEqual(resp.status, 400)
+            reason = resp.reason
+        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
+
+        search_body = get_hail_search_body(
+            intervals=LOCATION_SEARCH['intervals'] + ['1:1-99999999999'], omit_sample_type='SV_WES',
+        )
+        async with self.client.request('POST', '/search', json=search_body) as resp:
+            self.assertEqual(resp.status, 400)
+            reason = resp.reason
+        self.assertEqual(reason, 'Invalid intervals: 1:1-99999999999')
+
     async def test_sort(self):
         await self._assert_expected_search(
             [_sorted(VARIANT2, [11, 11]),  _sorted(VARIANT4, [11, 11]), _sorted(MULTI_FAMILY_VARIANT, [22, 24]),
              _sorted(VARIANT1, [None, None])], omit_sample_type='SV_WES', sort='protein_consequence',
+        )
+
+        await self._assert_expected_search(
+            [_sorted(SV_VARIANT1, [11]), _sorted(SV_VARIANT2, [12]), _sorted(SV_VARIANT3, [12]), _sorted(SV_VARIANT4, [12])],
+             sample_data=SV_WGS_SAMPLE_DATA, sort='protein_consequence',
         )
 
         await self._assert_expected_search(
@@ -583,6 +588,11 @@ class HailSearchTestCase(AioHTTPTestCase):
         # size sort only applies to SVs, so has no impact on other variants
         await self._assert_expected_search(
             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], sort='size', omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [_sorted(SV_VARIANT4, [-46343]), _sorted(SV_VARIANT1, [-104]), _sorted(SV_VARIANT2, [-50]),
+             _sorted(SV_VARIANT3, [-50])], sample_data=SV_WGS_SAMPLE_DATA, sort='size',
         )
 
         # sort applies to compound hets
