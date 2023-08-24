@@ -618,8 +618,7 @@ class BaseHailTableQuery(object):
 
         annotation_exprs = self._get_allowed_consequences_annotations(annotations, annotation_override_filters)
         secondary_exprs = self._get_allowed_consequences_annotations(annotations_secondary or {}, annotation_override_filters, is_secondary=True)
-        has_secondary_annotations = 'allowed_transcripts' in secondary_exprs
-        if has_secondary_annotations:
+        if secondary_exprs:
             annotation_exprs.update({f'{k}_secondary': v for k, v in secondary_exprs.items()})
 
         if not annotation_exprs:
@@ -627,7 +626,7 @@ class BaseHailTableQuery(object):
 
         self._ht = self._ht.annotate(**annotation_exprs)
         annotation_filter = self._ht[HAS_ALLOWED_ANNOTATION]
-        if has_secondary_annotations:
+        if secondary_exprs:
             annotation_filter |= self._ht[HAS_ALLOWED_SECONDARY_ANNOTATION]
         self._ht = self._ht.filter(annotation_filter)
 
@@ -640,12 +639,13 @@ class BaseHailTableQuery(object):
             self.TRANSCRIPTS_FIELD, self.TRANSCRIPT_CONSEQUENCE_FIELD, allowed_consequences)
 
         annotation_exprs = {}
-        if allowed_consequence_ids:
+        has_consequence_filter = bool(allowed_consequence_ids)
+        if has_consequence_filter:
             allowed_consequence_ids = hl.set(allowed_consequence_ids)
             consequence_filter = self._get_consequence_filter(allowed_consequence_ids, annotation_exprs)
             annotation_filters = annotation_filters + [consequence_filter]
 
-        if annotation_filters:
+        if has_consequence_filter or (annotation_filters and not is_secondary):
             annotation_exprs[HAS_ALLOWED_ANNOTATION] = hl.any(annotation_filters)
 
         return annotation_exprs
