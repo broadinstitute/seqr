@@ -2,6 +2,8 @@
 
 ## dev
 * Add GeneShet model to the reference DB (REQUIRES DB MIGRATION)
+
+## 8/22/23
 * Add db indices to optimize RNA data queries (REQUIRES DB MIGRATION)
 
 ## 7/11/23
