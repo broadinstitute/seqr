@@ -1101,7 +1101,6 @@ class SvHailTableQuery(BaseHailTableQuery):
         if not (annotations or {}).get(NEW_SV_FIELD):
             return passes_quality
 
-        # TODO
         entries_has_new_call = lambda entries: entries.any(lambda x: x.concordance.new_call)
         if passes_quality is None:
             return entries_has_new_call

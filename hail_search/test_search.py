@@ -101,6 +101,8 @@ COMP_HET_ALL_PASS_FILTERS = {
     'structural': ['DEL', 'CPX', 'INS'],
 }
 
+NEW_SV_FILTER = {'new_structural_variants': ['NEW']}
+
 
 def _sorted(variant, sorts):
     return {**variant, '_sort': sorts + variant['_sort']}
@@ -155,6 +157,10 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         await self._assert_expected_search(
             [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+        )
+
+        await self._assert_expected_search(
+            [SV_VARIANT2], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, sample_data=SV_WGS_SAMPLE_DATA,
         )
 
         inheritance_mode = 'de_novo'
@@ -221,8 +227,13 @@ class HailSearchTestCase(AioHTTPTestCase):
             [VARIANT2, MULTI_FAMILY_VARIANT], quality_filter={'min_gq': 40}, omit_sample_type='SV_WES',
         )
 
+        sv_quality_filter = {'min_gq_sv': 40}
         await self._assert_expected_search(
-            [SV_VARIANT3, SV_VARIANT4], quality_filter={'min_gq_sv': 40}, sample_data=SV_WGS_SAMPLE_DATA,
+            [SV_VARIANT3, SV_VARIANT4], quality_filter=sv_quality_filter, sample_data=SV_WGS_SAMPLE_DATA,
+        )
+
+        await self._assert_expected_search(
+            [], annotations=NEW_SV_FILTER, quality_filter=sv_quality_filter, sample_data=SV_WGS_SAMPLE_DATA,
         )
 
         await self._assert_expected_search(
