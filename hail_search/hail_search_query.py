@@ -1139,11 +1139,14 @@ class SvHailTableQuery(BaseHailTableQuery):
     def _get_annotation_override_filters(self, annotations, **kwargs):
         annotation_filters = []
         if annotations.get(STRUCTURAL_ANNOTATION_FIELD):
-            allowed_type_ids = self._get_enum_terms_ids('sv_type', None, annotations[STRUCTURAL_ANNOTATION_FIELD])
+            allowed_type_ids = self._get_allowed_sv_types(annotations[STRUCTURAL_ANNOTATION_FIELD])
             if allowed_type_ids:
                 annotation_filters.append(hl.set(allowed_type_ids).contains(self._ht.sv_type_id))
 
         return annotation_filters
+
+    def _get_allowed_sv_types(self, sv_types):
+        return self._get_enum_terms_ids('sv_type', None, sv_types)
 
     def _additional_annotation_fields(self):
         sv_type_enum = self._enums['sv_type']
@@ -1236,6 +1239,11 @@ class GcnvHailTableQuery(SvHailTableQuery):
                 transcripts.filter(lambda t: gene_ids.contains(t.geneId)),
             ), geneotype_gene_ids_expr,
         )
+
+    def _get_allowed_sv_types(self, sv_types):
+        return super()._get_allowed_sv_types([
+            type.replace('gCNV_', '') for type in sv_types if type.startswith('gCNV_')
+        ])
 
     def _additional_annotation_fields(self):
         return {}
