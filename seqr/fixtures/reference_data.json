@@ -1168,6 +1168,15 @@
         "pTS": 0.7346
     }
 },
+{
+    "model": "reference_data.geneshet",
+    "pk": 1,
+    "fields": {
+        "gene": 1,
+        "shet": 0.90576,
+        "shet_constrained": true
+    }
+},
     {
     "model": "reference_data.dbnsfpgene",
     "pk": 36613,

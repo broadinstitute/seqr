@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add GeneShet model to the reference DB (REQUIRES DB MIGRATION)
 * Add db indices to optimize RNA data queries (REQUIRES DB MIGRATION)
 
 ## 7/11/23
