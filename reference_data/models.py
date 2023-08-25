@@ -165,10 +165,9 @@ class GeneShet(models.Model):
     gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
 
     shet = models.FloatField()
-    shet_constrained = models.BooleanField()
 
     class Meta:
-        json_fields = ['shet', 'shet_constrained']
+        json_fields = ['shet']
 
 
 class Omim(models.Model):
