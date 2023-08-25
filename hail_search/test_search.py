@@ -151,6 +151,7 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         await self._assert_expected_search(
             [GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], omit_sample_type='VARIANTS', gene_counts={
+                # TODO should be filtered to returned transcripts - just use entries?
                 'ENSG00000129562': {'total': 1, 'families': {'F000002_2': 1}},
                 'ENSG00000013364': {'total': 1, 'families': {'F000002_2': 1}},
                 'ENSG00000079616': {'total': 1, 'families': {'F000002_2': 1}},

@@ -704,13 +704,13 @@ GCNV_MULTI_FAMILY_VARIANT1['genotypes'].update({'I000007_na20870': {
     'numAlt': 1, 'cn': 3, 'qs': 164, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
     'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
 }})
-GCNV_MULTI_FAMILY_VARIANT1['genotypes']['I000004_hg00731'].update({'start': 22438910, 'end': 22469796})
+GCNV_MULTI_FAMILY_VARIANT1['genotypes']['I000004_hg00731'].update({'start': 22438910, 'end': 22469796, 'geneIds': []})
 
 GCNV_MULTI_FAMILY_VARIANT2 = deepcopy(GCNV_VARIANT2)
 GCNV_MULTI_FAMILY_VARIANT2['numExon'] = 26
 GCNV_MULTI_FAMILY_VARIANT2['familyGuids'].append('F000003_3')
 for genotype in GCNV_MULTI_FAMILY_VARIANT2['genotypes'].values():
-    genotype.update({'numExon': 8})
+    genotype.update({'numExon': 8, 'geneIds': ['ENSG00000103495', 'ENSG00000167371', 'ENSG00000280893']})
 GCNV_MULTI_FAMILY_VARIANT2['genotypes'].update({'I000007_na20870': {
     'sampleId': 'NA20870', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
     'numAlt': 1, 'cn': 3, 'qs': 40, 'defragged': False, 'start': None, 'end': None, 'numExon': None,

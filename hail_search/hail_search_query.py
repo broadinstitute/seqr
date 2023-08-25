@@ -1202,8 +1202,9 @@ class GcnvHailTableQuery(SvHailTableQuery):
     }
     COMPUTED_GENOTYPE_FIELDS = {
         **SvHailTableQuery.COMPUTED_GENOTYPE_FIELDS,
-        **{k: lambda entry, field, r: hl.or_missing(r[field] != entry[f'sample_{field}'], entry[f'sample_{field}'])
-           for k in GENOTYPE_OVERRIDE_FIELDS.keys()},
+        **{k: lambda entry, field, r: hl.or_missing(
+            hl.is_missing(r[field]) | (r[field] != entry[f'sample_{field}']), entry[f'sample_{field}']
+        ) for k in GENOTYPE_OVERRIDE_FIELDS.keys()},
     }
     COMPUTED_GENOTYPE_FIELDS['prev_overlap'] = COMPUTED_GENOTYPE_FIELDS.pop('prev_num_alt')
 
@@ -1235,7 +1236,6 @@ class GcnvHailTableQuery(SvHailTableQuery):
             get_default(r), agg(entries.map(lambda g: g[sample_field]))
         )
 
-    # TODO actually return geneIds in genotypes
     def _format_results(self, ht, annotation_fields):
         ht = ht.annotate(**{
             k: self._get_genotype_override_field(ht, k, *args) for k, args in self.GENOTYPE_OVERRIDE_FIELDS.items()
