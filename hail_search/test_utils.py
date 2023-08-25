@@ -528,6 +528,171 @@ SV_VARIANT4 = {
     },
     '_sort': [14106694244],
 }
+GCNV_VARIANT1 = {
+    'variantId': 'suffix_95340_DUP',
+    'chrom': '14',
+    'pos': 22438910,
+    'end': 22469796,
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': '14',
+    'liftedOverPos': 22886546,
+    'rg37LocusEnd': {'contig': '14', 'position': 23058228},
+    'xpos': 14022417556,
+    'familyGuids': ['F000002_2'],
+    'genotypeFilters': '',
+    'genotypes': {
+        'I000004_hg00731': {
+            'sampleId': 'HG00731', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
+            'numAlt': 1, 'cn': 3, 'qs': 38, 'defragged': False, 'start': 22438910, 'end': 22469796, 'numExon': 0,
+            'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
+        },
+        'I000005_hg00732': {
+            'sampleId': 'HG00732', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
+            'numAlt': 0, 'cn': None, 'qs': None, 'defragged': None, 'start': None, 'end': None, 'numExon': None,
+            'geneIds': None, 'newCall': None, 'prevCall': None, 'prevOverlap': None,
+        },
+        'I000006_hg00733': {
+            'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
+            'numAlt': 0, 'cn': None, 'qs': None, 'defragged': None, 'start': None, 'end': None, 'numExon': None,
+            'geneIds': None, 'newCall': None, 'prevCall': None, 'prevOverlap': None,
+        }
+    },
+    'populations': {'sv_callset': {'af': 0.076492540538311, 'ac': 1763, 'an': 23048, 'hom': 0, 'het': 0}},
+    'predictions': {'strvctvre': 0.1809999942779541},
+    'numExon': 0,
+    'svType': 'DUP',
+    'transcripts': {
+        'ENSG00000129562': [{'geneId': 'ENSG00000129562', 'majorConsequence': 'COPY_GAIN'}],
+    },
+    '_sort': [14022417556],
+
+}
+GCNV_VARIANT2 = {
+    'variantId': 'suffix_124520_DUP',
+    'chrom': '16',
+    'pos': 29809156,
+    'end': 29815990,
+    'xpos': 16029802672,
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': '16',
+    'liftedOverPos': 29813993,
+    'rg37LocusEnd': {'contig': '16', 'position': 29831761},
+    'familyGuids': ['F000002_2'],
+    'genotypeFilters': '',
+    'genotypes': {
+        'I000004_hg00731': {
+            'sampleId': 'HG00731', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
+            'numAlt': 1, 'cn': 3, 'qs': 29, 'defragged': False, 'start': 29809156, 'end': 29815990, 'numExon': 8,
+            'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
+        },
+        'I000005_hg00732': {
+            'sampleId': 'HG00732', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
+            'numAlt': 1, 'cn': 3, 'qs': 46, 'defragged': False, 'start': 29809156, 'end': 29815990, 'numExon': 8,
+            'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
+        },
+        'I000006_hg00733': {
+            'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
+            'numAlt': 1, 'cn': 3, 'qs': 37, 'defragged': False, 'start': 29809156, 'end': 29815990, 'numExon': 8,
+            'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
+        }
+    },
+    'populations': {'sv_callset': {'af': 0.012322110123932362, 'ac': 284, 'an': 23047, 'hom': 0, 'het': 0}},
+    'predictions': {'strvctvre': 0.5479999780654907},
+    'numExon': 8,
+    'svType': 'DUP',
+    'transcripts': {
+        'ENSG00000013364': [{'geneId': 'ENSG00000013364', 'majorConsequence': 'LOF'}],
+        'ENSG00000079616': [{'geneId': 'ENSG00000079616', 'majorConsequence': 'LOF'}],
+        'ENSG00000103495': [{'geneId': 'ENSG00000103495', 'majorConsequence': 'COPY_GAIN'}],
+        'ENSG00000167371': [{'geneId': 'ENSG00000167371', 'majorConsequence': 'COPY_GAIN'}],
+        'ENSG00000280789': [{'geneId': 'ENSG00000280789', 'majorConsequence': 'LOF'}],
+        'ENSG00000280893': [{'geneId': 'ENSG00000280893', 'majorConsequence': 'COPY_GAIN'}],
+        'ENSG00000281348': [{'geneId': 'ENSG00000281348', 'majorConsequence': 'LOF'}],
+    },
+    '_sort': [16029802672],
+}
+GCNV_VARIANT3 = {
+    'variantId': 'suffix_140593_DUP',
+    'chrom': '17',
+    'pos': 38717327,
+    'end': 38719636,
+    'xpos': 17038717327,
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': '17',
+    'liftedOverPos': 36873580,
+    'rg37LocusEnd': {'contig': '17', 'position': 36876246},
+    'familyGuids': ['F000002_2'],
+    'genotypeFilters': '',
+    'genotypes': {
+        'I000004_hg00731': {
+            'sampleId': 'HG00731', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
+            'numAlt': 2, 'cn': 4, 'qs': 13, 'defragged': True, 'start': 38717327, 'end': 38719636, 'numExon': None,
+            'geneIds': None, 'newCall': True, 'prevCall': False, 'prevOverlap': False,
+        },
+        'I000005_hg00732': {
+            'sampleId': 'HG00732', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
+            'numAlt': 1, 'cn': 3, 'qs': 7, 'defragged': False, 'start': 38717327, 'end': 38719636, 'numExon': None,
+            'geneIds': None, 'newCall': False, 'prevCall': False, 'prevOverlap': True,
+        },
+        'I000006_hg00733': {
+            'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2', 'numAlt': 0,
+            'cn': None, 'qs': None, 'defragged': None, 'start': None, 'end': None, 'numExon': None, 'geneIds': None,
+            'newCall': None, 'prevCall': None, 'prevOverlap': None,
+        },
+    },
+    'populations': {'sv_callset': {'af': 0.0015185698866844177, 'ac': 35, 'an': 23048, 'hom': 0, 'het': 0}},
+    'predictions': {'strvctvre': 0.7860000133514404},
+    'numExon': 3,
+    'svType': 'DEL',
+    'transcripts': {
+        'ENSG00000275023': [{'geneId': 'ENSG00000275023', 'majorConsequence': 'LOF'}],
+    },
+    '_sort': [17038717327],
+}
+GCNV_VARIANT4 = {
+    'variantId': 'suffix_140608_DUP',
+    'chrom': '17',
+    'pos': 38721781,
+    'end': 38735703,
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': '17',
+    'liftedOverPos': 36878034,
+    'rg37LocusEnd': {'contig': '17', 'position': 36892521},
+    'familyGuids': ['F000002_2'],
+    'genotypeFilters': '',
+    'xpos': 17038721781,
+    'genotypes': {
+        'I000004_hg00731': {
+            'sampleId': 'HG00731', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
+            'numAlt': 1, 'cn': 3, 'qs': 28, 'defragged': False, 'start': 38721781, 'end': 38735703, 'numExon': 7,
+            'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
+        },
+        'I000005_hg00732': {
+            'sampleId': 'HG00732', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
+            'numAlt': 0, 'cn': None, 'qs': None, 'defragged': None, 'start': None, 'end': None, 'numExon': None,
+            'geneIds': None, 'newCall': None, 'prevCall': None, 'prevOverlap': None,
+        },
+        'I000006_hg00733': {
+            'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
+            'numAlt': 1, 'cn': 3, 'qs': 29, 'defragged': False, 'start': 38721781, 'end': 38734440, 'numExon': 7,
+            'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
+        }
+    },
+    'populations': {'sv_callset': {'af': 0.004989586770534515, 'ac': 115, 'an': 23048, 'hom': 0, 'het': 0}},
+    'predictions': {'strvctvre': 0.7099999785423279},
+    'numExon': 7,
+    'svType': 'DUP',
+    'transcripts': {
+        'ENSG00000275023': [{'geneId': 'ENSG00000275023', 'majorConsequence': 'LOF'}],
+        'ENSG00000277258': [{'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}],
+        'ENSG00000277972': [{'geneId': 'ENSG00000277972', 'majorConsequence': 'COPY_GAIN'}],
+    },
+    '_sort': [17038721781],
+}
 
 LOCATION_SEARCH = {
     'gene_ids': ['ENSG00000177000', 'ENSG00000097046'],

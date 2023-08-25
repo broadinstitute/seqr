@@ -1245,6 +1245,8 @@ class GcnvHailTableQuery(SvHailTableQuery):
             type.replace('gCNV_', '') for type in sv_types if type.startswith('gCNV_')
         ])
 
+    # TODO override genotype fields in genotypes response, actually return geneIds
+
     def _additional_annotation_fields(self):
         return {}
 
