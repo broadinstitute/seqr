@@ -60,6 +60,8 @@ SV_WGS_SAMPLE_DATA = {'SV_WGS': [FAMILY_11_SAMPLE, {
     'sample_id': 'NA20883', 'individual_guid': 'I000035_na20883', 'family_guid': 'F000011_11', 'project_guid': 'R0003_test', 'affected': 'N', 'sex': 'F',
 }]}
 
+SV_WES_SAMPLE_DATA = {'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'] + [FAMILY_3_SAMPLE]}
+
 VARIANT1 = {
     'variantId': '1-10439-AC-A',
     'chrom': '1',
@@ -562,9 +564,7 @@ GCNV_VARIANT1 = {
     'predictions': {'strvctvre': 0.1809999942779541},
     'numExon': 0,
     'svType': 'DUP',
-    'transcripts': {
-        'ENSG00000129562': [{'geneId': 'ENSG00000129562', 'majorConsequence': 'COPY_GAIN'}],
-    },
+    'transcripts': {},
     '_sort': [14022417556],
 
 }
@@ -603,13 +603,9 @@ GCNV_VARIANT2 = {
     'numExon': 8,
     'svType': 'DUP',
     'transcripts': {
-        'ENSG00000013364': [{'geneId': 'ENSG00000013364', 'majorConsequence': 'LOF'}],
-        'ENSG00000079616': [{'geneId': 'ENSG00000079616', 'majorConsequence': 'LOF'}],
         'ENSG00000103495': [{'geneId': 'ENSG00000103495', 'majorConsequence': 'COPY_GAIN'}],
         'ENSG00000167371': [{'geneId': 'ENSG00000167371', 'majorConsequence': 'COPY_GAIN'}],
-        'ENSG00000280789': [{'geneId': 'ENSG00000280789', 'majorConsequence': 'LOF'}],
         'ENSG00000280893': [{'geneId': 'ENSG00000280893', 'majorConsequence': 'COPY_GAIN'}],
-        'ENSG00000281348': [{'geneId': 'ENSG00000281348', 'majorConsequence': 'LOF'}],
     },
     '_sort': [16029802672],
 }
@@ -693,6 +689,36 @@ GCNV_VARIANT4 = {
     },
     '_sort': [17038721781],
 }
+
+GCNV_MULTI_FAMILY_VARIANT1 = deepcopy(GCNV_VARIANT1)
+GCNV_MULTI_FAMILY_VARIANT1.update({
+    'pos': 22418039,
+    'end': 22507821,
+    'transcripts': {
+        'ENSG00000129562': [{'geneId': 'ENSG00000129562', 'majorConsequence': 'COPY_GAIN'}],
+    },
+})
+GCNV_MULTI_FAMILY_VARIANT1['familyGuids'].append('F000003_3')
+GCNV_MULTI_FAMILY_VARIANT1['genotypes'].update({'I000007_na20870': {
+    'sampleId': 'NA20870', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
+    'numAlt': 1, 'cn': 3, 'qs': 164, 'defragged': False, 'start': 22418039, 'end': 22507821, 'numExon': 0,
+    'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
+}})
+
+GCNV_MULTI_FAMILY_VARIANT2 = deepcopy(GCNV_VARIANT2)
+GCNV_MULTI_FAMILY_VARIANT2['numExon'] = 26
+GCNV_MULTI_FAMILY_VARIANT2['familyGuids'].append('F000003_3')
+GCNV_MULTI_FAMILY_VARIANT2['genotypes'].update({'I000007_na20870': {
+    'sampleId': 'NA20870', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
+    'numAlt': 1, 'cn': 3, 'qs': 40, 'defragged': False, 'start': 29809156, 'end': 29815990, 'numExon': None,
+    'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
+}})
+GCNV_MULTI_FAMILY_VARIANT2['transcripts'].update({
+    'ENSG00000013364': [{'geneId': 'ENSG00000013364', 'majorConsequence': 'LOF'}],
+    'ENSG00000079616': [{'geneId': 'ENSG00000079616', 'majorConsequence': 'LOF'}],
+    'ENSG00000281348': [{'geneId': 'ENSG00000281348', 'majorConsequence': 'LOF'}],
+    'ENSG00000280789': [{'geneId': 'ENSG00000280789', 'majorConsequence': 'LOF'}],
+})
 
 LOCATION_SEARCH = {
     'gene_ids': ['ENSG00000177000', 'ENSG00000097046'],

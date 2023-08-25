@@ -1208,7 +1208,7 @@ class GcnvHailTableQuery(SvHailTableQuery):
     TRANSCRIPTS_ENUM_FIELD = SvHailTableQuery.ENUM_ANNOTATION_FIELDS[SvHailTableQuery.TRANSCRIPTS_FIELD]
     ENUM_ANNOTATION_FIELDS = {SvHailTableQuery.TRANSCRIPTS_FIELD: {
         **TRANSCRIPTS_ENUM_FIELD,
-        'format_values': lambda values, r: GcnvHailTableQuery.TRANSCRIPTS_ENUM_FIELD['format_values'](
+        'format_array_values': lambda values, r: GcnvHailTableQuery.TRANSCRIPTS_ENUM_FIELD['format_array_values'](
             GcnvHailTableQuery._get_gene_id_transcripts_override(values, r), r
         ),
     }}
@@ -1246,6 +1246,8 @@ class GcnvHailTableQuery(SvHailTableQuery):
         ])
 
     # TODO override genotype fields in genotypes response, actually return geneIds
+
+    # TODO filter family transcripts for gene counts
 
     def _additional_annotation_fields(self):
         return {}
