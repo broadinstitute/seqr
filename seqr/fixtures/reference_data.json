@@ -1173,8 +1173,7 @@
     "pk": 1,
     "fields": {
         "gene": 1,
-        "shet": 0.90576,
-        "shet_constrained": true
+        "shet": 0.90576
     }
 },
     {
