@@ -43,7 +43,7 @@ class BaseHailTableQuery(object):
     MISSING_NUM_ALT = -1
 
     GENOTYPE_FIELDS = {}
-    NESTED_GENOTYPE_FIELDS = {}
+    COMPUTED_GENOTYPE_FIELDS = {}
     GENOTYPE_QUERY_FIELDS = {}
     QUALITY_FILTER_FORMAT = {}
     POPULATIONS = {}
@@ -100,7 +100,7 @@ class BaseHailTableQuery(object):
                 'sampleId', 'individualGuid', 'familyGuid',
                 numAlt=hl.if_else(hl.is_defined(x[0].GT), x[0].GT.n_alt_alleles(), self.MISSING_NUM_ALT),
                 **{k: x[0][field] for k, field in self.GENOTYPE_FIELDS.items()},
-                **{_to_camel_case(k): x[0][field][k] for field, v in self.NESTED_GENOTYPE_FIELDS.items() for k in v},
+                **{_to_camel_case(k): v(x[0], k, r) for k, v in self.COMPUTED_GENOTYPE_FIELDS.items()},
             )),
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
@@ -1056,7 +1056,9 @@ class SvHailTableQuery(BaseHailTableQuery):
     DATA_TYPE = 'SV_WGS'
 
     GENOTYPE_FIELDS = {_to_camel_case(f): f for f in ['CN', 'GQ']}
-    NESTED_GENOTYPE_FIELDS = {'concordance': ['new_call', 'prev_call', 'prev_num_alt']}
+    COMPUTED_GENOTYPE_FIELDS = {
+        k: lambda entry, field, *args: entry.concordance[field] for k in ['new_call', 'prev_call', 'prev_num_alt']
+    }
     GENOTYPE_QUERY_FIELDS = {'gq_sv': 'GQ', 'gq': None}
 
     TRANSCRIPTS_FIELD = 'sorted_gene_consequences'
@@ -1186,22 +1188,31 @@ class GcnvHailTableQuery(SvHailTableQuery):
     GENOTYPE_FIELDS = {
         **SvHailTableQuery.GENOTYPE_FIELDS,
         **{f.lower(): f for f in ['QS', 'defragged']},
-        **{_to_camel_case(f): f'sample_{f}' for f in ['start', 'end', 'num_exon', 'gene_ids']},
     }
     del GENOTYPE_FIELDS['gq']
     GENOTYPE_QUERY_FIELDS = {}
-    NESTED_GENOTYPE_FIELDS = {
-        'concordance': SvHailTableQuery.NESTED_GENOTYPE_FIELDS['concordance'][:-1] + ['prev_overlap']
+    GENOTYPE_OVERRIDE_FIELDS = {
+        'start': (hl.min, lambda r: r.start_locus.position),
+        'end': (hl.max, lambda r: r.end_locus.position),
+        'num_exon': (hl.max, lambda r: r.num_exon),
+        'gene_ids': (
+            lambda entry_gene_ids: entry_gene_ids.fold(lambda s1, s2: s1.union(s2), hl.empty_set(hl.tstr)),
+            lambda r: hl.missing(hl.tset(hl.tstr)),
+        ),
     }
+    COMPUTED_GENOTYPE_FIELDS = {
+        **SvHailTableQuery.COMPUTED_GENOTYPE_FIELDS,
+        **{k: lambda entry, field, r: hl.or_missing(r[field] != entry[f'sample_{field}'], entry[f'sample_{field}'])
+           for k in GENOTYPE_OVERRIDE_FIELDS.keys()},
+    }
+    COMPUTED_GENOTYPE_FIELDS['prev_overlap'] = COMPUTED_GENOTYPE_FIELDS.pop('prev_num_alt')
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS
     BASE_ANNOTATION_FIELDS = {
         **SvHailTableQuery.BASE_ANNOTATION_FIELDS,
-        'pos': lambda r: GcnvHailTableQuery._get_genotype_override_field(
-            r, 'start', hl.min, default=r.start_locus.position),
-        'end': lambda r: GcnvHailTableQuery._get_genotype_override_field(
-            r, 'end', hl.max, default=r.end_locus.position),
-        'numExon': lambda r: GcnvHailTableQuery._get_genotype_override_field(r, 'num_exon', hl.max),
+        'pos': lambda r: r.start,
+        'end': lambda r: r.end,
+        'numExon': lambda r: r.num_exon,
     }
     del BASE_ANNOTATION_FIELDS['bothsidesSupport']
 
@@ -1209,43 +1220,32 @@ class GcnvHailTableQuery(SvHailTableQuery):
     ENUM_ANNOTATION_FIELDS = {SvHailTableQuery.TRANSCRIPTS_FIELD: {
         **TRANSCRIPTS_ENUM_FIELD,
         'format_array_values': lambda values, r: GcnvHailTableQuery.TRANSCRIPTS_ENUM_FIELD['format_array_values'](
-            GcnvHailTableQuery._get_gene_id_transcripts_override(values, r), r
+            hl.if_else(hl.is_missing(r.gene_ids), values, values.filter(lambda t: r.gene_ids.contains(t.geneId))), r,
         ),
     }}
 
     POPULATIONS = {k: v for k, v in SvHailTableQuery.POPULATIONS.items() if k != 'gnomad_svs'}
 
     @staticmethod
-    def _get_genotype_override_field(r, field, agg, default=None):
+    def _get_genotype_override_field(r, field, agg, get_default):
         sample_field = f'sample_{field}'
         entries = r.family_entries.flatmap(lambda x: x)
-        if default is None:
-            default = r[field]
         return hl.if_else(
             entries.any(lambda g: hl.is_defined(g.GT) & hl.is_missing(g[sample_field])),
-            default, agg(entries.map(lambda g: g[sample_field]))
+            get_default(r), agg(entries.map(lambda g: g[sample_field]))
         )
 
-    @classmethod
-    def _get_gene_id_transcripts_override(cls, transcripts, r):
-        empty_gene_set = hl.empty_set(hl.tstr)
-        geneotype_gene_ids_expr = cls._get_genotype_override_field(
-            r, 'gene_ids',
-            lambda entry_gene_ids: entry_gene_ids.fold(lambda s1, s2: s1.union(s2), empty_gene_set),
-            default=hl.missing(empty_gene_set.dtype))
-        return hl.bind(
-            lambda gene_ids: hl.if_else(
-                hl.is_missing(gene_ids), transcripts,
-                transcripts.filter(lambda t: gene_ids.contains(t.geneId)),
-            ), geneotype_gene_ids_expr,
-        )
+    # TODO actually return geneIds in genotypes
+    def _format_results(self, ht, annotation_fields):
+        ht = ht.annotate(**{
+            k: self._get_genotype_override_field(ht, k, *args) for k, args in self.GENOTYPE_OVERRIDE_FIELDS.items()
+        })
+        return super()._format_results(ht, annotation_fields)
 
     def get_allowed_sv_type_ids(self, sv_types):
         return super().get_allowed_sv_type_ids([
             type.replace('gCNV_', '') for type in sv_types if type.startswith('gCNV_')
         ])
-
-    # TODO override genotype fields in genotypes response, actually return geneIds
 
     # TODO filter family transcripts for gene counts
 

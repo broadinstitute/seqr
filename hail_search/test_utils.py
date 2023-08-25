@@ -546,7 +546,7 @@ GCNV_VARIANT1 = {
     'genotypes': {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
-            'numAlt': 1, 'cn': 3, 'qs': 38, 'defragged': False, 'start': 22438910, 'end': 22469796, 'numExon': 0,
+            'numAlt': 1, 'cn': 3, 'qs': 38, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
         },
         'I000005_hg00732': {
@@ -584,17 +584,17 @@ GCNV_VARIANT2 = {
     'genotypes': {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
-            'numAlt': 1, 'cn': 3, 'qs': 29, 'defragged': False, 'start': 29809156, 'end': 29815990, 'numExon': 8,
+            'numAlt': 1, 'cn': 3, 'qs': 29, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
         },
         'I000005_hg00732': {
             'sampleId': 'HG00732', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
-            'numAlt': 1, 'cn': 3, 'qs': 46, 'defragged': False, 'start': 29809156, 'end': 29815990, 'numExon': 8,
+            'numAlt': 1, 'cn': 3, 'qs': 46, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
         },
         'I000006_hg00733': {
             'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
-            'numAlt': 1, 'cn': 3, 'qs': 37, 'defragged': False, 'start': 29809156, 'end': 29815990, 'numExon': 8,
+            'numAlt': 1, 'cn': 3, 'qs': 37, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
         }
     },
@@ -625,12 +625,12 @@ GCNV_VARIANT3 = {
     'genotypes': {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
-            'numAlt': 2, 'cn': 4, 'qs': 13, 'defragged': True, 'start': 38717327, 'end': 38719636, 'numExon': None,
+            'numAlt': 2, 'cn': 4, 'qs': 13, 'defragged': True, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': True, 'prevCall': False, 'prevOverlap': False,
         },
         'I000005_hg00732': {
             'sampleId': 'HG00732', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
-            'numAlt': 1, 'cn': 3, 'qs': 7, 'defragged': False, 'start': 38717327, 'end': 38719636, 'numExon': None,
+            'numAlt': 1, 'cn': 3, 'qs': 7, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': False, 'prevOverlap': True,
         },
         'I000006_hg00733': {
@@ -664,7 +664,7 @@ GCNV_VARIANT4 = {
     'genotypes': {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
-            'numAlt': 1, 'cn': 3, 'qs': 28, 'defragged': False, 'start': 38721781, 'end': 38735703, 'numExon': 7,
+            'numAlt': 1, 'cn': 3, 'qs': 28, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
         },
         'I000005_hg00732': {
@@ -674,7 +674,7 @@ GCNV_VARIANT4 = {
         },
         'I000006_hg00733': {
             'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
-            'numAlt': 1, 'cn': 3, 'qs': 29, 'defragged': False, 'start': 38721781, 'end': 38734440, 'numExon': 7,
+            'numAlt': 1, 'cn': 3, 'qs': 29, 'defragged': False, 'start': None, 'end': 38734440, 'numExon': None,
             'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
         }
     },
@@ -701,16 +701,19 @@ GCNV_MULTI_FAMILY_VARIANT1.update({
 GCNV_MULTI_FAMILY_VARIANT1['familyGuids'].append('F000003_3')
 GCNV_MULTI_FAMILY_VARIANT1['genotypes'].update({'I000007_na20870': {
     'sampleId': 'NA20870', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
-    'numAlt': 1, 'cn': 3, 'qs': 164, 'defragged': False, 'start': 22418039, 'end': 22507821, 'numExon': 0,
+    'numAlt': 1, 'cn': 3, 'qs': 164, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
     'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
 }})
+GCNV_MULTI_FAMILY_VARIANT1['genotypes']['I000004_hg00731'].update({'start': 22438910, 'end': 22469796})
 
 GCNV_MULTI_FAMILY_VARIANT2 = deepcopy(GCNV_VARIANT2)
 GCNV_MULTI_FAMILY_VARIANT2['numExon'] = 26
 GCNV_MULTI_FAMILY_VARIANT2['familyGuids'].append('F000003_3')
+for genotype in GCNV_MULTI_FAMILY_VARIANT2['genotypes'].values():
+    genotype.update({'numExon': 8})
 GCNV_MULTI_FAMILY_VARIANT2['genotypes'].update({'I000007_na20870': {
     'sampleId': 'NA20870', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
-    'numAlt': 1, 'cn': 3, 'qs': 40, 'defragged': False, 'start': 29809156, 'end': 29815990, 'numExon': None,
+    'numAlt': 1, 'cn': 3, 'qs': 40, 'defragged': False, 'start': None, 'end': None, 'numExon': None,
     'geneIds': None, 'newCall': False, 'prevCall': True, 'prevOverlap': False,
 }})
 GCNV_MULTI_FAMILY_VARIANT2['transcripts'].update({
