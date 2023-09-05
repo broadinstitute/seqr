@@ -1,4 +1,4 @@
-GENOME_VERSION_GRCh38_DISPLAY = 'GRCh38'
+GENOME_VERSION_GRCh38 = 'GRCh38'
 
 AFFECTED = 'A'
 UNAFFECTED = 'N'
@@ -9,6 +9,7 @@ MALE = 'M'
 VARIANT_DATASET = 'VARIANTS'
 
 VARIANT_KEY_FIELD = 'variantId'
+GROUPED_VARIANTS_FIELD = 'variants'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
 SPLICE_AI_FIELD = 'splice_ai'
 NEW_SV_FIELD = 'new_structural_variants'
@@ -20,8 +21,14 @@ STRUCTURAL_ANNOTATION_FIELD = 'structural'
 ANNOTATION_OVERRIDE_FIELDS = [
     SCREEN_KEY, SPLICE_AI_FIELD, NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD,
 ]
+HAS_ALLOWED_ANNOTATION = 'has_allowed_annotation'
+HAS_ALLOWED_SECONDARY_ANNOTATION = f'{HAS_ALLOWED_ANNOTATION}_secondary'
 
 XPOS = 'xpos'
+
+PATHOGENICTY_SORT_KEY = 'pathogenicity'
+PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
+ABSENT_PATH_SORT_OFFSET = 12.5
 
 ALT_ALT = 'alt_alt'
 REF_REF = 'ref_ref'
@@ -52,9 +59,14 @@ INHERITANCE_FILTERS = {
     },
 }
 
+PREFILTER_FREQ_CUTOFF = 0.01
+PATH_FREQ_OVERRIDE_CUTOFF = 0.05
+CLINVAR_PATH_FILTER = 'pathogenic'
+CLINVAR_LIKELY_PATH_FILTER = 'likely_pathogenic'
+CLINVAR_PATH_SIGNIFICANCES = {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
 CLINVAR_PATH_RANGES = [
-    ('pathogenic', 'Pathogenic', 'Pathogenic/Likely_risk_allele'),
-    ('likely_pathogenic', 'Pathogenic/Likely_pathogenic', 'Likely_risk_allele'),
+    (CLINVAR_PATH_FILTER, 'Pathogenic', 'Pathogenic/Likely_risk_allele'),
+    (CLINVAR_LIKELY_PATH_FILTER, 'Pathogenic/Likely_pathogenic', 'Likely_risk_allele'),
     ('vus_or_conflicting', 'Conflicting_interpretations_of_pathogenicity', 'No_pathogenic_assertion'),
     ('likely_benign', 'Likely_benign', 'Benign/Likely_benign'),
     ('benign', 'Benign/Likely_benign', 'Benign'),

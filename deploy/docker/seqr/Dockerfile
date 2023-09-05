@@ -93,6 +93,7 @@ EXPOSE 8000
 ENV TERM=xterm
 
 COPY deploy/docker/seqr/readiness_probe /
+COPY deploy/docker/seqr/wait_for_routes /
 COPY deploy/docker/seqr/bin/*.sh /usr/local/bin/
 COPY deploy/docker/seqr/config/*.py ./
 COPY deploy/docker/seqr/bashrc /root/.bashrc
