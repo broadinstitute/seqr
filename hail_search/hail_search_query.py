@@ -1227,8 +1227,9 @@ class GcnvHailTableQuery(SvHailTableQuery):
 
     POPULATIONS = {k: v for k, v in SvHailTableQuery.POPULATIONS.items() if k != 'gnomad_svs'}
 
-    @staticmethod
-    def _get_genotype_override_field(r, field, agg, get_default):
+    @classmethod
+    def _get_genotype_override_field(cls, r, field):
+        agg, get_default = cls.GENOTYPE_OVERRIDE_FIELDS[field]
         sample_field = f'sample_{field}'
         entries = r.family_entries.flatmap(lambda x: x)
         return hl.if_else(
@@ -1237,9 +1238,7 @@ class GcnvHailTableQuery(SvHailTableQuery):
         )
 
     def _format_results(self, ht, annotation_fields):
-        ht = ht.annotate(**{
-            k: self._get_genotype_override_field(ht, k, *args) for k, args in self.GENOTYPE_OVERRIDE_FIELDS.items()
-        })
+        ht = ht.annotate(**{k: self._get_genotype_override_field(ht, k) for k in self.GENOTYPE_OVERRIDE_FIELDS})
         return super()._format_results(ht, annotation_fields)
 
     def get_allowed_sv_type_ids(self, sv_types):
@@ -1247,7 +1246,12 @@ class GcnvHailTableQuery(SvHailTableQuery):
             type.replace('gCNV_', '') for type in sv_types if type.startswith('gCNV_')
         ])
 
-    # TODO filter family transcripts for gene counts
+    @classmethod
+    def _gene_ids_expr(cls, ht):
+        gene_ids_expr = getattr(ht, 'gene_ids', None)
+        if gene_ids_expr is None:
+            gene_ids_expr = cls._get_genotype_override_field(ht, 'gene_ids')
+        return hl.or_else(gene_ids_expr, super()._gene_ids_expr(ht))
 
     def _additional_annotation_fields(self):
         return {}
