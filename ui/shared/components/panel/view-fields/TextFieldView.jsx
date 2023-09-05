@@ -27,7 +27,11 @@ const MAPPED_HTML_COMPONENTS = { code: 'div', pre: 'p' }
 
 const LazyRichTextEditor = props => <React.Suspense fallback={<Loader />}><RichTextEditor {...props} /></React.Suspense>
 
-const RICH_TEXT_FIELD = { component: LazyRichTextEditor }
+const RICH_TEXT_FIELD = {
+  component: LazyRichTextEditor,
+  // Override default behavior for undefined values, which is to exclude them from form values
+  parse: val => val || null,
+}
 const REQUIRED_RICH_TEXT_FIELD = { ...RICH_TEXT_FIELD, validate: validators.required }
 
 const markdownDisplay = (textPopup, textAnnotation) => (initialText) => {
