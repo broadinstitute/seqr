@@ -296,8 +296,8 @@ class HailSearchTestCase(AioHTTPTestCase):
         await self._assert_expected_search(
             [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
             **COMP_HET_ALL_PASS_FILTERS, gene_counts={
-                'ENSG00000171621': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000184986': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
+                'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
             }
         )
 
