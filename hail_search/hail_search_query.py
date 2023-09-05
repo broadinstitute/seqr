@@ -658,7 +658,7 @@ class BaseHailTableQuery(object):
             ch_ht = ch_ht.filter(ch_ht.comp_het_family_entries.any(hl.is_defined))
 
         # Get possible pairs of variants within the same gene
-        ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht))
+        ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht, comp_het=True))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
         formatted_rows_expr = hl.agg.collect(ch_ht.row)
         if HAS_ALLOWED_SECONDARY_ANNOTATION in self._ht.row:
@@ -693,7 +693,7 @@ class BaseHailTableQuery(object):
         return ch_ht
 
     @classmethod
-    def _gene_ids_expr(cls, ht):
+    def _gene_ids_expr(cls, ht, comp_het=False):
         return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
 
     def _is_valid_comp_het_family(self, entries_1, entries_2):
@@ -1228,10 +1228,10 @@ class GcnvHailTableQuery(SvHailTableQuery):
     POPULATIONS = {k: v for k, v in SvHailTableQuery.POPULATIONS.items() if k != 'gnomad_svs'}
 
     @classmethod
-    def _get_genotype_override_field(cls, r, field):
+    def _get_genotype_override_field(cls, r, field, family_entries_field=None):
         agg, get_default = cls.GENOTYPE_OVERRIDE_FIELDS[field]
         sample_field = f'sample_{field}'
-        entries = r.family_entries.flatmap(lambda x: x)
+        entries = r[family_entries_field or 'family_entries'].flatmap(lambda x: x)
         return hl.if_else(
             entries.any(lambda g: hl.is_defined(g.GT) & hl.is_missing(g[sample_field])),
             get_default(r), agg(entries.map(lambda g: g[sample_field]))
@@ -1247,11 +1247,12 @@ class GcnvHailTableQuery(SvHailTableQuery):
         ])
 
     @classmethod
-    def _gene_ids_expr(cls, ht):
-        gene_ids_expr = getattr(ht, 'gene_ids', None)
-        if gene_ids_expr is None:
-            gene_ids_expr = cls._get_genotype_override_field(ht, 'gene_ids')
-        return hl.or_else(gene_ids_expr, super()._gene_ids_expr(ht))
+    def _gene_ids_expr(cls, ht, comp_het=False):
+        family_entries_field = 'comp_het_family_entries' if comp_het else None
+        return hl.or_else(
+            cls._get_genotype_override_field(ht, 'gene_ids', family_entries_field=family_entries_field),
+            super()._gene_ids_expr(ht),
+        )
 
     def _additional_annotation_fields(self):
         return {}
