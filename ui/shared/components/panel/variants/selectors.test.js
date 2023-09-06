@@ -33,6 +33,7 @@ test('getPairedSelectedSavedVariants', () => {
   expect(savedNotesVariants.length).toEqual(1)
   expect(savedNotesVariants[0].variantGuid).toEqual('SV0000004_116042722_r0390_1000')
 
+
   const savedFamilyVariants = getPairedSelectedSavedVariants(
     STATE_WITH_2_FAMILIES, { match: { params:  { familyGuid: 'F011652_1' } } }
   )
@@ -42,7 +43,7 @@ test('getPairedSelectedSavedVariants', () => {
   expect(savedFamilyVariants[2].variantGuid).toEqual('SV0000002_SV48367227_r0390_100')
 
   const savedAnalysisGroupVariants = getPairedSelectedSavedVariants(
-    STATE_WITH_2_FAMILIES, { match: { params: { analysisGroupGuid: 'AG0000183_test_group' } } },
+    STATE_WITH_2_FAMILIES, { match: { params:  { analysisGroupGuid: 'AG0000183_test_group' } } }
   )
   expect(savedAnalysisGroupVariants.length).toEqual(3)
   expect(savedAnalysisGroupVariants[0].variantGuid).toEqual('SV0000004_116042722_r0390_1000')
