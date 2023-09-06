@@ -31,6 +31,12 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         return hl.array(self._data_type_queries.keys()).map(
             lambda data_type: ht[data_type]).find(lambda x: hl.is_defined(x))
 
-    # TODO gene counts
+    def format_gene_counts_ht(self):
+        hts = [query.format_gene_counts_ht() for query in self._data_type_queries.values()]
+        ht = hts[0]
+        for dt_ht in hts[1:]:
+            ht = ht.join(dt_ht, 'outer')
+            ht = ht.transmute(**{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in ['gene_ids', 'families']})
+        return ht
 
     # TODO merged sorts

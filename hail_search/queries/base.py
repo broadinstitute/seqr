@@ -746,9 +746,6 @@ class BaseHailTableQuery(object):
     def _format_collected_row(self, ht):
         return ht.row
 
-    def format_collected_results(self, collected):
-        return collected
-
     def _sort_order(self, ht):
         sort_expressions = self._get_sort_expressions(ht, XPOS)
         if self._sort != XPOS:
@@ -783,7 +780,7 @@ class BaseHailTableQuery(object):
     def _gene_rank_sort(cls, r, gene_ranks):
         return [hl.min(cls._gene_ids_expr(r).map(gene_ranks.get))]
 
-    def gene_counts(self):
+    def format_gene_counts_ht(self):
         selects = {
             'gene_ids': self._gene_ids_expr,
             'families': self.BASE_ANNOTATION_FIELDS['familyGuids'],
@@ -801,6 +798,10 @@ class BaseHailTableQuery(object):
         else:
             ht = ch_ht
 
+        return ht
+
+    def gene_counts(self):
+        ht = self.format_gene_counts_ht()
         ht = ht.explode('gene_ids').explode('families')
         return ht.aggregate(hl.agg.group_by(
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
