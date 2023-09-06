@@ -1,3 +1,5 @@
+import hail as hl
+
 from hail_search.queries.base import BaseHailTableQuery
 from hail_search.queries.variants import VariantHailTableQuery
 from hail_search.queries.sv import SvHailTableQuery
@@ -27,9 +29,11 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
                 ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
         return ht
 
-    def _format_collected_row(self, ht):
-        return hl.array(self._data_type_queries.keys()).map(
-            lambda data_type: ht[data_type]).find(lambda x: hl.is_defined(x))
+    def _format_collected_rows(self, collected):
+        return super()._format_collected_rows([
+            next(row.get(data_type) for data_type in self._data_type_queries if row.get(data_type))
+            for row in collected
+        ])
 
     def format_gene_counts_ht(self):
         hts = [query.format_gene_counts_ht() for query in self._data_type_queries.values()]
