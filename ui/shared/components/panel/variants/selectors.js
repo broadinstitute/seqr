@@ -66,35 +66,30 @@ const matchingVariants = (variants, matchFunc) => variants.filter(o => (Array.is
 const sortCompHet = (a, b) => (a.populations ? 1 : 0) - (b.populations ? 1 : 0)
 
 const getProjectSavedVariantsSelection = createSelector(
-  getSavedVariantsByGuid,
   (state, props) => props.match.params,
   getFamiliesByGuid,
   getAnalysisGroupsByGuid,
   state => state.currentProjectGuid,
   getVariantTagsByGuid,
-  (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid,
+  ({ tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid,
     projectGuid, tagsByGuid) => {
     if (!projectGuid) {
       return null
     }
 
-    let variants = Object.values(savedVariants)
-    const pairedFilters = []
-
+    let variantFilter
     if (variantGuid) {
-      variants = variants.filter(o => variantGuid.split(',').includes(o.variantGuid))
-      return [variants, pairedFilters]
-    }
-
-    if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {
+      variantFilter = o => variantGuid.split(',').includes(o.variantGuid)
+    } else if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {
       const analysisGroupFamilyGuids = analysisGroupsByGuid[analysisGroupGuid].familyGuids
-      variants = variants.filter(o => o.familyGuids.some(fg => analysisGroupFamilyGuids.includes(fg)))
+      variantFilter = o => o.familyGuids.some(fg => analysisGroupFamilyGuids.includes(fg))
     } else if (familyGuid) {
-      variants = variants.filter(o => o.familyGuids.includes(familyGuid))
+      variantFilter = o => o.familyGuids.includes(familyGuid)
     } else {
-      variants = variants.filter(o => o.familyGuids.some(fg => familiesByGuid[fg].projectGuid === projectGuid))
+      variantFilter = o => o.familyGuids.some(fg => familiesByGuid[fg].projectGuid === projectGuid)
     }
 
+    const pairedFilters = []
     if (tag === NOTE_TAG_NAME) {
       pairedFilters.push(({ noteGuids }) => noteGuids.length)
     } else if (tag === MME_TAG_NAME) {
@@ -105,16 +100,15 @@ const getProjectSavedVariantsSelection = createSelector(
       pairedFilters.push(({ tagGuids }) => tagGuids.length)
     }
 
-    return [variants, pairedFilters]
+    return [variantFilter, pairedFilters]
   },
 )
 
 const getSummaryDataSavedVariantsSelection = createSelector(
-  getSavedVariantsByGuid,
   (state, props) => props.match.params,
   state => state.currentProjectGuid,
   getVariantTagsByGuid,
-  (savedVariants, { tag, gene }, projectGuid, tagsByGuid) => {
+  ({ tag, gene }, projectGuid, tagsByGuid) => {
     if (projectGuid) {
       return null
     }
@@ -126,17 +120,23 @@ const getSummaryDataSavedVariantsSelection = createSelector(
       pairedFilters.push(({ tagGuids }) => tags.every(t => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === t)))
     }
 
-    return [Object.values(savedVariants), pairedFilters]
+    return [null, pairedFilters]
   },
 )
 
 export const getPairedSelectedSavedVariants = createSelector(
   getProjectSavedVariantsSelection,
   getSummaryDataSavedVariantsSelection,
+  getSavedVariantsByGuid,
   getVariantTagsByGuid,
   getVariantNotesByGuid,
-  (projectVariants, summaryDataVariants, tagsByGuid, notesByGuid) => {
-    const [variants, pairedFilters] = projectVariants || summaryDataVariants
+  (projectVariants, summaryDataVariants, savedVariants, tagsByGuid, notesByGuid) => {
+    const [variantFilter, pairedFilters] = projectVariants || summaryDataVariants
+
+    let variants = Object.values(savedVariants)
+    if (variantFilter) {
+      variants = variants.filter(variantFilter)
+    }
 
     const selectedVariantsByGuid = variants.reduce((acc, variant) => ({ ...acc, [variant.variantGuid]: variant }), {})
     const seenPairedGuids = []
