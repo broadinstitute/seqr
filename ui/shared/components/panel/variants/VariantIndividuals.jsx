@@ -70,7 +70,7 @@ const AlleleContainer = styled(Header).attrs({ size: 'medium' })`
   }
 `
 
-const WarningIcon = styled(Icon).attrs({ name: 'warning sign', color: 'yellow' })``
+const WarningIcon = props => <Icon name="warning sign" color="yellow" {...props} />
 
 const PAR_REGIONS = {
   37: {

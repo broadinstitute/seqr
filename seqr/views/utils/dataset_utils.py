@@ -336,7 +336,7 @@ def _get_splice_id(row):
 def load_rna_seq_splice_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
     samples_to_load, info, warnings = _load_rna_seq(
         RnaSeqSpliceOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_splice_outlier_row,
-        SPLICE_OUTLIER_HEADER_COLS.values(), get_unique_key=_get_splice_id
+        SPLICE_OUTLIER_HEADER_COLS.values(), get_unique_key=_get_splice_id, allow_missing_gene=True,
     )
 
     for sample_data_rows in samples_to_load.values():
@@ -347,7 +347,7 @@ def load_rna_seq_splice_outlier(file_path, user=None, mapping_file=None, ignore_
     return samples_to_load, info, warnings
 
 
-def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_columns, get_unique_key):
+def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_columns, get_unique_key, allow_missing_gene):
 
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
@@ -364,6 +364,7 @@ def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_column
     samples_with_conflict_tissues = defaultdict(set)
     errors = []
     gene_ids = set()
+    missing_gene_samples = set()
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in parse_row(row):
@@ -378,7 +379,11 @@ def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_column
 
             sample_id_to_tissue_type[(sample_id, project)] = tissue_type
 
-            gene_ids.add(row_dict[GENE_ID_COL])
+            gene_id = row_dict[GENE_ID_COL]
+            if gene_id:
+                gene_ids.add(gene_id)
+            else:
+                missing_gene_samples.add(sample_id)
 
             if get_unique_key:
                 gene_or_unique_id = get_unique_key(row_dict)
@@ -398,6 +403,8 @@ def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_column
     unknown_gene_ids = gene_ids - matched_gene_ids
     if unknown_gene_ids:
         errors.append(f'Unknown Gene IDs: {", ".join(sorted(unknown_gene_ids))}')
+    if missing_gene_samples and not allow_missing_gene:
+        errors += [f'Error in {sample_id} data: Gene ID is required' for sample_id in missing_gene_samples]
 
     if errors:
         raise ErrorsWarningsException(errors)
@@ -415,9 +422,9 @@ def _load_rna_seq_file(file_path, user, mapping_file, parse_row, expected_column
 
 
 def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns,
-                      get_unique_key=None):
+                      get_unique_key=None, allow_missing_gene=False):
     warnings, samples_by_id, sample_id_to_individual_id_mapping, sample_id_to_tissue_type = _load_rna_seq_file(
-        file_path, user, mapping_file, parse_row, expected_columns, get_unique_key)
+        file_path, user, mapping_file, parse_row, expected_columns, get_unique_key, allow_missing_gene)
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
     logger.info(message, user)

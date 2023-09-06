@@ -296,9 +296,9 @@ SAMPLE_GENE_SPLICE_DATA = {
     },
 }
 SAMPLE_GENE_SPLICE_DATA2 = {
-    'ENSG00000233750-2-167258096-167258349-*-psi3': {
+    '-2-167258096-167258349-*-psi3': {
         'chrom': '2', 'start': 167258096, 'end': 167258349, 'strand': '*', 'type': 'psi3',
-        'p_value': 1.56e-25, 'z_score': 6.33, 'delta_psi': 0.45, 'read_count': 143, 'gene_id': 'ENSG00000233750',
+        'p_value': 1.56e-25, 'z_score': 6.33, 'delta_psi': 0.45, 'read_count': 143, 'gene_id': '',
         'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 0,
     }
 }
@@ -759,7 +759,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
                 # a new sample NA20888
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                ['NA20888', 'Test Reprocessed Project', '', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
                 # a project mismatched sample NA20878
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3',
@@ -771,6 +771,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'initial_model_count': 7,
             'deleted_count': 4,
             'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
+            'allow_missing_gene': True,
             'get_models_json': lambda models: list(
                 models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'type', 'p_value', 'z_score', 'delta_psi',
                                    'read_count', 'rare_disease_samples_with_junction', 'rare_disease_samples_total')),
@@ -877,6 +878,12 @@ class DataManagerAPITest(AuthenticationTestCase):
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 400)
                 self.assertEqual(response.json()['errors'][0], 'Unknown Gene IDs: NOT_A_GENE_ID1, NOT_A_GENE_ID2')
+
+                if not params.get('allow_missing_gene'):
+                    _set_file_iter_stdout([header, loaded_data_row[:2] + [''] + loaded_data_row[3:]])
+                    response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+                    self.assertEqual(response.status_code, 400)
+                    self.assertEqual(response.json()['errors'][0], 'Error in NA19675_D2 data: Gene ID is required')
 
                 mapping_body = {'mappingFile': {'uploadedFileId': 'map.tsv'}}
                 mapping_body.update(body)
