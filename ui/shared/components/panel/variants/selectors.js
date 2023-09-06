@@ -115,12 +115,13 @@ const getSummaryDataSavedVariantsSelection = createSelector(
     const pairedFilters = []
     if (gene) {
       pairedFilters.push(({ transcripts }) => gene in (transcripts || {}))
-    } if (tag) {
+    } if (tag && tag !== SHOW_ALL) {
       const tags = tag.split(';')
       pairedFilters.push(({ tagGuids }) => tags.every(t => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === t)))
     }
 
-    return [null, pairedFilters]
+    const variantFilter = tag || gene ? null : () => false
+    return [variantFilter, pairedFilters]
   },
 )
 

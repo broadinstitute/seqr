@@ -56,6 +56,7 @@ class SavedVariants extends React.PureComponent {
     additionalFilter: PropTypes.node,
     tableSummaryComponent: PropTypes.elementType,
     multiple: PropTypes.bool,
+    summaryFullWidth: PropTypes.bool,
   }
 
   state = { showAllFilters: false }
@@ -73,7 +74,7 @@ class SavedVariants extends React.PureComponent {
     const {
       match, tableState, filters, totalPages, variantsToDisplay, totalVariantsCount, firstRecordIndex,
       tableSummaryComponent, loading, filteredVariantsCount, tagOptions, additionalFilter, updateTableField,
-      variantExportConfig, loadVariants, error, multiple, selectedTag,
+      variantExportConfig, loadVariants, error, multiple, summaryFullWidth, selectedTag,
     } = this.props
     const { showAllFilters } = this.state
     const { familyGuid, variantGuid } = match.params
@@ -101,7 +102,7 @@ class SavedVariants extends React.PureComponent {
         })}
         {!loading && (
           <ControlsRow>
-            <Grid.Column width={4}>
+            <Grid.Column width={summaryFullWidth ? 16 : 4}>
               {`Showing ${shownSummary} ${filteredVariantsCount}  `}
               <Dropdown
                 inline
@@ -113,7 +114,7 @@ class SavedVariants extends React.PureComponent {
               {` variants ${allShown ? '' : `(${totalVariantsCount} total)`}`}
 
             </Grid.Column>
-            <Grid.Column width={12} floated="right" textAlign="right">
+            <Grid.Column width={summaryFullWidth ? 16 : 12} floated="right" textAlign="right">
               {additionalFilter}
               {!variantGuid && (
                 <StateChangeForm

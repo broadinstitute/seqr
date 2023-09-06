@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 
 import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
 import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS } from 'redux/utils/reducerUtils'
-import { SORT_BY_XPOS } from 'shared/utils/constants'
+import { SHOW_ALL, SORT_BY_XPOS } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -43,7 +43,7 @@ export const loadSuccessStory = successStoryTypes => (dispatch) => {
 
 export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) => {
   // Do not load if already loaded
-  if (tag) {
+  if (tag && tag !== SHOW_ALL) {
     const loadedTags = getState().savedVariantTags
     if (loadedTags[tag] || tag.split(';').some(t => loadedTags[t])) {
       return

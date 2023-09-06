@@ -75,8 +75,9 @@ const BaseSavedVariants = React.memo(({ loadVariants, geneDetail, ...props }) =>
       filters={FILTER_FIELDS}
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
+      summaryFullWidth
       multiple
-      selectedTag={tag && tag.split(';')}
+      selectedTag={tag && tag.split(';').filter(t => t !== SHOW_ALL)}
       additionalFilter={
         <StyledForm inline>
           <Form.Field
