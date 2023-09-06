@@ -2,7 +2,7 @@ import hail as hl
 
 
 from hail_search.constants import NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD
-from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
+from hail_search.queries.base import BaseHailTableQuery, PredictionPath
 
 
 class SvHailTableQuery(BaseHailTableQuery):
