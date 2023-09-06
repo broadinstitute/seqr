@@ -53,10 +53,6 @@ class SvHailTableQuery(BaseHailTableQuery):
         parsed_intervals, _ = super()._parse_intervals(intervals, variant_ids=None, **kwargs)
         return parsed_intervals, variant_keys
 
-    def _filter_variant_ids(self, ht, variant_ids):
-        variant_ids_set = hl.set(variant_ids)
-        return ht.filter(variant_ids_set.contains(ht.variant_id))
-
     def _filter_annotated_table(self, *args, parsed_intervals=None, exclude_intervals=False, **kwargs):
         if parsed_intervals:
             interval_filter = hl.array(parsed_intervals).any(lambda interval: hl.if_else(
@@ -86,11 +82,6 @@ class SvHailTableQuery(BaseHailTableQuery):
             # SV search can specify secondary SV types, as well as secondary consequences
             annotation_filters = self._get_annotation_override_filters(annotations)
         return super()._get_allowed_consequences_annotations(annotations, annotation_filters)
-
-    def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
-        return self._ht[self.TRANSCRIPTS_FIELD].any(
-            lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
-        )
 
     def _get_annotation_override_filters(self, annotations, **kwargs):
         annotation_filters = []

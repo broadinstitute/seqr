@@ -471,7 +471,8 @@ class BaseHailTableQuery(object):
         return ht.filter(hl.is_missing(ht.filters) | (ht.filters.length() < 1))
 
     def _filter_variant_ids(self, ht, variant_ids):
-        raise NotImplementedError
+        variant_ids_set = hl.set(variant_ids)
+        return ht.filter(variant_ids_set.contains(ht.variant_id))
 
     def _prefilter_entries_table(self, ht, **kwargs):
         return ht
@@ -643,7 +644,9 @@ class BaseHailTableQuery(object):
         return annotation_exprs
 
     def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
-        raise NotImplementedError
+        return self._ht[self.TRANSCRIPTS_FIELD].any(
+            lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
+        )
 
     def _get_annotation_override_filters(self, annotations, **kwargs):
         return []
@@ -715,7 +718,7 @@ class BaseHailTableQuery(object):
         results = ht.annotate(**annotations)
         return results.select(*self.CORE_FIELDS, *list(annotations.keys()))
 
-    def search(self):
+    def format_search_ht(self):
         ch_ht = None
         annotation_fields = self.annotation_fields()
         if self._comp_het_ht:
@@ -728,13 +731,23 @@ class BaseHailTableQuery(object):
                 ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
         else:
             ht = ch_ht
+        return ht
 
-        (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
+    def search(self):
+        ht = self.format_search_ht()
+
+        (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(self._format_collected_row(ht), self._num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}. Fetched: {self._num_results}')
 
         if self._comp_het_ht:
             collected = [row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD) for row in collected]
         return collected, total_results
+
+    def _format_collected_row(self, ht):
+        return ht.row
+
+    def format_collected_results(self, collected):
+        return collected
 
     def _sort_order(self, ht):
         sort_expressions = self._get_sort_expressions(ht, XPOS)
