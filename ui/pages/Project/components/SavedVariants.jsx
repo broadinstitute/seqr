@@ -26,7 +26,7 @@ import { TAG_FORM_FIELD } from '../constants'
 import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
 import {
   getCurrentProject, getProjectTagTypeOptions, getTaggedVariantsByFamily, getProjectVariantSavedByOptions,
-  getSavedVariantTagTypeCounts, getSavedVariantTagTypeCountsByFamily,
+  getSavedVariantTagTypeCounts, getSavedVariantTagTypeCountsByFamily, getSavedVariantTableState,
 } from '../selectors'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
 import SelectSavedVariantsTable, { TAG_COLUMN, VARIANT_POS_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
@@ -134,6 +134,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
     tagTypeCounts: PropTypes.object,
     updateTableField: PropTypes.func,
     loadProjectSavedVariants: PropTypes.func,
+    categoryFilter: PropTypes.string,
   }
 
   getUpdateTagUrl = (newTag) => {
@@ -233,20 +234,16 @@ class BaseProjectSavedVariants extends React.PureComponent {
     )
   }
 
-  getSelectedTag = (tag, variantGuid) => categoryFilter => (
-    tag || (variantGuid ? null : (categoryFilter || SHOW_ALL))
-  )
-
   render() {
-    const { project, analysisGroup, loadProjectSavedVariants, ...props } = this.props
+    const { project, analysisGroup, loadProjectSavedVariants, categoryFilter, ...props } = this.props
     const { familyGuid, tag, variantGuid } = props.match.params
-    const filters = (tag === DISCOVERY_CATEGORY_NAME) ? FILTER_FIELDS : NON_DISCOVERY_FILTER_FIELDS
+    const appliedTagCategoryFilter = tag || (variantGuid ? null : (categoryFilter || SHOW_ALL))
 
     return (
       <SavedVariants
         tagOptions={this.tagOptions()}
-        filters={filters}
-        getSelectedTag={this.getSelectedTag(tag, variantGuid)}
+        filters={appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME ? FILTER_FIELDS : NON_DISCOVERY_FILTER_FIELDS}
+        selectedTag={appliedTagCategoryFilter}
         additionalFilter={
           (project.canEdit && familyGuid) ? <LinkSavedVariants familyGuid={familyGuid} {...props} /> : null
         }
@@ -267,6 +264,7 @@ const mapStateToProps = (state, ownProps) => ({
   tagTypeCounts: ownProps.match.params.familyGuid ?
     getSavedVariantTagTypeCountsByFamily(state)[ownProps.match.params.familyGuid] :
     getSavedVariantTagTypeCounts(state, ownProps),
+  categoryFilter: getSavedVariantTableState(state)?.categoryFilter,
 })
 
 const mapDispatchToProps = dispatch => ({

@@ -63,6 +63,7 @@ export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isL
 export const getSamplesLoading = state => state.samplesLoading.isLoading
 export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
 export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
+export const getSavedVariantTableState = state => state.savedVariantTableState
 const getFamiliesTableFiltersByProject = state => state.familyTableFilterState
 
 export const getCurrentProject = createSelector(

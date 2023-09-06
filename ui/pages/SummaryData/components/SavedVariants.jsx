@@ -58,25 +58,12 @@ const TAG_OPTIONS = [
   label: { empty: true, circular: true, style: { backgroundColor: 'white' } },
 }))
 
-TAG_OPTIONS.push({
-  value: SHOW_ALL,
-  text: 'All',
-  key: 'all',
-  label: { empty: true, circular: true, style: { backgroundColor: 'white' } },
-})
-
 const PAGE_URL = '/summary_data/saved_variants'
 
-const getUpdateTagUrl = (selectedTag, match) => {
-  const lastTag = selectedTag.length > 0 ? selectedTag[selectedTag.length - 1] : null
-  const [firstTag, ...otherTag] = selectedTag
-  const updatedTag = firstTag === SHOW_ALL ? otherTag : lastTag !== SHOW_ALL && selectedTag
-  return `${PAGE_URL}/${updatedTag.join(';') || SHOW_ALL}${match.params.gene ? `/${match.params.gene}` : ''}`
-}
+const getUpdateTagUrl =
+  (selectedTag, match) => `${PAGE_URL}/${(selectedTag || []).join(';') || SHOW_ALL}${match.params.gene ? `/${match.params.gene}` : ''}`
 
 const getGeneHref = tag => selectedGene => `${PAGE_URL}/${tag || SHOW_ALL}/${selectedGene.key}`
-
-const getSelectedTag = tag => categoryFilter => (tag ? tag.split(';') : [categoryFilter || SHOW_ALL])
 
 const BaseSavedVariants = React.memo(({ loadVariants, geneDetail, ...props }) => {
   const { params } = props.match
@@ -89,7 +76,7 @@ const BaseSavedVariants = React.memo(({ loadVariants, geneDetail, ...props }) =>
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
       multiple
-      getSelectedTag={getSelectedTag(tag)}
+      selectedTag={tag && tag.split(';')}
       additionalFilter={
         <StyledForm inline>
           <Form.Field

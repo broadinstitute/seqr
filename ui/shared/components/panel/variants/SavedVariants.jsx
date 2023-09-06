@@ -39,7 +39,7 @@ class SavedVariants extends React.PureComponent {
     match: PropTypes.object,
     history: PropTypes.object,
     tagOptions: PropTypes.arrayOf(PropTypes.object),
-    getSelectedTag: PropTypes.func,
+    selectedTag: PropTypes.any, // eslint-disable-line react/forbid-prop-types
     filters: PropTypes.arrayOf(PropTypes.object),
     loading: PropTypes.bool,
     error: PropTypes.string,
@@ -73,11 +73,10 @@ class SavedVariants extends React.PureComponent {
     const {
       match, tableState, filters, totalPages, variantsToDisplay, totalVariantsCount, firstRecordIndex,
       tableSummaryComponent, loading, filteredVariantsCount, tagOptions, additionalFilter, updateTableField,
-      variantExportConfig, loadVariants, error, multiple, getSelectedTag,
+      variantExportConfig, loadVariants, error, multiple, selectedTag,
     } = this.props
     const { showAllFilters } = this.state
     const { familyGuid, variantGuid } = match.params
-    const optionValue = getSelectedTag(tableState.categoryFilter)
 
     let shownFilters = filters
     const hasHiddenFilters = !showAllFilters && shownFilters.length > MAX_FILTERS
@@ -108,7 +107,7 @@ class SavedVariants extends React.PureComponent {
                 inline
                 multiple={multiple}
                 options={tagOptions}
-                value={optionValue}
+                value={selectedTag}
                 onChange={this.navigateToTag}
               />
               {` variants ${allShown ? '' : `(${totalVariantsCount} total)`}`}
