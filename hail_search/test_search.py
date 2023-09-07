@@ -662,6 +662,12 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
+            [_sorted(GCNV_VARIANT2, [4.5, 0]), _sorted(GCNV_VARIANT3, [4.5, 0]), _sorted(GCNV_VARIANT4, [4.5, 0]),
+             _sorted(GCNV_VARIANT1, [4.5, 3]), _sorted(VARIANT2, [11, 11]), _sorted(VARIANT4, [11, 11]),
+             _sorted(MULTI_FAMILY_VARIANT, [22, 24]), _sorted(VARIANT1, [None, None])], sort='protein_consequence',
+        )
+
+        await self._assert_expected_search(
             [_sorted(SV_VARIANT1, [11]), _sorted(SV_VARIANT2, [12]), _sorted(SV_VARIANT3, [12]), _sorted(SV_VARIANT4, [12])],
              sample_data=SV_WGS_SAMPLE_DATA, sort='protein_consequence',
         )
@@ -675,18 +681,19 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         await self._assert_expected_search(
             [_sorted(VARIANT1, [4]), _sorted(VARIANT2, [8]), _sorted(MULTI_FAMILY_VARIANT, [12.5]),
-             _sorted(VARIANT4, [12.5])], omit_sample_type='SV_WES', sort='pathogenicity',
+             _sorted(VARIANT4, [12.5]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='pathogenicity',
         )
 
         await self._assert_expected_search(
             [_sorted(VARIANT1, [4, None]), _sorted(VARIANT2, [8, 3]), _sorted(MULTI_FAMILY_VARIANT, [12.5, None]),
-             _sorted(VARIANT4, [12.5, None])], omit_sample_type='SV_WES', sort='pathogenicity_hgmd',
+             _sorted(VARIANT4, [12.5, None]), GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            sort='pathogenicity_hgmd',
         )
 
         await self._assert_expected_search(
             [_sorted(VARIANT2, [0]), _sorted(VARIANT4, [0.00026519427774474025]),
-             _sorted(VARIANT1, [0.034449315071105957]), _sorted(MULTI_FAMILY_VARIANT, [0.38041073083877563])],
-            omit_sample_type='SV_WES', sort='gnomad',
+             _sorted(VARIANT1, [0.034449315071105957]), _sorted(MULTI_FAMILY_VARIANT, [0.38041073083877563]),
+             GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='gnomad',
         )
 
         await self._assert_expected_search(
@@ -695,15 +702,17 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [_sorted(VARIANT4, [0.02222222276031971]), _sorted(VARIANT1, [0.10000000149011612]),
+            [_sorted(GCNV_VARIANT3, [0.0015185698866844177]), _sorted(GCNV_VARIANT4, [0.004989586770534515]),
+             _sorted(GCNV_VARIANT2, [0.012322110123932362]), _sorted(VARIANT4, [0.02222222276031971]),
+             _sorted(GCNV_VARIANT1, [0.076492540538311]), _sorted(VARIANT1, [0.10000000149011612]),
              _sorted(VARIANT2, [0.31111112236976624]), _sorted(MULTI_FAMILY_VARIANT, [0.6666666865348816])],
-            omit_sample_type='SV_WES', sort='callset_af',
+            sort='callset_af',
         )
 
         await self._assert_expected_search(
             [_sorted(VARIANT4, [-29.899999618530273]), _sorted(VARIANT2, [-20.899999618530273]),
-             _sorted(VARIANT1, [-4.668000221252441]), _sorted(MULTI_FAMILY_VARIANT, [-2.753999948501587]), ],
-            omit_sample_type='SV_WES', sort='cadd',
+             _sorted(VARIANT1, [-4.668000221252441]), _sorted(MULTI_FAMILY_VARIANT, [-2.753999948501587]),
+             GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sort='cadd',
         )
 
         await self._assert_expected_search(
@@ -716,20 +725,46 @@ class HailSearchTestCase(AioHTTPTestCase):
              _sorted(VARIANT1, [None])], omit_sample_type='SV_WES', sort='splice_ai',
         )
 
+        omim_sort_metadata = ['ENSG00000177000', 'ENSG00000097046', 'ENSG00000275023']
+        sort = 'in_omim'
         await self._assert_expected_search(
             [_sorted(MULTI_FAMILY_VARIANT, [0, -2]), _sorted(VARIANT2, [0, -1]), _sorted(VARIANT4, [0, -1]), _sorted(VARIANT1, [1, 0])],
-            omit_sample_type='SV_WES', sort='in_omim', sort_metadata=['ENSG00000177000', 'ENSG00000097046'],
+            omit_sample_type='SV_WES', sort=sort, sort_metadata=omim_sort_metadata,
+        )
+
+        await self._assert_expected_search(
+            [_sorted(GCNV_VARIANT3, [-1]), _sorted(GCNV_VARIANT4, [-1]), _sorted(GCNV_VARIANT1, [0]), _sorted(GCNV_VARIANT2, [0])],
+            omit_sample_type='VARIANTS', sort=sort, sort_metadata=omim_sort_metadata,
+        )
+
+        await self._assert_expected_search(
+            [_sorted(MULTI_FAMILY_VARIANT, [0, -2]), _sorted(VARIANT2, [0, -1]), _sorted(VARIANT4, [0, -1]),
+             _sorted(GCNV_VARIANT3, [0, -1]), _sorted(GCNV_VARIANT4, [0, -1]), _sorted(GCNV_VARIANT1, [0, 0]),
+             _sorted(GCNV_VARIANT2, [0, 0]),  _sorted(VARIANT1, [1, 0])], sort=sort, sort_metadata=omim_sort_metadata,
         )
 
         await self._assert_expected_search(
             [_sorted(VARIANT2, [0, -1]), _sorted(MULTI_FAMILY_VARIANT, [1, -1]), _sorted(VARIANT1, [1, 0]), _sorted(VARIANT4, [1, 0])],
-            omit_sample_type='SV_WES', sort='in_omim', sort_metadata=['ENSG00000177000'],
+            omit_sample_type='SV_WES', sort=sort, sort_metadata=['ENSG00000177000'],
+        )
+
+        constraint_sort_metadata = {'ENSG00000177000': 2, 'ENSG00000275023': 3, 'ENSG00000097046': 4}
+        sort = 'constraint'
+        await self._assert_expected_search(
+            [_sorted(VARIANT2, [2, 2]), _sorted(MULTI_FAMILY_VARIANT, [4, 2]), _sorted(VARIANT4, [4, 4]),
+             _sorted(VARIANT1, [None, None])], omit_sample_type='SV_WES', sort=sort, sort_metadata=constraint_sort_metadata,
         )
 
         await self._assert_expected_search(
-            [_sorted(VARIANT2, [2, 2]), _sorted(MULTI_FAMILY_VARIANT, [4, 2]), _sorted(VARIANT4, [4, 4]),
-             _sorted(VARIANT1, [None, None])], omit_sample_type='SV_WES', sort='constraint',
-            sort_metadata={'ENSG00000177000': 2, 'ENSG00000097046': 4},
+            [_sorted(GCNV_VARIANT3, [3]), _sorted(GCNV_VARIANT4, [3]), _sorted(GCNV_VARIANT1, [None]),
+             _sorted(GCNV_VARIANT2, [None])], omit_sample_type='VARIANTS', sort=sort, sort_metadata=constraint_sort_metadata,
+        )
+
+        await self._assert_expected_search(
+            [_sorted(VARIANT2, [2, 2]), _sorted(GCNV_VARIANT3, [3, 3]), _sorted(GCNV_VARIANT4, [3, 3]),
+             _sorted(MULTI_FAMILY_VARIANT, [4, 2]), _sorted(VARIANT4, [4, 4]), _sorted(VARIANT1, [None, None]),
+             _sorted(GCNV_VARIANT1, [None, None]), _sorted(GCNV_VARIANT2, [None, None])],
+            sort=sort, sort_metadata=constraint_sort_metadata,
         )
 
         await self._assert_expected_search(
@@ -738,14 +773,10 @@ class HailSearchTestCase(AioHTTPTestCase):
             sort_metadata={'ENSG00000177000': 3},
         )
 
-        # size sort only applies to SVs, so has no impact on other variants
-        await self._assert_expected_search(
-            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], sort='size', omit_sample_type='SV_WES',
-        )
-
+        # size sort only applies to SVs, so has no impact on other variant
         await self._assert_expected_search(
             [_sorted(GCNV_VARIANT1, [-171766]), _sorted(GCNV_VARIANT2, [-17768]), _sorted(GCNV_VARIANT4, [-14487]),
-             _sorted(GCNV_VARIANT3, [-2666])], omit_sample_type='VARIANTS', sort='size',
+             _sorted(GCNV_VARIANT3, [-2666]), VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], sort='size',
         )
 
         await self._assert_expected_search(
@@ -755,8 +786,9 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         # sort applies to compound hets
         await self._assert_expected_search(
-            [_sorted(VARIANT2, [11, 11]), [_sorted(VARIANT4, [11, 11]),  _sorted(VARIANT3, [22, 24])]],
-            sort='protein_consequence', inheritance_mode='recessive', omit_sample_type='SV_WES', **COMP_HET_ALL_PASS_FILTERS,
+            [_sorted(GCNV_VARIANT3, [4.5, 0]), [_sorted(GCNV_VARIANT3, [0]), _sorted(GCNV_VARIANT4, [0])],
+             _sorted(VARIANT2, [11, 11]), [_sorted(VARIANT4, [11, 11]),  _sorted(VARIANT3, [22, 24])]],
+            sort='protein_consequence', inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS,
         )
 
         await self._assert_expected_search(

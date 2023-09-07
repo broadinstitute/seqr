@@ -7,7 +7,7 @@ import os
 from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, HAS_ALLOWED_ANNOTATION, HAS_ALLOWED_SECONDARY_ANNOTATION, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
-    UNAFFECTED_ID, VARIANT_KEY_FIELD, X_LINKED_RECESSIVE, XPOS
+    UNAFFECTED_ID, VARIANT_KEY_FIELD, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -742,7 +742,7 @@ class BaseHailTableQuery(object):
         return self._format_collected_rows(collected), total_results
 
     def _format_collected_rows(self, collected):
-        if self._comp_het_ht:
+        if self._has_comp_het_search:
             collected = [row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD) for row in collected]
         return collected
 
@@ -760,7 +760,7 @@ class BaseHailTableQuery(object):
             prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
             return [-hl.float64(ht[prediction_path.source][prediction_path.field])]
 
-        if sort == 'in_omim':
+        if sort == OMIM_SORT:
             return self._omim_sort(ht, hl.set(set(self._sort_metadata)))
 
         if self._sort_metadata:

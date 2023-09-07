@@ -3,7 +3,7 @@ import hail as hl
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, HAS_ALLOWED_SECONDARY_ANNOTATION, HGMD_KEY, HGMD_PATH_RANGES, \
     GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
-    SCREEN_KEY, SPLICE_AI_FIELD, VARIANT_DATASET
+    SCREEN_KEY, SPLICE_AI_FIELD, VARIANT_DATASET, CONSEQUENCE_SORT
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
 
@@ -80,7 +80,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
     }
 
     SORTS = {
-        'protein_consequence': lambda r: [
+        CONSEQUENCE_SORT: lambda r: [
             hl.min(r.sorted_transcript_consequences.flatmap(lambda t: t.consequence_term_ids)),
             hl.min(r.selected_transcript.consequence_term_ids),
         ],

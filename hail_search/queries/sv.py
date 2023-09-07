@@ -1,7 +1,7 @@
 import hail as hl
 
 
-from hail_search.constants import NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD
+from hail_search.constants import CONSEQUENCE_SORT, NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
 
@@ -43,7 +43,7 @@ class SvHailTableQuery(BaseHailTableQuery):
 
     SORTS = {
         **BaseHailTableQuery.SORTS,
-        'protein_consequence': lambda r: [hl.min(r.sorted_gene_consequences.map(lambda g: g.major_consequence_id))],
+        CONSEQUENCE_SORT: lambda r: [hl.min(r.sorted_gene_consequences.map(lambda g: g.major_consequence_id))],
         'size': lambda r: [hl.if_else(
             r.start_locus.contig == r.end_locus.contig, r.start_locus.position - r.end_locus.position, -50,
         )],
