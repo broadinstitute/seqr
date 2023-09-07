@@ -5,10 +5,7 @@ import { Grid, Dropdown, Message } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { getSavedVariantsIsLoading, getSavedVariantsLoadingError } from 'redux/selectors'
-import {
-  DISCOVERY_CATEGORY_NAME,
-  VARIANT_PAGINATION_FIELD,
-} from 'shared/utils/constants'
+import { VARIANT_PAGINATION_FIELD } from 'shared/utils/constants'
 
 import ExportTableButton from '../../buttons/ExportTableButton'
 import StateChangeForm from '../../form/StateChangeForm'
@@ -22,7 +19,6 @@ import {
   getVisibleSortedSavedVariants,
 } from './selectors'
 
-const ALL_FILTER = 'ALL'
 const MAX_FILTERS = 4
 
 const ControlsRow = styled(Grid.Row)`
@@ -43,8 +39,8 @@ class SavedVariants extends React.PureComponent {
     match: PropTypes.object,
     history: PropTypes.object,
     tagOptions: PropTypes.arrayOf(PropTypes.object),
+    selectedTag: PropTypes.any, // eslint-disable-line react/forbid-prop-types
     filters: PropTypes.arrayOf(PropTypes.object),
-    discoveryFilters: PropTypes.arrayOf(PropTypes.object),
     loading: PropTypes.bool,
     error: PropTypes.string,
     variantsToDisplay: PropTypes.arrayOf(PropTypes.any),
@@ -59,6 +55,8 @@ class SavedVariants extends React.PureComponent {
     loadVariants: PropTypes.func,
     additionalFilter: PropTypes.node,
     tableSummaryComponent: PropTypes.elementType,
+    multiple: PropTypes.bool,
+    summaryFullWidth: PropTypes.bool,
   }
 
   state = { showAllFilters: false }
@@ -74,17 +72,14 @@ class SavedVariants extends React.PureComponent {
 
   render() {
     const {
-      match, tableState, filters, discoveryFilters, totalPages, variantsToDisplay, totalVariantsCount, firstRecordIndex,
+      match, tableState, filters, totalPages, variantsToDisplay, totalVariantsCount, firstRecordIndex,
       tableSummaryComponent, loading, filteredVariantsCount, tagOptions, additionalFilter, updateTableField,
-      variantExportConfig, loadVariants, error,
+      variantExportConfig, loadVariants, error, multiple, summaryFullWidth, selectedTag,
     } = this.props
     const { showAllFilters } = this.state
-    const { familyGuid, variantGuid, tag } = match.params
+    const { familyGuid, variantGuid } = match.params
 
-    const appliedTagCategoryFilter = tag || (variantGuid ? null : (tableState.categoryFilter || ALL_FILTER))
-
-    let shownFilters = (discoveryFilters && appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME) ?
-      discoveryFilters : filters
+    let shownFilters = filters
     const hasHiddenFilters = !showAllFilters && shownFilters.length > MAX_FILTERS
     if (hasHiddenFilters) {
       shownFilters = shownFilters.slice(0, MAX_FILTERS)
@@ -107,18 +102,19 @@ class SavedVariants extends React.PureComponent {
         })}
         {!loading && (
           <ControlsRow>
-            <Grid.Column width={4}>
+            <Grid.Column width={summaryFullWidth ? 16 : 4}>
               {`Showing ${shownSummary} ${filteredVariantsCount}  `}
               <Dropdown
                 inline
+                multiple={multiple}
                 options={tagOptions}
-                value={appliedTagCategoryFilter}
+                value={selectedTag}
                 onChange={this.navigateToTag}
               />
               {` variants ${allShown ? '' : `(${totalVariantsCount} total)`}`}
 
             </Grid.Column>
-            <Grid.Column width={12} floated="right" textAlign="right">
+            <Grid.Column width={summaryFullWidth ? 16 : 12} floated="right" textAlign="right">
               {additionalFilter}
               {!variantGuid && (
                 <StateChangeForm

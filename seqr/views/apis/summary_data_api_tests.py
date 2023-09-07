@@ -134,6 +134,11 @@ class SummaryDataAPITest(object):
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
 
+        multi_tag_url = reverse(saved_variants_page, args=['Review;Tier 1 - Novel gene and phenotype'])
+        response = self.client.get('{}?gene=ENSG00000135953'.format(multi_tag_url))
+        self.assertEqual(response.status_code, 200)
+        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
+
     def test_hpo_summary_data(self):
         url = reverse(hpo_summary_data, args=['HP:0002011'])
         self.check_require_login(url)
@@ -238,7 +243,7 @@ def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
     self.mock_get_groups.assert_has_calls(group_calls)
     self.mock_get_ws_acl.assert_not_called()
     self.mock_get_group_members.assert_not_called()
-    self.mock_get_ws_access_level.assert_not_called()
+
 
 # Test for permissions from AnVIL only
 class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
@@ -249,9 +254,12 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     def test_mme_details(self, *args):
         super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
         assert_has_expected_calls(self, [self.no_access_user, self.manager_user, self.analyst_user])
+        self.mock_get_ws_access_level.assert_not_called()
 
     def test_saved_variants_page(self):
         super(AnvilSummaryDataAPITest, self).test_saved_variants_page()
         assert_has_expected_calls(self, [
             self.no_access_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
         ], skip_group_call_idxs=[2])
+        self.mock_get_ws_access_level.assert_called_with(
+            self.analyst_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde')

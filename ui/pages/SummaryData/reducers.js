@@ -43,8 +43,9 @@ export const loadSuccessStory = successStoryTypes => (dispatch) => {
 
 export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) => {
   // Do not load if already loaded
-  if (tag) {
-    if (getState().savedVariantTags[tag]) {
+  if (tag && tag !== SHOW_ALL) {
+    const loadedTags = getState().savedVariantTags
+    if (loadedTags[tag] || tag.split(';').some(t => loadedTags[t])) {
       return
     }
   } else if (!gene) {
@@ -86,7 +87,6 @@ export const reducers = {
   savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
   externalAnalysisUploadStats: createSingleValueReducer(RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS, {}),
   allProjectSavedVariantTableState: createSingleObjectReducer(UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, {
-    categoryFilter: SHOW_ALL,
     sort: SORT_BY_XPOS,
     page: 1,
     recordsPerPage: 25,
