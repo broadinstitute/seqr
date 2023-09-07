@@ -15,7 +15,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         self._data_type_queries = {k: QUERY_CLASS_MAP[k](v, *args, **kwargs) for k, v in sample_data.items()}
         super().__init__(sample_data, *args, **kwargs)
 
-    def _load_filtered_table(self, sample_data, **kwargs):
+    def _load_filtered_table(self, *args, **kwargs):
         pass
 
     def format_search_ht(self):
@@ -39,7 +39,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             return None
 
         if self._sort == CONSEQUENCE_SORT:
-            return hl.array([hl.float64(4.5)]).extend(ht._sort.map(lambda x: hl.float64(x)))
+            return hl.array([hl.float64(4.5)]).extend(ht._sort.map(hl.float64))
         elif self._sort == OMIM_SORT:
             return hl.array([hl.int64(0)]).extend(ht._sort)
         elif self._sort_metadata:
