@@ -8,7 +8,7 @@ import { getGenesById } from 'redux/selectors'
 import { PREDICTOR_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
-import { ButtonLink } from '../../StyledComponents'
+import { ButtonLink, ColoredIcon } from '../../StyledComponents'
 
 const PredictionValue = styled.span`
   margin-left: 5px;
@@ -19,8 +19,10 @@ const PredictionValue = styled.span`
 
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
 
+const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
+
 const predictionFieldValue = (
-  predictions, { field, dangerThreshold, warningThreshold, indicatorMap, infoField, infoTitle },
+  predictions, { field, thresholds, indicatorMap, infoField, infoTitle },
 ) => {
   let value = predictions[field]
   if (value === null || value === undefined) {
@@ -29,22 +31,23 @@ const predictionFieldValue = (
 
   const infoValue = predictions[infoField]
 
-  if (dangerThreshold) {
-    value = parseFloat(value).toPrecision(2)
-    let color = 'green'
-    if (value >= dangerThreshold) {
-      color = 'red'
-    } else if (value >= warningThreshold) {
-      color = 'yellow'
-    }
-    return { value, color, infoValue, infoTitle, dangerThreshold, warningThreshold }
+  if (thresholds) {
+    value = parseFloat(value).toPrecision(3)
+    const color = PRED_COLOR_MAP.find(
+      (clr, i) => (thresholds[i - 1] || thresholds[i]) &&
+        (thresholds[i - 1] === undefined || value >= thresholds[i - 1]) &&
+        (thresholds[i] === undefined || value < thresholds[i]),
+    )
+    return { value, color, infoValue, infoTitle, thresholds }
   }
 
   return indicatorMap[value[0]] || indicatorMap[value]
 }
 
+const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
+
 const Prediction = (
-  { field, fieldTitle, value, color, infoValue, infoTitle, warningThreshold, dangerThreshold, href },
+  { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, href },
 ) => {
   const indicator = infoValue ? (
     <Popup
@@ -52,16 +55,23 @@ const Prediction = (
       content={infoValue}
       trigger={<Icon name="question circle" size="small" color={color} />}
     />
-  ) : <Icon name="circle" size="small" color={color} />
+  ) : coloredIcon(color)
   const fieldName = fieldTitle || snakecaseToTitlecase(field)
-  const fieldDisplay = dangerThreshold ? (
+  const fieldDisplay = thresholds ? (
     <Popup
       header={`${fieldName} Color Ranges`}
       content={
-        <div>
-          <div>{`Red > ${dangerThreshold}`}</div>
-          {warningThreshold < dangerThreshold && <div>{`Yellow > ${warningThreshold}`}</div>}
-        </div>
+        PRED_COLOR_MAP.map((c, i) => {
+          if (thresholds[i] === undefined && thresholds[i - 1] === undefined) {
+            return null
+          }
+          return (
+            <div key={c}>
+              {coloredIcon(c)}
+              {thresholds[i] === undefined ? ` >= ${thresholds[i - 1]}` : ` < ${thresholds[i]}`}
+            </div>
+          )
+        })
       }
       trigger={<span>{fieldName}</span>}
     />
@@ -85,8 +95,7 @@ Prediction.propTypes = {
   infoTitle: PropTypes.string,
   fieldTitle: PropTypes.string,
   color: PropTypes.string,
-  warningThreshold: PropTypes.number,
-  dangerThreshold: PropTypes.number,
+  thresholds: PropTypes.arrayOf(PropTypes.number),
   href: PropTypes.string,
 }
 
@@ -116,8 +125,8 @@ class Predictions extends React.PureComponent {
     if (gene && gene.primateAi) {
       genePredictors.primate_ai = {
         field: 'primate_ai',
-        warningThreshold: gene.primateAi.percentile25,
-        dangerThreshold: gene.primateAi.percentile75,
+        thresholds: [undefined, undefined, gene.primateAi.percentile25.toPrecision(3),
+          gene.primateAi.percentile75.toPrecision(3), undefined],
       }
     }
 

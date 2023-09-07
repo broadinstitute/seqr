@@ -15,6 +15,8 @@ import {
   VARIANT_PER_PAGE_FIELD,
   EXCLUDED_TAG_NAME,
   REVIEW_TAG_NAME,
+  DISCOVERY_CATEGORY_NAME,
+  SHOW_ALL,
 } from 'shared/utils/constants'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { LargeMultiselect, Dropdown } from 'shared/components/form/Inputs'
@@ -24,7 +26,7 @@ import { TAG_FORM_FIELD } from '../constants'
 import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
 import {
   getCurrentProject, getProjectTagTypeOptions, getTaggedVariantsByFamily, getProjectVariantSavedByOptions,
-  getSavedVariantTagTypeCounts, getSavedVariantTagTypeCountsByFamily,
+  getSavedVariantTagTypeCounts, getSavedVariantTagTypeCountsByFamily, getSavedVariantTableState,
 } from '../selectors'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
 import SelectSavedVariantsTable, { TAG_COLUMN, VARIANT_POS_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
@@ -36,8 +38,6 @@ const LabelLink = styled(Link)`
     color: black;
   }
 `
-
-const ALL_FILTER = 'ALL'
 
 const mapSavedByInputStateToProps = state => ({
   options: getProjectVariantSavedByOptions(state),
@@ -134,6 +134,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
     tagTypeCounts: PropTypes.object,
     updateTableField: PropTypes.func,
     loadProjectSavedVariants: PropTypes.func,
+    categoryFilter: PropTypes.string,
   }
 
   getUpdateTagUrl = (newTag) => {
@@ -147,7 +148,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
     return getSavedVariantsLinkPath({
       projectGuid: project.projectGuid,
       analysisGroupGuid: match.params.analysisGroupGuid,
-      tag: !isCategory && newTag !== ALL_FILTER && newTag,
+      tag: !isCategory && newTag !== SHOW_ALL && newTag,
       familyGuid: match.params.familyGuid,
     })
   }
@@ -191,7 +192,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
       })
       return acc
     }, [{
-      value: ALL_FILTER,
+      value: SHOW_ALL,
       text: 'All Saved',
       content: (
         <LabelLink
@@ -234,14 +235,15 @@ class BaseProjectSavedVariants extends React.PureComponent {
   }
 
   render() {
-    const { project, analysisGroup, loadProjectSavedVariants, ...props } = this.props
-    const { familyGuid } = props.match.params
+    const { project, analysisGroup, loadProjectSavedVariants, categoryFilter, ...props } = this.props
+    const { familyGuid, tag, variantGuid } = props.match.params
+    const appliedTagCategoryFilter = tag || (variantGuid ? null : (categoryFilter || SHOW_ALL))
 
     return (
       <SavedVariants
         tagOptions={this.tagOptions()}
-        filters={NON_DISCOVERY_FILTER_FIELDS}
-        discoveryFilters={FILTER_FIELDS}
+        filters={appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME ? FILTER_FIELDS : NON_DISCOVERY_FILTER_FIELDS}
+        selectedTag={appliedTagCategoryFilter}
         additionalFilter={
           (project.canEdit && familyGuid) ? <LinkSavedVariants familyGuid={familyGuid} {...props} /> : null
         }
@@ -262,6 +264,7 @@ const mapStateToProps = (state, ownProps) => ({
   tagTypeCounts: ownProps.match.params.familyGuid ?
     getSavedVariantTagTypeCountsByFamily(state)[ownProps.match.params.familyGuid] :
     getSavedVariantTagTypeCounts(state, ownProps),
+  categoryFilter: getSavedVariantTableState(state)?.categoryFilter,
 })
 
 const mapDispatchToProps = dispatch => ({

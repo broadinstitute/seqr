@@ -86,7 +86,7 @@ export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatc
   // Do not load if already loaded
   let expectedFamilyGuids
   if (variantGuid) {
-    if (state.savedVariantsByGuid[variantGuid]) {
+    if (variantGuid.split(',').every(g => state.savedVariantsByGuid[g])) {
       return
     }
     url = `${url}/${variantGuid}`
