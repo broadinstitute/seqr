@@ -199,6 +199,7 @@ class BaseHailTableQuery(object):
         self._num_results = num_results
         self._ht = None
         self._comp_het_ht = None
+        self.unfiltered_comp_het_ht = None
         self._inheritance_mode = inheritance_mode
         self._load_table_kwargs = {}
 
@@ -273,6 +274,9 @@ class BaseHailTableQuery(object):
             entry_type = families_ht.family_entries.dtype.element_type
             for project_ht, num_project_families in filtered_project_hts[1:]:
                 families_ht = families_ht.join(project_ht, how='outer')
+                families_ht = families_ht.annotate_globals(
+                    family_guids=families_ht.family_guids.extend(families_ht.family_guids_1)
+                )
                 select_fields = {
                     'filters': families_ht.filters.union(families_ht.filters_1),
                     'family_entries': hl.bind(
@@ -347,7 +351,8 @@ class BaseHailTableQuery(object):
         })
         sample_id_family_map = {s['sample_id']: s['family_guid'] for s in sample_data}
         sample_index_family_map = hl.dict({sample_id_index_map[k]: v for k, v in sample_id_family_map.items()})
-        family_index_map = {f: i for i, f in enumerate(sorted(set(sample_id_family_map.values())))}
+        family_guids = enumerate(sorted(set(sample_id_family_map.values())))
+        family_index_map = {f: i for i, f in family_guids}
         num_families = len(family_index_map)
         family_sample_indices = [None] * num_families
         sample_id_family_index_map = {}
@@ -360,6 +365,7 @@ class BaseHailTableQuery(object):
             family_sample_indices[family_index].append(sample_index)
         family_sample_indices = hl.array(family_sample_indices)
 
+        ht = ht.annotate_globals(family_guids=family_guids)
         ht = ht.transmute(
             family_entries=family_sample_indices.map(lambda sample_indices: sample_indices.map(
                 lambda i: ht.entries[i].annotate(
@@ -660,6 +666,8 @@ class BaseHailTableQuery(object):
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht, comp_het=True))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
+        self.unfiltered_comp_het_ht = ch_ht
+
         formatted_rows_expr = hl.agg.collect(ch_ht.row)
         if HAS_ALLOWED_SECONDARY_ANNOTATION in self._ht.row:
             primary_variants = hl.agg.filter(ch_ht[HAS_ALLOWED_ANNOTATION], formatted_rows_expr)
@@ -669,13 +677,16 @@ class BaseHailTableQuery(object):
             secondary_variants = formatted_rows_expr
 
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
+        self._filter_grouped_compound_hets(ch_ht)
+
+    def _filter_grouped_compound_hets(self, ch_ht):
         ch_ht = ch_ht.explode(ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v2)
         ch_ht = ch_ht.filter(ch_ht.v1[VARIANT_KEY_FIELD] != ch_ht.v2[VARIANT_KEY_FIELD])
 
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(valid_families=hl.enumerate(ch_ht.v1.comp_het_family_entries).map(
-            lambda x: self._is_valid_comp_het_family(x[1], ch_ht.v2.comp_het_family_entries[x[0]])
+            lambda x: self._is_valid_comp_het_family(ch_ht, x[1], ch_ht.v2.comp_het_family_entries[x[0]])
         ))
         ch_ht = ch_ht.filter(ch_ht.valid_families.any(lambda x: x))
 
@@ -696,7 +707,7 @@ class BaseHailTableQuery(object):
     def _gene_ids_expr(cls, ht, comp_het=False):
         return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
 
-    def _is_valid_comp_het_family(self, entries_1, entries_2):
+    def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
         return hl.is_defined(entries_1) & hl.is_defined(entries_2) & hl.enumerate(entries_1).all(lambda x: hl.any([
             (x[1].affected_id != UNAFFECTED_ID),
             self.GENOTYPE_QUERY_MAP[REF_REF](x[1].GT),

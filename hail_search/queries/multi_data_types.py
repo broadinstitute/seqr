@@ -1,6 +1,6 @@
 import hail as hl
 
-from hail_search.constants import CONSEQUENCE_SORT, OMIM_SORT
+from hail_search.constants import ALT_ALT, CONSEQUENCE_SORT, OMIM_SORT
 from hail_search.queries.base import BaseHailTableQuery
 from hail_search.queries.variants import VariantHailTableQuery
 from hail_search.queries.sv import SvHailTableQuery
@@ -12,11 +12,63 @@ QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery, SvHailT
 class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
     def __init__(self, sample_data, *args, **kwargs):
+        # TODO allow hom_alt for variant data type in comp het query
         self._data_type_queries = {k: QUERY_CLASS_MAP[k](v, *args, **kwargs) for k, v in sample_data.items()}
+        self._comp_het_hts = []
+        self._sv_type_del_id = None
         super().__init__(sample_data, *args, **kwargs)
 
     def _load_filtered_table(self, *args, **kwargs):
-        pass
+        variant_query = self._data_type_queries.get(VariantHailTableQuery.DATA_TYPE)
+        sv_queries = [
+            self._data_type_queries[data_type] for data_type in [SvHailTableQuery.DATA_TYPE, GcnvHailTableQuery.DATA_TYPE]
+            if data_type in self._data_type_queries
+        ]
+        if not (self._has_comp_het_search and variant_query is not None and sv_queries):
+            return
+
+        variant_ht = variant_query.unfiltered_comp_het_ht
+        variant_families = hl.eval(variant_ht.family_guids)
+        for sv_query in sv_queries:
+            merged_ht = self._filter_data_type_comp_hets(variant_ht, variant_families, sv_query)
+            if merged_ht is not None:
+                self._comp_het_hts.append(merged_ht)
+
+    def _filter_data_type_comp_hets(self, variant_ht, variant_families, sv_query):
+        sv_ht = sv_query.unfiltered_comp_het_ht
+        sv_type_del_ids = sv_query.get_allowed_sv_type_ids(['DEL'])
+        self._sv_type_del_id = list(sv_type_del_ids)[0] if sv_type_del_ids else None
+
+        sv_families = hl.eval(sv_ht.family_guids)
+        overlapped_families = list(set(variant_families).intersection(sv_families))
+        if not overlapped_families:
+            return None
+
+        variant_ch_ht = self._family_filtered_ch_ht(variant_ht, overlapped_families, variant_families, 'v1')
+        sv_ch_ht = self._family_filtered_ch_ht(sv_ht, overlapped_families, sv_families, 'v2')
+
+        ch_ht = variant_ch_ht.join(sv_ch_ht)
+        return self._filter_grouped_compound_hets(ch_ht)
+
+    def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
+        is_valid = super().is_valid(ch_ht, entries_1, entries_2)
+        if self._sv_type_del_id is None:
+            return is_valid
+
+        # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
+        # considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
+        return is_valid & (
+            entries_1.all(lambda g: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](g.GT)) | (
+                (ch_ht.v2.sv_type_id == self._sv_type_del_id) &
+                # TODO update test fixtures
+                (ch_ht.v2.start_locus.position <= ch_ht.v1.locus.position) &
+                (ch_ht.v1.locus.position <= ch_ht.v2.end_locus.position)))
+
+    @staticmethod
+    def _family_filtered_ch_ht(ht, overlapped_families, families, key):
+        family_indices = hl.array([families.index(family_guid) for family_guid in overlapped_families])
+        ht = ht.annotate(comp_het_family_entries=family_indices.map(lambda i: ht.comp_het_family_entries[i]))
+        return ht.group_by('gene_ids').aggregate(**{key: hl.agg.collect(ht.row)})
 
     def format_search_ht(self):
         ht = None
@@ -31,6 +83,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             else:
                 ht = ht.join(dt_ht, 'outer')
                 ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
+        # TODO add _comp_het_hts
         return ht
 
     def _merged_sort_expr(self, data_type, ht):
@@ -48,12 +101,14 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         return None
 
     def _format_collected_rows(self, collected):
+        # TODO add _comp_het_hts
         return super()._format_collected_rows([
             next(row.get(data_type) for data_type in self._data_type_queries if row.get(data_type))
             for row in collected
         ])
 
     def format_gene_counts_ht(self):
+        # TODO add _comp_het_hts
         hts = [query.format_gene_counts_ht() for query in self._data_type_queries.values()]
         ht = hts[0]
         for dt_ht in hts[1:]:
