@@ -156,6 +156,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         variant_gene_counts = {
             'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
             'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
+            'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}}
         }
         await self._assert_expected_search(
             [VARIANT1, VARIANT2, VARIANT3, VARIANT4], sample_data=FAMILY_2_VARIANT_SAMPLE_DATA, gene_counts=variant_gene_counts,
@@ -173,13 +174,14 @@ class HailSearchTestCase(AioHTTPTestCase):
             [VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, VARIANT3, VARIANT4, SV_VARIANT3, GCNV_VARIANT1, SV_VARIANT4,
              GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], sample_data={
                 'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'], **FAMILY_2_VARIANT_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA,
-            }, gene_counts={**variant_gene_counts, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS},
+            }, gene_counts={**variant_gene_counts, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
         )
 
     async def test_single_project_search(self):
         variant_gene_counts = {
             'ENSG00000097046': {'total': 3, 'families': {'F000002_2': 2, 'F000003_3': 1}},
             'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 2, 'F000003_3': 1}},
+            'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
         }
         await self._assert_expected_search(
             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_sample_type='SV_WES', gene_counts=variant_gene_counts,
@@ -203,7 +205,7 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         await self._assert_expected_search(
             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-            gene_counts={**variant_gene_counts, **GCNV_GENE_COUNTS}
+            gene_counts={**variant_gene_counts, **GCNV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}}
         )
 
     async def test_multi_project_search(self):
@@ -261,9 +263,9 @@ class HailSearchTestCase(AioHTTPTestCase):
             [SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
         )
 
-        gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'has_alt', 'I000005_hg00732': 'ref_ref'}}
+        gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'ref_ref', 'I000005_hg00732': 'has_alt'}}
         await self._assert_expected_search(
-            [VARIANT2, VARIANT3], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
+            [VARIANT2], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 
         inheritance_mode = 'compound_het'
         await self._assert_expected_search(
@@ -291,6 +293,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, gene_counts={
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
             }, sample_data=MULTI_PROJECT_SAMPLE_DATA, **COMP_HET_ALL_PASS_FILTERS,
         )
 

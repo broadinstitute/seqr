@@ -419,7 +419,8 @@ class BaseHailTableQuery(object):
 
         for genotype, entry_indices in entry_indices_by_gt.items():
             entry_indices = hl.dict(entry_indices)
-            ht = ht.annotate(**{field: hl.enumerate(ht.family_entries).map(
+            family_entries = ht[field] if field in ht.row else ht.family_entries
+            ht = ht.annotate(**{field: hl.enumerate(family_entries).map(
                 lambda x: cls._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, inheritance_mode)
             )})
 
