@@ -1,4 +1,4 @@
-from hail_search.hail_search_query import QUERY_CLASS_MAP
+from hail_search.queries.multi_data_types import QUERY_CLASS_MAP
 
 
 def search_hail_backend(request, gene_counts=False):
