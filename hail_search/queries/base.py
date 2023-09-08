@@ -7,7 +7,7 @@ import os
 from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, HAS_ALLOWED_ANNOTATION, HAS_ALLOWED_SECONDARY_ANNOTATION, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
-    UNAFFECTED_ID, VARIANT_KEY_FIELD, X_LINKED_RECESSIVE, XPOS
+    UNAFFECTED_ID, VARIANT_KEY_FIELD, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -471,7 +471,8 @@ class BaseHailTableQuery(object):
         return ht.filter(hl.is_missing(ht.filters) | (ht.filters.length() < 1))
 
     def _filter_variant_ids(self, ht, variant_ids):
-        raise NotImplementedError
+        variant_ids_set = hl.set(variant_ids)
+        return ht.filter(variant_ids_set.contains(ht.variant_id))
 
     def _prefilter_entries_table(self, ht, **kwargs):
         return ht
@@ -643,7 +644,9 @@ class BaseHailTableQuery(object):
         return annotation_exprs
 
     def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
-        raise NotImplementedError
+        return self._ht[self.TRANSCRIPTS_FIELD].any(
+            lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
+        )
 
     def _get_annotation_override_filters(self, annotations, **kwargs):
         return []
@@ -715,7 +718,7 @@ class BaseHailTableQuery(object):
         results = ht.annotate(**annotations)
         return results.select(*self.CORE_FIELDS, *list(annotations.keys()))
 
-    def search(self):
+    def format_search_ht(self):
         ch_ht = None
         annotation_fields = self.annotation_fields()
         if self._comp_het_ht:
@@ -728,13 +731,20 @@ class BaseHailTableQuery(object):
                 ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
         else:
             ht = ch_ht
+        return ht
+
+    def search(self):
+        ht = self.format_search_ht()
 
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}. Fetched: {self._num_results}')
 
-        if self._comp_het_ht:
+        return self._format_collected_rows(collected), total_results
+
+    def _format_collected_rows(self, collected):
+        if self._has_comp_het_search:
             collected = [row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD) for row in collected]
-        return collected, total_results
+        return collected
 
     def _sort_order(self, ht):
         sort_expressions = self._get_sort_expressions(ht, XPOS)
@@ -750,7 +760,7 @@ class BaseHailTableQuery(object):
             prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
             return [-hl.float64(ht[prediction_path.source][prediction_path.field])]
 
-        if sort == 'in_omim':
+        if sort == OMIM_SORT:
             return self._omim_sort(ht, hl.set(set(self._sort_metadata)))
 
         if self._sort_metadata:
@@ -770,7 +780,7 @@ class BaseHailTableQuery(object):
     def _gene_rank_sort(cls, r, gene_ranks):
         return [hl.min(cls._gene_ids_expr(r).map(gene_ranks.get))]
 
-    def gene_counts(self):
+    def format_gene_counts_ht(self):
         selects = {
             'gene_ids': self._gene_ids_expr,
             'families': self.BASE_ANNOTATION_FIELDS['familyGuids'],
@@ -788,6 +798,10 @@ class BaseHailTableQuery(object):
         else:
             ht = ch_ht
 
+        return ht
+
+    def gene_counts(self):
+        ht = self.format_gene_counts_ht()
         ht = ht.explode('gene_ids').explode('families')
         return ht.aggregate(hl.agg.group_by(
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))

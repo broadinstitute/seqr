@@ -1,7 +1,7 @@
 import hail as hl
 
 
-from hail_search.constants import NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD
+from hail_search.constants import CONSEQUENCE_SORT, NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath
 
 
@@ -43,7 +43,7 @@ class SvHailTableQuery(BaseHailTableQuery):
 
     SORTS = {
         **BaseHailTableQuery.SORTS,
-        'protein_consequence': lambda r: [hl.min(r.sorted_gene_consequences.map(lambda g: g.major_consequence_id))],
+        CONSEQUENCE_SORT: lambda r: [hl.min(r.sorted_gene_consequences.map(lambda g: g.major_consequence_id))],
         'size': lambda r: [hl.if_else(
             r.start_locus.contig == r.end_locus.contig, r.start_locus.position - r.end_locus.position, -50,
         )],
@@ -52,10 +52,6 @@ class SvHailTableQuery(BaseHailTableQuery):
     def _parse_intervals(self, intervals, variant_ids, variant_keys=None, **kwargs):
         parsed_intervals, _ = super()._parse_intervals(intervals, variant_ids=None, **kwargs)
         return parsed_intervals, variant_keys
-
-    def _filter_variant_ids(self, ht, variant_ids):
-        variant_ids_set = hl.set(variant_ids)
-        return ht.filter(variant_ids_set.contains(ht.variant_id))
 
     def _filter_annotated_table(self, *args, parsed_intervals=None, exclude_intervals=False, **kwargs):
         if parsed_intervals:
@@ -86,11 +82,6 @@ class SvHailTableQuery(BaseHailTableQuery):
             # SV search can specify secondary SV types, as well as secondary consequences
             annotation_filters = self._get_annotation_override_filters(annotations)
         return super()._get_allowed_consequences_annotations(annotations, annotation_filters)
-
-    def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
-        return self._ht[self.TRANSCRIPTS_FIELD].any(
-            lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
-        )
 
     def _get_annotation_override_filters(self, annotations, **kwargs):
         annotation_filters = []

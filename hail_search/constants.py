@@ -29,6 +29,8 @@ XPOS = 'xpos'
 PATHOGENICTY_SORT_KEY = 'pathogenicity'
 PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
 ABSENT_PATH_SORT_OFFSET = 12.5
+CONSEQUENCE_SORT = 'protein_consequence'
+OMIM_SORT = 'in_omim'
 
 ALT_ALT = 'alt_alt'
 REF_REF = 'ref_ref'
