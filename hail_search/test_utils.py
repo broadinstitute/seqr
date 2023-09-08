@@ -129,16 +129,16 @@ VARIANT1 = {
     '_sort': [1000010439],
 }
 VARIANT2 = {
-    'variantId': '1-11794419-T-G',
+    'variantId': '1-38724419-T-G',
     'chrom': '1',
-    'pos': 11794419,
+    'pos': 38724419,
     'ref': 'T',
     'alt': 'G',
     'genomeVersion': '38',
     'liftedOverGenomeVersion': '37',
     'liftedOverChrom': '1',
     'liftedOverPos': 11854476,
-    'xpos': 1011794419,
+    'xpos': 1038724419,
     'rsid': 'rs1801131',
     'familyGuids': ['F000002_2'],
     'genotypes': {
@@ -213,7 +213,7 @@ VARIANT2 = {
     },
     'mainTranscriptId': 'ENST00000376585',
     'selectedMainTranscriptId': None,
-    '_sort': [1011794419],
+    '_sort': [1038724419],
 }
 VARIANT3 = {
     'variantId': '1-91502721-G-A',

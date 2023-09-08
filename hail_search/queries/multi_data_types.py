@@ -60,7 +60,6 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         return is_valid & (
             entries_1.all(lambda g: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](g.GT)) | (
                 (ch_ht.v2.sv_type_id == self._sv_type_del_id) &
-                # TODO update test fixtures
                 (ch_ht.v2.start_locus.position <= ch_ht.v1.locus.position) &
                 (ch_ht.v1.locus.position <= ch_ht.v2.end_locus.position)))
 
