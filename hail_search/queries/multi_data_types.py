@@ -53,6 +53,12 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         ch_ht = variant_ch_ht.join(sv_ch_ht)
         return self._filter_grouped_compound_hets(ch_ht)
 
+    @staticmethod
+    def _family_filtered_ch_ht(ht, overlapped_families, families, key):
+        family_indices = hl.array([families.index(family_guid) for family_guid in overlapped_families])
+        ht = ht.annotate(comp_het_family_entries=family_indices.map(lambda i: ht.comp_het_family_entries[i]))
+        return ht.group_by('gene_ids').aggregate(**{key: hl.agg.collect(ht.row)})
+
     def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
         is_valid = super().is_valid(ch_ht, entries_1, entries_2)
         if self._sv_type_del_id is None:
@@ -65,12 +71,6 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
                 (ch_ht.v2.sv_type_id == self._sv_type_del_id) &
                 (ch_ht.v2.start_locus.position <= ch_ht.v1.locus.position) &
                 (ch_ht.v1.locus.position <= ch_ht.v2.end_locus.position)))
-
-    @staticmethod
-    def _family_filtered_ch_ht(ht, overlapped_families, families, key):
-        family_indices = hl.array([families.index(family_guid) for family_guid in overlapped_families])
-        ht = ht.annotate(comp_het_family_entries=family_indices.map(lambda i: ht.comp_het_family_entries[i]))
-        return ht.group_by('gene_ids').aggregate(**{key: hl.agg.collect(ht.row)})
 
     def format_search_ht(self):
         ht = None
