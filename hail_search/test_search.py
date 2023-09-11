@@ -299,6 +299,15 @@ class HailSearchTestCase(AioHTTPTestCase):
             **COMP_HET_ALL_PASS_FILTERS, gene_counts={'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}}},
         )
 
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4], [SV_VARIANT1, SV_VARIANT2]], inheritance_mode=inheritance_mode,
+            sample_data={**SV_WGS_SAMPLE_DATA, **MULTI_PROJECT_SAMPLE_DATA}, **COMP_HET_ALL_PASS_FILTERS, gene_counts={
+                'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
+                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+                'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
+            },
+        )
+
         inheritance_mode = 'recessive'
         await self._assert_expected_search(
             [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, gene_counts={

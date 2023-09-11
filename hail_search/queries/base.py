@@ -728,12 +728,15 @@ class BaseHailTableQuery(object):
 
     def _format_comp_het_results(self, ch_ht, annotation_fields):
         formatted_grouped_variants = ch_ht[GROUPED_VARIANTS_FIELD].map(
-            lambda v: self._format_results(v, annotation_fields).annotate(**{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
+            lambda v: self._format_results(v, annotation_fields=annotation_fields).annotate(
+                **{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
         )
         ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted(formatted_grouped_variants, key=lambda x: x._sort)})
         return ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
 
-    def _format_results(self, ht, annotation_fields):
+    def _format_results(self, ht, annotation_fields=None):
+        if annotation_fields is None:
+            annotation_fields = self.annotation_fields()
         annotations = {k: v(ht) for k, v in annotation_fields.items()}
         annotations.update({
             '_sort': self._sort_order(ht),
@@ -749,7 +752,7 @@ class BaseHailTableQuery(object):
             ch_ht = self._format_comp_het_results(self._comp_het_ht, annotation_fields)
 
         if self._ht:
-            ht = self._format_results(self._ht, annotation_fields)
+            ht = self._format_results(self._ht, annotation_fields=annotation_fields)
             if ch_ht:
                 ht = ht.join(ch_ht, 'outer')
                 ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
@@ -763,12 +766,12 @@ class BaseHailTableQuery(object):
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}. Fetched: {self._num_results}')
 
-        return self._format_collected_rows(collected), total_results
+        return [self._format_collected_row(row) for row in collected], total_results
 
-    def _format_collected_rows(self, collected):
+    def _format_collected_row(self, row):
         if self._has_comp_het_search:
-            collected = [row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD) for row in collected]
-        return collected
+            return row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD)
+        return row
 
     def _sort_order(self, ht):
         sort_expressions = self._get_sort_expressions(ht, XPOS)

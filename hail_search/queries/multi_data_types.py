@@ -1,6 +1,6 @@
 import hail as hl
 
-from hail_search.constants import ALT_ALT, CONSEQUENCE_SORT, OMIM_SORT
+from hail_search.constants import ALT_ALT, CONSEQUENCE_SORT, OMIM_SORT, GROUPED_VARIANTS_FIELD
 from hail_search.queries.base import BaseHailTableQuery
 from hail_search.queries.variants import VariantHailTableQuery
 from hail_search.queries.sv import SvHailTableQuery
@@ -17,25 +17,26 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             k: QUERY_CLASS_MAP[k](v, *args, override_comp_het_alt=k == VARIANT_DATA_TYPE, **kwargs)
             for k, v in sample_data.items()
         }
-        self._comp_het_hts = []
+        self._comp_het_hts = {}
         self._sv_type_del_id = None
         super().__init__(sample_data, *args, **kwargs)
 
     def _load_filtered_table(self, *args, **kwargs):
         variant_query = self._data_type_queries.get(VARIANT_DATA_TYPE)
-        sv_queries = [
-            self._data_type_queries[data_type] for data_type in [SvHailTableQuery.DATA_TYPE, GcnvHailTableQuery.DATA_TYPE]
+        sv_data_types = [
+            data_type for data_type in [SvHailTableQuery.DATA_TYPE, GcnvHailTableQuery.DATA_TYPE]
             if data_type in self._data_type_queries
         ]
-        if not (self._has_comp_het_search and variant_query is not None and sv_queries):
+        if not (self._has_comp_het_search and variant_query is not None and sv_data_types):
             return
 
         variant_ht = variant_query.unfiltered_comp_het_ht
         variant_families = hl.eval(variant_ht.family_guids)
-        for sv_query in sv_queries:
+        for data_type in sv_data_types:
+            sv_query = self._data_type_queries[data_type]
             merged_ht = self._filter_data_type_comp_hets(variant_ht, variant_families, sv_query)
             if merged_ht is not None:
-                self._comp_het_hts.append(merged_ht)
+                self._comp_het_hts[data_type] = merged_ht
 
     def _filter_data_type_comp_hets(self, variant_ht, variant_families, sv_query):
         sv_ht = sv_query.unfiltered_comp_het_ht
@@ -74,19 +75,26 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         return is_valid & is_allowed_hom_alt
 
     def format_search_ht(self):
-        ht = None
+        hts = []
         for data_type, query in self._data_type_queries.items():
             dt_ht = query.format_search_ht()
             merged_sort_expr = self._merged_sort_expr(data_type, dt_ht)
             if merged_sort_expr is not None:
                 dt_ht = dt_ht.annotate(_sort=merged_sort_expr)
-            dt_ht = dt_ht.select('_sort', **{data_type: dt_ht.row})
-            if ht is None:
-                ht = dt_ht
-            else:
-                ht = ht.join(dt_ht, 'outer')
-                ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
-        # TODO add _comp_het_hts
+            hts.append(dt_ht.select('_sort', **{data_type: dt_ht.row}))
+
+        for data_type, ch_ht in self._comp_het_hts.items():
+            hts.append(ch_ht.annotate(
+                v1=self._data_type_queries[VARIANT_DATA_TYPE]._format_results(ch_ht.v1),
+                v2=self._data_type_queries[data_type]._format_results(ch_ht.v2),
+                _sort=hl.sorted([ch_ht.v1._sort, ch_ht.v2._sort])[0],
+            ))
+
+        ht = hts[0]
+        for sub_ht in hts[1:]:
+            ht = ht.join(sub_ht, 'outer')
+            ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
+
         return ht
 
     def _merged_sort_expr(self, data_type, ht):
@@ -103,12 +111,11 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
         return None
 
-    def _format_collected_rows(self, collected):
-        # TODO add _comp_het_hts
-        return super()._format_collected_rows([
-            next(row.get(data_type) for data_type in self._data_type_queries if row.get(data_type))
-            for row in collected
-        ])
+    def _format_collected_row(self, row):
+        formatted_row = next((row.get(data_type) for data_type in self._data_type_queries if row.get(data_type)), None)
+        if formatted_row is None:
+            formatted_row = {GROUPED_VARIANTS_FIELD: sorted([row.v1, row.v2], key=lambda x: x._sort)}
+        return super()._format_collected_row(formatted_row)
 
     def format_gene_counts_ht(self):
         # TODO add _comp_het_hts
