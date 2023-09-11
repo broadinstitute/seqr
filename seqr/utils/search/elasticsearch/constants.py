@@ -338,7 +338,7 @@ PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
     'dbnsfp_DANN_score': {},
     'eigen_Eigen_phred': {},
-    'dbnsfp_VEST4_score': {'response_key': 'vest'},
+    'dbnsfp_VEST4_score': {'response_key': 'vest', 'format_value': lambda x: x.split(';')[0]},
     'dbnsfp_MutPred_score': {'response_key': 'mut_pred'},
     'mpc_MPC': {},
     'dbnsfp_MutationTaster_pred': {'response_key': 'mut_taster'},

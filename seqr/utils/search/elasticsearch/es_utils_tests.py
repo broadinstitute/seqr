@@ -76,6 +76,7 @@ ES_VARIANTS = [
           'exac_AC_Hom': 0,
           'topmed_AC': 21,
           'dbnsfp_REVEL_score': None,
+          'dbnsfp_VEST4_score': '0.335;0.341;0.38',
           'primate_ai_score': None,
           'variantId': '1-248367227-TC-T',
           'sortedTranscriptConsequences': [
