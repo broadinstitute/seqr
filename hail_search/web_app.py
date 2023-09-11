@@ -8,6 +8,8 @@ from hail_search.search import search_hail_backend, load_globals
 def _hl_json_default(o):
     if isinstance(o, hl.Struct) or isinstance(o, hl.utils.frozendict):
         return dict(o)
+    elif isinstance(o, set):
+        return sorted(o)
 
 
 def hl_json_dumps(obj):

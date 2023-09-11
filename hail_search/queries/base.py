@@ -4,14 +4,10 @@ import hail as hl
 import logging
 import os
 
-from hail_search.constants import AFFECTED, UNAFFECTED, AFFECTED_ID, UNAFFECTED_ID, MALE, VARIANT_DATASET, \
-    VARIANT_KEY_FIELD, GNOMAD_GENOMES_FIELD, XPOS, GENOME_VERSION_GRCh38, INHERITANCE_FILTERS, \
-    ANY_AFFECTED, X_LINKED_RECESSIVE, REF_REF, REF_ALT, COMP_HET_ALT, ALT_ALT, HAS_ALT, HAS_REF, \
-    ANNOTATION_OVERRIDE_FIELDS, SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
-    CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_RANGES, HGMD_PATH_RANGES, PATH_FREQ_OVERRIDE_CUTOFF, \
-    PREFILTER_FREQ_CUTOFF, COMPOUND_HET, RECESSIVE, GROUPED_VARIANTS_FIELD, NEW_SV_FIELD, HAS_ALLOWED_ANNOTATION, \
-    HAS_ALLOWED_SECONDARY_ANNOTATION, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, ABSENT_PATH_SORT_OFFSET, \
-    STRUCTURAL_ANNOTATION_FIELD
+from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
+    COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, HAS_ALLOWED_ANNOTATION, HAS_ALLOWED_SECONDARY_ANNOTATION, \
+    HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
+    UNAFFECTED_ID, VARIANT_KEY_FIELD, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -40,9 +36,10 @@ class BaseHailTableQuery(object):
         HAS_ALT: lambda gt: gt.is_non_ref(),
         HAS_REF: lambda gt: gt.is_hom_ref() | gt.is_het_ref(),
     }
+    MISSING_NUM_ALT = -1
 
     GENOTYPE_FIELDS = {}
-    NESTED_GENOTYPE_FIELDS = {}
+    COMPUTED_GENOTYPE_FIELDS = {}
     GENOTYPE_QUERY_FIELDS = {}
     QUALITY_FILTER_FORMAT = {}
     POPULATIONS = {}
@@ -63,7 +60,7 @@ class BaseHailTableQuery(object):
             'response_key': 'transcripts',
             'empty_array': True,
             'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
-            'format_array_values': lambda values: values.group_by(lambda t: t.geneId),
+            'format_array_values': lambda values, *args: values.group_by(lambda t: t.geneId),
         },
     }
     LIFTOVER_ANNOTATION_FIELDS = {
@@ -97,9 +94,9 @@ class BaseHailTableQuery(object):
                 lambda gt: hl.is_defined(gt.individualGuid)
             ).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0].select(
                 'sampleId', 'individualGuid', 'familyGuid',
-                numAlt=hl.if_else(hl.is_defined(x[0].GT), x[0].GT.n_alt_alleles(), -1),
+                numAlt=hl.if_else(hl.is_defined(x[0].GT), x[0].GT.n_alt_alleles(), self.MISSING_NUM_ALT),
                 **{k: x[0][field] for k, field in self.GENOTYPE_FIELDS.items()},
-                **{_to_camel_case(k): x[0][field][k] for field, v in self.NESTED_GENOTYPE_FIELDS.items() for k in v},
+                **{_to_camel_case(k): v(x[0], k, r) for k, v in self.COMPUTED_GENOTYPE_FIELDS.items()},
             )),
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
@@ -144,7 +141,7 @@ class BaseHailTableQuery(object):
 
     def _get_enum_terms_ids(self, field, subfield, terms):
         enum = self._get_enum_lookup(field, subfield)
-        return {enum[t] for t in terms if enum.get(t)}
+        return {enum[t] for t in terms if enum.get(t) is not None}
 
     def _format_enum_response(self, k, enum):
         enum_config = self.ENUM_ANNOTATION_FIELDS.get(k, {})
@@ -162,7 +159,7 @@ class BaseHailTableQuery(object):
                 value = hl.or_else(value, hl.empty_array(value.dtype.element_type))
             value = value.map(lambda x: cls._enum_field(x, enum, **kwargs))
             if format_array_values:
-                value = format_array_values(value)
+                value = format_array_values(value, r)
             return value
 
         return cls._enum_field(value, enum, **kwargs)
@@ -365,7 +362,7 @@ class BaseHailTableQuery(object):
 
         ht = ht.transmute(
             family_entries=family_sample_indices.map(lambda sample_indices: sample_indices.map(
-                lambda i: hl.or_else(ht.entries[i], cls._missing_entry(ht.entries[i])).annotate(
+                lambda i: ht.entries[i].annotate(
                     sampleId=sample_index_id_map.get(i),
                     individualGuid=sample_index_individual_map.get(i),
                     familyGuid=sample_index_family_map.get(i),
@@ -375,11 +372,6 @@ class BaseHailTableQuery(object):
         )
 
         return ht, sample_id_family_index_map, num_families
-
-    @classmethod
-    def _missing_entry(cls, entry):
-        entry_type = dict(**entry.dtype)
-        return hl.struct(**{k: hl.missing(v) for k, v in entry_type.items()})
 
     def _filter_inheritance(self, ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map):
         any_valid_entry = lambda x: self.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
@@ -479,7 +471,8 @@ class BaseHailTableQuery(object):
         return ht.filter(hl.is_missing(ht.filters) | (ht.filters.length() < 1))
 
     def _filter_variant_ids(self, ht, variant_ids):
-        raise NotImplementedError
+        variant_ids_set = hl.set(variant_ids)
+        return ht.filter(variant_ids_set.contains(ht.variant_id))
 
     def _prefilter_entries_table(self, ht, **kwargs):
         return ht
@@ -651,7 +644,9 @@ class BaseHailTableQuery(object):
         return annotation_exprs
 
     def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
-        raise NotImplementedError
+        return self._ht[self.TRANSCRIPTS_FIELD].any(
+            lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
+        )
 
     def _get_annotation_override_filters(self, annotations, **kwargs):
         return []
@@ -662,7 +657,7 @@ class BaseHailTableQuery(object):
             ch_ht = ch_ht.filter(ch_ht.comp_het_family_entries.any(hl.is_defined))
 
         # Get possible pairs of variants within the same gene
-        ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht))
+        ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht, comp_het=True))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
         formatted_rows_expr = hl.agg.collect(ch_ht.row)
         if HAS_ALLOWED_SECONDARY_ANNOTATION in self._ht.row:
@@ -697,7 +692,7 @@ class BaseHailTableQuery(object):
         return ch_ht
 
     @classmethod
-    def _gene_ids_expr(cls, ht):
+    def _gene_ids_expr(cls, ht, comp_het=False):
         return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
 
     def _is_valid_comp_het_family(self, entries_1, entries_2):
@@ -723,7 +718,7 @@ class BaseHailTableQuery(object):
         results = ht.annotate(**annotations)
         return results.select(*self.CORE_FIELDS, *list(annotations.keys()))
 
-    def search(self):
+    def format_search_ht(self):
         ch_ht = None
         annotation_fields = self.annotation_fields()
         if self._comp_het_ht:
@@ -736,13 +731,20 @@ class BaseHailTableQuery(object):
                 ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
         else:
             ht = ch_ht
+        return ht
+
+    def search(self):
+        ht = self.format_search_ht()
 
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}. Fetched: {self._num_results}')
 
-        if self._comp_het_ht:
+        return self._format_collected_rows(collected), total_results
+
+    def _format_collected_rows(self, collected):
+        if self._has_comp_het_search:
             collected = [row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD) for row in collected]
-        return collected, total_results
+        return collected
 
     def _sort_order(self, ht):
         sort_expressions = self._get_sort_expressions(ht, XPOS)
@@ -758,7 +760,7 @@ class BaseHailTableQuery(object):
             prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
             return [-hl.float64(ht[prediction_path.source][prediction_path.field])]
 
-        if sort == 'in_omim':
+        if sort == OMIM_SORT:
             return self._omim_sort(ht, hl.set(set(self._sort_metadata)))
 
         if self._sort_metadata:
@@ -778,7 +780,7 @@ class BaseHailTableQuery(object):
     def _gene_rank_sort(cls, r, gene_ranks):
         return [hl.min(cls._gene_ids_expr(r).map(gene_ranks.get))]
 
-    def gene_counts(self):
+    def format_gene_counts_ht(self):
         selects = {
             'gene_ids': self._gene_ids_expr,
             'families': self.BASE_ANNOTATION_FIELDS['familyGuids'],
@@ -796,379 +798,11 @@ class BaseHailTableQuery(object):
         else:
             ht = ch_ht
 
+        return ht
+
+    def gene_counts(self):
+        ht = self.format_gene_counts_ht()
         ht = ht.explode('gene_ids').explode('families')
         return ht.aggregate(hl.agg.group_by(
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
         ))
-
-
-class VariantHailTableQuery(BaseHailTableQuery):
-
-    DATA_TYPE = VARIANT_DATASET
-
-    TRANSCRIPTS_FIELD = 'sorted_transcript_consequences'
-    TRANSCRIPT_CONSEQUENCE_FIELD = 'consequence_term'
-    GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ', 'AB']}
-    QUALITY_FILTER_FORMAT = {
-        'AB': QualityFilterFormat(override=lambda gt: ~gt.GT.is_het(), scale=100),
-    }
-    POPULATIONS = {
-        'seqr': {'hom': 'hom', 'hemi': None, 'het': None, 'sort': 'callset_af'},
-        'topmed': {'hemi': None},
-        'exac': {
-            'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi',
-            'het': 'AC_Het',
-        },
-        'gnomad_exomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None, 'sort': 'gnomad_exomes'},
-        GNOMAD_GENOMES_FIELD: {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None, 'sort': 'gnomad'},
-    }
-    POPULATION_FIELDS = {'seqr': 'gt_stats'}
-    PREDICTION_FIELDS_CONFIG = {
-        'cadd': PredictionPath('cadd', 'PHRED'),
-        'eigen': PredictionPath('eigen', 'Eigen_phred'),
-        'fathmm': PredictionPath('dbnsfp', 'fathmm_MKL_coding_pred'),
-        'gnomad_noncoding': PredictionPath('gnomad_non_coding_constraint', 'z_score'),
-        'mpc': PredictionPath('mpc', 'MPC'),
-        'mut_pred': PredictionPath('dbnsfp', 'MutPred_score'),
-        'primate_ai': PredictionPath('primate_ai', 'score'),
-        SPLICE_AI_FIELD: PredictionPath(SPLICE_AI_FIELD, 'delta_score'),
-        'splice_ai_consequence': PredictionPath(SPLICE_AI_FIELD, 'splice_consequence'),
-        'vest': PredictionPath('dbnsfp', 'VEST4_score'),
-        'mut_taster': PredictionPath('dbnsfp', 'MutationTaster_pred'),
-        'polyphen': PredictionPath('dbnsfp', 'Polyphen2_HVAR_pred'),
-        'revel': PredictionPath('dbnsfp', 'REVEL_score'),
-        'sift': PredictionPath('dbnsfp', 'SIFT_pred'),
-    }
-    PATHOGENICITY_FILTERS = {
-        CLINVAR_KEY: ('pathogenicity', CLINVAR_PATH_RANGES),
-        HGMD_KEY: ('class', HGMD_PATH_RANGES),
-    }
-
-    GLOBALS = BaseHailTableQuery.GLOBALS + ['versions']
-    CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
-    BASE_ANNOTATION_FIELDS = {
-        'chrom': lambda r: r.locus.contig.replace("^chr", ""),
-        'pos': lambda r: r.locus.position,
-        'ref': lambda r: r.alleles[0],
-        'alt': lambda r: r.alleles[1],
-        'mainTranscriptId': lambda r: r.sorted_transcript_consequences.first().transcript_id,
-        'selectedMainTranscriptId': lambda r: hl.or_missing(
-            r.selected_transcript != r.sorted_transcript_consequences.first(), r.selected_transcript.transcript_id,
-        ),
-    }
-    BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
-    ENUM_ANNOTATION_FIELDS = {
-        'clinvar': {'annotate_value': lambda value, enum, ht_globals: {
-            'conflictingPathogenicities': VariantHailTableQuery._format_enum(
-                value, 'conflictingPathogenicities', enum, enum_keys=['pathogenicity']),
-            'version': ht_globals['versions'].clinvar,
-        }},
-        'screen': {
-            'response_key': 'screenRegionType',
-            'format_value': lambda value: value.region_types.first(),
-        },
-        TRANSCRIPTS_FIELD: {
-            **BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
-            'annotate_value': lambda transcript, *args: {'major_consequence': transcript.consequence_terms.first()},
-            'drop_fields': ['consequence_terms'],
-        }
-    }
-
-    SORTS = {
-        'protein_consequence': lambda r: [
-            hl.min(r.sorted_transcript_consequences.flatmap(lambda t: t.consequence_term_ids)),
-            hl.min(r.selected_transcript.consequence_term_ids),
-        ],
-        PATHOGENICTY_SORT_KEY: lambda r: [hl.or_else(r.clinvar.pathogenicity_id, ABSENT_PATH_SORT_OFFSET)],
-    }
-    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = lambda r: VariantHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [r.hgmd.class_id]
-    SORTS.update(BaseHailTableQuery.SORTS)
-
-    @staticmethod
-    def _selected_main_transcript_expr(ht):
-        gene_id = getattr(ht, 'gene_id', None)
-        if gene_id is not None:
-            gene_transcripts = ht.sorted_transcript_consequences.filter(lambda t: t.gene_id == ht.gene_id)
-        else:
-            gene_transcripts = getattr(ht, 'gene_transcripts', None)
-
-        allowed_transcripts = getattr(ht, 'allowed_transcripts', None)
-        if hasattr(ht, HAS_ALLOWED_SECONDARY_ANNOTATION):
-            allowed_transcripts = hl.if_else(
-                allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht.allowed_transcripts_secondary,
-            ) if allowed_transcripts is not None else ht.allowed_transcripts_secondary
-
-        main_transcript = ht.sorted_transcript_consequences.first()
-        if gene_transcripts is not None and allowed_transcripts is not None:
-            allowed_transcript_ids = hl.set(allowed_transcripts.map(lambda t: t.transcript_id))
-            matched_transcript = hl.or_else(
-                gene_transcripts.find(lambda t: allowed_transcript_ids.contains(t.transcript_id)),
-                gene_transcripts.first(),
-            )
-        elif gene_transcripts is not None:
-            matched_transcript = gene_transcripts.first()
-        elif allowed_transcripts is not None:
-            matched_transcript = allowed_transcripts.first()
-        else:
-            matched_transcript = main_transcript
-
-        return hl.or_else(matched_transcript, main_transcript)
-
-    def __init__(self, *args, **kwargs):
-        self._filter_hts = {}
-        super(VariantHailTableQuery, self).__init__(*args, **kwargs)
-
-    def _parse_intervals(self, intervals, variant_ids, exclude_intervals=False, **kwargs):
-        parsed_intervals, variant_ids = super()._parse_intervals(intervals, variant_ids, **kwargs)
-        if parsed_intervals and not exclude_intervals:
-            self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
-        return parsed_intervals, variant_ids
-
-    def _get_family_passes_quality_filter(self, quality_filter, ht=None, pathogenicity=None, **kwargs):
-        passes_quality = super(VariantHailTableQuery, self)._get_family_passes_quality_filter(quality_filter)
-        clinvar_path_ht = False if passes_quality is None else self._get_loaded_filter_ht(
-            CLINVAR_KEY, 'clinvar_path_variants.ht', self._get_clinvar_prefilter, pathogenicity=pathogenicity)
-        if not clinvar_path_ht:
-            return passes_quality
-
-        return lambda entries: hl.is_defined(clinvar_path_ht[ht.key]) | passes_quality(entries)
-
-    def _get_loaded_filter_ht(self, key, table_path, get_filters, **kwargs):
-        if self._filter_hts.get(key) is None:
-            ht_filter = get_filters(**kwargs)
-            if ht_filter is False:
-                self._filter_hts[key] = False
-            else:
-                ht = self._read_table(table_path)
-                if ht_filter is not True:
-                    ht = ht.filter(ht[ht_filter])
-                self._filter_hts[key] = ht
-
-        return self._filter_hts[key]
-
-    def _get_clinvar_prefilter(self, pathogenicity=None):
-        clinvar_path_filters = self._get_clinvar_path_filters(pathogenicity)
-        if not clinvar_path_filters:
-            return False
-
-        if CLINVAR_LIKELY_PATH_FILTER not in clinvar_path_filters:
-            return 'is_pathogenic'
-        elif CLINVAR_PATH_FILTER not in clinvar_path_filters:
-            return 'is_likely_pathogenic'
-        return True
-
-    def _filter_variant_ids(self, ht, variant_ids):
-        if len(variant_ids) == 1:
-            variant_id_q = ht.alleles == [variant_ids[0][2], variant_ids[0][3]]
-        else:
-            variant_id_q = hl.any([
-                (ht.locus == hl.locus(chrom, pos, reference_genome=self._genome_version)) &
-                (ht.alleles == [ref, alt])
-                for chrom, pos, ref, alt in variant_ids
-            ])
-        return ht.filter(variant_id_q)
-
-    def _prefilter_entries_table(self, ht, parsed_intervals=None, exclude_intervals=False, **kwargs):
-        if exclude_intervals and parsed_intervals:
-            ht = hl.filter_intervals(ht, parsed_intervals, keep=False)
-        af_ht = self._get_loaded_filter_ht(
-            GNOMAD_GENOMES_FIELD, 'high_af_variants.ht', self._get_gnomad_af_prefilter, **kwargs)
-        if af_ht:
-            ht = ht.filter(hl.is_missing(af_ht[ht.key]))
-        return ht
-
-    def _get_gnomad_af_prefilter(self, frequencies=None, pathogenicity=None, **kwargs):
-        gnomad_genomes_filter = (frequencies or {}).get(GNOMAD_GENOMES_FIELD, {})
-        af_cutoff = gnomad_genomes_filter.get('af')
-        if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
-            af_cutoff = PREFILTER_FREQ_CUTOFF
-        if af_cutoff is None:
-            return False
-
-        if self._get_clinvar_path_filters(pathogenicity):
-            af_cutoff = max(af_cutoff, PATH_FREQ_OVERRIDE_CUTOFF)
-
-        return 'is_gt_10_percent' if af_cutoff > PREFILTER_FREQ_CUTOFF else True
-
-    def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
-        allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
-            lambda tc: tc.consequence_term_ids.any(allowed_consequence_ids.contains)
-        )
-        annotation_exprs['allowed_transcripts'] = allowed_transcripts
-        return hl.is_defined(allowed_transcripts.first())
-
-    def _get_annotation_override_filters(self, annotations, pathogenicity=None, **kwargs):
-        annotation_filters = []
-
-        for key in self.PATHOGENICITY_FILTERS.keys():
-            path_terms = (pathogenicity or {}).get(key)
-            if path_terms:
-                annotation_filters.append(self._has_path_expr(path_terms, key))
-        if annotations.get(SCREEN_KEY):
-            allowed_consequences = hl.set(self._get_enum_terms_ids(SCREEN_KEY.lower(), 'region_type', annotations[SCREEN_KEY]))
-            annotation_filters.append(allowed_consequences.contains(self._ht.screen.region_type_ids.first()))
-        if annotations.get(SPLICE_AI_FIELD):
-            score_filter, _ = self._get_in_silico_filter(SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD])
-            annotation_filters.append(score_filter)
-
-        return annotation_filters
-
-    def _frequency_override_filter(self, pathogenicity):
-        path_terms = self._get_clinvar_path_filters(pathogenicity)
-        return self._has_path_expr(path_terms, CLINVAR_KEY) if path_terms else None
-
-    @staticmethod
-    def _get_clinvar_path_filters(pathogenicity):
-        return {
-            f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
-        }
-
-    def _has_path_expr(self, terms, field):
-        subfield, range_configs = self.PATHOGENICITY_FILTERS[field]
-        enum_lookup = self._get_enum_lookup(field, subfield)
-
-        ranges = [[None, None]]
-        for path_filter, start, end in range_configs:
-            if path_filter in terms:
-                ranges[-1][1] = len(enum_lookup) if end is None else enum_lookup[end]
-                if ranges[-1][0] is None:
-                    ranges[-1][0] = enum_lookup[start]
-            elif ranges[-1] != [None, None]:
-                ranges.append([None, None])
-
-        ranges = [r for r in ranges if r[0] is not None]
-        value = self._ht[field][f'{subfield}_id']
-        return hl.any(lambda r: (value >= r[0]) & (value <= r[1]), ranges)
-
-    def _format_results(self, ht, annotation_fields):
-        ht = ht.annotate(selected_transcript=self._selected_main_transcript_expr(ht))
-        return super()._format_results(ht, annotation_fields)
-
-    @classmethod
-    def _omim_sort(cls, r, omim_gene_set):
-        return [
-            hl.if_else(omim_gene_set.contains(r.selected_transcript.gene_id), 0, 1),
-        ] + super()._omim_sort(r, omim_gene_set)
-
-    @classmethod
-    def _gene_rank_sort(cls, r, gene_ranks):
-        return [gene_ranks.get(r.selected_transcript.gene_id)] + super()._gene_rank_sort(r, gene_ranks)
-
-
-class SvHailTableQuery(BaseHailTableQuery):
-
-    DATA_TYPE = 'SV_WGS'
-
-    GENOTYPE_FIELDS = {_to_camel_case(f): f for f in ['CN', 'GQ']}
-    NESTED_GENOTYPE_FIELDS = {'concordance': ['new_call', 'prev_call', 'prev_num_alt']}
-    GENOTYPE_QUERY_FIELDS = {'gq_sv': 'GQ', 'gq': None}
-
-    TRANSCRIPTS_FIELD = 'sorted_gene_consequences'
-    TRANSCRIPT_CONSEQUENCE_FIELD = 'major_consequence'
-    CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['algorithms']
-    BASE_ANNOTATION_FIELDS = {
-        'bothsidesSupport': lambda r: r.bothsides_support,
-        'chrom': lambda r: r.start_locus.contig.replace('^chr', ''),
-        'endChrom': lambda r: hl.or_missing(r.start_locus.contig != r.end_locus.contig, r.end_locus.contig.replace('^chr', '')),
-        'pos': lambda r: r.start_locus.position,
-        'end': lambda r: r.end_locus.position,
-        'rg37LocusEnd': lambda r: hl.or_missing(
-            hl.is_defined(r.rg37_locus_end), hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position)
-        ),
-        **BaseHailTableQuery.BASE_ANNOTATION_FIELDS,
-    }
-    ENUM_ANNOTATION_FIELDS = {
-        TRANSCRIPTS_FIELD: BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
-    }
-
-    POPULATIONS = {
-        'sv_callset': {'hemi': None, 'sort': 'callset_af'},
-        'gnomad_svs': {'id': 'ID', 'ac': None, 'an': None, 'hom': None, 'hemi': None, 'het': None, 'sort': 'gnomad'},
-    }
-    POPULATION_FIELDS = {'sv_callset': 'gt_stats'}
-    PREDICTION_FIELDS_CONFIG = {
-        'strvctvre': PredictionPath('strvctvre', 'score'),
-    }
-
-    SORTS = {
-        **BaseHailTableQuery.SORTS,
-        'protein_consequence': lambda r: [hl.min(r.sorted_gene_consequences.map(lambda g: g.major_consequence_id))],
-        'size': lambda r: [hl.if_else(
-            r.start_locus.contig == r.end_locus.contig, r.start_locus.position - r.end_locus.position, -50,
-        )],
-    }
-
-    def _parse_intervals(self, intervals, variant_ids, variant_keys=None, **kwargs):
-        parsed_intervals, _ = super()._parse_intervals(intervals, variant_ids=None, **kwargs)
-        return parsed_intervals, variant_keys
-
-    def _filter_variant_ids(self, ht, variant_ids):
-        variant_ids_set = hl.set(variant_ids)
-        return ht.filter(variant_ids_set.contains(ht.variant_id))
-
-    def _filter_annotated_table(self, *args, parsed_intervals=None, exclude_intervals=False, **kwargs):
-        if parsed_intervals:
-            interval_filter = hl.array(parsed_intervals).any(lambda interval: hl.if_else(
-                self._ht.start_locus.contig == self._ht.end_locus.contig,
-                interval.overlaps(hl.interval(self._ht.start_locus, self._ht.end_locus)),
-                interval.contains(self._ht.start_locus) | interval.contains(self._ht.end_locus),
-            ))
-            if exclude_intervals:
-                interval_filter = ~interval_filter
-            self._ht = self._ht.filter(interval_filter)
-
-        return super()._filter_annotated_table(*args, **kwargs)
-
-    def _get_family_passes_quality_filter(self, quality_filter, annotations=None, **kwargs):
-        passes_quality = super()._get_family_passes_quality_filter(quality_filter)
-        if not (annotations or {}).get(NEW_SV_FIELD):
-            return passes_quality
-
-        entries_has_new_call = lambda entries: entries.any(lambda x: x.concordance.new_call)
-        if passes_quality is None:
-            return entries_has_new_call
-
-        return lambda entries: entries_has_new_call(entries) & passes_quality(entries)
-
-    def _get_allowed_consequences_annotations(self, annotations, annotation_filters, is_secondary=False):
-        if is_secondary:
-            # SV search can specify secondary SV types, as well as secondary consequences
-            annotation_filters = self._get_annotation_override_filters(annotations)
-        return super()._get_allowed_consequences_annotations(annotations, annotation_filters)
-
-    def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
-        return self._ht[self.TRANSCRIPTS_FIELD].any(
-            lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
-        )
-
-    def _get_annotation_override_filters(self, annotations, **kwargs):
-        annotation_filters = []
-        if annotations.get(STRUCTURAL_ANNOTATION_FIELD):
-            allowed_type_ids = self._get_enum_terms_ids('sv_type', None, annotations[STRUCTURAL_ANNOTATION_FIELD])
-            if allowed_type_ids:
-                annotation_filters.append(hl.set(allowed_type_ids).contains(self._ht.sv_type_id))
-
-        return annotation_filters
-
-    def _additional_annotation_fields(self):
-        sv_type_enum = self._enums['sv_type']
-        insertion_type_id = sv_type_enum.index('INS')
-        get_end_chrom = self.BASE_ANNOTATION_FIELDS['endChrom']
-        return {
-            'cpxIntervals': lambda r: self._format_enum(
-                r, 'cpx_intervals', {'type': sv_type_enum}, annotate_value=lambda val, *args: {
-                    'chrom': val.start.contig,
-                    'start': val.start.position,
-                    'end': val.end.position,
-                },
-            ),
-            # For insertions, end_locus represents the svSourceDetail, otherwise represents the endChrom
-            'endChrom': lambda r: hl.or_missing(r.sv_type_id != insertion_type_id, get_end_chrom(r)),
-            'svSourceDetail': lambda r: hl.or_missing(r.sv_type_id == insertion_type_id, hl.bind(
-                lambda end_chrom: hl.or_missing(hl.is_defined(end_chrom), hl.struct(chrom=end_chrom)),
-                get_end_chrom(r),
-            )),
-        }
-
-
-QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery, SvHailTableQuery]}

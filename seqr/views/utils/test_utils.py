@@ -1057,7 +1057,7 @@ PARSED_VARIANTS = [
         },
         'pos': 248367227,
         'predictions': {'splice_ai': 0.75, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': 'D',
-                        'vest': None, 'mut_pred': None,
+                        'vest': '0.335', 'mut_pred': None,
                         'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None,
                         'polyphen': None, 'dann': None, 'sift': None, 'cadd': '25.9', 'primate_ai': None,
                         'mpc': None, 'strvctvre': None, 'splice_ai_consequence': None, 'gnomad_noncoding': 1.01272,},
