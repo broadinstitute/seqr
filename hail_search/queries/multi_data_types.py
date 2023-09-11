@@ -60,17 +60,18 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         return ht.group_by('gene_ids').aggregate(**{key: hl.agg.collect(ht.row)})
 
     def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
-        is_valid = super().is_valid(ch_ht, entries_1, entries_2)
-        if self._sv_type_del_id is None:
-            return is_valid
+        is_valid = super()._is_valid_comp_het_family(ch_ht, entries_1, entries_2)
 
         # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
         # considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
-        return is_valid & (
-            entries_1.all(lambda g: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](g.GT)) | (
-                (ch_ht.v2.sv_type_id == self._sv_type_del_id) &
-                (ch_ht.v2.start_locus.position <= ch_ht.v1.locus.position) &
-                (ch_ht.v1.locus.position <= ch_ht.v2.end_locus.position)))
+        is_allowed_hom_alt = entries_1.all(lambda g: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](g.GT))
+        if self._sv_type_del_id is not None:
+            is_allowed_hom_alt |= hl.all([
+                ch_ht.v2.sv_type_id == self._sv_type_del_id,
+                ch_ht.v2.start_locus.position <= ch_ht.v1.locus.position,
+                ch_ht.v1.locus.position <= ch_ht.v2.end_locus.position,
+            ])
+        return is_valid & is_allowed_hom_alt
 
     def format_search_ht(self):
         ht = None

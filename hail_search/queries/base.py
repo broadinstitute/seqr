@@ -330,7 +330,7 @@ class BaseHailTableQuery(object):
             ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map,
         )
 
-        return ht.select_globals(), num_families
+        return ht.select_globals('family_guids'), num_families
 
     @classmethod
     def _add_entry_sample_families(cls, ht, sample_data):
@@ -353,8 +353,8 @@ class BaseHailTableQuery(object):
         })
         sample_id_family_map = {s['sample_id']: s['family_guid'] for s in sample_data}
         sample_index_family_map = hl.dict({sample_id_index_map[k]: v for k, v in sample_id_family_map.items()})
-        family_guids = enumerate(sorted(set(sample_id_family_map.values())))
-        family_index_map = {f: i for i, f in family_guids}
+        family_guids = sorted(set(sample_id_family_map.values()))
+        family_index_map = {f: i for i, f in enumerate(family_guids)}
         num_families = len(family_index_map)
         family_sample_indices = [None] * num_families
         sample_id_family_index_map = {}
@@ -430,7 +430,7 @@ class BaseHailTableQuery(object):
             entry_indices = hl.dict(entry_indices)
             family_entries = ht[field] if field in ht.row else ht.family_entries
             ht = ht.annotate(**{field: hl.enumerate(family_entries).map(
-                lambda x: cls._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, inheritance_mode)
+                lambda x: self._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, inheritance_mode)
             )})
 
         return ht
@@ -680,7 +680,7 @@ class BaseHailTableQuery(object):
             secondary_variants = formatted_rows_expr
 
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
-        self._filter_grouped_compound_hets(ch_ht)
+        return self._filter_grouped_compound_hets(ch_ht)
 
     def _filter_grouped_compound_hets(self, ch_ht):
         ch_ht = ch_ht.explode(ch_ht.v1)
