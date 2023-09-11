@@ -7,19 +7,22 @@ from hail_search.queries.sv import SvHailTableQuery
 from hail_search.queries.gcnv import GcnvHailTableQuery
 
 QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]}
+VARIANT_DATA_TYPE = VariantHailTableQuery.DATA_TYPE
 
 
 class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
     def __init__(self, sample_data, *args, **kwargs):
-        # TODO allow hom_alt for variant data type in comp het query
-        self._data_type_queries = {k: QUERY_CLASS_MAP[k](v, *args, **kwargs) for k, v in sample_data.items()}
+        self._data_type_queries = {
+            k: QUERY_CLASS_MAP[k](v, *args, override_comp_het_alt=k == VARIANT_DATA_TYPE, **kwargs)
+            for k, v in sample_data.items()
+        }
         self._comp_het_hts = []
         self._sv_type_del_id = None
         super().__init__(sample_data, *args, **kwargs)
 
     def _load_filtered_table(self, *args, **kwargs):
-        variant_query = self._data_type_queries.get(VariantHailTableQuery.DATA_TYPE)
+        variant_query = self._data_type_queries.get(VARIANT_DATA_TYPE)
         sv_queries = [
             self._data_type_queries[data_type] for data_type in [SvHailTableQuery.DATA_TYPE, GcnvHailTableQuery.DATA_TYPE]
             if data_type in self._data_type_queries

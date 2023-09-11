@@ -192,11 +192,13 @@ class BaseHailTableQuery(object):
 
         return value
 
-    def __init__(self, sample_data, genome_version, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None, **kwargs):
+    def __init__(self, sample_data, genome_version, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
+                 override_comp_het_alt=False, **kwargs):
         self._genome_version = genome_version
         self._sort = sort
         self._sort_metadata = sort_metadata
         self._num_results = num_results
+        self._override_comp_het_alt = override_comp_het_alt
         self._ht = None
         self._comp_het_ht = None
         self.unfiltered_comp_het_ht = None
@@ -409,8 +411,7 @@ class BaseHailTableQuery(object):
 
         return ht.filter(filter_expr)
 
-    @classmethod
-    def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data, field):
+    def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data, field):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
         entry_indices_by_gt = defaultdict(lambda: defaultdict(list))
@@ -419,6 +420,8 @@ class BaseHailTableQuery(object):
                 if individual_genotype_filter else INHERITANCE_FILTERS[inheritance_mode].get(s['affected'])
             if inheritance_mode == X_LINKED_RECESSIVE and s['affected'] == UNAFFECTED and s['sex'] == MALE:
                 genotype = REF_REF
+            if genotype == COMP_HET_ALT and self._override_comp_het_alt:
+                genotype = HAS_ALT
             if genotype:
                 family_index, entry_index = sample_id_family_index_map[s['sample_id']]
                 entry_indices_by_gt[genotype][family_index].append(entry_index)
@@ -708,11 +711,14 @@ class BaseHailTableQuery(object):
         return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
 
     def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
-        return hl.is_defined(entries_1) & hl.is_defined(entries_2) & hl.enumerate(entries_1).all(lambda x: hl.any([
+        is_valid = hl.is_defined(entries_1) & hl.is_defined(entries_2) & hl.enumerate(entries_1).all(lambda x: hl.any([
             (x[1].affected_id != UNAFFECTED_ID),
             self.GENOTYPE_QUERY_MAP[REF_REF](x[1].GT),
             self.GENOTYPE_QUERY_MAP[REF_REF](entries_2[x[0]].GT),
         ]))
+        if self._override_comp_het_alt:
+            is_valid &= entries_1.extend(entries_2).all(lambda x: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](x.GT))
+        return is_valid
 
     def _format_comp_het_results(self, ch_ht, annotation_fields):
         formatted_grouped_variants = ch_ht[GROUPED_VARIANTS_FIELD].map(
