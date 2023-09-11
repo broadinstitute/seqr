@@ -680,7 +680,8 @@ class BaseHailTableQuery(object):
             secondary_variants = formatted_rows_expr
 
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
-        return self._filter_grouped_compound_hets(ch_ht)
+        ch_ht = self._filter_grouped_compound_hets(ch_ht)
+        return ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2])})
 
     def _filter_grouped_compound_hets(self, ch_ht):
         ch_ht = ch_ht.explode(ch_ht.v1)
@@ -698,13 +699,18 @@ class BaseHailTableQuery(object):
             VARIANT_KEY_FIELD: hl.str(':').join(hl.sorted([ch_ht.v1[VARIANT_KEY_FIELD], ch_ht.v2[VARIANT_KEY_FIELD]]))
         })
         ch_ht = ch_ht.distinct()
-        ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2]).map(lambda v: v.annotate(
-            gene_id=ch_ht.gene_ids,
-            family_entries=hl.enumerate(ch_ht.valid_families).filter(
-                lambda x: x[1]).map(lambda x: v.comp_het_family_entries[x[0]]),
-        ))})
+        ch_ht = ch_ht.select(**{k: self._annotated_comp_het_variant(ch_ht, k) for k in ['v1', 'v2']})
 
         return ch_ht
+
+    @staticmethod
+    def _annotated_comp_het_variant(ch_ht, field):
+        variant = ch_ht[field]
+        return variant.annotate(
+            gene_id=ch_ht.gene_ids,
+            family_entries=hl.enumerate(ch_ht.valid_families).filter(
+                lambda x: x[1]).map(lambda x: variant.comp_het_family_entries[x[0]]),
+        )
 
     @classmethod
     def _gene_ids_expr(cls, ht, comp_het=False):
