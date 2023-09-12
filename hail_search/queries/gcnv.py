@@ -7,6 +7,7 @@ from hail_search.queries.sv import SvHailTableQuery
 class GcnvHailTableQuery(SvHailTableQuery):
 
     DATA_TYPE = 'SV_WES'
+    SV_TYPE_PREFIX = 'gCNV_'
 
     #  gCNV data has no ref/ref calls so a missing entry indicates ref/ref
     GENOTYPE_QUERY_MAP = {
@@ -76,7 +77,7 @@ class GcnvHailTableQuery(SvHailTableQuery):
 
     def get_allowed_sv_type_ids(self, sv_types):
         return super().get_allowed_sv_type_ids([
-            type.replace('gCNV_', '') for type in sv_types if type.startswith('gCNV_')
+            type.replace(self.SV_TYPE_PREFIX, '') for type in sv_types if type.startswith(self.SV_TYPE_PREFIX)
         ])
 
     @classmethod

@@ -718,13 +718,14 @@ class BaseHailTableQuery(object):
 
     def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
         is_valid = hl.is_defined(entries_1) & hl.is_defined(entries_2) & hl.enumerate(entries_1).all(lambda x: hl.any([
-            (x[1].affected_id != UNAFFECTED_ID),
-            self.GENOTYPE_QUERY_MAP[REF_REF](x[1].GT),
-            self.GENOTYPE_QUERY_MAP[REF_REF](entries_2[x[0]].GT),
+            (x[1].affected_id != UNAFFECTED_ID), *self._comp_het_entry_has_ref(x[1].GT, entries_2[x[0]].GT),
         ]))
         if self._override_comp_het_alt:
             is_valid &= entries_1.extend(entries_2).all(lambda x: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](x.GT))
         return is_valid
+
+    def _comp_het_entry_has_ref(self, gt1, gt2):
+        return [self.GENOTYPE_QUERY_MAP[REF_REF](gt1), self.GENOTYPE_QUERY_MAP[REF_REF](gt2)]
 
     def _format_comp_het_results(self, ch_ht, annotation_fields):
         formatted_grouped_variants = ch_ht[GROUPED_VARIANTS_FIELD].map(
