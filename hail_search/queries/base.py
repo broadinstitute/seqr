@@ -808,28 +808,30 @@ class BaseHailTableQuery(object):
     def _gene_rank_sort(cls, r, gene_ranks):
         return [hl.min(cls._gene_ids_expr(r).map(gene_ranks.get))]
 
-    def format_gene_counts_ht(self):
-        selects = {
-            'gene_ids': self._gene_ids_expr,
-            'families': self.BASE_ANNOTATION_FIELDS['familyGuids'],
+    @classmethod
+    def _gene_count_selects(cls):
+        return {
+            'gene_ids': cls._gene_ids_expr,
+            'families': cls.BASE_ANNOTATION_FIELDS['familyGuids'],
         }
-        ch_ht = None
+
+    def format_gene_count_hts(self):
+        hts = []
+        selects = self._gene_count_selects()
         if self._comp_het_ht:
             ch_ht = self._comp_het_ht.explode(self._comp_het_ht[GROUPED_VARIANTS_FIELD])
-            ch_ht = ch_ht.select(**{k: v(ch_ht[GROUPED_VARIANTS_FIELD]) for k, v in selects.items()})
-
+            hts.append(ch_ht.select(**{k: v(ch_ht[GROUPED_VARIANTS_FIELD]) for k, v in selects.items()}))
         if self._ht:
-            ht = self._ht.select(**{k: v(self._ht) for k, v in selects.items()})
-            if ch_ht:
-                ht = ht.join(ch_ht, 'outer')
-                ht = ht.transmute(**{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in selects})
-        else:
-            ht = ch_ht
-
-        return ht
+            hts.append(self._ht.select(**{k: v(self._ht) for k, v in selects.items()}))
+        return hts
 
     def gene_counts(self):
-        ht = self.format_gene_counts_ht()
+        hts = self.format_gene_count_hts()
+        ht = hts[0]
+        for sub_ht in hts[1:]:
+            ht = ht.join(sub_ht, 'outer')
+            ht = ht.transmute(**{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in self._gene_count_selects()})
+
         ht = ht.explode('gene_ids').explode('families')
         return ht.aggregate(hl.agg.group_by(
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))

@@ -99,7 +99,12 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
                 **{f'comp_het_{data_type}': ch_ht.row},
             ))
 
-        return self._merge_hts(hts, ['_sort'])
+        ht = hts[0]
+        for sub_ht in hts[1:]:
+            ht = ht.join(sub_ht, 'outer')
+            ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
+
+        return ht
 
     def _format_comp_het_result(self, v, data_type):
         return self._data_type_queries[data_type]._format_results(v).annotate(
@@ -131,16 +136,20 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             formatted_row = {GROUPED_VARIANTS_FIELD: sorted([formatted_row.v1, formatted_row.v2], key=lambda x: x._sort)}
         return formatted_row
 
-    def format_gene_counts_ht(self):
-        # TODO add _comp_het_hts
-        hts = [query.format_gene_counts_ht() for query in self._data_type_queries.values()]
-        return self._merge_hts(hts, ['gene_ids', 'families'])
+    def format_gene_count_hts(self):
+        hts = []
+        for query in self._data_type_queries.values():
+            hts += query.format_gene_count_hts()
+        for data_type, ch_ht in self._comp_het_hts.items():
+            hts += [
+                self._comp_het_gene_count_ht(ch_ht, 'v1', VARIANT_DATA_TYPE),
+                self._comp_het_gene_count_ht(ch_ht, 'v2', data_type)
+            ]
+        return hts
 
-    @staticmethod
-    def _merge_hts(hts, merge_fields):
-        ht = hts[0]
-        for sub_ht in hts[1:]:
-            ht = ht.join(sub_ht, 'outer')
-            ht = ht.transmute(**{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields})
-
-        return ht
+    def _comp_het_gene_count_ht(self, ht, field, data_type):
+        selects = {
+            **self._gene_count_selects(),
+            'gene_ids': self._data_type_queries[data_type]._gene_ids_expr,
+        }
+        return ht.select(**{k: v(ht[field]) for k, v in selects.items()})
