@@ -766,12 +766,12 @@ class BaseHailTableQuery(object):
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
         logger.info(f'Total hits: {total_results}. Fetched: {self._num_results}')
 
-        return [self._format_collected_row(row) for row in collected], total_results
+        return self._format_collected_rows(collected), total_results
 
-    def _format_collected_row(self, row):
+    def _format_collected_rows(self, collected):
         if self._has_comp_het_search:
-            return row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD)
-        return row
+            return [row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD) for row in collected]
+        return collected
 
     def _sort_order(self, ht):
         sort_expressions = self._get_sort_expressions(ht, XPOS)

@@ -84,18 +84,16 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             hts.append(dt_ht.select('_sort', **{data_type: dt_ht.row}))
 
         for data_type, ch_ht in self._comp_het_hts.items():
-            hts.append(ch_ht.annotate(
+            ch_ht = ch_ht.annotate(
                 v1=self._data_type_queries[VARIANT_DATA_TYPE]._format_results(ch_ht.v1),
                 v2=self._data_type_queries[data_type]._format_results(ch_ht.v2),
+            )
+            hts.append(ch_ht.select(
                 _sort=hl.sorted([ch_ht.v1._sort, ch_ht.v2._sort])[0],
+                **{f'comp_het_{data_type}': ch_ht.row},
             ))
 
-        ht = hts[0]
-        for sub_ht in hts[1:]:
-            ht = ht.join(sub_ht, 'outer')
-            ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
-
-        return ht
+        return self._merge_hts(hts, ['_sort'])
 
     def _merged_sort_expr(self, data_type, ht):
         # Certain sorts have an extra element for variant-type data, so need to add an element for SV data
@@ -111,17 +109,28 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
         return None
 
-    def _format_collected_row(self, row):
-        formatted_row = next((row.get(data_type) for data_type in self._data_type_queries if row.get(data_type)), None)
-        if formatted_row is None:
+    def _format_collected_rows(self, collected):
+        data_types = [*self._data_type_queries, *[f'comp_het_{data_type}' for data_type in self._comp_het_hts]]
+        return super()._format_collected_rows([self._format_collected_row(row, data_types) for row in collected])
+
+    @staticmethod
+    def _format_collected_row( row, data_types):
+        data_type = next(data_type for data_type in data_types if row.get(data_type))
+        formatted_row = row.get(data_type)
+        if 'comp_het' in data_type:
             formatted_row = {GROUPED_VARIANTS_FIELD: sorted([row.v1, row.v2], key=lambda x: x._sort)}
-        return super()._format_collected_row(formatted_row)
+        return formatted_row
 
     def format_gene_counts_ht(self):
         # TODO add _comp_het_hts
         hts = [query.format_gene_counts_ht() for query in self._data_type_queries.values()]
+        return self._merge_hts(hts, ['gene_ids', 'families'])
+
+    @staticmethod
+    def _merge_hts(hts, merge_fields):
         ht = hts[0]
-        for dt_ht in hts[1:]:
-            ht = ht.join(dt_ht, 'outer')
-            ht = ht.transmute(**{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in ['gene_ids', 'families']})
+        for sub_ht in hts[1:]:
+            ht = ht.join(sub_ht, 'outer')
+            ht = ht.transmute(**{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields})
+
         return ht
