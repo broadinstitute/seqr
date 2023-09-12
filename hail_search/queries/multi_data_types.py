@@ -1,6 +1,7 @@
 import hail as hl
 
-from hail_search.constants import ALT_ALT, REF_REF, CONSEQUENCE_SORT, OMIM_SORT, GROUPED_VARIANTS_FIELD
+from hail_search.constants import ALT_ALT, REF_REF, CONSEQUENCE_SORT, OMIM_SORT, GROUPED_VARIANTS_FIELD, \
+    VARIANT_KEY_FIELD
 from hail_search.queries.base import BaseHailTableQuery
 from hail_search.queries.variants import VariantHailTableQuery
 from hail_search.queries.sv import SvHailTableQuery
@@ -90,8 +91,8 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
         for data_type, ch_ht in self._comp_het_hts.items():
             ch_ht = ch_ht.annotate(
-                v1=self._data_type_queries[VARIANT_DATA_TYPE]._format_results(ch_ht.v1),
-                v2=self._data_type_queries[data_type]._format_results(ch_ht.v2),
+                v1=self._format_comp_het_result(ch_ht.v1, VARIANT_DATA_TYPE),
+                v2=self._format_comp_het_result(ch_ht.v2, data_type),
             )
             hts.append(ch_ht.select(
                 _sort=hl.sorted([ch_ht.v1._sort, ch_ht.v2._sort])[0],
@@ -99,6 +100,10 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             ))
 
         return self._merge_hts(hts, ['_sort'])
+
+    def _format_comp_het_result(self, v, data_type):
+        return self._data_type_queries[data_type]._format_results(v).annotate(
+            **{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
 
     def _merged_sort_expr(self, data_type, ht):
         # Certain sorts have an extra element for variant-type data, so need to add an element for SV data

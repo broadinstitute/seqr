@@ -77,6 +77,7 @@ SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMai
 SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000426137'}
 SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000641759'}
+MULTI_DATA_TYPE_COMP_HET_VARIANT2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000641820'}
 
 PROJECT_2_VARIANT1 = deepcopy(VARIANT1)
 PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
@@ -284,8 +285,8 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [[GCNV_VARIANT3, GCNV_VARIANT4], [GCNV_VARIANT4, VARIANT2], [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode,
-            gene_counts={
+            [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode=inheritance_mode, gene_counts={
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000275023': {'total': 4, 'families': {'F000002_2': 4}},
@@ -326,7 +327,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4], [GCNV_VARIANT3, VARIANT2], VARIANT2, [VARIANT3, VARIANT4]],
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode=inheritance_mode, gene_counts={
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 3}},
@@ -818,7 +819,7 @@ class HailSearchTestCase(AioHTTPTestCase):
     #          _sorted(SV_VARIANT3, [-50])], sample_data=SV_WGS_SAMPLE_DATA, sort='size',
     #     )
     #
-    #     # sort applies to compound hets
+    #     # sort applies to compound hets # TODO update test
     #     await self._assert_expected_search(
     #         [_sorted(GCNV_VARIANT3, [4.5, 0]), [_sorted(GCNV_VARIANT3, [0]), _sorted(GCNV_VARIANT4, [0])],
     #          _sorted(VARIANT2, [11, 11]), [_sorted(VARIANT4, [11, 11]),  _sorted(VARIANT3, [22, 24])]],
