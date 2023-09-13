@@ -143,8 +143,6 @@ class HailSearchTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
-        if resp_json['total'] != len(results):
-            import pdb; pdb.set_trace()
         self.assertEqual(resp_json['total'], len(results))
         for i, result in enumerate(resp_json['results']):
             self.assertEqual(result, results[i])
