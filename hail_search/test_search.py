@@ -221,129 +221,129 @@ class HailSearchTestCase(AioHTTPTestCase):
     #         sample_data={**MULTI_PROJECT_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA},
     #     )
     #
-    async def test_inheritance_filter(self):
-        # inheritance_mode = 'any_affected'
-        # await self._assert_expected_search(
-        #     [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
-        #     inheritance_mode=inheritance_mode,
-        # )
-        #
-        # await self._assert_expected_search(
-        #     [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-        # )
-        #
-        # await self._assert_expected_search(
-        #     [GCNV_VARIANT3], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, omit_sample_type='VARIANTS',
-        # )
-        #
-        # await self._assert_expected_search(
-        #     [SV_VARIANT2], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, sample_data=SV_WGS_SAMPLE_DATA,
-        # )
-        #
-        # inheritance_mode = 'de_novo'
-        # await self._assert_expected_search(
-        #     [VARIANT1, FAMILY_3_VARIANT, VARIANT4, GCNV_VARIANT1], inheritance_mode=inheritance_mode,
-        # )
-        #
-        # await self._assert_expected_search(
-        #     [SV_VARIANT1], inheritance_mode=inheritance_mode,  sample_data=SV_WGS_SAMPLE_DATA,
-        # )
-        #
-        # inheritance_mode = 'x_linked_recessive'
-        # await self._assert_expected_search([], inheritance_mode=inheritance_mode)
-        # await self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA)
-        #
-        # inheritance_mode = 'homozygous_recessive'
-        # await self._assert_expected_search([VARIANT2, GCNV_VARIANT3], inheritance_mode=inheritance_mode)
-        #
-        # await self._assert_expected_search(
-        #     [PROJECT_2_VARIANT1, VARIANT2], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA,
-        # )
-        #
-        # await self._assert_expected_search(
-        #     [SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-        # )
-        #
-        # gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'ref_ref', 'I000005_hg00732': 'has_alt'}}
-        # await self._assert_expected_search(
-        #     [VARIANT2], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
-
-        inheritance_mode = 'compound_het'
-        await self._assert_expected_search(
-            [[VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA, gene_counts={
-                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
-            }, **COMP_HET_ALL_PASS_FILTERS,
-        )
-
-        await self._assert_expected_search(
-            [[GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode=inheritance_mode, omit_sample_type='VARIANTS', gene_counts={
-                'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
-                'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
-            }, **COMP_HET_ALL_PASS_FILTERS,
-        )
-
-        await self._assert_expected_search(
-            [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
-            inheritance_mode=inheritance_mode, gene_counts={
-                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
-            }, **COMP_HET_ALL_PASS_FILTERS,
-        )
-
-        await self._assert_expected_search(
-            [[SV_VARIANT1, SV_VARIANT2]], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-            **COMP_HET_ALL_PASS_FILTERS, gene_counts={'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}}},
-        )
-
-        await self._assert_expected_search(
-            [[SV_VARIANT1, SV_VARIANT2], [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode,
-            sample_data={**SV_WGS_SAMPLE_DATA, **MULTI_PROJECT_SAMPLE_DATA}, **COMP_HET_ALL_PASS_FILTERS, gene_counts={
-                'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
-                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
-            },
-        )
-
-        inheritance_mode = 'recessive'
-        await self._assert_expected_search(
-            [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, gene_counts={
-                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
-            }, sample_data=MULTI_PROJECT_SAMPLE_DATA, **COMP_HET_ALL_PASS_FILTERS,
-        )
-
-        await self._assert_expected_search(
-            [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode=inheritance_mode, omit_sample_type='VARIANTS', gene_counts={
-                'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
-                'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
-                'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
-            }, **COMP_HET_ALL_PASS_FILTERS,
-        )
-
-        await self._assert_expected_search(
-            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
-            inheritance_mode=inheritance_mode, gene_counts={
-                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 3}},
-                'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
-                'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 3}},
-                'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
-            }, **COMP_HET_ALL_PASS_FILTERS,
-        )
-
-        await self._assert_expected_search(
-            [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
-            **COMP_HET_ALL_PASS_FILTERS, gene_counts={
-                'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
-                'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
-            }
-        )
+    # async def test_inheritance_filter(self):
+    #     inheritance_mode = 'any_affected'
+    #     await self._assert_expected_search(
+    #         [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+    #         inheritance_mode=inheritance_mode,
+    #     )
+    #
+    #     await self._assert_expected_search(
+    #         [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+    #     )
+    #
+    #     await self._assert_expected_search(
+    #         [GCNV_VARIANT3], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, omit_sample_type='VARIANTS',
+    #     )
+    #
+    #     await self._assert_expected_search(
+    #         [SV_VARIANT2], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, sample_data=SV_WGS_SAMPLE_DATA,
+    #     )
+    #
+    #     inheritance_mode = 'de_novo'
+    #     await self._assert_expected_search(
+    #         [VARIANT1, FAMILY_3_VARIANT, VARIANT4, GCNV_VARIANT1], inheritance_mode=inheritance_mode,
+    #     )
+    #
+    #     await self._assert_expected_search(
+    #         [SV_VARIANT1], inheritance_mode=inheritance_mode,  sample_data=SV_WGS_SAMPLE_DATA,
+    #     )
+    #
+    #     inheritance_mode = 'x_linked_recessive'
+    #     await self._assert_expected_search([], inheritance_mode=inheritance_mode)
+    #     await self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA)
+    #
+    #     inheritance_mode = 'homozygous_recessive'
+    #     await self._assert_expected_search([VARIANT2, GCNV_VARIANT3], inheritance_mode=inheritance_mode)
+    #
+    #     await self._assert_expected_search(
+    #         [PROJECT_2_VARIANT1, VARIANT2], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA,
+    #     )
+    #
+    #     await self._assert_expected_search(
+    #         [SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+    #     )
+    #
+    #     gt_inheritance_filter = {'genotype': {'I000006_hg00733': 'ref_ref', 'I000005_hg00732': 'has_alt'}}
+    #     await self._assert_expected_search(
+    #         [VARIANT2], inheritance_filter=gt_inheritance_filter, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
+    #
+    #     inheritance_mode = 'compound_het'
+    #     await self._assert_expected_search(
+    #         [[VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, sample_data=MULTI_PROJECT_SAMPLE_DATA, gene_counts={
+    #             'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+    #             'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
+    #         }, **COMP_HET_ALL_PASS_FILTERS,
+    #     )
+    #
+    #     await self._assert_expected_search(
+    #         [[GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode=inheritance_mode, omit_sample_type='VARIANTS', gene_counts={
+    #             'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
+    #             'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+    #             'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
+    #         }, **COMP_HET_ALL_PASS_FILTERS,
+    #     )
+    #
+    #     await self._assert_expected_search(
+    #         [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
+    #         inheritance_mode=inheritance_mode, gene_counts={
+    #             'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+    #             'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
+    #             'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
+    #             'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}},
+    #             'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
+    #         }, **COMP_HET_ALL_PASS_FILTERS,
+    #     )
+    #
+    #     await self._assert_expected_search(
+    #         [[SV_VARIANT1, SV_VARIANT2]], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+    #         **COMP_HET_ALL_PASS_FILTERS, gene_counts={'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}}},
+    #     )
+    #
+    #     await self._assert_expected_search(
+    #         [[SV_VARIANT1, SV_VARIANT2], [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode,
+    #         sample_data={**SV_WGS_SAMPLE_DATA, **MULTI_PROJECT_SAMPLE_DATA}, **COMP_HET_ALL_PASS_FILTERS, gene_counts={
+    #             'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
+    #             'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+    #             'ENSG00000177000': {'total': 1, 'families': {'F000002_2': 1}},
+    #         },
+    #     )
+    #
+    #     inheritance_mode = 'recessive'
+    #     await self._assert_expected_search(
+    #         [PROJECT_2_VARIANT1, VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode=inheritance_mode, gene_counts={
+    #             'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+    #             'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
+    #             'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+    #         }, sample_data=MULTI_PROJECT_SAMPLE_DATA, **COMP_HET_ALL_PASS_FILTERS,
+    #     )
+    #
+    #     await self._assert_expected_search(
+    #         [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]], inheritance_mode=inheritance_mode, omit_sample_type='VARIANTS', gene_counts={
+    #             'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
+    #             'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
+    #             'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
+    #         }, **COMP_HET_ALL_PASS_FILTERS,
+    #     )
+    #
+    #     await self._assert_expected_search(
+    #         [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+    #         inheritance_mode=inheritance_mode, gene_counts={
+    #             'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+    #             'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 3}},
+    #             'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
+    #             'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 3}},
+    #             'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
+    #         }, **COMP_HET_ALL_PASS_FILTERS,
+    #     )
+    #
+    #     await self._assert_expected_search(
+    #         [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA,
+    #         **COMP_HET_ALL_PASS_FILTERS, gene_counts={
+    #             'ENSG00000171621': {'total': 2, 'families': {'F000011_11': 2}},
+    #             'ENSG00000184986': {'total': 1, 'families': {'F000011_11': 1}},
+    #         }
+    #     )
     #
     # async def test_quality_filter(self):
     #     quality_filter = {'vcf_filter': 'pass'}
@@ -569,81 +569,105 @@ class HailSearchTestCase(AioHTTPTestCase):
     #         gene_ids=LOCATION_SEARCH['gene_ids'][:1], annotations=annotations, omit_sample_type='SV_WES',
     #     )
     #
-    # async def test_secondary_annotations_filter(self):
-    #     annotations_1 = {'missense': ['missense_variant']}
-    #     annotations_2 = {'other': ['intron_variant']}
-    #
-    #     await self._assert_expected_search(
-    #         [[VARIANT3, VARIANT4]], inheritance_mode='compound_het', omit_sample_type='SV_WES',
-    #         annotations=annotations_1, annotations_secondary=annotations_2,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
-    #         annotations=annotations_1, annotations_secondary=annotations_2,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
-    #         annotations=annotations_2, annotations_secondary=annotations_1,
-    #     )
-    #
-    #     gcnv_annotations_1 = {'structural': ['gCNV_DUP']}
-    #     gcnv_annotations_2 = {'structural_consequence': ['LOF']}
-    #
-    #     await self._assert_expected_search(
-    #         [[GCNV_VARIANT3, GCNV_VARIANT4]], omit_sample_type='VARIANTS', inheritance_mode='compound_het',
-    #         annotations=gcnv_annotations_1, annotations_secondary=gcnv_annotations_2,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]], omit_sample_type='VARIANTS', inheritance_mode='recessive',
-    #         annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
-    #     )
-    #
-    #     sv_annotations_1 = {'structural': ['INS', 'LOF']}
-    #     sv_annotations_2 = {'structural': ['DEL', 'gCNV_DUP'], 'structural_consequence': ['INTRONIC']}
-    #
-    #     await self._assert_expected_search(
-    #         [[SV_VARIANT1, SV_VARIANT2]], sample_data=SV_WGS_SAMPLE_DATA, inheritance_mode='compound_het',
-    #         annotations=sv_annotations_1, annotations_secondary=sv_annotations_2,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, inheritance_mode='recessive',
-    #         annotations=sv_annotations_2, annotations_secondary=sv_annotations_1,
-    #     )
-    #
-    #     pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}
-    #     await self._assert_expected_search(
-    #         [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
-    #         annotations=annotations_2, annotations_secondary=annotations_1, pathogenicity=pathogenicity,
-    #     )
-    #
-    #     screen_annotations = {'SCREEN': ['CTCF-only']}
-    #     await self._assert_expected_search(
-    #         [], inheritance_mode='recessive', omit_sample_type='SV_WES',
-    #         annotations=screen_annotations, annotations_secondary=annotations_1,
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
-    #         annotations=screen_annotations, annotations_secondary=annotations_2,
-    #     )
-    #
-    #     selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
-    #     await self._assert_expected_search(
-    #         [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]], inheritance_mode='recessive',
-    #         annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,
-    #         pathogenicity=pathogenicity, omit_sample_type='SV_WES',
-    #     )
-    #
-    #     await self._assert_expected_search(
-    #         [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]],
-    #         annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
-    #         inheritance_mode='recessive', omit_sample_type='SV_WES',
-    #     )
-    #
+    async def test_secondary_annotations_filter(self):
+        # TODO test merged data tyopes
+        annotations_1 = {'missense': ['missense_variant']}
+        annotations_2 = {'other': ['intron_variant']}
+
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='compound_het', omit_sample_type='SV_WES',
+            annotations=annotations_1, annotations_secondary=annotations_2,
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=annotations_1, annotations_secondary=annotations_2,
+        )
+
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=annotations_2, annotations_secondary=annotations_1,
+        )
+
+        gcnv_annotations_1 = {'structural': ['gCNV_DUP']}
+        gcnv_annotations_2 = {'structural_consequence': ['LOF']}
+
+        await self._assert_expected_search(
+            [[GCNV_VARIANT3, GCNV_VARIANT4]], omit_sample_type='VARIANTS', inheritance_mode='compound_het',
+            annotations=gcnv_annotations_1, annotations_secondary=gcnv_annotations_2,
+        )
+
+        await self._assert_expected_search(
+            [GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]], omit_sample_type='VARIANTS', inheritance_mode='recessive',
+            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
+        )
+
+        await self._assert_expected_search(
+            [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4]], inheritance_mode='compound_het',
+            annotations=annotations_1, annotations_secondary=gcnv_annotations_2,
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode='recessive',
+            annotations={**annotations_1, **gcnv_annotations_1}, annotations_secondary={**annotations_2, **gcnv_annotations_2},
+        )
+
+        sv_annotations_1 = {'structural': ['INS', 'LOF']}
+        sv_annotations_2 = {'structural': ['DEL', 'gCNV_DUP'], 'structural_consequence': ['INTRONIC']}
+
+        await self._assert_expected_search(
+            [[SV_VARIANT1, SV_VARIANT2]], sample_data=SV_WGS_SAMPLE_DATA, inheritance_mode='compound_het',
+            annotations=sv_annotations_1, annotations_secondary=sv_annotations_2,
+        )
+
+        await self._assert_expected_search(
+            [[SV_VARIANT1, SV_VARIANT2], SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, inheritance_mode='recessive',
+            annotations=sv_annotations_2, annotations_secondary=sv_annotations_1,
+        )
+
+        pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}
+        await self._assert_expected_search(
+            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=annotations_2, annotations_secondary=annotations_1, pathogenicity=pathogenicity,
+        )
+
+        await self._assert_expected_search(
+            [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode='compound_het', pathogenicity=pathogenicity,
+            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
+        )
+
+        await self._assert_expected_search(
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            inheritance_mode='recessive', pathogenicity=pathogenicity,
+            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
+        )
+
+        screen_annotations = {'SCREEN': ['CTCF-only']}
+        await self._assert_expected_search(
+            [], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=screen_annotations, annotations_secondary=annotations_1,
+        )
+
+        await self._assert_expected_search(
+            [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            annotations=screen_annotations, annotations_secondary=annotations_2,
+        )
+
+        selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
+        await self._assert_expected_search(
+            [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]], inheritance_mode='recessive',
+            annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,
+            pathogenicity=pathogenicity, omit_sample_type='SV_WES',
+        )
+
+        await self._assert_expected_search(
+            [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]],
+            annotations={**selected_transcript_annotations, **screen_annotations}, annotations_secondary=annotations_2,
+            inheritance_mode='recessive', omit_sample_type='SV_WES',
+        )
+
     # async def test_in_silico_filter(self):
     #     in_silico = {'eigen': '5.5', 'mut_taster': 'P'}
     #     await self._assert_expected_search(

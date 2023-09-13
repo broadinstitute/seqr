@@ -84,6 +84,8 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         hts = []
         for data_type, query in self._data_type_queries.items():
             dt_ht = query.format_search_ht()
+            if dt_ht is None:
+                continue
             merged_sort_expr = self._merged_sort_expr(data_type, dt_ht)
             if merged_sort_expr is not None:
                 dt_ht = dt_ht.annotate(_sort=merged_sort_expr)

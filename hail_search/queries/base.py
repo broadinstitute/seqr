@@ -203,6 +203,7 @@ class BaseHailTableQuery(object):
         self._comp_het_ht = None
         self.unfiltered_comp_het_ht = None
         self._inheritance_mode = inheritance_mode
+        self._has_secondary_annotations = False
         self._load_table_kwargs = {}
 
         self._load_filtered_table(sample_data, inheritance_mode=inheritance_mode, **kwargs)
@@ -230,7 +231,7 @@ class BaseHailTableQuery(object):
 
         if self._has_comp_het_search:
             self._comp_het_ht = self._filter_compound_hets()
-            if self._is_recessive_search:
+            if self._is_recessive_search and HAS_ALLOWED_ANNOTATION in self._ht.row:
                 self._ht = self._ht.filter(self._ht.family_entries.any(hl.is_defined))
                 if HAS_ALLOWED_SECONDARY_ANNOTATION in self._ht.row:
                     self._ht = self._ht.filter(self._ht[HAS_ALLOWED_ANNOTATION]).drop(HAS_ALLOWED_SECONDARY_ANNOTATION)
@@ -619,19 +620,24 @@ class BaseHailTableQuery(object):
         annotations = annotations or {}
         annotation_override_filters = self._get_annotation_override_filters(annotations, pathogenicity=pathogenicity)
 
-        annotation_exprs = self._get_allowed_consequences_annotations(annotations, annotation_override_filters)
-        secondary_exprs = self._get_allowed_consequences_annotations(annotations_secondary or {}, annotation_override_filters, is_secondary=True)
+        annotation_exprs, _ = self._get_allowed_consequences_annotations(annotations, annotation_override_filters)
+        secondary_exprs, allowed_secondary_consequences = self._get_allowed_consequences_annotations(
+            annotations_secondary or {}, annotation_override_filters, is_secondary=True)
         if secondary_exprs:
             annotation_exprs.update({f'{k}_secondary': v for k, v in secondary_exprs.items()})
+        if secondary_exprs or allowed_secondary_consequences:
+            self._has_secondary_annotations = True
 
         if not annotation_exprs:
             return
 
         self._ht = self._ht.annotate(**annotation_exprs)
-        annotation_filter = self._ht[HAS_ALLOWED_ANNOTATION]
+        annotation_filters = []
+        if HAS_ALLOWED_ANNOTATION in annotation_exprs:
+            annotation_filters.append(self._ht[HAS_ALLOWED_ANNOTATION])
         if secondary_exprs:
-            annotation_filter |= self._ht[HAS_ALLOWED_SECONDARY_ANNOTATION]
-        self._ht = self._ht.filter(annotation_filter)
+            annotation_filters.append(self._ht[HAS_ALLOWED_SECONDARY_ANNOTATION])
+        self._ht = self._ht.filter(hl.any(annotation_filters))
 
     def _get_allowed_consequences_annotations(self, annotations, annotation_filters, is_secondary=False):
         allowed_consequences = {
@@ -651,7 +657,7 @@ class BaseHailTableQuery(object):
         if has_consequence_filter or (annotation_filters and not is_secondary):
             annotation_exprs[HAS_ALLOWED_ANNOTATION] = hl.any(annotation_filters)
 
-        return annotation_exprs
+        return annotation_exprs, allowed_consequences
 
     def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
         return self._ht[self.TRANSCRIPTS_FIELD].any(
@@ -672,7 +678,10 @@ class BaseHailTableQuery(object):
         self.unfiltered_comp_het_ht = ch_ht
 
         formatted_rows_expr = hl.agg.collect(ch_ht.row)
-        if HAS_ALLOWED_SECONDARY_ANNOTATION in self._ht.row:
+        if self._has_secondary_annotations:
+            if HAS_ALLOWED_ANNOTATION not in self._ht.row or HAS_ALLOWED_SECONDARY_ANNOTATION not in self._ht.row:
+                # In cases where comp het pairs must have different data types, there are no single data type results
+                return None
             primary_variants = hl.agg.filter(ch_ht[HAS_ALLOWED_ANNOTATION], formatted_rows_expr)
             secondary_variants = hl.agg.filter(ch_ht[HAS_ALLOWED_SECONDARY_ANNOTATION], formatted_rows_expr)
         else:
