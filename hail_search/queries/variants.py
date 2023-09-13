@@ -245,9 +245,9 @@ class VariantHailTableQuery(BaseHailTableQuery):
         value = self._ht[field][f'{subfield}_id']
         return hl.any(lambda r: (value >= r[0]) & (value <= r[1]), ranges)
 
-    def _format_results(self, ht, **kwargs):
+    def _format_results(self, ht, *args, **kwargs):
         ht = ht.annotate(selected_transcript=self._selected_main_transcript_expr(ht))
-        return super()._format_results(ht, **kwargs)
+        return super()._format_results(ht, *args, **kwargs)
 
     @classmethod
     def _omim_sort(cls, r, omim_gene_set):

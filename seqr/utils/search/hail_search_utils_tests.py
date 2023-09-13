@@ -179,7 +179,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             get_single_variant(self.families, '1-91502721-G-A', user=self.user, return_all_queried_families=True)
         self.assertEqual(
             str(cm.exception),
-            'Unable to return all families for the following variants: 1-11794419-T-G (F000003_3; F000005_5), 1-91502721-G-A (F000005_5)',
+            'Unable to return all families for the following variants: 1-38724419-T-G (F000003_3; F000005_5), 1-91502721-G-A (F000005_5)',
         )
 
         get_single_variant(self.families.filter(guid='F000002_2'), '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
