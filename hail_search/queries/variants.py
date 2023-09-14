@@ -2,7 +2,7 @@ import hail as hl
 
 from hail_search.constants import HGMD_KEY, HGMD_PATH_RANGES, \
     GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
-    SCREEN_KEY, SPLICE_AI_FIELD, VARIANT_DATASET, CONSEQUENCE_SORT
+    SCREEN_KEY, SPLICE_AI_FIELD, VARIANT_DATASET
 from hail_search.queries.base import PredictionPath, QualityFilterFormat
 from hail_search.queries.mito import MitoHailTableQuery
 
@@ -63,8 +63,8 @@ class VariantHailTableQuery(MitoHailTableQuery):
         PATHOGENICTY_HGMD_SORT_KEY: lambda r: MitoHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [r.hgmd.class_id],
     }
 
-    def _prefilter_entries_table(self, ht, **kwargs):
-        ht = super()._prefilter_entries_table(ht, **kwargs)
+    def _prefilter_entries_table(self, ht, *args, **kwargs):
+        ht = super()._prefilter_entries_table(ht, *args, **kwargs)
         af_ht = self._get_loaded_filter_ht(
             GNOMAD_GENOMES_FIELD, 'high_af_variants.ht', self._get_gnomad_af_prefilter, **kwargs)
         if af_ht:
@@ -84,8 +84,8 @@ class VariantHailTableQuery(MitoHailTableQuery):
 
         return 'is_gt_10_percent' if af_cutoff > PREFILTER_FREQ_CUTOFF else True
 
-    def _get_annotation_override_filters(self, annotations, **kwargs):
-        annotation_filters = super()._get_annotation_override_filters(annotations, **kwargs)
+    def _get_annotation_override_filters(self, annotations, *args, **kwargs):
+        annotation_filters = super()._get_annotation_override_filters(annotations, *args, **kwargs)
 
         if annotations.get(SCREEN_KEY):
             allowed_consequences = hl.set(self._get_enum_terms_ids(SCREEN_KEY.lower(), 'region_type', annotations[SCREEN_KEY]))
