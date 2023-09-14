@@ -1,7 +1,8 @@
 import hail as hl
 
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
-    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, HAS_ALLOWED_SECONDARY_ANNOTATION, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT
+    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, HAS_ALLOWED_SECONDARY_ANNOTATION, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
+    PATHOGENICTY_HGMD_SORT_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
 
@@ -35,7 +36,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         })
         POPULATION_FIELDS[pop_het] = POPULATION_FIELDS.get(pop, pop)
     POPULATIONS['seqr'].update({'af': 'AF_hom', 'ac': 'AC_hom', 'sort': 'callset_af'})
-    POPULATIONS['gnomad_mito']['sort'] = 'gnomad'  # TODO test
+    POPULATIONS['gnomad_mito']['sort'] = 'gnomad'
     PREDICTION_FIELDS_CONFIG = {
         'apogee': PredictionPath('mitimpact', 'score'),
         'haplogroup_defining': PredictionPath('haplogroup', 'is_defining', lambda v: hl.or_missing(v, 'Y')),
@@ -89,6 +90,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         PATHOGENICTY_SORT_KEY: lambda r: [hl.or_else(r.clinvar.pathogenicity_id, ABSENT_PATH_SORT_OFFSET)],
         **BaseHailTableQuery.SORTS,
     }
+    SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
@@ -152,7 +154,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         return self._filter_hts[key]
 
-    # TODO test coverage
     def _get_clinvar_prefilter(self, pathogenicity=None):
         clinvar_path_filters = self._get_clinvar_path_filters(pathogenicity)
         if not clinvar_path_filters:

@@ -606,7 +606,7 @@ class BaseHailTableQuery(object):
 
     def _get_in_silico_filter(self, in_silico, value):
         score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
-        enum_lookup = self._get_enum_lookup(*score_path)
+        enum_lookup = self._get_enum_lookup(*score_path[:2])
         if enum_lookup is not None:
             ht_value = self._ht[score_path.source][f'{score_path.field}_id']
             score_filter = ht_value == enum_lookup[value]
