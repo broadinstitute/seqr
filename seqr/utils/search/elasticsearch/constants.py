@@ -294,7 +294,6 @@ HGMD_FIELDS = ['accession', 'class']
 GENOTYPES_FIELD_KEY = 'genotypes'
 HAS_ALT_FIELD_KEYS = ['samples_num_alt_1', 'samples_num_alt_2', 'samples']
 SORTED_TRANSCRIPTS_FIELD_KEY = 'sortedTranscriptConsequences'
-CANONICAL_TRANSCRIPT_FILTER = 'non_coding_transcript_exon_variant__canonical'
 NESTED_FIELDS = {
     field_name: {field: {} for field in fields} for field_name, fields in {
         CLINVAR_KEY: CLINVAR_FIELDS,
