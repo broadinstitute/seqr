@@ -3,11 +3,14 @@ import hail as hl
 from hail_search.constants import ALT_ALT, REF_REF, CONSEQUENCE_SORT, OMIM_SORT, GROUPED_VARIANTS_FIELD, \
     VARIANT_KEY_FIELD
 from hail_search.queries.base import BaseHailTableQuery
+from hail_search.queries.mito import MitoHailTableQuery
 from hail_search.queries.variants import VariantHailTableQuery
 from hail_search.queries.sv import SvHailTableQuery
 from hail_search.queries.gcnv import GcnvHailTableQuery
 
-QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in [VariantHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]}
+QUERY_CLASS_MAP = {
+    cls.DATA_TYPE: cls for cls in [VariantHailTableQuery, MitoHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]
+}
 VARIANT_DATA_TYPE = VariantHailTableQuery.DATA_TYPE
 
 
