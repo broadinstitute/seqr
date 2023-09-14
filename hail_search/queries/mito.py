@@ -21,6 +21,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
     QUALITY_FILTER_FORMAT = {
         'HL': QualityFilterFormat(scale=100),
     }
+
     POPULATION_FIELDS = {'helix': 'helix_mito', 'seqr': 'gt_stats'}
     POPULATIONS = {}
     for pop in ['seqr', 'gnomad_mito', 'helix']:
@@ -37,7 +38,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
     POPULATIONS['gnomad_mito']['sort'] = 'gnomad'  # TODO test
     PREDICTION_FIELDS_CONFIG = {
         'apogee': PredictionPath('mitimpact', 'score'),
-        'haplogroup_defining': PredictionPath('haplogroup', 'is_defining'),  # TODO lambda v: hl.or_missing(v, 'Y')
+        'haplogroup_defining': PredictionPath('haplogroup', 'is_defining', lambda v: hl.or_missing(v, 'Y')),
         'hmtvar': PredictionPath('hmtvar', 'score'),
         'mitotip': PredictionPath('mitotip', 'trna_prediction'),
         'mut_taster': PredictionPath('dbnsfp_mito', 'MutationTaster_pred'),

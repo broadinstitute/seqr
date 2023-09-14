@@ -14,7 +14,7 @@ DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 logger = logging.getLogger(__name__)
 
 
-PredictionPath = namedtuple('PredictionPath', ['source', 'field'])
+PredictionPath = namedtuple('PredictionPath', ['source', 'field', 'format'], defaults=[lambda x: x])
 QualityFilterFormat = namedtuple('QualityFilterFormat', ['scale', 'override'], defaults=[None, None])
 
 
@@ -103,7 +103,7 @@ class BaseHailTableQuery(object):
             }),
             'predictions': lambda r: hl.struct(**{
                 prediction: self._format_enum(r[path.source], path.field, self._enums[path.source][path.field])
-                if self._enums.get(path.source, {}).get(path.field) else r[path.source][path.field]
+                if self._enums.get(path.source, {}).get(path.field) else path.format(r[path.source][path.field])
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
         }
