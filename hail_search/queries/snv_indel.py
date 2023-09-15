@@ -7,7 +7,7 @@ from hail_search.queries.base import PredictionPath, QualityFilterFormat
 from hail_search.queries.mito import MitoHailTableQuery
 
 
-class VariantHailTableQuery(MitoHailTableQuery):
+class SnvIndelHailTableQuery(MitoHailTableQuery):
 
     DATA_TYPE = 'SNV_INDEL'
 
