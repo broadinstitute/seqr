@@ -54,7 +54,7 @@ def set_missing_es_indices(apps, schema_editor):
     Sample = apps.get_model("seqr", "Sample")
     db_alias = schema_editor.connection.alias
     missing_index_samples = Sample.objects.using(db_alias).filter(
-        dataset_type='VARIANTS', is_active=False, elasticsearch_index__isnull=True)
+        dataset_type='SNV_INDEL', is_active=False, elasticsearch_index__isnull=True)
     if missing_index_samples:
         print('Updating index for  {} samples'.format(len(missing_index_samples)))
         for sample in tqdm(missing_index_samples, unit=' samples'):
@@ -91,7 +91,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='sample',
             name='dataset_type',
-            field=models.CharField(choices=[('VARIANTS', 'Variant Calls'), ('SV', 'SV Calls')], max_length=10),
+            field=models.CharField(choices=[('SNV_INDEL', 'Variant Calls'), ('SV', 'SV Calls')], max_length=10),
         ),
         migrations.AlterField(
             model_name='sample',

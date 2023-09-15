@@ -138,7 +138,7 @@ ES_INDEX_MAPPING = {
                 "gencodeVersion": "19",
                 "genomeVersion": "37",
                 "sampleType": "WES",
-                "datasetType": "VARIANTS",
+                "datasetType": "SNV_INDEL",
                 "sourceFilePath": "test_index_alias_2_path"
             },
             "_all": {
@@ -152,7 +152,7 @@ ES_INDEX_MAPPING = {
                 "gencodeVersion": "19",
                 "genomeVersion": "37",
                 "sampleType": "WGS",
-                "datasetType": "VARIANTS",
+                "datasetType": "SNV_INDEL",
                 "sourceFilePath": "test_index_no_project_path"
             },
             "_all": {
@@ -217,7 +217,7 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
     "docsCount": "672312",
     "storeSize": "233.4mb",
     "creationDateString": "2019-10-03T19:53:53.846Z",
-    "datasetType": "VARIANTS",
+    "datasetType": "SNV_INDEL",
     "gencodeVersion": "19",
     "projects": []
 }

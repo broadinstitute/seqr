@@ -225,7 +225,7 @@ class Migration(migrations.Migration):
                 ('is_active', models.BooleanField(default=False)),
                 ('dataset_file_path', models.TextField(blank=True, db_index=True, null=True)),
                 ('dataset_type', models.CharField(blank=True, choices=[
-                    ('ALIGN', 'Alignment'), ('VARIANTS', 'Variant Calls'), ('SV', 'SV Calls'),
+                    ('ALIGN', 'Alignment'), ('SNV_INDEL', 'Variant Calls'), ('SV', 'SV Calls'),
                     ('BREAK', 'Breakpoints'), ('SPLICE', 'Splice Junction Calls'),
                     ('ASE', 'Allele Specific Expression')
                 ], max_length=20, null=True),
