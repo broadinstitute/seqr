@@ -194,6 +194,7 @@ class BaseHailTableQuery(object):
 
     def __init__(self, sample_data, genome_version, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
                  override_comp_het_alt=False, **kwargs):
+        self.unfiltered_comp_het_ht = None
         self._genome_version = genome_version
         self._sort = sort
         self._sort_metadata = sort_metadata
@@ -201,7 +202,6 @@ class BaseHailTableQuery(object):
         self._override_comp_het_alt = override_comp_het_alt
         self._ht = None
         self._comp_het_ht = None
-        self.unfiltered_comp_het_ht = None
         self._inheritance_mode = inheritance_mode
         self._has_secondary_annotations = False
         self._load_table_kwargs = {}
