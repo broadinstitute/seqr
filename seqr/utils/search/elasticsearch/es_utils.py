@@ -173,9 +173,10 @@ def _validate_index_metadata(index_metadata, elasticsearch_index, project=None, 
     if not dataset_path.endswith(DATASET_FILE_EXTENSIONS):
         raise ValueError("Variant call dataset path must end with {}".format(' or '.join(DATASET_FILE_EXTENSIONS)))
 
-    if index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS) != dataset_type:
+    index_dataset_type = EsSearch.get_index_metadata_dataset_type(index_metadata)
+    if index_dataset_type != dataset_type:
         raise ValueError('Index "{0}" has dataset type {1} but expects {2}'.format(
-            elasticsearch_index, index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS), dataset_type
+            elasticsearch_index, index_dataset_type, dataset_type
         ))
 
 
