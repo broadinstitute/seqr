@@ -18,7 +18,7 @@ from seqr.utils.search.elasticsearch.constants import X_LINKED_RECESSIVE, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, \
     PREDICTION_FIELD_LOOKUP, MULTI_FIELD_PREDICTORS, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
-    PATH_FREQ_OVERRIDE_CUTOFF, AFFECTED, UNAFFECTED, HAS_ALT, \
+    PATH_FREQ_OVERRIDE_CUTOFF, AFFECTED, UNAFFECTED, HAS_ALT, CANONICAL_TRANSCRIPT_FILTER, \
     get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS, SCREEN_KEY, MAX_INDEX_SEARCHES, PREFILTER_SEARCH_SIZE
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
@@ -918,16 +918,24 @@ class EsSearch(object):
             if self._allowed_consequences:
                 consequence_transcript_id = next((
                     t.get('transcriptId') for t in gene_transcripts if
-                    t.get('majorConsequence') in self._allowed_consequences), None)
+                    self._is_matched_transcript(t, self._allowed_consequences)), None)
                 if not consequence_transcript_id and self._allowed_consequences_secondary:
                     consequence_transcript_id = next((
-                        t.get('transcriptId') for t in gene_transcripts if t.get('majorConsequence') in self._allowed_consequences_secondary
+                        t.get('transcriptId') for t in gene_transcripts if self._is_matched_transcript(t, self._allowed_consequences_secondary)
                     ), None)
                 selected_main_transcript_id = consequence_transcript_id or selected_main_transcript_id
             if selected_main_transcript_id == main_transcript_id:
                 selected_main_transcript_id = None
 
         return main_transcript_id, selected_main_transcript_id
+
+    @staticmethod
+    def _is_matched_transcript(t, allowed_consequences):
+        is_match = t.get('majorConsequence') in allowed_consequences
+        if CANONICAL_TRANSCRIPT_FILTER in allowed_consequences and t.get('canonical') and \
+                t.get('majorConsequence') == 'non_coding_transcript_exon_variant':
+            is_match = True
+        return is_match
 
     @staticmethod
     def _add_liftover(result, hit):
@@ -1055,6 +1063,8 @@ class EsSearch(object):
         return True
 
     def _filter_invalid_annotation_compound_hets(self, gene_id, gene_variants):
+        allowed_consequences = self._allowed_consequences + (self._allowed_consequences_secondary or [])
+        has_canonical_transcript_filter = CANONICAL_TRANSCRIPT_FILTER in allowed_consequences
         for variant in gene_variants:
             all_gene_consequences = []
             if variant.get('svType'):
@@ -1069,13 +1079,20 @@ class EsSearch(object):
 
             variant['gene_consequences'] = {}
             for k, transcripts in variant['transcripts'].items():
-                variant['gene_consequences'][k] = all_gene_consequences + [
-                    transcript['majorConsequence'] for transcript in transcripts if
-                    transcript.get('majorConsequence')
+                transcript_consequences = [
+                    (transcript['majorConsequence'], transcript.get('canonical'))
+                    for transcript in transcripts if transcript.get('majorConsequence')
                 ]
+                variant['gene_consequences'][k] = all_gene_consequences + [
+                    consequence for consequence, _ in transcript_consequences
+                ]
+                if has_canonical_transcript_filter and any(
+                        canonical for consequence, canonical in transcript_consequences
+                        if consequence == 'non_coding_transcript_exon_variant'):
+                    variant['gene_consequences'][k].append(CANONICAL_TRANSCRIPT_FILTER)
 
         return [variant for variant in gene_variants if any(
-            consequence in self._allowed_consequences + (self._allowed_consequences_secondary or [])
+            consequence in allowed_consequences
             for consequence in variant['gene_consequences'].get(gene_id, [])
         )]
 
