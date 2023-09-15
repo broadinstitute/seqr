@@ -59,3 +59,12 @@ const INITIAL_GENE_SEARCH = {
 }
 
 export const GeneSearchLink = props => <ConnectedSearchResultsLink initialSearch={INITIAL_GENE_SEARCH} {...props} />
+
+const PERMISSIVE_INITIAL_GENE_SEARCH = {
+  ...INITIAL_GENE_SEARCH,
+  qualityFilter: { ...INITIAL_GENE_SEARCH.qualityFilter, min_gq: 20 },
+}
+
+export const PermissiveGeneSearchLink = props => (
+  <ConnectedSearchResultsLink initialSearch={PERMISSIVE_INITIAL_GENE_SEARCH} {...props} />
+)
