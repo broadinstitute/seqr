@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 
-OLD_DT = 'SNV_INDEL'
+OLD_DT = 'VARIANTS'
 NEW_DT = 'SNV_INDEL'
 
 def update_dataset_type(is_forward):
