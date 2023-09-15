@@ -1023,7 +1023,7 @@ CORE_INDEX_METADATA = {
         'properties': MAPPING_PROPERTIES,
     },
     SECOND_INDEX_NAME: {
-        '_meta': {'genomeVersion': '37', 'datasetType': 'SNV_INDEL'},
+        '_meta': {'genomeVersion': '37', 'datasetType': 'VARIANTS'},
         'properties': MAPPING_PROPERTIES,
     },
     SV_INDEX_NAME: {

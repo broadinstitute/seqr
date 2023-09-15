@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='sample',
             name='dataset_type',
-            field=models.CharField(choices=[('SNV_INDEL', 'Variant Calls'), ('SV', 'SV Calls'), ('MITO', 'Mitochondria calls')], max_length=10),
+            field=models.CharField(choices=[('VARIANTS', 'Variant Calls'), ('SV', 'SV Calls'), ('MITO', 'Mitochondria calls')], max_length=10),
         ),
     ]

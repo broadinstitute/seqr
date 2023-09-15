@@ -45,7 +45,7 @@ def update_saved_search_datset_type(apps, schema_editor):
     if saved_searches:
         print('Updating  {} searches'.format(len(saved_searches)))
         for search in tqdm(saved_searches, unit=' searches'):
-            search.search['datasetType'] = 'SNV_INDEL'
+            search.search['datasetType'] = 'VARIANTS'
             search.save()
 
 

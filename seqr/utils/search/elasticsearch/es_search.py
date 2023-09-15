@@ -106,7 +106,7 @@ class EsSearch(object):
     @staticmethod
     def get_index_metadata_dataset_type(index_metadata):
         data_type = index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
-        if data_type == 'SNV_INDEL':
+        if data_type == 'VARIANTS':
             data_type = Sample.DATASET_TYPE_VARIANT_CALLS
         return data_type
 
