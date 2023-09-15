@@ -101,7 +101,14 @@ class EsSearch(object):
                     })
 
     def _get_index_dataset_type(self, index):
-        return self.index_metadata[index].get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
+        return self.get_index_metadata_dataset_type(self.index_metadata[index])
+
+    @staticmethod
+    def get_index_metadata_dataset_type(index_metadata):
+        data_type = index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
+        if data_type == 'VARIANTS':
+            data_type = Sample.DATASET_TYPE_VARIANT_CALLS
+        return data_type
 
     def _set_indices(self, indices):
         self._indices = indices

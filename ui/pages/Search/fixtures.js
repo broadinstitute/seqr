@@ -159,7 +159,7 @@ export const STATE = {
     S2310658_wal_mc16200_mc16203: {
       createdDate: "2018-03-30T11:50:40.079Z",
       elasticsearchIndex: "CMG_MYOSEQ",
-      datasetType: "VARIANTS",
+      datasetType: "SNV_INDEL",
       individualGuid: "I021476_na19678",
       loadedDate: "2018-03-13T13:25:21.551Z",
       projectGuid: PROJECT_GUID,
@@ -183,7 +183,7 @@ export const STATE = {
     S2310656_wal_mc16200_mc16203: {
       createdDate: "2018-03-30T11:50:40.079Z",
       elasticsearchIndex: "CMG_MYOSEQ",
-      datasetType: "VARIANTS",
+      datasetType: "SNV_INDEL",
       individualGuid: "I021476_na19678",
       loadedDate: "2018-03-13T13:25:21.551Z",
       projectGuid: PROJECT_GUID,
@@ -196,7 +196,7 @@ export const STATE = {
       createdDate: "2018-03-30T11:50:40.079Z",
       elasticsearchIndex: null,
       datasetName: null,
-      datasetType: "VARIANTS",
+      datasetType: "SNV_INDEL",
       individualGuid: "I021476_na19678",
       loadedDate: "2018-03-13T13:25:21.551Z",
       projectGuid: PROJECT_GUID,

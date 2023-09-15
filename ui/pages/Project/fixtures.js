@@ -314,7 +314,7 @@ export const STATE_WITH_2_FAMILIES = {
       createdDate: "2018-03-30T11:50:40.079Z",
       datasetFilePath: "gs://seqr-datasets/GRCh37/cmg_sankaran_wes/CMG_MYOSEQ.vcf.gz",
       datasetName: null,
-      datasetType: "VARIANTS",
+      datasetType: "SNV_INDEL",
       familyGuid: 'F011652_2',
       individualGuid: "I021476_na19678_2",
       loadedDate: "2018-03-13T13:25:21.551Z",

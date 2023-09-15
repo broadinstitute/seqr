@@ -4,21 +4,21 @@ from hail_search.constants import ALT_ALT, REF_REF, CONSEQUENCE_SORT, OMIM_SORT,
     VARIANT_KEY_FIELD
 from hail_search.queries.base import BaseHailTableQuery
 from hail_search.queries.mito import MitoHailTableQuery
-from hail_search.queries.variants import VariantHailTableQuery
+from hail_search.queries.snv_indel import SnvIndelHailTableQuery
 from hail_search.queries.sv import SvHailTableQuery
 from hail_search.queries.gcnv import GcnvHailTableQuery
 
 QUERY_CLASS_MAP = {
-    cls.DATA_TYPE: cls for cls in [VariantHailTableQuery, MitoHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]
+    cls.DATA_TYPE: cls for cls in [SnvIndelHailTableQuery, MitoHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]
 }
-VARIANT_DATA_TYPE = VariantHailTableQuery.DATA_TYPE
+SNV_INDEL_DATA_TYPE = SnvIndelHailTableQuery.DATA_TYPE
 
 
 class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
     def __init__(self, sample_data, *args, **kwargs):
         self._data_type_queries = {
-            k: QUERY_CLASS_MAP[k](v, *args, override_comp_het_alt=k == VARIANT_DATA_TYPE, **kwargs)
+            k: QUERY_CLASS_MAP[k](v, *args, override_comp_het_alt=k == SNV_INDEL_DATA_TYPE, **kwargs)
             for k, v in sample_data.items()
         }
         self._comp_het_hts = {}
@@ -27,7 +27,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         super().__init__(sample_data, *args, **kwargs)
 
     def _load_filtered_table(self, *args, **kwargs):
-        variant_query = self._data_type_queries.get(VARIANT_DATA_TYPE)
+        variant_query = self._data_type_queries.get(SNV_INDEL_DATA_TYPE)
         sv_data_types = [
             data_type for data_type in [SvHailTableQuery.DATA_TYPE, GcnvHailTableQuery.DATA_TYPE]
             if data_type in self._data_type_queries
@@ -79,7 +79,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         return is_valid & is_allowed_hom_alt
 
     def _comp_het_entry_has_ref(self, gt1, gt2):
-        variant_query = self._data_type_queries[VARIANT_DATA_TYPE]
+        variant_query = self._data_type_queries[SNV_INDEL_DATA_TYPE]
         sv_query = self._data_type_queries[self._current_sv_data_type]
         return [variant_query.GENOTYPE_QUERY_MAP[REF_REF](gt1), sv_query.GENOTYPE_QUERY_MAP[REF_REF](gt2)]
 
@@ -96,7 +96,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
         for data_type, ch_ht in self._comp_het_hts.items():
             ch_ht = ch_ht.annotate(
-                v1=self._format_comp_het_result(ch_ht.v1, VARIANT_DATA_TYPE),
+                v1=self._format_comp_het_result(ch_ht.v1, SNV_INDEL_DATA_TYPE),
                 v2=self._format_comp_het_result(ch_ht.v2, data_type),
             )
             hts.append(ch_ht.select(
@@ -147,7 +147,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             hts += query.format_gene_count_hts()
         for data_type, ch_ht in self._comp_het_hts.items():
             hts += [
-                self._comp_het_gene_count_ht(ch_ht, 'v1', VARIANT_DATA_TYPE),
+                self._comp_het_gene_count_ht(ch_ht, 'v1', SNV_INDEL_DATA_TYPE),
                 self._comp_het_gene_count_ht(ch_ht, 'v2', data_type)
             ]
         return hts

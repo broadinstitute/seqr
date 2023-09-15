@@ -2,14 +2,14 @@ import hail as hl
 
 from hail_search.constants import HGMD_KEY, HGMD_PATH_RANGES, \
     GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
-    SCREEN_KEY, SPLICE_AI_FIELD, VARIANT_DATASET
+    SCREEN_KEY, SPLICE_AI_FIELD
 from hail_search.queries.base import PredictionPath, QualityFilterFormat
 from hail_search.queries.mito import MitoHailTableQuery
 
 
-class VariantHailTableQuery(MitoHailTableQuery):
+class SnvIndelHailTableQuery(MitoHailTableQuery):
 
-    DATA_TYPE = VARIANT_DATASET
+    DATA_TYPE = 'SNV_INDEL'
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ', 'AB']}
     QUALITY_FILTER_FORMAT = {

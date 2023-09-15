@@ -16,7 +16,7 @@ NON_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
 INDEX_NAME = 'test_index'
 SV_INDEX_NAME = 'test_new_sv_index'
 NEW_SAMPLE_TYPE_INDEX_NAME = 'test_new_index'
-ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
+ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'SNV_INDEL'})
 MAPPING_PROPS_SAMPLES_NUM_ALT_1 = {
     "samples_num_alt_1": {"type": "keyword"},
 }
@@ -85,7 +85,7 @@ class DatasetAPITest(object):
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'mappingFilePath': 'mapping.csv',
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
         }))
         self.assertEqual(response.status_code, 200)
         MOCK_OPEN.assert_called_with('mapping.csv', 'r')
@@ -226,7 +226,7 @@ class DatasetAPITest(object):
         }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': NEW_SAMPLE_TYPE_INDEX_NAME,
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
         }))
         self.assertEqual(response.status_code, 200)
 
@@ -235,7 +235,7 @@ class DatasetAPITest(object):
         new_sample_type_sample_guid = 'S987654_NA19675_1'
         self.assertDictEqual(response_json['familiesByGuid'], {})
         self.assertListEqual(list(response_json['samplesByGuid'].keys()), [new_sample_type_sample_guid])
-        self.assertEqual(response_json['samplesByGuid'][new_sample_type_sample_guid]['datasetType'], 'VARIANTS')
+        self.assertEqual(response_json['samplesByGuid'][new_sample_type_sample_guid]['datasetType'], 'SNV_INDEL')
         self.assertEqual(response_json['samplesByGuid'][new_sample_type_sample_guid]['sampleType'], 'WGS')
         self.assertTrue(response_json['samplesByGuid'][new_sample_type_sample_guid]['isActive'])
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
@@ -271,7 +271,7 @@ class DatasetAPITest(object):
         mock_send_slack.reset_mock()
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
         }))
         self.assertEqual(response.status_code, 200)
 
@@ -368,7 +368,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
             }, "properties": MAPPING_PROPS_WITH_SAMPLES}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has dataset type SV but expects VARIANTS']})
+        self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has dataset type SV but expects SNV_INDEL']})
 
         urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
             'sub_index_1': {'mappings': {'_meta': {
@@ -425,7 +425,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
             'ignoreExtraSamplesInCallset': True,
         }))
         self.assertEqual(response.status_code, 400)
@@ -436,7 +436,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
             'ignoreExtraSamplesInCallset': True,
         }))
         self.assertEqual(response.status_code, 400)
@@ -447,7 +447,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'mappingFilePath': 'mapping.csv',
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
         }))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Must contain 2 columns: NA19678_1, NA19678, metadata']})
@@ -456,7 +456,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'mappingFilePath': 'mapping.csv',
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
         }))
         self.assertEqual(response.status_code, 500)
         self.assertEqual(response.json()['error'], 'Unhandled base exception')
