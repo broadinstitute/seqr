@@ -305,7 +305,6 @@ def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, 
         saved_variants = saved_variants_by_family[family_id]
 
         family_subject_row = family_data_by_id[family_id]
-        family_subject_row['num_saved_variants'] = len(saved_variants)
         genome_version = family_subject_row.pop('genome_version')
 
         post_discovery_omim_number = family_subject_row.pop('post_discovery_omim_number')
