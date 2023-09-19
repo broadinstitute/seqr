@@ -4,12 +4,15 @@ import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } f
 import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_XPOS } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { GREGOR_PROJECT_PATH } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 const REQUEST_SUCCESS_STORY = 'REQUEST_SUCCESS_STORY'
 const RECEIVE_SUCCESS_STORY = 'RECEIVE_SUCCESS_STORY'
 const REQUEST_MME = 'REQUEST_MME'
 const RECEIVE_MME = 'RECEIVE_MME'
+const REQUEST_SAMPLE_METADATA = 'REQUEST_SAMPLE_METADATA'
+const RECEIVE_SAMPLE_METADATA = 'RECEIVE_SAMPLE_METADATA'
 const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
 const UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE = 'UPDATE_ALL_PROJECT_VARIANT_STATE'
 const RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS = 'RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS'
@@ -68,6 +71,52 @@ export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) =>
     }).get({ gene })
 }
 
+export const loadSampleMetadata = (projectGuid, filterValues) => (dispatch) => {
+  if (projectGuid === GREGOR_PROJECT_PATH) {
+    dispatch({ type: REQUEST_SAMPLE_METADATA })
+
+    const errors = new Set()
+    const rows = []
+    new HttpRequestHelper(`/api/report/get_category_projects/${projectGuid}`,
+      (projectsResponseJson) => {
+        const chunkedProjects = projectsResponseJson.projectGuids.reduce((acc, guid) => {
+          if (acc[0].length === 5) {
+            acc.unshift([])
+          }
+          acc[0].push(guid)
+          return acc
+        }, [[]])
+        chunkedProjects.reduce((previousPromise, projectsChunk) => previousPromise.then(
+          () => Promise.all(projectsChunk.map(cmgProjectGuid => new HttpRequestHelper(
+            `/api/report/sample_metadata/${cmgProjectGuid}`,
+            (responseJson) => {
+              rows.push(...responseJson.rows)
+            },
+            e => errors.add(e.message),
+          ).get())),
+        ), Promise.resolve()).then(() => {
+          if (errors.size) {
+            dispatch({ type: RECEIVE_SAMPLE_METADATA, error: [...errors].join(', '), newValue: [] })
+          } else {
+            dispatch({ type: RECEIVE_SAMPLE_METADATA, newValue: rows })
+          }
+        })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_SAMPLE_METADATA, error: e.message, newValue: [] })
+      }).get(filterValues)
+  } else if (projectGuid) {
+    dispatch({ type: REQUEST_SAMPLE_METADATA })
+    new HttpRequestHelper(`/api/report/sample_metadata/${projectGuid}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_SAMPLE_METADATA, newValue: responseJson.rows })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_SAMPLE_METADATA, error: e.message, newValue: [] })
+      }).get(filterValues)
+  }
+}
+
 export const updateAllProjectSavedVariantTable = updates => (
   { type: UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, updates })
 
@@ -84,6 +133,8 @@ export const reducers = {
   mmeLoading: loadingReducer(REQUEST_MME, RECEIVE_MME),
   mmeMetrics: createSingleValueReducer(RECEIVE_MME, {}, 'metrics'),
   mmeSubmissions: createSingleValueReducer(RECEIVE_MME, [], 'submissions'),
+  sampleMetadataLoading: loadingReducer(REQUEST_SAMPLE_METADATA, RECEIVE_SAMPLE_METADATA),
+  sampleMetadataRows: createSingleValueReducer(RECEIVE_SAMPLE_METADATA, []),
   savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
   externalAnalysisUploadStats: createSingleValueReducer(RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS, {}),
   allProjectSavedVariantTableState: createSingleObjectReducer(UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, {

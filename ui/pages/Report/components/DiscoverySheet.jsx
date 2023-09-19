@@ -2,10 +2,10 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
+import BaseReport from 'shared/components/table/BaseReport'
 import { DISCOVERY_SHEET_COLUMNS, CMG_PROJECT_PATH } from '../constants'
 import { loadDiscoverySheet } from '../reducers'
 import { getDiscoverySheetLoading, getDiscoverySheetLoadingError, getDiscoverySheetRows } from '../selectors'
-import BaseReport from './BaseReport'
 
 const getDownloadFilename = projectGuid => `discovery_sheet_${projectGuid}`
 

@@ -4,10 +4,10 @@ import { connect } from 'react-redux'
 
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
+import BaseReport from 'shared/components/table/BaseReport'
 import { ALL_PROJECTS_PATH, GREGOR_PROJECT_PATH } from '../constants'
 import { loadSampleMetadata } from '../reducers'
 import { getSampleMetadataLoading, getSampleMetadataLoadingError, getSampleMetadataRows, getSampleMetadataColumns } from '../selectors'
-import BaseReport from './BaseReport'
 
 const FILENAME_LOOKUP = {
   [ALL_PROJECTS_PATH]: 'All_AnVIL_Projects',
