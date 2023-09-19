@@ -124,11 +124,10 @@ from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
     get_category_projects, \
-    sample_metadata_export, \
     gregor_export, \
     seqr_stats
 from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, hpo_summary_data, \
-    bulk_update_family_analysed_by
+    bulk_update_family_analysed_by, sample_metadata_export
 from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -307,7 +306,6 @@ api_endpoints = {
     'upload_temp_file': save_temp_file,
 
     'report/anvil/(?P<project_guid>[^/]+)': anvil_export,
-    'report/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
     'report/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
     'report/gregor': gregor_export,
     'report/get_category_projects/(?P<category>[^/]+)': get_category_projects,
@@ -331,6 +329,7 @@ api_endpoints = {
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
     'summary_data/matchmaker': mme_details,
     'summary_data/update_analysed_by': bulk_update_family_analysed_by,
+    'summary_data/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
 
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/grant_access': grant_workspace_access,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/validate_vcf': validate_anvil_vcf,

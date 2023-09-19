@@ -7,9 +7,8 @@ import responses
 from settings import AIRTABLE_URL
 
 from seqr.models import Project
-from seqr.views.apis.report_api import seqr_stats, get_category_projects, discovery_sheet, anvil_export, \
-    sample_metadata_export, gregor_export
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
+from seqr.views.apis.report_api import seqr_stats, get_category_projects, discovery_sheet, anvil_export, gregor_export
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -108,46 +107,6 @@ AIRTABLE_SAMPLE_RECORDS = {
       "createdTime": "2019-07-16T18:23:21.000Z"
     }
 ]}
-
-PAGINATED_AIRTABLE_SAMPLE_RECORDS = {
-    'offset': 'abc123',
-    'records': [{
-      'id': 'rec2B6OGmQpfuRW5z',
-      'fields': {
-        'CollaboratorSampleID': 'NA19675',
-        'Collaborator': ['recW24C2CJW5lT64K'],
-        'dbgap_study_id': 'dbgap_study_id_2',
-        'dbgap_subject_id': 'dbgap_subject_id_1',
-        'dbgap_sample_id': 'SM-A4GQ4',
-        'SequencingProduct': [
-          'Mendelian Rare Disease Exome'
-        ],
-        'dbgap_submission': [
-          'WES',
-          'Array'
-        ]
-      },
-      'createdTime': '2019-09-09T19:21:12.000Z'
-    }
-]}
-
-AIRTABLE_COLLABORATOR_RECORDS = {
-    "records": [
-        {
-            "id": "recW24C2CJW5lT64K",
-            "fields": {
-                "CollaboratorID": "Hildebrandt",
-            }
-        },
-        {
-            "id": "reca4hcBnbA2cnZf9",
-            "fields": {
-                "CollaboratorID": "Seidman",
-            }
-        }
-    ]
-}
-
 
 AIRTABLE_GREGOR_SAMPLE_RECORDS = {
   "records": [
@@ -313,69 +272,6 @@ EXPECTED_GREGOR_FILES = [
     'experiment_rna_short_read', 'aligned_rna_short_read', 'experiment',
 ]
 
-EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
-    "project_guid": "R0003_test",
-    "num_saved_variants": 2,
-    "solve_state": "Tier 1",
-    "sample_id": "NA20889",
-    "Gene_Class-1": "Tier 1 - Candidate",
-    "Gene_Class-2": "Tier 1 - Candidate",
-    "inheritance_description-1": "Autosomal recessive (compound heterozygous)",
-    "inheritance_description-2": "Autosomal recessive (compound heterozygous)",
-    "hpo_absent": "",
-    "novel_mendelian_gene-1": "Y",
-    "novel_mendelian_gene-2": "Y",
-    "hgvsc-1": "c.3955G>A",
-    "date_data_generation": "2017-02-05",
-    "Zygosity-1": "Heterozygous",
-    "Zygosity-2": "Heterozygous",
-    "variant_genome_build-1": "GRCh37",
-    "variant_genome_build-2": "GRCh37",
-    "Ref-1": "TC",
-    "sv_type-2": "Deletion",
-    "sv_name-2": "DEL:chr12:49045487-49045898",
-    "Chrom-2": "12",
-    "Pos-2": "49045487",
-    "ancestry_detail": "Ashkenazi Jewish",
-    "maternal_id": "",
-    "paternal_id": "",
-    "hgvsp-1": "c.1586-17C>G",
-    "entity:family_id": "12",
-    "project_id": "Test Reprocessed Project",
-    "Pos-1": "248367227",
-    "data_type": "WES",
-    "family_guid": "F000012_12",
-    "congenital_status": "Unknown",
-    "family_history": "Yes",
-    "hpo_present": "HP:0011675 (Arrhythmia)|HP:0001509 ()",
-    "Transcript-1": "ENST00000505820",
-    "ancestry": "Ashkenazi Jewish",
-    "phenotype_group": "",
-    "sex": "Female",
-    "entity:subject_id": "NA20889",
-    "entity:sample_id": "NA20889",
-    "Chrom-1": "1",
-    "Alt-1": "T",
-    "Gene-1": "OR4G11P",
-    "pmid_id": None,
-    "phenotype_description": None,
-    "affected_status": "Affected",
-    "family_id": "12",
-    "MME": "Y",
-    "subject_id": "NA20889",
-    "proband_relationship": "",
-    "consanguinity": "None suspected",
-    "sequencing_center": "Broad",
-}
-EXPECTED_SAMPLE_METADATA_ROW = {
-    "dbgap_submission": "No",
-    "dbgap_study_id": "",
-    "dbgap_subject_id": "",
-    "sample_provider": "",
-    "multiple_datasets": "No",
-}
-EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
-
 MOCK_DATA_MODEL_URL = 'http://raw.githubusercontent.com/gregor_data_model.json'
 MOCK_DATA_MODEL = {
     'name': 'test data model',
@@ -473,13 +369,7 @@ MOCK_DATA_MODEL = {
 }
 
 
-def _get_list_param(call, param):
-    query_params = call.url.split('?')[1].split('&')
-    param_str = f'{param}='
-    return [p.replace(param_str, '') for p in query_params if p.startswith(param_str)]
-
-
-class ReportAPITest(object):
+class ReportAPITest(AirtableTest):
 
     def _get_zip_files(self, mock_zip, filenames):
         mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr
@@ -490,17 +380,6 @@ class ReportAPITest(object):
             [row.split('\t') for row in mock_write_zip.call_args_list[i][0][1].split('\n') if row]
             for i in range(len(filenames))
         )
-
-    def _assert_expected_airtable_call(self, call_index, filter_formula, fields, additional_params=None):
-        expected_params = {
-            'fields[]': mock.ANY,
-            'pageSize': '100',
-            'filterByFormula': filter_formula,
-        }
-        if additional_params:
-            expected_params.update(additional_params)
-        self.assertDictEqual(responses.calls[call_index].request.params, expected_params)
-        self.assertListEqual(_get_list_param(responses.calls[call_index].request, 'fields%5B%5D'), fields)
 
     def test_seqr_stats(self):
         no_access_project = Project.objects.get(id=2)
@@ -668,120 +547,6 @@ class ReportAPITest(object):
             'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, '
             'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
-
-        self.check_no_analyst_no_access(url)
-
-        # Test non-broad analysts do not have access
-        self.login_pm_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-
-    @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 2)
-    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
-    @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
-    @responses.activate
-    def test_sample_metadata_export(self, mock_google_authenticated):
-        mock_google_authenticated.return_value = False
-        url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
-        self.check_analyst_login(url)
-
-        unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
-        response = self.client.get(unauthorized_project_url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual( response.json()['error'], 'Permission Denied')
-        mock_google_authenticated.return_value = True
-
-        # Test invalid airtable responses
-        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=402)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 402)
-
-        responses.reset()
-        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=200)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 500)
-        self.assertIn(response.json()['error'], ['Unable to retrieve airtable data: No JSON object could be decoded',
-                                        'Unable to retrieve airtable data: Expecting value: line 1 column 1 (char 0)'])
-
-        responses.reset()
-        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),
-                      json=PAGINATED_AIRTABLE_SAMPLE_RECORDS, status=200)
-        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),
-                      json=AIRTABLE_SAMPLE_RECORDS, status=200)
-        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Collaborator'.format(AIRTABLE_URL),
-                      json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(
-            response.json()['error'],
-            'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
-        self.assertEqual(len(responses.calls), 4)
-        first_formula = "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888')"
-        expected_fields = [
-            'CollaboratorSampleID', 'Collaborator', 'dbgap_study_id', 'dbgap_subject_id',
-            'dbgap_sample_id', 'SequencingProduct', 'dbgap_submission',
-        ]
-        self._assert_expected_airtable_call(0, first_formula, expected_fields)
-        self._assert_expected_airtable_call(1, first_formula, expected_fields, additional_params={'offset': 'abc123'})
-        self._assert_expected_airtable_call(2, "OR({CollaboratorSampleID}='NA20889')", expected_fields)
-        second_formula = "OR({SeqrCollaboratorSampleID}='NA20888',{SeqrCollaboratorSampleID}='NA20889')"
-        expected_fields[0] = 'SeqrCollaboratorSampleID'
-        self._assert_expected_airtable_call(3, second_formula, expected_fields)
-
-        # Test success
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertEqual(len(response_json['rows']), 3)
-        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
-        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
-        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
-        self.assertDictEqual(EXPECTED_SAMPLE_METADATA_ROW, test_row)
-        self.assertEqual(len(responses.calls), 8)
-        self._assert_expected_airtable_call(
-            -1, "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
-        self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
-
-        # Test omit airtable columns
-        responses.reset()
-        response = self.client.get(f'{url}?omitAirtable=true')
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertEqual(len(response_json['rows']), 3)
-        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
-        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
-        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
-        self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
-
-        # Test empty project
-        empty_project_url = reverse(sample_metadata_export, args=[PROJECT_EMPTY_GUID])
-        response = self.client.get(empty_project_url)
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'rows': []})
-
-        # Test all projects
-        all_projects_url = reverse(sample_metadata_export, args=['all'])
-        response = self.client.get(all_projects_url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertEqual(len(response_json['rows']), 16 + len(self.ADDITIONAL_SAMPLES))
-        expected_samples.update({
-            'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
-            'NA20872', 'NA20881', 'HG00733',
-        })
-        expected_samples.update(self.ADDITIONAL_SAMPLES)
-        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
-        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
-        self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
-        self.assertEqual(len([r['subject_id'] for r in response_json['rows'] if r['subject_id'] == 'NA20888']), 2)
 
         self.check_no_analyst_no_access(url)
 
@@ -1100,11 +865,11 @@ class ReportAPITest(object):
         sample_ids.update(additional_samples or [])
         sample_filter = ','.join([f"{{CollaboratorSampleID}}='{sample_id}'" for sample_id in sorted(sample_ids)])
         sample_fields = ['CollaboratorSampleID', 'SMID', 'CollaboratorParticipantID', 'Recontactable']
-        self._assert_expected_airtable_call(0, f"OR({sample_filter})", sample_fields)
+        self.assert_expected_airtable_call(0, f"OR({sample_filter})", sample_fields)
         sample_ids -= {'NA19675_1', 'NA19679', 'NA20888'}
         secondary_sample_filter = ','.join([f"{{SeqrCollaboratorSampleID}}='{sample_id}'" for sample_id in sorted(sample_ids)])
         sample_fields[0] = 'SeqrCollaboratorSampleID'
-        self._assert_expected_airtable_call(1, f"OR({secondary_sample_filter})", sample_fields)
+        self.assert_expected_airtable_call(1, f"OR({secondary_sample_filter})", sample_fields)
         metadata_fields = [
             'CollaboratorParticipantID', '5prime3prime_bias_rna', 'CollaboratorSampleID_rna', 'CollaboratorSampleID_wes',
             'CollaboratorSampleID_wgs', 'RIN_rna', 'SMID_rna', 'SMID_wes', 'SMID_wgs', 'aligned_dna_short_read_file_wes',
@@ -1123,7 +888,7 @@ class ReportAPITest(object):
             'target_insert_size_wgs', 'targeted_region_bed_file', 'targeted_regions_method_wes', 'total_reads_rna',
             'variant_types', 'within_site_batch_name_rna',
         ]
-        self._assert_expected_airtable_call(
+        self.assert_expected_airtable_call(
             2, "OR(CollaboratorParticipantID='NA19675',CollaboratorParticipantID='NA19679',CollaboratorParticipantID='NA20888',CollaboratorParticipantID='VCGS_FAM203_621')",
             metadata_fields,
         )
@@ -1133,7 +898,6 @@ class ReportAPITest(object):
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
-    ADDITIONAL_SAMPLES = ['NA21234']
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
         'familiesCount': {'non_demo': 12, 'demo': 2},
@@ -1150,7 +914,6 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 
 class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
-    ADDITIONAL_SAMPLES = []
     STATS_DATA = {
         'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},

@@ -2,11 +2,13 @@ from datetime import datetime
 from django.urls.base import reverse
 import json
 import mock
+import responses
 
 from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, hpo_summary_data, \
-    bulk_update_family_analysed_by
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
+    bulk_update_family_analysed_by, sample_metadata_export
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
 from seqr.models import FamilyAnalysedBy
+from settings import AIRTABLE_URL
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -29,9 +31,152 @@ SAVED_VARIANT_RESPONSE_KEYS = {
     'mmeSubmissionsByGuid', 'transcriptsById',
 }
 
+EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
+    "project_guid": "R0003_test",
+    "num_saved_variants": 2,
+    "solve_state": "Tier 1",
+    "sample_id": "NA20889",
+    "Gene_Class-1": "Tier 1 - Candidate",
+    "Gene_Class-2": "Tier 1 - Candidate",
+    "inheritance_description-1": "Autosomal recessive (compound heterozygous)",
+    "inheritance_description-2": "Autosomal recessive (compound heterozygous)",
+    "hpo_absent": "",
+    "novel_mendelian_gene-1": "Y",
+    "novel_mendelian_gene-2": "Y",
+    "hgvsc-1": "c.3955G>A",
+    "date_data_generation": "2017-02-05",
+    "Zygosity-1": "Heterozygous",
+    "Zygosity-2": "Heterozygous",
+    "variant_genome_build-1": "GRCh37",
+    "variant_genome_build-2": "GRCh37",
+    "Ref-1": "TC",
+    "sv_type-2": "Deletion",
+    "sv_name-2": "DEL:chr12:49045487-49045898",
+    "Chrom-2": "12",
+    "Pos-2": "49045487",
+    "ancestry_detail": "Ashkenazi Jewish",
+    "maternal_id": "",
+    "paternal_id": "",
+    "hgvsp-1": "c.1586-17C>G",
+    "entity:family_id": "12",
+    "project_id": "Test Reprocessed Project",
+    "Pos-1": "248367227",
+    "data_type": "WES",
+    "family_guid": "F000012_12",
+    "congenital_status": "Unknown",
+    "family_history": "Yes",
+    "hpo_present": "HP:0011675 (Arrhythmia)|HP:0001509 ()",
+    "Transcript-1": "ENST00000505820",
+    "ancestry": "Ashkenazi Jewish",
+    "phenotype_group": "",
+    "sex": "Female",
+    "entity:subject_id": "NA20889",
+    "entity:sample_id": "NA20889",
+    "Chrom-1": "1",
+    "Alt-1": "T",
+    "Gene-1": "OR4G11P",
+    "pmid_id": None,
+    "phenotype_description": None,
+    "affected_status": "Affected",
+    "family_id": "12",
+    "MME": "Y",
+    "subject_id": "NA20889",
+    "proband_relationship": "",
+    "consanguinity": "None suspected",
+    "sequencing_center": "Broad",
+}
+EXPECTED_SAMPLE_METADATA_ROW = {
+    "dbgap_submission": "No",
+    "dbgap_study_id": "",
+    "dbgap_subject_id": "",
+    "sample_provider": "",
+    "multiple_datasets": "No",
+}
+EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
+
+AIRTABLE_SAMPLE_RECORDS = {
+  "records": [
+    {
+      "id": "rec2B6OGmQpAkQW3s",
+      "fields": {
+        "SeqrCollaboratorSampleID": "VCGS_FAM203_621_D1",
+        "CollaboratorSampleID": "NA19675",
+        "Collaborator": ["recW24C2CJW5lT64K"],
+        "dbgap_study_id": "dbgap_stady_id_1",
+        "dbgap_subject_id": "dbgap_subject_id_1",
+        "dbgap_sample_id": "SM-A4GQ4",
+        "SequencingProduct": [
+          "Mendelian Rare Disease Exome"
+        ],
+        "dbgap_submission": [
+          "WES",
+          "Array"
+        ]
+      },
+      "createdTime": "2019-09-09T19:21:12.000Z"
+    },
+    {
+      "id": "rec2Nkg10N1KssPc3",
+      "fields": {
+        "SeqrCollaboratorSampleID": "HG00731",
+        "CollaboratorSampleID": "NA20885",
+        "Collaborator": ["reca4hcBnbA2cnZf9"],
+        "dbgap_study_id": "dbgap_stady_id_2",
+        "dbgap_subject_id": "dbgap_subject_id_2",
+        "dbgap_sample_id": "SM-JDBTT",
+        "SequencingProduct": [
+          "Standard Germline Exome v6 Plus GSA Array"
+        ],
+        "dbgap_submission": [
+          "WES",
+          "Array"
+        ]
+      },
+      "createdTime": "2019-07-16T18:23:21.000Z"
+    }
+]}
+PAGINATED_AIRTABLE_SAMPLE_RECORDS = {
+    'offset': 'abc123',
+    'records': [{
+      'id': 'rec2B6OGmQpfuRW5z',
+      'fields': {
+        'CollaboratorSampleID': 'NA19675',
+        'Collaborator': ['recW24C2CJW5lT64K'],
+        'dbgap_study_id': 'dbgap_study_id_2',
+        'dbgap_subject_id': 'dbgap_subject_id_1',
+        'dbgap_sample_id': 'SM-A4GQ4',
+        'SequencingProduct': [
+          'Mendelian Rare Disease Exome'
+        ],
+        'dbgap_submission': [
+          'WES',
+          'Array'
+        ]
+      },
+      'createdTime': '2019-09-09T19:21:12.000Z'
+    }
+]}
+
+AIRTABLE_COLLABORATOR_RECORDS = {
+    "records": [
+        {
+            "id": "recW24C2CJW5lT64K",
+            "fields": {
+                "CollaboratorID": "Hildebrandt",
+            }
+        },
+        {
+            "id": "reca4hcBnbA2cnZf9",
+            "fields": {
+                "CollaboratorID": "Seidman",
+            }
+        }
+    ]
+}
+
 
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
-class SummaryDataAPITest(object):
+class SummaryDataAPITest(AirtableTest):
 
     @mock.patch('matchmaker.matchmaker_utils.datetime')
     def test_mme_details(self, mock_datetime):
@@ -229,11 +374,126 @@ class SummaryDataAPITest(object):
 
         self.check_no_analyst_no_access(url)
 
+    @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 2)
+    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
+    @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
+    @responses.activate
+    def test_sample_metadata_export(self, mock_google_authenticated):
+        mock_google_authenticated.return_value = False
+        url = reverse(sample_metadata_export, args=['R0003_test'])
+        self.check_analyst_login(url)
+
+        unauthorized_project_url = reverse(sample_metadata_export, args=['R0004_non_analyst_project'])
+        response = self.client.get(unauthorized_project_url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Permission Denied')
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Permission Denied')
+        mock_google_authenticated.return_value = True
+
+        # Test invalid airtable responses
+        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=402)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 402)
+
+        responses.reset()
+        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=200)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 500)
+        self.assertIn(response.json()['error'], ['Unable to retrieve airtable data: No JSON object could be decoded',
+                                                 'Unable to retrieve airtable data: Expecting value: line 1 column 1 (char 0)'])
+
+        responses.reset()
+        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),
+                      json=PAGINATED_AIRTABLE_SAMPLE_RECORDS, status=200)
+        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),
+                      json=AIRTABLE_SAMPLE_RECORDS, status=200)
+        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Collaborator'.format(AIRTABLE_URL),
+                      json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json()['error'],
+            'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
+        self.assertEqual(len(responses.calls), 4)
+        first_formula = "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888')"
+        expected_fields = [
+            'CollaboratorSampleID', 'Collaborator', 'dbgap_study_id', 'dbgap_subject_id',
+            'dbgap_sample_id', 'SequencingProduct', 'dbgap_submission',
+        ]
+        self.assert_expected_airtable_call(0, first_formula, expected_fields)
+        self.assert_expected_airtable_call(1, first_formula, expected_fields, additional_params={'offset': 'abc123'})
+        self.assert_expected_airtable_call(2, "OR({CollaboratorSampleID}='NA20889')", expected_fields)
+        second_formula = "OR({SeqrCollaboratorSampleID}='NA20888',{SeqrCollaboratorSampleID}='NA20889')"
+        expected_fields[0] = 'SeqrCollaboratorSampleID'
+        self.assert_expected_airtable_call(3, second_formula, expected_fields)
+
+        # Test success
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertEqual(len(response_json['rows']), 3)
+        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
+        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
+        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertDictEqual(EXPECTED_SAMPLE_METADATA_ROW, test_row)
+        self.assertEqual(len(responses.calls), 8)
+        self.assert_expected_airtable_call(
+            -1, "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
+        self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
+
+        # Test omit airtable columns
+        responses.reset()
+        response = self.client.get(f'{url}?omitAirtable=true')
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertEqual(len(response_json['rows']), 3)
+        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
+        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
+        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
+
+        # Test empty project
+        empty_project_url = reverse(sample_metadata_export, args=['R0002_empty'])
+        response = self.client.get(empty_project_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'rows': []})
+
+        # Test all projects
+        all_projects_url = reverse(sample_metadata_export, args=['all'])
+        response = self.client.get(all_projects_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertEqual(len(response_json['rows']), 16 + len(self.ADDITIONAL_SAMPLES))
+        expected_samples.update({
+            'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
+            'NA20872', 'NA20881', 'HG00733',
+        })
+        expected_samples.update(self.ADDITIONAL_SAMPLES)
+        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
+        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
+        self.assertEqual(len([r['subject_id'] for r in response_json['rows'] if r['subject_id'] == 'NA20888']), 2)
+
+        self.check_no_analyst_no_access(url)
+
+        # Test non-broad analysts do not have access
+        self.login_pm_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Permission Denied')
+
 # Tests for AnVIL access disabled
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
     NUM_MANAGER_SUBMISSIONS = 4
     MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
+    ADDITIONAL_SAMPLES = ['NA21234']
 
 
 def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
@@ -250,6 +510,7 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     NUM_MANAGER_SUBMISSIONS = 4
     MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
+    ADDITIONAL_SAMPLES = []
 
     def test_mme_details(self, *args):
         super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
