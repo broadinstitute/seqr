@@ -25,7 +25,7 @@ export const SUCCESS_STORY_COLUMNS = [
 const PROJECT_ID_FIELD = 'project_id'
 const FAMILY_FIELD_ID = 'family_id'
 
-export const CORE_ANVIL_COLUMNS = [
+export const CORE_METADATA_COLUMNS = [
   { name: 'subject_id' },
   {
     name: PROJECT_ID_FIELD,
@@ -62,7 +62,7 @@ export const CORE_ANVIL_COLUMNS = [
   { name: 'family_history' },
 ]
 
-export const AIRTABLE_ANVIL_COLUMNS = [
+export const AIRTABLE_METADATA_COLUMNS = [
   { name: 'dbgap_submission' },
   { name: 'dbgap_study_id' },
   { name: 'dbgap_subject_id' },
@@ -71,7 +71,7 @@ export const AIRTABLE_ANVIL_COLUMNS = [
   { name: 'sample_provider' },
 ]
 
-export const VARIANT_ANVIL_COLUMNS = [
+export const VARIANT_METADATA_COLUMNS = [
   'Gene',
   'Gene_Class',
   'novel_mendelian_gene',
