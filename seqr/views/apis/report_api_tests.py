@@ -369,7 +369,6 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "dbgap_submission": "No",
     "dbgap_study_id": "",
     "dbgap_subject_id": "",
-    "sample_provider": "",
     "multiple_datasets": "No",
 }
 EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
@@ -743,7 +742,7 @@ class ReportAPITest(object):
         self.assertDictEqual(EXPECTED_SAMPLE_METADATA_ROW, test_row)
         self.assertEqual(len(responses.calls), 8)
         self._assert_expected_airtable_call(
-            -1, "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
+            -1, "OR(RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
         self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
 
         # Test omit airtable columns

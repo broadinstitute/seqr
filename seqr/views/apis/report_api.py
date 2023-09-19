@@ -174,8 +174,7 @@ def anvil_export(request, project_guid):
         [project], request.GET.get('loadedBefore'),
     )
 
-    subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
-        individual_samples, request.user, include_collaborator=False)
+    subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(individual_samples, request.user)
 
     # Flatten lists of discovery rows so there is one row per variant
     discovery_rows = [row for row_group in discovery_rows for row in row_group if row]
@@ -200,10 +199,11 @@ def sample_metadata_export(request, project_guid):
     individual_samples = _get_loaded_before_date_project_individual_samples(
         projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
     subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
-        individual_samples, request.user, include_collaborator=True, omit_airtable=omit_airtable,
-        row_key_field='family_guid', get_additional_sample_fields=lambda sample: {
+        individual_samples, request.user, omit_airtable=omit_airtable,
+        row_key_field='family_guid', get_additional_sample_fields=lambda sample, airtable_metadata: {
             'data_type': sample.sample_type,
             'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
+            'Collaborator': (airtable_metadata or {}).get('Collaborator'),
         }, add_additional_variant_discovery_fields=_add_additional_variant_discovery_fields,
         family_values={
             'family_guid': F('guid'),
@@ -214,8 +214,18 @@ def sample_metadata_export(request, project_guid):
     family_rows_by_id = {row['family_id']: row for row in family_rows}
 
     rows_by_subject_family_id = {(row['subject_id'], row['family_guid']): row for row in subject_rows}
+    collaborator_map = {}
     for row in sample_rows:
-        rows_by_subject_family_id[(row['subject_id'], row['family_guid'])].update(row)
+        row_key = (row['subject_id'], row['family_guid'])
+        collaborator = row.pop('Collaborator', None)
+        if collaborator:
+            collaborator_map[row_key] = collaborator
+        rows_by_subject_family_id[row_key].update(row)
+
+    if collaborator_map:
+        collaborator_name_map = _get_airtable_collaborator_names(request.user, collaborator_map.values())
+        for row_key, collaborator_id in collaborator_map.items():
+            rows_by_subject_family_id[row_key]['sample_provider'] = collaborator_name_map.get(collaborator_id)
 
     for rows in discovery_rows:
         for i, row in enumerate(rows):
@@ -250,8 +260,8 @@ def _add_additional_variant_discovery_fields(parsed_variant, discovery_tag_names
     _set_discovery_phenotype_class(parsed_variant, discovery_tag_names)
 
 
-def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, omit_airtable=False, row_key_field=None, 
-                          family_values=None, get_additional_sample_fields=None, add_additional_variant_discovery_fields=None):
+def _parse_anvil_metadata(individual_samples, user, omit_airtable=False, row_key_field=None, family_values=None,
+                          get_additional_sample_fields=None, add_additional_variant_discovery_fields=None):
     family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
         'id', 'family_id', 'post_discovery_omim_number', 'project__name',
         pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
@@ -292,8 +302,7 @@ def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, 
             {s.individual.guid for s in family_samples if s.individual.sex == Individual.SEX_MALE},
         )
 
-    sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
-        list(sample_ids), user, include_collaborator=include_collaborator)
+    sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(list(sample_ids), user)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(samples_by_family_id.keys()))
     compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
@@ -568,13 +577,12 @@ def _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additio
         'sample_id': sample.sample_id,
         'sequencing_center': 'Broad',
     }
-    if airtable_metadata is not None:
-        sample_row['sample_provider'] = airtable_metadata.get('CollaboratorName') or ''
     if has_dbgap_submission:
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
     if get_additional_sample_fields:
-        sample_row.update(get_additional_sample_fields(sample))
+        sample_row.update(get_additional_sample_fields(sample, airtable_metadata))
     return sample_row
+
 
 def _get_discovery_rows(sample, parsed_variants, male_individual_guids, row_id_data):
     individual = sample.individual
@@ -652,21 +660,22 @@ def _get_airtable_samples(sample_ids, user, fields, list_fields=None):
     return sample_records, session
 
 
-def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
-    sample_records, session = _get_airtable_samples(
+def _get_sample_airtable_metadata(sample_ids, user):
+    sample_records, _ = _get_airtable_samples(
         sample_ids, user, fields=SINGLE_SAMPLE_FIELDS, list_fields=LIST_SAMPLE_FIELDS,
     )
-
-    if include_collaborator:
-        collaborator_ids = {record['Collaborator'] for record in sample_records.values() if 'Collaborator' in record}
-        collaborator_map = session.fetch_records(
-            'Collaborator', fields=['CollaboratorID'], or_filters={'RECORD_ID()': collaborator_ids}
-        ) if collaborator_ids else {}
-
-        for sample in sample_records.values():
-            sample['CollaboratorName'] = collaborator_map.get(sample.get('Collaborator'), {}).get('CollaboratorID')
-
     return sample_records
+
+
+def _get_airtable_collaborator_names(user, collaborator_ids):
+    collaborator_map = AirtableSession(user).fetch_records(
+        'Collaborator', fields=['CollaboratorID'], or_filters={'RECORD_ID()': collaborator_ids}
+    )
+
+    return {
+        collaborator_id: collaborator_map.get(collaborator_id, {}).get('CollaboratorID')
+        for collaborator_id in collaborator_ids
+    }
 
 
 # GREGoR metadata
