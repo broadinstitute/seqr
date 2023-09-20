@@ -175,6 +175,8 @@ def sample_metadata_export(request, project_guid):
     omit_airtable = is_all_projects or 'true' in request.GET.get('omitAirtable', '')
     if is_all_projects:
         projects = get_internal_projects()
+    elif project_guid == 'gregor':
+        projects = get_internal_projects().filter(projectcategory__name__iexact='gregor')
     else:
         projects = [get_project_and_check_permissions(project_guid, request.user)]
 

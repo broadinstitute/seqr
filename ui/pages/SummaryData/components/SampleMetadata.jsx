@@ -10,10 +10,11 @@ import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
-import { ALL_PROJECTS_PATH, GREGOR_PROJECT_PATH } from '../constants'
+import { ALL_PROJECTS_PATH } from '../constants'
 import { loadSampleMetadata } from '../reducers'
 import { getSampleMetadataLoading, getSampleMetadataLoadingError, getSampleMetadataRows, getSampleMetadataColumns } from '../selectors'
 
+const GREGOR_PROJECT_PATH = 'gregor'
 const FILENAME_LOOKUP = {
   [ALL_PROJECTS_PATH]: 'All_AnVIL_Projects',
   [GREGOR_PROJECT_PATH]: 'All_GREGoR_Projects',

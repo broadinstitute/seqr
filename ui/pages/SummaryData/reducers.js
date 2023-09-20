@@ -4,7 +4,6 @@ import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } f
 import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_XPOS } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { GREGOR_PROJECT_PATH } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 const REQUEST_SUCCESS_STORY = 'REQUEST_SUCCESS_STORY'
@@ -31,18 +30,21 @@ export const loadMme = () => (dispatch) => {
     }).get()
 }
 
-export const loadSuccessStory = successStoryTypes => (dispatch) => {
-  if (successStoryTypes) {
-    dispatch({ type: REQUEST_SUCCESS_STORY })
-    new HttpRequestHelper(`/api/summary_data/success_story/${successStoryTypes}`,
+const loadDataRows = (requestAction, receiveAction, urlPath) => (loadId, filterValues) => (dispatch) => {
+  if (loadId) {
+    dispatch({ type: requestAction })
+    new HttpRequestHelper(`/api/summary_data/${urlPath}/${loadId}`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_SUCCESS_STORY, newValue: responseJson.rows })
+        dispatch({ type: receiveAction, newValue: responseJson.rows })
       },
       (e) => {
-        dispatch({ type: RECEIVE_SUCCESS_STORY, error: e.message, newValue: [] })
-      }).get()
+        dispatch({ type: receiveAction, error: e.message, newValue: [] })
+      }).get(filterValues)
   }
 }
+
+export const loadSuccessStory = loadDataRows(REQUEST_SUCCESS_STORY, RECEIVE_SUCCESS_STORY, 'success_story')
+export const loadSampleMetadata = loadDataRows(REQUEST_SAMPLE_METADATA, RECEIVE_SAMPLE_METADATA, 'sample_metadata')
 
 export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) => {
   // Do not load if already loaded
@@ -69,52 +71,6 @@ export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) =>
     (e) => {
       dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
     }).get({ gene })
-}
-
-export const loadSampleMetadata = (projectGuid, filterValues) => (dispatch) => {
-  if (projectGuid === GREGOR_PROJECT_PATH) {
-    dispatch({ type: REQUEST_SAMPLE_METADATA })
-
-    const errors = new Set()
-    const rows = []
-    new HttpRequestHelper(`/api/report/get_category_projects/${projectGuid}`, // TODO
-      (projectsResponseJson) => {
-        const chunkedProjects = projectsResponseJson.projectGuids.reduce((acc, guid) => {
-          if (acc[0].length === 5) {
-            acc.unshift([])
-          }
-          acc[0].push(guid)
-          return acc
-        }, [[]])
-        chunkedProjects.reduce((previousPromise, projectsChunk) => previousPromise.then(
-          () => Promise.all(projectsChunk.map(cmgProjectGuid => new HttpRequestHelper(
-            `/api/summary_data/sample_metadata/${cmgProjectGuid}`,
-            (responseJson) => {
-              rows.push(...responseJson.rows)
-            },
-            e => errors.add(e.message),
-          ).get())),
-        ), Promise.resolve()).then(() => {
-          if (errors.size) {
-            dispatch({ type: RECEIVE_SAMPLE_METADATA, error: [...errors].join(', '), newValue: [] })
-          } else {
-            dispatch({ type: RECEIVE_SAMPLE_METADATA, newValue: rows })
-          }
-        })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_SAMPLE_METADATA, error: e.message, newValue: [] })
-      }).get(filterValues)
-  } else if (projectGuid) {
-    dispatch({ type: REQUEST_SAMPLE_METADATA })
-    new HttpRequestHelper(`/api/summary_data/sample_metadata/${projectGuid}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_SAMPLE_METADATA, newValue: responseJson.rows })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_SAMPLE_METADATA, error: e.message, newValue: [] })
-      }).get(filterValues)
-  }
 }
 
 export const updateAllProjectSavedVariantTable = updates => (

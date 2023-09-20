@@ -437,8 +437,37 @@ class SummaryDataAPITest(AirtableTest):
             -1, "OR(RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
         self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
 
-        # Test omit airtable columns
+        # Test gregor projects
+        gregor_projects_url = reverse(sample_metadata_export, args=['gregor'])
+        response = self.client.get(gregor_projects_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertEqual(len(response_json['rows']), 16)
+        expected_samples.update({
+            'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
+            'NA20872', 'NA20881', 'HG00733',
+        })
+        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
+        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertDictEqual(EXPECTED_SAMPLE_METADATA_ROW, test_row)
+        self.assertEqual(len([r['subject_id'] for r in response_json['rows'] if r['subject_id'] == 'NA20888']), 2)
+
+        # Test all projects
         responses.reset()
+        all_projects_url = reverse(sample_metadata_export, args=['all'])
+        response = self.client.get(all_projects_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertEqual(len(response_json['rows']), 16 + len(self.ADDITIONAL_SAMPLES))
+        expected_samples.update(self.ADDITIONAL_SAMPLES)
+        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
+        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
+        self.assertEqual(len([r['subject_id'] for r in response_json['rows'] if r['subject_id'] == 'NA20888']), 2)
+
+        # Test omit airtable columns
         response = self.client.get(f'{url}?omitAirtable=true')
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -454,23 +483,6 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get(empty_project_url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'rows': []})
-
-        # Test all projects
-        all_projects_url = reverse(sample_metadata_export, args=['all'])
-        response = self.client.get(all_projects_url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertEqual(len(response_json['rows']), 16 + len(self.ADDITIONAL_SAMPLES))
-        expected_samples.update({
-            'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
-            'NA20872', 'NA20881', 'HG00733',
-        })
-        expected_samples.update(self.ADDITIONAL_SAMPLES)
-        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
-        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
-        self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
-        self.assertEqual(len([r['subject_id'] for r in response_json['rows'] if r['subject_id'] == 'NA20888']), 2)
 
         self.check_no_analyst_no_access(url)
 

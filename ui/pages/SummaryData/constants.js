@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { successStoryTypeDisplay } from 'shared/utils/constants'
 
 export const ALL_PROJECTS_PATH = 'all'
-export const GREGOR_PROJECT_PATH = 'gregor'
 
 const formatIDLink =
   row => <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row.family_id}</Link>
