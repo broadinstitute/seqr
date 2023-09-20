@@ -131,7 +131,7 @@ def anvil_export(request, project_guid):
 
     parse_anvil_metadata(
         [project], request.GET.get('loadedBefore'), request.user, _add_row,
-        get_additional_variant_discovery_fields=lambda variant, genome_version: {
+        get_additional_variant_fields=lambda variant, genome_version: {
             'variant_genome_build': GENOME_BUILD_MAP.get(variant.get('genomeVersion') or genome_version) or '',
         },
         get_additional_sample_fields=lambda sample, *args: {
@@ -188,7 +188,7 @@ def sample_metadata_export(request, project_guid):
 
     parse_anvil_metadata(
         projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user, _add_row,
-        omit_airtable=omit_airtable, get_additional_variant_discovery_fields=_get_additional_variant_discovery_fields,
+        omit_airtable=omit_airtable, get_additional_variant_fields=_get_additional_variant_fields,
         get_additional_sample_fields=lambda sample, airtable_metadata: {
             'data_type': sample.sample_type,
             'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
@@ -216,7 +216,9 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': list(rows_by_subject_family_id.values())})
 
 
-def _get_additional_variant_discovery_fields(variant, *args):
+def _get_additional_variant_fields(variant, *args):
+    if 'discovery_tag_guids_by_name' not in variant:
+        return {}
     discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
     is_novel = 'Y' if any('Novel gene' in name for name in discovery_tag_names) else 'N'
     return {
