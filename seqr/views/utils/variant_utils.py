@@ -1,6 +1,7 @@
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F
+from django.db.models import Prefetch, F
+from django.db.models.functions import JSONObject
 import logging
 import redis
 
@@ -13,7 +14,7 @@ from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
-    get_json_for_matchmaker_submissions
+    get_json_for_matchmaker_submissions, get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
@@ -187,45 +188,6 @@ def _add_pa_detail(locus_list_gene, locus_list_guid, gene_json):
         }
 
 
-def get_variant_main_transcript(variant):
-    main_transcript_id = variant.get('selectedMainTranscriptId') or variant.get('mainTranscriptId')
-    if main_transcript_id:
-        for gene_id, transcripts in variant.get('transcripts', {}).items():
-            main_transcript = next((t for t in transcripts if t['transcriptId'] == main_transcript_id), None)
-            if main_transcript:
-                if 'geneId' not in main_transcript:
-                    main_transcript['geneId'] = gene_id
-                return main_transcript
-    elif len(variant.get('transcripts', {})) == 1:
-        gene_id = next(k for k in variant['transcripts'].keys())
-        #  Handle manually created SNPs
-        if variant['transcripts'][gene_id] == []:
-            return {'geneId': gene_id}
-    return {}
-
-
-def get_sv_name(variant_json):
-    return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
-
-
-def get_saved_discovery_variants_by_family(variant_filter, format_variants, get_family_id):
-    tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
-
-    project_saved_variants = SavedVariant.objects.filter(
-        varianttag__variant_tag_type__in=tag_types,
-        **variant_filter,
-    ).order_by('created_date').distinct()
-
-    project_saved_variants = format_variants(project_saved_variants, tag_types)
-
-    saved_variants_by_family = defaultdict(list)
-    for saved_variant in project_saved_variants:
-        family_id = get_family_id(saved_variant)
-        saved_variants_by_family[family_id].append(saved_variant)
-
-    return saved_variants_by_family
-
-
 LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
@@ -300,6 +262,45 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     return response
 
 
+def get_variant_main_transcript(variant):
+    main_transcript_id = variant.get('selectedMainTranscriptId') or variant.get('mainTranscriptId')
+    if main_transcript_id:
+        for gene_id, transcripts in variant.get('transcripts', {}).items():
+            main_transcript = next((t for t in transcripts if t['transcriptId'] == main_transcript_id), None)
+            if main_transcript:
+                if 'geneId' not in main_transcript:
+                    main_transcript['geneId'] = gene_id
+                return main_transcript
+    elif len(variant.get('transcripts', {})) == 1:
+        gene_id = next(k for k in variant['transcripts'].keys())
+        #  Handle manually created SNPs
+        if variant['transcripts'][gene_id] == []:
+            return {'geneId': gene_id}
+    return {}
+
+
+def get_sv_name(variant_json):
+    return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
+
+
+def get_saved_discovery_variants_by_family(variant_filter, format_variants, get_family_id):
+    tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
+
+    project_saved_variants = SavedVariant.objects.filter(
+        varianttag__variant_tag_type__in=tag_types,
+        **variant_filter,
+    ).order_by('created_date').distinct()
+
+    project_saved_variants = format_variants(project_saved_variants, tag_types)
+
+    saved_variants_by_family = defaultdict(list)
+    for saved_variant in project_saved_variants:
+        family_id = get_family_id(saved_variant)
+        saved_variants_by_family[family_id].append(saved_variant)
+
+    return saved_variants_by_family
+
+
 HET = 'Heterozygous'
 HOM_ALT = 'Homozygous'
 HEMI = 'Hemizygous'
@@ -359,7 +360,6 @@ def get_genotype_zygosity(genotype, is_hemi_variant):
         return HOM_ALT
     if num_alt == 1 or cn == 1 or cn == 3:
         return HEMI if is_hemi_variant else HET
-    return None
 
 
 DISCOVERY_PHENOTYPE_CLASSES = {

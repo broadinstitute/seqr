@@ -11,8 +11,7 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, \
-    get_variant_inheritance_models, get_sv_name, get_discovery_phenotype_class, get_genotype_zygosity
-
+    get_variant_inheritance_models, get_sv_name, get_genotype_zygosity
 
 SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
     'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
@@ -183,6 +182,10 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
             add_row(discovery_row, family_id, 'discovery')
 
 
+def _get_nested_variant_name(variant):
+    return get_sv_name(variant) if variant.get('svType') else variant['variantId']
+
+
 def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date):
     if max_loaded_date:
         max_loaded_date = datetime.strptime(max_loaded_date, '%Y-%m-%d')
@@ -243,10 +246,6 @@ def _process_mnvs(potential_mnvs, saved_variants):
             variant['discovery_notes'] = discovery_notes
         saved_variants.remove(parent_mnv)
     return mnv_genes
-
-
-def _get_nested_variant_name(variant):
-    return get_sv_name(variant) if variant.get('svType') else variant['variantId']
 
 
 def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv_genes):
@@ -310,7 +309,6 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
             'Transcript': variant['main_transcript'].get('transcriptId'),
         })
     return variant['genotypes'], parsed_variant
-
 
 def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map):
     features_present = [feature['id'] for feature in individual.features or []]
@@ -384,10 +382,13 @@ def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
     return discovery_rows
 
 
+SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'dbgap_sample_id']
+LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
+
+
 def _get_sample_airtable_metadata(sample_ids, user):
     sample_records, _ = get_airtable_samples(
-        sample_ids, user, fields=['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'dbgap_sample_id'],
-        list_fields=['SequencingProduct', 'dbgap_submission'],
+        sample_ids, user, fields=SINGLE_SAMPLE_FIELDS, list_fields=LIST_SAMPLE_FIELDS,
     )
     return sample_records
 
