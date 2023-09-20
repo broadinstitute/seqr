@@ -103,12 +103,14 @@ FAMILY_TABLE_COLUMNS = [
     'family_history', 'family_onset',
 ]
 DISCOVERY_TABLE_CORE_COLUMNS = ['subject_id', 'sample_id']
-DISCOVERY_TABLE_VARIANT_COLUMNS = [
-    'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'variant_genome_build', 'Chrom', 'Pos', 'Ref',
-    'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'significance', 'discovery_notes',
+SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
+    'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
+    'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'discovery_notes',
 ]
-DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS = DISCOVERY_TABLE_VARIANT_COLUMNS + [
-    'novel_mendelian_gene', 'phenotype_class']
+DISCOVERY_TABLE_VARIANT_COLUMNS = deepcopy(SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS)
+DISCOVERY_TABLE_VARIANT_COLUMNS.insert(4, 'variant_genome_build')
+DISCOVERY_TABLE_VARIANT_COLUMNS.insert(14, 'significance')
+DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS = SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS + ['novel_mendelian_gene', 'phenotype_class']
 
 PHENOTYPE_PROJECT_CATEGORIES = [
     'Muscle', 'Eye', 'Renal', 'Neuromuscular', 'IBD', 'Epilepsy', 'Orphan', 'Hematologic',
@@ -223,13 +225,10 @@ def sample_metadata_export(request, project_guid):
             family_rows_by_id[family_id] = row
         elif type == 'discovery':
             for i, discovery_row in enumerate(row):
-                # TODO cleanup
-                parsed_row = {k: discovery_row[k] for k in DISCOVERY_TABLE_CORE_COLUMNS}
-                parsed_row.update({
+                rows_by_subject_family_id[(discovery_row['subject_id'], family_id)].update({
                     '{}-{}'.format(k, i + 1): discovery_row[k] for k in DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS if
                     discovery_row.get(k)
                 })
-                rows_by_subject_family_id[(discovery_row['subject_id'], family_id)].update(parsed_row)
         else:
             row_key = (row['subject_id'], family_id)
             collaborator = row.pop('Collaborator', None)
