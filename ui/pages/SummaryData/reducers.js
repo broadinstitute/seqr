@@ -77,7 +77,7 @@ export const loadSampleMetadata = (projectGuid, filterValues) => (dispatch) => {
 
     const errors = new Set()
     const rows = []
-    new HttpRequestHelper(`/api/report/get_category_projects/${projectGuid}`,
+    new HttpRequestHelper(`/api/report/get_category_projects/${projectGuid}`, // TODO
       (projectsResponseJson) => {
         const chunkedProjects = projectsResponseJson.projectGuids.reduce((acc, guid) => {
           if (acc[0].length === 5) {
@@ -88,7 +88,7 @@ export const loadSampleMetadata = (projectGuid, filterValues) => (dispatch) => {
         }, [[]])
         chunkedProjects.reduce((previousPromise, projectsChunk) => previousPromise.then(
           () => Promise.all(projectsChunk.map(cmgProjectGuid => new HttpRequestHelper(
-            `/api/report/sample_metadata/${cmgProjectGuid}`,
+            `/api/summary_data/sample_metadata/${cmgProjectGuid}`,
             (responseJson) => {
               rows.push(...responseJson.rows)
             },
@@ -107,7 +107,7 @@ export const loadSampleMetadata = (projectGuid, filterValues) => (dispatch) => {
       }).get(filterValues)
   } else if (projectGuid) {
     dispatch({ type: REQUEST_SAMPLE_METADATA })
-    new HttpRequestHelper(`/api/report/sample_metadata/${projectGuid}`,
+    new HttpRequestHelper(`/api/summary_data/sample_metadata/${projectGuid}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_SAMPLE_METADATA, newValue: responseJson.rows })
       },
