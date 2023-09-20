@@ -644,14 +644,12 @@ class BaseHailTableQuery(object):
             ann for field, anns in annotations.items()
             if anns and (field not in ANNOTATION_OVERRIDE_FIELDS) for ann in anns
         }
-        allowed_consequence_ids = self._get_enum_terms_ids(
-            self.TRANSCRIPTS_FIELD, self.TRANSCRIPT_CONSEQUENCE_FIELD, allowed_consequences)
+        allowed_consequence_ids = self._get_allowed_consequence_ids(allowed_consequences)
 
         annotation_exprs = {}
-        has_consequence_filter = bool(allowed_consequence_ids)
+        consequence_filter = self._get_consequence_filter(allowed_consequence_ids, allowed_consequences, annotation_exprs)
+        has_consequence_filter = consequence_filter is not None
         if has_consequence_filter:
-            allowed_consequence_ids = hl.set(allowed_consequence_ids)
-            consequence_filter = self._get_consequence_filter(allowed_consequence_ids, annotation_exprs)
             annotation_filters = annotation_filters + [consequence_filter]
 
         if has_consequence_filter or (annotation_filters and not is_secondary):
@@ -659,7 +657,13 @@ class BaseHailTableQuery(object):
 
         return annotation_exprs, allowed_consequences
 
-    def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
+    def _get_allowed_consequence_ids(self, allowed_consequences):
+        return self._get_enum_terms_ids(self.TRANSCRIPTS_FIELD, self.TRANSCRIPT_CONSEQUENCE_FIELD, allowed_consequences)
+
+    def _get_consequence_filter(self, allowed_consequence_ids, allowed_consequences, annotation_exprs):
+        if not allowed_consequence_ids:
+            return None
+        allowed_consequence_ids = hl.set(allowed_consequence_ids)
         return self._ht[self.TRANSCRIPTS_FIELD].any(
             lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
         )
