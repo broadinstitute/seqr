@@ -172,7 +172,10 @@ def anvil_export(request, project_guid):
 
     parsed_rows = defaultdict(list)
     def _add_row(row, family_id, type):
-        parsed_rows[type].append(row)
+        if type == 'discovery':
+            parsed_rows[type] += row
+        else:
+            parsed_rows[type].append(row)
     _parse_anvil_metadata([project], request.GET.get('loadedBefore'), request.user, _add_row)
 
     return export_multiple_files([
@@ -193,14 +196,31 @@ def sample_metadata_export(request, project_guid):
         projects = [get_project_and_check_permissions(project_guid, request.user)]
 
     family_rows_by_id = {}
-    rows_by_subject_family_id = defaultdict(lambda: {'discovery': []})
+    rows_by_subject_family_id = defaultdict(dict)
+    collaborator_map = {}
+    all_features = set()
     def _add_row(row, family_id, type):
         if type == 'family':
             family_rows_by_id[family_id] = row
         elif type == 'discovery':
-            rows_by_subject_family_id[(row['subject_id'], family_id)][type].append(row)
+            for i, discovery_row in enumerate(row):
+                parsed_row = {k: discovery_row[k] for k in DISCOVERY_TABLE_CORE_COLUMNS}
+                parsed_row.update({
+                    '{}-{}'.format(k, i + 1): discovery_row[k] for k in DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS if
+                    discovery_row.get(k)
+                })
+                rows_by_subject_family_id[(discovery_row['subject_id'], family_id)].update(parsed_row)
         else:
-            rows_by_subject_family_id[(row['subject_id'], family_id)].update(row)
+            row_key = (row['subject_id'], family_id)
+            collaborator = row.pop('Collaborator', None)
+            if collaborator:
+                collaborator_map[row_key] = collaborator
+            if row.get('ancestry_detail'):
+                row['ancestry'] = row['ancestry_detail']
+            if 'hpo_present' in row:
+                all_features.update(row['hpo_present'].split('|'))
+                all_features.update(row['hpo_absent'].split('|'))
+            rows_by_subject_family_id[row_key].update(row)
 
     _parse_anvil_metadata(
         projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user, _add_row,
@@ -216,40 +236,19 @@ def sample_metadata_export(request, project_guid):
         },
     )
 
-    collaborator_map = {}
-    all_features = set()
-    for row_key, row in rows_by_subject_family_id.items():
-        collaborator = row.pop('Collaborator', None)
-        if collaborator:
-            collaborator_map[row_key] = collaborator
-
-        row.update(family_rows_by_id[row_key[1]])
-        if row['ancestry_detail']:
-            row['ancestry'] = row['ancestry_detail']
-
-        all_features.update(row['hpo_present'].split('|'))
-        all_features.update(row['hpo_absent'].split('|'))
-
-        for i, discovery_row in enumerate(row.pop('discovery', [])):
-            parsed_row = {k: discovery_row[k] for k in DISCOVERY_TABLE_CORE_COLUMNS}
-            parsed_row.update({
-                '{}-{}'.format(k, i + 1): discovery_row[k] for k in DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS if discovery_row.get(k)
-            })
-            row.update(parsed_row)
-
     if collaborator_map:
         collaborator_name_map = _get_airtable_collaborator_names(request.user, collaborator_map.values())
         for row_key, collaborator_id in collaborator_map.items():
             rows_by_subject_family_id[row_key]['sample_provider'] = collaborator_name_map.get(collaborator_id)
 
-    rows = list(rows_by_subject_family_id.values())
     hpo_name_map = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_features)}
-    for row in rows:
+    for row_key, row in rows_by_subject_family_id.items():
+        row.update(family_rows_by_id[row_key[1]])
         for hpo_key in ['hpo_present', 'hpo_absent']:
             if row[hpo_key]:
                 row[hpo_key] = '|'.join(['{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')) for feature_id in row[hpo_key].split('|')])
 
-    return create_json_response({'rows': rows})
+    return create_json_response({'rows': list(rows_by_subject_family_id.values())})
 
 
 def _add_additional_variant_discovery_fields(parsed_variant, discovery_tag_names):
@@ -368,7 +367,8 @@ def _parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtabl
             sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additional_sample_fields)
             add_row(sample_row, family_id, 'sample')
 
-            _get_discovery_rows(sample, parsed_variants, male_individual_guids, lambda row: add_row(row, family_id, 'discovery'))
+            discovery_row = _get_discovery_rows(sample, parsed_variants, male_individual_guids)
+            add_row(discovery_row, family_id, 'discovery')
 
 
 def _get_variant_main_transcript(variant):
@@ -573,12 +573,13 @@ def _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additio
     return sample_row
 
 
-def _get_discovery_rows(sample, parsed_variants, male_individual_guids, add_row):
+def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
     individual = sample.individual
     discovery_row = {
         'subject_id': individual.individual_id,
         'sample_id': sample.sample_id,
     }
+    discovery_rows = []
     for genotypes, parsed_variant in parsed_variants:
         genotype = genotypes.get(individual.guid, {})
         chrom = parsed_variant.get('Chrom', '')
@@ -592,7 +593,8 @@ def _get_discovery_rows(sample, parsed_variants, male_individual_guids, add_row)
             }
             variant_discovery_row.update(parsed_variant)
             variant_discovery_row.update(discovery_row)
-            add_row(variant_discovery_row)
+            discovery_rows.append(variant_discovery_row)
+    return discovery_rows
 
 
 SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'dbgap_sample_id']
