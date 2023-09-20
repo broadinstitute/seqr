@@ -130,7 +130,7 @@ def anvil_export(request, project_guid):
 
     parse_anvil_metadata(
         [project], request.GET.get('loadedBefore'), request.user, _add_row,
-        get_additional_variant_discovery_fields=lambda variant, genome_version: {
+        get_additional_variant_fields=lambda variant, genome_version: {
             'variant_genome_build': GENOME_BUILD_MAP.get(variant.get('genomeVersion') or genome_version) or '',
         },
         get_additional_sample_fields=lambda sample, *args: {

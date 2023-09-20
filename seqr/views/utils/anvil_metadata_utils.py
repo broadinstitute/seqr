@@ -70,7 +70,7 @@ MULTIPLE_DATASET_PRODUCTS = {
 
 
 def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, family_values=None,
-                          get_additional_sample_fields=None, get_additional_variant_discovery_fields=None):
+                          get_additional_sample_fields=None, get_additional_variant_fields=None):
     individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
 
     family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
@@ -157,7 +157,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
 
         parsed_variants = [
             _parse_anvil_family_saved_variant(
-                variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_discovery_fields)
+                variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_fields)
             for variant in saved_variants]
 
         for sample in family_samples:
@@ -270,7 +270,7 @@ def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv
     return compound_het_gene_id_by_family
 
 
-def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_discovery_fields):
+def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_fields):
     if variant['inheritance_models']:
         inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
     else:
@@ -283,10 +283,10 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
         'Chrom': variant.get('chrom', ''),
         'Pos': str(variant.get('pos', '')),
     }
+    if get_additional_variant_fields:
+        parsed_variant.update(get_additional_variant_fields(variant, genome_version))
 
     if 'discovery_tag_guids_by_name' in variant:
-        if get_additional_variant_discovery_fields:
-            parsed_variant.update(get_additional_variant_discovery_fields(variant, genome_version))
         discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
         if any('Tier 1' in name for name in discovery_tag_names):
             parsed_variant['Gene_Class'] = 'Tier 1 - Candidate'
