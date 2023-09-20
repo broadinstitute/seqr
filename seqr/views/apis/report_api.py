@@ -174,22 +174,22 @@ def anvil_export(request, project_guid):
 
     parsed_rows = defaultdict(list)
 
-    def _add_row(row, family_id, type):
-        if type == 'discovery':
-            parsed_rows[type] += [{
+    def _add_row(row, family_id, row_type):
+        if row_type == 'discovery':
+            parsed_rows[row_type] += [{
                 'entity:discovery_id': f'{discovery_row["Chrom"]}_{discovery_row["Pos"]}_{discovery_row["subject_id"]}',
                 **discovery_row,
             } for discovery_row in row]
         else:
-            id_field = f'{type}_id'
+            id_field = f'{row_type}_id'
             entity_id_field = f'entity:{id_field}'
             if id_field in row and entity_id_field not in row:
                 row[entity_id_field] = row[id_field]
-            parsed_rows[type].append(row)
+            parsed_rows[row_type].append(row)
 
     _parse_anvil_metadata(
         [project], request.GET.get('loadedBefore'), request.user, _add_row,
-        get_additional_variant_discovery_fields=lambda variant: {
+        get_additional_variant_discovery_fields=lambda variant, genome_version: {
             'variant_genome_build': GENOME_BUILD_MAP.get(variant.get('genomeVersion') or genome_version) or '',
         },
         get_additional_sample_fields=lambda sample, *args: {
@@ -220,10 +220,10 @@ def sample_metadata_export(request, project_guid):
     collaborator_map = {}
     all_features = set()
 
-    def _add_row(row, family_id, type):
-        if type == 'family':
+    def _add_row(row, family_id, row_type):
+        if row_type == 'family':
             family_rows_by_id[family_id] = row
-        elif type == 'discovery':
+        elif row_type == 'discovery':
             for i, discovery_row in enumerate(row):
                 rows_by_subject_family_id[(discovery_row['subject_id'], family_id)].update({
                     '{}-{}'.format(k, i + 1): discovery_row[k] for k in DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS if
@@ -270,7 +270,7 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': list(rows_by_subject_family_id.values())})
 
 
-def _get_additional_variant_discovery_fields(variant):
+def _get_additional_variant_discovery_fields(variant, *args):
     discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
     is_novel = 'Y' if any('Novel gene' in name for name in discovery_tag_names) else 'N'
     return {
@@ -517,7 +517,7 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
 
     if 'discovery_tag_guids_by_name' in variant:
         if get_additional_variant_discovery_fields:
-            parsed_variant.update(get_additional_variant_discovery_fields(variant))
+            parsed_variant.update(get_additional_variant_discovery_fields(variant, genome_version))
         discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
         if any('Tier 1' in name for name in discovery_tag_names):
             parsed_variant['Gene_Class'] = 'Tier 1 - Candidate'
