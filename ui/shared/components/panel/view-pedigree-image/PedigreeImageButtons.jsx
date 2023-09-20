@@ -96,3 +96,24 @@ const mapSaveDispatchToProps = (dispatch, ownProps) => ({
 })
 
 export const SavePedigreeDatasetButton = connect(null, mapSaveDispatchToProps)(BaseSavePedigreeDatasetButton)
+
+const BaseResetPedigreeDatasetButton = React.memo(({ onSubmit }) => (
+  <DispatchRequestButton
+    onSubmit={onSubmit}
+    icon="sync"
+    size="huge"
+    confirmDialog="Are you sure you want to reset this pedigree? This will remove any customizations and will instead use the family information from seqr"
+  />
+))
+
+const mapResetDispatchToProps = (dispatch, ownProps) => ({
+  onSubmit: () => dispatch(
+    updateFamily({ pedigreeDataset: null, familyGuid: ownProps.familyGuid }),
+  ),
+})
+
+BaseResetPedigreeDatasetButton.propTypes = {
+  onSubmit: PropTypes.func,
+}
+
+export const ResetPedigreeDatasetButton = connect(null, mapResetDispatchToProps)(BaseResetPedigreeDatasetButton)
