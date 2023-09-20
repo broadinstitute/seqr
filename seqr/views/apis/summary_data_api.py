@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 from django.db.models import CharField, F, Value, Case, When
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
@@ -9,6 +10,7 @@ from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissio
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Family, Individual, VariantTagType, SavedVariant, FamilyAnalysedBy
+from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
@@ -16,9 +18,8 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissio
     add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required, get_project_and_check_permissions, get_internal_projects
-from seqr.views.utils.anvil_metadata_utils import get_loaded_before_date_project_individual_samples, parse_anvil_metadata, \
-    DISCOVERY_TABLE_CORE_COLUMNS, DISCOVERY_TABLE_VARIANT_COLUMNS
-from seqr.views.utils.variant_utils import get_variants_response
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS
+from seqr.views.utils.variant_utils import get_variants_response, get_discovery_phenotype_class
 
 MAX_SAVED_VARIANTS = 10000
 
@@ -177,41 +178,76 @@ def sample_metadata_export(request, project_guid):
     else:
         projects = [get_project_and_check_permissions(project_guid, request.user)]
 
-    individual_samples = get_loaded_before_date_project_individual_samples(
-        projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
-    subject_rows, sample_rows, family_rows, discovery_rows = parse_anvil_metadata(
-        individual_samples, request.user, include_collaborator=True, omit_airtable=omit_airtable,
-        family_values={'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y'))}
-    )
-    family_rows_by_id = {row['family_id']: row for row in family_rows}
-
-    rows_by_subject_family_id = {(row['subject_id'], row['family_guid']): row for row in subject_rows}
-    for row in sample_rows:
-        rows_by_subject_family_id[(row['subject_id'], row['family_guid'])].update(row)
-
-    for rows in discovery_rows:
-        for i, row in enumerate(rows):
-            if row:
-                parsed_row = {k: row[k] for k in DISCOVERY_TABLE_CORE_COLUMNS}
-                parsed_row.update({
-                    '{}-{}'.format(k, i + 1): row[k]
-                    for k in DISCOVERY_TABLE_VARIANT_COLUMNS + ['novel_mendelian_gene', 'phenotype_class'] if row.get(k)
-                })
-                rows_by_subject_family_id[(row['subject_id'], row['family_guid'])].update(parsed_row)
-
-    rows = list(rows_by_subject_family_id.values())
+    family_rows_by_id = {}
+    rows_by_subject_family_id = defaultdict(dict)
+    collaborator_map = {}
     all_features = set()
-    for row in rows:
-        row.update(family_rows_by_id[row['family_id']])
-        if row['ancestry_detail']:
-            row['ancestry'] = row['ancestry_detail']
-        all_features.update(row['hpo_present'].split('|'))
-        all_features.update(row['hpo_absent'].split('|'))
+
+    def _add_row(row, family_id, row_type):
+        if row_type == 'family':
+            family_rows_by_id[family_id] = row
+        elif row_type == 'discovery':
+            for i, discovery_row in enumerate(row):
+                rows_by_subject_family_id[(discovery_row['subject_id'], family_id)].update({
+                    '{}-{}'.format(k, i + 1): discovery_row[k] for k in
+                    SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS + ['novel_mendelian_gene', 'phenotype_class'] if discovery_row.get(k)
+                })
+        else:
+            row_key = (row['subject_id'], family_id)
+            collaborator = row.pop('Collaborator', None)
+            if collaborator:
+                collaborator_map[row_key] = collaborator
+            if 'ancestry_detail' in row:
+                row['ancestry'] = row.pop('ancestry_detail')
+            if 'hpo_present' in row:
+                all_features.update(row['hpo_present'].split('|'))
+                all_features.update(row['hpo_absent'].split('|'))
+            rows_by_subject_family_id[row_key].update(row)
+
+    parse_anvil_metadata(
+        projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user, _add_row,
+        omit_airtable=omit_airtable,
+        get_additional_variant_discovery_fields=_get_additional_variant_discovery_fields,
+        get_additional_sample_fields=lambda sample, airtable_metadata: {
+            'data_type': sample.sample_type,
+            'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
+            'Collaborator': (airtable_metadata or {}).get('Collaborator'),
+        }, family_values={
+            'family_guid': F('guid'),
+            'project_guid': F('project__guid'),
+            'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
+        },
+    )
+
+    if collaborator_map:
+        collaborator_name_map = _get_airtable_collaborator_names(request.user, collaborator_map.values())
+        for row_key, collaborator_id in collaborator_map.items():
+            rows_by_subject_family_id[row_key]['sample_provider'] = collaborator_name_map.get(collaborator_id)
 
     hpo_name_map = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_features)}
-    for row in rows:
+    for row_key, row in rows_by_subject_family_id.items():
+        row.update(family_rows_by_id[row_key[1]])
         for hpo_key in ['hpo_present', 'hpo_absent']:
             if row[hpo_key]:
                 row[hpo_key] = '|'.join(['{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')) for feature_id in row[hpo_key].split('|')])
 
-    return create_json_response({'rows': rows})
+    return create_json_response({'rows': list(rows_by_subject_family_id.values())})
+
+
+def _get_additional_variant_discovery_fields(variant, *args):
+    discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
+    is_novel = 'Y' if any('Novel gene' in name for name in discovery_tag_names) else 'N'
+    return {
+        'novel_mendelian_gene': is_novel,
+        'phenotype_class': get_discovery_phenotype_class(discovery_tag_names),
+    }
+
+
+def _get_airtable_collaborator_names(user, collaborator_ids):
+    collaborator_map = AirtableSession(user).fetch_records(
+        'Collaborator', fields=['CollaboratorID'], or_filters={'RECORD_ID()': collaborator_ids}
+    )
+    return {
+        collaborator_id: collaborator_map.get(collaborator_id, {}).get('CollaboratorID')
+        for collaborator_id in collaborator_ids
+    }

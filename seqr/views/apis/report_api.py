@@ -16,9 +16,8 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import get_airtable_samples
-from seqr.views.utils.anvil_metadata_utils import get_loaded_before_date_project_individual_samples, parse_anvil_metadata, \
-    DISCOVERY_TABLE_CORE_COLUMNS, DISCOVERY_TABLE_VARIANT_COLUMNS, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION, \
-    ANCESTRY_MAP, ANCESTRY_DETAIL_MAP
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION, \
+ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
@@ -100,33 +99,51 @@ FAMILY_TABLE_COLUMNS = [
     'family_history', 'family_onset',
 ]
 DISCOVERY_TABLE_CORE_COLUMNS = ['subject_id', 'sample_id']
-DISCOVERY_TABLE_VARIANT_COLUMNS = [
-    'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'variant_genome_build', 'Chrom', 'Pos', 'Ref',
-    'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'significance', 'discovery_notes',
-]
-DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS = DISCOVERY_TABLE_VARIANT_COLUMNS + [
-    'novel_mendelian_gene', 'phenotype_class']
+DISCOVERY_TABLE_VARIANT_COLUMNS = deepcopy(SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS)
+DISCOVERY_TABLE_VARIANT_COLUMNS.insert(4, 'variant_genome_build')
+DISCOVERY_TABLE_VARIANT_COLUMNS.insert(14, 'significance')
+
+GENOME_BUILD_MAP = {
+    '37': 'GRCh37',
+    '38': 'GRCh38.p12',
+}
 
 
 @analyst_required
 def anvil_export(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    individual_samples = get_loaded_before_date_project_individual_samples(
-        [project], request.GET.get('loadedBefore'),
+    parsed_rows = defaultdict(list)
+
+    def _add_row(row, family_id, row_type):
+        if row_type == 'discovery':
+            parsed_rows[row_type] += [{
+                'entity:discovery_id': f'{discovery_row["Chrom"]}_{discovery_row["Pos"]}_{discovery_row["subject_id"]}',
+                **discovery_row,
+            } for discovery_row in row]
+        else:
+            id_field = f'{row_type}_id'
+            entity_id_field = f'entity:{id_field}'
+            if id_field in row and entity_id_field not in row:
+                row[entity_id_field] = row[id_field]
+            parsed_rows[row_type].append(row)
+
+    parse_anvil_metadata(
+        [project], request.GET.get('loadedBefore'), request.user, _add_row,
+        get_additional_variant_discovery_fields=lambda variant, genome_version: {
+            'variant_genome_build': GENOME_BUILD_MAP.get(variant.get('genomeVersion') or genome_version) or '',
+        },
+        get_additional_sample_fields=lambda sample, *args: {
+            'entity:sample_id': sample.individual.individual_id,
+            'sequencing_center': 'Broad',
+        },
     )
 
-    subject_rows, sample_rows, family_rows, discovery_rows = parse_anvil_metadata(
-        individual_samples, request.user, include_collaborator=False)
-
-    # Flatten lists of discovery rows so there is one row per variant
-    discovery_rows = [row for row_group in discovery_rows for row in row_group if row]
-
     return export_multiple_files([
-        ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, subject_rows],
-        ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
-        ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
-        ['{}_PI_Discovery'.format(project.name), ['entity:discovery_id'] + DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, discovery_rows],
+        ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, parsed_rows['subject']],
+        ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, parsed_rows['sample']],
+        ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, parsed_rows['family']],
+        ['{}_PI_Discovery'.format(project.name), ['entity:discovery_id'] + DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, parsed_rows['discovery']],
     ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
 
 
@@ -1064,7 +1081,7 @@ def _get_gene_row(row, gene_id, inheritances, variant_tag_names, variants):
 
 def _set_discovery_details(row, variant_tag_names, variants):
     phenotype_class = get_discovery_phenotype_class(variant_tag_names)
-    if phenotype_class is not None:
+    if phenotype_class:
         row['phenotype_class'] = phenotype_class
 
     # Set defaults

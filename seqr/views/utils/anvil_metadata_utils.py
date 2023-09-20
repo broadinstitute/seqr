@@ -14,10 +14,9 @@ from seqr.views.utils.variant_utils import get_variant_main_transcript, get_save
     get_variant_inheritance_models, get_sv_name, get_discovery_phenotype_class, get_genotype_zygosity
 
 
-DISCOVERY_TABLE_CORE_COLUMNS = ['subject_id', 'sample_id']
-DISCOVERY_TABLE_VARIANT_COLUMNS = [
-    'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'variant_genome_build', 'Chrom', 'Pos', 'Ref',
-    'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'significance', 'discovery_notes',
+SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
+    'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
+    'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'discovery_notes',
 ]
 
 PHENOTYPE_PROJECT_CATEGORIES = [
@@ -56,11 +55,6 @@ INHERITANCE_MODE_MAP = {
     'AD': 'Autosomal dominant',
 }
 
-GENOME_BUILD_MAP = {
-    '37': 'GRCh37',
-    '38': 'GRCh38.p12',
-}
-
 SV_TYPE_MAP = {
     'DUP': 'Duplication',
     'DEL': 'Deletion',
@@ -76,29 +70,17 @@ MULTIPLE_DATASET_PRODUCTS = {
 }
 
 
-def get_loaded_before_date_project_individual_samples(projects, max_loaded_date):
-    if max_loaded_date:
-        max_loaded_date = datetime.strptime(max_loaded_date, '%Y-%m-%d')
-    else:
-        max_loaded_date = datetime.now() - timedelta(days=365)
+def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, family_values=None,
+                          get_additional_sample_fields=None, get_additional_variant_discovery_fields=None):
+    individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
 
-    loaded_samples = get_search_samples(projects, active_only=False).select_related('individual').order_by('-loaded_date')
-    if max_loaded_date:
-        loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
-    #  Only return the oldest sample for each individual
-    return {sample.individual: sample for sample in loaded_samples}
-
-
-def parse_anvil_metadata(individual_samples, user, include_collaborator=False, omit_airtable=False, family_values=None):
     family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
         'id', 'family_id', 'post_discovery_omim_number', 'project__name',
-        family_guid=F('guid'),
         pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
         phenotype_description=Replace(
             Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
             Value('\t'), Value(' '),
         ),
-        project_guid=F('project__guid'),
         genome_version=F('project__genome_version'),
         phenotype_groups=ArrayAgg(
             'project__projectcategory__name', distinct=True,
@@ -132,8 +114,7 @@ def parse_anvil_metadata(individual_samples, user, include_collaborator=False, o
             {s.individual.guid for s in family_samples if s.individual.sex == Individual.SEX_MALE},
         )
 
-    sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
-        list(sample_ids), user, include_collaborator=include_collaborator)
+    sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(list(sample_ids), user)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(samples_by_family_id.keys()))
     compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
@@ -149,15 +130,10 @@ def parse_anvil_metadata(individual_samples, user, include_collaborator=False, o
         for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers)
     }
 
-    subject_rows = []
-    sample_rows = []
-    family_rows = []
-    discovery_rows = []
     for family_id, family_samples in samples_by_family_id.items():
         saved_variants = saved_variants_by_family[family_id]
 
         family_subject_row = family_data_by_id[family_id]
-        family_subject_row['num_saved_variants'] = len(saved_variants)
         genome_version = family_subject_row.pop('genome_version')
 
         post_discovery_omim_number = family_subject_row.pop('post_discovery_omim_number')
@@ -173,17 +149,16 @@ def parse_anvil_metadata(individual_samples, user, include_collaborator=False, o
 
         family_consanguinity = any(sample.individual.consanguinity is True for sample in family_samples)
         family_row = {
-            'entity:family_id': family_subject_row['family_id'],
             'family_id': family_subject_row['family_id'],
             'consanguinity': 'Present' if family_consanguinity else 'None suspected',
         }
         if len(affected_individual_guids) > 1:
             family_row['family_history'] = 'Yes'
-        family_rows.append(family_row)
+        add_row(family_row, family_id, 'family')
 
         parsed_variants = [
             _parse_anvil_family_saved_variant(
-                variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id)
+                variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_discovery_fields)
             for variant in saved_variants]
 
         for sample in family_samples:
@@ -199,34 +174,26 @@ def parse_anvil_metadata(individual_samples, user, include_collaborator=False, o
             subject_row = _get_subject_row(
                 individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map)
             subject_row.update(family_subject_row)
-            subject_rows.append(subject_row)
+            add_row(subject_row, family_id, 'subject')
 
-            sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata)
-            sample_row['family_guid'] = family_subject_row['family_guid']
-            sample_rows.append(sample_row)
+            sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additional_sample_fields)
+            add_row(sample_row, family_id, 'sample')
 
-            discovery_row = _get_discovery_rows(sample, parsed_variants, male_individual_guids, family_subject_row['family_guid'])
-            discovery_rows.append(discovery_row)
-
-    return subject_rows, sample_rows, family_rows, discovery_rows
+            discovery_row = _get_discovery_rows(sample, parsed_variants, male_individual_guids)
+            add_row(discovery_row, family_id, 'discovery')
 
 
-def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
-    sample_records, session = get_airtable_samples(
-        sample_ids, user, fields=['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'dbgap_sample_id'],
-        list_fields=['SequencingProduct', 'dbgap_submission'],
-    )
+def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date):
+    if max_loaded_date:
+        max_loaded_date = datetime.strptime(max_loaded_date, '%Y-%m-%d')
+    else:
+        max_loaded_date = datetime.now() - timedelta(days=365)
 
-    if include_collaborator:
-        collaborator_ids = {record['Collaborator'] for record in sample_records.values() if 'Collaborator' in record}
-        collaborator_map = session.fetch_records(
-            'Collaborator', fields=['CollaboratorID'], or_filters={'RECORD_ID()': collaborator_ids}
-        ) if collaborator_ids else {}
-
-        for sample in sample_records.values():
-            sample['CollaboratorName'] = collaborator_map.get(sample.get('Collaborator'), {}).get('CollaboratorID')
-
-    return sample_records
+    loaded_samples = get_search_samples(projects, active_only=False).select_related('individual').order_by('-loaded_date')
+    if max_loaded_date:
+        loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
+    #  Only return the oldest sample for each individual
+    return {sample.individual: sample for sample in loaded_samples}
 
 
 def _process_saved_variants(saved_variants_by_family, family_individual_affected_guids):
@@ -304,45 +271,24 @@ def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv
     return compound_het_gene_id_by_family
 
 
-def _format_variants(project_saved_variants, *args):
-    variants = get_json_for_saved_variants(
-        project_saved_variants, add_details=True, additional_model_fields=['family_id'], additional_values={
-            'discovery_tags': ArrayAgg(JSONObject(
-                name='varianttag__variant_tag_type__name',
-                guid='varianttag__guid',
-            )),
-        })
-    for saved_variant in variants:
-        saved_variant['discovery_tag_guids_by_name'] = {vt['name']: vt['guid'] for vt in saved_variant.pop('discovery_tags')}
-    return variants
-
-
-def _get_parsed_saved_discovery_variants_by_family(families):
-    return get_saved_discovery_variants_by_family(
-        {'family__id__in': families}, _format_variants, lambda saved_variant: saved_variant.pop('familyId'),
-    )
-
-
-def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id):
+def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_discovery_fields):
     if variant['inheritance_models']:
         inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
     else:
         inheritance_mode = 'Unknown / Other'
-    variant_genome_version = variant.get('genomeVersion') or genome_version
+
     parsed_variant = {
         'Gene_Class': 'Known',
         'inheritance_description': inheritance_mode,
-        'variant_genome_build': GENOME_BUILD_MAP.get(variant_genome_version) or '',
         'discovery_notes': variant.get('discovery_notes', ''),
         'Chrom': variant.get('chrom', ''),
         'Pos': str(variant.get('pos', '')),
     }
 
     if 'discovery_tag_guids_by_name' in variant:
+        if get_additional_variant_discovery_fields:
+            parsed_variant.update(get_additional_variant_discovery_fields(variant, genome_version))
         discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
-        is_novel = 'Y' if any('Novel gene' in name for name in discovery_tag_names) else 'N'
-        parsed_variant['novel_mendelian_gene'] = is_novel
-        parsed_variant['phenotype_class'] = get_discovery_phenotype_class(discovery_tag_names)
         if any('Tier 1' in name for name in discovery_tag_names):
             parsed_variant['Gene_Class'] = 'Tier 1 - Candidate'
         elif any('Tier 2' in name for name in discovery_tag_names):
@@ -377,7 +323,6 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
         solve_state = 'Tier 2' if all_tier_2 else 'Tier 1'
 
     subject_row = {
-        'entity:subject_id': individual.individual_id,
         'subject_id': individual.individual_id,
         'sex': Individual.SEX_LOOKUP[individual.sex],
         'ancestry': ANCESTRY_MAP.get(individual.population, ''),
@@ -403,29 +348,24 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
     return subject_row
 
 
-def _get_sample_row(sample, has_dbgap_submission, airtable_metadata):
+def _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additional_sample_fields=None):
     individual = sample.individual
     sample_row = {
-        'entity:sample_id': individual.individual_id,
         'subject_id': individual.individual_id,
         'sample_id': sample.sample_id,
-        'data_type': sample.sample_type,
-        'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
-        'sequencing_center': 'Broad',
     }
-    if airtable_metadata is not None:
-        sample_row['sample_provider'] = airtable_metadata.get('CollaboratorName') or ''
     if has_dbgap_submission:
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
+    if get_additional_sample_fields:
+        sample_row.update(get_additional_sample_fields(sample, airtable_metadata))
     return sample_row
 
 
-def _get_discovery_rows(sample, parsed_variants, male_individual_guids, family_guid):
+def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
     individual = sample.individual
     discovery_row = {
         'subject_id': individual.individual_id,
         'sample_id': sample.sample_id,
-        'family_guid': family_guid,
     }
     discovery_rows = []
     for genotypes, parsed_variant in parsed_variants:
@@ -436,12 +376,36 @@ def _get_discovery_rows(sample, parsed_variants, male_individual_guids, family_g
             genotype, is_hemi_variant=is_x_linked and individual.guid in male_individual_guids)
         if zygosity:
             variant_discovery_row = {
-                'entity:discovery_id': f'{chrom}_{parsed_variant["Pos"]}_{individual.individual_id}',
                 'Zygosity': zygosity,
             }
             variant_discovery_row.update(parsed_variant)
             variant_discovery_row.update(discovery_row)
             discovery_rows.append(variant_discovery_row)
-        else:
-            discovery_rows.append(None)
     return discovery_rows
+
+
+def _get_sample_airtable_metadata(sample_ids, user):
+    sample_records, _ = get_airtable_samples(
+        sample_ids, user, fields=['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'dbgap_sample_id'],
+        list_fields=['SequencingProduct', 'dbgap_submission'],
+    )
+    return sample_records
+
+
+def _format_variants(project_saved_variants, *args):
+    variants = get_json_for_saved_variants(
+        project_saved_variants, add_details=True, additional_model_fields=['family_id'], additional_values={
+            'discovery_tags': ArrayAgg(JSONObject(
+                name='varianttag__variant_tag_type__name',
+                guid='varianttag__guid',
+            )),
+        })
+    for saved_variant in variants:
+        saved_variant['discovery_tag_guids_by_name'] = {vt['name']: vt['guid'] for vt in saved_variant.pop('discovery_tags')}
+    return variants
+
+
+def _get_parsed_saved_discovery_variants_by_family(families):
+    return get_saved_discovery_variants_by_family(
+        {'family__id__in': families}, _format_variants, lambda saved_variant: saved_variant.pop('familyId'),
+    )

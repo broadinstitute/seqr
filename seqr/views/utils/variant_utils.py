@@ -204,6 +204,10 @@ def get_variant_main_transcript(variant):
     return {}
 
 
+def get_sv_name(variant_json):
+    return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
+
+
 def get_saved_discovery_variants_by_family(variant_filter, format_variants, get_family_id):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
 
@@ -356,10 +360,6 @@ def get_genotype_zygosity(genotype, is_hemi_variant):
     if num_alt == 1 or cn == 1 or cn == 3:
         return HEMI if is_hemi_variant else HET
     return None
-
-
-def get_sv_name(variant_json):
-    return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
 
 
 DISCOVERY_PHENOTYPE_CLASSES = {
