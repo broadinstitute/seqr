@@ -170,11 +170,8 @@ MULTIPLE_DATASET_PRODUCTS = {
 def anvil_export(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    individual_samples = _get_loaded_before_date_project_individual_samples(
-        [project], request.GET.get('loadedBefore'),
-    )
-
-    subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(individual_samples, request.user)
+    subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
+        [project], request.GET.get('loadedBefore'), request.user)
 
     # Flatten lists of discovery rows so there is one row per variant
     discovery_rows = [row for row_group in discovery_rows for row in row_group if row]
@@ -196,16 +193,14 @@ def sample_metadata_export(request, project_guid):
     else:
         projects = [get_project_and_check_permissions(project_guid, request.user)]
 
-    individual_samples = _get_loaded_before_date_project_individual_samples(
-        projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
     subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
-        individual_samples, request.user, omit_airtable=omit_airtable,
+        projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user,
+        omit_airtable=omit_airtable, add_additional_variant_discovery_fields=_add_additional_variant_discovery_fields,
         row_key_field='family_guid', get_additional_sample_fields=lambda sample, airtable_metadata: {
             'data_type': sample.sample_type,
             'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
-        }, add_additional_variant_discovery_fields=_add_additional_variant_discovery_fields,
-        family_values={
+        }, family_values={
             'family_guid': F('guid'),
             'project_guid': F('project__guid'),
             'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
@@ -260,8 +255,10 @@ def _add_additional_variant_discovery_fields(parsed_variant, discovery_tag_names
     _set_discovery_phenotype_class(parsed_variant, discovery_tag_names)
 
 
-def _parse_anvil_metadata(individual_samples, user, omit_airtable=False, row_key_field=None, family_values=None,
+def _parse_anvil_metadata(projects, max_loaded_date, user, omit_airtable=False, row_key_field=None, family_values=None,
                           get_additional_sample_fields=None, add_additional_variant_discovery_fields=None):
+    individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
+
     family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
         'id', 'family_id', 'post_discovery_omim_number', 'project__name',
         pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
