@@ -173,6 +173,7 @@ def anvil_export(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     parsed_rows = defaultdict(list)
+
     def _add_row(row, family_id, type):
         if type == 'discovery':
             parsed_rows[type] += [{
@@ -185,9 +186,12 @@ def anvil_export(request, project_guid):
             if id_field in row and entity_id_field not in row:
                 row[entity_id_field] = row[id_field]
             parsed_rows[type].append(row)
+
     _parse_anvil_metadata(
         [project], request.GET.get('loadedBefore'), request.user, _add_row,
-        add_additional_variant_discovery_fields=_add_export_additional_variant_discovery_fields,
+        get_additional_variant_discovery_fields=lambda variant: {
+            'variant_genome_build': GENOME_BUILD_MAP.get(variant.get('genomeVersion') or genome_version) or '',
+        },
         get_additional_sample_fields=lambda sample, *args: {
             'entity:sample_id': sample.individual.individual_id,
             'sequencing_center': 'Broad',
@@ -200,11 +204,6 @@ def anvil_export(request, project_guid):
         ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, parsed_rows['family']],
         ['{}_PI_Discovery'.format(project.name), ['entity:discovery_id'] + DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, parsed_rows['discovery']],
     ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
-
-
-def _add_export_additional_variant_discovery_fields(parsed_variant, variant):
-    variant_genome_version = variant.get('genomeVersion') or genome_version
-    parsed_variant['variant_genome_build'] = GENOME_BUILD_MAP.get(variant_genome_version) or ''
 
 
 @analyst_required
@@ -220,6 +219,7 @@ def sample_metadata_export(request, project_guid):
     rows_by_subject_family_id = defaultdict(dict)
     collaborator_map = {}
     all_features = set()
+
     def _add_row(row, family_id, type):
         if type == 'family':
             family_rows_by_id[family_id] = row
@@ -243,7 +243,7 @@ def sample_metadata_export(request, project_guid):
 
     _parse_anvil_metadata(
         projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user, _add_row,
-        omit_airtable=omit_airtable, add_additional_variant_discovery_fields=_add_additional_variant_discovery_fields,
+        omit_airtable=omit_airtable, get_additional_variant_discovery_fields=_get_additional_variant_discovery_fields,
         get_additional_sample_fields=lambda sample, airtable_metadata: {
             'data_type': sample.sample_type,
             'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
@@ -270,15 +270,17 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': list(rows_by_subject_family_id.values())})
 
 
-def _add_additional_variant_discovery_fields(parsed_variant, variant):
+def _get_additional_variant_discovery_fields(variant):
     discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
     is_novel = 'Y' if any('Novel gene' in name for name in discovery_tag_names) else 'N'
-    parsed_variant['novel_mendelian_gene'] = is_novel
-    _set_discovery_phenotype_class(parsed_variant, discovery_tag_names)
+    return {
+        'novel_mendelian_gene': is_novel,
+        'phenotype_class': _get_discovery_phenotype_class(discovery_tag_names),
+    }
 
 
 def _parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, family_values=None,
-                          get_additional_sample_fields=None, add_additional_variant_discovery_fields=None):
+                          get_additional_sample_fields=None, get_additional_variant_discovery_fields=None):
     individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
 
     family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
@@ -365,7 +367,7 @@ def _parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtabl
 
         parsed_variants = [
             _parse_anvil_family_saved_variant(
-                variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, add_additional_variant_discovery_fields)
+                variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_discovery_fields)
             for variant in saved_variants]
 
         for sample in family_samples:
@@ -499,7 +501,7 @@ def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv
     return compound_het_gene_id_by_family
 
 
-def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, add_additional_variant_discovery_fields):
+def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_discovery_fields):
     if variant['inheritance_models']:
         inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
     else:
@@ -514,8 +516,8 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
     }
 
     if 'discovery_tag_guids_by_name' in variant:
-        if add_additional_variant_discovery_fields:
-            add_additional_variant_discovery_fields(parsed_variant, variant)
+        if get_additional_variant_discovery_fields:
+            parsed_variant.update(get_additional_variant_discovery_fields(variant))
         discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
         if any('Tier 1' in name for name in discovery_tag_names):
             parsed_variant['Gene_Class'] = 'Tier 1 - Candidate'
@@ -1708,15 +1710,17 @@ DISCOVERY_PHENOTYPE_CLASSES = {
 }
 
 
-def _set_discovery_phenotype_class(row, variant_tag_names):
+def _get_discovery_phenotype_class(variant_tag_names):
     for phenotype_class, class_tag_names in DISCOVERY_PHENOTYPE_CLASSES.items():
         if any(tag in variant_tag_names for tag in class_tag_names):
-            row['phenotype_class'] = phenotype_class
-            break
+            return phenotype_class
+    return None
 
 
 def _set_discovery_details(row, variant_tag_names, variants):
-    _set_discovery_phenotype_class(row, variant_tag_names)
+    phenotype_class = _get_discovery_phenotype_class(variant_tag_names)
+    if phenotype_class:
+        row['phenotype_class'] = phenotype_class
 
     # Set defaults
     for functional_field in FUNCTIONAL_DATA_FIELD_MAP.values():
