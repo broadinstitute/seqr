@@ -173,10 +173,24 @@ def anvil_export(request, project_guid):
     parsed_rows = defaultdict(list)
     def _add_row(row, family_id, type):
         if type == 'discovery':
-            parsed_rows[type] += row
+            parsed_rows[type] += [{
+                'entity:discovery_id': f'{discovery_row["Chrom"]}_{discovery_row["Pos"]}_{discovery_row["subject_id"]}',
+                **discovery_row,
+            } for discovery_row in row]
         else:
+            id_field = f'{type}_id'
+            entity_id_field = f'entity:{id_field}'
+            if id_field in row and entity_id_field not in row:
+                row[entity_id_field] = row[id_field]
             parsed_rows[type].append(row)
-    _parse_anvil_metadata([project], request.GET.get('loadedBefore'), request.user, _add_row)
+    _parse_anvil_metadata(
+        [project], request.GET.get('loadedBefore'), request.user, _add_row,
+        add_additional_variant_discovery_fields=_add_export_additional_variant_discovery_fields,
+        get_additional_sample_fields=lambda sample, *args: {
+            'entity:sample_id': sample.individual.individual_id,
+            'sequencing_center': 'Broad',
+        },
+    )
 
     return export_multiple_files([
         ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, parsed_rows['subject']],
@@ -184,6 +198,11 @@ def anvil_export(request, project_guid):
         ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, parsed_rows['family']],
         ['{}_PI_Discovery'.format(project.name), ['entity:discovery_id'] + DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, parsed_rows['discovery']],
     ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
+
+
+def _add_export_additional_variant_discovery_fields(parsed_variant, variant):
+    variant_genome_version = variant.get('genomeVersion') or genome_version
+    parsed_variant['variant_genome_build'] = GENOME_BUILD_MAP.get(variant_genome_version) or ''
 
 
 @analyst_required
@@ -204,6 +223,7 @@ def sample_metadata_export(request, project_guid):
             family_rows_by_id[family_id] = row
         elif type == 'discovery':
             for i, discovery_row in enumerate(row):
+                # TODO cleanup
                 parsed_row = {k: discovery_row[k] for k in DISCOVERY_TABLE_CORE_COLUMNS}
                 parsed_row.update({
                     '{}-{}'.format(k, i + 1): discovery_row[k] for k in DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS if
@@ -215,8 +235,8 @@ def sample_metadata_export(request, project_guid):
             collaborator = row.pop('Collaborator', None)
             if collaborator:
                 collaborator_map[row_key] = collaborator
-            if row.get('ancestry_detail'):
-                row['ancestry'] = row['ancestry_detail']
+            if 'ancestry_detail' in row:
+                row['ancestry'] = row.pop('ancestry_detail')
             if 'hpo_present' in row:
                 all_features.update(row['hpo_present'].split('|'))
                 all_features.update(row['hpo_absent'].split('|'))
@@ -251,7 +271,8 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': list(rows_by_subject_family_id.values())})
 
 
-def _add_additional_variant_discovery_fields(parsed_variant, discovery_tag_names):
+def _add_additional_variant_discovery_fields(parsed_variant, variant):
+    discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
     is_novel = 'Y' if any('Novel gene' in name for name in discovery_tag_names) else 'N'
     parsed_variant['novel_mendelian_gene'] = is_novel
     _set_discovery_phenotype_class(parsed_variant, discovery_tag_names)
@@ -336,7 +357,6 @@ def _parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtabl
 
         family_consanguinity = any(sample.individual.consanguinity is True for sample in family_samples)
         family_row = {
-            'entity:family_id': family_subject_row['family_id'],
             'family_id': family_subject_row['family_id'],
             'consanguinity': 'Present' if family_consanguinity else 'None suspected',
         }
@@ -485,20 +505,19 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
         inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
     else:
         inheritance_mode = 'Unknown / Other'
-    variant_genome_version = variant.get('genomeVersion') or genome_version
+
     parsed_variant = {
         'Gene_Class': 'Known',
         'inheritance_description': inheritance_mode,
-        'variant_genome_build': GENOME_BUILD_MAP.get(variant_genome_version) or '',
         'discovery_notes': variant.get('discovery_notes', ''),
         'Chrom': variant.get('chrom', ''),
         'Pos': str(variant.get('pos', '')),
     }
 
     if 'discovery_tag_guids_by_name' in variant:
-        discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
         if add_additional_variant_discovery_fields:
-            add_additional_variant_discovery_fields(parsed_variant, discovery_tag_names)
+            add_additional_variant_discovery_fields(parsed_variant, variant)
+        discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
         if any('Tier 1' in name for name in discovery_tag_names):
             parsed_variant['Gene_Class'] = 'Tier 1 - Candidate'
         elif any('Tier 2' in name for name in discovery_tag_names):
@@ -532,7 +551,6 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
         solve_state = 'Tier 2' if all_tier_2 else 'Tier 1'
 
     subject_row = {
-        'entity:subject_id': individual.individual_id,
         'subject_id': individual.individual_id,
         'sex': Individual.SEX_LOOKUP[individual.sex],
         'ancestry': ANCESTRY_MAP.get(individual.population, ''),
@@ -561,10 +579,8 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
 def _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additional_sample_fields=None):
     individual = sample.individual
     sample_row = {
-        'entity:sample_id': individual.individual_id,
         'subject_id': individual.individual_id,
         'sample_id': sample.sample_id,
-        'sequencing_center': 'Broad',
     }
     if has_dbgap_submission:
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
@@ -588,7 +604,6 @@ def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
             genotype, is_hemi_variant=is_x_linked and individual.guid in male_individual_guids)
         if zygosity:
             variant_discovery_row = {
-                'entity:discovery_id': f'{chrom}_{parsed_variant["Pos"]}_{individual.individual_id}',
                 'Zygosity': zygosity,
             }
             variant_discovery_row.update(parsed_variant)
