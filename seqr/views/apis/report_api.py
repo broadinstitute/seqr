@@ -189,7 +189,7 @@ def anvil_export(request, project_guid):
 
     _parse_anvil_metadata(
         [project], request.GET.get('loadedBefore'), request.user, _add_row,
-        get_additional_variant_discovery_fields=lambda variant, genome_version: {
+        get_additional_variant_fields=lambda variant, genome_version: {
             'variant_genome_build': GENOME_BUILD_MAP.get(variant.get('genomeVersion') or genome_version) or '',
         },
         get_additional_sample_fields=lambda sample, *args: {
@@ -246,7 +246,7 @@ def sample_metadata_export(request, project_guid):
 
     _parse_anvil_metadata(
         projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user, _add_row,
-        omit_airtable=omit_airtable, get_additional_variant_discovery_fields=_get_additional_variant_discovery_fields,
+        omit_airtable=omit_airtable, get_additional_variant_fields=_get_additional_variant_fields,
         get_additional_sample_fields=lambda sample, airtable_metadata: {
             'data_type': sample.sample_type,
             'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
@@ -274,7 +274,9 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': list(rows_by_subject_family_id.values())})
 
 
-def _get_additional_variant_discovery_fields(variant, *args):
+def _get_additional_variant_fields(variant, *args):
+    if 'discovery_tag_guids_by_name' not in variant:
+        return {}
     discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
     is_novel = 'Y' if any('Novel gene' in name for name in discovery_tag_names) else 'N'
     return {
@@ -284,7 +286,7 @@ def _get_additional_variant_discovery_fields(variant, *args):
 
 
 def _parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, family_values=None,
-                          get_additional_sample_fields=None, get_additional_variant_discovery_fields=None):
+                          get_additional_sample_fields=None, get_additional_variant_fields=None):
     individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
 
     family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
@@ -371,7 +373,7 @@ def _parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtabl
 
         parsed_variants = [
             _parse_anvil_family_saved_variant(
-                variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_discovery_fields)
+                variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_fields)
             for variant in saved_variants]
 
         for sample in family_samples:
@@ -505,7 +507,7 @@ def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv
     return compound_het_gene_id_by_family
 
 
-def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_discovery_fields):
+def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_fields):
     if variant['inheritance_models']:
         inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
     else:
@@ -518,10 +520,10 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
         'Chrom': variant.get('chrom', ''),
         'Pos': str(variant.get('pos', '')),
     }
+    if get_additional_variant_fields:
+        parsed_variant.update(get_additional_variant_fields(variant, genome_version))
 
     if 'discovery_tag_guids_by_name' in variant:
-        if get_additional_variant_discovery_fields:
-            parsed_variant.update(get_additional_variant_discovery_fields(variant, genome_version))
         discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
         if any('Tier 1' in name for name in discovery_tag_names):
             parsed_variant['Gene_Class'] = 'Tier 1 - Candidate'
