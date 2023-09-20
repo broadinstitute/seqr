@@ -225,10 +225,13 @@ def sample_metadata_export(request, project_guid):
             family_rows_by_id[family_id] = row
         elif row_type == 'discovery':
             for i, discovery_row in enumerate(row):
-                rows_by_subject_family_id[(discovery_row['subject_id'], family_id)].update({
+                parsed_row = {
                     '{}-{}'.format(k, i + 1): discovery_row[k] for k in DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS if
                     discovery_row.get(k)
-                })
+                }
+                parsed_row['num_saved_variants'] = len(row)
+                rows_by_subject_family_id[(discovery_row['subject_id'], family_id)].update(parsed_row)
+
         else:
             row_key = (row['subject_id'], family_id)
             collaborator = row.pop('Collaborator', None)

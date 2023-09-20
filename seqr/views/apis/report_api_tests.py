@@ -315,6 +315,7 @@ EXPECTED_GREGOR_FILES = [
 
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "project_guid": "R0003_test",
+    "num_saved_variants": 2,
     "solve_state": "Tier 1",
     "sample_id": "NA20889",
     "Gene_Class-1": "Tier 1 - Candidate",
