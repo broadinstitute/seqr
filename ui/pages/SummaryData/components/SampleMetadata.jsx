@@ -109,7 +109,8 @@ const VARIANT_COLUMNS = [
   'discovery_notes',
 ]
 
-const VIEW_ALL_PAGES = [{ name: 'GREGoR', path: GREGOR_PROJECT_PATH }, { name: 'Broad', path: ALL_PROJECTS_PATH }]
+const ANALYST_VIEW_ALL_PAGES = [{ name: 'GREGoR', path: GREGOR_PROJECT_PATH }, { name: 'Broad', path: ALL_PROJECTS_PATH }]
+const VIEW_ALL_PAGES = [{ name: 'my', path: ALL_PROJECTS_PATH }]
 
 const SEARCH_CATEGORIES = ['projects']
 
@@ -128,7 +129,7 @@ const getColumns = (data) => {
   ).map(({ name, ...props }) => ({ name, content: name, ...props }))
 }
 
-const SampleMetadata = React.memo(({ projectGuid, queryForm, data }) => (
+const SampleMetadata = React.memo(({ projectGuid, queryForm, data, user }) => (
   <div>
     <InlineHeader size="medium" content="Project:" />
     <AwesomeBar
@@ -137,7 +138,7 @@ const SampleMetadata = React.memo(({ projectGuid, queryForm, data }) => (
       inputwidth="350px"
       getResultHref={getResultHref}
     />
-    {VIEW_ALL_PAGES.map(({ name, path }) => (
+    {(user.isAnalyst ? ANALYST_VIEW_ALL_PAGES : VIEW_ALL_PAGES).map(({ name, path }) => (
       <span key={path}>
         &nbsp; or &nbsp;
         <NavLink to={`/summary_data/sample_metadata/${path}`} activeStyle={ACTIVE_LINK_STYLE}>{`view all ${name} projects`}</NavLink>
@@ -164,6 +165,7 @@ SampleMetadata.propTypes = {
   data: PropTypes.arrayOf(PropTypes.object),
   projectGuid: PropTypes.string,
   queryForm: PropTypes.node,
+  user: PropTypes.object,
 }
 
 const parseResponse = ({ rows }) => ({ data: rows })
@@ -175,6 +177,7 @@ const LoadedSampleMetadata = ({ match, user }) => (
     queryFields={(user.isAnalyst && match.params.projectGuid !== ALL_PROJECTS_PATH) ? AIRTABLE_FIELDS : FIELDS}
     childComponent={SampleMetadata}
     projectGuid={match.params.projectGuid}
+    user={user}
   />
 )
 
