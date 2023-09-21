@@ -1,5 +1,5 @@
 command = 'gunicorn'
-bind = f'0.0.0.0:8000'
+bind = '0.0.0.0:8000'
 workers = 1
 loglevel = 'info'
 timeout = 3600   # seconds (default is 30)
