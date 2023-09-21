@@ -1,6 +1,5 @@
-import os
 command = 'gunicorn'
-bind = f'0.0.0.0:{os.environ["HAIL_SEARCH_SERVICE_PORT"]}'
+bind = f'0.0.0.0:8000'
 workers = 1
 loglevel = 'info'
 timeout = 3600   # seconds (default is 30)
