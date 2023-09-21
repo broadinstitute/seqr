@@ -1,4 +1,4 @@
-name: seqr dev release
+name: seqr hail search dev release
 on:
   workflow_run:
     workflows: ["Hail Search Unit Tests"]
