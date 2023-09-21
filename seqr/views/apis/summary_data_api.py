@@ -169,8 +169,7 @@ def bulk_update_family_analysed_by(request):
     })
 
 
-@login_and_policies_required
-def sample_metadata_export(request, project_guid):
+def _get_metadata_projects(request, project_guid):
     is_analyst = user_is_analyst(request.user)
     is_all_projects = project_guid == 'all'
     include_airtable = 'true' in request.GET.get('includeAirtable', '') and is_analyst and not is_all_projects
@@ -183,6 +182,12 @@ def sample_metadata_export(request, project_guid):
         projects = Project.objects.filter(projectcategory__name__iexact='gregor')
     else:
         projects = [get_project_and_check_permissions(project_guid, request.user)]
+    return projects, include_airtable
+
+
+@login_and_policies_required
+def sample_metadata_export(request, project_guid):
+    projects, include_airtable = _get_metadata_projects(request, project_guid)
 
     family_rows_by_id = {}
     rows_by_subject_family_id = defaultdict(dict)
