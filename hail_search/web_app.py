@@ -29,7 +29,7 @@ async def status(request: web.Request) -> web.Response:
     return web.json_response({'success': True})
 
 
-def init_web_app():
+async def init_web_app():
     app = web.Application()
     app.add_routes([
         web.get('/status', status),
