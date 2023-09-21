@@ -360,6 +360,7 @@ def get_genotype_zygosity(genotype, is_hemi_variant):
         return HOM_ALT
     if num_alt == 1 or cn == 1 or cn == 3:
         return HEMI if is_hemi_variant else HET
+    return None
 
 
 DISCOVERY_PHENOTYPE_CLASSES = {
