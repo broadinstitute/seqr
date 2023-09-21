@@ -28,9 +28,13 @@ const FIELDS = [
     inputType: 'Input',
     type: 'date',
   },
+]
+
+const AIRTABLE_FIELDS = [
+  ...FIELDS,
   {
-    name: 'omitAirtable',
-    label: 'Skip Airtable Columns',
+    name: 'includeAirtable',
+    label: 'Include Airtable Columns',
     inline: true,
     component: BooleanCheckbox,
   },
@@ -164,19 +168,19 @@ SampleMetadata.propTypes = {
 
 const parseResponse = ({ rows }) => ({ data: rows })
 
-const LoadedSampleMetadata = ({ match, ...props }) => (
+const LoadedSampleMetadata = ({ match, user }) => (
   <StateDataLoader
     url={match.params.projectGuid ? `/api/summary_data/sample_metadata/${match.params.projectGuid}` : ''}
     parseResponse={parseResponse}
-    queryFields={FIELDS}
+    queryFields={(user.isAnalyst && match.params.projectGuid !== ALL_PROJECTS_PATH) ? AIRTABLE_FIELDS : FIELDS}
     childComponent={SampleMetadata}
     projectGuid={match.params.projectGuid}
-    {...props}
   />
 )
 
 LoadedSampleMetadata.propTypes = {
   match: PropTypes.object,
+  user: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
