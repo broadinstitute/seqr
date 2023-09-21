@@ -5,7 +5,7 @@ import { Header, Segment, List } from 'semantic-ui-react'
 
 export default () => (
   <Segment basic padded="very">
-    <Header dividing content="Terms Of Service" subheader="Last Updated 3/4/2021" size="huge" />
+    <Header dividing content="Terms Of Service" subheader="Last Updated 9/22/2023" size="huge" />
 
     Your access to systems and networks owned by The Broad Institute, Inc. (&quot;Broad&quot;) is governed by, and
     subject to the following terms and conditions, as well as all Federal laws, including, but not limited to, the
@@ -27,9 +27,13 @@ export default () => (
     You agree to access and use seqr for lawful purposes only. You are solely responsible for the knowledge of and
     adherence to any and all laws, statutes, rules, and regulations pertaining to your use of seqr.
 
-    <Header content="By accessing and using seqr, you agree that you must:" size="small" />
+    <Header content="By accessing and using seqr, you agree to:" size="small" />
     <List bulleted>
-      <List.Item>Conduct only authorized business on the system.</List.Item>
+      <List.Item>
+        Ensure that you have obtained all required consents, authorizations, and/or approvals needed to submit
+        de-identified data.
+      </List.Item>
+      <List.Item>Share non-identifiable aggregate statistics with other users for research purposes.</List.Item>
       <List.Item>
         Access seqr using only your own individual account. Group or shared accounts are NOT permitted.
       </List.Item>
@@ -38,16 +42,16 @@ export default () => (
         authentication credentials to anyone; a Broad employee should never ask you to reveal them.
       </List.Item>
       <List.Item>
-        Abide by minimum password requirements. Passwords must meet the following requirements: (1) Be at least 8
-        characters in length; (2) Be rotated every 60 days; (3) Each new password has at least 1 character changed
-        from the previous password; and (4) No passwords are reused for 24 generations.
+        Authentication is handled by <a href="https://app.terra.bio/" target="_blank" rel="noreferrer">Terra</a>.
+        Users must meet password and MFA requirements per
+        the <a href="https://app.terra.bio/#terms-of-service" target="_blank" rel="noreferrer">Terra Terms of Service</a>.
       </List.Item>
       <List.Item>
         Use multi-factor authentication and use a second factor authenticator that is both separate from the device
         gaining access to seqr and either FIPS 140-2 validated or NSA approved.
       </List.Item>
       <List.Item>
-        Report all security incidents or suspected incidents (e.g., lost passwords, improper or suspicious acts)
+        Report all security incidents or suspected incidents (e.g., compromised passwords, improper or suspicious acts)
         related to Broad systems and networks to <a href="mailto:seqr@broadinstitute.org">seqr@broadinstitute.org</a>.
       </List.Item>
       <List.Item>
@@ -95,6 +99,13 @@ export default () => (
       </List.Item>
     </List>
 
+    <Header content="HIPAA, Protected Health Information, and the Clinical Compliance Features" size="medium" />
+    Seqr is not a Covered Entity as that term is defined in the Health Insurance Portability and Accountability Act of
+    1996, as amended, and its related regulations (collectively, &quot;HIPAA&quot;). seqr is not intended for the
+    storage of any PHI on the platform. You agree to indemnify and hold harmless seqr of and from any and all claims,
+    demands, losses, causes of action, damage, lawsuits, judgments, including attorneys&apos; fees and costs, arising
+    out of or relating to your uploading, storing, or transferring of PHI.
+
     <Header content="Restrictions on the Use of Shared and Group Accounts" size="medium" />
     You may not access seqr using group or shared accounts. The credentials used for authenticating to seqr must
     belong to a single individual.
@@ -106,7 +117,7 @@ export default () => (
 
     <Header content="Granting Access" size="medium" />
     Some seqr users may have the ability to grant access to projects and the data contained therein. These users are
-    responsible for ensuring that permission is granted only to those who have adequate permissions to work with those
+    responsible for ensuring that permission is granted only to those who have adequate permissions to work with that
     data. If data are shared inappropriately or with unauthorized users through seqr, your access to seqr may be
     suspended or terminated and, in some instances, seqr staff may contact the user&apos;s institution.
 
@@ -134,12 +145,5 @@ export default () => (
     exemplary, or consequential damages, arising out of your use of or inability to use seqr, including without
     limitation, loss of revenue or anticipated profits, loss of goodwill, loss of data, computer failure or malfunction,
     or any and all other damages.
-
-    <Header content="HIPAA, Protected Health Information, and the Clinical Compliance Features" size="medium" />
-    Seqr is not a Covered Entity as that term is defined in the Health Insurance Portability and Accountability Act of
-    1996, as amended, and its related regulations (collectively, &quot;HIPAA&quot;). seqr is not intended for the
-    storage of any PHI on the platform. You agree to indemnify and hold harmless seqr of and from any and all claims,
-    demands, losses, causes of action, damage, lawsuits, judgments, including attorneys&apos; fees and costs, arising
-    out of or relating to your uploading, storing, or transferring of PHI.
   </Segment>
 )
