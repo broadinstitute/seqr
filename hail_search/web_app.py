@@ -30,12 +30,12 @@ async def status(request: web.Request) -> web.Response:
 
 
 async def init_web_app():
+    hl.init(idempotent=True)
+    load_globals()
     app = web.Application()
     app.add_routes([
         web.get('/status', status),
         web.post('/search', search),
         web.post('/gene_counts', gene_counts),
     ])
-    hl.init(idempotent=True)
-    load_globals()
     return app
