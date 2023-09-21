@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Message } from 'semantic-ui-react'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import FormWrapper from './form/FormWrapper'
+import StateChangeForm from './form/StateChangeForm'
 import DataLoader from './DataLoader'
 
 class StateDataLoader extends React.PureComponent {
@@ -24,19 +24,22 @@ class StateDataLoader extends React.PureComponent {
     loading: false,
     errorHeader: null,
     error: null,
+    query: {},
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps, prevState) {
     const { url } = this.props
-    if (prevProps.url !== url) {
+    const { query } = this.state
+    if (prevProps.url !== url || prevState.query !== query) {
       this.load()
     }
   }
 
-  load = (query) => {
+  load = () => {
     const {
       url, errorHeader, validationErrorHeader, validationErrorMessage, parseResponse, validateResponse,
     } = this.props
+    const { query } = this.state
     if (!url) {
       this.setState({ showEmpty: true })
       return
@@ -58,20 +61,22 @@ class StateDataLoader extends React.PureComponent {
       }).get(query)
   }
 
+  updateField = name => (value) => {
+    this.setState(prevState => ({ query: { ...prevState.query, [name]: value } }))
+  }
+
   render() {
-    const { loadedProps, loading, errorHeader, error, showEmpty } = this.state
+    const { loadedProps, loading, errorHeader, error, showEmpty, query } = this.state
     const {
       childComponent, url, validationErrorHeader, validationErrorMessage, parseResponse, validateResponse, queryFields,
       ...props
     } = this.props
     const errorMessage = error ? <Message visible error header={errorHeader} content={error} /> : null
     const queryForm = queryFields && (
-      <FormWrapper
-        onSubmit={this.load}
+      <StateChangeForm
+        initialValues={query}
         fields={queryFields}
-        noModal
-        inline
-        submitOnChange
+        updateField={this.updateField}
       />
     )
     return (
