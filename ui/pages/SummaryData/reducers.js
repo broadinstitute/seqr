@@ -10,8 +10,6 @@ const REQUEST_SUCCESS_STORY = 'REQUEST_SUCCESS_STORY'
 const RECEIVE_SUCCESS_STORY = 'RECEIVE_SUCCESS_STORY'
 const REQUEST_MME = 'REQUEST_MME'
 const RECEIVE_MME = 'RECEIVE_MME'
-const REQUEST_SAMPLE_METADATA = 'REQUEST_SAMPLE_METADATA'
-const RECEIVE_SAMPLE_METADATA = 'RECEIVE_SAMPLE_METADATA'
 const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
 const UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE = 'UPDATE_ALL_PROJECT_VARIANT_STATE'
 const RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS = 'RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS'
@@ -30,21 +28,18 @@ export const loadMme = () => (dispatch) => {
     }).get()
 }
 
-const loadDataRows = (requestAction, receiveAction, urlPath) => (loadId, filterValues) => (dispatch) => {
-  if (loadId) {
-    dispatch({ type: requestAction })
-    new HttpRequestHelper(`/api/summary_data/${urlPath}/${loadId}`,
+export const loadSuccessStory = successStoryTypes => (dispatch) => {
+  if (successStoryTypes) {
+    dispatch({ type: REQUEST_SUCCESS_STORY })
+    new HttpRequestHelper(`/api/summary_data/success_story/${successStoryTypes}`,
       (responseJson) => {
-        dispatch({ type: receiveAction, newValue: responseJson.rows })
+        dispatch({ type: RECEIVE_SUCCESS_STORY, newValue: responseJson.rows })
       },
       (e) => {
-        dispatch({ type: receiveAction, error: e.message, newValue: [] })
-      }).get(filterValues)
+        dispatch({ type: RECEIVE_SUCCESS_STORY, error: e.message, newValue: [] })
+      }).get()
   }
 }
-
-export const loadSuccessStory = loadDataRows(REQUEST_SUCCESS_STORY, RECEIVE_SUCCESS_STORY, 'success_story')
-export const loadSampleMetadata = loadDataRows(REQUEST_SAMPLE_METADATA, RECEIVE_SAMPLE_METADATA, 'sample_metadata')
 
 export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) => {
   // Do not load if already loaded
@@ -89,8 +84,6 @@ export const reducers = {
   mmeLoading: loadingReducer(REQUEST_MME, RECEIVE_MME),
   mmeMetrics: createSingleValueReducer(RECEIVE_MME, {}, 'metrics'),
   mmeSubmissions: createSingleValueReducer(RECEIVE_MME, [], 'submissions'),
-  sampleMetadataLoading: loadingReducer(REQUEST_SAMPLE_METADATA, RECEIVE_SAMPLE_METADATA),
-  sampleMetadataRows: createSingleValueReducer(RECEIVE_SAMPLE_METADATA, []),
   savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
   externalAnalysisUploadStats: createSingleValueReducer(RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS, {}),
   allProjectSavedVariantTableState: createSingleObjectReducer(UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, {

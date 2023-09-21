@@ -1,20 +1,19 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 
+import { getUser } from 'redux/selectors'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import DataTable from 'shared/components/table/DataTable'
 import { HorizontalSpacer } from 'shared/components/Spacers'
-import DataLoader from 'shared/components/DataLoader'
+import StateDataLoader from 'shared/components/StateDataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
-import FormWrapper from 'shared/components/form/FormWrapper'
 import { BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
-import { ALL_PROJECTS_PATH } from '../constants'
-import { loadSampleMetadata } from '../reducers'
-import { getSampleMetadataLoading, getSampleMetadataLoadingError, getSampleMetadataRows, getSampleMetadataColumns } from '../selectors'
 
+const ALL_PROJECTS_PATH = 'all'
 const GREGOR_PROJECT_PATH = 'gregor'
+
 const FILENAME_LOOKUP = {
   [ALL_PROJECTS_PATH]: 'All_AnVIL_Projects',
   [GREGOR_PROJECT_PATH]: 'All_GREGoR_Projects',
@@ -37,6 +36,74 @@ const FIELDS = [
   },
 ]
 
+const PROJECT_ID_FIELD = 'project_id'
+const FAMILY_FIELD_ID = 'family_id'
+
+const CORE_METADATA_COLUMNS = [
+  { name: 'subject_id' },
+  {
+    name: PROJECT_ID_FIELD,
+    format:
+      row => <Link to={`/project/${row.project_guid}/project_page`} target="_blank">{row[PROJECT_ID_FIELD]}</Link>,
+    noFormatExport: true,
+  },
+  {
+    name: FAMILY_FIELD_ID,
+    format:
+      row => <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row[FAMILY_FIELD_ID]}</Link>,
+    noFormatExport: true,
+  },
+  { name: 'pmid_id' },
+  { name: 'paternal_id' },
+  { name: 'maternal_id' },
+  { name: 'proband_relationship' },
+  { name: 'sex' },
+  { name: 'ancestry' },
+  { name: 'phenotype_group' },
+  { name: 'disease_id' },
+  { name: 'disease_description' },
+  { name: 'affected_status' },
+  { name: 'congenital_status' },
+  { name: 'hpo_present', style: { minWidth: '400px' } },
+  { name: 'hpo_absent', style: { minWidth: '400px' } },
+  { name: 'phenotype_description', style: { minWidth: '200px' } },
+  { name: 'solve_state' },
+  { name: 'MME' },
+  { name: 'sample_id' },
+  { name: 'data_type' },
+  { name: 'date_data_generation' },
+  { name: 'consanguinity' },
+  { name: 'family_history' },
+]
+
+const AIRTABLE_METADATA_COLUMNS = [
+  { name: 'dbgap_submission' },
+  { name: 'dbgap_study_id' },
+  { name: 'dbgap_subject_id' },
+  { name: 'multiple_datasets' },
+  { name: 'dbgap_sample_id' },
+  { name: 'sample_provider' },
+]
+
+const VARIANT_METADATA_COLUMNS = [
+  'Gene',
+  'Gene_Class',
+  'novel_mendelian_gene',
+  'phenotype_class',
+  'inheritance_description',
+  'Zygosity',
+  'Chrom',
+  'Pos',
+  'Ref',
+  'Alt',
+  'hgvsc',
+  'hgvsp',
+  'Transcript',
+  'sv_name',
+  'sv_type',
+  'discovery_notes',
+]
+
 const VIEW_ALL_PAGES = [{ name: 'GREGoR', path: GREGOR_PROJECT_PATH }, { name: 'Broad', path: ALL_PROJECTS_PATH }]
 
 const SEARCH_CATEGORIES = ['projects']
@@ -46,12 +113,17 @@ const ACTIVE_LINK_STYLE = {
   color: 'grey',
 }
 
-const LOADING_PROPS = { inline: true }
-
 const getResultHref = result => `/summary_data/sample_metadata/${result.key}`
 
-const SampleMetadata = React.memo(({ match, data, columns, loading, load, loadingError }) => (
-  <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
+const getColumns = (data, projectGuid) => {
+  const maxSavedVariants = Math.max(1, ...(data || []).map(row => row.num_saved_variants))
+  return [...CORE_METADATA_COLUMNS, ...(projectGuid === ALL_PROJECTS_PATH ? [] : AIRTABLE_METADATA_COLUMNS)].concat(
+    ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_METADATA_COLUMNS.map(col => ({ name: `${col}-${i + 1}` }))),
+  ).map(({ name, ...props }) => ({ name, content: name, ...props }))
+}
+
+const SampleMetadata = React.memo(({ projectGuid, queryForm, data }) => (
+  <div>
     <InlineHeader size="medium" content="Project:" />
     <AwesomeBar
       categories={SEARCH_CATEGORIES}
@@ -60,56 +132,53 @@ const SampleMetadata = React.memo(({ match, data, columns, loading, load, loadin
       getResultHref={getResultHref}
     />
     {VIEW_ALL_PAGES.map(({ name, path }) => (
-      <span>
+      <span key={path}>
         &nbsp; or &nbsp;
         <NavLink to={`/summary_data/sample_metadata/${path}`} activeStyle={ACTIVE_LINK_STYLE}>{`view all ${name} projects`}</NavLink>
       </span>
     ))}
     <HorizontalSpacer width={20} />
-    <FormWrapper
-      onSubmit={load}
-      fields={FIELDS}
-      noModal
-      inline
-      submitOnChange
-    />
+    {queryForm}
     <DataTable
       striped
       collapsing
       horizontalScroll
-      downloadFileName={`${FILENAME_LOOKUP[match.params.projectGuid] || (data.length && data[0].project_id.replace(/ /g, '_'))}_${new Date().toISOString().slice(0, 10)}_Metadata`}
+      downloadFileName={`${FILENAME_LOOKUP[projectGuid] || (data?.length && data[0].project_id.replace(/ /g, '_'))}_${new Date().toISOString().slice(0, 10)}_Metadata`}
       idField="subject_id"
       defaultSortColumn="family_id"
-      emptyContent={loadingError || (match.params.projectGuid ? '0 cases found' : 'Select a project to view data')}
-      loading={loading}
+      emptyContent={projectGuid ? '0 cases found' : 'Select a project to view data'}
       data={data}
-      columns={columns}
-      loadingProps={LOADING_PROPS}
+      columns={getColumns(data, projectGuid)}
       rowsPerPage={100}
     />
-  </DataLoader>
+  </div>
 ))
 
 SampleMetadata.propTypes = {
-  match: PropTypes.object,
   data: PropTypes.arrayOf(PropTypes.object),
-  columns: PropTypes.arrayOf(PropTypes.object),
-  loading: PropTypes.bool,
-  loadingError: PropTypes.string,
-  load: PropTypes.func,
+  projectGuid: PropTypes.string,
+  queryForm: PropTypes.node,
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  data: getSampleMetadataRows(state),
-  columns: getSampleMetadataColumns(state, ownProps),
-  loading: getSampleMetadataLoading(state),
-  loadingError: getSampleMetadataLoadingError(state),
+const parseResponse = ({ rows }) => ({ data: rows })
+
+const LoadedSampleMetadata = ({ match, ...props }) => (
+  <StateDataLoader
+    url={match.params.projectGuid ? `/api/summary_data/sample_metadata/${match.params.projectGuid}` : ''}
+    parseResponse={parseResponse}
+    queryFields={FIELDS}
+    childComponent={SampleMetadata}
+    projectGuid={match.params.projectGuid}
+    {...props}
+  />
+)
+
+LoadedSampleMetadata.propTypes = {
+  match: PropTypes.object,
+}
+
+const mapStateToProps = state => ({
+  user: getUser(state),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => ({
-  load: (values) => {
-    dispatch(loadSampleMetadata(ownProps.match.params.projectGuid, typeof values === 'object' ? values : {}))
-  },
-})
-
-export default connect(mapStateToProps, mapDispatchToProps)(SampleMetadata)
+export default connect(mapStateToProps)(LoadedSampleMetadata)
