@@ -5,9 +5,9 @@ import { Header, Segment, List } from 'semantic-ui-react'
 
 export default () => (
   <Segment basic padded="very">
-    <Header dividing content="Privacy Policy" subheader="Last Updated 10/27/2020" size="huge" />
+    <Header dividing content="Privacy Policy" subheader="Last Updated 9/22/2023" size="huge" />
 
-    The Broad Institute of MIT& Harvard (<b>&quot;Broad&quot;</b>) values your privacy. This Privacy Policy
+    The Broad Institute of MIT & Harvard (<b>&quot;Broad&quot;</b>) values your privacy. This Privacy Policy
     (<b>&quot;Policy&quot;</b>) provides important information about how Broad collects and uses your Personal
     Information (as defined in Section 6 below) through the seqr platform.
 
@@ -16,16 +16,18 @@ export default () => (
       this Policy, please contact us at <a href="mailto:seqr@broadinstitute.org">seqr@broadinstitute.org</a>.
     </b>
 
-    <Header content="1. Who is Broad?" size="medium" />
-    Broad is a non-profit research institution that is dedicated to improving human health by using genomics to advance
-    our understanding of the biology and treatment of human disease, and to help lay the groundwork for a new
-    generation of therapies.  For more information on the organization, please
+    <Header content="1. What is Broad?" size="medium" />
+    The Broad Institute of MIT & Harvard is a non-profit research institution that is dedicated to improving human
+    health by using genomics to advance our understanding of the biology and treatment of human disease, and to help lay
+    the groundwork for a new generation of therapies.  For more information on the organization, please
     see <a href="https://www.broadinstitute.org/about-us">https://www.broadinstitute.org/about-us</a>.  We will refer
     to Broad in this Policy as <b>&quot;we,&quot;</b> <b>&quot;us&quot;</b> or <b>&quot;our.&quot;</b> <br /><br />
 
-    This Policy applies to the seqr platform, which is a web-based application developed and hosted by Broad
-    (the <b>&quot;Platform&quot;</b>). This Platform is used by both Broad employees and external collaborators across
-    the world to analyze and diagnose patients with rare genetic diseases. While the Platform is owned by the
+    This Policy applies to the seqr platform (<b>&quot;Platform&quot;</b>) - an open-source web-based application
+    developed and hosted by Broad. To be more broadly available to researchers, seqr has been made available as a
+    connected application in the National Human Genome Research Institute Analysis Visualization and Informatics
+    Lab‐Space (NHGRI&apos;s AnVIL; https://anvilproject.org). The seqr platform is used by Broad employees and external
+    users for family-focused rare disease analysis and project management. While the Platform is owned by the
     Broad&apos;s Translational Genomics Group, the genomic and other data hosted within the Platform
     (<b>&quot;Genomic Data&quot;</b>) is owned or controlled by the data contributor who consented the sample and
     uploaded the data to the Platform. <br /><br />
@@ -42,7 +44,7 @@ export default () => (
     about Research Participants that may be contributed by users to the Platform.
 
     <Header content="3. Does this Policy Apply to Genomic Data Uploaded to the Platform?" size="medium" />
-    This Policy only applies to information that we collect about users of the Platform, and does not apply to Genomic
+    This Policy only applies to information that we collect about users of the Platform and does not apply to Genomic
     Data contributed by users to the Platform. While the Platform also allows users to view and contribute Genomic Data
     for research purposes,  the relevant Genomic Data contributor is  responsible for obtaining all necessary
     permissions and consents for such data.  If you are a user of the Platform, you are required to keep the Genomic
@@ -61,15 +63,15 @@ export default () => (
     choose to do any of the following, none of which is required:
     <List bulleted>
       <List.Item>
-        register to use the Platform, such as when you create an account on the Platform, in which case we collect your
+        Register to use the Platform, such as when you create an account on the Platform, in which case we collect your
         name and e-mail address;
       </List.Item>
       <List.Item>
-        use the Platform, such as comments, material or information you may post on or upload to the Platform
+        Use the Platform, such as comments, material or information you may post on or upload to the Platform
         (&quot;User Content&quot;); and
       </List.Item>
       <List.Item>
-        communicate with us (e.g., by email).
+        Communicate with us (e.g., by email).
       </List.Item>
     </List>
     In all these cases, we only collect information that you have provided to us, except for information obtained
@@ -251,16 +253,12 @@ export default () => (
     that you keep your profile account on the Platform confidential, including any user identification or password.  You
     should also notify us immediately if there has been any unauthorized use of your account.
 
-    <Header content="14. Do you collect information from children?" size="medium" />
-    We do not collect information directly from children under the age of majority.  If we discover that a child under
-    the age of majority has provided us with Personal Information, we will delete such information from our systems.
-
-    <Header content="15. Is there any transfer of Personal Information from one country to another?" size="medium" />
+    <Header content="14. Is there any transfer of Personal Information from one country to another?" size="medium" />
     We store the information you provide on servers in the United States.  If you are a user of the Platform, you agree
     to the transfer of your Personal Information to the United States and acknowledge that the laws in the United States
     may offer less protection to your Personal Information than the laws where you live.
 
-    <Header content="16. Whom do I contact if I have a question or a complaint?" size="medium" />
+    <Header content="15. Whom do I contact if I have a question or a complaint?" size="medium" />
     You may contact us at the addresses below if you have any questions or complaints about information practices or
     this Policy:<br />
     By email to: <a href="mailto:seqr@broadinstitute.org">seqr@broadinstitute.org</a><br />
@@ -271,7 +269,7 @@ export default () => (
     United States<br />
     Attention: Data Privacy<br />
 
-    <Header content="17. Will you update or change this Policy?" size="medium" />
+    <Header content="16. Will you update or change this Policy?" size="medium" />
     Yes, we may need to update or change this Policy for various reasons, such as to comply with changes in the law, or
     to cover new features or services provided through the Platform.  If we update or change this Policy we will post
     the changes to the Policy on the Platform and in the App. To make sure you are aware of any updates or changes, you
@@ -281,14 +279,14 @@ export default () => (
     to determine when this Privacy Policy was last revised by checking the &quot;Last Updated&quot; information that
     appears at the top of this page.
 
-    <Header content="18. HIPAA, Protected Health Information and Clinical Compliance Features." size="medium" />
-    In general, we are not a Covered Entity or Business Associate as such terms are defined in the Health Insurance
+    <Header content="17. HIPAA, Protected Health Information and Clinical Compliance Features." size="medium" />
+    The Broad is not a Covered Entity or Business Associate as such terms are defined in the Health Insurance
     Portability and Accountability Act of 1996, as amended, and its related regulations
-    (collectively, <b>&quot;HIPAA&quot;</b>) and, therefore, are not generally subject to the requirements of HIPAA with
+    (collectively, <b>&quot;HIPAA&quot;</b>) and, therefore, is not generally subject to the requirements of HIPAA with
     respect to <b>P</b>ersonal Information we process through the Platform.  seqr is not
     intended <b>to store</b> protected health information subject to HIPAA (<b>&quot;PHI&quot;</b>).
 
-    <Header content="19. Notice to Residents of the European Union" size="medium" />
+    <Header content="18. Notice to Residents of the European Union" size="medium" />
     This section outlines certain additional information that we are obligated to provide to data subjects of the
     European Union as well as certain rights such data subjects have with respect to the processing of their Personal
     Information, pursuant to applicable local laws.  Capitalized terms not otherwise defined in this Policy, shall have
