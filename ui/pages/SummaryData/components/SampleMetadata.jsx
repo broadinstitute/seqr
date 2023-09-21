@@ -39,7 +39,7 @@ const FIELDS = [
 const PROJECT_ID_FIELD = 'project_id'
 const FAMILY_FIELD_ID = 'family_id'
 
-const CORE_METADATA_COLUMNS = [
+const CORE_COLUMNS = [
   { name: 'subject_id' },
   {
     name: PROJECT_ID_FIELD,
@@ -76,8 +76,9 @@ const CORE_METADATA_COLUMNS = [
   { name: 'family_history' },
 ]
 
-const AIRTABLE_METADATA_COLUMNS = [
-  { name: 'dbgap_submission' },
+const AIRTABLE_DBGAP_SUBMISSION_FIELD = 'dbgap_submission'
+const AIRTABLE_COLUMNS = [
+  { name: AIRTABLE_DBGAP_SUBMISSION_FIELD },
   { name: 'dbgap_study_id' },
   { name: 'dbgap_subject_id' },
   { name: 'multiple_datasets' },
@@ -85,7 +86,7 @@ const AIRTABLE_METADATA_COLUMNS = [
   { name: 'sample_provider' },
 ]
 
-const VARIANT_METADATA_COLUMNS = [
+const VARIANT_COLUMNS = [
   'Gene',
   'Gene_Class',
   'novel_mendelian_gene',
@@ -115,10 +116,11 @@ const ACTIVE_LINK_STYLE = {
 
 const getResultHref = result => `/summary_data/sample_metadata/${result.key}`
 
-const getColumns = (data, projectGuid) => {
+const getColumns = (data) => {
   const maxSavedVariants = Math.max(1, ...(data || []).map(row => row.num_saved_variants))
-  return [...CORE_METADATA_COLUMNS, ...(projectGuid === ALL_PROJECTS_PATH ? [] : AIRTABLE_METADATA_COLUMNS)].concat(
-    ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_METADATA_COLUMNS.map(col => ({ name: `${col}-${i + 1}` }))),
+  const hasAirtable = data && data[0] && data[0][AIRTABLE_DBGAP_SUBMISSION_FIELD]
+  return [...CORE_COLUMNS, ...(hasAirtable ? AIRTABLE_COLUMNS : [])].concat(
+    ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_COLUMNS.map(col => ({ name: `${col}-${i + 1}` }))),
   ).map(({ name, ...props }) => ({ name, content: name, ...props }))
 }
 
@@ -148,7 +150,7 @@ const SampleMetadata = React.memo(({ projectGuid, queryForm, data }) => (
       defaultSortColumn="family_id"
       emptyContent={projectGuid ? '0 cases found' : 'Select a project to view data'}
       data={data}
-      columns={getColumns(data, projectGuid)}
+      columns={getColumns(data)}
       rowsPerPage={100}
     />
   </div>
