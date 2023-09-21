@@ -6,8 +6,8 @@ WORKDIR /hail_search
 
 # Install dependencies.
 # (Explicitly not using a build image w/ venev here because our additional requirements are minimal... for now)
-COPY hail_search/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY hail_search/requirements-deploy.txt .
+RUN pip install --no-cache-dir -r requirements-deploy.txt
 
 # Deployment utilities
 COPY deploy/docker/hail_search/gunicorn_config.py /
