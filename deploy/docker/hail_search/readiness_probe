@@ -1,1 +1,0 @@
-curl http://localhost:${HAIL_SEARCH_SERVICE_PORT} | grep -i "html" >& /readiness_probe.log

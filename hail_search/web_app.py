@@ -36,5 +36,6 @@ async def init_web_app():
         web.post('/search', search),
         web.post('/gene_counts', gene_counts),
     ])
+    hl.init(idempotent=True)
     load_globals()
     return app
