@@ -9,4 +9,4 @@ COPY hail_search/ .
 
 WORKDIR /
 EXPOSE 8000
-CMD ["python", "-m", "hail_search"]
+CMD ["python3", "-m", "hail_search"]
