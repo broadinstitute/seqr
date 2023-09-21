@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
+from django.core.exceptions import PermissionDenied
 from django.db.models import CharField, F, Value, Case, When
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
@@ -9,7 +10,7 @@ from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissio
     get_mme_metrics, get_hpo_terms_by_id
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Family, Individual, VariantTagType, SavedVariant, FamilyAnalysedBy
+from seqr.models import Project, Family, Individual, VariantTagType, SavedVariant, FamilyAnalysedBy
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.gene_utils import get_genes
@@ -168,15 +169,18 @@ def bulk_update_family_analysed_by(request):
     })
 
 
-# TODO change access
-@analyst_required
+@login_and_policies_required
 def sample_metadata_export(request, project_guid):
+    is_analyst = user_is_analyst(request.user)
     is_all_projects = project_guid == 'all'
-    omit_airtable = is_all_projects or 'true' in request.GET.get('omitAirtable', '')
+    include_airtable = 'true' in request.GET.get('includeAirtable', '') and is_analyst and not is_all_projects
     if is_all_projects:
-        projects = get_internal_projects()
+        projects = get_internal_projects() if is_analyst else Project.objects.filter(
+            guid__in=get_project_guids_user_can_view(request.user))
     elif project_guid == 'gregor':
-        projects = get_internal_projects().filter(projectcategory__name__iexact='gregor')
+        if not is_analyst:
+            raise PermissionDenied()
+        projects = Project.objects.filter(projectcategory__name__iexact='gregor')
     else:
         projects = [get_project_and_check_permissions(project_guid, request.user)]
 
@@ -210,7 +214,7 @@ def sample_metadata_export(request, project_guid):
 
     parse_anvil_metadata(
         projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user, _add_row,
-        omit_airtable=omit_airtable,
+        omit_airtable=not include_airtable,
         get_additional_variant_fields=_get_additional_variant_fields,
         get_additional_sample_fields=lambda sample, airtable_metadata: {
             'data_type': sample.sample_type,

@@ -366,6 +366,19 @@ class SummaryDataAPITest(AirtableTest):
 
         self.check_no_analyst_no_access(url)
 
+    def _has_expected_metadata_response(self, response, expected_samples, has_airtable=False, has_duplicate=False):
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertEqual(len(response_json['rows']), len(expected_samples) + (1 if has_duplicate else 0))
+        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
+        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertDictEqual(
+            EXPECTED_SAMPLE_METADATA_ROW if has_airtable else EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row
+        )
+        if has_duplicate:
+            self.assertEqual(len([r['subject_id'] for r in response_json['rows'] if r['subject_id'] == 'NA20888']), 2)
+
     @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 2)
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
@@ -373,26 +386,76 @@ class SummaryDataAPITest(AirtableTest):
     def test_sample_metadata_export(self, mock_google_authenticated):
         mock_google_authenticated.return_value = False
         url = reverse(sample_metadata_export, args=['R0003_test'])
-        self.check_analyst_login(url)
+        self.check_require_login(url)
 
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Permission Denied')
+
+        # Test collaborator access
+        self.login_collaborator()
+        response = self.client.get(url)
+        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
+        self._has_expected_metadata_response(response, expected_samples)
+
+        # Test airtable not returned for non-analysts
+        include_airtable_url = f'{url}?includeAirtable=true'
+        response = self.client.get(include_airtable_url)
+        self._has_expected_metadata_response(response, expected_samples)
+
+        # Test all projects
+        all_projects_url = reverse(sample_metadata_export, args=['all'])
+        multi_project_samples = {
+            'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
+            'NA20872', 'NA20881', 'HG00733',
+        }
+        multi_project_samples.update(expected_samples)
+        response = self.client.get(all_projects_url)
+        self._has_expected_metadata_response(response, multi_project_samples, has_duplicate=True)
+
+        # Test gregor projects no access
+        gregor_projects_url = reverse(sample_metadata_export, args=['gregor'])
+        response = self.client.get(gregor_projects_url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Permission Denied')
+
+        # Test analyst access
+        self.login_analyst_user()
         unauthorized_project_url = reverse(sample_metadata_export, args=['R0004_non_analyst_project'])
         response = self.client.get(unauthorized_project_url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.get(url)
+        self._has_expected_metadata_response(response, expected_samples)
+
+        # Test empty project
+        empty_project_url = reverse(sample_metadata_export, args=['R0002_empty'])
+        response = self.client.get(empty_project_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'rows': []})
+
+        # Test all projects
+        response = self.client.get(all_projects_url)
+        all_project_samples = {*multi_project_samples, *self.ADDITIONAL_SAMPLES}
+        self._has_expected_metadata_response(response, all_project_samples, has_duplicate=True)
+
+        response = self.client.get(f'{all_projects_url}?includeAirtable=true')
+        self._has_expected_metadata_response(response, all_project_samples, has_duplicate=True)
+
+        # Test invalid airtable responses
+        response = self.client.get(include_airtable_url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
         mock_google_authenticated.return_value = True
 
-        # Test invalid airtable responses
         responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=402)
-        response = self.client.get(url)
+        response = self.client.get(include_airtable_url)
         self.assertEqual(response.status_code, 402)
 
         responses.reset()
         responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=200)
-        response = self.client.get(url)
+        response = self.client.get(include_airtable_url)
         self.assertEqual(response.status_code, 500)
         self.assertIn(response.json()['error'], ['Unable to retrieve airtable data: No JSON object could be decoded',
                                                  'Unable to retrieve airtable data: Expecting value: line 1 column 1 (char 0)'])
@@ -404,7 +467,7 @@ class SummaryDataAPITest(AirtableTest):
                       json=AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Collaborator'.format(AIRTABLE_URL),
                       json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
-        response = self.client.get(url)
+        response = self.client.get(include_airtable_url)
         self.assertEqual(response.status_code, 500)
         self.assertEqual(
             response.json()['error'],
@@ -422,75 +485,20 @@ class SummaryDataAPITest(AirtableTest):
         expected_fields[0] = 'SeqrCollaboratorSampleID'
         self.assert_expected_airtable_call(3, second_formula, expected_fields)
 
-        # Test success
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertEqual(len(response_json['rows']), 3)
-        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
-        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
-        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
-        self.assertDictEqual(EXPECTED_SAMPLE_METADATA_ROW, test_row)
+        # Test airtable success
+        response = self.client.get(include_airtable_url)
+        self._has_expected_metadata_response(response, expected_samples, has_airtable=True)
         self.assertEqual(len(responses.calls), 8)
         self.assert_expected_airtable_call(
             -1, "OR(RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
         self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
 
         # Test gregor projects
-        gregor_projects_url = reverse(sample_metadata_export, args=['gregor'])
         response = self.client.get(gregor_projects_url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertEqual(len(response_json['rows']), 16)
-        expected_samples.update({
-            'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
-            'NA20872', 'NA20881', 'HG00733',
-        })
-        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
-        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
-        self.assertDictEqual(EXPECTED_SAMPLE_METADATA_ROW, test_row)
-        self.assertEqual(len([r['subject_id'] for r in response_json['rows'] if r['subject_id'] == 'NA20888']), 2)
+        self._has_expected_metadata_response(response, multi_project_samples, has_duplicate=True)
 
-        # Test all projects
-        responses.reset()
-        all_projects_url = reverse(sample_metadata_export, args=['all'])
-        response = self.client.get(all_projects_url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertEqual(len(response_json['rows']), 16 + len(self.ADDITIONAL_SAMPLES))
-        expected_samples.update(self.ADDITIONAL_SAMPLES)
-        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
-        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
-        self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
-        self.assertEqual(len([r['subject_id'] for r in response_json['rows'] if r['subject_id'] == 'NA20888']), 2)
-
-        # Test omit airtable columns
-        response = self.client.get(f'{url}?omitAirtable=true')
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertEqual(len(response_json['rows']), 3)
-        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
-        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
-        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
-        self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
-
-        # Test empty project
-        empty_project_url = reverse(sample_metadata_export, args=['R0002_empty'])
-        response = self.client.get(empty_project_url)
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'rows': []})
-
-        self.check_no_analyst_no_access(url)
-
-        # Test non-broad analysts do not have access
-        self.login_pm_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
+        response = self.client.get(f'{gregor_projects_url}?includeAirtable=true')
+        self._has_expected_metadata_response(response, multi_project_samples, has_airtable=True, has_duplicate=True)
 
 
 # Tests for AnVIL access disabled
