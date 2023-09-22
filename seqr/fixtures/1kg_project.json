@@ -880,7 +880,7 @@
 
         "individual": 1,
         "sample_type": "WES",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "sample_id": "NA19675",
         "is_active": true,
         "elasticsearch_index": "test_index",
@@ -898,7 +898,7 @@
 
         "individual": 2,
         "sample_type": "WES",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "sample_id": "NA19678",
         "is_active": true,
         "elasticsearch_index": "test_index_old",
@@ -915,7 +915,7 @@
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 3,
         "sample_type": "RNA",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "sample_id": "NA19679_S",
         "is_active": true,
         "elasticsearch_index":null,
@@ -938,7 +938,7 @@
         "is_active": false,
         "elasticsearch_index": "test_index",
         "individual": 3,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -955,7 +955,7 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 4,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -972,7 +972,7 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 5,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -989,7 +989,7 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 6,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1006,7 +1006,7 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 7,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1023,7 +1023,7 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 8,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
@@ -1041,7 +1041,7 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 9,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1058,7 +1058,7 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 10,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
@@ -1076,7 +1076,7 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 11,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
@@ -1094,7 +1094,7 @@
         "sample_type": "WES",
         "is_active": false,
     	"individual": 12,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
@@ -1112,7 +1112,7 @@
         "sample_type": "WES",
         "is_active": false,
     	"individual": 14,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
@@ -1130,7 +1130,7 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 15,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "loaded_date": "2020-02-05T06:42:55.397Z"
     }
 },
@@ -1147,7 +1147,7 @@
         "sample_type": "WGS",
         "is_active": false,
         "individual": 16,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
@@ -1165,7 +1165,7 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 17,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
@@ -1265,7 +1265,7 @@
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 1,
         "sample_type": "RNA",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "sample_id": "NA19675_D2",
         "is_active": true,
         "elasticsearch_index":null,
@@ -1283,7 +1283,7 @@
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 1,
         "sample_type": "RNA",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "sample_id": "NA19675_1",
         "is_active": true,
         "elasticsearch_index":null,
@@ -1302,7 +1302,7 @@
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 1,
         "sample_type": "RNA",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "sample_id": "NA19675_D2",
         "is_active": true,
         "elasticsearch_index":null,

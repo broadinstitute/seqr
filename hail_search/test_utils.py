@@ -5,7 +5,7 @@ FAMILY_3_SAMPLE = {
     'sample_id': 'NA20870', 'individual_guid': 'I000007_na20870', 'family_guid': 'F000003_3',
     'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M',
 }
-FAMILY_2_VARIANT_SAMPLE_DATA = {'VARIANTS': [
+FAMILY_2_VARIANT_SAMPLE_DATA = {'SNV_INDEL': [
     {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
     {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
     {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
@@ -18,20 +18,20 @@ EXPECTED_SAMPLE_DATA = {
     ],
 }
 EXPECTED_SAMPLE_DATA.update(deepcopy(FAMILY_2_VARIANT_SAMPLE_DATA))
-EXPECTED_SAMPLE_DATA['VARIANTS'].append(FAMILY_3_SAMPLE)
-CUSTOM_AFFECTED_SAMPLE_DATA = {'VARIANTS': deepcopy(EXPECTED_SAMPLE_DATA['VARIANTS'])}
-CUSTOM_AFFECTED_SAMPLE_DATA['VARIANTS'][0]['affected'] = 'N'
-CUSTOM_AFFECTED_SAMPLE_DATA['VARIANTS'][1]['affected'] = 'A'
-CUSTOM_AFFECTED_SAMPLE_DATA['VARIANTS'][2]['affected'] = 'U'
+EXPECTED_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_3_SAMPLE)
+CUSTOM_AFFECTED_SAMPLE_DATA = {'SNV_INDEL': deepcopy(EXPECTED_SAMPLE_DATA['SNV_INDEL'])}
+CUSTOM_AFFECTED_SAMPLE_DATA['SNV_INDEL'][0]['affected'] = 'N'
+CUSTOM_AFFECTED_SAMPLE_DATA['SNV_INDEL'][1]['affected'] = 'A'
+CUSTOM_AFFECTED_SAMPLE_DATA['SNV_INDEL'][2]['affected'] = 'U'
 
 FAMILY_1_SAMPLE_DATA = {
-    'VARIANTS': [
+    'SNV_INDEL': [
         {'sample_id': 'NA19675', 'individual_guid': 'I000001_na19675', 'family_guid': 'F000001_1', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M'},
         {'sample_id': 'NA19678', 'individual_guid': 'I000002_na19678', 'family_guid': 'F000001_1', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
     ],
 }
 FAMILY_2_MISSING_SAMPLE_DATA = deepcopy(FAMILY_1_SAMPLE_DATA)
-for s in FAMILY_2_MISSING_SAMPLE_DATA['VARIANTS']:
+for s in FAMILY_2_MISSING_SAMPLE_DATA['SNV_INDEL']:
     s['family_guid'] = 'F000002_2'
 
 FAMILY_2_MITO_SAMPLE_DATA = {'MITO': [
@@ -45,14 +45,14 @@ ALL_AFFECTED_SAMPLE_DATA.update(FAMILY_2_MITO_SAMPLE_DATA)
 FAMILY_5_SAMPLE = {
     'sample_id': 'NA20874', 'individual_guid': 'I000009_na20874', 'family_guid': 'F000005_5', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M',
 }
-ALL_AFFECTED_SAMPLE_DATA['VARIANTS'].append(FAMILY_5_SAMPLE)
+ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_5_SAMPLE)
 FAMILY_11_SAMPLE = {
     'sample_id': 'NA20885', 'individual_guid': 'I000015_na20885', 'family_guid': 'F000011_11', 'project_guid': 'R0003_test', 'affected': 'A', 'sex': 'M',
 }
 MULTI_PROJECT_SAMPLE_DATA = deepcopy(FAMILY_2_VARIANT_SAMPLE_DATA)
-MULTI_PROJECT_SAMPLE_DATA['VARIANTS'].append(FAMILY_11_SAMPLE)
+MULTI_PROJECT_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_11_SAMPLE)
 MULTI_PROJECT_MISSING_SAMPLE_DATA = deepcopy(FAMILY_2_MISSING_SAMPLE_DATA)
-MULTI_PROJECT_MISSING_SAMPLE_DATA['VARIANTS'].append(FAMILY_11_SAMPLE)
+MULTI_PROJECT_MISSING_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_11_SAMPLE)
 
 SV_WGS_SAMPLE_DATA = {'SV_WGS': [FAMILY_11_SAMPLE, {
     'sample_id': 'NA20884', 'individual_guid': 'I000025_na20884', 'family_guid': 'F000011_11', 'project_guid': 'R0003_test', 'affected': 'N', 'sex': 'M',
@@ -129,16 +129,16 @@ VARIANT1 = {
     '_sort': [1000010439],
 }
 VARIANT2 = {
-    'variantId': '1-11794419-T-G',
+    'variantId': '1-38724419-T-G',
     'chrom': '1',
-    'pos': 11794419,
+    'pos': 38724419,
     'ref': 'T',
     'alt': 'G',
     'genomeVersion': '38',
     'liftedOverGenomeVersion': '37',
     'liftedOverChrom': '1',
     'liftedOverPos': 11854476,
-    'xpos': 1011794419,
+    'xpos': 1038724419,
     'rsid': 'rs1801131',
     'familyGuids': ['F000002_2'],
     'genotypes': {
@@ -148,11 +148,11 @@ VARIANT2 = {
        },
        'I000005_hg00732': {
            'sampleId': 'HG00732', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
-           'numAlt': 0, 'dp': 33, 'gq': 40, 'ab': 0.0,
+           'numAlt': 1, 'dp': 32, 'gq': 99, 'ab': 0.625,
        },
        'I000006_hg00733': {
            'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
-           'numAlt': 1, 'dp': 32, 'gq': 99, 'ab': 0.625,
+           'numAlt': 0, 'dp': 33, 'gq': 40, 'ab': 0.0,
        },
     },
     'genotypeFilters': '',
@@ -202,16 +202,18 @@ VARIANT2 = {
            {'aminoAcids': 'E/A', 'canonical': None, 'codons': 'gAa/gCa', 'geneId': 'ENSG00000177000', 'hgvsc': 'ENST00000376592.6:c.1286A>C', 'hgvsp': 'ENSP00000365777.1:p.Glu429Ala', 'transcriptId': 'ENST00000376592', 'isLofNagnag': None, 'transcriptRank': 3, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'missense_variant'},
            {'aminoAcids': 'E/A', 'canonical': None, 'codons': 'gAa/gCa', 'geneId': 'ENSG00000177000', 'hgvsc': 'ENST00000423400.7:c.1406A>C', 'hgvsp': 'ENSP00000398908.3:p.Glu469Ala', 'transcriptId': 'ENST00000423400', 'isLofNagnag': None, 'transcriptRank': 4, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'missense_variant'},
            {'aminoAcids': 'E/A', 'canonical': None, 'codons': 'gAa/gCa', 'geneId': 'ENSG00000177000', 'hgvsc': 'ENST00000641407.1:c.1286A>C', 'hgvsp': 'ENSP00000493098.1:p.Glu429Ala', 'transcriptId': 'ENST00000641407', 'isLofNagnag': None, 'transcriptRank': 5, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'missense_variant'},
-           {'aminoAcids': 'E/A', 'canonical': None, 'codons': 'gAa/gCa', 'geneId': 'ENSG00000177000', 'hgvsc': 'ENST00000641820.1:c.551A>C', 'hgvsp': 'ENSP00000492937.1:p.Glu184Ala', 'transcriptId': 'ENST00000641820', 'isLofNagnag': None, 'transcriptRank': 6, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'missense_variant'},
            {'aminoAcids': 'E/A', 'canonical': None, 'codons': 'gAa/gCa', 'geneId': 'ENSG00000177000', 'hgvsc': 'ENST00000641446.1:c.1286A>C', 'hgvsp': 'ENSP00000493262.1:p.Glu429Ala', 'transcriptId': 'ENST00000641446', 'isLofNagnag': None, 'transcriptRank': 7, 'biotype': 'nonsense_mediated_decay', 'lofFilters': None, 'majorConsequence': 'missense_variant'},
            {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000177000', 'hgvsc': 'ENST00000641747.1:c.*798A>C', 'hgvsp': None, 'transcriptId': 'ENST00000641747', 'isLofNagnag': None, 'transcriptRank': 8, 'biotype': 'nonsense_mediated_decay', 'lofFilters': None, 'majorConsequence': '3_prime_UTR_variant'},
            {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000177000', 'hgvsc': 'ENST00000641759.1:n.1655A>C', 'hgvsp': None, 'transcriptId': 'ENST00000641759', 'isLofNagnag': None, 'transcriptRank': 9, 'biotype': 'retained_intron', 'lofFilters': None, 'majorConsequence': 'non_coding_transcript_exon_variant'},
            {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000177000', 'hgvsc': 'ENST00000641805.1:n.1803A>C', 'hgvsp': None, 'transcriptId': 'ENST00000641805', 'isLofNagnag': None, 'transcriptRank': 10, 'biotype': 'retained_intron', 'lofFilters': None, 'majorConsequence': 'non_coding_transcript_exon_variant'},
        ],
+       'ENSG00000277258': [
+           {'aminoAcids': 'E/A', 'canonical': None, 'codons': 'gAa/gCa', 'geneId': 'ENSG00000277258', 'hgvsc': 'ENST00000641820.1:c.551A>C', 'hgvsp': 'ENSP00000492937.1:p.Glu184Ala', 'transcriptId': 'ENST00000641820', 'isLofNagnag': None, 'transcriptRank': 0, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'missense_variant'},
+       ]
     },
     'mainTranscriptId': 'ENST00000376585',
     'selectedMainTranscriptId': None,
-    '_sort': [1011794419],
+    '_sort': [1038724419],
 }
 VARIANT3 = {
     'variantId': '1-91502721-G-A',
@@ -642,7 +644,7 @@ GCNV_VARIANT3 = {
     'populations': {'sv_callset': {'af': 0.0015185698866844177, 'ac': 35, 'an': 23048, 'hom': 0, 'het': 0}},
     'predictions': {'strvctvre': 0.7860000133514404},
     'numExon': 3,
-    'svType': 'DEL',
+    'svType': 'DUP',
     'transcripts': {
         'ENSG00000275023': [{'geneId': 'ENSG00000275023', 'majorConsequence': 'LOF'}],
     },
@@ -681,7 +683,7 @@ GCNV_VARIANT4 = {
     'populations': {'sv_callset': {'af': 0.004989586770534515, 'ac': 115, 'an': 23048, 'hom': 0, 'het': 0}},
     'predictions': {'strvctvre': 0.7099999785423279},
     'numExon': 7,
-    'svType': 'DUP',
+    'svType': 'DEL',
     'transcripts': {
         'ENSG00000275023': [{'geneId': 'ENSG00000275023', 'majorConsequence': 'LOF'}],
         'ENSG00000277258': [{'geneId': 'ENSG00000277258', 'majorConsequence': 'LOF'}],
@@ -723,6 +725,162 @@ GCNV_MULTI_FAMILY_VARIANT2['transcripts'].update({
     'ENSG00000280789': [{'geneId': 'ENSG00000280789', 'majorConsequence': 'LOF'}],
 })
 
+MITO_VARIANT1 = {
+    'variantId': 'M-4429-G-A',
+    'chrom': 'M',
+    'pos': 4429,
+    'ref': 'G',
+    'alt': 'A',
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': 'MT',
+    'liftedOverPos': 4429,
+    'xpos': 25000004429,
+    'rsid': 'rs1603219456',
+    'familyGuids': ['F000002_2'],
+    'genotypes': {'I000006_hg00733': {
+        'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
+        'numAlt': 1, 'dp': 3955, 'gq': 53.0, 'hl': 0.083, 'mitoCn': 230, 'contamination': 0.0,
+    }},
+    'genotypeFilters': '',
+    'populations': {
+        'seqr': {'af': 0.0, 'ac': 0, 'an': 154},
+        'seqr_heteroplasmy': {'af': 0.006493506487458944, 'ac': 1, 'an': 154},
+        'gnomad_mito': {'af': 0.0, 'ac': 0, 'an': 56419},
+        'gnomad_mito_heteroplasmy': {'af': 0.0, 'ac': 0, 'an': 56419, 'max_hl': 0.0},
+        'helix': {'af': 0.0, 'ac': 0, 'an': 195983},
+        'helix_heteroplasmy': {'af': 1.530745066702366e-05, 'ac': 3, 'an': 195983, 'max_hl': 0.20634999871253967},
+    },
+    'predictions': {
+        'apogee': None,
+        'haplogroup_defining': None,
+        'hmtvar': 0.05000000074505806,
+        'mitotip': 'likely_pathogenic',
+        'mut_taster': None,
+        'sift': None,
+    },
+    'commonLowHeteroplasmy': False,
+    'highConstraintRegion': True,
+    'mitomapPathogenic': None,
+    'clinvar': {
+        'alleleId': 677748,
+        'conflictingPathogenicities': None,
+        'goldStars': 1,
+        'pathogenicity': 'Uncertain_significance',
+        'assertions': [],
+        'version': '2023-08-06',
+    },
+    'transcripts': {
+        'ENSG00000210112': [
+            {'aminoAcids': None, 'canonical': 1, 'codons': None, 'geneId': 'ENSG00000210112', 'hgvsc': 'ENST00000387377.1:n.28G>A', 'hgvsp': None, 'transcriptId': 'ENST00000387377', 'isLofNagnag': None, 'transcriptRank': 0, 'biotype': 'Mt_tRNA', 'lofFilters': None, 'majorConsequence': 'non_coding_transcript_exon_variant'},
+        ],
+    },
+    'mainTranscriptId': 'ENST00000387377',
+    'selectedMainTranscriptId': None,
+    '_sort': [25000004429],
+}
+MITO_VARIANT2 = {
+    'variantId': 'M-11597-A-G',
+    'chrom': 'M',
+    'pos': 11597,
+    'ref': 'A',
+    'alt': 'G',
+    'xpos': 25000011597,
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': 'MT',
+    'liftedOverPos': 11597,
+    'rsid': None,
+    'familyGuids': ['F000002_2'],
+    'genotypes': {'I000006_hg00733': {
+        'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
+        'numAlt': 1, 'dp': 3845, 'gq': 60.0, 'hl': 0.029, 'mitoCn': 247, 'contamination': 0.015,
+    }},
+    'genotypeFilters': '',
+    'populations': {
+        'seqr': {'af': 0.0, 'ac': 0, 'an': 154},
+        'seqr_heteroplasmy': {'af': 0.006493506487458944, 'ac': 1, 'an': 154},
+        'gnomad_mito': {'af': 0.0, 'ac': 0, 'an': 0},
+        'gnomad_mito_heteroplasmy': {'af': 0.0, 'ac': 0, 'an': 0, 'max_hl': 0.0},
+        'helix': {'af': 0.0, 'ac': 0, 'an': 0},
+        'helix_heteroplasmy': {'af': 0.0, 'ac': 0, 'an': 0, 'max_hl': 0.0},
+    },
+    'predictions': {
+        'apogee': 0.5799999833106995,
+        'haplogroup_defining': None,
+        'hmtvar': 0.75,
+        'mitotip': None,
+        'mut_taster': 'N',
+        'sift': 'D',
+    },
+    'commonLowHeteroplasmy': False,
+    'highConstraintRegion': True,
+    'mitomapPathogenic': None,
+    'clinvar': None,
+    'transcripts': {
+        'ENSG00000198886': [
+            {'aminoAcids': 'T/A', 'canonical': 1, 'codons': 'Aca/Gca', 'geneId': 'ENSG00000198886', 'hgvsc': 'ENST00000361381.2:c.838A>G', 'hgvsp': 'ENSP00000354961.2:p.Thr280Ala', 'transcriptId': 'ENST00000361381', 'isLofNagnag': None, 'transcriptRank': 0, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'missense_variant'},
+        ],
+    },
+    'mainTranscriptId': 'ENST00000361381',
+    'selectedMainTranscriptId': None,
+    '_sort': [25000011597],
+}
+MITO_VARIANT3 = {
+    'variantId': 'M-14783-T-C',
+    'chrom': 'M',
+    'pos': 14783,
+    'ref': 'T',
+    'alt': 'C',
+    'xpos': 25000014783,
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': 'MT',
+    'liftedOverPos': 14783,
+    'rsid': 'rs193302982',
+    'familyGuids': ['F000002_2'],
+    'genotypes': {'I000006_hg00733': {
+        'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
+        'numAlt': 2, 'dp': 3943, 'gq': 60.0, 'hl': 1.0, 'mitoCn': 214, 'contamination': 0.0,
+    }},
+    'genotypeFilters': 'artifact_prone_site',
+    'populations': {
+        'seqr': {'af': 0.019480518996715546, 'ac': 3, 'an': 154},
+        'seqr_heteroplasmy': {'af': 0.006493506487458944, 'ac': 1, 'an': 154},
+        'gnomad_mito': {'af': 0.05534649267792702, 'ac': 3118, 'an': 56336},
+        'gnomad_mito_heteroplasmy': {'af': 5.3251918870955706e-05, 'ac': 3, 'an': 56336, 'max_hl': 1.0},
+        'helix': {'af': 0.04884607344865799, 'ac': 9573, 'an': 195983},
+        'helix_heteroplasmy': {'af': 9.184470400214195e-05, 'ac': 18, 'an': 195983, 'max_hl': 0.962689995765686},
+    },
+    'predictions': {
+        'apogee': None,
+        'haplogroup_defining': 'Y',
+        'hmtvar': None,
+        'mitotip': None,
+        'mut_taster': None,
+        'sift': None,
+    },
+    'commonLowHeteroplasmy': True,
+    'highConstraintRegion': False,
+    'mitomapPathogenic': True,
+    'clinvar': {
+        'alleleId': 150280,
+        'conflictingPathogenicities': None,
+        'goldStars': 0,
+        'pathogenicity': 'Likely_pathogenic',
+        'assertions': [],
+        'version': '2023-08-06',
+    },
+    'transcripts': {
+        'ENSG00000198727': [
+            {'aminoAcids': 'L', 'canonical': 1, 'codons': 'Tta/Cta', 'geneId': 'ENSG00000198727', 'hgvsc': 'ENST00000361789.2:c.37T>C', 'hgvsp': 'ENSP00000354554.2:p.Leu13=', 'transcriptId': 'ENST00000361789', 'isLofNagnag': None, 'transcriptRank': 0, 'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'synonymous_variant'},
+        ],
+    },
+    'mainTranscriptId': 'ENST00000361789',
+    'selectedMainTranscriptId': None,
+    '_sort': [25000014783],
+}
+
 LOCATION_SEARCH = {
     'gene_ids': ['ENSG00000177000', 'ENSG00000097046'],
     'intervals': ['2:1234-5678', '7:1-11100', '1:11785723-11806455', '1:91500851-91525764'],
@@ -734,6 +892,7 @@ RSID_SEARCH = {'variant_ids': [], 'rs_ids': ['rs1801131']}
 GENE_COUNTS = {
     'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
     'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 2, 'F000011_11': 1}},
+    'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 1, 'F000011_11': 1}},
 }
 
 

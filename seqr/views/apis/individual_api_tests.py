@@ -817,7 +817,10 @@ class IndividualAPITest(object):
 * * Son, age 12, unaffected, unspecified availability
 * __Relatives:__ None""")
 
-    def _is_expected_individuals_metadata_upload(self, response, expected_families=False):
+    def _is_expected_individuals_metadata_upload(self, response, expected_families=False, has_non_hpo_update=False):
+        unchanged_individuals = ['NA19679']
+        if not has_non_hpo_update:
+            unchanged_individuals.insert(0, 'NA19678')
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         expected_response = {
@@ -826,9 +829,9 @@ class IndividualAPITest(object):
             'warnings': [
                 "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0004322 (NA19675_1); HP:0100258 (NA19679)",
                 'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
-                'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
+                f'No changes detected for {len(unchanged_individuals)} individuals. The following entries will not be updated: {", ".join(unchanged_individuals)}',
             ],
-            'info': ['1 individuals will be updated'],
+            'info': [f'{2 if has_non_hpo_update else 1} individuals will be updated'],
         }
         if expected_families:
             expected_response['warnings'].insert(1, 'The following invalid values for "assigned_analyst" will not be added: test_user_no_access@test.com (NA19679)')
@@ -844,7 +847,10 @@ class IndividualAPITest(object):
         if expected_families:
             expected_keys.add('familiesByGuid')
         self.assertSetEqual(set(response_json.keys()), expected_keys)
-        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
+        updated_individuals = {'I000001_na19675'}
+        if has_non_hpo_update:
+            updated_individuals.add('I000002_na19678')
+        self.assertSetEqual(set(response_json['individualsByGuid'].keys()), updated_individuals)
         self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675'].keys()), INDIVIDUAL_FIELDS)
         self.assertListEqual(
             response_json['individualsByGuid']['I000001_na19675']['features'],
@@ -864,6 +870,10 @@ class IndividualAPITest(object):
         self.assertListEqual(
             response_json['individualsByGuid']['I000001_na19675']['candidateGenes'],
             [{'gene': 'IKBKAP', 'comments': 'multiple panels, no confirm'}, {'gene': 'EHBP1L1'}])
+
+        if has_non_hpo_update:
+            self.assertIsNone(response_json['individualsByGuid']['I000002_na19678']['features'])
+            self.assertFalse(response_json['individualsByGuid']['I000002_na19678']['affectedRelatives'])
 
         if expected_families:
             self.assertListEqual(list(response_json['familiesByGuid'].keys()), ['F000001_1'])
@@ -907,11 +917,11 @@ class IndividualAPITest(object):
             ]})
 
         # send valid request
-        rows[0] = '1,NA19678,,,,,,,,,,'
+        rows[0] = '1,NA19678,,,,,false,,,,,'
         rows.append('1,NA19675_1,HP:0002017,"HP:0012469 (Infantile spasms);HP:0004322 (Short stature, severe)",F,2000,True,Juvenile onset,"Autosomal dominant inheritance, Sporadic","Finnish, Irish","IKBKAP -- (multiple panels, no confirm), EHBP1L1",test_user_collaborator@test.com')
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
-        self._is_expected_individuals_metadata_upload(response, expected_families=True)
+        self._is_expected_individuals_metadata_upload(response, expected_families=True, has_non_hpo_update=True)
 
     def test_individuals_metadata_json_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])

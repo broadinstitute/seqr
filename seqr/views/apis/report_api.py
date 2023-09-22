@@ -102,7 +102,7 @@ FAMILY_TABLE_COLUMNS = [
     'entity:family_id', 'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_image', 'pedigree_detail',
     'family_history', 'family_onset',
 ]
-DISCOVERY_TABLE_CORE_COLUMNS = ['entity:discovery_id', 'subject_id', 'sample_id']
+DISCOVERY_TABLE_CORE_COLUMNS = ['subject_id', 'sample_id']
 DISCOVERY_TABLE_VARIANT_COLUMNS = [
     'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'variant_genome_build', 'Chrom', 'Pos', 'Ref',
     'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'significance', 'discovery_notes',
@@ -184,7 +184,7 @@ def anvil_export(request, project_guid):
         ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, subject_rows],
         ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
         ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
-        ['{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, discovery_rows],
+        ['{}_PI_Discovery'.format(project.name), ['entity:discovery_id'] + DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, discovery_rows],
     ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
 
 
@@ -479,6 +479,8 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
         'inheritance_description': inheritance_mode,
         'variant_genome_build': GENOME_BUILD_MAP.get(variant_genome_version) or '',
         'discovery_notes': variant.get('discovery_notes', ''),
+        'Chrom': variant.get('chrom', ''),
+        'Pos': str(variant.get('pos', '')),
     }
 
     if 'discovery_tag_guids_by_name' in variant:
@@ -500,8 +502,6 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
         gene_id = compound_het_gene_id_by_family.get(family_id) or variant['main_transcript']['geneId']
         parsed_variant.update({
             'Gene': genes_by_id[gene_id]['geneSymbol'],
-            'Chrom': variant['chrom'],
-            'Pos': str(variant['pos']),
             'Ref': variant['ref'],
             'Alt': variant['alt'],
             'hgvsc': (variant['main_transcript'].get('hgvsc') or '').split(':')[-1],
@@ -566,7 +566,6 @@ def _get_sample_row(sample, has_dbgap_submission, airtable_metadata):
 def _get_discovery_rows(sample, parsed_variants, male_individual_guids, family_guid):
     individual = sample.individual
     discovery_row = {
-        'entity:discovery_id': individual.individual_id,
         'subject_id': individual.individual_id,
         'sample_id': sample.sample_id,
         'family_guid': family_guid,
@@ -574,11 +573,13 @@ def _get_discovery_rows(sample, parsed_variants, male_individual_guids, family_g
     discovery_rows = []
     for genotypes, parsed_variant in parsed_variants:
         genotype = genotypes.get(individual.guid, {})
-        is_x_linked = "X" in parsed_variant.get('Chrom', '')
+        chrom = parsed_variant.get('Chrom', '')
+        is_x_linked = "X" in chrom
         zygosity = _get_genotype_zygosity(
             genotype, is_hemi_variant=is_x_linked and individual.guid in male_individual_guids)
         if zygosity:
             variant_discovery_row = {
+                'entity:discovery_id': f'{chrom}_{parsed_variant["Pos"]}_{individual.individual_id}',
                 'Zygosity': zygosity,
             }
             variant_discovery_row.update(parsed_variant)

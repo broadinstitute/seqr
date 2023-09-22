@@ -14,7 +14,7 @@ DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 logger = logging.getLogger(__name__)
 
 
-PredictionPath = namedtuple('PredictionPath', ['source', 'field'])
+PredictionPath = namedtuple('PredictionPath', ['source', 'field', 'format'], defaults=[lambda x: x])
 QualityFilterFormat = namedtuple('QualityFilterFormat', ['scale', 'override'], defaults=[None, None])
 
 
@@ -103,7 +103,7 @@ class BaseHailTableQuery(object):
             }),
             'predictions': lambda r: hl.struct(**{
                 prediction: self._format_enum(r[path.source], path.field, self._enums[path.source][path.field])
-                if self._enums.get(path.source, {}).get(path.field) else r[path.source][path.field]
+                if self._enums.get(path.source, {}).get(path.field) else path.format(r[path.source][path.field])
                 for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
         }
@@ -192,14 +192,18 @@ class BaseHailTableQuery(object):
 
         return value
 
-    def __init__(self, sample_data, genome_version, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None, **kwargs):
+    def __init__(self, sample_data, genome_version, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
+                 override_comp_het_alt=False, **kwargs):
+        self.unfiltered_comp_het_ht = None
         self._genome_version = genome_version
         self._sort = sort
         self._sort_metadata = sort_metadata
         self._num_results = num_results
+        self._override_comp_het_alt = override_comp_het_alt
         self._ht = None
         self._comp_het_ht = None
         self._inheritance_mode = inheritance_mode
+        self._has_secondary_annotations = False
         self._load_table_kwargs = {}
 
         self._load_filtered_table(sample_data, inheritance_mode=inheritance_mode, **kwargs)
@@ -227,7 +231,7 @@ class BaseHailTableQuery(object):
 
         if self._has_comp_het_search:
             self._comp_het_ht = self._filter_compound_hets()
-            if self._is_recessive_search:
+            if self._is_recessive_search and HAS_ALLOWED_ANNOTATION in self._ht.row:
                 self._ht = self._ht.filter(self._ht.family_entries.any(hl.is_defined))
                 if HAS_ALLOWED_SECONDARY_ANNOTATION in self._ht.row:
                     self._ht = self._ht.filter(self._ht[HAS_ALLOWED_ANNOTATION]).drop(HAS_ALLOWED_SECONDARY_ANNOTATION)
@@ -273,6 +277,9 @@ class BaseHailTableQuery(object):
             entry_type = families_ht.family_entries.dtype.element_type
             for project_ht, num_project_families in filtered_project_hts[1:]:
                 families_ht = families_ht.join(project_ht, how='outer')
+                families_ht = families_ht.annotate_globals(
+                    family_guids=families_ht.family_guids.extend(families_ht.family_guids_1)
+                )
                 select_fields = {
                     'filters': families_ht.filters.union(families_ht.filters_1),
                     'family_entries': hl.bind(
@@ -324,7 +331,7 @@ class BaseHailTableQuery(object):
             ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map,
         )
 
-        return ht.select_globals(), num_families
+        return ht.select_globals('family_guids'), num_families
 
     @classmethod
     def _add_entry_sample_families(cls, ht, sample_data):
@@ -347,7 +354,8 @@ class BaseHailTableQuery(object):
         })
         sample_id_family_map = {s['sample_id']: s['family_guid'] for s in sample_data}
         sample_index_family_map = hl.dict({sample_id_index_map[k]: v for k, v in sample_id_family_map.items()})
-        family_index_map = {f: i for i, f in enumerate(sorted(set(sample_id_family_map.values())))}
+        family_guids = sorted(set(sample_id_family_map.values()))
+        family_index_map = {f: i for i, f in enumerate(family_guids)}
         num_families = len(family_index_map)
         family_sample_indices = [None] * num_families
         sample_id_family_index_map = {}
@@ -360,6 +368,7 @@ class BaseHailTableQuery(object):
             family_sample_indices[family_index].append(sample_index)
         family_sample_indices = hl.array(family_sample_indices)
 
+        ht = ht.annotate_globals(family_guids=family_guids)
         ht = ht.transmute(
             family_entries=family_sample_indices.map(lambda sample_indices: sample_indices.map(
                 lambda i: ht.entries[i].annotate(
@@ -403,8 +412,7 @@ class BaseHailTableQuery(object):
 
         return ht.filter(filter_expr)
 
-    @classmethod
-    def _filter_families_inheritance(cls, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data, field):
+    def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data, field):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
         entry_indices_by_gt = defaultdict(lambda: defaultdict(list))
@@ -413,14 +421,17 @@ class BaseHailTableQuery(object):
                 if individual_genotype_filter else INHERITANCE_FILTERS[inheritance_mode].get(s['affected'])
             if inheritance_mode == X_LINKED_RECESSIVE and s['affected'] == UNAFFECTED and s['sex'] == MALE:
                 genotype = REF_REF
+            if genotype == COMP_HET_ALT and self._override_comp_het_alt:
+                genotype = HAS_ALT
             if genotype:
                 family_index, entry_index = sample_id_family_index_map[s['sample_id']]
                 entry_indices_by_gt[genotype][family_index].append(entry_index)
 
         for genotype, entry_indices in entry_indices_by_gt.items():
             entry_indices = hl.dict(entry_indices)
-            ht = ht.annotate(**{field: hl.enumerate(ht.family_entries).map(
-                lambda x: cls._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, inheritance_mode)
+            family_entries = ht[field] if field in ht.row else ht.family_entries
+            ht = ht.annotate(**{field: hl.enumerate(family_entries).map(
+                lambda x: self._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, inheritance_mode)
             )})
 
         return ht
@@ -595,7 +606,7 @@ class BaseHailTableQuery(object):
 
     def _get_in_silico_filter(self, in_silico, value):
         score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
-        enum_lookup = self._get_enum_lookup(*score_path)
+        enum_lookup = self._get_enum_lookup(*score_path[:2])
         if enum_lookup is not None:
             ht_value = self._ht[score_path.source][f'{score_path.field}_id']
             score_filter = ht_value == enum_lookup[value]
@@ -609,41 +620,50 @@ class BaseHailTableQuery(object):
         annotations = annotations or {}
         annotation_override_filters = self._get_annotation_override_filters(annotations, pathogenicity=pathogenicity)
 
-        annotation_exprs = self._get_allowed_consequences_annotations(annotations, annotation_override_filters)
-        secondary_exprs = self._get_allowed_consequences_annotations(annotations_secondary or {}, annotation_override_filters, is_secondary=True)
+        annotation_exprs, _ = self._get_allowed_consequences_annotations(annotations, annotation_override_filters)
+        secondary_exprs, allowed_secondary_consequences = self._get_allowed_consequences_annotations(
+            annotations_secondary or {}, annotation_override_filters, is_secondary=True)
         if secondary_exprs:
             annotation_exprs.update({f'{k}_secondary': v for k, v in secondary_exprs.items()})
+        if secondary_exprs or allowed_secondary_consequences:
+            self._has_secondary_annotations = True
 
         if not annotation_exprs:
             return
 
         self._ht = self._ht.annotate(**annotation_exprs)
-        annotation_filter = self._ht[HAS_ALLOWED_ANNOTATION]
+        annotation_filters = []
+        if HAS_ALLOWED_ANNOTATION in annotation_exprs:
+            annotation_filters.append(self._ht[HAS_ALLOWED_ANNOTATION])
         if secondary_exprs:
-            annotation_filter |= self._ht[HAS_ALLOWED_SECONDARY_ANNOTATION]
-        self._ht = self._ht.filter(annotation_filter)
+            annotation_filters.append(self._ht[HAS_ALLOWED_SECONDARY_ANNOTATION])
+        self._ht = self._ht.filter(hl.any(annotation_filters))
 
     def _get_allowed_consequences_annotations(self, annotations, annotation_filters, is_secondary=False):
         allowed_consequences = {
             ann for field, anns in annotations.items()
             if anns and (field not in ANNOTATION_OVERRIDE_FIELDS) for ann in anns
         }
-        allowed_consequence_ids = self._get_enum_terms_ids(
-            self.TRANSCRIPTS_FIELD, self.TRANSCRIPT_CONSEQUENCE_FIELD, allowed_consequences)
+        allowed_consequence_ids = self._get_allowed_consequence_ids(allowed_consequences)
 
         annotation_exprs = {}
-        has_consequence_filter = bool(allowed_consequence_ids)
+        consequence_filter = self._get_consequence_filter(allowed_consequence_ids, allowed_consequences, annotation_exprs)
+        has_consequence_filter = consequence_filter is not None
         if has_consequence_filter:
-            allowed_consequence_ids = hl.set(allowed_consequence_ids)
-            consequence_filter = self._get_consequence_filter(allowed_consequence_ids, annotation_exprs)
             annotation_filters = annotation_filters + [consequence_filter]
 
         if has_consequence_filter or (annotation_filters and not is_secondary):
             annotation_exprs[HAS_ALLOWED_ANNOTATION] = hl.any(annotation_filters)
 
-        return annotation_exprs
+        return annotation_exprs, allowed_consequences
 
-    def _get_consequence_filter(self, allowed_consequence_ids, annotation_exprs):
+    def _get_allowed_consequence_ids(self, allowed_consequences):
+        return self._get_enum_terms_ids(self.TRANSCRIPTS_FIELD, self.TRANSCRIPT_CONSEQUENCE_FIELD, allowed_consequences)
+
+    def _get_consequence_filter(self, allowed_consequence_ids, allowed_consequences, annotation_exprs):
+        if not allowed_consequence_ids:
+            return None
+        allowed_consequence_ids = hl.set(allowed_consequence_ids)
         return self._ht[self.TRANSCRIPTS_FIELD].any(
             lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
         )
@@ -659,8 +679,13 @@ class BaseHailTableQuery(object):
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht, comp_het=True))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
+        self.unfiltered_comp_het_ht = ch_ht
+
         formatted_rows_expr = hl.agg.collect(ch_ht.row)
-        if HAS_ALLOWED_SECONDARY_ANNOTATION in self._ht.row:
+        if self._has_secondary_annotations:
+            if HAS_ALLOWED_ANNOTATION not in self._ht.row or HAS_ALLOWED_SECONDARY_ANNOTATION not in self._ht.row:
+                # In cases where comp het pairs must have different data types, there are no single data type results
+                return None
             primary_variants = hl.agg.filter(ch_ht[HAS_ALLOWED_ANNOTATION], formatted_rows_expr)
             secondary_variants = hl.agg.filter(ch_ht[HAS_ALLOWED_SECONDARY_ANNOTATION], formatted_rows_expr)
         else:
@@ -668,13 +693,17 @@ class BaseHailTableQuery(object):
             secondary_variants = formatted_rows_expr
 
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
+        ch_ht = self._filter_grouped_compound_hets(ch_ht)
+        return ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2])})
+
+    def _filter_grouped_compound_hets(self, ch_ht):
         ch_ht = ch_ht.explode(ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v2)
         ch_ht = ch_ht.filter(ch_ht.v1[VARIANT_KEY_FIELD] != ch_ht.v2[VARIANT_KEY_FIELD])
 
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(valid_families=hl.enumerate(ch_ht.v1.comp_het_family_entries).map(
-            lambda x: self._is_valid_comp_het_family(x[1], ch_ht.v2.comp_het_family_entries[x[0]])
+            lambda x: self._is_valid_comp_het_family(ch_ht, x[1], ch_ht.v2.comp_het_family_entries[x[0]])
         ))
         ch_ht = ch_ht.filter(ch_ht.valid_families.any(lambda x: x))
 
@@ -683,33 +712,45 @@ class BaseHailTableQuery(object):
             VARIANT_KEY_FIELD: hl.str(':').join(hl.sorted([ch_ht.v1[VARIANT_KEY_FIELD], ch_ht.v2[VARIANT_KEY_FIELD]]))
         })
         ch_ht = ch_ht.distinct()
-        ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2]).map(lambda v: v.annotate(
-            gene_id=ch_ht.gene_ids,
-            family_entries=hl.enumerate(ch_ht.valid_families).filter(
-                lambda x: x[1]).map(lambda x: v.comp_het_family_entries[x[0]]),
-        ))})
+        ch_ht = ch_ht.select(**{k: self._annotated_comp_het_variant(ch_ht, k) for k in ['v1', 'v2']})
 
         return ch_ht
+
+    @staticmethod
+    def _annotated_comp_het_variant(ch_ht, field):
+        variant = ch_ht[field]
+        return variant.annotate(
+            gene_id=ch_ht.gene_ids,
+            family_entries=hl.enumerate(ch_ht.valid_families).filter(
+                lambda x: x[1]).map(lambda x: variant.comp_het_family_entries[x[0]]),
+        )
 
     @classmethod
     def _gene_ids_expr(cls, ht, comp_het=False):
         return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
 
-    def _is_valid_comp_het_family(self, entries_1, entries_2):
-        return hl.is_defined(entries_1) & hl.is_defined(entries_2) & hl.enumerate(entries_1).all(lambda x: hl.any([
-            (x[1].affected_id != UNAFFECTED_ID),
-            self.GENOTYPE_QUERY_MAP[REF_REF](x[1].GT),
-            self.GENOTYPE_QUERY_MAP[REF_REF](entries_2[x[0]].GT),
+    def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
+        is_valid = hl.is_defined(entries_1) & hl.is_defined(entries_2) & hl.enumerate(entries_1).all(lambda x: hl.any([
+            (x[1].affected_id != UNAFFECTED_ID), *self._comp_het_entry_has_ref(x[1].GT, entries_2[x[0]].GT),
         ]))
+        if self._override_comp_het_alt:
+            is_valid &= entries_1.extend(entries_2).all(lambda x: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](x.GT))
+        return is_valid
+
+    def _comp_het_entry_has_ref(self, gt1, gt2):
+        return [self.GENOTYPE_QUERY_MAP[REF_REF](gt1), self.GENOTYPE_QUERY_MAP[REF_REF](gt2)]
 
     def _format_comp_het_results(self, ch_ht, annotation_fields):
         formatted_grouped_variants = ch_ht[GROUPED_VARIANTS_FIELD].map(
-            lambda v: self._format_results(v, annotation_fields).annotate(**{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
+            lambda v: self._format_results(v, annotation_fields=annotation_fields).annotate(
+                **{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
         )
         ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted(formatted_grouped_variants, key=lambda x: x._sort)})
         return ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
 
-    def _format_results(self, ht, annotation_fields):
+    def _format_results(self, ht, annotation_fields=None):
+        if annotation_fields is None:
+            annotation_fields = self.annotation_fields()
         annotations = {k: v(ht) for k, v in annotation_fields.items()}
         annotations.update({
             '_sort': self._sort_order(ht),
@@ -725,7 +766,7 @@ class BaseHailTableQuery(object):
             ch_ht = self._format_comp_het_results(self._comp_het_ht, annotation_fields)
 
         if self._ht:
-            ht = self._format_results(self._ht, annotation_fields)
+            ht = self._format_results(self._ht, annotation_fields=annotation_fields)
             if ch_ht:
                 ht = ht.join(ch_ht, 'outer')
                 ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
@@ -743,7 +784,7 @@ class BaseHailTableQuery(object):
 
     def _format_collected_rows(self, collected):
         if self._has_comp_het_search:
-            collected = [row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD) for row in collected]
+            return [row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD) for row in collected]
         return collected
 
     def _sort_order(self, ht):
@@ -780,28 +821,30 @@ class BaseHailTableQuery(object):
     def _gene_rank_sort(cls, r, gene_ranks):
         return [hl.min(cls._gene_ids_expr(r).map(gene_ranks.get))]
 
-    def format_gene_counts_ht(self):
-        selects = {
-            'gene_ids': self._gene_ids_expr,
-            'families': self.BASE_ANNOTATION_FIELDS['familyGuids'],
+    @classmethod
+    def _gene_count_selects(cls):
+        return {
+            'gene_ids': cls._gene_ids_expr,
+            'families': cls.BASE_ANNOTATION_FIELDS['familyGuids'],
         }
-        ch_ht = None
+
+    def format_gene_count_hts(self):
+        hts = []
+        selects = self._gene_count_selects()
         if self._comp_het_ht:
             ch_ht = self._comp_het_ht.explode(self._comp_het_ht[GROUPED_VARIANTS_FIELD])
-            ch_ht = ch_ht.select(**{k: v(ch_ht[GROUPED_VARIANTS_FIELD]) for k, v in selects.items()})
-
+            hts.append(ch_ht.select(**{k: v(ch_ht[GROUPED_VARIANTS_FIELD]) for k, v in selects.items()}))
         if self._ht:
-            ht = self._ht.select(**{k: v(self._ht) for k, v in selects.items()})
-            if ch_ht:
-                ht = ht.join(ch_ht, 'outer')
-                ht = ht.transmute(**{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in selects})
-        else:
-            ht = ch_ht
-
-        return ht
+            hts.append(self._ht.select(**{k: v(self._ht) for k, v in selects.items()}))
+        return hts
 
     def gene_counts(self):
-        ht = self.format_gene_counts_ht()
+        hts = self.format_gene_count_hts()
+        ht = hts[0]
+        for sub_ht in hts[1:]:
+            ht = ht.join(sub_ht, 'outer')
+            ht = ht.transmute(**{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in self._gene_count_selects()})
+
         ht = ht.explode('gene_ids').explode('families')
         return ht.aggregate(hl.agg.group_by(
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))

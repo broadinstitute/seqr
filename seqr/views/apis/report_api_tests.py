@@ -334,12 +334,13 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "Ref-1": "TC",
     "sv_type-2": "Deletion",
     "sv_name-2": "DEL:chr12:49045487-49045898",
+    "Chrom-2": "12",
+    "Pos-2": "49045487",
     "ancestry_detail": "Ashkenazi Jewish",
     "maternal_id": "",
     "paternal_id": "",
     "hgvsp-1": "c.1586-17C>G",
     "entity:family_id": "12",
-    "entity:discovery_id": "NA20889",
     "project_id": "Test Reprocessed Project",
     "Pos-1": "248367227",
     "data_type": "WES",
@@ -649,20 +650,20 @@ class ReportAPITest(object):
             '10-Ref', '11-Alt', '12-hgvsc', '13-hgvsp', '14-Transcript', '15-sv_name', '16-sv_type',
             '17-significance', '18-discovery_notes'])
         self.assertIn([
-            'HG00731', 'HG00731', 'HG00731', 'RP11', 'Known', 'Autosomal recessive (homozygous)',
+            '1_248367227_HG00731', 'HG00731', 'HG00731', 'RP11', 'Known', 'Autosomal recessive (homozygous)',
             'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-'], discovery_file)
         self.assertIn([
-            'NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Tier 1 - Candidate', 'de novo',
+            '21_3343353_NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Tier 1 - Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
             '-', '-', '-', '-'], discovery_file)
         self.assertIn([
-            'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
+            '19_1912633_HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
             '1912633', 'G', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
             'The following variants are part of the multinucleotide variant 19-1912632-GC-TT '
             '(c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
         self.assertIn([
-            'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
+            '19_1912634_HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
             '1912634', 'C', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
             'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, '
             'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
@@ -1138,11 +1139,11 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
         'familiesCount': {'non_demo': 12, 'demo': 2},
         'individualsCount': {'non_demo': 16, 'demo': 4},
         'sampleCountsByType': {
-            'WES__VARIANTS': {'demo': 1, 'non_demo': 7},
+            'WES__SNV_INDEL': {'demo': 1, 'non_demo': 7},
             'WGS__MITO': {'non_demo': 1},
             'WES__SV': {'non_demo': 3},
             'WGS__SV': {'non_demo': 1},
-            'RNA__VARIANTS': {'non_demo': 4},
+            'RNA__SNV_INDEL': {'non_demo': 4},
         },
     }
 
@@ -1155,10 +1156,10 @@ class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},
         'individualsCount': {'internal': 14, 'external': 2, 'no_anvil': 0, 'demo': 4},
         'sampleCountsByType': {
-            'WES__VARIANTS': {'internal': 7, 'demo': 1},
+            'WES__SNV_INDEL': {'internal': 7, 'demo': 1},
             'WGS__MITO': {'internal': 1},
             'WES__SV': {'internal': 3},
             'WGS__SV': {'external': 1},
-            'RNA__VARIANTS': {'internal': 4},
+            'RNA__SNV_INDEL': {'internal': 4},
         },
     }

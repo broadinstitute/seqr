@@ -9,7 +9,7 @@ import FormWrapper from 'shared/components/form/FormWrapper'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
 import AddWorkspaceDataForm from 'shared/components/panel/LoadWorkspaceDataForm'
-import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
+import { DATASET_TYPE_SNV_INDEL_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
 
 import { addVariantsDataset, addIGVDataset } from '../reducers'
 import { getCurrentProject, getProjectGuid } from '../selectors'
@@ -65,7 +65,7 @@ const UPLOAD_CALLSET_FIELDS = [
     labelHelp: 'The caller used to generate the raw data for this index',
     component: Select,
     options: [
-      { value: DATASET_TYPE_VARIANT_CALLS, name: 'Haplotypecaller' },
+      { value: DATASET_TYPE_SNV_INDEL_CALLS, name: 'Haplotypecaller' },
       { value: DATASET_TYPE_SV_CALLS, name: 'SV Caller' },
       { value: DATASET_TYPE_MITO_CALLS, name: 'Mitochondria Caller' },
     ],
@@ -142,7 +142,7 @@ const UPLOAD_IGV_FIELDS = [
   },
 ]
 
-const DEFAULT_UPLOAD_CALLSET_VALUE = { datasetType: DATASET_TYPE_VARIANT_CALLS }
+const DEFAULT_UPLOAD_CALLSET_VALUE = { datasetType: DATASET_TYPE_SNV_INDEL_CALLS }
 
 const PANES = [
   {

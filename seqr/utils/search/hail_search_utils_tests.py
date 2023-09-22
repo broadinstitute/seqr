@@ -75,7 +75,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.search_model.search['locus'] = {'rawVariantItems': '1-10439-AC-A,1-91511686-TCA-G'}
         query_variants(self.results_model, user=self.user, sort='in_omim')
         self._test_expected_search_call(
-            num_results=2,  dataset_type='VARIANTS', omit_sample_type='SV_WES',
+            num_results=2,  dataset_type='SNV_INDEL', omit_sample_type='SV_WES',
             sort='in_omim', sort_metadata=['ENSG00000223972', 'ENSG00000243485', 'ENSG00000268020'],
             **VARIANT_ID_SEARCH,
         )
@@ -101,7 +101,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         }
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
-            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type=None,
+            inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type=None,
             search_fields=['annotations'], sample_data=CUSTOM_AFFECTED_SAMPLE_DATA,
         )
 
@@ -109,21 +109,21 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.search_model.search['annotations_secondary'] = {'structural_consequence': ['LOF']}
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
-            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='SV',
+            inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SV',
             search_fields=['annotations', 'annotations_secondary']
         )
 
         self.search_model.search['annotations_secondary'].update({'SCREEN': ['dELS', 'DNase-only']})
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
-            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='ALL',
+            inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='ALL',
             search_fields=['annotations', 'annotations_secondary']
         )
 
         self.search_model.search['annotations_secondary']['structural_consequence'] = []
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
-            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='VARIANTS',
+            inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
             search_fields=['annotations', 'annotations_secondary'], omit_sample_type='SV_WES',
         )
 
@@ -173,13 +173,13 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[], variant_keys=['prefix_19107_DEL'],
-            num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='VARIANTS')
+            num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='SNV_INDEL')
 
         with self.assertRaises(InvalidSearchException) as cm:
             get_single_variant(self.families, '1-91502721-G-A', user=self.user, return_all_queried_families=True)
         self.assertEqual(
             str(cm.exception),
-            'Unable to return all families for the following variants: 1-11794419-T-G (F000003_3; F000005_5), 1-91502721-G-A (F000005_5)',
+            'Unable to return all families for the following variants: 1-38724419-T-G (F000003_3; F000005_5), 1-91502721-G-A (F000005_5)',
         )
 
         get_single_variant(self.families.filter(guid='F000002_2'), '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
@@ -201,7 +201,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             variant_keys=['prefix-938_DEL'],
             num_results=3, sample_data=ALL_AFFECTED_SAMPLE_DATA)
 
-        get_variants_for_variant_ids(self.families, variant_ids, user=self.user, dataset_type='VARIANTS')
+        get_variants_for_variant_ids(self.families, variant_ids, user=self.user, dataset_type='SNV_INDEL')
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
             variant_keys=[],

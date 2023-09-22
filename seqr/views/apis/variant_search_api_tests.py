@@ -158,7 +158,7 @@ class VariantSearchAPITest(object):
         self.assertDictEqual(response_json, EXPECTED_SEARCH_CONTEXT_RESPONSE)
 
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_CONTEXT_FIELDS)
-        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV', 'MITO'})
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'SNV_INDEL', 'SV', 'MITO'})
 
         locus_list_fields = deepcopy(LOCUS_LIST_FIELDS)
         locus_list_fields.update(PA_LOCUS_LIST_FIELDS)
@@ -387,11 +387,11 @@ class VariantSearchAPITest(object):
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
              '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '', '', '',
              '', '', '', '', '', '', '', '', ''],
-            ['1', '11794419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
+            ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
              '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
              '2.000999927520752', '0.0', '', 'tolerated', '', 'damaging', 'rs1801131', 'ENST00000376585.6:c.1409A>C',
              'ENSP00000365770.1:p.Glu470Ala', 'Conflicting_interpretations_of_pathogenicity', '1', '', '2', '', '', '', '', '', 'HG00731', '2', '99', '1.0',
-             'HG00732', '0', '40', '0.0', 'HG00733', '1', '99', '0.625'],
+             'HG00732', '1', '99', '0.625', 'HG00733', '0', '40', '0.0'],
             ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
              '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '', '',
              '', 'rs13447464', 'ENST00000428239.5:c.115+890G>A', '', '', '', '', '2', '', '', '', '', '', 'HG00731',
@@ -421,11 +421,11 @@ class VariantSearchAPITest(object):
                 ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
                  '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)',
                  '', '', '', '', '', '', '', '', '', '', '', '',],
-                ['1', '11794419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
+                ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
                  '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
                  '2.000999927520752', '0.0', '', 'tolerated', '', 'damaging', 'rs1801131', 'ENST00000376585.6:c.1409A>C',
                  'ENSP00000365770.1:p.Glu470Ala', 'Conflicting_interpretations_of_pathogenicity', '1', '', '2', '', '', 'HG00731', '2', '99', '1.0',
-                 'HG00732', '0', '40', '0.0', 'HG00733', '1', '99', '0.625'],
+                 'HG00732', '1', '99', '0.625', 'HG00733', '0', '40', '0.0'],
                 ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
                  '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '',
                  '', '', 'rs13447464', 'ENST00000428239.5:c.115+890G>A', '', '', '', '', '2', '', '', 'HG00731',
@@ -658,8 +658,8 @@ class VariantSearchAPITest(object):
         self.assertDictEqual(response_json, expected_response)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_CONTEXT_FIELDS)
-        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV', 'MITO'})
-        self.assertSetEqual(set(response_json['projectsByGuid']['R0003_test']['datasetTypes']), {'VARIANTS'})
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'SNV_INDEL', 'SV', 'MITO'})
+        self.assertSetEqual(set(response_json['projectsByGuid']['R0003_test']['datasetTypes']), {'SNV_INDEL'})
         self.assertEqual(len(response_json['familiesByGuid']), 13)
 
         # Test search hash context

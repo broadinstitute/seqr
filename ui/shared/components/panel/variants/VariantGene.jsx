@@ -20,7 +20,7 @@ import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { BehindModalPopup } from '../../PopupWithModal'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../StyledComponents'
-import { GeneSearchLink } from '../../buttons/SearchResultsLink'
+import { PermissiveGeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
 import { GenCC, ClingenLabel, HI_THRESHOLD, TS_THRESHOLD } from '../genes/GeneDetail'
@@ -541,7 +541,7 @@ GeneDetails.propTypes = {
 const GeneSearchLinkWithPopup = props => (
   <Popup
     trigger={
-      <GeneSearchLink {...props} />
+      <PermissiveGeneSearchLink {...props} />
     }
     content="Search for all variants with AF < 3% in this gene present in any affected individual"
     size="tiny"

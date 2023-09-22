@@ -111,7 +111,7 @@ export const MATCHMAKER_CONTACT_URL_FIELD = {
 
 // SAMPLES
 
-export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+export const DATASET_TYPE_SNV_INDEL_CALLS = 'SNV_INDEL'
 export const DATASET_TYPE_SV_CALLS = 'SV'
 export const DATASET_TYPE_MITO_CALLS = 'MITO'
 
@@ -1143,6 +1143,16 @@ const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuids[0].localeCompare(b.familyGuids[0]) },
   { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
   {
+    value: SORT_BY_IN_OMIM,
+    text: 'In OMIM',
+    comparator: (a, b, genesById) => (
+      Object.keys(b.transcripts || {}).reduce(
+        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
+      ) - Object.keys(a.transcripts || {}).reduce(
+        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
+      )),
+  },
+  {
     value: SORT_BY_PROTEIN_CONSQ,
     text: 'Protein Consequence',
     comparator: (a, b) => getConsequenceRank(a) - getConsequenceRank(b),
@@ -1172,16 +1182,6 @@ const VARIANT_SORT_OPTONS = [
       )) - Math.min(...Object.keys(b.transcripts || {}).reduce(
         (acc, geneId) => [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [],
       ))),
-  },
-  {
-    value: SORT_BY_IN_OMIM,
-    text: 'In OMIM',
-    comparator: (a, b, genesById) => (
-      Object.keys(b.transcripts || {}).reduce(
-        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
-      ) - Object.keys(a.transcripts || {}).reduce(
-        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
-      )),
   },
   {
     value: SORT_BY_PRIORITIZED_GENE,
