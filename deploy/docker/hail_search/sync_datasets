@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+suffixes=(
+  GRCh38_SNV_INDEL_VERSION
+  GRCh38_MITO_VERSION
+  GRCh38_SV_VERSION
+  GRCh38_GCNV_VERSION
+  GRCh37_SNV_INDEL_VERSION
+  GRCh37_MITO_VERSION
+  GRCh37_SV_VERSION
+  GRCh37_GCNV_VERSION
+)
+
+function to_gcs_path () {
+    # e.g. GRCh38_SNV_INDEL_VERSION -> GRCh38/SNV_INDEL
+    echo $1 | sed "s|GRCh38_|GRCh38/|g" | sed "s|GRCh37_|GRCh37/|g" | sed "s|_VERSION||g"
+}
+
+for suffix in "${suffixes[@]}"; do
+    path=$(to_gcs_path $suffix)
+    gsutil -m rsync -r $SOURCE_DATASETS_DIR/$path/runs/${!suffix} $DATASETS_DIR/$path
+done
