@@ -1,5 +1,4 @@
 from django.core.management.base import BaseCommand
-from django.db.models import Q
 
 from seqr.models import Project, Family, VariantTag, VariantTagType
 from seqr.utils.search.utils import backend_specific_call
