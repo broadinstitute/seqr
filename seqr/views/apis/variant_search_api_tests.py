@@ -174,7 +174,7 @@ class VariantSearchAPITest(object):
 
     def _assert_expected_rnaseq_response(self, response_json):
         self.assertDictEqual(
-            response_json['rnaSeqData']['I000001_na19675']['outliers']['ENSG00000268903'],
+            response_json['rnaSeqData']['I000001_na19675']['outliers']['ENSG00000268903'][0],
             {'geneId': 'ENSG00000268903', 'isSignificant': True, 'pAdjust': 1.39e-09, 'pValue': 5.88e-10,
              'tissueType': None, 'zScore': 7.08}
         )
