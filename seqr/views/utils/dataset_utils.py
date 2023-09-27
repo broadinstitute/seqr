@@ -242,13 +242,13 @@ def _parse_tsv_row(row):
     return [s.strip().strip('"') for s in row.rstrip('\n').split('\t')]
 
 PROJECT_COL = 'project'
+TISSUE_COL = 'tissue'
 RNA_OUTLIER_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 'zScore': 'z_score',
-                       PROJECT_COL: PROJECT_COL}
+                       PROJECT_COL: PROJECT_COL, TISSUE_COL: TISSUE_COL}
 
 SAMPLE_ID_COL = 'sample_id'
 GENE_ID_COL = 'gene_id'
 TPM_COL = 'TPM'
-TISSUE_COL = 'tissue'
 INDIV_ID_COL = 'individual_id'
 TPM_HEADER_COLS = [SAMPLE_ID_COL, PROJECT_COL, GENE_ID_COL, TISSUE_COL, TPM_COL]
 
