@@ -17,8 +17,7 @@ After installation, run `psql -l` and if there is no user named `postgres`, run 
 
 - [redis](https://redis.io/topics/quickstart)
 
-- [node/npm <14](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).  Note: more recent versions of `node` may or may not function correctly and
-are not officially supported.
+- [node/npm <14](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).  Note: more recent versions of `node` may not function are not officially supported.
 
 Optionally, if planning to use elasticsearch from docker-compose, install:
 - [docker](https://docs.docker.com/install/)
