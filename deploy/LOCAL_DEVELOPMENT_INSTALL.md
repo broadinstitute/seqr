@@ -83,7 +83,7 @@ export ANALYST_USER_GROUP=TGG_Users
 export PM_USER_GROUP=TGG_PM
     
 # Set the client ID and secret for the seqr-local OAuth client (from GCP)
-# Note: do not use the values from saved as seqr-secrets in secret manager, the local credentials are saved [here](https://console.cloud.google.com/apis/credentials?project=seqr-project).
+# Note: do not use the values from `seqr-secrets` in secret manager, the local credentials are saved [here](https://console.cloud.google.com/apis/credentials?project=seqr-project).
 export SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID=
 export SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=   
     
