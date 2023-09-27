@@ -19,7 +19,8 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissio
     add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required, get_project_and_check_permissions, get_internal_projects
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, \
+    FAMILY_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.variant_utils import get_variants_response, get_discovery_phenotype_class
 
 MAX_SAVED_VARIANTS = 10000
@@ -195,9 +196,9 @@ def sample_metadata_export(request, project_guid):
     all_features = set()
 
     def _add_row(row, family_id, row_type):
-        if row_type == 'family':
+        if row_type == FAMILY_ROW_TYPE:
             family_rows_by_id[family_id] = row
-        elif row_type == 'discovery':
+        elif row_type == DISCOVERY_ROW_TYPE:
             for i, discovery_row in enumerate(row):
                 parsed_row = {
                     '{}-{}'.format(k, i + 1): discovery_row[k] for k in

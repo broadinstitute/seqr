@@ -46,6 +46,8 @@ const predictionFieldValue = (
 
 const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
 
+const rangeSourceLink = <a href="https://pubmed.ncbi.nlm.nih.gov/36413997" target="_blank" rel="noreferrer">36413997</a>
+
 const Prediction = (
   { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, href },
 ) => {
@@ -60,19 +62,35 @@ const Prediction = (
   const fieldDisplay = thresholds ? (
     <Popup
       header={`${fieldName} Color Ranges`}
-      content={
-        PRED_COLOR_MAP.map((c, i) => {
-          if (thresholds[i] === undefined && thresholds[i - 1] === undefined) {
-            return null
-          }
-          return (
-            <div key={c}>
-              {coloredIcon(c)}
-              {thresholds[i] === undefined ? ` >= ${thresholds[i - 1]}` : ` < ${thresholds[i]}`}
-            </div>
-          )
-        })
-      }
+      hoverable
+      content={(
+        <div>
+          {PRED_COLOR_MAP.map((c, i) => {
+            const prevUndefined = thresholds[i - 1] === undefined
+            let range
+            if (thresholds[i] === undefined) {
+              if (prevUndefined) {
+                return null
+              }
+              range = ` >= ${thresholds[i - 1]}`
+            } else if (prevUndefined) {
+              range = ` < ${thresholds[i]}`
+            } else {
+              range = ` ${thresholds[i - 1]} - ${thresholds[i]}`
+            }
+            return (
+              <div key={c}>
+                {coloredIcon(c)}
+                {range}
+              </div>
+            )
+          })}
+          <small>
+            {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
+            Based on 2022 ClinGen recommendations (PMID: {rangeSourceLink})
+          </small>
+        </div>
+      )}
       trigger={<span>{fieldName}</span>}
     />
   ) : fieldName

@@ -68,6 +68,11 @@ MULTIPLE_DATASET_PRODUCTS = {
     'Standard Germline Exome v6 Plus GSA Array',
 }
 
+FAMILY_ROW_TYPE = 'family'
+SUBJECT_ROW_TYPE = 'subject'
+SAMPLE_ROW_TYPE = 'sample'
+DISCOVERY_ROW_TYPE = 'discovery'
+
 
 def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, family_values=None,
                           get_additional_sample_fields=None, get_additional_variant_fields=None):
@@ -153,7 +158,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
         }
         if len(affected_individual_guids) > 1:
             family_row['family_history'] = 'Yes'
-        add_row(family_row, family_id, 'family')
+        add_row(family_row, family_id, FAMILY_ROW_TYPE)
 
         parsed_variants = [
             _parse_anvil_family_saved_variant(
@@ -173,13 +178,13 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
             subject_row = _get_subject_row(
                 individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map)
             subject_row.update(family_subject_row)
-            add_row(subject_row, family_id, 'subject')
+            add_row(subject_row, family_id, SUBJECT_ROW_TYPE)
 
             sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additional_sample_fields)
-            add_row(sample_row, family_id, 'sample')
+            add_row(sample_row, family_id, SAMPLE_ROW_TYPE)
 
             discovery_row = _get_discovery_rows(sample, parsed_variants, male_individual_guids)
-            add_row(discovery_row, family_id, 'discovery')
+            add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 
 def _get_nested_variant_name(variant):

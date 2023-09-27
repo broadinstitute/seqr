@@ -17,7 +17,8 @@ from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import get_airtable_samples
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION, \
-    ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS
+    ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
+    SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
@@ -99,7 +100,7 @@ FAMILY_TABLE_COLUMNS = [
     'family_history', 'family_onset',
 ]
 DISCOVERY_TABLE_CORE_COLUMNS = ['subject_id', 'sample_id']
-DISCOVERY_TABLE_VARIANT_COLUMNS = deepcopy(SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS)
+DISCOVERY_TABLE_VARIANT_COLUMNS = list(SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS)
 DISCOVERY_TABLE_VARIANT_COLUMNS.insert(4, 'variant_genome_build')
 DISCOVERY_TABLE_VARIANT_COLUMNS.insert(14, 'significance')
 
@@ -116,7 +117,7 @@ def anvil_export(request, project_guid):
     parsed_rows = defaultdict(list)
 
     def _add_row(row, family_id, row_type):
-        if row_type == 'discovery':
+        if row_type == DISCOVERY_ROW_TYPE:
             parsed_rows[row_type] += [{
                 'entity:discovery_id': f'{discovery_row["Chrom"]}_{discovery_row["Pos"]}_{discovery_row["subject_id"]}',
                 **discovery_row,
@@ -140,10 +141,10 @@ def anvil_export(request, project_guid):
     )
 
     return export_multiple_files([
-        ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, parsed_rows['subject']],
-        ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, parsed_rows['sample']],
-        ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, parsed_rows['family']],
-        ['{}_PI_Discovery'.format(project.name), ['entity:discovery_id'] + DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, parsed_rows['discovery']],
+        ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, parsed_rows[SUBJECT_ROW_TYPE]],
+        ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, parsed_rows[SAMPLE_ROW_TYPE]],
+        ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, parsed_rows[FAMILY_ROW_TYPE]],
+        ['{}_PI_Discovery'.format(project.name), ['entity:discovery_id'] + DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, parsed_rows[DISCOVERY_ROW_TYPE]],
     ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
 
 
