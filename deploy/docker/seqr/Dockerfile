@@ -86,7 +86,6 @@ COPY panelapp/ .
 COPY reference_data/ .
 COPY seqr/ .
 COPY static/ .
-COPY ui/ .
 COPY --from=build /build/ui/dist /seqr/ui/dist
 
 ENV VIRTUAL_ENV=/opt/venv

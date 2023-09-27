@@ -5,7 +5,7 @@ LABEL maintainer="Broad TGG"
 WORKDIR /hail_search
 
 # Infrastucture Code
-COPY deploy/docker/hail_search/sync_datasets /
+COPY deploy/docker/hail_search/bin /
 
 # Application Code
 COPY hail_search/ .
