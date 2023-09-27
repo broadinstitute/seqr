@@ -11,7 +11,7 @@ def run():
     web.run_app(
         app,
         host='0.0.0.0',  # nosec
-        port=8000,
+        port=5000,
         access_log_format='%{From}i "%r" %s %Tfs',
     )
 
