@@ -4,7 +4,7 @@ steps:
   - --destination=gcr.io/seqr-project/seqr-hail-search:${COMMIT_SHA}
   - --destination=gcr.io/seqr-project/seqr-hail-search:${_CUSTOM_BRANCH_TAG}
   - --destination=gcr.io/seqr-project/seqr-hail-search:latest
-  - --dockerfile=deploy/docker/hail_search/Dockerfile
+  - --dockerfile=hail_search/deploy/Dockerfile
   - --cache=true
   - --cache-ttl=168h
 
