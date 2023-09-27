@@ -107,7 +107,7 @@ SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
     'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
     'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'discovery_notes',
 ]
-DISCOVERY_TABLE_VARIANT_COLUMNS = deepcopy(SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS)
+DISCOVERY_TABLE_VARIANT_COLUMNS = list(SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS)
 DISCOVERY_TABLE_VARIANT_COLUMNS.insert(4, 'variant_genome_build')
 DISCOVERY_TABLE_VARIANT_COLUMNS.insert(14, 'significance')
 DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS = SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS + ['novel_mendelian_gene', 'phenotype_class']
@@ -167,6 +167,10 @@ MULTIPLE_DATASET_PRODUCTS = {
     'Standard Germline Exome v6 Plus GSA Array',
 }
 
+FAMILY_ROW_TYPE = 'family'
+SUBJECT_ROW_TYPE = 'subject'
+SAMPLE_ROW_TYPE = 'sample'
+DISCOVERY_ROW_TYPE = 'discovery'
 
 @analyst_required
 def anvil_export(request, project_guid):
@@ -175,7 +179,7 @@ def anvil_export(request, project_guid):
     parsed_rows = defaultdict(list)
 
     def _add_row(row, family_id, row_type):
-        if row_type == 'discovery':
+        if row_type == DISCOVERY_ROW_TYPE:
             parsed_rows[row_type] += [{
                 'entity:discovery_id': f'{discovery_row["Chrom"]}_{discovery_row["Pos"]}_{discovery_row["subject_id"]}',
                 **discovery_row,
@@ -199,10 +203,10 @@ def anvil_export(request, project_guid):
     )
 
     return export_multiple_files([
-        ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, parsed_rows['subject']],
-        ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, parsed_rows['sample']],
-        ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, parsed_rows['family']],
-        ['{}_PI_Discovery'.format(project.name), ['entity:discovery_id'] + DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, parsed_rows['discovery']],
+        ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, parsed_rows[SUBJECT_ROW_TYPE]],
+        ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, parsed_rows[SAMPLE_ROW_TYPE]],
+        ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, parsed_rows[FAMILY_ROW_TYPE]],
+        ['{}_PI_Discovery'.format(project.name), ['entity:discovery_id'] + DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, parsed_rows[DISCOVERY_ROW_TYPE]],
     ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
 
 
@@ -221,9 +225,9 @@ def sample_metadata_export(request, project_guid):
     all_features = set()
 
     def _add_row(row, family_id, row_type):
-        if row_type == 'family':
+        if row_type == FAMILY_ROW_TYPE:
             family_rows_by_id[family_id] = row
-        elif row_type == 'discovery':
+        elif row_type == DISCOVERY_ROW_TYPE:
             for i, discovery_row in enumerate(row):
                 parsed_row = {
                     '{}-{}'.format(k, i + 1): discovery_row[k] for k in DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS if
@@ -369,7 +373,7 @@ def _parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtabl
         }
         if len(affected_individual_guids) > 1:
             family_row['family_history'] = 'Yes'
-        add_row(family_row, family_id, 'family')
+        add_row(family_row, family_id, FAMILY_ROW_TYPE)
 
         parsed_variants = [
             _parse_anvil_family_saved_variant(
@@ -389,13 +393,13 @@ def _parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtabl
             subject_row = _get_subject_row(
                 individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map)
             subject_row.update(family_subject_row)
-            add_row(subject_row, family_id, 'subject')
+            add_row(subject_row, family_id, SUBJECT_ROW_TYPE)
 
             sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additional_sample_fields)
-            add_row(sample_row, family_id, 'sample')
+            add_row(sample_row, family_id, SAMPLE_ROW_TYPE)
 
             discovery_row = _get_discovery_rows(sample, parsed_variants, male_individual_guids)
-            add_row(discovery_row, family_id, 'discovery')
+            add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 
 def _get_variant_main_transcript(variant):
