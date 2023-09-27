@@ -1,4 +1,5 @@
 import requests
+from collections import defaultdict
 from django.core.exceptions import PermissionDenied
 
 from seqr.utils.logging_utils import SeqrLogger
@@ -70,3 +71,47 @@ class AirtableSession(object):
             self._populate_records(record_type, records, offset=response_json['offset'])
 
 
+def _get_airtable_samples_for_id_field(sample_ids, id_field, fields, session):
+    raw_records = session.fetch_records(
+        'Samples', fields=[id_field] + fields,
+        or_filters={f'{{{id_field}}}': sample_ids},
+    )
+
+    records_by_id = defaultdict(list)
+    for record in raw_records.values():
+        records_by_id[record[id_field]].append(record)
+    return records_by_id
+
+
+def get_airtable_samples(sample_ids, user, fields, list_fields=None):
+    list_fields = list_fields or []
+    all_fields = fields + list_fields
+
+    session = AirtableSession(user)
+    records_by_id = _get_airtable_samples_for_id_field(sample_ids, 'CollaboratorSampleID', all_fields, session)
+    missing = set(sample_ids) - set(records_by_id.keys())
+    if missing:
+        records_by_id.update(_get_airtable_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', all_fields, session))
+
+    sample_records = {}
+    for record_id, records in records_by_id.items():
+        parsed_record = {}
+        for field in fields:
+            record_field = {
+                record[field][0] if field == 'Collaborator' else record[field] for record in records if field in record
+            }
+            if len(record_field) > 1:
+                error = 'Found multiple airtable records for sample {} with mismatched values in field {}'.format(
+                    record_id, field)
+                raise Exception(error)
+            if record_field:
+                parsed_record[field] = record_field.pop()
+        for field in list_fields:
+            parsed_record[field] = set()
+            for record in records:
+                if field in record:
+                    parsed_record[field].update(record[field])
+
+        sample_records[record_id] = parsed_record
+
+    return sample_records, session
