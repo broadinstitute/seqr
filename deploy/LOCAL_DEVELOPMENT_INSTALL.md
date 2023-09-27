@@ -17,7 +17,8 @@ After installation, run `psql -l` and if there is no user named `postgres`, run 
 
 - [redis](https://redis.io/topics/quickstart)
 
-- [node/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+- [node/npm <14](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).  Note: more recent versions of `node` may or may not function correctly and
+are not officially supported.
 
 Optionally, if planning to use elasticsearch from docker-compose, install:
 - [docker](https://docs.docker.com/install/)
@@ -92,7 +93,7 @@ export SEQR_ES_PASSWORD=
 
 ## Run seqr
 
-In order to run seqr, you need to have 2 sevrers running simultaneously, one for the client-side javascript and one
+In order to run seqr, you need to have 2 servers running simultaneously, one for the client-side javascript and one
 for the server-side python
  
 ### Prerequisites
