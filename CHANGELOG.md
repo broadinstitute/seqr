@@ -2,6 +2,9 @@
 
 ## dev
 
+## 9/22/23
+* Update VARIANTS dataset_type in Sample model (REQUIRES DB MIGRATION)
+
 ## 8/22/23
 * Add db indices to optimize RNA data queries (REQUIRES DB MIGRATION)
 
