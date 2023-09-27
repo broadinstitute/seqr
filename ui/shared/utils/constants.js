@@ -1319,6 +1319,7 @@ export const PREDICTOR_FIELDS = [
     infoField: 'splice_ai_consequence',
     infoTitle: 'Predicted Consequence',
     fieldTitle: 'SpliceAI',
+    helpText: 'This overrides the annotation and pathogenicity filters, so variants will be returned if they have either the specified transcript consequence OR pathogenicity OR a score greater than the selected value',
     getHref: ({ chrom, pos, ref, alt, genomeVersion }) => (
       `https://spliceailookup.broadinstitute.org/#variant=${chrom}-${pos}-${ref}-${alt}&hg=${genomeVersion}&distance=1000&mask=1`
     ),
