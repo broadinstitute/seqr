@@ -11,5 +11,5 @@ COPY deploy/docker/hail_search/bin /
 COPY hail_search/ .
 
 WORKDIR /
-EXPOSE 8000
+EXPOSE 5000
 CMD ["python3", "-m", "hail_search"]
