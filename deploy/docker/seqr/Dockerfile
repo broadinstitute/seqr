@@ -80,7 +80,12 @@ RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" > /e
 COPY --from=build /opt/venv /opt/venv
 
 WORKDIR /seqr
-COPY . .
+COPY admin/ .
+COPY matchmaker/ .
+COPY panelapp/ .
+COPY reference_data/ .
+COPY seqr/ .
+COPY static/ .
 COPY --from=build /build/ui/dist /seqr/ui/dist
 
 ENV VIRTUAL_ENV=/opt/venv
