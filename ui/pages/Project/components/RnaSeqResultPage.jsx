@@ -54,8 +54,7 @@ class BaseRnaSeqResultPage extends React.PureComponent {
   render() {
     const { familyGuid, rnaSeqData, significantJunctionOutliers, genesById, tissueOptions } = this.props
     const { tissueType } = this.state
-    const hasTissueOptions = tissueOptions?.length > 0
-    const defaultTissue = hasTissueOptions ? tissueOptions[0].value : null
+    const defaultTissue = tissueOptions?.length > 0 ? tissueOptions[0].value : null
     const showTissueType = tissueType === '' ? defaultTissue : tissueType
     const tissueDisplay = TISSUE_DISPLAY[showTissueType]
 
@@ -70,10 +69,10 @@ class BaseRnaSeqResultPage extends React.PureComponent {
 
     return (
       <div>
-        {(showTissueType || hasTissueOptions) && (
+        {(showTissueType || tissueOptions?.length > 1) && (
           <TissueContainer>
             Tissue type: &nbsp;
-            {hasTissueOptions ? (
+            {tissueOptions?.length > 1 ? (
               <Dropdown
                 text={tissueDisplay || 'Unknown Tissue'}
                 value={showTissueType}
