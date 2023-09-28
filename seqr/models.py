@@ -649,12 +649,13 @@ class Sample(ModelWithGUID):
     )
     DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
+    NO_TISSUE_TYPE = 'X'
     TISSUE_TYPE_CHOICES = (
         ('WB', 'Whole Blood'),
         ('F', 'Fibroblast'),
         ('M', 'Muscle'),
         ('L', 'Lymphocyte'),
-        ('X', 'None'),
+        (NO_TISSUE_TYPE, 'None'),
     )
 
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)

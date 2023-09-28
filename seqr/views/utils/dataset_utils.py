@@ -58,6 +58,7 @@ def _find_or_create_missing_sample_records(
         create_active=False,
         get_individual_sample_lookup=_get_individual_sample_lookup,
         sample_id_to_tissue_type=None,
+        tissue_type=None,
         **kwargs
 ):
     samples = list(samples)
@@ -93,7 +94,7 @@ def _find_or_create_missing_sample_records(
                 individual=individual,
                 created_date=timezone.now(),
                 is_active=create_active,
-                tissue_type=sample_id_to_tissue_type.get(sample_key) if sample_id_to_tissue_type else None,
+                tissue_type=sample_id_to_tissue_type.get(sample_key) if sample_id_to_tissue_type else tissue_type,
                 **kwargs
             ) for sample_key, individual in sample_id_to_individual_record.items()]
         samples += list(Sample.bulk_create(user, new_samples))
@@ -176,6 +177,7 @@ def match_and_update_search_samples(
         sample_type=sample_type,
         dataset_type=dataset_type,
         loaded_date=loaded_date,
+        tissue_type=Sample.NO_TISSUE_TYPE,
         **sample_data,
     )
 
