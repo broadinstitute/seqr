@@ -86,6 +86,7 @@ COPY panelapp/ .
 COPY reference_data/ .
 COPY seqr/ .
 COPY static/ .
+COPY manage.py settings.py wsgi.py .
 COPY --from=build /build/ui/dist /seqr/ui/dist
 
 ENV VIRTUAL_ENV=/opt/venv
