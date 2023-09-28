@@ -4,7 +4,6 @@ import styled from 'styled-components'
 
 import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
 import { RadioGroup, AlignedBooleanCheckbox, Select, InlineToggle } from 'shared/components/form/Inputs'
-import { VerticalSpacer } from 'shared/components/Spacers'
 import { snakecaseToTitlecase, camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
