@@ -714,7 +714,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'sample_tissue_type': 'M',
             'num_parsed_samples': 4,
             'initial_model_count': 4,
-            'deleted_count': 1,
+            'deleted_count': 3,
             'extra_warnings': [
                 'Skipped data loading for the following 1 sample(s) due to mismatched tissue type: NA19678 (fibroblasts, muscle)',
             ],
@@ -742,7 +742,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             ],
             'write_data': {'NA20870\t\t{"ENSG00000233750-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
-                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000233750",'
+                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000233750",' 
                            ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}\n',
                            'NA20870\t\t{"ENSG00000135953-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
@@ -883,7 +883,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                     _set_file_iter_stdout([header, loaded_data_row[:2] + [''] + loaded_data_row[3:]])
                     response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                     self.assertEqual(response.status_code, 400)
-                    self.assertEqual(response.json()['errors'][0], 'Error in NA19675_D2 data: Gene ID is required')
+                    self.assertEqual(response.json()['errors'][0], 'Samples missing required "gene_id": NA19675_D2')
 
                 mapping_body = {'mappingFile': {'uploadedFileId': 'map.tsv'}}
                 mapping_body.update(body)
@@ -987,6 +987,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 # test correct file interactions
                 mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
                 mock_open.assert_called_with(RNA_FILENAME_TEMPLATE.format(data_type), 'wt')
+                exp = [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']]
                 self.assertListEqual(mock_writes, [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']])
 
                 # test loading new data without deleting existing data
