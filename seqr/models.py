@@ -651,10 +651,11 @@ class Sample(ModelWithGUID):
 
     NO_TISSUE_TYPE = 'X'
     TISSUE_TYPE_CHOICES = (
-        ('WB', 'Whole Blood'),
-        ('F', 'Fibroblast'),
-        ('M', 'Muscle'),
-        ('L', 'Lymphocyte'),
+        ('WB', 'whole_blood'),
+        ('F', 'fibroblasts'),
+        ('M', 'muscle'),
+        ('L', 'lymphocytes'),
+        ('A', 'airway_cultured_epithelium'),
         (NO_TISSUE_TYPE, 'None'),
     )
 

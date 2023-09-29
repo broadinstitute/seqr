@@ -284,15 +284,8 @@ SPLICE_OUTLIER_FORMATTER = {
 SPLICE_OUTLIER_HEADER_COLS = {col: _to_camel_case(col) for col in SPLICE_OUTLIER_COLS}
 SPLICE_OUTLIER_HEADER_COLS[SAMPLE_ID_COL] = SPLICE_OUTLIER_HEADER_COLS.pop(INDIV_ID_COL)
 
-TISSUE_TYPE_MAP = {
-    # TODO use database enum
-    'whole_blood': 'WB',
-    'fibroblasts': 'F',
-    'muscle': 'M',
-    'lymphocytes': 'L',
-}
-
-REVERSE_TISSUE_TYPE = {v: k for k, v in TISSUE_TYPE_MAP.items()}
+REVERSE_TISSUE_TYPE = dict(Sample.TISSUE_TYPE_CHOICES)
+TISSUE_TYPE_MAP = {v: k for k, v in REVERSE_TISSUE_TYPE.items() if k != Sample.NO_TISSUE_TYPE}
 
 
 def load_rna_seq_outlier(*args, **kwargs):
@@ -364,7 +357,7 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
             if not (allow_missing_gene and missing_cols == [GENE_ID_COL]):
                 continue
 
-        tissue_type = TISSUE_TYPE_MAP.get(row[TISSUE_COL])
+        tissue_type = TISSUE_TYPE_MAP[row[TISSUE_COL]]
         project = row[PROJECT_COL]
         if (sample_id, project) in sample_id_to_tissue_type:
             prev_tissue_type = sample_id_to_tissue_type[(sample_id, project)]

@@ -3,8 +3,7 @@
 from django.db import migrations, models
 from django.contrib.postgres.aggregates import ArrayAgg
 
-# TODO get correct tissue type from Ben
-SAMPLE_TISSUE_MAP = {sample_id: 'M' for sample_id in {
+SAMPLE_TISSUE_MAP = {sample_id: 'A' for sample_id in {
     'MCH-103_1_NE1', 'MCH-75_1_NE1', 'MCH-44_1_NE1', 'MCH-80_1_NE1', 'MCH-199_1_NE1', 'MCH-68_1_NE1', 'MCH-55_1_NE1',
     'MCH-69_1_NE1', 'MCH-198_1_NE1',
 }}
@@ -55,6 +54,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='sample',
             name='tissue_type',
-            field=models.CharField(choices=[('WB', 'Whole Blood'), ('F', 'Fibroblast'), ('M', 'Muscle'), ('L', 'Lymphocyte'), ('X', 'None')], max_length=2),
+            field=models.CharField(choices=[('WB', 'whole_blood'), ('F', 'fibroblasts'), ('M', 'muscle'), ('L', 'lymphocytes'), ('A', 'airway_cultured_epithelium'), ('X', 'None')], max_length=2),
         ),
     ]
