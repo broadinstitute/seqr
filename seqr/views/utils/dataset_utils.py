@@ -333,11 +333,11 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
     samples_by_id = defaultdict(dict)
     f = file_iter(file_path, user=user)
     header = _parse_tsv_row(next(f))
-    required_cols = {
-        column_map.get(col, col) for col in [SAMPLE_ID_COL, PROJECT_COL, GENE_ID_COL, TISSUE_COL]
+    required_column_map = {
+        column_map.get(col, col): col for col in [SAMPLE_ID_COL, PROJECT_COL, GENE_ID_COL, TISSUE_COL]
     }
     expected_cols = set(column_map.values())
-    expected_cols.update(required_cols)
+    expected_cols.update(required_column_map.keys())
     missing_cols = expected_cols - set(header)
     if missing_cols:
         raise ValueError(f'Invalid file: missing column(s): {", ".join(sorted(missing_cols))}')
@@ -356,12 +356,12 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
         for mapped_key, format in (format_fields or {}).items():
             row_dict[mapped_key] = format_fields[mapped_key](row_dict[mapped_key])
 
-        missing_cols = [col for col in required_cols if not row.get(col)]
+        missing_cols = [col_id for col, col_id in required_column_map.items() if not row.get(col)]
         sample_id = row_dict.pop(SAMPLE_ID_COL) if SAMPLE_ID_COL in row_dict else row[SAMPLE_ID_COL]
         if missing_cols:
             for col in missing_cols:
                 missing_required_fields[col].append(sample_id)
-            if not (allow_missing_gene and missing_cols == [column_map.get(GENE_ID_COL, GENE_ID_COL)]):
+            if not (allow_missing_gene and missing_cols == [GENE_ID_COL]):
                 continue
 
         tissue_type = TISSUE_TYPE_MAP.get(row[TISSUE_COL])
@@ -395,10 +395,10 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
     matched_gene_ids = set(GeneInfo.objects.filter(gene_id__in=gene_ids).values_list('gene_id', flat=True))
     unknown_gene_ids = gene_ids - matched_gene_ids
     if allow_missing_gene:
-        missing_required_fields.pop(column_map[GENE_ID_COL], None)
+        missing_required_fields.pop(GENE_ID_COL, None)
     if missing_required_fields:
         errors += [
-            f'Samples missing required "{column_map.get(col, col)}": {", ".join(sorted(sample_ids))}'
+            f'Samples missing required "{col}": {", ".join(sorted(sample_ids))}'
             for col, sample_ids in missing_required_fields.items()
         ]
     if unknown_gene_ids:
