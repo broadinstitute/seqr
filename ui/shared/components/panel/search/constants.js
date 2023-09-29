@@ -453,7 +453,7 @@ const REQUIRE_SCORE_FIELD = {
   labelHelp: 'Only return variants where at least one filtered predictor is present. By default, variants are returned if a predictor meets the filtered value or is missing entirely',
 }
 export const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
-  ({ field, fieldTitle, indicatorMap, group, min, max }) => {
+  ({ field, fieldTitle, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
     const label = fieldTitle || snakecaseToTitlecase(field)
     const filterField = { name: field, label, group }
 
@@ -472,6 +472,13 @@ export const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...PREDICTOR_FIELDS.filter
     const labelHelp = (
       <div>
         {`Enter a numeric cutoff for ${label}`}
+        {dangerThreshold && (
+          <div>
+            Thresholds:
+            <div>{`Red > ${dangerThreshold}`}</div>
+            <div>{`Yellow > ${warningThreshold}`}</div>
+          </div>
+        )}
       </div>
     )
     return {
