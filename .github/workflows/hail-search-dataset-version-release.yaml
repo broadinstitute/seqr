@@ -21,7 +21,6 @@ on:
       version:
         required: true
 
-
 jobs:
   helm_update:
     runs-on: ubuntu-latest
