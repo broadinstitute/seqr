@@ -35,7 +35,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: update image tag in the broad seqr chart
+      - name: update dataset version in the broad-seqr chart
         uses: mikefarah/yq@v4.22.1
         with:
           cmd: >
