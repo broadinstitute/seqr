@@ -329,18 +329,14 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "date_data_generation": "2017-02-05",
     "Zygosity-1": "Heterozygous",
     "Zygosity-2": "Heterozygous",
-    "variant_genome_build-1": "GRCh37",
-    "variant_genome_build-2": "GRCh37",
     "Ref-1": "TC",
     "sv_type-2": "Deletion",
     "sv_name-2": "DEL:chr12:49045487-49045898",
     "Chrom-2": "12",
     "Pos-2": "49045487",
-    "ancestry_detail": "Ashkenazi Jewish",
     "maternal_id": "",
     "paternal_id": "",
     "hgvsp-1": "c.1586-17C>G",
-    "entity:family_id": "12",
     "project_id": "Test Reprocessed Project",
     "Pos-1": "248367227",
     "data_type": "WES",
@@ -352,8 +348,6 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "ancestry": "Ashkenazi Jewish",
     "phenotype_group": "",
     "sex": "Female",
-    "entity:subject_id": "NA20889",
-    "entity:sample_id": "NA20889",
     "Chrom-1": "1",
     "Alt-1": "T",
     "Gene-1": "OR4G11P",
@@ -365,13 +359,11 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "subject_id": "NA20889",
     "proband_relationship": "",
     "consanguinity": "None suspected",
-    "sequencing_center": "Broad",
 }
 EXPECTED_SAMPLE_METADATA_ROW = {
     "dbgap_submission": "No",
     "dbgap_study_id": "",
     "dbgap_subject_id": "",
-    "sample_provider": "",
     "multiple_datasets": "No",
 }
 EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
@@ -745,7 +737,7 @@ class ReportAPITest(object):
         self.assertDictEqual(EXPECTED_SAMPLE_METADATA_ROW, test_row)
         self.assertEqual(len(responses.calls), 8)
         self._assert_expected_airtable_call(
-            -1, "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
+            -1, "OR(RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
         self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
 
         # Test omit airtable columns

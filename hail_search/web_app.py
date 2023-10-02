@@ -29,12 +29,13 @@ async def status(request: web.Request) -> web.Response:
     return web.json_response({'success': True})
 
 
-def init_web_app():
+async def init_web_app():
+    hl.init(idempotent=True)
+    load_globals()
     app = web.Application()
     app.add_routes([
         web.get('/status', status),
         web.post('/search', search),
         web.post('/gene_counts', gene_counts),
     ])
-    load_globals()
     return app
