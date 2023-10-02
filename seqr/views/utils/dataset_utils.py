@@ -317,6 +317,18 @@ def load_rna_seq_splice_outlier(*args, **kwargs):
     return samples_to_load, info, warnings
 
 
+def _validate_rna_header(header, column_map):
+    required_column_map = {
+        column_map.get(col, col): col for col in [SAMPLE_ID_COL, PROJECT_COL, GENE_ID_COL, TISSUE_COL]
+    }
+    expected_cols = set(column_map.values())
+    expected_cols.update(required_column_map.keys())
+    missing_cols = expected_cols - set(header)
+    if missing_cols:
+        raise ValueError(f'Invalid file: missing column(s): {", ".join(sorted(missing_cols))}')
+    return required_column_map
+
+
 def _parse_rna_row(row, column_map, required_column_map, missing_required_fields, allow_missing_gene, should_skip=None, format_fields=None):
     if not (should_skip and should_skip(row)):
         row_dict = {mapped_key: row[col] for mapped_key, col in column_map.items()}
@@ -341,14 +353,7 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
     samples_by_id = defaultdict(dict)
     f = file_iter(file_path, user=user)
     header = _parse_tsv_row(next(f))
-    required_column_map = {
-        column_map.get(col, col): col for col in [SAMPLE_ID_COL, PROJECT_COL, GENE_ID_COL, TISSUE_COL]
-    }
-    expected_cols = set(column_map.values())
-    expected_cols.update(required_column_map.keys())
-    missing_cols = expected_cols - set(header)
-    if missing_cols:
-        raise ValueError(f'Invalid file: missing column(s): {", ".join(sorted(missing_cols))}')
+    required_column_map = _validate_rna_header(header, column_map)
 
     sample_id_to_tissue_type = {}
     samples_with_conflict_tissues = defaultdict(set)
