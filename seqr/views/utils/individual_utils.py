@@ -174,7 +174,7 @@ def delete_individuals(project, individual_guids, user):
     individuals_to_delete = Individual.objects.filter(
         family__project=project, guid__in=individual_guids)
 
-    errors = backend_specific_call(_validate_no_submissions, _validate_no_search_samples)(individuals_to_delete)
+    errors = backend_specific_call(_validate_no_submissions, _validate_no_sumissions_no_search_samples)(individuals_to_delete)
     if errors:
         raise ErrorsWarningsException(errors)
 
@@ -208,7 +208,7 @@ def _validate_no_submissions(individuals_to_delete):
     )
 
 
-def _validate_no_search_samples(individuals_to_delete):
+def _validate_no_sumissions_no_search_samples(individuals_to_delete):
     return _validate_no_submissions(individuals_to_delete) + _validate_delete_individuals(
         individuals_to_delete, 'search sample', dict(sample__is_active=True)
     )
