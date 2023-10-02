@@ -811,14 +811,14 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(sample.data_source, data_source)
         return sample.guid
 
-    def test_update_rna_outlier(self):
-        self._test_update_rna_seq('outlier')
+    def test_update_rna_outlier(self, *args, **kwargs):
+        self._test_update_rna_seq('outlier', *args, **kwargs)
 
-    def test_update_rna_tpm(self):
-        self._test_update_rna_seq('tpm')
+    def test_update_rna_tpm(self, *args, **kwargs):
+        self._test_update_rna_seq('tpm', *args, **kwargs)
 
-    def test_update_rna_splice_outlier(self):
-        self._test_update_rna_seq('splice_outlier')
+    def test_update_rna_splice_outlier(self, *args, **kwargs):
+        self._test_update_rna_seq('splice_outlier', *args, **kwargs)
 
     @mock.patch('seqr.views.utils.dataset_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.dataset_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
@@ -995,7 +995,6 @@ class DataManagerAPITest(AuthenticationTestCase):
         # test correct file interactions
         mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
         mock_open.assert_called_with(RNA_FILENAME_TEMPLATE.format(data_type), 'wt')
-        exp = [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']]
         self.assertListEqual(mock_writes, [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']])
 
         # test loading new data without deleting existing data

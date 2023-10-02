@@ -2,7 +2,6 @@
 
 from collections import defaultdict
 from django.db import migrations, models
-from django.contrib.postgres.aggregates import ArrayAgg
 from tqdm import tqdm
 
 SAMPLE_TISSUE_MAP = {sample_id: 'A' for sample_id in {

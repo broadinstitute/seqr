@@ -346,8 +346,8 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
             continue
 
         row_dict = {mapped_key: row[col] for mapped_key, col in column_map.items()}
-        for mapped_key, format in (format_fields or {}).items():
-            row_dict[mapped_key] = format_fields[mapped_key](row_dict[mapped_key])
+        for mapped_key, format_func in (format_fields or {}).items():
+            row_dict[mapped_key] = format_func(row_dict[mapped_key])
 
         missing_cols = [col_id for col, col_id in required_column_map.items() if not row.get(col)]
         sample_id = row_dict.pop(SAMPLE_ID_COL) if SAMPLE_ID_COL in row_dict else row[SAMPLE_ID_COL]
