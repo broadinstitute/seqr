@@ -13,6 +13,7 @@ from django.utils import timezone
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, SavedVariant, \
     FamilyNote, CAN_EDIT
+from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json, update_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, \
@@ -346,10 +347,9 @@ def _delete_project(project_guid, user):
     project = Project.objects.get(guid=project_guid)
     check_user_created_object_permissions(project, user)
 
-    IgvSample.bulk_delete(user, individual__family__project=project)
-    Sample.bulk_delete(user, individual__family__project=project)
-
-    Individual.bulk_delete(user, family__project=project)
+    individual_guids_to_delete = Individual.objects.filter(
+        family__project__guid=project_guid).values_list('guid', flat=True)
+    delete_individuals(project, individual_guids_to_delete, user)
 
     Family.bulk_delete(user, project=project)
 

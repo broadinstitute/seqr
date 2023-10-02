@@ -202,6 +202,7 @@ class FamilyAPITest(AuthenticationTestCase):
             'families': [{'familyGuid': 'F000012_12'}]}))
         self.assertEqual(response.status_code, 200)
 
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_families_handler(self, mock_pm_group):
         url = reverse(delete_families_handler, args=[PROJECT_GUID])
@@ -220,6 +221,14 @@ class FamilyAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA19675_1'])
+
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Unable to delete individuals with active MME submission: NA19675_1',
+            'Unable to delete individuals with active search sample: HG00731, HG00732, HG00733, NA19675_1, NA19678, NA19679',
+        ])
 
         # Test success
         MatchmakerSubmission.objects.update(deleted_date=datetime.now())
