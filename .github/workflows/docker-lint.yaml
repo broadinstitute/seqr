@@ -9,6 +9,7 @@ on:
       - master
     paths:
       - deploy/docker/seqr/Dockerfile
+      - hail_search/deploy/Dockerfile
       - .hadolint.yaml
       - .github/workflows/docker-lint.yaml
   pull_request:
@@ -18,6 +19,7 @@ on:
       - master
     paths:
       - deploy/docker/seqr/Dockerfile
+      - hail_search/deploy/Dockerfile
       - .hadolint.yaml
       - .github/workflows/docker-lint.yaml
 
@@ -29,3 +31,6 @@ jobs:
       - uses: hadolint/hadolint-action@v1.5.0
         with:
           dockerfile: deploy/docker/seqr/Dockerfile
+      - uses: hadolint/hadolint-action@v1.5.0
+        with:
+          dockerfile: hail_search/deploy/Dockerfile
