@@ -170,17 +170,21 @@ def bulk_update_family_analysed_by(request):
     })
 
 
+ALL_PROJECTS = 'all'
+GREGOR_CATEGORY = 'gregor'
+
+
 def _get_metadata_projects(request, project_guid):
     is_analyst = user_is_analyst(request.user)
-    is_all_projects = project_guid == 'all'
+    is_all_projects = project_guid == ALL_PROJECTS
     include_airtable = 'true' in request.GET.get('includeAirtable', '') and is_analyst and not is_all_projects
     if is_all_projects:
         projects = get_internal_projects() if is_analyst else Project.objects.filter(
             guid__in=get_project_guids_user_can_view(request.user))
-    elif project_guid == 'gregor':
+    elif project_guid == GREGOR_CATEGORY:
         if not is_analyst:
             raise PermissionDenied()
-        projects = Project.objects.filter(projectcategory__name__iexact='gregor')
+        projects = Project.objects.filter(projectcategory__name__iexact=GREGOR_CATEGORY)
     else:
         projects = [get_project_and_check_permissions(project_guid, request.user)]
     return projects, include_airtable
