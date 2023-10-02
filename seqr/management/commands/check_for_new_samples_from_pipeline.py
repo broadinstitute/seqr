@@ -27,8 +27,6 @@ class Command(BaseCommand):
         logger.info(f'Loading new samples from {path}: {version}')
         metadata_path = f'gs://seqr-datasets/v03/{path}/{data_type}/runs/{version}/metadata.json'
         metadata = json.loads(next(line for line in file_iter(metadata_path)))
-        if not metadata.get('projects'):
-            raise CommandError(f'Invalid metadata for {path}: {version}')
 
         family_guids = {family for families in metadata['projects'].values() for family in families}
         families = Family.objects.filter(guid__in=family_guids)
