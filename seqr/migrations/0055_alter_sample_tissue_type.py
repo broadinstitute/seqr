@@ -13,9 +13,11 @@ SAMPLE_TISSUE_MAP = {sample_id: 'A' for sample_id in {
 
 def update_tissue_type(apps, schema_editor):
     Sample = apps.get_model('seqr', 'Sample')
-    RnaSeqOutlier = apps.get_model('seqr', 'RnaSeqOutlier')
-    RnaSeqTpm = apps.get_model('seqr', 'RnaSeqTpm')
-    RnaSeqSpliceOutlier = apps.get_model('seqr', 'RnaSeqTpm')
+    rna_data_classes = {
+        'rnaseqoutlier': apps.get_model('seqr', 'RnaSeqOutlier'),
+        'rnaseqspliceoutlier': apps.get_model('seqr', 'RnaSeqSpliceOutlier'),
+        'rnaseqtpm': apps.get_model('seqr', 'RnaSeqTpm'),
+    }
     db_alias = schema_editor.connection.alias
 
     samples = Sample.objects.using(db_alias).filter(tissue_type__isnull=True)
@@ -24,11 +26,11 @@ def update_tissue_type(apps, schema_editor):
 
     rna_samples = samples.filter(sample_type='RNA', is_active=True)
     non_rna_samples = samples.exclude(id__in=[s.id for s in rna_samples])
-    individual_tissue_sample_map = defaultdict(dict)
+    individual_tissue_sample_map = defaultdict(lambda: defaultdict(list))
     for s in Sample.objects.using(db_alias).filter(
         tissue_type__isnull=False, individual_id__in=rna_samples.values_list('individual_id', flat=True),
     ):
-        individual_tissue_sample_map[s.individual_id].update({s.tissue_type: s})
+        individual_tissue_sample_map[s.individual_id][s.tissue_type].append(s)
 
     grouped_samples = defaultdict(set)
     for s in rna_samples:
@@ -42,31 +44,41 @@ def update_tissue_type(apps, schema_editor):
             s.tissue_type = SAMPLE_TISSUE_MAP[s.sample_id]
         sample_key = (s.individual_id, s.tissue_type)
         grouped_samples[sample_key].add(s)
-        existing_tissue_sample = individual_tissue_sample_map[s.individual_id].get(s.tissue_type)
-        if existing_tissue_sample:
-            grouped_samples[sample_key].add(existing_tissue_sample)
-
-    # Should only have one sample per tissue per individual, but now may have duplicates
-    duplicates = [sorted(v, key=lambda x: x.created_date, reverse=True) for k, v in grouped_samples.items() if len(v) > 1]
-    assert all(len(dup) == 2 for dup in duplicates)
-    print(f'Updating loaded RNA data for {len(duplicates)} duplicated samples')
-    for new_s, old_s in tqdm(duplicates, unit=' duplicates'):
-        for model_cls in [RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier]:
-            rna_data = model_cls.objects.using(db_alias).filter(sample_id=old_s.id)
-            if rna_data and not model_cls.objects.using(db_alias).filter(sample_id=new_s.id).exists():
-                rna_data.update(sample_id=new_s.id)
-    deprecated_sample_ids = [duplicate[1].id for duplicate in duplicates]
-    rna_samples = rna_samples.exclude(id__in=deprecated_sample_ids)
-    Sample.objects.using(db_alias).filter(id__in=deprecated_sample_ids).delete()
+        existing_tissue_samples = individual_tissue_sample_map[s.individual_id].get(s.tissue_type)
+        if existing_tissue_samples:
+            grouped_samples[sample_key].update(existing_tissue_samples)
 
     print(f'Updating {len(rna_samples)} RNA samples')
     Sample.objects.using(db_alias).bulk_update(rna_samples, ['tissue_type'])
+
+    # Should only have one sample per tissue per individual, but now may have duplicates
+    duplicates = [sorted(v, key=lambda x: x.created_date, reverse=True) for k, v in grouped_samples.items() if len(v) > 1]
+    print(f'Updating loaded RNA data for {len(duplicates)} duplicated samples')
+    dup_id_map = {new_s.id: [old_s.id for old_s in old_samples] for new_s, *old_samples in duplicates}
+    duplicated_ids = [id for ids in dup_id_map.values() for id in ids]
+    dup_samples = Sample.objects.using(db_alias).filter(id__in=list(dup_id_map.keys()) + duplicated_ids)
+    has_rna_data = {
+        field: set(dup_samples.filter(**{f'{field}__isnull': False}).values_list('id', flat=True))
+        for field in rna_data_classes
+    }
+    for new_s_id, old_sample_ids in tqdm(dup_id_map.items(), unit=' duplicates'):
+        for field, model_cls in rna_data_classes.items():
+            has_data_samples = has_rna_data[field]
+            for old_s_id in old_sample_ids:
+                if old_s_id in has_data_samples and new_s_id not in has_data_samples:
+                    model_cls.objects.using(db_alias).filter(sample_id=old_s_id).update(sample_id=new_s_id)
+                    has_data_samples.add(new_s_id)
+
+    print(f'Deleting {len(duplicated_ids)} duplicate RNA samples')
+    Sample.objects.using(db_alias).filter(id__in=duplicated_ids).delete()
 
     print(f'Updating {len(non_rna_samples)} non-RNA samples to default tissue type')
     non_rna_samples.update(tissue_type='X')
 
 
 class Migration(migrations.Migration):
+
+    atomic = False
 
     dependencies = [
         ('seqr', '0054_alter_sample_dataset_type'),
