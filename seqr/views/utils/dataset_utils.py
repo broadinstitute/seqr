@@ -38,6 +38,8 @@ def _find_or_create_samples(
         sample_project_tuples,
         projects,
         user,
+        sample_type,
+        dataset_type,
         sample_id_to_individual_id_mapping,
         raise_no_match_error=False,
         raise_unmatched_error_template=None,
@@ -45,15 +47,18 @@ def _find_or_create_samples(
         sample_id_to_tissue_type=None,
         tissue_type=None,
         data_source=None,
-        **kwargs
+        sample_data=None,
 ):
+    sample_params = {'sample_type': sample_type, 'dataset_type': dataset_type}
+    sample_params.update(sample_data or {})
+
     samples_by_key = {
         (s['sample_id'], s.pop('individual__family__project__name')): s for s in Sample.objects.filter(
             individual__family__project__in=projects,
             sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
             **({'tissue_type__in': set(sample_id_to_tissue_type.values())} if sample_id_to_tissue_type else {
                 'tissue_type': tissue_type}),
-            **kwargs,
+            **sample_params,
         ).values('guid', 'individual_id', 'sample_id', 'tissue_type', 'individual__family__project__name')
     }
 
@@ -103,9 +108,9 @@ def _find_or_create_samples(
             tissue_type=sample_id_to_tissue_type.get(sample_key) if sample_id_to_tissue_type else tissue_type,
             loaded_date=loaded_date,
             data_source=data_source,
-            **sample_data,
-            **kwargs
-        ) for sample_key, sample_data in new_samples.items()]
+            **created_sample_data,
+            **sample_params
+        ) for sample_key, created_sample_data in new_samples.items()]
         Sample.bulk_create(user, new_sample_models)
 
     return new_samples, existing_samples, remaining_sample_keys, loaded_date
@@ -166,13 +171,13 @@ def match_and_update_search_samples(
         sample_project_tuples,
         projects,
         user,
+        sample_type,
+        dataset_type,
         sample_id_to_individual_id_mapping,
-        sample_type=sample_type,
-        dataset_type=dataset_type,
+        sample_data=sample_data,
         tissue_type=Sample.NO_TISSUE_TYPE,
         raise_unmatched_error_template=raise_unmatched_error_template,
         raise_no_match_error=not raise_unmatched_error_template,
-        **sample_data,
     )
 
     all_samples = list(existing_samples.values()) + list(new_samples.values())
@@ -191,7 +196,7 @@ def match_and_update_search_samples(
     Family.bulk_update(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
-    return inactivated_sample_guids, family_guids_to_update, updated_samples, new_samples, len(remaining_sample_keys)
+    return new_samples, inactivated_sample_guids, len(remaining_sample_keys), family_guids_to_update, updated_samples
 
 
 def _parse_tsv_row(row):

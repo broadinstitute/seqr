@@ -1,3 +1,4 @@
+from collections import defaultdict
 from django.core.management.base import BaseCommand, CommandError
 import json
 import logging
@@ -5,6 +6,8 @@ import os
 
 from seqr.models import Family, Sample
 from seqr.utils.file_utils import file_iter
+from seqr.utils.search.add_data_utils import notify_search_data_loaded
+from seqr.views.utils.dataset_utils import match_and_update_search_samples
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +22,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         path = options['path']
         version = options['version']
+        genome_build, dataset_type = path.split('/')
 
         if Sample.objects.filter(data_source=version, is_active=True).exists():
             logger.info(f'Data already loaded for {path}: {version}')
@@ -32,3 +36,34 @@ class Command(BaseCommand):
         if len(families) < len(metadata['families']):
             invalid = metadata['families'].keys() - set(families.values_list('guid', flat=True))
             raise CommandError(f'Invalid families in run metadata {path}: {version} - {", ".join(invalid)}')
+
+        family_project_map = {f.guid: f.project for f in families.select_related('project')}
+        samples_by_project = defaultdict(list)
+        for family_guid, sample_ids in metadata['families'].items():
+            samples_by_project[family_project_map[family_guid]] += sample_ids
+        sample_project_tuples = []
+        for project, sample_ids in samples_by_project.items():
+            sample_project_tuples += [(sample_id, project.name) for sample_id in sample_ids]
+
+        # TODO validate genome build etc
+
+        sample_type = metadata['sample_type']
+        logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
+        new_samples, inactivated_sample_guids, *args = match_and_update_search_samples(
+            projects=samples_by_project.keys(),
+            sample_project_tuples=sample_project_tuples,
+            sample_data={'data_source': version, 'elasticsearch_index': metadata['callset']},
+            sample_type=sample_type,
+            dataset_type=dataset_type,
+            user=None,
+        )
+
+        # Send loading notifications
+        new_samples_by_project_name = defaultdict(list)
+        for (_, project_name), s in new_samples.items():
+            new_samples_by_project_name[project_name].append(s)
+        for project, sample_ids in samples_by_project.items():
+            notify_search_data_loaded(
+                project, dataset_type, sample_type, inactivated_sample_guids,
+                new_samples=new_samples_by_project_name[project.name], num_samples=len(sample_ids),
+            )
