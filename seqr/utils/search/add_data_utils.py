@@ -37,7 +37,7 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
         dataset_type=dataset_type,
         expected_families=expected_families,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-        ignore_extra_samples=ignore_extra_samples,
+        raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
     )
 
     if notify:

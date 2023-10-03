@@ -159,8 +159,8 @@ def _update_variant_samples(samples_guids, individual_ids, user, dataset_type, s
 
 
 def match_and_update_search_samples(
-        projects, sample_project_tuples, sample_type, dataset_type, sample_data, user,
-        sample_id_to_individual_id_mapping=None, ignore_extra_samples=False, expected_families=None,
+        projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
+        sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
 ):
     new_samples, existing_samples, _, loaded_date = _find_or_create_samples(
         sample_project_tuples,
@@ -170,8 +170,8 @@ def match_and_update_search_samples(
         sample_type=sample_type,
         dataset_type=dataset_type,
         tissue_type=Sample.NO_TISSUE_TYPE,
-        raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.',
-        raise_no_match_error=ignore_extra_samples,
+        raise_unmatched_error_template=raise_unmatched_error_template,
+        raise_no_match_error=not raise_unmatched_error_template,
         **sample_data,
     )
 
