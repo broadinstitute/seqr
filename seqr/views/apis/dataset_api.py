@@ -1,6 +1,6 @@
 import json
 
-from seqr.utils.search.add_data_utils import add_new_search_samples
+from seqr.utils.search.add_data_utils import add_new_es_search_samples
 from seqr.models import Individual, Family
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
@@ -31,7 +31,7 @@ def add_variants_dataset_handler(request, project_guid):
     request_json = json.loads(request.body)
 
     try:
-        inactivated_sample_guids, updated_family_guids, updated_samples = add_new_search_samples(
+        inactivated_sample_guids, updated_family_guids, updated_samples = add_new_es_search_samples(
             request_json, project, request.user, notify=True)
     except ValueError as e:
         return create_json_response({'errors': [str(e)]}, status=400)

@@ -9,7 +9,7 @@ from seqr.models import Project, SavedVariant, Sample
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import reset_cached_search_results
-from seqr.utils.search.add_data_utils import add_new_search_samples
+from seqr.utils.search.add_data_utils import add_new_es_search_samples
 from seqr.utils.search.utils import get_variants_for_variant_ids, get_single_variant
 from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
 
@@ -35,7 +35,7 @@ class Command(BaseCommand):
         expected_families = {sv.family for sv in saved_variant_models}
 
         logger.info('Validating es index {}'.format(options['es_index']))
-        add_new_search_samples({
+        add_new_es_search_samples({
             'elasticsearchIndex': options['es_index'],
             'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
             'genomeVersion': GENOME_VERSION_GRCh38,

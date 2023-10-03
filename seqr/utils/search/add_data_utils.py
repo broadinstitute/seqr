@@ -12,7 +12,7 @@ def _hail_backend_error(*args, **kwargs):
     raise ValueError('Adding samples is disabled for the hail backend')
 
 
-def add_new_search_samples(request_json, project, user, notify=False, expected_families=None):
+def add_new_es_search_samples(request_json, project, user, notify=False, expected_families=None):
     dataset_type = request_json.get('datasetType')
     if dataset_type not in Sample.DATASET_TYPE_LOOKUP:
         raise ValueError(f'Invalid dataset type "{dataset_type}"')
