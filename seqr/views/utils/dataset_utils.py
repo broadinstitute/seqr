@@ -107,13 +107,13 @@ def _find_or_create_samples(
     return new_samples, existing_samples, remaining_sample_keys, loaded_date
 
 
-def _validate_samples_families(samples, included_families, sample_type, dataset_type, expected_families=None):
+def _validate_samples_families(samples_ids, included_family_guids, sample_type, dataset_type, expected_families=None):
     missing_individuals = Individual.objects.filter(
-        family__in=included_families,
+        family__guid__in=included_family_guids,
         sample__is_active=True,
         sample__dataset_type=dataset_type,
         sample__sample_type=sample_type,
-    ).exclude(sample__in=samples).select_related('family')
+    ).exclude(sample__id__in=samples_ids).select_related('family')
     missing_family_individuals = defaultdict(list)
     for individual in missing_individuals:
         missing_family_individuals[individual.family].append(individual)
@@ -127,28 +127,27 @@ def _validate_samples_families(samples, included_families, sample_type, dataset_
                 ))))
 
     if expected_families:
-        missing_families = expected_families - included_families
+        missing_families = [f.family_id for f in expected_families if f.guid not in included_family_guids]
         if missing_families:
             raise ValueError(
                 'The following families have saved variants but are missing from the callset: {}.'.format(
-                    ', '.join([f.family_id for f in missing_families])
+                    ', '.join(missing_families)
                 ))
 
 
-def _update_variant_samples(samples, user, dataset_type, sample_type, sample_data):
-    updated_samples = [sample.id for sample in samples]
+def _update_variant_samples(samples_ids, individual_ids, user, dataset_type, sample_type, sample_data):
 
     activated_sample_guids = Sample.bulk_update(user, {
         'is_active': True,
         **sample_data,
-    }, id__in=updated_samples, is_active=False)
+    }, id__in=samples_ids, is_active=False)
 
     inactivate_samples = Sample.objects.filter(
-        individual_id__in={sample.individual_id for sample in samples},
+        individual_id__in=individual_ids,
         is_active=True,
         dataset_type=dataset_type,
         sample_type=sample_type,
-    ).exclude(id__in=updated_samples)
+    ).exclude(id__in=samples_ids)
 
     inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
 
@@ -173,23 +172,22 @@ def match_and_update_search_samples(
         **sample_data,
     )
 
-    samples = existing_samples + new_samples # TODO
-    prefetch_related_objects(samples, 'individual__family')
-    included_families = {sample.individual.family for sample in samples}
-    _validate_samples_families(samples, included_families, sample_type, dataset_type, expected_families=expected_families)
+    samples_ids = [s.id for s in existing_samples + new_samples]
+    individual_ids = {sample.individual_id for sample in existing_samples + new_samples}
+    included_families = dict(Family.objects.filter(individual__id__in=individual_ids).values_list('guid', 'analysis_status'))
+    _validate_samples_families(samples_ids, included_families.keys(), sample_type, dataset_type, expected_families=expected_families)
 
     activated_sample_guids, inactivated_sample_guids = _update_variant_samples(
-        samples, user, dataset_type, sample_type, sample_data={'loaded_date': loaded_date, **sample_data})
+        samples_ids, individual_ids, user, dataset_type, sample_type, sample_data={'loaded_date': loaded_date, **sample_data})
     updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
 
     family_guids_to_update = [
-        family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
+        family_guid for family_guid, analysis_status in included_families.items() if analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
     ]
     Family.bulk_update(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
-    # TODO clean up return values
-    return inactivated_sample_guids, family_guids_to_update, updated_samples, new_samples, len(existing_samples)
+    return inactivated_sample_guids, family_guids_to_update, updated_samples, new_samples, len(samples_ids)
 
 
 def _parse_tsv_row(row):
@@ -396,7 +394,6 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
     )
     # TODO cleanup
     samples = existing_samples + new_samples
-    remaining_sample_ids = {sample_id for sample_id, _ in remaining_sample_keys}
 
     # Delete old data
     to_delete = model_cls.objects.filter(sample__in=existing_samples).exclude(sample__data_source=data_source)
@@ -406,11 +403,11 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
 
     Sample.bulk_update(user, {'data_source': data_source}, id__in={s.id for s in existing_samples})
 
-    loaded_sample_ids = set(model_cls.objects.filter(sample__in=existing_samples).values_list('sample_id', flat=True).distinct())
+    loaded_sample_guids = set(model_cls.objects.filter(sample__in=existing_samples).values_list('sample__guid', flat=True).distinct())
     prefetch_related_objects(samples, 'individual__family__project')  # newly created samples need prefetching
     samples_to_load = {
         sample.guid: samples_by_id[(sample.sample_id, sample.individual.family.project.name)] for sample in samples\
-        if sample.id not in loaded_sample_ids
+        if sample.guid not in loaded_sample_guids
     }
 
     sample_projects = Project.objects.filter(family__individual__sample__guid__in=samples_to_load.keys()).values(
@@ -425,12 +422,12 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
 
     _notify_rna_loading(model_cls, sample_projects)
 
-    if remaining_sample_ids:
-        skipped_samples = ', '.join(sorted(remaining_sample_ids))
-        message = f'Skipped loading for the following {len(remaining_sample_ids)} unmatched samples: {skipped_samples}'
+    if remaining_sample_keys:
+        skipped_samples = ', '.join(sorted({sample_id for sample_id, _ in remaining_sample_keys}))
+        message = f'Skipped loading for the following {len(remaining_sample_keys)} unmatched samples: {skipped_samples}'
         warnings.append(message)
-    if loaded_sample_ids:
-        message = f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file'
+    if loaded_sample_guids:
+        message = f'Skipped loading for {len(loaded_sample_guids)} samples already loaded from this file'
         warnings.append(message)
 
     for warning in warnings:

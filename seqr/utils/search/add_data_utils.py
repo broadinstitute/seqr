@@ -45,7 +45,7 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
     return inactivated_sample_guids, updated_family_guids, updated_samples
 
 
-def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, new_samples, num_existing_samples):
+def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, new_samples, num_samples):
     if not project_has_anvil(project):
         return
     is_internal = is_internal_anvil_project(project)
@@ -79,7 +79,7 @@ We have loaded {num_sample} samples from the AnVIL workspace <a href={anvil_url}
         base_url=BASE_URL,
         guid=project.guid,
         project_name=project.name,
-        num_sample=len(new_samples)+num_existing_samples,
+        num_sample=num_samples,
     ),
         subject='New data available in seqr',
         to=sorted([user.email]),

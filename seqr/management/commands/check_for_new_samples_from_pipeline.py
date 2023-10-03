@@ -20,7 +20,7 @@ class Command(BaseCommand):
         path = options['path']
         version = options['version']
 
-        if Sample.objects.filter(data_source=version).exists():
+        if Sample.objects.filter(data_source=version, is_active=True).exists():
             logger.info(f'Data already loaded for {path}: {version}')
             return
 
