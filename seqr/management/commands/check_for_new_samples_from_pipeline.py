@@ -28,8 +28,7 @@ class Command(BaseCommand):
         metadata_path = f'gs://seqr-datasets/v03/{path}/{data_type}/runs/{version}/metadata.json'
         metadata = json.loads(next(line for line in file_iter(metadata_path)))
 
-        family_guids = {family for families in metadata['projects'].values() for family in families}
-        families = Family.objects.filter(guid__in=family_guids)
-        if len(families) < len(family_guids):
-            invalid = family_guids - set(families.values_list('guid', flat=True))
+        families = Family.objects.filter(guid__in=metadata['families'].keys())
+        if len(families) < len(metadata['families']):
+            invalid = metadata['families'].keys() - set(families.values_list('guid', flat=True))
             raise CommandError(f'Invalid families in run metadata {path}: {version} - {", ".join(invalid)}')
