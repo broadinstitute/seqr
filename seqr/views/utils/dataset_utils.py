@@ -150,35 +150,59 @@ def _update_variant_samples(samples, user, dataset_type, sample_type, sample_dat
     return activated_sample_guids, inactivate_sample_guids
 
 
+def _match_and_update_samples(
+    projects, user, sample_project_tuples, sample_type, dataset_type, sample_data, create_sample_data,
+    sample_id_to_individual_id_mapping, raise_unmatched_error_template, tissue_type=None, sample_id_to_tissue_type=None, raise_no_match_error=False,
+):
+    def _get_unmatched_error(sample_keys):
+        return raise_unmatched_error_template.format(sample_ids=(', '.join(sorted([sample_id for sample_id, _ in sample_keys]))))
+
+    samples = Sample.objects.select_related('individual__family__project').filter(
+        individual__family__project__in=projects,
+        sample_type=sample_type,
+        dataset_type=dataset_type,
+        sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
+        **({'tissue_type__in': set(sample_id_to_tissue_type.values())} if sample_id_to_tissue_type else {'tissue_type': tissue_type}),
+        **sample_data,
+    )
+
+    existing_samples = [s for s in samples if (s.sample_id, s.individual.family.project.name) in sample_project_tuples
+                        and (sample_id_to_tissue_type is None or sample_id_to_tissue_type[(s.sample_id, s.individual.family.project.name)] == s.tissue_type)]
+
+    loaded_date = timezone.now()
+    return *_find_or_create_missing_sample_records(
+        samples=existing_samples,
+        projects=projects,
+        user=user,
+        sample_count=len(sample_project_tuples),
+        get_individual_sample_key=lambda key: ((sample_id_to_individual_id_mapping or {}).get(key[0], key[0]), key[1]),
+        remaining_sample_keys=set(sample_project_tuples) -
+                              {(s.sample_id, s.individual.family.project.name) for s in existing_samples},
+        raise_no_match_error=raise_no_match_error,
+        get_unmatched_error=_get_unmatched_error if raise_unmatched_error_template else None,
+        get_individual_sample_lookup=lambda inds: {(i.individual_id, i.family.project.name):
+                                                       i for i in inds.select_related('family__project')},
+        sample_id_to_tissue_type=sample_id_to_tissue_type,
+        sample_type=sample_type,
+        dataset_type=dataset_type,
+        loaded_date=loaded_date,
+        tissue_type=tissue_type,
+        **sample_data,
+        **create_sample_data,
+    ), existing_samples, loaded_date
+
+
 def match_and_update_search_samples(
         project, user, sample_ids, sample_type, dataset_type, sample_data,
         sample_id_to_individual_id_mapping, raise_unmatched_error_template, expected_families=None,
 ):
-    def _get_unmatched_error(remaining_sample_ids):
-        return raise_unmatched_error_template.format(sample_ids=(', '.join(sorted(remaining_sample_ids))))
-
-    samples = Sample.objects.select_related('individual').filter(
-        individual__family__project=project,
-        sample_type=sample_type,
-        dataset_type=dataset_type,
-        sample_id__in=sample_ids,
-        **sample_data,
-    )
-    loaded_date = timezone.now()
-    samples, matched_individual_ids, _ = _find_or_create_missing_sample_records(
-        samples=samples,
-        projects=[project],
-        user=user,
-        sample_count=len(sample_ids),
-        get_individual_sample_key=_get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping),
-        remaining_sample_keys=set(sample_ids) - {sample.sample_id for sample in samples},
+    sample_project_tuples = [(sample_id, project.name) for sample_id in sample_ids]
+    # TODO use kwargs for create_sample_data
+    create_sample_data = {}
+    samples, matched_individual_ids, _, _, loaded_date = _match_and_update_samples(
+        [project], user, sample_project_tuples, sample_type, dataset_type, sample_data, create_sample_data,
+        sample_id_to_individual_id_mapping, raise_unmatched_error_template, tissue_type=Sample.NO_TISSUE_TYPE,
         raise_no_match_error=not raise_unmatched_error_template,
-        get_unmatched_error=_get_unmatched_error if raise_unmatched_error_template else None,
-        sample_type=sample_type,
-        dataset_type=dataset_type,
-        loaded_date=loaded_date,
-        tissue_type=Sample.NO_TISSUE_TYPE,
-        **sample_data,
     )
 
     prefetch_related_objects(samples, 'individual__family')
@@ -202,38 +226,11 @@ def _match_and_update_rna_samples(
     projects, user, sample_project_tuples, data_source, sample_id_to_individual_id_mapping, raise_unmatched_error_template,
     sample_id_to_tissue_type,
 ):
-    def _get_unmatched_error(sample_keys):
-        return raise_unmatched_error_template.format(sample_ids=(', '.join(sorted([sample_id for sample_id, _ in sample_keys]))))
-
-    samples = Sample.objects.select_related('individual__family__project').filter(
-        individual__family__project__in=projects,
-        sample_type=Sample.SAMPLE_TYPE_RNA,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
-        tissue_type__in=set(sample_id_to_tissue_type.values()),
-    )
-
-    existing_samples = [s for s in samples if (s.sample_id, s.individual.family.project.name) in sample_project_tuples
-                        and sample_id_to_tissue_type[(s.sample_id, s.individual.family.project.name)] == s.tissue_type]
-
-    samples, _, remaining_sample_keys = _find_or_create_missing_sample_records(
-        samples=existing_samples,
-        projects=projects,
-        user=user,
-        sample_count=len(sample_project_tuples),
-        get_individual_sample_key=lambda key: (sample_id_to_individual_id_mapping.get(key[0], key[0]), key[1]),
-        remaining_sample_keys=set(sample_project_tuples) -
-                              {(s.sample_id, s.individual.family.project.name) for s in existing_samples},
-        raise_no_match_error=False,
-        get_unmatched_error=_get_unmatched_error if raise_unmatched_error_template else None,
-        create_active=True,
-        get_individual_sample_lookup=lambda inds: {(i.individual_id, i.family.project.name):
-                                                       i for i in inds.select_related('family__project')},
-        sample_id_to_tissue_type=sample_id_to_tissue_type,
-        data_source=data_source,
-        sample_type=Sample.SAMPLE_TYPE_RNA,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        loaded_date=timezone.now(),
+    sample_data = {}
+    create_sample_data = {'data_source': data_source, 'create_active': True}
+    samples, _, remaining_sample_keys, existing_samples,  _ = _match_and_update_samples(
+        projects, user, sample_project_tuples, Sample.SAMPLE_TYPE_RNA, Sample.DATASET_TYPE_VARIANT_CALLS, sample_data, create_sample_data,
+        sample_id_to_individual_id_mapping, raise_unmatched_error_template, sample_id_to_tissue_type=sample_id_to_tissue_type,
     )
 
     return existing_samples, samples, {sample_id for sample_id, _ in remaining_sample_keys}
