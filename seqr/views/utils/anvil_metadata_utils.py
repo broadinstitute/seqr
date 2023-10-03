@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
 from django.db.models import F, Q, Value, CharField
-from django.db.models.functions import Replace
+from django.db.models.functions import Replace, JSONObject
 from django.contrib.postgres.aggregates import ArrayAgg
 
 from reference_data.models import Omim
@@ -9,6 +9,7 @@ from seqr.models import Family, Individual
 from seqr.views.utils.airtable_utils import get_airtable_samples
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.search.utils import get_search_samples
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, \
     get_variant_inheritance_models, get_sv_name, get_genotype_zygosity
 
@@ -397,5 +398,20 @@ def _get_sample_airtable_metadata(sample_ids, user):
     return sample_records
 
 
+def _format_variants(project_saved_variants, *args):
+    variants = get_json_for_saved_variants(
+        project_saved_variants, add_details=True, additional_model_fields=['family_id'], additional_values={
+            'discovery_tags': ArrayAgg(JSONObject(
+                name='varianttag__variant_tag_type__name',
+                guid='varianttag__guid',
+            )),
+        })
+    for saved_variant in variants:
+        saved_variant['discovery_tag_guids_by_name'] = {vt['name']: vt['guid'] for vt in saved_variant.pop('discovery_tags')}
+    return variants
+
+
 def _get_parsed_saved_discovery_variants_by_family(families):
-    return get_saved_discovery_variants_by_family({'family__id__in': families}, parse_json=True)
+    return get_saved_discovery_variants_by_family(
+        {'family__id__in': families}, _format_variants, lambda saved_variant: saved_variant.pop('familyId'),
+    )

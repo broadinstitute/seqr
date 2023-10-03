@@ -3,13 +3,11 @@ import { combineReducers } from 'redux'
 import { loadingReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { GREGOR_PROJECT_PATH, CMG_PROJECT_PATH } from './constants'
+import { CMG_PROJECT_PATH } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 const REQUEST_DISCOVERY_SHEET = 'REQUEST_DISCOVERY_SHEET'
 const RECEIVE_DISCOVERY_SHEET = 'RECEIVE_DISCOVERY_SHEET'
-const REQUEST_SAMPLE_METADATA = 'REQUEST_SAMPLE_METADATA'
-const RECEIVE_SAMPLE_METADATA = 'RECEIVE_SAMPLE_METADATA'
 const REQUEST_SEARCH_HASH_CONTEXT = 'REQUEST_SEARCH_HASH_CONTEXT'
 const RECEIVE_SEARCH_HASH_CONTEXT = 'RECEIVE_SEARCH_HASH_CONTEXT'
 const REQUEST_SEQR_STATS = 'REQUEST_SEQR_STATS'
@@ -17,7 +15,7 @@ const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
 
 // Data actions
 const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (projectGuid, filterValues) => (dispatch) => {
-  if (projectGuid === GREGOR_PROJECT_PATH || projectGuid === CMG_PROJECT_PATH) {
+  if (projectGuid === CMG_PROJECT_PATH) {
     dispatch({ type: requestAction })
 
     const errors = new Set()
@@ -63,8 +61,6 @@ const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (project
 }
 
 export const loadDiscoverySheet = loadMultiProjectData(REQUEST_DISCOVERY_SHEET, RECEIVE_DISCOVERY_SHEET, 'discovery_sheet')
-
-export const loadSampleMetadata = loadMultiProjectData(REQUEST_SAMPLE_METADATA, RECEIVE_SAMPLE_METADATA, 'sample_metadata')
 
 export const loadSeqrStats = () => (dispatch) => {
   dispatch({ type: REQUEST_SEQR_STATS })
@@ -137,8 +133,6 @@ export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback)
 }
 
 export const reducers = {
-  sampleMetadataLoading: loadingReducer(REQUEST_SAMPLE_METADATA, RECEIVE_SAMPLE_METADATA),
-  sampleMetadataRows: createSingleValueReducer(RECEIVE_SAMPLE_METADATA, []),
   discoverySheetLoading: loadingReducer(REQUEST_DISCOVERY_SHEET, RECEIVE_DISCOVERY_SHEET),
   discoverySheetRows: createSingleValueReducer(RECEIVE_DISCOVERY_SHEET, []),
   searchHashContextLoading: loadingReducer(REQUEST_SEARCH_HASH_CONTEXT, RECEIVE_SEARCH_HASH_CONTEXT),
