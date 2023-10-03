@@ -38,7 +38,7 @@ jobs:
         uses: mikefarah/yq@v4.22.1
         with:
           cmd: >
-            yq -i '.hail-search.datasetVersions.${{ inputs.reference_genome }}/${{ inputs.dataset_type }} = "${{ inputs.version }}"' charts/broad-seqr/values.yaml
+            yq -i '.global.hail-search.datasetVersions.${{ inputs.reference_genome }}/${{ inputs.dataset_type }} = "${{ inputs.version }}"' charts/broad-seqr/values.yaml
 
       - name: Commit and Push changes
         uses: Andro999b/push@v1.3
