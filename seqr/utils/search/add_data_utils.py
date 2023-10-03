@@ -27,7 +27,7 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
     sample_id_to_individual_id_mapping = load_mapping_file(
         request_json['mappingFilePath'], user) if request_json.get('mappingFilePath') else {}
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
-    sample_db_ids, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids = match_and_update_search_samples(
+    inactivated_sample_guids, updated_family_guids, updated_samples, *args = match_and_update_search_samples(
         project=project,
         user=user,
         sample_ids=sample_ids,
@@ -39,27 +39,19 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
         raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
     )
 
-    updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
-
     if notify:
-        notify_search_data_loaded(project, dataset_type, sample_type, sample_db_ids, matched_individual_ids, updated_samples)
+        notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, *args)
 
     return inactivated_sample_guids, updated_family_guids, updated_samples
 
 
-def notify_search_data_loaded(project, dataset_type, sample_type, sample_db_ids, matched_individual_ids, updated_samples):
+def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, new_samples, num_existing_samples):
     if not project_has_anvil(project):
         return
     is_internal = is_internal_anvil_project(project)
 
-    updated_individuals = {sample.individual_id for sample in updated_samples}
-    previous_loaded_individuals = {
-        sample.individual_id for sample in Sample.objects.filter(
-            individual__in=updated_individuals, sample_type=sample_type, dataset_type=dataset_type,
-        ).exclude(id__in=sample_db_ids)}
-    previous_loaded_individuals.update(matched_individual_ids)
-    new_sample_ids = [
-        sample.sample_id for sample in updated_samples if sample.individual_id not in previous_loaded_individuals]
+    previous_loaded_individuals = set(Sample.objects.filter(guid__in=inactivated_sample_guids).values_list('individual_id', flat=True))
+    new_sample_ids = [sample.sample_id for sample in new_samples if sample.individual_id not in previous_loaded_individuals]
 
     url = f'{BASE_URL}project/{project.guid}/project_page'
     msg_dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
@@ -87,7 +79,7 @@ We have loaded {num_sample} samples from the AnVIL workspace <a href={anvil_url}
         base_url=BASE_URL,
         guid=project.guid,
         project_name=project.name,
-        num_sample=len(sample_db_ids),
+        num_sample=len(new_samples)+num_existing_samples,
     ),
         subject='New data available in seqr',
         to=sorted([user.email]),

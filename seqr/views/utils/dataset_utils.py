@@ -104,8 +104,7 @@ def _find_or_create_samples(
             ) for sample_key, individual in sample_id_to_individual_record.items()]
         new_samples = list(Sample.bulk_create(user, new_samples))
 
-    # TODO cleaner return values
-    return existing_samples + new_samples, existing_samples, remaining_sample_keys, loaded_date
+    return new_samples, existing_samples, remaining_sample_keys, loaded_date
 
 
 def _validate_samples_families(samples, included_families, sample_type, dataset_type, expected_families=None):
@@ -161,7 +160,7 @@ def match_and_update_search_samples(
         sample_id_to_individual_id_mapping, raise_unmatched_error_template, expected_families=None,
 ):
     sample_project_tuples = [(sample_id, project.name) for sample_id in sample_ids]
-    samples, existing_samples, _, loaded_date = _find_or_create_samples(
+    new_samples, existing_samples, _, loaded_date = _find_or_create_samples(
         sample_project_tuples,
         [project],
         user,
@@ -174,12 +173,14 @@ def match_and_update_search_samples(
         **sample_data,
     )
 
+    samples = existing_samples + new_samples # TODO
     prefetch_related_objects(samples, 'individual__family')
     included_families = {sample.individual.family for sample in samples}
     _validate_samples_families(samples, included_families, sample_type, dataset_type, expected_families=expected_families)
 
     activated_sample_guids, inactivated_sample_guids = _update_variant_samples(
         samples, user, dataset_type, sample_type, sample_data={'loaded_date': loaded_date, **sample_data})
+    updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
 
     family_guids_to_update = [
         family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
@@ -188,9 +189,7 @@ def match_and_update_search_samples(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
     # TODO clean up return values
-    sample_ids = [s.id for s in samples]
-    matched_individual_ids = {sample.individual_id for sample in existing_samples}
-    return sample_ids, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update
+    return inactivated_sample_guids, family_guids_to_update, updated_samples, new_samples, len(existing_samples)
 
 
 def _parse_tsv_row(row):
@@ -383,7 +382,7 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
 
     data_source = file_path.split('/')[-1].split('_-_')[-1]
     sample_project_tuples = set(samples_by_id.keys())
-    samples, existing_samples, remaining_sample_keys, _ = _find_or_create_samples(
+    new_samples, existing_samples, remaining_sample_keys, _ = _find_or_create_samples(
         projects=get_internal_projects(),
         user=user,
         sample_project_tuples=sample_project_tuples,
@@ -395,6 +394,8 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         create_active=True,
     )
+    # TODO cleanup
+    samples = existing_samples + new_samples
     remaining_sample_ids = {sample_id for sample_id, _ in remaining_sample_keys}
 
     # Delete old data
