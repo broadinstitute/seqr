@@ -27,16 +27,17 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
     sample_id_to_individual_id_mapping = load_mapping_file(
         request_json['mappingFilePath'], user) if request_json.get('mappingFilePath') else {}
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
+    sample_project_tuples = [(sample_id, project.name) for sample_id in sample_ids]
     inactivated_sample_guids, updated_family_guids, updated_samples, *args = match_and_update_search_samples(
-        project=project,
+        projects=[project],
         user=user,
-        sample_ids=sample_ids,
+        sample_project_tuples=sample_project_tuples,
         sample_data=sample_data,
         sample_type=sample_type,
         dataset_type=dataset_type,
         expected_families=expected_families,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-        raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
+        ignore_extra_samples=ignore_extra_samples,
     )
 
     if notify:
@@ -51,7 +52,7 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
     is_internal = is_internal_anvil_project(project)
 
     previous_loaded_individuals = set(Sample.objects.filter(guid__in=inactivated_sample_guids).values_list('individual_id', flat=True))
-    new_sample_ids = [sample['sample_id'] for sample in new_samples if sample['individual_id'] not in previous_loaded_individuals]
+    new_sample_ids = [sample['sample_id'] for sample in new_samples.values() if sample['individual_id'] not in previous_loaded_individuals]
 
     url = f'{BASE_URL}project/{project.guid}/project_page'
     msg_dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'

@@ -159,20 +159,19 @@ def _update_variant_samples(samples_guids, individual_ids, user, dataset_type, s
 
 
 def match_and_update_search_samples(
-        project, user, sample_ids, sample_type, dataset_type, sample_data,
-        sample_id_to_individual_id_mapping, raise_unmatched_error_template, expected_families=None,
+        projects, sample_project_tuples, sample_type, dataset_type, sample_data, user,
+        sample_id_to_individual_id_mapping=None, ignore_extra_samples=False, expected_families=None,
 ):
-    sample_project_tuples = [(sample_id, project.name) for sample_id in sample_ids]
     new_samples, existing_samples, _, loaded_date = _find_or_create_samples(
         sample_project_tuples,
-        [project],
+        projects,
         user,
         sample_id_to_individual_id_mapping,
         sample_type=sample_type,
         dataset_type=dataset_type,
         tissue_type=Sample.NO_TISSUE_TYPE,
-        raise_unmatched_error_template=raise_unmatched_error_template,
-        raise_no_match_error=not raise_unmatched_error_template,
+        raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.',
+        raise_no_match_error=ignore_extra_samples,
         **sample_data,
     )
 
@@ -192,7 +191,7 @@ def match_and_update_search_samples(
     Family.bulk_update(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
-    return inactivated_sample_guids, family_guids_to_update, updated_samples, new_samples.values(), len(samples_guids)
+    return inactivated_sample_guids, family_guids_to_update, updated_samples, new_samples, len(samples_guids)
 
 
 def _parse_tsv_row(row):
