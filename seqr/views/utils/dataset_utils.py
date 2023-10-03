@@ -162,7 +162,7 @@ def match_and_update_search_samples(
         projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
         sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
 ):
-    new_samples, existing_samples, _, loaded_date = _find_or_create_samples(
+    new_samples, existing_samples, remaining_sample_keys, loaded_date = _find_or_create_samples(
         sample_project_tuples,
         projects,
         user,
@@ -191,7 +191,7 @@ def match_and_update_search_samples(
     Family.bulk_update(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
-    return inactivated_sample_guids, family_guids_to_update, updated_samples, new_samples, len(samples_guids)
+    return inactivated_sample_guids, family_guids_to_update, updated_samples, new_samples, len(remaining_sample_keys)
 
 
 def _parse_tsv_row(row):
