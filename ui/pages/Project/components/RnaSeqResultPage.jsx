@@ -30,7 +30,6 @@ const OUTLIER_VOLCANO_PLOT_CONFIGS = [
     getLocation: (({ chrom, start, end }) => `${chrom}:${Math.max(1, start - RNASEQ_JUNCTION_PADDING)}-${end + RNASEQ_JUNCTION_PADDING}`),
     searchType: 'regions',
     title: 'Splice Junction Outliers',
-    formatData: (data, tissueType) => data.filter(outlier => outlier.tissueType === tissueType),
   },
 ]
 
@@ -45,7 +44,7 @@ class BaseRnaSeqResultPage extends React.PureComponent {
   }
 
   state = {
-    tissueType: null,
+    tissueType: '',
   }
 
   onTissueChange = (e, data) => {
@@ -55,12 +54,13 @@ class BaseRnaSeqResultPage extends React.PureComponent {
   render() {
     const { familyGuid, rnaSeqData, significantJunctionOutliers, genesById, tissueOptions } = this.props
     const { tissueType } = this.state
-    const showTissueType = tissueType || (tissueOptions?.length > 0 ? tissueOptions[0].value : null)
+    const defaultTissue = tissueOptions?.length > 0 ? tissueOptions[0].value : null
+    const showTissueType = tissueType === '' ? defaultTissue : tissueType
     const tissueDisplay = TISSUE_DISPLAY[showTissueType]
 
-    const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map(({ formatData, ...config }) => {
+    const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map((config) => {
       const data = rnaSeqData[config.key]
-      return ({ data: formatData ? formatData(data, showTissueType) : data, ...config })
+      return ({ data: data.filter(outlier => outlier.tissueType === showTissueType), ...config })
     }).filter(({ data }) => data.length)
 
     const tableData = significantJunctionOutliers.reduce(
@@ -69,10 +69,10 @@ class BaseRnaSeqResultPage extends React.PureComponent {
 
     return (
       <div>
-        {showTissueType && (
+        {(showTissueType || tissueOptions?.length > 1) && (
           <TissueContainer>
             Tissue type: &nbsp;
-            {tissueOptions.length > 1 ? (
+            {tissueOptions?.length > 1 ? (
               <Dropdown
                 text={tissueDisplay || 'Unknown Tissue'}
                 value={showTissueType}

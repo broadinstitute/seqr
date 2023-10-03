@@ -303,7 +303,7 @@ export const searchMmeMatches = submissionGuid => (dispatch) => {
 export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
   const { outliers, spliceOutliers } = getState().rnaSeqDataByIndividual[individualGuid] || {}
   // If variants were loaded for the individual, the significant data were loaded but not the non-significant ones
-  if (!outliers || !spliceOutliers || (Object.values(outliers).every(({ isSignificant }) => isSignificant) &&
+  if (!outliers || !spliceOutliers || (Object.values(outliers).flat().every(({ isSignificant }) => isSignificant) &&
     Object.values(spliceOutliers).flat().every(({ isSignificant }) => isSignificant))
   ) {
     dispatch({ type: REQUEST_RNA_SEQ_DATA })

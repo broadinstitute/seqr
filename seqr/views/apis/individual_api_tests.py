@@ -993,20 +993,20 @@ class IndividualAPITest(object):
         self.assertSetEqual(set(response_json.keys()), {'rnaSeqData', 'genesById'})
         self.assertDictEqual(response_json['rnaSeqData'], {
             INDIVIDUAL_GUID: {'outliers': {
-                'ENSG00000135953': {
+                'ENSG00000135953': [{
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'isSignificant': True,
-                    'tissueType': None,
-                },
-                'ENSG00000240361': {
+                    'tissueType': 'M',
+                }],
+                'ENSG00000240361': [{
                     'geneId': 'ENSG00000240361', 'zScore': -4.08, 'pValue': 5.88, 'pAdjust': 0.09, 'isSignificant': False,
-                    'tissueType': None,
-                },
-                'ENSG00000268903': {
+                    'tissueType': 'M',
+                }],
+                'ENSG00000268903': [{
                     'geneId': 'ENSG00000268903', 'zScore': 7.08, 'pValue':0.000000000588, 'pAdjust': 0.00000000139,
                     'isSignificant': True,
-                    'tissueType': None,
-                },
+                    'tissueType': 'M',
+                }],
             },
             'spliceOutliers': {
                 'ENSG00000268903': mock.ANY,
@@ -1033,8 +1033,8 @@ class IndividualAPITest(object):
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         response_rnaseq_data = response.json()['rnaSeqData'][INDIVIDUAL_GUID]
-        self.assertTrue(response_rnaseq_data['outliers']['ENSG00000135953']['isSignificant'])
-        significant_outliers = [outlier for outlier in response_rnaseq_data['outliers'].values() if outlier['isSignificant']]
+        self.assertTrue(response_rnaseq_data['outliers']['ENSG00000135953'][0]['isSignificant'])
+        significant_outliers = [outlier for outlier in response_rnaseq_data['outliers'].values() if outlier[0]['isSignificant']]
         self.assertEqual(2, len(significant_outliers))
         self.assertListEqual(
             sorted([{field: outlier[field] for field in ['start', 'end', 'pValue', 'tissueType', 'isSignificant']}

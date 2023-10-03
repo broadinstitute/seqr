@@ -194,7 +194,7 @@ class DatasetAPITest(object):
 
         # Regular variant sample should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
-        self.assertEqual(len(sample_models), 5)
+        self.assertEqual(len(sample_models), 4)
         self.assertSetEqual({sv_sample_guid, existing_index_sample_guid} | existing_rna_seq_sample_guids,
                             {sample.guid for sample in sample_models})
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
@@ -254,7 +254,7 @@ class DatasetAPITest(object):
 
         # Previous variant samples should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
-        self.assertEqual(len(sample_models), 6)
+        self.assertEqual(len(sample_models), 5)
         self.assertSetEqual(
             {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid} | existing_rna_seq_sample_guids,
             {sample.guid for sample in sample_models})
