@@ -47,24 +47,23 @@ def _find_or_create_samples(
         data_source=None,
         **kwargs
 ):
-    # TODO use values instead of full model?
     samples_by_key = {
-        (s.sample_id, s.individual.family.project.name): s for s in Sample.objects.filter(
+        (s['sample_id'], s.pop('individual__family__project__name')): s for s in Sample.objects.filter(
             individual__family__project__in=projects,
             sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
             **({'tissue_type__in': set(sample_id_to_tissue_type.values())} if sample_id_to_tissue_type else {
                 'tissue_type': tissue_type}),
             **kwargs,
-        ).select_related('individual__family__project')
+        ).values('guid', 'individual_id', 'sample_id', 'tissue_type', 'individual__family__project__name')
     }
 
     existing_samples = {
         key: s for key, s in samples_by_key.items() if key in sample_project_tuples
-        and (sample_id_to_tissue_type is None or sample_id_to_tissue_type[key] == s.tissue_type)
+        and (sample_id_to_tissue_type is None or sample_id_to_tissue_type[key] == s['tissue_type'])
     }
     remaining_sample_keys = set(sample_project_tuples) - set(samples_by_key.keys())
 
-    matched_individual_ids = {sample.individual_id for sample in existing_samples.values()}
+    matched_individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
     loaded_date = timezone.now()
     new_samples = {}
     if len(remaining_sample_keys) > 0:
@@ -93,30 +92,32 @@ def _find_or_create_samples(
                 sample_ids=(', '.join(sorted([sample_id for sample_id, _ in remaining_sample_keys])))))
 
         # create new Sample records for Individual records that matches
-        new_samples = {
-            sample_key: Sample(
-                guid='S{}_{}'.format(random.randint(10**9, 10**10), individual.individual_id)[:Sample.MAX_GUID_SIZE], # nosec
-                sample_id=sample_key[0] if isinstance(sample_key, tuple) else sample_key,
-                individual=individual,
-                created_date=timezone.now(),
-                is_active=create_active,
-                tissue_type=sample_id_to_tissue_type.get(sample_key) if sample_id_to_tissue_type else tissue_type,
-                loaded_date=loaded_date,
-                data_source=data_source,
-                **kwargs
-            ) for sample_key, individual in sample_id_to_individual_record.items()}
-        Sample.bulk_create(user, new_samples.values())
+        new_samples = {sample_key: {
+            'guid': 'S{}_{}'.format(random.randint(10**9, 10**10), individual.individual_id)[:Sample.MAX_GUID_SIZE],
+            'sample_id': sample_key[0],
+            'individual_id': individual.id,
+        } for sample_key, individual in sample_id_to_individual_record.items()}
+        new_sample_models = [Sample(
+            created_date=timezone.now(),
+            is_active=create_active,
+            tissue_type=sample_id_to_tissue_type.get(sample_key) if sample_id_to_tissue_type else tissue_type,
+            loaded_date=loaded_date,
+            data_source=data_source,
+            **sample_data,
+            **kwargs
+        ) for sample_key, sample_data in new_samples.items()]
+        Sample.bulk_create(user, new_sample_models)
 
     return new_samples, existing_samples, remaining_sample_keys, loaded_date
 
 
-def _validate_samples_families(samples_ids, included_family_guids, sample_type, dataset_type, expected_families=None):
+def _validate_samples_families(samples_guids, included_family_guids, sample_type, dataset_type, expected_families=None):
     missing_individuals = Individual.objects.filter(
         family__guid__in=included_family_guids,
         sample__is_active=True,
         sample__dataset_type=dataset_type,
         sample__sample_type=sample_type,
-    ).exclude(sample__id__in=samples_ids).select_related('family')
+    ).exclude(sample__guid__in=samples_guids).select_related('family')
     missing_family_individuals = defaultdict(list)
     for individual in missing_individuals:
         missing_family_individuals[individual.family].append(individual)
@@ -138,19 +139,19 @@ def _validate_samples_families(samples_ids, included_family_guids, sample_type, 
                 ))
 
 
-def _update_variant_samples(samples_ids, individual_ids, user, dataset_type, sample_type, sample_data):
+def _update_variant_samples(samples_guids, individual_ids, user, dataset_type, sample_type, sample_data):
 
     activated_sample_guids = Sample.bulk_update(user, {
         'is_active': True,
         **sample_data,
-    }, id__in=samples_ids, is_active=False)
+    }, guid__in=samples_guids, is_active=False)
 
     inactivate_samples = Sample.objects.filter(
         individual_id__in=individual_ids,
         is_active=True,
         dataset_type=dataset_type,
         sample_type=sample_type,
-    ).exclude(id__in=samples_ids)
+    ).exclude(guid__in=samples_guids)
 
     inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
 
@@ -176,13 +177,13 @@ def match_and_update_search_samples(
     )
 
     all_samples = list(existing_samples.values()) + list(new_samples.values())
-    samples_ids = [s.id for s in all_samples]
-    individual_ids = {sample.individual_id for sample in all_samples}
+    samples_guids = [sample['guid'] for sample in all_samples]
+    individual_ids = {sample['individual_id'] for sample in all_samples}
     included_families = dict(Family.objects.filter(individual__id__in=individual_ids).values_list('guid', 'analysis_status'))
-    _validate_samples_families(samples_ids, included_families.keys(), sample_type, dataset_type, expected_families=expected_families)
+    _validate_samples_families(samples_guids, included_families.keys(), sample_type, dataset_type, expected_families=expected_families)
 
     activated_sample_guids, inactivated_sample_guids = _update_variant_samples(
-        samples_ids, individual_ids, user, dataset_type, sample_type, sample_data={'loaded_date': loaded_date, **sample_data})
+        samples_guids, individual_ids, user, dataset_type, sample_type, sample_data={'loaded_date': loaded_date, **sample_data})
     updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
 
     family_guids_to_update = [
@@ -191,7 +192,7 @@ def match_and_update_search_samples(
     Family.bulk_update(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
-    return inactivated_sample_guids, family_guids_to_update, updated_samples, new_samples.values(), len(samples_ids)
+    return inactivated_sample_guids, family_guids_to_update, updated_samples, new_samples.values(), len(samples_guids)
 
 
 def _parse_tsv_row(row):
@@ -396,19 +397,20 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         create_active=True,
     )
+    existing_sample_guids = [s['guid'] for s in existing_samples.values()]
 
     # Delete old data
-    to_delete = model_cls.objects.filter(sample__in=existing_samples.values()).exclude(sample__data_source=data_source)
+    to_delete = model_cls.objects.filter(sample__guid__in=existing_sample_guids).exclude(sample__data_source=data_source)
     prev_loaded_individual_ids = set(to_delete.values_list('sample__individual_id', flat=True))
     if to_delete:
         model_cls.bulk_delete(user, to_delete)
 
-    Sample.bulk_update(user, {'data_source': data_source}, id__in={s.id for s in existing_samples.values()})
+    Sample.bulk_update(user, {'data_source': data_source}, guid__in=existing_sample_guids)
 
-    loaded_sample_ids = set(model_cls.objects.filter(sample__in=existing_samples.values()).values_list('sample_id', flat=True).distinct())
+    loaded_sample_guids = set(model_cls.objects.filter(sample__guid__in=existing_sample_guids).values_list('sample__guid', flat=True).distinct())
     samples_to_load = {
-        sample.guid: samples_by_id[sample_key] for sample_key, sample in [*existing_samples.items(), *new_samples.items()]
-        if sample.id not in loaded_sample_ids
+        sample['guid']: samples_by_id[sample_key] for sample_key, sample in [*existing_samples.items(), *new_samples.items()]
+        if sample['guid'] not in loaded_sample_guids
     }
 
     sample_projects = Project.objects.filter(family__individual__sample__guid__in=samples_to_load.keys()).values(
@@ -427,8 +429,8 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
         skipped_samples = ', '.join(sorted({sample_id for sample_id, _ in remaining_sample_keys}))
         message = f'Skipped loading for the following {len(remaining_sample_keys)} unmatched samples: {skipped_samples}'
         warnings.append(message)
-    if loaded_sample_ids:
-        message = f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file'
+    if loaded_sample_guids:
+        message = f'Skipped loading for {len(loaded_sample_guids)} samples already loaded from this file'
         warnings.append(message)
 
     for warning in warnings:

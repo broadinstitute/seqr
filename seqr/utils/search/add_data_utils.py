@@ -51,7 +51,7 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
     is_internal = is_internal_anvil_project(project)
 
     previous_loaded_individuals = set(Sample.objects.filter(guid__in=inactivated_sample_guids).values_list('individual_id', flat=True))
-    new_sample_ids = [sample.sample_id for sample in new_samples if sample.individual_id not in previous_loaded_individuals]
+    new_sample_ids = [sample['sample_id'] for sample in new_samples if sample['individual_id'] not in previous_loaded_individuals]
 
     url = f'{BASE_URL}project/{project.guid}/project_page'
     msg_dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
