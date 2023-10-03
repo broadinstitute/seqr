@@ -34,44 +34,45 @@ def load_mapping_file_content(file_content):
     return id_mapping
 
 
-def _get_individual_sample_lookup(individuals):
-    return {i.individual_id: i for i in individuals}
-
-
-def _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping):
-    sample_id_to_individual_id_mapping = sample_id_to_individual_id_mapping or {}
-
-    def _get_mapped_id(sample_id):
-        return sample_id_to_individual_id_mapping.get(sample_id, sample_id)
-    return _get_mapped_id
-
-
-def _find_or_create_missing_sample_records(
-        samples,
+def _find_or_create_samples(
+        sample_project_tuples,
         projects,
         user,
-        sample_count,
-        get_individual_sample_key,
-        remaining_sample_keys,
+        sample_id_to_individual_id_mapping,
         raise_no_match_error=False,
-        get_unmatched_error=None,
+        raise_unmatched_error_template=None,
         create_active=False,
-        get_individual_sample_lookup=_get_individual_sample_lookup,
         sample_id_to_tissue_type=None,
         tissue_type=None,
+        data_source=None,
         **kwargs
 ):
-    samples = list(samples)
-    matched_individual_ids = {sample.individual_id for sample in samples}
+    samples = Sample.objects.select_related('individual__family__project').filter(
+        individual__family__project__in=projects,
+        sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
+        **({'tissue_type__in': set(sample_id_to_tissue_type.values())} if sample_id_to_tissue_type else {
+            'tissue_type': tissue_type}),
+        **kwargs,
+    )
+
+    existing_samples = [
+        s for s in samples if (s.sample_id, s.individual.family.project.name) in sample_project_tuples
+        and (sample_id_to_tissue_type is None or sample_id_to_tissue_type[(s.sample_id, s.individual.family.project.name)] == s.tissue_type)
+    ]
+    remaining_sample_keys = set(sample_project_tuples) - {(s.sample_id, s.individual.family.project.name) for s in samples}
+
+    matched_individual_ids = {sample.individual_id for sample in existing_samples}
+    loaded_date = timezone.now()
     if len(remaining_sample_keys) > 0:
-        remaining_individuals_dict = get_individual_sample_lookup(
-            Individual.objects.filter(family__project__in=projects).exclude(id__in=matched_individual_ids)
-        )
+        remaining_individuals_dict = {
+            (i.individual_id, i.family.project.name): i for i in Individual.objects.filter(
+                family__project__in=projects).exclude(id__in=matched_individual_ids).select_related('family__project')
+        }
 
         # find Individual records with exactly-matching individual_ids
         sample_id_to_individual_record = {}
         for sample_key in remaining_sample_keys:
-            individual_key = get_individual_sample_key(sample_key)
+            individual_key = ((sample_id_to_individual_id_mapping or {}).get(sample_key[0], sample_key[0]), sample_key[1])
             if individual_key not in remaining_individuals_dict:
                 continue
             sample_id_to_individual_record[sample_key] = remaining_individuals_dict[individual_key]
@@ -80,11 +81,12 @@ def _find_or_create_missing_sample_records(
         logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
 
         remaining_sample_keys -= set(sample_id_to_individual_record.keys())
-        if raise_no_match_error and len(remaining_sample_keys) == sample_count:
+        if raise_no_match_error and len(remaining_sample_keys) == len(sample_project_tuples):
             raise ValueError(
-                'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(sample_count))
-        if get_unmatched_error and remaining_sample_keys:
-            raise ValueError(get_unmatched_error(remaining_sample_keys))
+                'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(len(sample_project_tuples)))
+        if raise_unmatched_error_template and remaining_sample_keys:
+            raise ValueError(raise_unmatched_error_template.format(
+                sample_ids=(', '.join(sorted([sample_id for sample_id, _ in remaining_sample_keys])))))
 
         # create new Sample records for Individual records that matches
         new_samples = [
@@ -95,11 +97,16 @@ def _find_or_create_missing_sample_records(
                 created_date=timezone.now(),
                 is_active=create_active,
                 tissue_type=sample_id_to_tissue_type.get(sample_key) if sample_id_to_tissue_type else tissue_type,
+                loaded_date=loaded_date,
+                data_source=data_source,
                 **kwargs
             ) for sample_key, individual in sample_id_to_individual_record.items()]
-        samples += list(Sample.bulk_create(user, new_samples))
+        samples = existing_samples + list(Sample.bulk_create(user, new_samples))
+    else:
+        samples = existing_samples
 
-    return samples, matched_individual_ids, remaining_sample_keys
+    # TODO cleaner return values
+    return samples, matched_individual_ids, remaining_sample_keys, existing_samples, loaded_date
 
 
 def _validate_samples_families(samples, included_families, sample_type, dataset_type, expected_families=None):
@@ -150,59 +157,22 @@ def _update_variant_samples(samples, user, dataset_type, sample_type, sample_dat
     return activated_sample_guids, inactivate_sample_guids
 
 
-def _match_and_update_samples(
-    projects, user, sample_project_tuples, sample_type, dataset_type, sample_data, create_sample_data,
-    sample_id_to_individual_id_mapping, raise_unmatched_error_template, tissue_type=None, sample_id_to_tissue_type=None, raise_no_match_error=False,
-):
-    def _get_unmatched_error(sample_keys):
-        return raise_unmatched_error_template.format(sample_ids=(', '.join(sorted([sample_id for sample_id, _ in sample_keys]))))
-
-    samples = Sample.objects.select_related('individual__family__project').filter(
-        individual__family__project__in=projects,
-        sample_type=sample_type,
-        dataset_type=dataset_type,
-        sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
-        **({'tissue_type__in': set(sample_id_to_tissue_type.values())} if sample_id_to_tissue_type else {'tissue_type': tissue_type}),
-        **sample_data,
-    )
-
-    existing_samples = [s for s in samples if (s.sample_id, s.individual.family.project.name) in sample_project_tuples
-                        and (sample_id_to_tissue_type is None or sample_id_to_tissue_type[(s.sample_id, s.individual.family.project.name)] == s.tissue_type)]
-
-    loaded_date = timezone.now()
-    return *_find_or_create_missing_sample_records(
-        samples=existing_samples,
-        projects=projects,
-        user=user,
-        sample_count=len(sample_project_tuples),
-        get_individual_sample_key=lambda key: ((sample_id_to_individual_id_mapping or {}).get(key[0], key[0]), key[1]),
-        remaining_sample_keys=set(sample_project_tuples) -
-                              {(s.sample_id, s.individual.family.project.name) for s in existing_samples},
-        raise_no_match_error=raise_no_match_error,
-        get_unmatched_error=_get_unmatched_error if raise_unmatched_error_template else None,
-        get_individual_sample_lookup=lambda inds: {(i.individual_id, i.family.project.name):
-                                                       i for i in inds.select_related('family__project')},
-        sample_id_to_tissue_type=sample_id_to_tissue_type,
-        sample_type=sample_type,
-        dataset_type=dataset_type,
-        loaded_date=loaded_date,
-        tissue_type=tissue_type,
-        **sample_data,
-        **create_sample_data,
-    ), existing_samples, loaded_date
-
-
 def match_and_update_search_samples(
         project, user, sample_ids, sample_type, dataset_type, sample_data,
         sample_id_to_individual_id_mapping, raise_unmatched_error_template, expected_families=None,
 ):
     sample_project_tuples = [(sample_id, project.name) for sample_id in sample_ids]
-    # TODO use kwargs for create_sample_data
-    create_sample_data = {}
-    samples, matched_individual_ids, _, _, loaded_date = _match_and_update_samples(
-        [project], user, sample_project_tuples, sample_type, dataset_type, sample_data, create_sample_data,
-        sample_id_to_individual_id_mapping, raise_unmatched_error_template, tissue_type=Sample.NO_TISSUE_TYPE,
+    samples, matched_individual_ids, _, _, loaded_date = _find_or_create_samples(
+        sample_project_tuples,
+        [project],
+        user,
+        sample_id_to_individual_id_mapping,
+        sample_type=sample_type,
+        dataset_type=dataset_type,
+        tissue_type=Sample.NO_TISSUE_TYPE,
+        raise_unmatched_error_template=raise_unmatched_error_template,
         raise_no_match_error=not raise_unmatched_error_template,
+        **sample_data,
     )
 
     prefetch_related_objects(samples, 'individual__family')
@@ -226,11 +196,17 @@ def _match_and_update_rna_samples(
     projects, user, sample_project_tuples, data_source, sample_id_to_individual_id_mapping, raise_unmatched_error_template,
     sample_id_to_tissue_type,
 ):
-    sample_data = {}
-    create_sample_data = {'data_source': data_source, 'create_active': True}
-    samples, _, remaining_sample_keys, existing_samples,  _ = _match_and_update_samples(
-        projects, user, sample_project_tuples, Sample.SAMPLE_TYPE_RNA, Sample.DATASET_TYPE_VARIANT_CALLS, sample_data, create_sample_data,
-        sample_id_to_individual_id_mapping, raise_unmatched_error_template, sample_id_to_tissue_type=sample_id_to_tissue_type,
+    samples, _, remaining_sample_keys, existing_samples,  _ = _find_or_create_samples(
+        sample_project_tuples,
+        projects,
+        user,
+        sample_id_to_individual_id_mapping,
+        sample_type=Sample.SAMPLE_TYPE_RNA,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        data_source=data_source,
+        raise_unmatched_error_template=raise_unmatched_error_template,
+        sample_id_to_tissue_type=sample_id_to_tissue_type,
+        create_active=True,
     )
 
     return existing_samples, samples, {sample_id for sample_id, _ in remaining_sample_keys}
