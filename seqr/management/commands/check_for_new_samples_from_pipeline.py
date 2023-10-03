@@ -4,6 +4,7 @@ import json
 import logging
 import os
 
+from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Family, Sample
 from seqr.utils.file_utils import file_iter
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
@@ -22,7 +23,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         path = options['path']
         version = options['version']
-        genome_build, dataset_type = path.split('/')
+        genome_version, dataset_type = path.split('/')
 
         if Sample.objects.filter(data_source=version, is_active=True).exists():
             logger.info(f'Data already loaded for {path}: {version}')
@@ -41,11 +42,20 @@ class Command(BaseCommand):
         samples_by_project = defaultdict(list)
         for family_guid, sample_ids in metadata['families'].items():
             samples_by_project[family_project_map[family_guid]] += sample_ids
+
         sample_project_tuples = []
+        invalid_genome_version_projects = []
         for project, sample_ids in samples_by_project.items():
             sample_project_tuples += [(sample_id, project.name) for sample_id in sample_ids]
+            project_genome_version = GENOME_VERSION_LOOKUP.get(project.genome_version, project.genome_version)
+            if project_genome_version != genome_version:
+                invalid_genome_version_projects.append((project.guid, project_genome_version))
 
-        # TODO validate genome build etc
+        if invalid_genome_version_projects:
+            raise CommandError(
+                f'Data has genome version {genome_version} but the following projects have conflicting versions: '
+                ', '.join([f'{project} ({invalid_version})' for project, invalid_version in invalid_genome_version_projects])
+            )
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
