@@ -70,7 +70,7 @@ def _find_or_create_samples(
 
     matched_individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
     loaded_date = timezone.now()
-    new_samples = {}
+    samples = {**existing_samples}
     if len(remaining_sample_keys) > 0:
         remaining_individuals_dict = {
             (i.individual_id, i.family.project.name): i for i in Individual.objects.filter(
@@ -101,6 +101,7 @@ def _find_or_create_samples(
             'guid': 'S{}_{}'.format(random.randint(10**9, 10**10), individual.individual_id)[:Sample.MAX_GUID_SIZE],
             'individual_id': individual.id,
         } for sample_key, individual in sample_id_to_individual_record.items()}
+        samples.update(new_samples)
         new_sample_models = [Sample(
             sample_id=sample_key[0],
             created_date=timezone.now(),
@@ -113,7 +114,7 @@ def _find_or_create_samples(
         ) for sample_key, created_sample_data in new_samples.items()]
         Sample.bulk_create(user, new_sample_models)
 
-    return new_samples, existing_samples, remaining_sample_keys, loaded_date
+    return samples, existing_samples, remaining_sample_keys, loaded_date
 
 
 def _validate_samples_families(samples_guids, included_family_guids, sample_type, dataset_type, expected_families=None):
@@ -167,7 +168,7 @@ def match_and_update_search_samples(
         projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
         sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
 ):
-    new_samples, existing_samples, remaining_sample_keys, loaded_date = _find_or_create_samples(
+    samples, existing_samples, remaining_sample_keys, loaded_date = _find_or_create_samples(
         sample_project_tuples,
         projects,
         user,
@@ -180,9 +181,8 @@ def match_and_update_search_samples(
         raise_no_match_error=not raise_unmatched_error_template,
     )
 
-    all_samples = list(existing_samples.values()) + list(new_samples.values())  # TODO merge before return?
-    samples_guids = [sample['guid'] for sample in all_samples]
-    individual_ids = {sample['individual_id'] for sample in all_samples}
+    samples_guids = [sample['guid'] for sample in samples.values()]
+    individual_ids = {sample['individual_id'] for sample in samples.values()}
     included_families = dict(Family.objects.filter(individual__id__in=individual_ids).values_list('guid', 'analysis_status'))
     _validate_samples_families(samples_guids, included_families.keys(), sample_type, dataset_type, expected_families=expected_families)
 
@@ -389,7 +389,7 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
 
     data_source = file_path.split('/')[-1].split('_-_')[-1]
     sample_project_tuples = set(samples_by_id.keys())
-    new_samples, existing_samples, remaining_sample_keys, _ = _find_or_create_samples(
+    samples, existing_samples, remaining_sample_keys, _ = _find_or_create_samples(
         projects=get_internal_projects(),
         user=user,
         sample_project_tuples=sample_project_tuples,
@@ -413,7 +413,7 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
 
     loaded_sample_guids = set(model_cls.objects.filter(sample__guid__in=existing_sample_guids).values_list('sample__guid', flat=True).distinct())
     samples_to_load = {
-        sample['guid']: samples_by_id[sample_key] for sample_key, sample in [*existing_samples.items(), *new_samples.items()]
+        sample['guid']: samples_by_id[sample_key] for sample_key, sample in samples.items()
         if sample['guid'] not in loaded_sample_guids
     }
 
