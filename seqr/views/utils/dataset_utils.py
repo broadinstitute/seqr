@@ -97,22 +97,23 @@ def _find_or_create_samples(
                 sample_ids=(', '.join(sorted([sample_id for sample_id, _ in remaining_sample_keys])))))
 
         # create new Sample records for Individual records that matches
-        new_samples = {sample_key: {
+        new_sample_args = {sample_key: {
             'guid': 'S{}_{}'.format(random.randint(10**9, 10**10), individual.individual_id)[:Sample.MAX_GUID_SIZE],
             'individual_id': individual.id,
         } for sample_key, individual in sample_id_to_individual_record.items()}
-        samples.update(new_samples)
-        new_sample_models = [Sample(
-            sample_id=sample_key[0],
-            created_date=timezone.now(),
-            is_active=create_active,
-            tissue_type=sample_id_to_tissue_type.get(sample_key) if sample_id_to_tissue_type else tissue_type,
-            loaded_date=loaded_date,
-            data_source=data_source,
-            **created_sample_data,
-            **sample_params
-        ) for sample_key, created_sample_data in new_samples.items()]
-        Sample.bulk_create(user, new_sample_models)
+        samples.update(new_sample_args)
+        new_samples = [
+            Sample(
+                sample_id=sample_key[0],
+                created_date=timezone.now(),
+                is_active=create_active,
+                tissue_type=sample_id_to_tissue_type.get(sample_key) if sample_id_to_tissue_type else tissue_type,
+                loaded_date=loaded_date,
+                data_source=data_source,
+                **created_sample_data,
+                **sample_params
+            ) for sample_key, created_sample_data in new_sample_args.items()]
+        Sample.bulk_create(user, new_samples)
 
     return samples, existing_samples, remaining_sample_keys, loaded_date
 
@@ -169,16 +170,16 @@ def match_and_update_search_samples(
         sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
 ):
     samples, existing_samples, remaining_sample_keys, loaded_date = _find_or_create_samples(
-        sample_project_tuples,
-        projects,
-        user,
-        sample_type,
-        dataset_type,
-        sample_id_to_individual_id_mapping,
-        sample_data=sample_data,
-        tissue_type=Sample.NO_TISSUE_TYPE,
-        raise_unmatched_error_template=raise_unmatched_error_template,
+        sample_project_tuples=sample_project_tuples,
+        projects=projects,
+        user=user,
         raise_no_match_error=not raise_unmatched_error_template,
+        raise_unmatched_error_template=raise_unmatched_error_template,
+        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+        sample_type=sample_type,
+        dataset_type=dataset_type,
+        tissue_type=Sample.NO_TISSUE_TYPE,
+        sample_data=sample_data,
     )
 
     samples_guids = [sample['guid'] for sample in samples.values()]
