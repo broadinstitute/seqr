@@ -151,7 +151,7 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         if self.SLACK_MESSAGE_TEMPLATE:
             mock_send_slack.assert_called_with(
-                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES', samples='NA20878'))
+                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES', samples='NA19679, NA20878', count=2))
         else:
             mock_send_slack.assert_not_called()
 
@@ -202,7 +202,7 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         if self.SLACK_MESSAGE_TEMPLATE:
             mock_send_slack.assert_called_with(
-                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES SV', samples='NA19675_1'))
+                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES SV', samples='NA19675_1', count=1))
         else:
             mock_send_slack.assert_not_called()
 
@@ -248,7 +248,7 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         if self.SLACK_MESSAGE_TEMPLATE:
             mock_send_slack.assert_called_with(
-                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WGS', samples='NA19675_1'))
+                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WGS', samples='NA19675_1', count=1))
         else:
             mock_send_slack.assert_not_called()
 
@@ -481,7 +481,7 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     ANVIL_DISABLED = False
 
-    SLACK_MESSAGE_TEMPLATE = f'1 new {{type}} samples are loaded in {SEQR_URL}/project/{PROJECT_GUID}/project_page\n```{{samples}}```'
+    SLACK_MESSAGE_TEMPLATE = f'{{count}} new {{type}} samples are loaded in {SEQR_URL}/project/{PROJECT_GUID}/project_page\n```{{samples}}```'
 
     def test_add_variants_dataset(self, *args):
         super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)

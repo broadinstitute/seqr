@@ -28,7 +28,7 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
         request_json['mappingFilePath'], user) if request_json.get('mappingFilePath') else {}
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
     sample_project_tuples = [(sample_id, project.name) for sample_id in sample_ids]
-    new_samples, inactivated_sample_guids, num_skipped, updated_family_guids, updated_samples = match_and_update_search_samples(
+    updated_samples, inactivated_sample_guids, num_skipped, updated_family_guids = match_and_update_search_samples(
         projects=[project],
         user=user,
         sample_project_tuples=sample_project_tuples,
@@ -42,22 +42,22 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
 
     if notify:
         num_samples = len(sample_ids) - num_skipped
-        notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, new_samples.values(), num_samples)
+        notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, updated_samples, num_samples)
 
     return inactivated_sample_guids, updated_family_guids, updated_samples
 
 
-def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, new_samples, num_samples):
+def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, updated_samples, num_samples):
     if not project_has_anvil(project):
         return
     is_internal = is_internal_anvil_project(project)
 
     previous_loaded_individuals = set(Sample.objects.filter(guid__in=inactivated_sample_guids).values_list('individual_id', flat=True))
-    new_sample_ids = [sample['sample_id'] for sample in new_samples if sample['individual_id'] not in previous_loaded_individuals]
+    new_sample_ids = [sample.sample_id for sample in updated_samples if sample.individual_id not in previous_loaded_individuals]
 
     url = f'{BASE_URL}project/{project.guid}/project_page'
     msg_dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
-    sample_id_list = f'\n```{", ".join(new_sample_ids)}```' if is_internal else ''
+    sample_id_list = f'\n```{", ".join(sorted(new_sample_ids))}```' if is_internal else ''
     summary_message = f'{len(new_sample_ids)} new {sample_type}{msg_dataset_type} samples are loaded in {url}{sample_id_list}'
 
     safe_post_to_slack(

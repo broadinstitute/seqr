@@ -59,7 +59,7 @@ class Command(BaseCommand):
 
         sample_type = metadata['sample_type']
         logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        new_samples, inactivated_sample_guids, *args = match_and_update_search_samples(
+        updated_samples, inactivated_sample_guids, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
             sample_data={'data_source': version, 'elasticsearch_index': metadata['callset']},
@@ -69,11 +69,9 @@ class Command(BaseCommand):
         )
 
         # Send loading notifications
-        new_samples_by_project_name = defaultdict(list)
-        for (_, project_name), s in new_samples.items():
-            new_samples_by_project_name[project_name].append(s)
         for project, sample_ids in samples_by_project.items():
+            project_updated_samples = updated_samples.filter(individual__family__project=project)
             notify_search_data_loaded(
                 project, dataset_type, sample_type, inactivated_sample_guids,
-                new_samples=new_samples_by_project_name[project.name], num_samples=len(sample_ids),
+                updated_samples=project_updated_samples, num_samples=len(sample_ids),
             )

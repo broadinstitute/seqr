@@ -53,7 +53,7 @@ def _find_or_create_samples(
     sample_params.update(sample_data or {})
 
     samples_by_key = {
-        (s['sample_id'], s.pop('individual__family__project__name')): s for s in Sample.objects.filter(
+        (s.pop('sample_id'), s.pop('individual__family__project__name')): s for s in Sample.objects.filter(
             individual__family__project__in=projects,
             sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
             **({'tissue_type__in': set(sample_id_to_tissue_type.values())} if sample_id_to_tissue_type else {
@@ -99,10 +99,10 @@ def _find_or_create_samples(
         # create new Sample records for Individual records that matches
         new_samples = {sample_key: {
             'guid': 'S{}_{}'.format(random.randint(10**9, 10**10), individual.individual_id)[:Sample.MAX_GUID_SIZE],
-            'sample_id': sample_key[0],
             'individual_id': individual.id,
         } for sample_key, individual in sample_id_to_individual_record.items()}
         new_sample_models = [Sample(
+            sample_id=sample_key[0],
             created_date=timezone.now(),
             is_active=create_active,
             tissue_type=sample_id_to_tissue_type.get(sample_key) if sample_id_to_tissue_type else tissue_type,
@@ -180,7 +180,7 @@ def match_and_update_search_samples(
         raise_no_match_error=not raise_unmatched_error_template,
     )
 
-    all_samples = list(existing_samples.values()) + list(new_samples.values())
+    all_samples = list(existing_samples.values()) + list(new_samples.values())  # TODO merge before return?
     samples_guids = [sample['guid'] for sample in all_samples]
     individual_ids = {sample['individual_id'] for sample in all_samples}
     included_families = dict(Family.objects.filter(individual__id__in=individual_ids).values_list('guid', 'analysis_status'))
@@ -196,7 +196,7 @@ def match_and_update_search_samples(
     Family.bulk_update(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
-    return new_samples, inactivated_sample_guids, len(remaining_sample_keys), family_guids_to_update, updated_samples
+    return updated_samples, inactivated_sample_guids, len(remaining_sample_keys), family_guids_to_update
 
 
 def _parse_tsv_row(row):
