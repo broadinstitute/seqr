@@ -668,6 +668,26 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         }
 
 
+class AirtableTest(object):
+
+    def assert_expected_airtable_call(self, call_index, filter_formula, fields, additional_params=None):
+        expected_params = {
+            'fields[]': mock.ANY,
+            'pageSize': '100',
+            'filterByFormula': filter_formula,
+        }
+        if additional_params:
+            expected_params.update(additional_params)
+        self.assertDictEqual(responses.calls[call_index].request.params, expected_params)
+        self.assertListEqual(self._get_list_param(responses.calls[call_index].request, 'fields%5B%5D'), fields)
+
+    @staticmethod
+    def _get_list_param(call, param):
+        query_params = call.url.split('?')[1].split('&')
+        param_str = f'{param}='
+        return [p.replace(param_str, '') for p in query_params if p.startswith(param_str)]
+
+
 USER_FIELDS = {
     'dateJoined', 'email', 'firstName', 'lastLogin', 'lastName', 'username', 'displayName', 'id',  'isActive', 'isAnvil',
     'isAnalyst', 'isDataManager', 'isPm', 'isSuperuser',

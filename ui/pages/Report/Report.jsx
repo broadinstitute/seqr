@@ -10,7 +10,6 @@ import Anvil from './components/Anvil'
 import CustomSearch from './components/CustomSearch'
 import DiscoverySheet from './components/DiscoverySheet'
 import Gregor from './components/Gregor'
-import SampleMetadata from './components/SampleMetadata'
 import SeqrStats from './components/SeqrStats'
 
 export const REPORT_PAGES = [
@@ -18,7 +17,6 @@ export const REPORT_PAGES = [
   { path: 'custom_search', params: '/:searchHash?', component: CustomSearch },
   { path: 'discovery_sheet', params: '/:projectGuid?', component: DiscoverySheet },
   { path: 'gregor', component: Gregor },
-  { path: 'sample_metadata', params: '/:projectGuid?', component: SampleMetadata },
   { path: 'seqr_stats', component: SeqrStats },
 ]
 

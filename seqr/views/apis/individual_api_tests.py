@@ -283,6 +283,7 @@ class IndividualAPITest(object):
         self.assertIsNone(updated_individual['paternalGuid'])
         self.assertIsNone(updated_individual['paternalGuid'])
 
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_individuals(self, mock_pm_group):
         individuals_url = reverse(delete_individuals_handler, args=[PROJECT_GUID])
@@ -334,11 +335,15 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA20889'])
 
-        response = self.client.post(
-            pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
-                'individuals': [{'individualGuid': 'I000015_na20885'}]
-            }))
+        data = json.dumps({
+            'individuals': [{'individualGuid': 'I000015_na20885'}]
+        })
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.post(pm_required_delete_individuals_url, content_type='application/json', data=data)
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active search sample: NA20885'])
 
+        response = self.client.post(pm_required_delete_individuals_url, content_type='application/json', data=data)
         self.assertEqual(response.status_code, 200)
 
         # Test External AnVIL projects

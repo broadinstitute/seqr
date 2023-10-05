@@ -68,7 +68,7 @@ toml==0.10.2
     # via responses
 types-toml==0.10.8.5
     # via responses
-urllib3==1.26.14
+urllib3==1.26.17
     # via
     #   -c requirements.txt
     #   requests
