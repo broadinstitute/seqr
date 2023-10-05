@@ -6,10 +6,10 @@ import json
 import mock
 
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
-from seqr.models import Family, Individual, Sample
+from seqr.models import Project, Family, Individual, Sample
 
 SEQR_URL = 'https://seqr.broadinstitute.org/'
-PROJECT_GUID = 'R0001_1kg'
+PROJECT_GUID = 'R0003_test'
 EXTERNAL_PROJECT_GUID = 'R0004_non_analyst_project'
 
 # TODO inline
@@ -60,6 +60,16 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 'F000014_14': ['NA21234'],
             },
         }).encode()]
+
+        with self.assertRaises(CommandError) as ce:
+            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', version)
+        self.assertEqual(
+            str(ce.exception),
+            'Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)')
+
+        project = Project.objects.get(guid=PROJECT_GUID)
+        project.genome_version = 38
+        project.save()
 
         call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', version)
 
@@ -114,7 +124,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
-                f'1 new WES samples are loaded in {SEQR_URL}project/R0003_test/project_page\n```NA20889```',
+                f'1 new WES samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20889```',
             ),
             mock.call(
                 'anvil-data-loading',

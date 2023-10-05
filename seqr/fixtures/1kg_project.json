@@ -54,7 +54,6 @@
         "description": "",
 	"can_edit_group": 2,
 	"can_view_group": 3,
-    "genome_version": "38",
     "workspace_name": "anvil-project 1000 Genomes Demo",
     "workspace_namespace": "my-seqr-billing",
 	"is_mme_enabled": true,

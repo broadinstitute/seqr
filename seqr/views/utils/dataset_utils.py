@@ -66,7 +66,7 @@ def _find_or_create_samples(
         key: s for key, s in samples_by_key.items() if key in sample_project_tuples
         and (sample_id_to_tissue_type is None or sample_id_to_tissue_type[key] == s['tissue_type'])
     }
-    remaining_sample_keys = set(sample_project_tuples) - set(samples_by_key.keys())
+    remaining_sample_keys = set(sample_project_tuples) - set(existing_samples.keys())
 
     matched_individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
     loaded_date = timezone.now()

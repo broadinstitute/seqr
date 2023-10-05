@@ -1,7 +1,7 @@
 import logging
 from django.core.management.base import BaseCommand
 
-from seqr.models import RnaSeqTpm
+from seqr.models import RnaSeqTpm, Sample
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.dataset_utils import load_rna_seq_tpm
 
@@ -34,10 +34,14 @@ class Command(BaseCommand):
         samples_to_load, _, _ = load_rna_seq_tpm(
             options['input_file'], mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
 
-        for sample, data_by_gene in samples_to_load.items():
+        sample_id_map = {
+            s['guid']: s for s in Sample.objects.filter(guid__in=samples_to_load).values('guid', 'id', 'sample_id')
+        }
+        for sample_guid, data_by_gene in samples_to_load.items():
+            sample_data = sample_id_map[sample_guid]
             models = RnaSeqTpm.objects.bulk_create(
-                [RnaSeqTpm(sample=sample, **data) for data in data_by_gene.values()], batch_size=1000)
-            logger.info(f'create {len(models)} RnaSeqTpm for {sample.sample_id}')
+                [RnaSeqTpm(sample_id=sample_data['id'], **data) for data in data_by_gene.values()], batch_size=1000)
+            logger.info(f'create {len(models)} RnaSeqTpm for {sample_data["sample_id"]}')
 
         logger.info('DONE')
 
