@@ -2,7 +2,6 @@ from collections import defaultdict
 from django.core.management.base import BaseCommand, CommandError
 import json
 import logging
-import os
 
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Family, Sample

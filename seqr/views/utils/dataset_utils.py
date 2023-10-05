@@ -1,6 +1,6 @@
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import prefetch_related_objects, Q
+from django.db.models import Q
 from django.utils import timezone
 from tqdm import tqdm
 import random
@@ -98,7 +98,7 @@ def _find_or_create_samples(
 
         # create new Sample records for Individual records that matches
         new_sample_args = {sample_key: {
-            'guid': 'S{}_{}'.format(random.randint(10**9, 10**10), individual.individual_id)[:Sample.MAX_GUID_SIZE],
+            'guid': 'S{}_{}'.format(random.randint(10**9, 10**10), individual.individual_id)[:Sample.MAX_GUID_SIZE],  # nosec
             'individual_id': individual.id,
         } for sample_key, individual in sample_id_to_individual_record.items()}
         samples.update(new_sample_args)
@@ -170,7 +170,7 @@ def match_and_update_search_samples(
         projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
         sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
 ):
-    samples, existing_samples, remaining_sample_keys, loaded_date = _find_or_create_samples(
+    samples, _, remaining_sample_keys, loaded_date = _find_or_create_samples(
         sample_project_tuples=sample_project_tuples,
         projects=projects,
         user=user,
