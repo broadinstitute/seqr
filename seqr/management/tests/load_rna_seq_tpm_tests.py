@@ -4,6 +4,7 @@ import mock
 from django.core.management import call_command
 
 from seqr.models import Sample, RnaSeqTpm, RnaSeqOutlier
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 RNA_FILE_ID = 'all_tissue_tpms.tsv.gz'
@@ -36,9 +37,9 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         self.assertEqual(str(e.exception), 'Invalid file: missing column(s): TPM, gene_id, project, sample_id, tissue')
 
         mock_gzip_file.__iter__.return_value[0] = 'sample_id\tproject\tindividual_id\tgene_id\tTPM\ttissue\n'
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(ErrorsWarningsException) as e:
             call_command('load_rna_seq_tpm', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Sample NA19675_D2 has no tissue type')
+        self.assertListEqual(e.exception.errors, ['Samples missing required "tissue": NA19675_D2'])
 
         mock_gzip_file.__iter__.return_value[1] = 'NA19675_D2\t1kg project nåme with uniçøde\tNA19675_1\tENSG00000240361\t12.6\tmuscle\n'
         with self.assertRaises(ValueError) as e:

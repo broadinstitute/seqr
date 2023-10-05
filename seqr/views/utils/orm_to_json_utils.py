@@ -764,7 +764,7 @@ SPLICE_OUTLIERS = 'spliceOutliers'
 def get_json_for_rna_seq_outliers(filters, significant_only=True, individual_guid=None):
     filters = {'sample__is_active': True, **filters}
 
-    data_by_individual_gene = defaultdict(lambda: {EXPRESSION_OUTLIERS: {}, SPLICE_OUTLIERS: defaultdict(list)})
+    data_by_individual_gene = defaultdict(lambda: {EXPRESSION_OUTLIERS: defaultdict(list), SPLICE_OUTLIERS: defaultdict(list)})
 
     for model, outlier_type in [(RnaSeqOutlier, EXPRESSION_OUTLIERS), (RnaSeqSpliceOutlier, SPLICE_OUTLIERS)]:
         significant_filter = {f'{model.SIGNIFICANCE_FIELD}__lt': model.SIGNIFICANCE_THRESHOLD}
@@ -782,9 +782,6 @@ def get_json_for_rna_seq_outliers(filters, significant_only=True, individual_gui
         )
 
         for data in outliers:
-            if outlier_type == EXPRESSION_OUTLIERS:
-                data_by_individual_gene[data.pop('individualGuid')][outlier_type][data['geneId']] = data
-            else:
-                data_by_individual_gene[data.pop('individualGuid')][outlier_type][data['geneId']].append(data)
+            data_by_individual_gene[data.pop('individualGuid')][outlier_type][data['geneId']].append(data)
 
     return data_by_individual_gene
