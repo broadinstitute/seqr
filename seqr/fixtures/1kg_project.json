@@ -54,6 +54,7 @@
         "description": "",
 	"can_edit_group": 2,
 	"can_view_group": 3,
+    "genome_version": "38",
     "workspace_name": "anvil-project 1000 Genomes Demo",
     "workspace_namespace": "my-seqr-billing",
 	"is_mme_enabled": true,
@@ -360,6 +361,7 @@
         "last_modified_date": "2017-03-12T22:37:17.555Z",
         "project": 4,
         "family_id": "14",
+        "analysis_status": "Rncc",
         "success_story": "Differential treatement",
         "success_story_types": ["A", "D"]
     }
@@ -1182,6 +1184,7 @@
         "individual": 17,
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "data_source": "auto__2023-08-08",
         "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }

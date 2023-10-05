@@ -102,6 +102,8 @@ def _find_or_create_samples(
             'individual_id': individual.id,
         } for sample_key, individual in sample_id_to_individual_record.items()}
         samples.update(new_sample_args)
+        if data_source not in sample_params:
+            sample_params['data_source'] = data_source
         new_samples = [
             Sample(
                 sample_id=sample_key[0],
@@ -109,7 +111,6 @@ def _find_or_create_samples(
                 is_active=create_active,
                 tissue_type=sample_id_to_tissue_type.get(sample_key) if sample_id_to_tissue_type else tissue_type,
                 loaded_date=loaded_date,
-                data_source=data_source,
                 **created_sample_data,
                 **sample_params
             ) for sample_key, created_sample_data in new_sample_args.items()]

@@ -30,7 +30,7 @@ class Command(BaseCommand):
             return
 
         logger.info(f'Loading new samples from {path}: {version}')
-        metadata_path = f'gs://seqr-datasets/v03/{path}/{data_type}/runs/{version}/metadata.json'
+        metadata_path = f'gs://seqr-datasets/v03/{path}/runs/{version}/metadata.json'
         metadata = json.loads(next(line for line in file_iter(metadata_path)))
 
         families = Family.objects.filter(guid__in=metadata['families'].keys())
@@ -53,7 +53,7 @@ class Command(BaseCommand):
 
         if invalid_genome_version_projects:
             raise CommandError(
-                f'Data has genome version {genome_version} but the following projects have conflicting versions: '
+                f'Data has genome version {genome_version} but the following projects have conflicting versions: ' +
                 ', '.join([f'{project} ({invalid_version})' for project, invalid_version in invalid_genome_version_projects])
             )
 
@@ -62,6 +62,7 @@ class Command(BaseCommand):
         updated_samples, inactivated_sample_guids, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
+            # TODO want to update but not create new with callset mismatch
             sample_data={'data_source': version, 'elasticsearch_index': metadata['callset']},
             sample_type=sample_type,
             dataset_type=dataset_type,
