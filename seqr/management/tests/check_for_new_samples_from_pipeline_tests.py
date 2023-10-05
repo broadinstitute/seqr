@@ -35,34 +35,37 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
     @mock.patch('seqr.utils.search.add_data_utils.send_html_email')
+    @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.logger')
     @mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: GUID_ID)
     @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
-    def test_command(self, mock_send_email, mock_send_slack, mock_subprocess):
-        # Test missing required arguments
+    def test_command(self, mock_logger, mock_send_email, mock_send_slack, mock_subprocess):
+        # Test errors
         with self.assertRaises(CommandError) as ce:
             call_command('check_for_new_samples_from_pipeline')
         self.assertEqual(str(ce.exception), 'Error: the following arguments are required: path, version')
 
-        # TODO test errors
-
-        # 'sourceFilePath': 'test_data.vcf',
-        # 'sample_ids': {'buckets': [{'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'}, {'key': 'NA20878'}]}
-        # MOCK_FILE_ITER.return_value = StringIO('NA19678_1,NA19678\n')
-
-        version = 'auto__2023-08-08'
-        callset = '1kg.vcf.gz'
-        mock_subprocess.return_value.stdout = [json.dumps({
-            'callset': callset, 'sample_type': 'WES', 'families': {
-                'F000011_11': ['NA20885'],
+        metadata = {
+            'callset': '1kg.vcf.gz',
+            'sample_type': 'WES',
+            'families': {
+                'F0000123_ABC': ['NA22882', 'NA20885'],
                 'F000012_12': ['NA20888', 'NA20889'],
                 'F000014_14': ['NA21234'],
             },
-        }).encode()]
+        }
+        mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
 
         with self.assertRaises(CommandError) as ce:
-            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', version)
+            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
+        self.assertEqual(
+            str(ce.exception), 'Invalid families in run metadata GRCh38/SNV_INDEL: auto__2023-08-08 - F0000123_ABC')
+
+        metadata['families']['F000011_11'] = metadata['families'].pop('F0000123_ABC')
+        mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
+        with self.assertRaises(CommandError) as ce:
+            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
         self.assertEqual(
             str(ce.exception),
             'Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)')
@@ -71,11 +74,25 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         project.genome_version = 38
         project.save()
 
-        call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', version)
+        with self.assertRaises(ValueError) as ce:
+            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
+        self.assertEqual(str(ce.exception), 'Matches not found for sample ids: NA22882')
+
+        metadata['families']['F000011_11'] = metadata['families']['F000011_11'][1:]
+        mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
+
+        # Test success
+        call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
 
         mock_subprocess.assert_called_with(
-            f'gsutil cat gs://seqr-datasets/v03/GRCh38/SNV_INDEL/runs/{version}/metadata.json',
+            'gsutil cat gs://seqr-datasets/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/metadata.json',
             stdout=-1, stderr=-2, shell=True)
+
+        mock_logger.info.assert_has_calls([
+            mock.call(f'Loading new samples from GRCh38/SNV_INDEL: auto__2023-08-08'),
+            mock.call('Loading 4 WES SNV_INDEL samples in 2 projects'),
+            mock.call('DONE'),
+        ])
 
         # Tests Sample models created/updated
         updated_sample_models = Sample.objects.filter(guid__in={
@@ -84,8 +101,8 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertSetEqual({'WES'}, set(updated_sample_models.values_list('sample_type', flat=True)))
         self.assertSetEqual({'SNV_INDEL'}, set(updated_sample_models.values_list('dataset_type', flat=True)))
         self.assertSetEqual({True}, set(updated_sample_models.values_list('is_active', flat=True)))
-        self.assertSetEqual({callset}, set(updated_sample_models.values_list('elasticsearch_index', flat=True)))
-        self.assertSetEqual({version}, set(updated_sample_models.values_list('data_source', flat=True)))
+        self.assertSetEqual({'1kg.vcf.gz'}, set(updated_sample_models.values_list('elasticsearch_index', flat=True)))
+        self.assertSetEqual({'auto__2023-08-08'}, set(updated_sample_models.values_list('data_source', flat=True)))
         self.assertSetEqual(
             {datetime.now().strftime('%Y-%m-%d')},
             {date.strftime('%Y-%m-%d') for date in updated_sample_models.values_list('loaded_date', flat=True)}
@@ -146,6 +163,15 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(mock_send_email.call_count, 1)
         mock_send_email.assert_called_with(EMAIL, subject='New data available in seqr', to=['test_user_manager@test.com'])
 
-        # TODO test logging
+        # Test reloading has no effect
+        mock_logger.reset_mock()
+        mock_send_email.reset_mock()
+        mock_send_slack.reset_mock()
+        sample_last_modified = Sample.objects.filter(
+            last_modified_date__isnull=False).values_list('last_modified_date', flat=True).order_by('-last_modified_date')[0]
 
-        # TODO test reloading does nothing
+        call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
+        mock_logger.info.assert_called_with(f'Data already loaded for GRCh38/SNV_INDEL: auto__2023-08-08')
+        mock_send_email.assert_not_called()
+        mock_send_slack.assert_not_called()
+        self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())

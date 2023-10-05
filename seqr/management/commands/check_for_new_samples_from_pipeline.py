@@ -75,3 +75,4 @@ class Command(BaseCommand):
                 project, dataset_type, sample_type, inactivated_sample_guids,
                 updated_samples=project_updated_samples, num_samples=len(sample_ids),
             )
+        logger.info('DONE')
