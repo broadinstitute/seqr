@@ -218,17 +218,6 @@ def _remove_pedigree_images(families, user):
     Family.bulk_update(user, {'pedigree_image': None}, queryset=families)
 
 
-def get_parsed_feature(feature):
-    optional_fields = ['notes', 'qualifiers']
-    feature_json = {'id': feature['id']}
-
-    for field in optional_fields:
-        if field in feature:
-            feature_json[field] = feature[field]
-
-    return feature_json
-
-
 def _get_updated_pedigree_json(updated_individuals, updated_families, updated_note_ids, user):
     individuals_by_guid = {
         individual['individualGuid']: individual for individual in
