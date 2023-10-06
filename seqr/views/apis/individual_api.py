@@ -104,12 +104,12 @@ def update_individual_hpo_terms(request, individual_guid):
 def _get_parsed_features(features):
     parsed_features = {}
     for feature in features:
-        id = feature['id']
-        feature_json = {'id': id}
+        feature_id = feature['id']
+        feature_json = {'id': feature_id}
         for field in ['notes', 'qualifiers']:
             if field in feature:
                 feature_json[field] = feature[field]
-        parsed_features[id] = feature_json
+        parsed_features[feature_id] = feature_json
     return list(parsed_features.values())
 
 
