@@ -86,11 +86,13 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
 
         # Test success
+        mock_subprocess.reset_mock()
         call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
 
-        mock_subprocess.assert_called_with(
+        mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [
+            'gsutil ls gs://seqr-datasets/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/_SUCCESS',
             'gsutil cat gs://seqr-datasets/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/metadata.json',
-            stdout=-1, stderr=-2, shell=True)
+        ]], any_order=True)
 
         mock_logger.info.assert_has_calls([
             mock.call(f'Loading new samples from GRCh38/SNV_INDEL: auto__2023-08-08'),
