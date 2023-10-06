@@ -276,6 +276,24 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
 
+        multi_tag_url = reverse(saved_variants_page, args=['Review;Tier 1 - Novel gene and phenotype'])
+        response = self.client.get('{}?gene=ENSG00000135953'.format(multi_tag_url))
+        self.assertEqual(response.status_code, 200)
+        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
+
+        discovery_tag_url = reverse(saved_variants_page, args=['CMG Discovery Tags'])
+        response = self.client.get('{}?gene=ENSG00000135953'.format(discovery_tag_url))
+        self.assertEqual(response.status_code, 200)
+        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {
+            'SV0000001_2103343353_r0390_100', 'SV0000002_1248367227_r0390_100', 'SV0000007_prefix_19107_DEL_r00',
+            'SV0000006_1248367227_r0003_tes',
+        })
+
+        multi_discovery_tag_url = reverse(saved_variants_page, args=['CMG Discovery Tags;Review'])
+        response = self.client.get('{}?gene=ENSG00000135953'.format(multi_discovery_tag_url))
+        self.assertEqual(response.status_code, 200)
+        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
+
     def test_hpo_summary_data(self):
         url = reverse(hpo_summary_data, args=['HP:0002011'])
         self.check_require_login(url)

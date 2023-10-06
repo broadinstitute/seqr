@@ -120,7 +120,9 @@ const getSummaryDataSavedVariantsSelection = createSelector(
       pairedFilters.push(({ transcripts }) => gene in (transcripts || {}))
     } if (tag && tag !== SHOW_ALL) {
       const tags = tag.split(';')
-      pairedFilters.push(({ tagGuids }) => tags.every(t => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === t)))
+      pairedFilters.push(({ tagGuids }) => tags.every(t => tagGuids.some(tagGuid => (
+        tagsByGuid[tagGuid][t === DISCOVERY_CATEGORY_NAME ? 'category' : 'name'] === t
+      ))))
     }
 
     const variantFilter = tag || gene ? null : () => false
