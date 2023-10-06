@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 10/6/23
 * Require tissue_type in Sample model (REQUIRES DB MIGRATION)
 
 ## 9/22/23
