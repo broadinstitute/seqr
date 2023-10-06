@@ -1,20 +1,19 @@
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Prefetch, F
-from django.db.models.functions import JSONObject
+from django.db.models import F
 import logging
 import redis
 
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqTpm, PhenotypePrioritization, Project, Sample, VariantTagType, VariantTag
+    RnaSeqTpm, PhenotypePrioritization, Project, Sample, VariantTagType
 from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
-    get_json_for_matchmaker_submissions, get_json_for_saved_variants
+    get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
@@ -23,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 MAX_VARIANTS_FETCH = 1000
+DISCOVERY_CATEGORY = 'CMG Discovery Tags'
+
 
 def update_project_saved_variant_json(project, family_id=None, user=None):
     saved_variants = SavedVariant.objects.filter(family__project=project).select_related('family')
@@ -283,36 +284,19 @@ def get_sv_name(variant_json):
     return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
 
 
-def get_saved_discovery_variants_by_family(variant_filter, parse_json=False):
-    tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
+def get_saved_discovery_variants_by_family(variant_filter, format_variants, get_family_id):
+    tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
     project_saved_variants = SavedVariant.objects.filter(
         varianttag__variant_tag_type__in=tag_types,
         **variant_filter,
     ).order_by('created_date').distinct()
 
-    if parse_json:
-        project_saved_variants = get_json_for_saved_variants(
-            project_saved_variants, add_details=True, additional_model_fields=['family_id'], additional_values={
-                'discovery_tags': ArrayAgg(JSONObject(
-                    name='varianttag__variant_tag_type__name',
-                    guid='varianttag__guid',
-                )),
-            })
-    else:
-        project_saved_variants = project_saved_variants.prefetch_related(
-            Prefetch('varianttag_set', to_attr='discovery_tags',
-                 queryset=VariantTag.objects.filter(variant_tag_type__in=tag_types).select_related('variant_tag_type'),
-            )).prefetch_related('variantfunctionaldata_set')
+    project_saved_variants = format_variants(project_saved_variants, tag_types)
 
     saved_variants_by_family = defaultdict(list)
     for saved_variant in project_saved_variants:
-        if parse_json:
-            family_id = saved_variant.pop('familyId')
-            saved_variant['discovery_tag_guids_by_name'] = {vt['name']: vt['guid'] for vt in
-                                                             saved_variant.pop('discovery_tags')}
-        else:
-            family_id = saved_variant.family_id
+        family_id = get_family_id(saved_variant)
         saved_variants_by_family[family_id].append(saved_variant)
 
     return saved_variants_by_family

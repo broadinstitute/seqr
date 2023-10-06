@@ -47,6 +47,9 @@ INDIVIDUAL_UPDATE_DATA = {
     'features': [{
         'id': 'HP:0002011',
         'label': 'nervous system abnormality',
+    }, {
+        'id': 'HP:0002011',
+        'label': 'nervous system abnormality',
         'category': 'HP:0000708',
         'categoryName': 'Nervous',
         'qualifiers': [{'type': 'onset', 'label': 'congenital'}],
@@ -283,6 +286,7 @@ class IndividualAPITest(object):
         self.assertIsNone(updated_individual['paternalGuid'])
         self.assertIsNone(updated_individual['paternalGuid'])
 
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_individuals(self, mock_pm_group):
         individuals_url = reverse(delete_individuals_handler, args=[PROJECT_GUID])
@@ -334,11 +338,15 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA20889'])
 
-        response = self.client.post(
-            pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
-                'individuals': [{'individualGuid': 'I000015_na20885'}]
-            }))
+        data = json.dumps({
+            'individuals': [{'individualGuid': 'I000015_na20885'}]
+        })
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.post(pm_required_delete_individuals_url, content_type='application/json', data=data)
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active search sample: NA20885'])
 
+        response = self.client.post(pm_required_delete_individuals_url, content_type='application/json', data=data)
         self.assertEqual(response.status_code, 200)
 
         # Test External AnVIL projects
@@ -897,7 +905,7 @@ class IndividualAPITest(object):
         rows = [
             '1,NA19678,,,,,no,infant,recessive,,,not_an_email',
             '1,NA19679,HP:0100258 (Preaxial polydactyly),,,,,,,,,test_user_no_access@test.com',
-            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia),,,,,,,,,',
+            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia);HP:0011675 (Arrhythmia),,,,,,,,,',
         ]
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
@@ -930,6 +938,7 @@ class IndividualAPITest(object):
         f = SimpleUploadedFile('updates.json', json.dumps([
             {'external_id': 'NA19675_1', 'sex': 'F', 'date_of_birth': '2000-01-01', 'features': [
                 {'id': 'HP:0002017', 'observed': 'yes'},
+                {'id': 'HP:0002017', 'observed': 'yes'},
                 {'id': 'HP:0012469', 'observed': 'no'},
                 {'id': 'HP:0004322', 'observed': 'no'},
             ], 'family_history': {'affectedRelatives': True}, 'global_age_of_onset': [{'label': 'Juvenile onset'}],
@@ -953,8 +962,10 @@ class IndividualAPITest(object):
         rows = [
             '1,NA19675_1,yes,HP:0002017,,F,2000,true,Juvenile onset,"Autosomal dominant inheritance, Sporadic","Finnish, Irish","IKBKAP -- (multiple panels, no confirm), EHBP1L1"',
             '1,NA19675_1,no,HP:0012469,,,,,,,,',
+            '1,NA19675_1,no,HP:0012469,,,,,,,,',
             '1,NA19675_1,no,,HP:0004322,,,,,,,',
             '1,NA19678,,,,,,,,,,',
+            '1,NA19679,yes,HP:0100258,,,,,,,,',
             '1,NA19679,yes,HP:0100258,,,,,,,,',
             '1,HG00731,yes,HP:0002017,,,,,,,,',
             '1,HG00731,no,HP:0012469,HP:0011675,,,,,,,',
@@ -993,20 +1004,20 @@ class IndividualAPITest(object):
         self.assertSetEqual(set(response_json.keys()), {'rnaSeqData', 'genesById'})
         self.assertDictEqual(response_json['rnaSeqData'], {
             INDIVIDUAL_GUID: {'outliers': {
-                'ENSG00000135953': {
+                'ENSG00000135953': [{
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'isSignificant': True,
-                    'tissueType': None,
-                },
-                'ENSG00000240361': {
+                    'tissueType': 'M',
+                }],
+                'ENSG00000240361': [{
                     'geneId': 'ENSG00000240361', 'zScore': -4.08, 'pValue': 5.88, 'pAdjust': 0.09, 'isSignificant': False,
-                    'tissueType': None,
-                },
-                'ENSG00000268903': {
+                    'tissueType': 'M',
+                }],
+                'ENSG00000268903': [{
                     'geneId': 'ENSG00000268903', 'zScore': 7.08, 'pValue':0.000000000588, 'pAdjust': 0.00000000139,
                     'isSignificant': True,
-                    'tissueType': None,
-                },
+                    'tissueType': 'M',
+                }],
             },
             'spliceOutliers': {
                 'ENSG00000268903': mock.ANY,
@@ -1033,8 +1044,8 @@ class IndividualAPITest(object):
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         response_rnaseq_data = response.json()['rnaSeqData'][INDIVIDUAL_GUID]
-        self.assertTrue(response_rnaseq_data['outliers']['ENSG00000135953']['isSignificant'])
-        significant_outliers = [outlier for outlier in response_rnaseq_data['outliers'].values() if outlier['isSignificant']]
+        self.assertTrue(response_rnaseq_data['outliers']['ENSG00000135953'][0]['isSignificant'])
+        significant_outliers = [outlier for outlier in response_rnaseq_data['outliers'].values() if outlier[0]['isSignificant']]
         self.assertEqual(2, len(significant_outliers))
         self.assertListEqual(
             sorted([{field: outlier[field] for field in ['start', 'end', 'pValue', 'tissueType', 'isSignificant']}

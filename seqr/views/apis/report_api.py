@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from datetime import datetime
 from dateutil import relativedelta as rdelta
-from django.db.models import Prefetch, Count, F, Q, Value, Case, When
+from django.db.models import Prefetch, Count, Q
 from django.utils import timezone
 import json
 import re
@@ -15,7 +15,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_chrom_pos
 
-from seqr.views.utils.airtable_utils import get_airtable_samples, AirtableSession
+from seqr.views.utils.airtable_utils import get_airtable_samples
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION, \
     ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
     SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE
@@ -103,7 +103,6 @@ DISCOVERY_TABLE_CORE_COLUMNS = ['subject_id', 'sample_id']
 DISCOVERY_TABLE_VARIANT_COLUMNS = list(SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS)
 DISCOVERY_TABLE_VARIANT_COLUMNS.insert(4, 'variant_genome_build')
 DISCOVERY_TABLE_VARIANT_COLUMNS.insert(14, 'significance')
-DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS = SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS + ['novel_mendelian_gene', 'phenotype_class']
 
 GENOME_BUILD_MAP = {
     '37': 'GRCh37',
@@ -147,96 +146,6 @@ def anvil_export(request, project_guid):
         ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, parsed_rows[FAMILY_ROW_TYPE]],
         ['{}_PI_Discovery'.format(project.name), ['entity:discovery_id'] + DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, parsed_rows[DISCOVERY_ROW_TYPE]],
     ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
-
-
-@analyst_required
-def sample_metadata_export(request, project_guid):
-    is_all_projects = project_guid == 'all'
-    omit_airtable = is_all_projects or 'true' in request.GET.get('omitAirtable', '')
-    if is_all_projects:
-        projects = get_internal_projects()
-    else:
-        projects = [get_project_and_check_permissions(project_guid, request.user)]
-
-    family_rows_by_id = {}
-    rows_by_subject_family_id = defaultdict(dict)
-    collaborator_map = {}
-    all_features = set()
-
-    def _add_row(row, family_id, row_type):
-        if row_type == FAMILY_ROW_TYPE:
-            family_rows_by_id[family_id] = row
-        elif row_type == DISCOVERY_ROW_TYPE:
-            for i, discovery_row in enumerate(row):
-                parsed_row = {
-                    '{}-{}'.format(k, i + 1): discovery_row[k] for k in DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS if
-                    discovery_row.get(k)
-                }
-                parsed_row['num_saved_variants'] = len(row)
-                rows_by_subject_family_id[(discovery_row['subject_id'], family_id)].update(parsed_row)
-
-        else:
-            row_key = (row['subject_id'], family_id)
-            collaborator = row.pop('Collaborator', None)
-            if collaborator:
-                collaborator_map[row_key] = collaborator
-            if 'ancestry_detail' in row:
-                row['ancestry'] = row.pop('ancestry_detail')
-            if 'hpo_present' in row:
-                all_features.update(row['hpo_present'].split('|'))
-                all_features.update(row['hpo_absent'].split('|'))
-            rows_by_subject_family_id[row_key].update(row)
-
-    parse_anvil_metadata(
-        projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user, _add_row,
-        omit_airtable=omit_airtable, get_additional_variant_fields=_get_additional_variant_fields,
-        get_additional_sample_fields=lambda sample, airtable_metadata: {
-            'data_type': sample.sample_type,
-            'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
-            'Collaborator': (airtable_metadata or {}).get('Collaborator'),
-        }, family_values={
-            'family_guid': F('guid'),
-            'project_guid': F('project__guid'),
-            'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
-        },
-    )
-
-    if collaborator_map:
-        collaborator_name_map = _get_airtable_collaborator_names(request.user, collaborator_map.values())
-        for row_key, collaborator_id in collaborator_map.items():
-            rows_by_subject_family_id[row_key]['sample_provider'] = collaborator_name_map.get(collaborator_id)
-
-    hpo_name_map = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_features)}
-    for row_key, row in rows_by_subject_family_id.items():
-        row.update(family_rows_by_id[row_key[1]])
-        row['num_saved_variants'] = row.get('num_saved_variants', 0)
-        for hpo_key in ['hpo_present', 'hpo_absent']:
-            if row[hpo_key]:
-                row[hpo_key] = '|'.join(['{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')) for feature_id in row[hpo_key].split('|')])
-
-    return create_json_response({'rows': list(rows_by_subject_family_id.values())})
-
-
-def _get_additional_variant_fields(variant, *args):
-    if 'discovery_tag_guids_by_name' not in variant:
-        return {}
-    discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
-    is_novel = 'Y' if any('Novel gene' in name for name in discovery_tag_names) else 'N'
-    return {
-        'novel_mendelian_gene': is_novel,
-        'phenotype_class': get_discovery_phenotype_class(discovery_tag_names),
-    }
-
-
-def _get_airtable_collaborator_names(user, collaborator_ids):
-    collaborator_map = AirtableSession(user).fetch_records(
-        'Collaborator', fields=['CollaboratorID'], or_filters={'RECORD_ID()': collaborator_ids}
-    )
-
-    return {
-        collaborator_id: collaborator_map.get(collaborator_id, {}).get('CollaboratorID')
-        for collaborator_id in collaborator_ids
-    }
 
 
 # GREGoR metadata
@@ -967,7 +876,14 @@ def _get_analysis_notes_by_family(project):
 
 
 def _get_project_saved_discovery_variants_by_family(project):
-    return get_saved_discovery_variants_by_family({'family__project': project}, parse_json=False)
+    return get_saved_discovery_variants_by_family(
+        {'family__project': project},
+        lambda project_saved_variants, tag_types: project_saved_variants.prefetch_related(
+            Prefetch('varianttag_set', to_attr='discovery_tags',
+                 queryset=VariantTag.objects.filter(variant_tag_type__in=tag_types).select_related('variant_tag_type'),
+            )).prefetch_related('variantfunctionaldata_set'),
+        lambda saved_variant: saved_variant.family_id,
+    )
 
 
 def _get_has_mme_submission_family_guids(projects):

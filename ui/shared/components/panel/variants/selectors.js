@@ -30,10 +30,13 @@ export const getIndividualGeneDataByFamilyGene = createSelector(
       if (rnaSeqData) {
         acc[familyGuid] = acc[familyGuid] || {}
         acc[familyGuid].rnaSeqData = Object.entries(rnaSeqData).reduce(
-          (acc2, [geneId, data]) => (data.isSignificant ? {
+          (acc2, [geneId, data]) => ({
             ...acc2,
-            [geneId]: [...(acc2[geneId] || []), { ...data, individualName: displayName }],
-          } : acc2), acc[familyGuid].rnaSeqData || {},
+            [geneId]: [
+              ...(acc2[geneId] || []),
+              ...data.filter(({ isSignificant }) => isSignificant).map(d => ({ ...d, individualName: displayName })),
+            ],
+          }), acc[familyGuid].rnaSeqData || {},
         )
       }
       if (phenotypeGeneScores) {
@@ -117,7 +120,9 @@ const getSummaryDataSavedVariantsSelection = createSelector(
       pairedFilters.push(({ transcripts }) => gene in (transcripts || {}))
     } if (tag && tag !== SHOW_ALL) {
       const tags = tag.split(';')
-      pairedFilters.push(({ tagGuids }) => tags.every(t => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === t)))
+      pairedFilters.push(({ tagGuids }) => tags.every(t => tagGuids.some(tagGuid => (
+        tagsByGuid[tagGuid][t === DISCOVERY_CATEGORY_NAME ? 'category' : 'name'] === t
+      ))))
     }
 
     const variantFilter = tag || gene ? null : () => false

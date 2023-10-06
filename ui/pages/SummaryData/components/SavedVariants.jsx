@@ -13,6 +13,7 @@ import {
   VARIANT_PER_PAGE_FIELD,
   VARIANT_TAGGED_DATE_FIELD,
   SHOW_ALL,
+  DISCOVERY_CATEGORY_NAME,
 } from 'shared/utils/constants'
 import { StyledForm } from 'shared/components/form/FormHelpers'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
@@ -30,6 +31,7 @@ const FILTER_FIELDS = [
 ]
 
 const TAG_OPTIONS = [
+  DISCOVERY_CATEGORY_NAME,
   'Tier 1 - Novel gene and phenotype',
   'Tier 1 - Novel gene for known phenotype',
   'Tier 1 - Phenotype expansion',

@@ -11,6 +11,8 @@ on:
       - 'hail_search/**'
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - 'hail_search/**'
 
 jobs:
   hail_search:

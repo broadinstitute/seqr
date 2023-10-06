@@ -46,11 +46,11 @@ MOCK_FILE_ITER = MOCK_OPEN.return_value.__enter__.return_value.__iter__
 class DatasetAPITest(object):
 
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
-    @mock.patch('seqr.views.apis.dataset_api.safe_post_to_slack')
-    @mock.patch('seqr.views.apis.dataset_api.send_html_email')
-    @mock.patch('seqr.views.apis.dataset_api.BASE_URL', 'https://seqr.broadinstitute.org/')
-    @mock.patch('seqr.views.apis.dataset_api.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
-    @mock.patch('seqr.views.apis.dataset_api.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
+    @mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
+    @mock.patch('seqr.utils.search.add_data_utils.send_html_email')
+    @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
+    @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
+    @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @urllib3_responses.activate
     def test_add_variants_dataset(self, mock_send_email, mock_send_slack, mock_random):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
@@ -151,7 +151,7 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         if self.SLACK_MESSAGE_TEMPLATE:
             mock_send_slack.assert_called_with(
-                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES', samples='NA20878'))
+                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES', samples='NA19679, NA20878', count=2))
         else:
             mock_send_slack.assert_not_called()
 
@@ -194,7 +194,7 @@ class DatasetAPITest(object):
 
         # Regular variant sample should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
-        self.assertEqual(len(sample_models), 5)
+        self.assertEqual(len(sample_models), 4)
         self.assertSetEqual({sv_sample_guid, existing_index_sample_guid} | existing_rna_seq_sample_guids,
                             {sample.guid for sample in sample_models})
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
@@ -202,7 +202,7 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         if self.SLACK_MESSAGE_TEMPLATE:
             mock_send_slack.assert_called_with(
-                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES SV', samples='NA19675_1'))
+                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES SV', samples='NA19675_1', count=1))
         else:
             mock_send_slack.assert_not_called()
 
@@ -248,13 +248,13 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         if self.SLACK_MESSAGE_TEMPLATE:
             mock_send_slack.assert_called_with(
-                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WGS', samples='NA19675_1'))
+                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WGS', samples='NA19675_1', count=1))
         else:
             mock_send_slack.assert_not_called()
 
         # Previous variant samples should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
-        self.assertEqual(len(sample_models), 6)
+        self.assertEqual(len(sample_models), 5)
         self.assertSetEqual(
             {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid} | existing_rna_seq_sample_guids,
             {sample.guid for sample in sample_models})
@@ -481,7 +481,7 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     ANVIL_DISABLED = False
 
-    SLACK_MESSAGE_TEMPLATE = f'1 new {{type}} samples are loaded in {SEQR_URL}/project/{PROJECT_GUID}/project_page\n```{{samples}}```'
+    SLACK_MESSAGE_TEMPLATE = f'{{count}} new {{type}} samples are loaded in {SEQR_URL}/project/{PROJECT_GUID}/project_page\n```{{samples}}```'
 
     def test_add_variants_dataset(self, *args):
         super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)

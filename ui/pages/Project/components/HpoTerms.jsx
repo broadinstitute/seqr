@@ -239,7 +239,9 @@ class HpoTermsEditor extends React.PureComponent {
 
   addItem = (data) => {
     const { onChange, value } = this.props
-    onChange([...value, data])
+    if (value.every(({ id }) => id !== data.id)) {
+      onChange([...value, data])
+    }
     this.setState({ showAddItem: false })
   }
 
