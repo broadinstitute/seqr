@@ -21,7 +21,7 @@ from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst
     login_and_policies_required, get_project_and_check_permissions, get_internal_projects
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, \
     FAMILY_ROW_TYPE, DISCOVERY_ROW_TYPE
-from seqr.views.utils.variant_utils import get_variants_response, get_discovery_phenotype_class
+from seqr.views.utils.variant_utils import get_variants_response, get_discovery_phenotype_class, DISCOVERY_CATEGORY
 
 MAX_SAVED_VARIANTS = 10000
 
@@ -95,7 +95,9 @@ def saved_variants_page(request, tag):
     else:
         tags = tag.split(';')
         tag_types = VariantTagType.objects.filter(name__in=tags, project__isnull=True)
-        saved_variant_models = SavedVariant.objects.all()
+        saved_variant_models = SavedVariant.objects.filter(
+            varianttag__variant_tag_type__category=DISCOVERY_CATEGORY, varianttag__variant_tag_type__project__isnull=True,
+        ).distinct() if DISCOVERY_CATEGORY in tags else SavedVariant.objects.all()
         for tt in tag_types:
             saved_variant_models = saved_variant_models.filter(varianttag__variant_tag_type=tt).distinct()
 
