@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 MAX_VARIANTS_FETCH = 1000
+DISCOVERY_CATEGORY = 'CMG Discovery Tags'
+
 
 def update_project_saved_variant_json(project, family_id=None, user=None):
     saved_variants = SavedVariant.objects.filter(family__project=project).select_related('family')
@@ -283,7 +285,7 @@ def get_sv_name(variant_json):
 
 
 def get_saved_discovery_variants_by_family(variant_filter, format_variants, get_family_id):
-    tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
+    tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
     project_saved_variants = SavedVariant.objects.filter(
         varianttag__variant_tag_type__in=tag_types,

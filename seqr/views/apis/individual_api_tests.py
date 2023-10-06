@@ -47,6 +47,9 @@ INDIVIDUAL_UPDATE_DATA = {
     'features': [{
         'id': 'HP:0002011',
         'label': 'nervous system abnormality',
+    }, {
+        'id': 'HP:0002011',
+        'label': 'nervous system abnormality',
         'category': 'HP:0000708',
         'categoryName': 'Nervous',
         'qualifiers': [{'type': 'onset', 'label': 'congenital'}],
@@ -902,7 +905,7 @@ class IndividualAPITest(object):
         rows = [
             '1,NA19678,,,,,no,infant,recessive,,,not_an_email',
             '1,NA19679,HP:0100258 (Preaxial polydactyly),,,,,,,,,test_user_no_access@test.com',
-            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia),,,,,,,,,',
+            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia);HP:0011675 (Arrhythmia),,,,,,,,,',
         ]
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
@@ -935,6 +938,7 @@ class IndividualAPITest(object):
         f = SimpleUploadedFile('updates.json', json.dumps([
             {'external_id': 'NA19675_1', 'sex': 'F', 'date_of_birth': '2000-01-01', 'features': [
                 {'id': 'HP:0002017', 'observed': 'yes'},
+                {'id': 'HP:0002017', 'observed': 'yes'},
                 {'id': 'HP:0012469', 'observed': 'no'},
                 {'id': 'HP:0004322', 'observed': 'no'},
             ], 'family_history': {'affectedRelatives': True}, 'global_age_of_onset': [{'label': 'Juvenile onset'}],
@@ -958,8 +962,10 @@ class IndividualAPITest(object):
         rows = [
             '1,NA19675_1,yes,HP:0002017,,F,2000,true,Juvenile onset,"Autosomal dominant inheritance, Sporadic","Finnish, Irish","IKBKAP -- (multiple panels, no confirm), EHBP1L1"',
             '1,NA19675_1,no,HP:0012469,,,,,,,,',
+            '1,NA19675_1,no,HP:0012469,,,,,,,,',
             '1,NA19675_1,no,,HP:0004322,,,,,,,',
             '1,NA19678,,,,,,,,,,',
+            '1,NA19679,yes,HP:0100258,,,,,,,,',
             '1,NA19679,yes,HP:0100258,,,,,,,,',
             '1,HG00731,yes,HP:0002017,,,,,,,,',
             '1,HG00731,no,HP:0012469,HP:0011675,,,,,,,',
