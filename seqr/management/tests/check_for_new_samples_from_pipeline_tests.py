@@ -45,6 +45,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             call_command('check_for_new_samples_from_pipeline')
         self.assertEqual(str(ce.exception), 'Error: the following arguments are required: path, version')
 
+        with self.assertRaises(CommandError) as ce:
+            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
+        self.assertEqual(str(ce.exception), 'Run failed for GRCh38/SNV_INDEL: auto__2023-08-08, unable to load data')
+
         metadata = {
             'callset': '1kg.vcf.gz',
             'sample_type': 'WES',
@@ -54,6 +58,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 'F000014_14': ['NA21234'],
             },
         }
+        mock_subprocess.return_value.wait.return_value = 0
         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
 
         with self.assertRaises(CommandError) as ce:

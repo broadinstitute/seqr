@@ -5,11 +5,13 @@ import logging
 
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Family, Sample
-from seqr.utils.file_utils import file_iter
+from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 
 logger = logging.getLogger(__name__)
+
+GS_PATH_TEMPLATE = 'gs://seqr-datasets/v03/{path}/runs/{version}/'
 
 
 class Command(BaseCommand):
@@ -29,9 +31,11 @@ class Command(BaseCommand):
             return
 
         logger.info(f'Loading new samples from {path}: {version}')
-        metadata_path = f'gs://seqr-datasets/v03/{path}/runs/{version}/metadata.json'
-        metadata = json.loads(next(line for line in file_iter(metadata_path)))
+        gs_path = GS_PATH_TEMPLATE.format(path=path, version=version)
+        if not does_file_exist(gs_path + '_SUCCESS'):
+            raise CommandError(f'Run failed for {path}: {version}, unable to load data')
 
+        metadata = json.loads(next(line for line in file_iter(gs_path + 'metadata.json')))
         families = Family.objects.filter(guid__in=metadata['families'].keys())
         if len(families) < len(metadata['families']):
             invalid = metadata['families'].keys() - set(families.values_list('guid', flat=True))
