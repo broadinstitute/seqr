@@ -1,12 +1,13 @@
 /* eslint-disable react/jsx-one-expression-per-line */
 
+import PropTypes from 'prop-types'
 import React from 'react'
 import { Header, Segment, List, Icon } from 'semantic-ui-react'
 
 import { WORKSPACE_REQUIREMENTS } from 'shared/components/panel/LoadWorkspaceDataForm'
 import { SeqrAvailability } from './LandingPage'
 
-export default () => (
+const Faq = () => (
   <Segment basic padded="very">
     <Header dividing content="FAQ" size="huge" />
 
@@ -169,3 +170,17 @@ export default () => (
 
   </Segment>
 )
+
+const SpanishFaq = () => 'HELLO!'
+
+const LANGUAGE_MAP = {
+  es: <SpanishFaq />,
+}
+
+const FaqPages = ({ match }) => LANGUAGE_MAP[match.params.language] || <Faq />
+
+FaqPages.propTypes = {
+  match: PropTypes.object,
+}
+
+export default FaqPages
