@@ -164,10 +164,10 @@ class GeneCopyNumberSensitivity(models.Model):
 class GeneShet(models.Model):
     gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
 
-    shet = models.FloatField()
+    post_mean = models.FloatField()
 
     class Meta:
-        json_fields = ['shet']
+        json_fields = ['post_mean']
 
 
 class Omim(models.Model):

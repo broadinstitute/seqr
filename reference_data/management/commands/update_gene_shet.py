@@ -8,15 +8,13 @@ logger = logging.getLogger(__name__)
 class ShetReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = GeneShet
-    # The .tsv file is generated from the Google Doc at https://docs.google.com/spreadsheets/d/1enxGBWCAFBHdrRlqCj_ueleiDo9K9GWn/edit#gid=1146995171
-    # by downloading with a tsv format.
-    url = 'https://storage.googleapis.com/seqr-reference-data/gene_constraint/shet_Zeng(2023).xlsx%20-%20All%20scores-for%20gene%20page.tsv'
+    url = 'https://zenodo.org/record/7939768/files/s_het_estimates.genebayes.tsv'
 
     @staticmethod
     def parse_record(record):
         yield {
             'gene_id': record['ensg'],
-            'shet': float(record['post_mean (Shet)']),
+            'post_mean': float(record['post_mean']),
         }
 
 
