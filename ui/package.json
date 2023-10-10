@@ -45,7 +45,7 @@
     "mini-css-extract-plugin": "^2.3.0",
     "object-assign": "4.1.1",
     "patch-package": "^6.4.7",
-    "postcss": "^8.4.5",
+    "postcss": "^8.4.31",
     "postcss-flexbugs-fixes": "^5.0.2",
     "postcss-loader": "^6.1.1",
     "promise": "8.0.1",
