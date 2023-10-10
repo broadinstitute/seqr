@@ -26,6 +26,27 @@ const FAQS = [
         <a href="https://youtube.com/playlist?list=PLlMMtlgw6qNiY6mkBu111-lpmANKHdGKM" target="blank">tutorial videos</a>.
       </div>
     ),
+    es: {
+      header: 'P. ¿Qué es seqr?',
+      content: (
+        <div>
+          seqr es una plataforma open source de análisis de datos genómicos compatible con la Federal Information
+          Security Management Act (FISMA, por sus siglas en inglés) para el diagnóstico de enfermedades raras y el
+          descubrimiento de genes. La interfaz de búsqueda de variantes está diseñada para análisis basados en familias.
+          La plataforma seqr puede cargar un joint, o conjunto, denominado VCF y anotarlo con información relevante para
+          el análisis mendeliano en una interfaz web fácil de usar con enlaces a recursos externos. Los usuarios pueden
+          realizar búsquedas de novo/dominante, recesivas (homocigotos/heterocigotos compuestos/ligados al cromosoma X)
+          o personalizadas (listas de genes, penetrancia incompleta, etc.) dentro de una familia para identificar de
+          manera eficiente un diagnóstico o una causa candidata de enfermedad entre las variantes de un solo nucleótido
+          e indeles. La plataforma admite la búsqueda de una lista de genes en un grupo de muestras. A través de la
+          interfaz Matchmaker Exchange, seqr también admite el envío de variantes/genes candidatos e información
+          fenotípica a una red internacional para el descubrimiento de genes. <br /><br />
+
+          Para revisar la funcionalidad disponible en la plataforma seqr, consulte nuestros &nbsp;
+          <a href="https://youtube.com/playlist?list=PLlMMtlgw6qNiY6mkBu111-lpmANKHdGKM" target="blank">videos tutoriales</a>.
+        </div>
+      ),
+    },
   }, {
     header: 'Q. What analyses are not supported in seqr?',
     content: (
@@ -44,6 +65,26 @@ const FAQS = [
         </List.Item>
       </List>
     ),
+    es: {
+      header: 'P. ¿Qué análisis no admite seqr?',
+      content: (
+        <List bulleted>
+          <List.Item>
+            seqr no está diseñado para análisis de carga génica o de cohortes. Puede buscar variantes en un gen
+            candidato a través de sus datos, pero seqr no proporcionará una cuantificación de cuánta variación debe
+            esperar ver.
+          </List.Item>
+          <List.Item>
+            seqr no es un annotation pipeline para un VCF. Aunque las anotaciones se agregan cuando los datos se cargan
+            en seqr, no se puede generar el VCF anotado de seqr.
+          </List.Item>
+          <List.Item>
+            seqr no tiene capacidades de generación de informes, aunque existe un soporte limitado para descargar listas
+            de variantes cortas de seqr que podrían usarse como entrada para generar un informe externo.
+          </List.Item>
+        </List>
+      ),
+    },
   }, {
     header: 'Q. Can I try out seqr?',
     content: (
@@ -79,6 +120,46 @@ const FAQS = [
         then proceed with the instructions above.
       </div>
     ),
+    es: {
+      header: 'P. ¿Puedo probar seqr?',
+      content: (
+        <div>
+          ¡Sí! Cree una cuenta de seqr y pruebe la funcionalidad básica utilizando el proyecto de demostración.
+          <br /><br />
+
+          El proceso de inicio de sesión de seqr requiere que registre su dirección de correo electrónico en el Genomic
+          Data Science Analysis, Visualization, and Informatics Lab-Space (AnVIL*) del NHGRI. Esto requiere una cuenta
+          de Google, ya sea una cuenta de Gmail o registrar su cuenta de correo electrónico que no sea de Gmail con
+          Google.<br /><br />
+
+          Instrucciones para registrarse usando cuentas de Gmail o una cuenta de correo electrónico registrada con
+          Google:
+          <List ordered>
+            <List.Item>
+              Vaya a <a href="https://anvil.terra.bio" target="blank">https://anvil.terra.bio</a>
+            </List.Item>
+            <List.Item>
+              Abra el menu ( <Icon name="bars" />) en la parte superior izquierda y haz clic en &quot;Iniciar sesión con
+              Google&quot;. nicie sesión con la dirección de correo electrónico registrada con Gmail o Google* que
+              planea usar para iniciar sesión en seqr.
+            </List.Item>
+            <List.Item>
+              Se le pedirá que se registre y acepte los términos de servicio de AnVIL.
+            </List.Item>
+            <List.Item>
+              Vaya a <a href="https://seqr.broadinstitute.org" target="blank">https://seqr.broadinstitute.org</a> y
+              confirme que puede iniciar sesión. seqr mostrará un proyecto de demostración con el que se puede jugar
+              para probar cómo funciona.
+            </List.Item>
+          </List>
+
+          *Si prefiere usar su dirección de correo electrónico institucional u otra que no sea de Gmail, puede seguir
+          &nbsp;<a href="https://anvilproject.org/learn/account-setup/obtaining-a-google-id" target="blank">este enlace</a>
+          &nbsp;para obtener instrucciones sobre cómo crear una cuenta que esté asociada con su dirección de correo
+          electrónico institucional que no sea de Gmail, luego continúe con las instrucciones anteriores.
+        </div>
+      ),
+    },
   }, {
     header: 'Q. How can I analyze my data in seqr?',
     content: (
@@ -96,6 +177,42 @@ const FAQS = [
         this <a href="https://drive.google.com/file/d/1aE7vUvUOZw_r78Osjn1Q0Cs3c5DCuonz/view?usp=sharing" target="blank">documentation</a>
       </div>
     ),
+    es: {
+      header: 'P. ¿Cómo puedo analizar mis datos en seqr?',
+      content: (
+        <div>
+          Hay 3 mecanismos a través de los cuales puede cargar y analizar sus datos en seqr:
+          <List ordered>
+            <List.Item>
+              A través de la <a href="https://anvilproject.org" target="blank">AnVIL platform</a>* donde se pueden
+              realizar solicitudes de carga de un conjunto denominado vcf en seqr. Para obtener más información sobre
+              cómo generar un conjunto denominado vcf, consulte el&nbsp;
+              <a href="https://www.youtube.com/watch?v=TvYz_VI9vN0&ab_channel=BroadInstitute" target="blank">vídeo tutorial</a>
+            </List.Item>
+            <List.Item>
+              Como colaborador proporcionando muestras para secuenciación dentro del &nbsp;
+              <a href="https://cmg.broadinstitute.org" target="blank">Broad Institute Center for Mendelian Genomics</a>,
+              parte del <a href="https://gregorconsortium.org" target="blank">consorcio GREGoR</a>
+            </List.Item>
+            <List.Item>
+              En GitHub como <a href="http://github.com/broadinstitute/seqr" target="blank">proyecto de open source</a>
+              &nbsp;para descarga e instalación local
+            </List.Item>
+          </List>
+
+          *AnVIL es un repositorio de datos designado por el NIH de acceso controlado compatible con la plataforma
+          Terra. Se espera que los usuarios se aseguren de que el uso y el intercambio de datos dentro de Terra o AnVIL
+          Workspace se lleven a cabo de acuerdo con todas las leyes y regulaciones nacionales, tribales y estatales
+          aplicables, así como con las políticas y procedimientos institucionales relevantes para el manejo de datos
+          genómicos. Sin embargo, debido a que seqr se ejecuta dentro de los espacios de trabajo de Terra o AnVIL, no se
+          requiere aprobación regulatoria adicional para usar seqr para analizar los datos almacenados en Terra o AnVIL.
+          <br />
+
+          Para obtener más información sobre cómo generar un conjunto denominado vcf, consulte
+          esta <a href="https://drive.google.com/file/d/1aE7vUvUOZw_r78Osjn1Q0Cs3c5DCuonz/view?usp=sharing" target="blank">documentación</a>
+        </div>
+      ),
+    },
   }, {
     header: 'Q. How can I set up seqr locally?',
     content: (
@@ -111,6 +228,22 @@ const FAQS = [
         not be easily answered via a discussion post, send us an <a href="mailto:seqr@broadinstitute.org">email</a>.
       </div>
     ),
+    es: {
+      header: 'P. ¿Cómo puedo configurar seqr localmente?',
+      content: (
+        <div>
+          La configuración de seqr localmente generalmente requiere sólidas habilidades bioinformáticas para su
+          implementación y también requiere la descarga/almacenamiento de grandes conjuntos de datos de anotaciones.
+          Hay <a href="https://github.com/broadinstitute/seqr/blob/master/deploy/LOCAL_INSTALL.md" target="blank">documentación</a>
+          &nbsp; en GitHub sobre cómo configurar una instancia local de seqr. Si tiene preguntas o problemas con la
+          implementación, le recomendamos que consulte nuestra  &nbsp;
+          <a href="https://github.com/broadinstitute/seqr/discussions" target="blank">página de debates de Github</a>
+          &nbsp; para obtener ayuda general para la resolución de problemas. Si después de consultar nuestra
+          documentación todavía tiene preguntas que no pueden responderse fácilmente a través de una publicación de
+          discusión, envíenos un <a href="mailto:seqr@broadinstitute.org"> correo electrónico.</a>.
+        </div>
+      ),
+    },
   }, {
     header: 'Q. I am unable to log in or access my project in seqr. What should I do?',
     content: (
@@ -136,22 +269,71 @@ const FAQS = [
         </List>
       </div>
     ),
+    es: {
+      header: 'P. No puedo iniciar sesión o acceder a mi proyecto en seqr. ¿Qué debo hacer?',
+      content: (
+        <div>
+          Para acceder a seqr, los usuarios deben tener su dirección de correo electrónico registrada en AnVIL (ver
+          instrucciones arriba) y para ver proyectos específicos deben tener acceso al espacio de trabajo de AnVIL
+          correspondiente al proyecto. La razón más frecuente por la que un usuario no puede iniciar sesión en un
+          proyecto de seqr es porque el correo electrónico que se utiliza para iniciar sesión es diferente al que tiene
+          acceso al espacio de trabajo del proyecto.<br /><br />
+
+          Si aún tiene problemas después de haber confirmado que su dirección de correo electrónico está registrada con
+          AnVIL y es la misma que se agregó al proyecto seqr, intente lo siguiente:
+
+          <List bulleted>
+            <List.Item>
+              <i>Si no puede iniciar sesión en seqr en absoluto:</i> Primero inicie sesión en
+              AnVIL <a href="https://anvil.terra.bio" target="blank">aquí</a> y luego proceda
+              a <a href="https://seqr.broadinstitute.org" target="blank">seqr</a>.
+            </List.Item>
+            <List.Item>
+              <i>Si no ve su proyecto:</i> Primero inicie sesión en
+              AnVIL <a href="https://anvil.terra.bio" target="blank">aquí</a>, navegue hasta el espacio de trabajo
+              asociado con el proyecto, luego seleccione &quot;Data&quot; &gt; &quot;Files&quot; &gt;
+              &quot;Analyze in seqr&quot;.
+            </List.Item>
+          </List>
+        </div>
+      ),
+    },
   }, {
     header: 'Q. How long does it take to load data in seqr?',
     content: `Genomic datasets are large and the seqr loading pipeline richly annotates the variants so data loading can 
     take from a few days to up to a week to process, depending on the sample numbers and data types.`,
+    es: {
+      header: 'P. ¿Cuánto tiempo se tarda en cargar datos en seqr?',
+      content: `Los conjuntos de datos genómicos son grandes y la canalización de carga de seqr anota detalladamente las
+       variantes, por lo que la carga de datos puede tardar desde unos pocos días hasta una semana en procesarse, según
+       el número de muestras y los tipos de datos.`,
+    },
   }, {
     header: 'Q. How do I add a new team member to a project?',
     content: (
       <div>
-        To add a new collaborator, navigate to the respective workspace in AnVIL and select Share. Only personnel with
-        &quot;Can Share&quot; level access in AnVIL can add or remove collaborators. The seqr team does not manage user
-        access. <br /><br />
+        To add a new collaborator, navigate to the respective workspace in AnVIL and select &quot;Share&quot;. Only
+        personnel with &quot;Can Share&quot; level access in AnVIL can add or remove collaborators. The seqr team does
+        not manage user access. <br /><br />
 
         Please make sure your new team member registers the same email with Terra/AnVIL as the one added to the
         workspace. This is the most frequent reason why new users are unable to access a project.
       </div>
     ),
+    es: {
+      header: '¿Cómo agrego un nuevo miembro del equipo a un proyecto?',
+      content: (
+        <div>
+          Para agregar un nuevo colaborador, navegue al espacio de trabajo respectivo en AnVIL y seleccione
+          &quot;Share&quot;. Solo el personal con nivel de acceso &quot;Can Share&quot; en AnVIL puede agregar o
+          eliminar colaboradores. El equipo de seqr no gestiona el acceso de los usuarios. <br /><br />
+
+          Asegúrese de que su nuevo miembro del equipo registre el mismo correo electrónico con Terra/AnVIL que el
+          agregado al espacio de trabajo. Esta es la razón más frecuente por la que los nuevos usuarios no pueden
+          acceder a un proyecto.
+        </div>
+      ),
+    },
   }, {
     header: 'Q. What workspace permissions do I need to use seqr in AnVIL?',
     content: (
@@ -169,6 +351,33 @@ const FAQS = [
         then request loading from the copy, as you will now be the Owner of the cloned workspace.
       </div>
     ),
+    es: {
+      header: 'P. ¿Qué permisos de espacio de trabajo necesito para usar seqr en AnVIL?',
+      content: (
+        <div>
+          Para acceder a proyectos existentes de seqr, siga las instrucciones anteriores para agregar nuevos
+          colaboradores. Para enviar una solicitud para cargar datos a seqr, necesitará:<br />
+
+          <List bulleted>
+            <List.Item>Acceso de &quot;Writer&quot; o &quot;Owner&quot; al espacio de trabajo</List.Item>
+            <List.Item>Permisos &quot;Can Share&quot; activados para el espacio de trabajo</List.Item>
+            <List.Item>
+              No hay &nbsp;
+              <a href="https://support.terra.bio/hc/en-us/articles/360026775691" target="_blank" rel="noreferrer">
+                dominios de autorización
+              </a>
+               &nbsp; para asociar con el espacio de trabajo
+            </List.Item>
+          </List>
+
+          <br />
+          Si no tiene permisos suficientes en el espacio de trabajo para solicitar la carga, puede comunicarse con el
+          propietario existente del espacio de trabajo para solicitar estos permisos. Otra opción es clonar el espacio
+          de trabajo existente y luego solicitar la carga desde la copia, ya que ahora será el propietario del espacio
+          del espacio de trabajo clonado.
+        </div>
+      ),
+    },
   }, {
     header: 'Q. How much does it cost to use seqr?',
     content: (
@@ -183,11 +392,34 @@ const FAQS = [
         Once it is confirmed that the data is accessible in seqr, the VCF can be removed from the AnVIL workspace.
       </div>
     ),
+    es: {
+      header: 'P. ¿Cuánto cuesta usar seqr?',
+      content: (
+        <div>
+          Actualmente no hay costos asociados con las solicitudes para cargar datos desde su espacio de trabajo de AnVIL
+          a seqr o para usar seqr en AnVIL para analizar datos genómicos.<br /><br />
+
+          Usted será responsable de los costos de almacenamiento de sus VCF en un espacio de trabajo de AnVIL y será
+          responsable de cualquier operación de cómputo que elija ejecutar en ese espacio de trabajo, incluyendo el
+          costo de generar cualquier conjunto denominado VCF. Puede encontrar información detallada sobre los costos y
+          la facturación de AnVIL &nbsp;
+          <a href="https://support.terra.bio/hc/en-us/articles/360048632271-Overview-Terra-costs-and-billing-GCP-" target="blank">aquí</a>.
+          Una vez que se confirma que se puede acceder a los datos en seqr, el VCF se puede eliminar del espacio de
+          trabajo de AnVIL.
+        </div>
+      ),
+    },
   }, {
     header: 'Q. How do I add data to an existing project in seqr?',
     content: `To add new data, create a new joint called VCF with all the samples you want in your seqr project, including those
       you had previously loaded, and upload it using the Load Additional Data feature on the Project Page. All notes and
       tags saved in previously analyzed cases will be kept.`,
+    es: {
+      header: 'P. ¿Cómo puedo agregar datos a un proyecto existente en seqr?',
+      content: `Para agregar nuevos datos, cree un nuevo conjunto denominado VCF con todas las muestras que desee en su 
+      proyecto seqr, incluyendo las que había cargado previamente, y cárgala usando la función “Load Additional Data” en 
+      la página “Project Page”. Se conservarán todas las notas y etiquetas guardadas en casos previamente analizados.`,
+    },
   }, {
     header: 'Q. How do I transfer data between workspaces in seqr?',
     content: (
@@ -201,6 +433,21 @@ const FAQS = [
         to the original workspace and request loading additional data from that project as described above.
       </div>
     ),
+    es: {
+      header: 'P. ¿Cómo puedo transferir datos entre espacios de trabajo en seqr?',
+      content: (
+        <div>
+          Cada proyecto en seqr está vinculado a un solo espacio de trabajo. No podemos admitir la carga de un VCF desde
+          un nuevo espacio de trabajo a un proyecto seqr existente.<br /><br />
+
+          Para cargar un nuevo conjunto denominado VCF, deberá solicitar la carga desde el nuevo espacio de trabajo.
+          Esto creará un nuevo proyecto seqr con los datos, y ninguno de sus análisis anteriores, como etiquetas y
+          notas, estará disponible allí. Alternativamente, si desea agregar datos al proyecto existente, deberá mover el
+          nuevo conjunto denominado VCF a este espacio de trabajo original y solicitar la carga de datos adicionales
+          desde allí.
+        </div>
+      ),
+    },
   }, {
     header: 'Q. Have ideas for seqr?',
     content: (
@@ -211,23 +458,32 @@ const FAQS = [
         proposed ideas, or email us at <a href="mailto:seqr@broadinstitute.org">seqr@broadinstitute.org</a>.
       </div>
     ),
+    es: {
+      header: 'P. ¿Tiene ideas para seqr?',
+      content: (
+        <div>
+          Estamos emocionados de ver crecer las funciones de seqr para respaldar sus necesidades de análisis y las de
+          otros, y agradecemos sus sugerencias o contribuciones de código al proyecto de open source. Abra una nueva
+          &nbsp; <a href="https://github.com/broadinstitute/seqr/discussions" target="blank">discusión de Github</a>
+          &nbsp; para discutir sus ideas, o envíenos un correo electrónico a &nbsp;
+          <a href="mailto:seqr@broadinstitute.org">seqr@broadinstitute.org</a>.
+        </div>
+      ),
+    },
   },
 ]
-
-const SPANISH_FAQ = []
-
-const LANGUAGE_MAP = {
-  es: SPANISH_FAQ,
-}
 
 // TODO add links to other languages
 const FaqPages = ({ match }) => (
   <Segment basic padded="very">
     <Header dividing content="FAQ" size="huge" />
-    {(LANGUAGE_MAP[match.params.language] || FAQS).map(({ header, content }) => [
-      <Header content={header} size="medium" />,
-      content,
-    ])}
+    {FAQS.map((config) => {
+      const { header, content } = config[match.params.language] || config
+      return [
+        <Header content={header} size="medium" />,
+        content,
+      ]
+    })}
   </Segment>
 )
 
