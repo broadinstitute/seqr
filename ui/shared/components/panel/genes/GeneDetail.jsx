@@ -211,6 +211,23 @@ const STAT_DETAILS = [
     'of how likely the gene is to be intolerant of loss-of-function mutations.',
   },
   {
+    title: 'Shet',
+    scoreField: 'sHet',
+    fields: [
+      { field: 'postMean', label: 'post_mean' },
+    ],
+    note: (
+      <span>
+        This score was developed by the Pritchard lab [
+        <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10245655" target="_blank" rel="noreferrer">
+          Zeng et al 2023
+        </a>
+        ] to predict gene constraint based on functional and evolutionary information. Scores &gt;0.1 are considered to
+        have high likelihood to be under extreme selection.
+      </span>
+    ),
+  },
+  {
     title: 'Haploinsufficient',
     content: gene => (
       <DosageSensitivity
