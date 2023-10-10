@@ -639,7 +639,7 @@ class Sample(ModelWithGUID):
         (SAMPLE_TYPE_RNA, 'RNA'),
     )
 
-    DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+    DATASET_TYPE_VARIANT_CALLS = 'SNV_INDEL'
     DATASET_TYPE_SV_CALLS = 'SV'
     DATASET_TYPE_MITO_CALLS = 'MITO'
     DATASET_TYPE_CHOICES = (
@@ -649,11 +649,14 @@ class Sample(ModelWithGUID):
     )
     DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
+    NO_TISSUE_TYPE = 'X'
     TISSUE_TYPE_CHOICES = (
-        ('WB', 'Whole Blood'),
-        ('F', 'Fibroblast'),
-        ('M', 'Muscle'),
-        ('L', 'Lymphocyte'),
+        ('WB', 'whole_blood'),
+        ('F', 'fibroblasts'),
+        ('M', 'muscle'),
+        ('L', 'lymphocytes'),
+        ('A', 'airway_cultured_epithelium'),
+        (NO_TISSUE_TYPE, 'None'),
     )
 
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
@@ -661,7 +664,7 @@ class Sample(ModelWithGUID):
     sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
     dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES)
 
-    tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES, null=True, blank=True)
+    tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES)
 
     # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
     sample_id = models.TextField(db_index=True)

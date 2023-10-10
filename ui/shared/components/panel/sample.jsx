@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { Popup, Icon } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../Spacers'
-import { DATASET_TYPE_VARIANT_CALLS } from '../../utils/constants'
+import { DATASET_TYPE_SNV_INDEL_CALLS } from '../../utils/constants'
 
 const Detail = styled.span`
   font-size: 11px;
@@ -22,7 +22,7 @@ const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) => (
       <span>
         <Icon size="small" name="circle" color={iconColor(loadedSample, isOutdated)} />
         {loadedSample && <b>{loadedSample.sampleType}</b>}
-        {loadedSample && loadedSample.datasetType !== DATASET_TYPE_VARIANT_CALLS && ` - ${loadedSample.datasetType}`}
+        {loadedSample && loadedSample.datasetType !== DATASET_TYPE_SNV_INDEL_CALLS && ` - ${loadedSample.datasetType}`}
         {
           !hoverDetails && (loadedSample ? (
             <Detail>

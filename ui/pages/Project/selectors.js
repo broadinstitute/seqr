@@ -63,6 +63,7 @@ export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isL
 export const getSamplesLoading = state => state.samplesLoading.isLoading
 export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
 export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
+export const getSavedVariantTableState = state => state.savedVariantTableState
 const getFamiliesTableFiltersByProject = state => state.familyTableFilterState
 
 export const getCurrentProject = createSelector(
@@ -896,14 +897,14 @@ export const getTissueOptionsByIndividualGuid = createSelector(
     const tissueTypesByIndividualGuid = Object.entries(rnaSeqDataByIndividualGuid || {}).map(
       ([individualGuid, rnaSeqData]) => ([
         individualGuid,
-        [...new Set(Object.values(rnaSeqData?.spliceOutliers || {}).flat().map(({ tissueType }) => tissueType))],
+        [...new Set(Object.values(rnaSeqData || {}).map(Object.values).flat(2).map(({ tissueType }) => tissueType))],
       ]),
     )
     return tissueTypesByIndividualGuid.reduce((acc, [individualGuid, tissueTypes]) => (
       tissueTypes.length > 0 ? {
         ...acc,
         [individualGuid]: tissueTypes.map(tissueType => (
-          { key: tissueType, text: TISSUE_DISPLAY[tissueType] || 'No Tissue', value: tissueType }
+          { key: tissueType, text: TISSUE_DISPLAY[tissueType] || 'Unknown Tissue', value: tissueType }
         )),
       } : acc
     ), {})
@@ -915,10 +916,9 @@ export const getRnaSeqOutliersByIndividual = createSelector(
   rnaSeqDataByIndividual => Object.entries(rnaSeqDataByIndividual).reduce(
     (acc, [individualGuid, rnaSeqData]) => ({
       ...acc,
-      [individualGuid]: {
-        outliers: Object.values(rnaSeqData.outliers || {}),
-        spliceOutliers: Object.values(rnaSeqData.spliceOutliers || {}).flat(),
-      },
+      [individualGuid]: Object.entries(rnaSeqData).reduce((acc2, [key, data]) => ({
+        ...acc2, [key]: Object.values(data).flat(),
+      }), {}),
     }), {},
   ),
 )

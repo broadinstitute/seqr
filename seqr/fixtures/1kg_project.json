@@ -360,6 +360,7 @@
         "last_modified_date": "2017-03-12T22:37:17.555Z",
         "project": 4,
         "family_id": "14",
+        "analysis_status": "Rncc",
         "success_story": "Differential treatement",
         "success_story_types": ["A", "D"]
     }
@@ -880,7 +881,8 @@
 
         "individual": 1,
         "sample_type": "WES",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "sample_id": "NA19675",
         "is_active": true,
         "elasticsearch_index": "test_index",
@@ -898,7 +900,8 @@
 
         "individual": 2,
         "sample_type": "WES",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "sample_id": "NA19678",
         "is_active": true,
         "elasticsearch_index": "test_index_old",
@@ -915,7 +918,7 @@
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 3,
         "sample_type": "RNA",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "sample_id": "NA19679_S",
         "is_active": true,
         "elasticsearch_index":null,
@@ -937,8 +940,9 @@
         "sample_type": "WES",
         "is_active": false,
         "elasticsearch_index": "test_index",
+        "tissue_type": "X",
         "individual": 3,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -955,7 +959,8 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 4,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -972,7 +977,8 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 5,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -989,7 +995,8 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 6,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1006,7 +1013,8 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 7,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1023,8 +1031,9 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 8,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1041,7 +1050,8 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 9,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1058,8 +1068,9 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 10,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1076,8 +1087,9 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 11,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1094,8 +1106,9 @@
         "sample_type": "WES",
         "is_active": false,
     	"individual": 12,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1112,8 +1125,9 @@
         "sample_type": "WES",
         "is_active": false,
     	"individual": 14,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1130,7 +1144,8 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 15,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "loaded_date": "2020-02-05T06:42:55.397Z"
     }
 },
@@ -1147,8 +1162,9 @@
         "sample_type": "WGS",
         "is_active": false,
         "individual": 16,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1165,8 +1181,10 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 17,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "data_source": "auto__2023-08-08",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1184,6 +1202,7 @@
         "is_active": true,
         "individual": 4,
         "dataset_type": "SV",
+        "tissue_type": "X",
         "loaded_date": "2018-02-05T06:42:55.397Z"
     }
 },
@@ -1201,6 +1220,7 @@
         "is_active": true,
         "individual": 5,
         "dataset_type": "SV",
+        "tissue_type": "X",
         "loaded_date": "2018-02-05T06:42:55.397Z"
     }
 },
@@ -1257,24 +1277,6 @@
 },
 {
     "model": "seqr.sample",
-    "pk": 150,
-    "fields": {
-        "guid": "S000150_na19675_d2",
-        "created_date": "2017-02-05T06:42:55.397Z",
-        "created_by": null,
-        "last_modified_date": "2017-03-13T09:07:49.744Z",
-        "individual": 1,
-        "sample_type": "RNA",
-        "dataset_type": "VARIANTS",
-        "sample_id": "NA19675_D2",
-        "is_active": true,
-        "elasticsearch_index":null,
-        "data_source": "muscle_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
-    }
-},
-{
-    "model": "seqr.sample",
     "pk": 151,
     "fields": {
         "guid": "S000151_na19675_1",
@@ -1283,7 +1285,7 @@
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 1,
         "sample_type": "RNA",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "sample_id": "NA19675_1",
         "is_active": true,
         "elasticsearch_index":null,
@@ -1302,7 +1304,7 @@
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 1,
         "sample_type": "RNA",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "sample_id": "NA19675_D2",
         "is_active": true,
         "elasticsearch_index":null,
@@ -1315,7 +1317,7 @@
     "model": "seqr.rnaseqoutlier",
     "pk": 1,
     "fields": {
-        "sample": 150,
+        "sample": 152,
         "gene_id": "ENSG00000135953",
         "z_score": 7.31,
         "p_value": 0.00000000000948,
@@ -1326,7 +1328,7 @@
     "model": "seqr.rnaseqoutlier",
     "pk": 2,
     "fields": {
-        "sample": 150,
+        "sample": 152,
         "gene_id": "ENSG00000240361",
         "z_score": -4.08,
         "p_value": 5.88,
@@ -1337,7 +1339,7 @@
     "model": "seqr.rnaseqoutlier",
     "pk": 3,
     "fields": {
-        "sample": 150,
+        "sample": 152,
         "gene_id": "ENSG00000268903",
         "z_score": 7.08,
         "p_value": 0.000000000588,
@@ -1365,7 +1367,7 @@
     "model": "seqr.rnaseqtpm",
     "pk": 5,
     "fields": {
-        "sample": 150,
+        "sample": 152,
         "gene_id": "ENSG00000227232",
         "tpm": 9.1
     }
@@ -1373,7 +1375,7 @@
     "model": "seqr.rnaseqtpm",
     "pk": 6,
     "fields": {
-        "sample": 150,
+        "sample": 152,
         "gene_id": "ENSG00000233653",
         "tpm": 1.03
     }

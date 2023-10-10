@@ -13,6 +13,7 @@ import {
   VARIANT_PER_PAGE_FIELD,
   VARIANT_TAGGED_DATE_FIELD,
   SHOW_ALL,
+  DISCOVERY_CATEGORY_NAME,
 } from 'shared/utils/constants'
 import { StyledForm } from 'shared/components/form/FormHelpers'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
@@ -30,6 +31,7 @@ const FILTER_FIELDS = [
 ]
 
 const TAG_OPTIONS = [
+  DISCOVERY_CATEGORY_NAME,
   'Tier 1 - Novel gene and phenotype',
   'Tier 1 - Novel gene for known phenotype',
   'Tier 1 - Phenotype expansion',
@@ -58,17 +60,10 @@ const TAG_OPTIONS = [
   label: { empty: true, circular: true, style: { backgroundColor: 'white' } },
 }))
 
-TAG_OPTIONS.push({
-  value: SHOW_ALL,
-  text: 'All',
-  key: 'all',
-  label: { empty: true, circular: true, style: { backgroundColor: 'white' } },
-})
-
 const PAGE_URL = '/summary_data/saved_variants'
 
 const getUpdateTagUrl =
-  (selectedTag, match) => `${PAGE_URL}/${selectedTag}${match.params.gene ? `/${match.params.gene}` : ''}`
+  (selectedTag, match) => `${PAGE_URL}/${(selectedTag || []).join(';') || SHOW_ALL}${match.params.gene ? `/${match.params.gene}` : ''}`
 
 const getGeneHref = tag => selectedGene => `${PAGE_URL}/${tag || SHOW_ALL}/${selectedGene.key}`
 
@@ -82,6 +77,9 @@ const BaseSavedVariants = React.memo(({ loadVariants, geneDetail, ...props }) =>
       filters={FILTER_FIELDS}
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
+      summaryFullWidth
+      multiple
+      selectedTag={tag && tag.split(';').filter(t => t !== SHOW_ALL)}
       additionalFilter={
         <StyledForm inline>
           <Form.Field

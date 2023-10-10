@@ -6,8 +6,6 @@ AFFECTED_ID = 0
 UNAFFECTED_ID = 1
 MALE = 'M'
 
-VARIANT_DATASET = 'VARIANTS'
-
 VARIANT_KEY_FIELD = 'variantId'
 GROUPED_VARIANTS_FIELD = 'variants'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
@@ -29,6 +27,8 @@ XPOS = 'xpos'
 PATHOGENICTY_SORT_KEY = 'pathogenicity'
 PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
 ABSENT_PATH_SORT_OFFSET = 12.5
+CONSEQUENCE_SORT = 'protein_consequence'
+OMIM_SORT = 'in_omim'
 
 ALT_ALT = 'alt_alt'
 REF_REF = 'ref_ref'

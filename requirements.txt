@@ -18,13 +18,13 @@ cffi==1.15.1
     # via cryptography
 charset-normalizer==3.0.1
     # via requests
-cryptography==41.0.3
+cryptography==41.0.4
     # via social-auth-core
 defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
-django==3.2.20
+django==3.2.21
     # via
     #   -r requirements.in
     #   django-anymail
@@ -84,7 +84,7 @@ oauthlib==3.2.2
     #   social-auth-core
 openpyxl==3.1.1
     # via -r requirements.in
-pillow==9.4.0
+pillow==10.0.1
     # via -r requirements.in
 protobuf==3.20.2
     # via
@@ -147,7 +147,7 @@ sqlparse==0.4.4
     # via django
 tqdm==4.64.1
     # via -r requirements.in
-urllib3==1.26.14
+urllib3==1.26.17
     # via
     #   elasticsearch
     #   requests

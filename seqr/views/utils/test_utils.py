@@ -668,6 +668,26 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         }
 
 
+class AirtableTest(object):
+
+    def assert_expected_airtable_call(self, call_index, filter_formula, fields, additional_params=None):
+        expected_params = {
+            'fields[]': mock.ANY,
+            'pageSize': '100',
+            'filterByFormula': filter_formula,
+        }
+        if additional_params:
+            expected_params.update(additional_params)
+        self.assertDictEqual(responses.calls[call_index].request.params, expected_params)
+        self.assertListEqual(self._get_list_param(responses.calls[call_index].request, 'fields%5B%5D'), fields)
+
+    @staticmethod
+    def _get_list_param(call, param):
+        query_params = call.url.split('?')[1].split('&')
+        param_str = f'{param}='
+        return [p.replace(param_str, '') for p in query_params if p.startswith(param_str)]
+
+
 USER_FIELDS = {
     'dateJoined', 'email', 'firstName', 'lastLogin', 'lastName', 'username', 'displayName', 'id',  'isActive', 'isAnvil',
     'isAnalyst', 'isDataManager', 'isPm', 'isSuperuser',
@@ -1057,7 +1077,7 @@ PARSED_VARIANTS = [
         },
         'pos': 248367227,
         'predictions': {'splice_ai': 0.75, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': 'D',
-                        'vest': None, 'mut_pred': None,
+                        'vest': '0.335', 'mut_pred': None,
                         'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None,
                         'polyphen': None, 'dann': None, 'sift': None, 'cadd': '25.9', 'primate_ai': None,
                         'mpc': None, 'strvctvre': None, 'splice_ai_consequence': None, 'gnomad_noncoding': 1.01272,},

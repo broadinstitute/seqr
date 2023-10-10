@@ -271,7 +271,7 @@ class SearchUtilsTests(SearchTestHelper):
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=2, skip_genotype_filter=False,
             search_fields=['locus'], rs_ids=[],  variant_ids=['1-248367227-TC-T', '2-103343353-GAGA-G'],
-            parsed_variant_ids=[('1', 248367227, 'TC', 'T'), ('2', 103343353, 'GAGA', 'G')], dataset_type='VARIANTS',
+            parsed_variant_ids=[('1', 248367227, 'TC', 'T'), ('2', 103343353, 'GAGA', 'G')], dataset_type='SNV_INDEL',
             omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
         )
 
@@ -305,7 +305,7 @@ class SearchUtilsTests(SearchTestHelper):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type=None,
+            inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type=None,
             search_fields=['annotations'], omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
         )
 
@@ -313,7 +313,7 @@ class SearchUtilsTests(SearchTestHelper):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='SV',
+            inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SV',
             search_fields=['annotations', 'annotations_secondary']
         )
 
@@ -321,7 +321,7 @@ class SearchUtilsTests(SearchTestHelper):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='ALL',
+            inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='ALL',
             search_fields=['annotations', 'annotations_secondary']
         )
 
@@ -329,7 +329,7 @@ class SearchUtilsTests(SearchTestHelper):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
-            inheritance_mode='recessive', dataset_type='VARIANTS', secondary_dataset_type='VARIANTS',
+            inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
             search_fields=['annotations', 'annotations_secondary'],
             omitted_sample_guids=['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733'],
         )

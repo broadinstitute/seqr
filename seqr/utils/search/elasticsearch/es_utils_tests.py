@@ -76,6 +76,7 @@ ES_VARIANTS = [
           'exac_AC_Hom': 0,
           'topmed_AC': 21,
           'dbnsfp_REVEL_score': None,
+          'dbnsfp_VEST4_score': '0.335;0.341;0.38',
           'primate_ai_score': None,
           'variantId': '1-248367227-TC-T',
           'sortedTranscriptConsequences': [
@@ -316,6 +317,7 @@ ES_VARIANTS = [
           'gnomad_genomes_AN': None,
           'dbnsfp_MetaSVM_pred': None,
           'dbnsfp_Polyphen2_HVAR_pred': None,
+          'dbnsfp_VEST4_score': '.;.;.;.',
           'clinvar_allele_id': None,
           'gnomad_exomes_Hom': 0,
           'gnomad_exomes_AF_POPMAX_OR_GLOBAL': 0.00016269686320447742,

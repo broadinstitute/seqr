@@ -270,8 +270,7 @@ SAMPLE_SV_WGS_QC_DATA = [
     b'NA19678	FALSE\n',
 ]
 
-RNA_SAMPLE_GUID = 'S000150_na19675_d2'
-RNA_TPM_SAMPLE_GUID = 'S000152_na19675_d2'
+RNA_MUSCLE_SAMPLE_GUID = 'S000152_na19675_d2'
 RNA_SPLICE_SAMPLE_GUID = 'S000151_na19675_1'
 PLACEHOLDER_GUID = 'S0000100'
 RNA_FILE_ID = 'gs://rna_data/new_muscle_samples.tsv.gz'
@@ -296,18 +295,18 @@ SAMPLE_GENE_SPLICE_DATA = {
     },
 }
 SAMPLE_GENE_SPLICE_DATA2 = {
-    'ENSG00000233750-2-167258096-167258349-*-psi3': {
+    '-2-167258096-167258349-*-psi3': {
         'chrom': '2', 'start': 167258096, 'end': 167258349, 'strand': '*', 'type': 'psi3',
-        'p_value': 1.56e-25, 'z_score': 6.33, 'delta_psi': 0.45, 'read_count': 143, 'gene_id': 'ENSG00000233750',
+        'p_value': 1.56e-25, 'z_score': 6.33, 'delta_psi': 0.45, 'read_count': 143, 'gene_id': '',
         'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 0,
     }
 }
 RNA_OUTLIER_SAMPLE_DATA = [
-    f'{RNA_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_OUTLIER_DATA)}\n',
+    f'{RNA_MUSCLE_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_OUTLIER_DATA)}\n',
     f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'p_value': '0.04', 'p_adjust': '0.112', 'z_score': '1.9'}})}\n",
 ]
 RNA_TPM_SAMPLE_DATA = [
-    f'{RNA_TPM_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n',
+    f'{RNA_MUSCLE_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n',
     f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '0.112'}})}\n",
 ]
 RNA_SPLICE_SAMPLE_DATA = [
@@ -652,26 +651,27 @@ class DataManagerAPITest(AuthenticationTestCase):
         'outlier': {
             'model_cls': RnaSeqOutlier,
             'message_data_type': 'Expression Outlier',
-            'header': ['sampleID', 'project', 'geneID', 'detail', 'pValue', 'padjust', 'zScore'],
+            'header': ['sampleID', 'project', 'geneID', 'tissue', 'detail', 'pValue', 'padjust', 'zScore'],
             'optional_headers': ['detail'],
-            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'muscle', 'detail1', 0.01, 0.001, -3.1],
+            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
             'duplicated_indiv_id_data': [
-                ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
+                ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000240361', 'fibroblasts', 'detail2', 0.01, 0.13, -3.1],
             ],
             'write_data': {
                 'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "p_value": "0.064", "p_adjust": "0.0000057", "z_score": "7.8"}}\n',
                 'NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "p_value": "0.01", "p_adjust": "0.13", "z_score": "-3.1"}}\n'
             },
             'new_data': [
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.13, -3.1],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA19675_D3', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'muscle', 'detail1', 0.01, 0.13, -3.1],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'muscle', 'detail2', 0.01, 0.13, -3.1],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA19675_D3', 'Test Reprocessed Project', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'muscle', '', 0.04, 0.112, 1.9],
             ],
             'skipped_samples': 'NA19675_D3',
+            'sample_tissue_type': 'M',
             'num_parsed_samples': 3,
             'initial_model_count': 3,
             'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
@@ -679,7 +679,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'expected_models_json': [
                 ('ENSG00000240361', 0.13, 0.01, -3.1), ('ENSG00000233750', 0.0000057, 0.064, 7.8),
             ],
-            'sample_guid': RNA_SAMPLE_GUID,
+            'sample_guid': RNA_MUSCLE_SAMPLE_GUID,
         },
         'tpm': {
             'model_cls': RnaSeqTpm,
@@ -714,14 +714,14 @@ class DataManagerAPITest(AuthenticationTestCase):
             'sample_tissue_type': 'M',
             'num_parsed_samples': 4,
             'initial_model_count': 4,
-            'deleted_count': 1,
+            'deleted_count': 3,
             'extra_warnings': [
                 'Skipped data loading for the following 1 sample(s) due to mismatched tissue type: NA19678 (fibroblasts, muscle)',
             ],
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.0)],
-            'sample_guid': RNA_TPM_SAMPLE_GUID,
+            'sample_guid': RNA_MUSCLE_SAMPLE_GUID,
         },
         'splice_outlier': {
             'model_cls': RnaSeqSpliceOutlier,
@@ -759,7 +759,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
                 # a new sample NA20888
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                ['NA20888', 'Test Reprocessed Project', '', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
                 # a project mismatched sample NA20878
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3',
@@ -771,6 +771,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'initial_model_count': 7,
             'deleted_count': 4,
             'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
+            'allow_missing_gene': True,
             'get_models_json': lambda models: list(
                 models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'type', 'p_value', 'z_score', 'delta_psi',
                                    'read_count', 'rare_disease_samples_with_junction', 'rare_disease_samples_total')),
@@ -810,6 +811,15 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(sample.data_source, data_source)
         return sample.guid
 
+    def test_update_rna_outlier(self, *args, **kwargs):
+        self._test_update_rna_seq('outlier', *args, **kwargs)
+
+    def test_update_rna_tpm(self, *args, **kwargs):
+        self._test_update_rna_seq('tpm', *args, **kwargs)
+
+    def test_update_rna_splice_outlier(self, *args, **kwargs):
+        self._test_update_rna_seq('splice_outlier', *args, **kwargs)
+
     @mock.patch('seqr.views.utils.dataset_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.dataset_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @mock.patch('seqr.views.utils.dataset_utils.safe_post_to_slack')
@@ -818,188 +828,193 @@ class DataManagerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
-    def test_update_rna_seq(self, mock_open, mock_subprocess, mock_load_uploaded_file,
+    def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess, mock_load_uploaded_file,
                             mock_os, mock_datetime, mock_send_slack):
         url = reverse(update_rna_seq)
         self.check_data_manager_login(url)
 
-        for data_type, params in self.RNA_DATA_TYPE_PARAMS.items():
-            with self.subTest(data_type):
-                model_cls = params['model_cls']
-                header = params['header']
-                loaded_data_row = params['loaded_data_row']
+        params = self.RNA_DATA_TYPE_PARAMS[data_type]
+        model_cls = params['model_cls']
+        header = params['header']
+        loaded_data_row = params['loaded_data_row']
 
-                # Test errors
-                body = {'dataType': data_type, 'file': 'gs://rna_data/muscle_samples.tsv.gz'}
-                mock_datetime.now.return_value = datetime(2020, 4, 15)
-                mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
-                mock_load_uploaded_file.return_value = [['a']]
-                mock_does_file_exist = mock.MagicMock()
-                mock_does_file_exist.wait.return_value = 1
-                mock_subprocess.side_effect = [mock_does_file_exist]
-                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-                self.assertEqual(response.status_code, 400)
-                self.assertDictEqual(response.json(), {'error': 'File not found: gs://rna_data/muscle_samples.tsv.gz'})
+        # Test errors
+        body = {'dataType': data_type, 'file': 'gs://rna_data/muscle_samples.tsv.gz'}
+        mock_datetime.now.return_value = datetime(2020, 4, 15)
+        mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
+        mock_load_uploaded_file.return_value = [['a']]
+        mock_does_file_exist = mock.MagicMock()
+        mock_does_file_exist.wait.return_value = 1
+        mock_subprocess.side_effect = [mock_does_file_exist]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'File not found: gs://rna_data/muscle_samples.tsv.gz'})
 
-                mock_does_file_exist.wait.return_value = 0
-                mock_file_iter = mock.MagicMock()
-                def _set_file_iter_stdout(rows):
-                    mock_file_iter.stdout = [('\t'.join([str(col) for col in row]) + '\n').encode() for row in rows]
-                    mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+        mock_does_file_exist.wait.return_value = 0
+        mock_file_iter = mock.MagicMock()
+        def _set_file_iter_stdout(rows):
+            mock_file_iter.stdout = [('\t'.join([str(col) for col in row]) + '\n').encode() for row in rows]
+            mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
 
-                _set_file_iter_stdout([['']])
-                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-                self.assertEqual(response.status_code, 400)
-                self.assertDictEqual(response.json(), {
-                    'error': f'Invalid file: missing column(s): '
-                             f'{", ".join(sorted([col for col in header if col not in params["optional_headers"]]))}',
-                })
+        _set_file_iter_stdout([['']])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'error': f'Invalid file: missing column(s): '
+                     f'{", ".join(sorted([col for col in header if col not in params["optional_headers"]]))}',
+        })
 
-                mismatch_row = loaded_data_row[:-1] + [loaded_data_row[-1] - 2]
-                _set_file_iter_stdout([header, loaded_data_row, loaded_data_row, mismatch_row])
-                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-                self.assertEqual(response.status_code, 400)
-                response_json = response.json()
-                self.assertTrue('errors' in response_json.keys())
-                self.assertEqual(len(response_json['errors']), 1)
-                self.assertTrue(response_json['errors'][0].startswith(
-                    f'Error in {loaded_data_row[0]} data for {params.get("row_id", mismatch_row[2])}: mismatched entries '))
+        mismatch_row = loaded_data_row[:-1] + [loaded_data_row[-1] - 2]
+        _set_file_iter_stdout([header, loaded_data_row, loaded_data_row, mismatch_row])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        response_json = response.json()
+        self.assertTrue('errors' in response_json.keys())
+        self.assertEqual(len(response_json['errors']), 1)
+        self.assertTrue(response_json['errors'][0].startswith(
+            f'Error in {loaded_data_row[0]} data for {params.get("row_id", mismatch_row[2])}: mismatched entries '))
 
-                missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
-                _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
-                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-                self.assertEqual(response.status_code, 400)
-                self.assertDictEqual(response.json(), {'error': 'Unable to find matches for the following samples: NA19675_D3'})
+        missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
+        _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Unable to find matches for the following samples: NA19675_D3'})
 
-                unknown_gene_id_row1 = loaded_data_row[:2] + ['NOT_A_GENE_ID1'] + loaded_data_row[3:]
-                unknown_gene_id_row2 = loaded_data_row[:2] + ['NOT_A_GENE_ID2'] + loaded_data_row[3:]
-                _set_file_iter_stdout([header, unknown_gene_id_row1, unknown_gene_id_row2])
-                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-                self.assertEqual(response.status_code, 400)
-                self.assertEqual(response.json()['errors'][0], 'Unknown Gene IDs: NOT_A_GENE_ID1, NOT_A_GENE_ID2')
+        unknown_gene_id_row1 = loaded_data_row[:2] + ['NOT_A_GENE_ID1'] + loaded_data_row[3:]
+        unknown_gene_id_row2 = loaded_data_row[:2] + ['NOT_A_GENE_ID2'] + loaded_data_row[3:]
+        _set_file_iter_stdout([header, unknown_gene_id_row1, unknown_gene_id_row2])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['errors'][0], 'Unknown Gene IDs: NOT_A_GENE_ID1, NOT_A_GENE_ID2')
 
-                mapping_body = {'mappingFile': {'uploadedFileId': 'map.tsv'}}
-                mapping_body.update(body)
-                mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
-                response = self.client.post(url, content_type='application/json', data=json.dumps(mapping_body))
-                self.assertEqual(response.status_code, 400)
-                self.assertDictEqual(response.json(), {'error': 'Must contain 2 columns: a'})
+        if not params.get('allow_missing_gene'):
+            _set_file_iter_stdout([header, loaded_data_row[:2] + [''] + loaded_data_row[3:]])
+            response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['errors'][0], 'Samples missing required "gene_id": NA19675_D2')
 
-                # Test already loaded data
-                mock_send_slack.reset_mock()
-                self.reset_logs()
-                _set_file_iter_stdout([header, loaded_data_row])
-                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-                self.assertEqual(response.status_code, 200)
-                info = [
-                    'Parsed 1 RNA-seq samples',
-                    'Attempted data loading for 0 RNA-seq samples in the following 0 projects: ',
-                ]
-                warnings = ['Skipped loading for 1 samples already loaded from this file']
-                self.assertDictEqual(response.json(), {'info': info, 'warnings': warnings, 'sampleGuids': [], 'fileName': mock.ANY})
-                self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings)
-                self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
-                mock_send_slack.assert_not_called()
+        mapping_body = {'mappingFile': {'uploadedFileId': 'map.tsv'}}
+        mapping_body.update(body)
+        mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(mapping_body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Must contain 2 columns: a'})
 
-                def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, new_sample_individual_id, body,
-                                             project_names, num_created_samples=1, warnings=None, additional_logs=None):
-                    self.reset_logs()
-                    _set_file_iter_stdout([header] + data)
-                    response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-                    self.assertEqual(response.status_code, 200)
-                    num_projects = len(project_names.split(','))
-                    info = [
-                        f'Parsed {num_parsed_samples} RNA-seq samples',
-                        f'Attempted data loading for {num_loaded_samples} RNA-seq samples in the following {num_projects}'
-                        f' projects: {project_names}'
-                    ]
-                    file_name = RNA_FILENAME_TEMPLATE.format(data_type)
-                    response_json = response.json()
-                    self.assertDictEqual(response_json, {'info': info, 'warnings': warnings or [], 'sampleGuids': mock.ANY,
-                                                         'fileName': file_name})
-                    new_sample_guid = self._check_rna_sample_model(
-                        individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz',
-                        tissue_type=params.get('sample_tissue_type'),
-                    )
-                    self.assertTrue(new_sample_guid in response_json['sampleGuids'])
-                    additional_logs = [(f'create {num_created_samples} Samples', {'dbUpdate': {
-                        'dbEntity': 'Sample', 'updateType': 'bulk_create',
-                        'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [response_json['sampleGuids'][-1]],
-                    }})] + (additional_logs or [])
-                    self._has_expected_file_loading_logs(
-                        'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings,
-                        additional_logs=additional_logs, additional_logs_offset=3)
+        # Test already loaded data
+        mock_send_slack.reset_mock()
+        self.reset_logs()
+        _set_file_iter_stdout([header, loaded_data_row])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        info = [
+            'Parsed 1 RNA-seq samples',
+            'Attempted data loading for 0 RNA-seq samples in the following 0 projects: ',
+        ]
+        warnings = ['Skipped loading for 1 samples already loaded from this file']
+        self.assertDictEqual(response.json(), {'info': info, 'warnings': warnings, 'sampleGuids': [], 'fileName': mock.ANY})
+        self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings)
+        self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
+        mock_send_slack.assert_not_called()
 
-                    return response_json, new_sample_guid
+        def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, new_sample_individual_id, body,
+                                     project_names, num_created_samples=1, warnings=None, additional_logs=None):
+            self.reset_logs()
+            _set_file_iter_stdout([header] + data)
+            response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+            self.assertEqual(response.status_code, 200)
+            num_projects = len(project_names.split(','))
+            info = [
+                f'Parsed {num_parsed_samples} RNA-seq samples',
+                f'Attempted data loading for {num_loaded_samples} RNA-seq samples in the following {num_projects}'
+                f' projects: {project_names}'
+            ]
+            file_name = RNA_FILENAME_TEMPLATE.format(data_type)
+            response_json = response.json()
+            self.assertDictEqual(response_json, {'info': info, 'warnings': warnings or [], 'sampleGuids': mock.ANY,
+                                                 'fileName': file_name})
+            new_sample_guid = self._check_rna_sample_model(
+                individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz',
+                tissue_type=params.get('sample_tissue_type'),
+            )
+            self.assertTrue(new_sample_guid in response_json['sampleGuids'])
+            additional_logs = [(f'create {num_created_samples} Samples', {'dbUpdate': {
+                'dbEntity': 'Sample', 'updateType': 'bulk_create',
+                'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [response_json['sampleGuids'][-1]],
+            }})] + (additional_logs or [])
+            self._has_expected_file_loading_logs(
+                'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings,
+                additional_logs=additional_logs, additional_logs_offset=3)
 
-                # Test loading new data
-                mock_open.reset_mock()
-                self.reset_logs()
-                mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
-                mock_writes = []
-                def mock_write(content):
-                    mock_writes.append(content)
-                mock_open.return_value.__enter__.return_value.write.side_effect = mock_write
-                body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
-                warnings = [
-                    f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
-                    f'unmatched samples: {params["skipped_samples"]}']
-                if params.get('extra_warnings'):
-                    warnings = params['extra_warnings'] + warnings
-                deleted_count = params.get('deleted_count', params['initial_model_count'])
-                response_json, new_sample_guid = _test_basic_data_loading(
-                    params['new_data'], params["num_parsed_samples"], 2, 16, body,
-                    '1kg project nåme with uniçøde, Test Reprocessed Project', warnings=warnings,
-                    additional_logs=[
-                        (f'delete {model_cls.__name__}s', {'dbUpdate': {
-                            'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
-                           'parentEntityIds': [params['sample_guid']], 'updateType': 'bulk_delete'}}),
-                        ('update 1 Samples', {'dbUpdate': {
-                            'dbEntity': 'Sample', 'entityIds': [params['sample_guid']],
-                            'updateType': 'bulk_update', 'updateFields': ['data_source']}}),
-                    ])
-                self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
-                self.assertEqual(mock_send_slack.call_count, 2)
-                mock_send_slack.assert_has_calls([
-                    mock.call(
-                        'seqr-data-loading',
-                        f'0 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>\n``````',
-                    ), mock.call(
-                        'seqr-data-loading',
-                        f'1 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/'
-                        f'R0003_test/project_page|Test Reprocessed Project>\n```NA20888```',
-                    ),
-                ])
+            return response_json, new_sample_guid
 
-                # test database models are correct
-                self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
-                sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz',
-                                                           tissue_type=params.get('sample_tissue_type'))
-                self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
+        # Test loading new data
+        mock_open.reset_mock()
+        self.reset_logs()
+        mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
+        mock_writes = []
+        def mock_write(content):
+            mock_writes.append(content)
+        mock_open.return_value.__enter__.return_value.write.side_effect = mock_write
+        body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
+        warnings = [
+            f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
+            f'unmatched samples: {params["skipped_samples"]}']
+        if params.get('extra_warnings'):
+            warnings = params['extra_warnings'] + warnings
+        deleted_count = params.get('deleted_count', params['initial_model_count'])
+        response_json, new_sample_guid = _test_basic_data_loading(
+            params['new_data'], params["num_parsed_samples"], 2, 16, body,
+            '1kg project nåme with uniçøde, Test Reprocessed Project', warnings=warnings,
+            additional_logs=[
+                (f'delete {model_cls.__name__}s', {'dbUpdate': {
+                    'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
+                   'parentEntityIds': [params['sample_guid']], 'updateType': 'bulk_delete'}}),
+                ('update 1 Samples', {'dbUpdate': {
+                    'dbEntity': 'Sample', 'entityIds': [params['sample_guid']],
+                    'updateType': 'bulk_update', 'updateFields': ['data_source']}}),
+            ])
+        self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
+        self.assertEqual(mock_send_slack.call_count, 2)
+        mock_send_slack.assert_has_calls([
+            mock.call(
+                'seqr-data-loading',
+                f'0 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>\n``````',
+            ), mock.call(
+                'seqr-data-loading',
+                f'1 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/'
+                f'R0003_test/project_page|Test Reprocessed Project>\n```NA20888```',
+            ),
+        ])
 
-                # test correct file interactions
-                mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
-                mock_open.assert_called_with(RNA_FILENAME_TEMPLATE.format(data_type), 'wt')
-                self.assertListEqual(mock_writes, [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']])
+        # test database models are correct
+        self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
+        sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz',
+                                                   tissue_type=params.get('sample_tissue_type'))
+        self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
-                # test loading new data without deleting existing data
-                data = [params['no_existing_data']]
-                body.pop('mappingFile')
-                _test_basic_data_loading(data, 1, 1, 2, body, '1kg project nåme with uniçøde')
+        # test correct file interactions
+        mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
+        mock_open.assert_called_with(RNA_FILENAME_TEMPLATE.format(data_type), 'wt')
+        self.assertListEqual(mock_writes, [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']])
 
-                # Test loading data when where are duplicated individual ids in different projects.
-                data = params['duplicated_indiv_id_data']
-                mock_writes = []
-                _test_basic_data_loading(data, 2, 2, 20, body, '1kg project nåme with uniçøde, Test Reprocessed Project',
-                                         num_created_samples=2)
-                self.assertSetEqual(set([s.split('_', 1)[1] for s in mock_writes]), params['write_data'])
+        # test loading new data without deleting existing data
+        data = [params['no_existing_data']]
+        body.pop('mappingFile')
+        _test_basic_data_loading(data, 1, 1, 2, body, '1kg project nåme with uniçøde')
+
+        # Test loading data when where are duplicated individual ids in different projects.
+        data = params['duplicated_indiv_id_data']
+        mock_writes = []
+        _test_basic_data_loading(data, 2, 2, 20, body, '1kg project nåme with uniçøde, Test Reprocessed Project',
+                                 num_created_samples=2)
+        self.assertSetEqual(set([s.split('_', 1)[1] for s in mock_writes]), params['write_data'])
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     def test_load_rna_seq_sample_data(self, mock_open, mock_os):
         mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
 
-        url = reverse(load_rna_seq_sample_data, args=[RNA_SAMPLE_GUID])
+        url = reverse(load_rna_seq_sample_data, args=[RNA_MUSCLE_SAMPLE_GUID])
         self.check_data_manager_login(url)
 
         for data_type, params in self.RNA_DATA_TYPE_PARAMS.items():

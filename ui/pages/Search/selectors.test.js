@@ -49,5 +49,5 @@ test('getLocusListOptions', () => {
 })
 
 test('getDatasetTypes', () => {
-  expect(getDatasetTypes(STATE, { projectFamilies: [{ projectGuid: PROJECT_GUID }] })).toEqual('SV,VARIANTS')
+  expect(getDatasetTypes(STATE, { projectFamilies: [{ projectGuid: PROJECT_GUID }] })).toEqual('SNV_INDEL,SV')
 })

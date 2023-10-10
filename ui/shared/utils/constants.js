@@ -111,7 +111,7 @@ export const MATCHMAKER_CONTACT_URL_FIELD = {
 
 // SAMPLES
 
-export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+export const DATASET_TYPE_SNV_INDEL_CALLS = 'SNV_INDEL'
 export const DATASET_TYPE_SV_CALLS = 'SV'
 export const DATASET_TYPE_MITO_CALLS = 'MITO'
 
@@ -909,25 +909,16 @@ const ORDERED_VEP_CONSEQUENCES = [
     value: 'NMD_transcript_variant',
     so: 'SO:0001621',
   },
-  // 2 kinds of 'non_coding_transcript_exon_variant' text due to value change in Ensembl v77
   {
-    description: 'A sequence variant that changes non-coding exon sequence',
-    text: 'Non-coding exon variant',
-    value: 'non_coding_exon_variant',
-    so: 'SO:0001792',
+    description: 'A sequence variant that changes non-coding exon sequence in a canonical transcript for that gene, typically a noncoding gene',
+    text: 'Non-coding transcript exon variant (canonical)',
+    value: 'non_coding_transcript_exon_variant__canonical',
   },
   {
-    description: 'A sequence variant that changes non-coding exon sequence',
-    text: 'Non-coding transcript exon variant',
+    description: 'A sequence variant that changes non-coding exon sequence in any transcript for that gene, often a noncoding version of a protein coding gene',
+    text: 'Non-coding transcript exon variant (all)',
     value: 'non_coding_transcript_exon_variant',
     so: 'SO:0001792',
-  },
-  // 2 kinds of 'nc_transcript_variant' text due to value change in Ensembl v77
-  {
-    description: 'A transcript variant of a non coding RNA',
-    text: 'nc transcript variant',
-    value: 'nc_transcript_variant',
-    so: 'SO:0001619',
   },
   {
     description: 'A transcript variant of a non coding RNA',
@@ -1152,6 +1143,16 @@ const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuids[0].localeCompare(b.familyGuids[0]) },
   { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
   {
+    value: SORT_BY_IN_OMIM,
+    text: 'In OMIM',
+    comparator: (a, b, genesById) => (
+      Object.keys(b.transcripts || {}).reduce(
+        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
+      ) - Object.keys(a.transcripts || {}).reduce(
+        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
+      )),
+  },
+  {
     value: SORT_BY_PROTEIN_CONSQ,
     text: 'Protein Consequence',
     comparator: (a, b) => getConsequenceRank(a) - getConsequenceRank(b),
@@ -1181,16 +1182,6 @@ const VARIANT_SORT_OPTONS = [
       )) - Math.min(...Object.keys(b.transcripts || {}).reduce(
         (acc, geneId) => [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [],
       ))),
-  },
-  {
-    value: SORT_BY_IN_OMIM,
-    text: 'In OMIM',
-    comparator: (a, b, genesById) => (
-      Object.keys(b.transcripts || {}).reduce(
-        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
-      ) - Object.keys(a.transcripts || {}).reduce(
-        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
-      )),
   },
   {
     value: SORT_BY_PRIORITIZED_GENE,

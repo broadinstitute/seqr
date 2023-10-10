@@ -290,14 +290,14 @@ def update_rna_seq(request):
     # Save sample data for loading
     file_name = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}.json.gz'
     with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'wt') as f:
-        for sample, sample_data in samples_to_load.items():
-            f.write(f'{sample.guid}\t\t{json.dumps(sample_data)}\n')
+        for sample_guid, sample_data in samples_to_load.items():
+            f.write(f'{sample_guid}\t\t{json.dumps(sample_data)}\n')
 
     return create_json_response({
         'info': info,
         'warnings': warnings,
         'fileName': file_name,
-        'sampleGuids': [s.guid for s in samples_to_load.keys()],
+        'sampleGuids': list(samples_to_load.keys()),
     })
 
 

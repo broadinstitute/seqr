@@ -20,7 +20,7 @@ from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
     is_internal_anvil_project
-from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
+from seqr.views.utils.individual_utils import delete_individuals, add_or_update_individuals_and_families
 
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
@@ -88,7 +88,7 @@ def update_individual_hpo_terms(request, individual_guid):
 
     feature_fields = ['features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures']
     update_json = {
-        key: [get_parsed_feature(feature) for feature in request_json[key]] if request_json.get(key) else None
+        key: _get_parsed_features(request_json[key]) if request_json.get(key) else None
         for key in feature_fields
     }
     update_model_from_json(individual, update_json, user=request.user)
@@ -99,6 +99,18 @@ def update_individual_hpo_terms(request, individual_guid):
     return create_json_response({
         individual.guid: individual_json
     })
+
+
+def _get_parsed_features(features):
+    parsed_features = {}
+    for feature in features:
+        feature_id = feature['id']
+        feature_json = {'id': feature_id}
+        for field in ['notes', 'qualifiers']:
+            if field in feature:
+                feature_json[field] = feature[field]
+        parsed_features[feature_id] = feature_json
+    return list(parsed_features.values())
 
 
 def _anvil_project_can_edit_pedigree(project, user):
@@ -423,7 +435,7 @@ def _gene_list_value(val):
 
 
 INDIVIDUAL_METADATA_FIELDS = {
-    FEATURES_COL: lambda val: [{'id': feature} for feature in val],
+    FEATURES_COL: lambda val: [{'id': feature} for feature in set(val)],
     ABSENT_FEATURES_COL: lambda val: [{'id': feature} for feature in val],
     BIRTH_COL: int,
     DEATH_COL: int,
@@ -579,18 +591,21 @@ def _process_hpo_records(records, filename, project, user):
                 row[ABSENT_FEATURES_COL] = _parse_hpo_terms(row.get(ABSENT_FEATURES_COL))
 
         elif HPO_TERM_NUMBER_COL in column_map:
-            aggregate_rows = defaultdict(lambda: {FEATURES_COL: [], ABSENT_FEATURES_COL: []})
+            aggregate_rows = defaultdict(lambda: {FEATURES_COL: set(), ABSENT_FEATURES_COL: set()})
             for row in row_dicts:
                 column = ABSENT_FEATURES_COL if row.pop(AFFECTED_FEATURE_COL) == 'no' else FEATURES_COL
                 aggregate_entry = aggregate_rows[(row.get(FAMILY_ID_COL), row.get(INDIVIDUAL_ID_COL))]
                 term = row.pop(HPO_TERM_NUMBER_COL, None)
                 if term:
-                    aggregate_entry[column].append(term.strip())
+                    aggregate_entry[column].add(term.strip())
                 else:
-                    aggregate_entry[column] = []
+                    aggregate_entry[column] = set()
                 aggregate_entry.update({k: v for k, v in row.items() if v})
 
-            return _parse_individual_hpo_terms(list(aggregate_rows.values()), project, user)
+            row_dicts = [
+                {**entry, FEATURES_COL: list(entry[FEATURES_COL]), ABSENT_FEATURES_COL: list(entry[ABSENT_FEATURES_COL])}
+                for entry in aggregate_rows.values()
+            ]
 
     return _parse_individual_hpo_terms(row_dicts, project, user)
 
@@ -703,13 +718,18 @@ def _get_record_updates(record, individual, invalid_values, allowed_assigned_ana
             if k == ASSIGNED_ANALYST_COL:
                 if v not in allowed_assigned_analysts:
                     raise ValueError
-                parsed_val = v
+                if v:
+                    update_record[k] = v
             else:
-                parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
-                if (k not in {FEATURES_COL, ABSENT_FEATURES_COL} and parsed_val == getattr(individual, k)) or has_same_features:
-                    parsed_val = None
-            if parsed_val:
-                update_record[k] = parsed_val
+                _parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
+                if (
+                    # different features
+                    (k in {FEATURES_COL, ABSENT_FEATURES_COL} and not has_same_features)
+                    # different value (for non-feature col)
+                    or _parsed_val != getattr(individual, k)
+                ):
+                    update_record[k] = _parsed_val
+
         except (KeyError, ValueError):
             invalid_values[k][v].append(individual.individual_id)
     return update_record

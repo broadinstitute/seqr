@@ -47,6 +47,9 @@ INDIVIDUAL_UPDATE_DATA = {
     'features': [{
         'id': 'HP:0002011',
         'label': 'nervous system abnormality',
+    }, {
+        'id': 'HP:0002011',
+        'label': 'nervous system abnormality',
         'category': 'HP:0000708',
         'categoryName': 'Nervous',
         'qualifiers': [{'type': 'onset', 'label': 'congenital'}],
@@ -283,6 +286,7 @@ class IndividualAPITest(object):
         self.assertIsNone(updated_individual['paternalGuid'])
         self.assertIsNone(updated_individual['paternalGuid'])
 
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_individuals(self, mock_pm_group):
         individuals_url = reverse(delete_individuals_handler, args=[PROJECT_GUID])
@@ -334,11 +338,15 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA20889'])
 
-        response = self.client.post(
-            pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
-                'individuals': [{'individualGuid': 'I000015_na20885'}]
-            }))
+        data = json.dumps({
+            'individuals': [{'individualGuid': 'I000015_na20885'}]
+        })
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.post(pm_required_delete_individuals_url, content_type='application/json', data=data)
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active search sample: NA20885'])
 
+        response = self.client.post(pm_required_delete_individuals_url, content_type='application/json', data=data)
         self.assertEqual(response.status_code, 200)
 
         # Test External AnVIL projects
@@ -817,7 +825,10 @@ class IndividualAPITest(object):
 * * Son, age 12, unaffected, unspecified availability
 * __Relatives:__ None""")
 
-    def _is_expected_individuals_metadata_upload(self, response, expected_families=False):
+    def _is_expected_individuals_metadata_upload(self, response, expected_families=False, has_non_hpo_update=False):
+        unchanged_individuals = ['NA19679']
+        if not has_non_hpo_update:
+            unchanged_individuals.insert(0, 'NA19678')
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         expected_response = {
@@ -826,9 +837,9 @@ class IndividualAPITest(object):
             'warnings': [
                 "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0004322 (NA19675_1); HP:0100258 (NA19679)",
                 'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
-                'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
+                f'No changes detected for {len(unchanged_individuals)} individuals. The following entries will not be updated: {", ".join(unchanged_individuals)}',
             ],
-            'info': ['1 individuals will be updated'],
+            'info': [f'{2 if has_non_hpo_update else 1} individuals will be updated'],
         }
         if expected_families:
             expected_response['warnings'].insert(1, 'The following invalid values for "assigned_analyst" will not be added: test_user_no_access@test.com (NA19679)')
@@ -844,7 +855,10 @@ class IndividualAPITest(object):
         if expected_families:
             expected_keys.add('familiesByGuid')
         self.assertSetEqual(set(response_json.keys()), expected_keys)
-        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
+        updated_individuals = {'I000001_na19675'}
+        if has_non_hpo_update:
+            updated_individuals.add('I000002_na19678')
+        self.assertSetEqual(set(response_json['individualsByGuid'].keys()), updated_individuals)
         self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675'].keys()), INDIVIDUAL_FIELDS)
         self.assertListEqual(
             response_json['individualsByGuid']['I000001_na19675']['features'],
@@ -864,6 +878,10 @@ class IndividualAPITest(object):
         self.assertListEqual(
             response_json['individualsByGuid']['I000001_na19675']['candidateGenes'],
             [{'gene': 'IKBKAP', 'comments': 'multiple panels, no confirm'}, {'gene': 'EHBP1L1'}])
+
+        if has_non_hpo_update:
+            self.assertIsNone(response_json['individualsByGuid']['I000002_na19678']['features'])
+            self.assertFalse(response_json['individualsByGuid']['I000002_na19678']['affectedRelatives'])
 
         if expected_families:
             self.assertListEqual(list(response_json['familiesByGuid'].keys()), ['F000001_1'])
@@ -887,7 +905,7 @@ class IndividualAPITest(object):
         rows = [
             '1,NA19678,,,,,no,infant,recessive,,,not_an_email',
             '1,NA19679,HP:0100258 (Preaxial polydactyly),,,,,,,,,test_user_no_access@test.com',
-            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia),,,,,,,,,',
+            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia);HP:0011675 (Arrhythmia),,,,,,,,,',
         ]
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
@@ -907,11 +925,11 @@ class IndividualAPITest(object):
             ]})
 
         # send valid request
-        rows[0] = '1,NA19678,,,,,,,,,,'
+        rows[0] = '1,NA19678,,,,,false,,,,,'
         rows.append('1,NA19675_1,HP:0002017,"HP:0012469 (Infantile spasms);HP:0004322 (Short stature, severe)",F,2000,True,Juvenile onset,"Autosomal dominant inheritance, Sporadic","Finnish, Irish","IKBKAP -- (multiple panels, no confirm), EHBP1L1",test_user_collaborator@test.com')
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
-        self._is_expected_individuals_metadata_upload(response, expected_families=True)
+        self._is_expected_individuals_metadata_upload(response, expected_families=True, has_non_hpo_update=True)
 
     def test_individuals_metadata_json_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
@@ -919,6 +937,7 @@ class IndividualAPITest(object):
 
         f = SimpleUploadedFile('updates.json', json.dumps([
             {'external_id': 'NA19675_1', 'sex': 'F', 'date_of_birth': '2000-01-01', 'features': [
+                {'id': 'HP:0002017', 'observed': 'yes'},
                 {'id': 'HP:0002017', 'observed': 'yes'},
                 {'id': 'HP:0012469', 'observed': 'no'},
                 {'id': 'HP:0004322', 'observed': 'no'},
@@ -943,8 +962,10 @@ class IndividualAPITest(object):
         rows = [
             '1,NA19675_1,yes,HP:0002017,,F,2000,true,Juvenile onset,"Autosomal dominant inheritance, Sporadic","Finnish, Irish","IKBKAP -- (multiple panels, no confirm), EHBP1L1"',
             '1,NA19675_1,no,HP:0012469,,,,,,,,',
+            '1,NA19675_1,no,HP:0012469,,,,,,,,',
             '1,NA19675_1,no,,HP:0004322,,,,,,,',
             '1,NA19678,,,,,,,,,,',
+            '1,NA19679,yes,HP:0100258,,,,,,,,',
             '1,NA19679,yes,HP:0100258,,,,,,,,',
             '1,HG00731,yes,HP:0002017,,,,,,,,',
             '1,HG00731,no,HP:0012469,HP:0011675,,,,,,,',
@@ -983,20 +1004,20 @@ class IndividualAPITest(object):
         self.assertSetEqual(set(response_json.keys()), {'rnaSeqData', 'genesById'})
         self.assertDictEqual(response_json['rnaSeqData'], {
             INDIVIDUAL_GUID: {'outliers': {
-                'ENSG00000135953': {
+                'ENSG00000135953': [{
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'isSignificant': True,
-                    'tissueType': None,
-                },
-                'ENSG00000240361': {
+                    'tissueType': 'M',
+                }],
+                'ENSG00000240361': [{
                     'geneId': 'ENSG00000240361', 'zScore': -4.08, 'pValue': 5.88, 'pAdjust': 0.09, 'isSignificant': False,
-                    'tissueType': None,
-                },
-                'ENSG00000268903': {
+                    'tissueType': 'M',
+                }],
+                'ENSG00000268903': [{
                     'geneId': 'ENSG00000268903', 'zScore': 7.08, 'pValue':0.000000000588, 'pAdjust': 0.00000000139,
                     'isSignificant': True,
-                    'tissueType': None,
-                },
+                    'tissueType': 'M',
+                }],
             },
             'spliceOutliers': {
                 'ENSG00000268903': mock.ANY,
@@ -1023,8 +1044,8 @@ class IndividualAPITest(object):
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         response_rnaseq_data = response.json()['rnaSeqData'][INDIVIDUAL_GUID]
-        self.assertTrue(response_rnaseq_data['outliers']['ENSG00000135953']['isSignificant'])
-        significant_outliers = [outlier for outlier in response_rnaseq_data['outliers'].values() if outlier['isSignificant']]
+        self.assertTrue(response_rnaseq_data['outliers']['ENSG00000135953'][0]['isSignificant'])
+        significant_outliers = [outlier for outlier in response_rnaseq_data['outliers'].values() if outlier[0]['isSignificant']]
         self.assertEqual(2, len(significant_outliers))
         self.assertListEqual(
             sorted([{field: outlier[field] for field in ['start', 'end', 'pValue', 'tissueType', 'isSignificant']}

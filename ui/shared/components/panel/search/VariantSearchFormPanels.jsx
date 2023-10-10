@@ -186,6 +186,7 @@ export const ANNOTATION_PANEL = {
   fieldLayout: annotationFieldLayout([
     SV_GROUPS, HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS_SCREEN,
   ]),
+  helpText: 'Filter by reported annotation. Variants will be returned if they have ANY of the specified annotations, including if they have a Splice AI score above the threshold and no other annotations. This filter is overridden by the pathogenicity filter, so variants will be returned if they have the specified pathogenicity even if none of the annotation filters match.',
 }
 
 export const FREQUENCY_PANEL = {

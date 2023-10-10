@@ -258,6 +258,7 @@ else:
         'http://localhost:3000',
         'http://localhost:8000',
     )
+    # the collectstatic step in docker build runs without env variables set, and uncommenting these lines breaks the docker build
     # STATICFILES_DIRS.append(STATIC_ROOT)
     # STATIC_ROOT = None
     CORS_ALLOW_CREDENTIALS = True
@@ -290,8 +291,8 @@ TEMPLATES = [
 #########################################################
 
 SEQR_VERSION = 'v1.0'
-SEQR_PRIVACY_VERSION = float(os.environ.get('SEQR_PRIVACY_VERSION', 1.0))
-SEQR_TOS_VERSION = float(os.environ.get('SEQR_TOS_VERSION', 1.1))
+SEQR_PRIVACY_VERSION = float(os.environ.get('SEQR_PRIVACY_VERSION', 1.1))
+SEQR_TOS_VERSION = float(os.environ.get('SEQR_TOS_VERSION', 1.2))
 
 BASE_URL = os.environ.get("BASE_URL", "/")
 GA_TOKEN_ID = os.environ.get("GA_TOKEN_ID")

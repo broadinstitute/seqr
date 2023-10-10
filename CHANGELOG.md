@@ -3,6 +3,12 @@
 ## dev
 * Add GeneShet model to the reference DB (REQUIRES DB MIGRATION)
 
+## 10/6/23
+* Require tissue_type in Sample model (REQUIRES DB MIGRATION)
+
+## 9/22/23
+* Update VARIANTS dataset_type in Sample model (REQUIRES DB MIGRATION)
+
 ## 8/22/23
 * Add db indices to optimize RNA data queries (REQUIRES DB MIGRATION)
 
