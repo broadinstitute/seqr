@@ -1,12 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { NavLink } from 'react-router-dom'
 
 import DataTable from 'shared/components/table/DataTable'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import DataLoader from 'shared/components/DataLoader'
-import { InlineHeader } from 'shared/components/StyledComponents'
+import { InlineHeader, ActiveDisabledNavLink } from 'shared/components/StyledComponents'
 import {
   FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
   FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP,
@@ -23,11 +22,6 @@ const getDownloadFilename = successStoryTypes => `success_story_${successStoryTy
 const getFamilyFilterVal = ({ success_story }) => `${success_story}`
 
 const LOADING_PROPS = { inline: true }
-
-const ACTIVE_LINK_STYLE = {
-  cursor: 'notAllowed',
-  color: 'grey',
-}
 
 const formatInitialValue = (match) => {
   const query = match.params.successStoryTypes
@@ -65,7 +59,7 @@ const SuccessStory = React.memo(({ match, data, loading, loadingError, load, his
       fieldDisplay={fieldDisplay}
     />
     or &nbsp;
-    <NavLink to="/summary_data/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>
+    <ActiveDisabledNavLink to="/summary_data/success_story/all">view all success stories</ActiveDisabledNavLink>
     <VerticalSpacer height={15} />
     <DataTable
       downloadFileName={getDownloadFilename(match.params.successStoryTypes, data)}

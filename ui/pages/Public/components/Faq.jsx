@@ -5,6 +5,7 @@ import React from 'react'
 import { Header, Segment, List, Icon } from 'semantic-ui-react'
 
 import { WORKSPACE_REQUIREMENTS } from 'shared/components/panel/LoadWorkspaceDataForm'
+import { ActiveDisabledNavLink } from 'shared/components/StyledComponents'
 import { SeqrAvailability } from './LandingPage'
 
 const FAQS = [
@@ -473,10 +474,18 @@ const FAQS = [
   },
 ]
 
-// TODO add links to other languages
+const LANGUAGES = [{ path: '', text: 'English' }, { path: 'es', text: 'Español' }]
+
 const FaqPages = ({ match }) => (
   <Segment basic padded="very">
-    <Header dividing content="FAQ" size="huge" />
+    <Header
+      dividing
+      size="huge"
+      content="FAQ"
+      subheader={LANGUAGES.map(({ path, text }) => (
+        <ActiveDisabledNavLink key={path} exact padded activeColor="black" to={`/faq/${path}`}>{text}</ActiveDisabledNavLink>
+      ))}
+    />
     {FAQS.map((config) => {
       const { header, content } = config[match.params.language] || config
       return [
