@@ -23,7 +23,7 @@ import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../Sty
 import { PermissiveGeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
-import { GenCC, ClingenLabel, HI_THRESHOLD, TS_THRESHOLD } from '../genes/GeneDetail'
+import { GenCC, ClingenLabel, HI_THRESHOLD, TS_THRESHOLD, SHET_THRESHOLD } from '../genes/GeneDetail'
 import { getIndividualGeneDataByFamilyGene } from './selectors'
 
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
@@ -379,24 +379,38 @@ const GENE_DETAIL_SECTIONS = [
     color: 'red',
     description: 'Loss of Function Constraint',
     label: 'LOF CONSTR',
-    showDetails: gene => gene.constraints.louef < LOF_THRESHHOLD,
+    showDetails: gene => (gene.constraints.louef < LOF_THRESHHOLD) ||
+      (gene.cnSensitivity.phi && gene.cnSensitivity.phi > HI_THRESHOLD) ||
+      (gene.sHet.postMean && gene.sHet.postMean > SHET_THRESHOLD),
     detailsDisplay: gene => (
-      `This gene ranks as ${gene.constraints.louefRank} most intolerant of LoF mutations out of
-       ${gene.constraints.totalGenes} genes under study (louef:
-       ${gene.constraints.louef.toPrecision(4)}${gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}).
-       LOEUF is the observed to expected upper bound fraction for loss-of-function variants based on the variation
-       observed in the gnomad data. Both LOEUF and pLi are measures of how likely the gene is to be intolerant of
-       loss-of-function mutations`),
-  },
-  {
-    color: 'red',
-    description: 'HaploInsufficient',
-    label: 'HI',
-    showDetails: gene => gene.cnSensitivity.phi && gene.cnSensitivity.phi > HI_THRESHOLD,
-    detailsDisplay: gene => (
-      `These are a score developed by the Talkowski lab that predict whether a gene is haploinsufficient based 
-      on large chromosomal microarray data set analysis. Scores >${HI_THRESHOLD} are considered to have high likelihood to be 
-      haploinsufficient. This gene has a score of ${gene.cnSensitivity.phi.toPrecision(4)}.`),
+      <List bulleted>
+        <List.Item>
+          This gene ranks as &nbsp;
+          {gene.constraints.louefRank}
+          &nbsp;most intolerant of LoF mutations out of &nbsp;
+          {gene.constraints.totalGenes}
+          &nbsp;genes under study (louef: &nbsp;
+          {gene.constraints.louef.toPrecision(4)}
+          {gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}
+          )
+          <a href="https://pubmed.ncbi.nlm.nih.gov/32461654/" target="_blank" rel="noreferrer"> Karczewski (2020)</a>
+        </List.Item>
+        {gene.sHet.postMean && (
+          <List.Item>
+            This gene has a Shet score of &nbsp;
+            {gene.sHet.postMean.toPrecision(4)}
+            <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10245655" target="_blank" rel="noreferrer"> Zeng (2023)</a>
+          </List.Item>
+        )}
+        {gene.cnSensitivity.phi && (
+          <List.Item>
+            This gene has a haploinsufficiency (HI) score of &nbsp;
+            {gene.cnSensitivity.phi.toPrecision(4)}
+            <a href="https://pubmed.ncbi.nlm.nih.gov/35917817" target="_blank" rel="noreferrer"> Collins (2022)</a>
+          </List.Item>
+        )}
+      </List>
+    ),
   },
   {
     color: 'red',

@@ -175,6 +175,7 @@ DosageSensitivity.propTypes = {
 
 export const HI_THRESHOLD = 0.86
 export const TS_THRESHOLD = 0.94
+export const SHET_THRESHOLD = 0.1
 const HAPLOINSUFFICIENT_FIELDS = [{ field: 'phi', label: 'pHaplo' }]
 const TRIPLOSENSITIVE_FIELDS = [{ field: 'pts', label: 'pTriplo' }]
 const STAT_DETAILS = [
@@ -222,8 +223,9 @@ const STAT_DETAILS = [
         <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10245655" target="_blank" rel="noreferrer">
           Zeng et al 2023
         </a>
-        ] to predict gene constraint based on functional and evolutionary information. Scores &gt;0.1 are considered to
-        have high likelihood to be under extreme selection.
+        ] to predict gene constraint based on functional and evolutionary information. Scores &gt;
+        {SHET_THRESHOLD}
+        &nbsp; are considered to have high likelihood to be under extreme selection.
       </span>
     ),
   },
