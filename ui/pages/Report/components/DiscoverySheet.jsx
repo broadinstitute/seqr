@@ -1,22 +1,16 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { NavLink } from 'react-router-dom'
 
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
-import { InlineHeader } from 'shared/components/StyledComponents'
+import { InlineHeader, ActiveDisabledNavLink } from 'shared/components/StyledComponents'
 import { DISCOVERY_SHEET_COLUMNS, CMG_PROJECT_PATH } from '../constants'
 import { loadDiscoverySheet } from '../reducers'
 import { getDiscoverySheetLoading, getDiscoverySheetLoadingError, getDiscoverySheetRows } from '../selectors'
 
 const SEARCH_CATEGORIES = ['projects']
-
-const ACTIVE_LINK_STYLE = {
-  cursor: 'notAllowed',
-  color: 'grey',
-}
 
 const LOADING_PROPS = { inline: true }
 
@@ -33,7 +27,7 @@ const DiscoverySheet = React.memo(({ match, data, loading, load, loadingError })
     />
     <span>
       &nbsp; or &nbsp;
-      <NavLink to={`/report/discovery_sheet/${CMG_PROJECT_PATH}`} activeStyle={ACTIVE_LINK_STYLE}>view all CMG projects</NavLink>
+      <ActiveDisabledNavLink to={`/report/discovery_sheet/${CMG_PROJECT_PATH}`}>view all CMG projects</ActiveDisabledNavLink>
     </span>
     <DataTable
       striped

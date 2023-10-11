@@ -167,7 +167,7 @@ no_login_react_app_pages = [
     'matchmaker/disclaimer',
     'privacy_policy',
     'terms_of_service',
-    'faq',
+    'faq/.*',
 
 ]
 

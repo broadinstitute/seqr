@@ -1,14 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Link, NavLink } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import DataTable from 'shared/components/table/DataTable'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import StateDataLoader from 'shared/components/StateDataLoader'
-import { InlineHeader } from 'shared/components/StyledComponents'
+import { InlineHeader, ActiveDisabledNavLink } from 'shared/components/StyledComponents'
 import { BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
 
 const ALL_PROJECTS_PATH = 'all'
@@ -114,11 +114,6 @@ const VIEW_ALL_PAGES = [{ name: 'my', path: ALL_PROJECTS_PATH }]
 
 const SEARCH_CATEGORIES = ['projects']
 
-const ACTIVE_LINK_STYLE = {
-  cursor: 'notAllowed',
-  color: 'grey',
-}
-
 const getResultHref = result => `/summary_data/sample_metadata/${result.key}`
 
 const getColumns = (data) => {
@@ -141,7 +136,7 @@ const SampleMetadata = React.memo(({ projectGuid, queryForm, data, user }) => (
     {(user.isAnalyst ? ANALYST_VIEW_ALL_PAGES : VIEW_ALL_PAGES).map(({ name, path }) => (
       <span key={path}>
         &nbsp; or &nbsp;
-        <NavLink to={`/summary_data/sample_metadata/${path}`} activeStyle={ACTIVE_LINK_STYLE}>{`view all ${name} projects`}</NavLink>
+        <ActiveDisabledNavLink to={`/summary_data/sample_metadata/${path}`}>{`view all ${name} projects`}</ActiveDisabledNavLink>
       </span>
     ))}
     <HorizontalSpacer width={20} />
