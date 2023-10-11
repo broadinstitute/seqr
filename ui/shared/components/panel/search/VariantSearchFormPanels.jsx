@@ -106,7 +106,7 @@ export const HGMD_PATHOGENICITY_PANEL = {
   headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(HGMD_PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
   fields: HGMD_PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
-  helpText: 'Filter by reported pathogenicity. This overrides the annotation filter, so variants will be returned if they have either the specified transcript consequence OR pathogenicity. This also overrides the frequency filter, so variants will be returned if they have either the specified frequency OR pathogenicity and frequency up to 0.05',
+  helpText: 'Filter by reported pathogenicity.  This overrides the annotation filter, the frequency filter, and the call quality filter.  Variants will be returned if they have the specified transcript consequence AND the specified frequency AND all individuals pass all specified quality filters OR if the variant has the specified pathogenicity and a frequency up to 0.05.',
 }
 
 const IN_SILICO_SPLICING_FIELD = IN_SILICO_FIELDS.find(({ name }) => name === SPLICE_AI_FIELD)
