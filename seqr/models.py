@@ -324,7 +324,7 @@ class Family(ModelWithGUID):
 
     coded_phenotype = models.TextField(null=True, blank=True)
     mondo_id = models.CharField(null=True, blank=True, max_length=30)
-    post_discovery_omim_number = models.TextField(null=True, blank=True)
+    post_discovery_omim_number = ArrayField(models.PositiveIntegerField(), default=list)
     pubmed_ids = ArrayField(models.TextField(), default=list)
 
     analysis_status = models.CharField(
