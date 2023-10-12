@@ -8,6 +8,7 @@ from django.db.models import Count
 from django.db.models.fields.files import ImageFieldFile
 
 from matchmaker.models import MatchmakerSubmission
+from reference_data.models import Omim
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.individual_utils import delete_individuals
@@ -45,7 +46,16 @@ def family_page_data(request, family_guid):
     }
 
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
-    response['familiesByGuid'][family_guid]['detailsLoaded'] = True
+
+    mim_numbers = family.post_discovery_omim_numbers
+    omim_map = {o['phenotypeMimNumber']: o for o in get_json_for_queryset(
+        Omim.objects.filter(phenotype_mim_number__in=mim_numbers), nested_fields=[{'key': 'geneId', 'fields': ['gene', 'gene_id']}],
+    )}
+
+    response['familiesByGuid'][family_guid].update({
+        'detailsLoaded': True,
+        'postDiscoveryOmimNumbers': [omim_map.get(m, {'phenotypeMimNumber': m}) for m in mim_numbers],
+    })
 
     outlier_individual_guids = sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA)\
         .exclude(rnaseqoutlier__isnull=True, rnaseqspliceoutlier__isnull=True).values_list('individual__guid', flat=True)

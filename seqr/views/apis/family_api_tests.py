@@ -51,7 +51,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['familiesByGuid']), 1)
         family = response_json['familiesByGuid'][FAMILY_GUID]
-        family_fields = {'individualGuids', 'detailsLoaded', 'postDiscoveryOmimNumbers'}  # TODO
+        family_fields = {'individualGuids', 'detailsLoaded', 'postDiscoveryOmimNumbers'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(family.keys()), family_fields)
         self.assertEqual(family['projectGuid'], PROJECT_GUID)
@@ -59,6 +59,11 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertListEqual(family['analysedBy'], [
             {'createdBy': 'Test No Access User', 'dataType': 'SNP', 'lastModifiedDate': '2022-07-22T19:27:08.563+00:00'},
         ])
+        self.assertListEqual(family['postDiscoveryOmimNumbers'], [{
+            'geneId': 'ENSG00000243485', 'mimNumber': 103320, 'phenotypeMimNumber': 615120,
+            'phenotypeDescription': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
+            'phenotypeInheritance': 'Autosomal recessive',
+        },  {'phenotypeMimNumber': 615123}])
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
