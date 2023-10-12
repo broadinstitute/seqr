@@ -1,5 +1,5 @@
 import React from 'react'
-import { Form, Label } from 'semantic-ui-react'
+import { Icon, Form, Label } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
 import { validators } from '../components/form/FormHelpers'
@@ -1307,6 +1307,7 @@ export const SV_IN_SILICO_GROUP = 'Structural'
 export const NO_SV_IN_SILICO_GROUPS = [MISSENSE_IN_SILICO_GROUP, CODING_IN_SILICO_GROUP]
 export const SPLICE_AI_FIELD = 'splice_ai'
 
+const rangeSourceLink = <a href="https://pubmed.ncbi.nlm.nih.gov/36413997" target="_blank" rel="noreferrer">36413997</a>
 export const PREDICTOR_FIELDS = [
   { field: 'cadd', group: CODING_IN_SILICO_GROUP, thresholds: [0.151, 22.8, 25.3, 28.1, undefined], min: 1, max: 99 },
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, thresholds: [0.0161, 0.291, 0.644, 0.773, 0.932] },
@@ -1343,6 +1344,36 @@ export const PREDICTOR_FIELDS = [
   { field: 'mitotip', indicatorMap: MITOTIP_MAP },
   { field: 'hmtvar', thresholds: [undefined, undefined, 0.35, 0.35, undefined] },
 ]
+export const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
+export const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
+export const predictorColorRanges = thresholds => (
+  <div>
+    {PRED_COLOR_MAP.map((c, i) => {
+      const prevUndefined = thresholds[i - 1] === undefined
+      let range
+      if (thresholds[i] === undefined) {
+        if (prevUndefined) {
+          return null
+        }
+        range = ` >= ${thresholds[i - 1]}`
+      } else if (prevUndefined) {
+        range = ` < ${thresholds[i]}`
+      } else {
+        range = ` ${thresholds[i - 1]} - ${thresholds[i]}`
+      }
+      return (
+        <div key={c}>
+          {coloredIcon(c)}
+          {range}
+        </div>
+      )
+    })}
+    <small>
+      {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
+      Based on 2022 ClinGen recommendations (PMID: {rangeSourceLink})
+    </small>
+  </div>
+)
 
 export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {
   if (selectedMainTranscriptId || mainTranscriptId) {

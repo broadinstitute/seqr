@@ -5,10 +5,10 @@ import { connect } from 'react-redux'
 import { Icon, Transition, Popup } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
-import { PREDICTOR_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
+import { PRED_COLOR_MAP, PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, getVariantMainGeneId } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
-import { ButtonLink, ColoredIcon } from '../../StyledComponents'
+import { ButtonLink } from '../../StyledComponents'
 
 const PredictionValue = styled.span`
   margin-left: 5px;
@@ -18,8 +18,6 @@ const PredictionValue = styled.span`
 `
 
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
-
-const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
 
 const predictionFieldValue = (
   predictions, { field, thresholds, indicatorMap, infoField, infoTitle },
@@ -44,10 +42,6 @@ const predictionFieldValue = (
   return indicatorMap[value[0]] || indicatorMap[value]
 }
 
-const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
-
-const rangeSourceLink = <a href="https://pubmed.ncbi.nlm.nih.gov/36413997" target="_blank" rel="noreferrer">36413997</a>
-
 const Prediction = (
   { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, href },
 ) => {
@@ -63,34 +57,7 @@ const Prediction = (
     <Popup
       header={`${fieldName} Color Ranges`}
       hoverable
-      content={(
-        <div>
-          {PRED_COLOR_MAP.map((c, i) => {
-            const prevUndefined = thresholds[i - 1] === undefined
-            let range
-            if (thresholds[i] === undefined) {
-              if (prevUndefined) {
-                return null
-              }
-              range = ` >= ${thresholds[i - 1]}`
-            } else if (prevUndefined) {
-              range = ` < ${thresholds[i]}`
-            } else {
-              range = ` ${thresholds[i - 1]} - ${thresholds[i]}`
-            }
-            return (
-              <div key={c}>
-                {coloredIcon(c)}
-                {range}
-              </div>
-            )
-          })}
-          <small>
-            {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
-            Based on 2022 ClinGen recommendations (PMID: {rangeSourceLink})
-          </small>
-        </div>
-      )}
+      content={predictorColorRanges(thresholds)}
       trigger={<span>{fieldName}</span>}
     />
   ) : fieldName

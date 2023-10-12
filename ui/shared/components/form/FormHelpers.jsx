@@ -49,12 +49,12 @@ renderField.propTypes = {
   submitForm: PropTypes.func,
 }
 
-export const helpLabel = (label, labelHelp) => (
+export const helpLabel = (label, labelHelp, popupProps = { size: 'small' }) => (
   labelHelp ? (
     <label>
       {label}
       &nbsp;
-      <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" />
+      <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} position="top center" {...popupProps} />
     </label>
   ) : label
 )
@@ -91,7 +91,8 @@ ArrayFieldItem.propTypes = {
 
 export const configuredField = (field, formProps = {}) => {
   const {
-    component, name, isArrayField, addArrayElement, addArrayElementProps, arrayFieldName, key, label, labelHelp,
+    component, name, isArrayField, addArrayElement, addArrayElementProps,
+    arrayFieldName, key, label, labelHelp, popupProps,
     ...fieldProps
   } = field
   const baseProps = {
@@ -102,7 +103,7 @@ export const configuredField = (field, formProps = {}) => {
     component: renderField,
     fieldComponent: component,
     submitForm: formProps.submitOnChange ? formProps.onSubmit : null,
-    label: helpLabel(label, labelHelp),
+    label: helpLabel(label, labelHelp, popupProps),
     data: formProps.formMetaId && { formId: formProps.formMetaId },
     ...fieldProps,
   }
