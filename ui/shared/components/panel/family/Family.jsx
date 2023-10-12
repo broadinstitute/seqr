@@ -26,7 +26,7 @@ import {
   FAMILY_FIELD_SUCCESS_STORY_TYPE,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_NAME_LOOKUP,
-  FAMILY_FIELD_OMIM_NUMBER,
+  FAMILY_FIELD_OMIM_NUMBERS,
   FAMILY_FIELD_PMIDS, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_SUCCESS_STORY, FAMILY_NOTES_FIELDS,
   FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY,
   FAMILY_FIELD_ANALYSIS_GROUPS, FAMILY_FIELD_MONDO_ID,
@@ -112,10 +112,20 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
       </a>
     ),
   },
-  [FAMILY_FIELD_OMIM_NUMBER]: {
-    canEdit: true,
-    component: SingleFieldView,
-    fieldDisplay: value => <a target="_blank" rel="noreferrer" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
+  [FAMILY_FIELD_OMIM_NUMBERS]: {
+    // canEdit: true,  TODO
+    component: ListFieldView,
+    itemKey: ({ phenotypeMimNumber }) => phenotypeMimNumber,
+    itemDisplay: ({ geneSymbol, phenotypeMimNumber, phenotypeDescription, phenotypeInheritance }) => (
+      <span>
+        <a target="_blank" rel="noreferrer" href={`https://www.omim.org/entry/${phenotypeMimNumber}`}>{phenotypeMimNumber}</a>
+        :&nbsp;
+        <b>{geneSymbol}</b>
+        &nbsp;
+        {phenotypeDescription}
+        {phenotypeInheritance && <i>{` (${phenotypeInheritance})`}</i>}
+      </span>
+    ),
   },
   [FAMILY_FIELD_PMIDS]: {
     internal: true,

@@ -49,7 +49,7 @@ def family_page_data(request, family_guid):
 
     mim_numbers = family.post_discovery_omim_numbers
     omim_map = {o['phenotypeMimNumber']: o for o in get_json_for_queryset(
-        Omim.objects.filter(phenotype_mim_number__in=mim_numbers), nested_fields=[{'key': 'geneId', 'fields': ['gene', 'gene_id']}],
+        Omim.objects.filter(phenotype_mim_number__in=mim_numbers), nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}],
     )}
 
     response['familiesByGuid'][family_guid].update({
