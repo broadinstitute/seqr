@@ -324,7 +324,7 @@ class Family(ModelWithGUID):
 
     coded_phenotype = models.TextField(null=True, blank=True)
     mondo_id = models.CharField(null=True, blank=True, max_length=30)
-    post_discovery_omim_number = ArrayField(models.PositiveIntegerField(), default=list)
+    post_discovery_omim_numbers = ArrayField(models.PositiveIntegerField(), default=list)
     pubmed_ids = ArrayField(models.TextField(), default=list)
 
     analysis_status = models.CharField(
@@ -347,7 +347,7 @@ class Family(ModelWithGUID):
 
         json_fields = [
             'guid', 'family_id', 'description', 'analysis_status', 'created_date',
-            'post_discovery_omim_number', 'pedigree_dataset', 'coded_phenotype', 'mondo_id',
+            'pedigree_dataset', 'coded_phenotype', 'mondo_id',
         ]
         internal_json_fields = [
             'success_story_types', 'success_story', 'pubmed_ids',
