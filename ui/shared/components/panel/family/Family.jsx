@@ -14,6 +14,7 @@ import NoteListFieldView from '../view-fields/NoteListFieldView'
 import SingleFieldView from '../view-fields/SingleFieldView'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
+import LoadOptionsSelect from '../../form/LoadOptionsSelect'
 import { InlineHeader } from '../../StyledComponents'
 import {
   SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS,
@@ -113,7 +114,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     ),
   },
   [FAMILY_FIELD_OMIM_NUMBERS]: {
-    // canEdit: true,  TODO
+    canEdit: true,
     component: ListFieldView,
     itemKey: ({ phenotypeMimNumber }) => phenotypeMimNumber,
     itemDisplay: ({ geneSymbol, phenotypeMimNumber, phenotypeDescription, phenotypeInheritance }) => (
@@ -126,6 +127,16 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
         {phenotypeInheritance && <i>{` (${phenotypeInheritance})`}</i>}
       </span>
     ),
+    addElementLabel: 'Add OMIM #',
+    formFieldProps: {
+      control: LoadOptionsSelect,
+      validationErrorMessage: 'No OMIM conditions found for the discovery genes in this family',
+      optionsResponseKey: FAMILY_FIELD_OMIM_NUMBERS,
+      formatOption: ({ geneSymbol, phenotypeMimNumber, phenotypeDescription }) => (
+        { value: phenotypeMimNumber, description: `${geneSymbol}: ${phenotypeDescription}` }
+      ),
+    },
+    computeFormFieldProps: ({ familyGuid }) => ({ url: `/api/family/${familyGuid}/discovery_omim_options` }),
   },
   [FAMILY_FIELD_PMIDS]: {
     internal: true,

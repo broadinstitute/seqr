@@ -45,6 +45,7 @@ class ListFieldView extends React.PureComponent {
     initialValues: PropTypes.object,
     addElementLabel: PropTypes.string,
     formFieldProps: PropTypes.object,
+    computeFormFieldProps: PropTypes.func,
     itemJoin: PropTypes.string,
     itemDisplay: PropTypes.func,
     itemKey: PropTypes.func,
@@ -67,7 +68,7 @@ class ListFieldView extends React.PureComponent {
   }
 
   formFieldProps = () => {
-    const { addElementLabel, formFieldProps = {} } = this.props
+    const { addElementLabel, formFieldProps = {}, computeFormFieldProps, initialValues } = this.props
     return {
       isArrayField: true,
       addArrayElement: AddElementButton,
@@ -75,6 +76,7 @@ class ListFieldView extends React.PureComponent {
       validate: validators.required,
       component: RemovableInput,
       ...formFieldProps,
+      ...(computeFormFieldProps ? computeFormFieldProps(initialValues) : {}),
     }
   }
 
