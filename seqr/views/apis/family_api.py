@@ -24,7 +24,7 @@ from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample
     PhenotypePrioritization, Project
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
-from seqr.views.utils.variant_utils import get_phenotype_prioritization
+from seqr.views.utils.variant_utils import get_phenotype_prioritization, DISCOVERY_CATEGORY
 
 
 FAMILY_ID_FIELD = 'familyId'
@@ -48,9 +48,7 @@ def family_page_data(request, family_guid):
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
 
     mim_numbers = family.post_discovery_omim_numbers
-    omim_map = {o['phenotypeMimNumber']: o for o in get_json_for_queryset(
-        Omim.objects.filter(phenotype_mim_number__in=mim_numbers), nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}],
-    )}
+    omim_map = {o['phenotypeMimNumber']: o for o in _get_filtered_omim_json(phenotype_mim_number__in=mim_numbers)}
 
     response['familiesByGuid'][family_guid].update({
         'detailsLoaded': True,
@@ -75,6 +73,13 @@ def family_page_data(request, family_guid):
 
     return create_json_response(response)
 
+
+def _get_filtered_omim_json(**kwargs):
+    return get_json_for_queryset(
+        Omim.objects.filter(**kwargs).distinct(), nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}],
+    )
+
+
 @login_and_policies_required
 def family_variant_tag_summary(request, family_guid):
     family = Family.objects.get(guid=family_guid)
@@ -95,6 +100,21 @@ def family_variant_tag_summary(request, family_guid):
     add_project_tag_types(response['projectsByGuid'])
 
     return create_json_response(response)
+
+
+@login_and_policies_required
+def get_family_discovery_omim_options(request, family_guid):
+    family = Family.objects.get(guid=family_guid)
+    project = family.project
+    check_project_permissions(project, request.user)
+
+    discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY)
+    gene_ids = {
+        gene_id for transcripts in discovery_variants.values_list('saved_variant_json__transcripts', flat=True)
+        for gene_id in transcripts.keys()
+    }
+
+    return create_json_response({'options': list(_get_filtered_omim_json(gene__gene_id__in=gene_ids))})
 
 
 @login_and_policies_required

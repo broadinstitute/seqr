@@ -131,7 +131,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     formFieldProps: {
       control: LoadOptionsSelect,
       validationErrorMessage: 'No OMIM conditions found for the discovery genes in this family',
-      optionsResponseKey: FAMILY_FIELD_OMIM_NUMBERS,
+      optionsResponseKey: 'options',
       formatOption: ({ geneSymbol, phenotypeMimNumber, phenotypeDescription }) => (
         { value: phenotypeMimNumber, description: `${geneSymbol}: ${phenotypeDescription}` }
       ),
