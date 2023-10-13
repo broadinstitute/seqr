@@ -116,15 +116,22 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_OMIM_NUMBERS]: {
     canEdit: true,
     component: ListFieldView,
-    itemKey: ({ phenotypeMimNumber }) => phenotypeMimNumber,
-    itemDisplay: ({ geneSymbol, phenotypeMimNumber, phenotypeDescription, phenotypeInheritance }) => (
+    itemKey: values => values[0].phenotypeMimNumber,
+    itemDisplay: values => (
       <span>
-        <a target="_blank" rel="noreferrer" href={`https://www.omim.org/entry/${phenotypeMimNumber}`}>{phenotypeMimNumber}</a>
+        <a target="_blank" rel="noreferrer" href={`https://www.omim.org/entry/${values[0].phenotypeMimNumber}`}>
+          {values[0].phenotypeMimNumber}
+        </a>
         :&nbsp;
-        <b>{geneSymbol}</b>
-        &nbsp;
-        {phenotypeDescription}
-        {phenotypeInheritance && <i>{` (${phenotypeInheritance})`}</i>}
+        {values.map(({ geneSymbol, phenotypeDescription, phenotypeInheritance }, i) => (
+          <span>
+            {i !== 0 && '; '}
+            <b>{geneSymbol}</b>
+            &nbsp;
+            {phenotypeDescription}
+            {phenotypeInheritance && <i>{` (${phenotypeInheritance})`}</i>}
+          </span>
+        ))}
       </span>
     ),
     addElementLabel: 'Add OMIM #',
@@ -132,9 +139,10 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
       control: LoadOptionsSelect,
       validationErrorMessage: 'No OMIM conditions found for the discovery genes in this family',
       optionsResponseKey: 'options',
-      formatOption: ({ geneSymbol, phenotypeMimNumber, phenotypeDescription }) => (
-        { value: phenotypeMimNumber, description: `${geneSymbol}: ${phenotypeDescription}` }
-      ),
+      formatOption: ([phenotypeMimNumber, phenotypes]) => ({
+        value: phenotypeMimNumber,
+        description: phenotypes.map(({ geneSymbol, phenotypeDescription }) => `${geneSymbol}: ${phenotypeDescription}`).join('; '),
+      }),
     },
     computeFormFieldProps: ({ familyGuid }) => ({ url: `/api/family/${familyGuid}/discovery_omim_options` }),
   },

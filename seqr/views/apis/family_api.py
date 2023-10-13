@@ -47,12 +47,11 @@ def family_page_data(request, family_guid):
 
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
 
-    mim_numbers = family.post_discovery_omim_numbers
-    omim_map = {o['phenotypeMimNumber']: o for o in _get_filtered_omim_json(phenotype_mim_number__in=mim_numbers)}
+    omim_map = _get_filtered_grouped_omim_json(phenotype_mim_number__in=family.post_discovery_omim_numbers)
 
     response['familiesByGuid'][family_guid].update({
         'detailsLoaded': True,
-        'postDiscoveryOmimNumbers': [omim_map.get(m, {'phenotypeMimNumber': m}) for m in mim_numbers],
+        'postDiscoveryOmimNumbers': [omim_map[m] or [{'phenotypeMimNumber': m}] for m in family.post_discovery_omim_numbers],
     })
 
     outlier_individual_guids = sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA)\
@@ -74,10 +73,13 @@ def family_page_data(request, family_guid):
     return create_json_response(response)
 
 
-def _get_filtered_omim_json(**kwargs):
-    return get_json_for_queryset(
+def _get_filtered_grouped_omim_json(**kwargs):
+    omim_map = defaultdict(list)
+    for o in get_json_for_queryset(
         Omim.objects.filter(**kwargs).distinct(), nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}],
-    )
+    ):
+        omim_map[o['phenotypeMimNumber']].append(o)
+    return omim_map
 
 
 @login_and_policies_required
@@ -114,7 +116,7 @@ def get_family_discovery_omim_options(request, family_guid):
         for gene_id in transcripts.keys()
     }
 
-    return create_json_response({'options': list(_get_filtered_omim_json(gene__gene_id__in=gene_ids))})
+    return create_json_response({'options': list(_get_filtered_grouped_omim_json(gene__gene_id__in=gene_ids).items())})
 
 
 @login_and_policies_required
