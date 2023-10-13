@@ -10,7 +10,8 @@ from matchmaker.models import MatchmakerSubmission
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
     update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, \
     receive_families_table_handler, create_family_note, update_family_note, delete_family_note, family_page_data, \
-    family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data, get_family_phenotype_gene_scores
+    family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data, get_family_phenotype_gene_scores, \
+    get_family_discovery_omim_options
 from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
@@ -59,11 +60,11 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertListEqual(family['analysedBy'], [
             {'createdBy': 'Test No Access User', 'dataType': 'SNP', 'lastModifiedDate': '2022-07-22T19:27:08.563+00:00'},
         ])
-        self.assertListEqual(family['postDiscoveryOmimNumbers'], [{
+        self.assertListEqual(family['postDiscoveryOmimNumbers'], [[{
             'geneSymbol': 'MIR1302-2HG', 'mimNumber': 103320, 'phenotypeMimNumber': 615120,
             'phenotypeDescription': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
             'phenotypeInheritance': 'Autosomal recessive',
-        },  {'phenotypeMimNumber': 615123}])
+        }],  [{'phenotypeMimNumber': 615123}]])
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
@@ -153,6 +154,25 @@ class FamilyAPITest(AuthenticationTestCase):
             FAMILY_GUID: {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
         })
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
+
+    def test_get_family_discovery_omim_options(self):
+        url = reverse(get_family_discovery_omim_options, args=[FAMILY_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'options': []})
+
+        discovery_omim_url = reverse(get_family_discovery_omim_options, args=['F000012_12'])
+        response = self.client.get(discovery_omim_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'options': [[616126, [{
+            'geneSymbol': 'DDX11L1',
+            'mimNumber': 147571,
+            'phenotypeMimNumber': 616126,
+            'phenotypeDescription': 'Immunodeficiency 38',
+            'phenotypeInheritance': 'Autosomal recessive',
+        }]]]})
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_edit_families_handler(self, mock_pm_group):
