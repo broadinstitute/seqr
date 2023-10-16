@@ -45,17 +45,16 @@ class ListFieldView extends React.PureComponent {
     initialValues: PropTypes.object,
     addElementLabel: PropTypes.string,
     formFieldProps: PropTypes.object,
-    computeFormFieldProps: PropTypes.func,
     itemJoin: PropTypes.string,
     itemDisplay: PropTypes.func,
     itemKey: PropTypes.func,
   }
 
   fieldDisplay = (values) => {
-    const { itemJoin, itemDisplay, itemKey, initialValues } = this.props
-    return (itemJoin ? values.join(itemJoin) : values.filter(val => val).map(value => (
-      <div key={itemKey ? itemKey(value) : value}>{itemDisplay ? itemDisplay(value, initialValues) : value}</div>
-    )))
+    const { itemJoin, itemDisplay, itemKey } = this.props
+    return (itemJoin ? values.join(itemJoin) : values.filter(val => val).map(
+      value => <div key={itemKey ? itemKey(value) : value}>{itemDisplay ? itemDisplay(value) : value}</div>,
+    ))
   }
 
   defaultedInitialValues = () => {
@@ -68,7 +67,7 @@ class ListFieldView extends React.PureComponent {
   }
 
   formFieldProps = () => {
-    const { addElementLabel, formFieldProps = {}, computeFormFieldProps, initialValues } = this.props
+    const { addElementLabel, formFieldProps = {} } = this.props
     return {
       isArrayField: true,
       addArrayElement: AddElementButton,
@@ -76,7 +75,6 @@ class ListFieldView extends React.PureComponent {
       validate: validators.required,
       component: RemovableInput,
       ...formFieldProps,
-      ...(computeFormFieldProps ? computeFormFieldProps(initialValues) : {}),
     }
   }
 

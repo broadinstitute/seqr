@@ -60,11 +60,12 @@ class FamilyAPITest(AuthenticationTestCase):
             {'createdBy': 'Test No Access User', 'dataType': 'SNP', 'lastModifiedDate': '2022-07-22T19:27:08.563+00:00'},
         ])
         self.assertListEqual(family['postDiscoveryOmimNumbers'], [615120, 615123])
-        self.assertDictEqual(family['postDiscoveryOmimOptions'], {'615120': [{
-            'geneSymbol': 'MIR1302-2HG', 'mimNumber': 103320, 'phenotypeMimNumber': 615120,
-            'phenotypeDescription': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
-            'phenotypeInheritance': 'Autosomal recessive',
-        }]})
+        self.assertDictEqual(family['postDiscoveryOmimOptions'], {
+            '615120': {'phenotypeMimNumber': 615120, 'phenotypes': [{
+                'geneSymbol': 'MIR1302-2HG', 'mimNumber': 103320, 'phenotypeMimNumber': 615120,
+                'phenotypeDescription': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
+                'phenotypeInheritance': 'Autosomal recessive',
+            }]}})
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
@@ -115,13 +116,14 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000012_12'})
         self.assertListEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimNumbers'], [])
-        self.assertDictEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimOptions'], {'616126': [{
-            'geneSymbol': 'DDX11L1',
-            'mimNumber': 147571,
-            'phenotypeMimNumber': 616126,
-            'phenotypeDescription': 'Immunodeficiency 38',
-            'phenotypeInheritance': 'Autosomal recessive',
-        }]})
+        self.assertDictEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimOptions'], {'616126': {
+            'phenotypeMimNumber': 616126, 'phenotypes': [{
+                'geneSymbol': 'DDX11L1',
+                'mimNumber': 147571,
+                'phenotypeMimNumber': 616126,
+                'phenotypeDescription': 'Immunodeficiency 38',
+                'phenotypeInheritance': 'Autosomal recessive',
+            }]}})
 
         # Test analyst users have internal fields returned
         self.login_analyst_user()

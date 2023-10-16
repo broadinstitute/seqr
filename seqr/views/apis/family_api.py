@@ -57,9 +57,12 @@ def family_page_data(request, family_guid):
     omims = Omim.objects.filter(
         Q(phenotype_mim_number__in=family_response['postDiscoveryOmimNumbers']) | Q(gene__gene_id__in=gene_ids)
     ).distinct()
-    omim_map = defaultdict(list)
+    omim_map = {}
     for o in get_json_for_queryset(omims, nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}]):
-        omim_map[o['phenotypeMimNumber']].append(o)
+        mim_number = o['phenotypeMimNumber']
+        if mim_number not in omim_map:
+            omim_map[mim_number] = {'phenotypeMimNumber': mim_number, 'phenotypes': []}
+        omim_map[mim_number]['phenotypes'].append(o)
 
     family_response.update({
         'detailsLoaded': True,

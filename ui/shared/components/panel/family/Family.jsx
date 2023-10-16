@@ -14,7 +14,6 @@ import NoteListFieldView from '../view-fields/NoteListFieldView'
 import SingleFieldView from '../view-fields/SingleFieldView'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
-import { Select } from '../../form/Inputs'
 import { InlineHeader } from '../../StyledComponents'
 import {
   SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS,
@@ -115,14 +114,20 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   },
   [FAMILY_FIELD_OMIM_NUMBERS]: {
     canEdit: true,
-    component: ListFieldView,
-    itemDisplay: (phenotypeMimNumber, { postDiscoveryOmimOptions }) => (
+    component: OptionFieldView,
+    multiple: true,
+    tagOptionLookupField: 'postDiscoveryOmimOptions',
+    formatTagOption: ({ phenotypeMimNumber, phenotypes }) => ({
+      value: phenotypeMimNumber,
+      description: phenotypes.map(({ geneSymbol, phenotypeDescription }) => `${geneSymbol}: ${phenotypeDescription}`).join('; '),
+    }),
+    tagAnnotation: ({ phenotypeMimNumber, phenotypes }) => (
       <span>
         <a target="_blank" rel="noreferrer" href={`https://www.omim.org/entry/${phenotypeMimNumber}`}>
           {phenotypeMimNumber}
         </a>
         :&nbsp;
-        {(postDiscoveryOmimOptions[phenotypeMimNumber] || []).map(
+        {phenotypes.map(
           ({ geneSymbol, phenotypeDescription, phenotypeInheritance }, i) => (
             <span key={phenotypeDescription}>
               {i !== 0 && '; '}
@@ -135,16 +140,6 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
         )}
       </span>
     ),
-    addElementLabel: 'Add OMIM #',
-    formFieldProps: {
-      control: Select,
-    },
-    computeFormFieldProps: ({ postDiscoveryOmimOptions }) => ({
-      options: Object.entries(postDiscoveryOmimOptions).map(([phenotypeMimNumber, phenotypes]) => ({
-        value: parseInt(phenotypeMimNumber, 10),
-        description: phenotypes.map(({ geneSymbol, phenotypeDescription }) => `${geneSymbol}: ${phenotypeDescription}`).join('; '),
-      })),
-    }),
   },
   [FAMILY_FIELD_PMIDS]: {
     internal: true,
