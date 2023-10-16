@@ -48,7 +48,6 @@ def family_page_data(request, family_guid):
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
     family_response = response['familiesByGuid'][family_guid]
 
-    # Add discovery OMIM details
     discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY)
     gene_ids = {
         gene_id for transcripts in discovery_variants.values_list('saved_variant_json__transcripts', flat=True)
@@ -86,7 +85,6 @@ def family_page_data(request, family_guid):
     response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
     return create_json_response(response)
-
 
 @login_and_policies_required
 def family_variant_tag_summary(request, family_guid):
