@@ -113,7 +113,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     ),
   },
   [FAMILY_FIELD_OMIM_NUMBERS]: {
-    canEdit: true,
+    canEditFamily: ({ postDiscoveryOmimOptions }) => Object.keys(postDiscoveryOmimOptions || {}).length > 0,
     component: OptionFieldView,
     multiple: true,
     tagOptionLookupField: 'postDiscoveryOmimOptions',
@@ -174,14 +174,17 @@ class Family extends React.PureComponent {
 
   familyField = (field) => {
     const { family, compact, disableEdit, updateFamily: dispatchUpdateFamily, disableInternalEdit } = this.props
-    const { submitArgs, component, canEdit, internal, ...fieldProps } = FAMILY_FIELD_RENDER_LOOKUP[field.id]
+    const {
+      submitArgs, component, canEdit, canEditFamily, internal, ...fieldProps
+    } = FAMILY_FIELD_RENDER_LOOKUP[field.id]
 
     const name = FAMILY_FIELD_NAME_LOOKUP[field.id]
     const submitFunc = submitArgs ?
       values => dispatchUpdateFamily({ ...values, ...submitArgs }) : dispatchUpdateFamily
     return React.createElement(component || TextFieldView, {
       key: field.id,
-      isEditable: !disableEdit && (canEdit || (!disableInternalEdit && internal)),
+      isEditable: !disableEdit && (
+        canEdit || (canEditFamily && canEditFamily(family)) || (!disableInternalEdit && internal)),
       isPrivate: internal,
       fieldName: compact ? null : name,
       field: field.id,
