@@ -4,7 +4,7 @@ APIs used to retrieve and modify Individual fields
 import json
 from collections import defaultdict
 from django.contrib.auth.models import User
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.db.models.fields.files import ImageFieldFile
 
 from matchmaker.models import MatchmakerSubmission
@@ -46,12 +46,24 @@ def family_page_data(request, family_guid):
     }
 
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
+    family_response = response['familiesByGuid'][family_guid]
 
-    omim_map = _get_filtered_grouped_omim_json(phenotype_mim_number__in=family.post_discovery_omim_numbers)
+    # Add discovery OMIM details
+    discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY)
+    gene_ids = {
+        gene_id for transcripts in discovery_variants.values_list('saved_variant_json__transcripts', flat=True)
+        for gene_id in transcripts.keys()
+    }
+    omims = Omim.objects.filter(
+        Q(phenotype_mim_number__in=family_response['postDiscoveryOmimNumbers']) | Q(gene__gene_id__in=gene_ids)
+    ).distinct()
+    omim_map = defaultdict(list)
+    for o in get_json_for_queryset(omims, nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}]):
+        omim_map[o['phenotypeMimNumber']].append(o)
 
-    response['familiesByGuid'][family_guid].update({
+    family_response.update({
         'detailsLoaded': True,
-        'postDiscoveryOmimNumbers': [omim_map[m] or [{'phenotypeMimNumber': m}] for m in family.post_discovery_omim_numbers],
+        'postDiscoveryOmimOptions': omim_map,
     })
 
     outlier_individual_guids = sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA)\
@@ -71,15 +83,6 @@ def family_page_data(request, family_guid):
     response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
     return create_json_response(response)
-
-
-def _get_filtered_grouped_omim_json(**kwargs):
-    omim_map = defaultdict(list)
-    for o in get_json_for_queryset(
-        Omim.objects.filter(**kwargs).distinct(), nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}],
-    ):
-        omim_map[o['phenotypeMimNumber']].append(o)
-    return omim_map
 
 
 @login_and_policies_required
@@ -102,21 +105,6 @@ def family_variant_tag_summary(request, family_guid):
     add_project_tag_types(response['projectsByGuid'])
 
     return create_json_response(response)
-
-
-@login_and_policies_required
-def get_family_discovery_omim_options(request, family_guid):
-    family = Family.objects.get(guid=family_guid)
-    project = family.project
-    check_project_permissions(project, request.user)
-
-    discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY)
-    gene_ids = {
-        gene_id for transcripts in discovery_variants.values_list('saved_variant_json__transcripts', flat=True)
-        for gene_id in transcripts.keys()
-    }
-
-    return create_json_response({'options': list(_get_filtered_grouped_omim_json(gene__gene_id__in=gene_ids).items())})
 
 
 @login_and_policies_required

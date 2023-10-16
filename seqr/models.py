@@ -347,7 +347,7 @@ class Family(ModelWithGUID):
 
         json_fields = [
             'guid', 'family_id', 'description', 'analysis_status', 'created_date',
-            'pedigree_dataset', 'coded_phenotype', 'mondo_id',
+            'post_discovery_omim_numbers', 'pedigree_dataset', 'coded_phenotype', 'mondo_id',
         ]
         internal_json_fields = [
             'success_story_types', 'success_story', 'pubmed_ids',

@@ -28,7 +28,6 @@ from seqr.views.apis.family_api import \
     family_page_data, \
     get_family_rna_seq_data, \
     get_family_phenotype_gene_scores, \
-    get_family_discovery_omim_options, \
     family_variant_tag_summary
 
 from seqr.views.apis.individual_api import \
@@ -195,7 +194,6 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/delete': delete_family_note,
     'family/(?P<family_guid>[\w.|-]+)/rna_seq_data/(?P<gene_id>[\w.|-]+)': get_family_rna_seq_data,
     'family/(?P<family_guid>[\w.|-]+)/phenotype_gene_scores': get_family_phenotype_gene_scores,  # noqa: W605
-    'family/(?P<family_guid>[\w.|-]+)/discovery_omim_options': get_family_discovery_omim_options,
 
     'dashboard': dashboard_page_data,
 
