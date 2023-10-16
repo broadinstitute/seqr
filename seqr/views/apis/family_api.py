@@ -51,11 +51,11 @@ def family_page_data(request, family_guid):
     discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY)
     gene_ids = {
         gene_id for transcripts in discovery_variants.values_list('saved_variant_json__transcripts', flat=True)
-        for gene_id in transcripts.keys()
+        for gene_id in (transcripts or {}).keys()
     }
     omims = Omim.objects.filter(
         Q(phenotype_mim_number__in=family_response['postDiscoveryOmimNumbers']) | Q(gene__gene_id__in=gene_ids)
-    ).distinct()
+    ).exclude(phenotype_mim_number__isnull=True).distinct()
     omim_map = {}
     for o in get_json_for_queryset(omims, nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}]):
         mim_number = o['phenotypeMimNumber']
