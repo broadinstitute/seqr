@@ -119,7 +119,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     tagOptionLookupField: 'postDiscoveryOmimOptions',
     formatTagOption: ({ phenotypeMimNumber, phenotypes }) => ({
       value: phenotypeMimNumber,
-      description: phenotypes.map(({ geneSymbol, phenotypeDescription }) => `${geneSymbol}: ${phenotypeDescription}`).join('; '),
+      description: (phenotypes || []).map(({ geneSymbol, phenotypeDescription }) => `${geneSymbol}: ${phenotypeDescription}`).join('; '),
     }),
     tagAnnotation: ({ phenotypeMimNumber, phenotypes }) => (
       <span>
@@ -127,7 +127,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
           {phenotypeMimNumber}
         </a>
         :&nbsp;
-        {phenotypes.map(
+        {(phenotypes || []).map(
           ({ geneSymbol, phenotypeDescription, phenotypeInheritance }, i) => (
             <span key={phenotypeDescription}>
               {i !== 0 && '; '}
