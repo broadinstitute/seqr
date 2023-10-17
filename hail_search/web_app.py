@@ -1,8 +1,28 @@
 from aiohttp import web
 import json
 import hail as hl
+import logging
 
 from hail_search.search import search_hail_backend, load_globals
+
+logger = logging.getLogger(__name__)
+
+
+def _log_exception(e, request):
+    logger.error(f'{request.headers.get("From")} "{e}"')
+
+
+@web.middleware
+async def error_middleware(request, handler):
+    try:
+        return await handler(request)
+    except web.HTTPError as e:
+        _log_exception(e, request)
+        raise e
+    except Exception as e:
+        caught_e = web.HTTPInternalServerError(reason=str(e))
+        _log_exception(caught_e, request)
+        raise caught_e
 
 
 def _hl_json_default(o):
@@ -32,7 +52,7 @@ async def status(request: web.Request) -> web.Response:
 async def init_web_app():
     hl.init(idempotent=True)
     load_globals()
-    app = web.Application()
+    app = web.Application(middlewares=[error_middleware])
     app.add_routes([
         web.get('/status', status),
         web.post('/search', search),
