@@ -1,3 +1,4 @@
+from aiohttp.web import HTTPNotFound
 import hail as hl
 
 from hail_search.constants import HGMD_KEY, HGMD_PATH_RANGES, \
@@ -95,3 +96,18 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
             annotation_filters.append(score_filter)
 
         return annotation_filters
+
+    def lookup_variant(self, variant_id):
+        _, variant_ids = self._parse_intervals(intervals=None, variant_ids=[variant_id])
+        ht = self._read_table('annotations.ht')
+        ht = self._filter_variant_ids(ht, variant_ids)
+
+        annotation_fields = {
+            k: v for k, v in self.annotation_fields().items() if k not in {'genotypes', 'familyGuids', 'genotypeFilters'}
+        }
+        formatted = self._format_results(ht, annotation_fields=annotation_fields)
+
+        variants = formatted.aggregate(hl.agg.take(formatted.row, 1))
+        if not variants:
+            raise HTTPNotFound()
+        return variants[0]

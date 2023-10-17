@@ -2,7 +2,7 @@ from aiohttp import web
 import json
 import hail as hl
 
-from hail_search.search import search_hail_backend, load_globals
+from hail_search.search import search_hail_backend, load_globals, lookup_variant
 
 
 def _hl_json_default(o):
@@ -25,6 +25,10 @@ async def search(request: web.Request) -> web.Response:
     return web.json_response({'results': hail_results, 'total': total_results}, dumps=hl_json_dumps)
 
 
+async def lookup(request: web.Request) -> web.Response:
+    return web.json_response(lookup_variant(await request.json()), dumps=hl_json_dumps)
+
+
 async def status(request: web.Request) -> web.Response:
     return web.json_response({'success': True})
 
@@ -37,5 +41,6 @@ async def init_web_app():
         web.get('/status', status),
         web.post('/search', search),
         web.post('/gene_counts', gene_counts),
+        web.post('/lookup', lookup),
     ])
     return app

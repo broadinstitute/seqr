@@ -206,7 +206,8 @@ class BaseHailTableQuery(object):
         self._has_secondary_annotations = False
         self._load_table_kwargs = {}
 
-        self._load_filtered_table(sample_data, inheritance_mode=inheritance_mode, **kwargs)
+        if sample_data:
+            self._load_filtered_table(sample_data, inheritance_mode=inheritance_mode, **kwargs)
 
     @property
     def _is_recessive_search(self):
