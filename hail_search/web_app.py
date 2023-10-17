@@ -8,8 +8,11 @@ from hail_search.search import search_hail_backend, load_globals
 logger = logging.getLogger(__name__)
 
 
-def _log_exception(e, request):
+def _handle_exception(e, request):
+    if not e.text:
+        e.text = e.reason
     logger.error(f'{request.headers.get("From")} "{e}"')
+    raise e
 
 
 @web.middleware
@@ -17,14 +20,9 @@ async def error_middleware(request, handler):
     try:
         return await handler(request)
     except web.HTTPError as e:
-        _log_exception(e, request)
-        if not e.text:
-            e.text = e.reason
-        raise e
+        _handle_exception(e, request)
     except Exception as e:
-        caught_e = web.HTTPInternalServerError(reason=str(e), text=str(e))
-        _log_exception(caught_e, request)
-        raise caught_e
+        _handle_exception(web.HTTPInternalServerError(reason=str(e)), request)
 
 
 def _hl_json_default(o):
