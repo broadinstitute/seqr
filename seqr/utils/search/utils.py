@@ -10,7 +10,8 @@ from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
-from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend
+from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend, \
+    hail_variant_lookup
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 
@@ -146,6 +147,11 @@ def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None
     return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
         *_get_families_search_data(families, dataset_type=dataset_type), parsed_variant_ids, user, **kwargs
     )
+
+
+def variant_lookup(genome_version, variant_id, user):
+    lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), hail_variant_lookup)
+    return lookup_func(genome_version, _parse_variant_id(variant_id), user)
 
 
 def _get_search_cache_key(search_model, sort=None):

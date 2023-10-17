@@ -11,7 +11,8 @@ from math import ceil
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
-from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples
+from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples, \
+    variant_lookup
 from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.export_utils import export_table
@@ -522,3 +523,8 @@ def _flatten_variants(variants):
         else:
             flattened_variants.append(variant)
     return flattened_variants
+
+
+@login_and_policies_required
+def variant_lookup_handler(request, genome_version, variant_id):
+    return create_json_response(variant_lookup(genome_version, variant_id, request.user))

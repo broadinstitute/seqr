@@ -70,6 +70,13 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     return response_json['results']
 
 
+def hail_variant_lookup(genome_version, variant_id, user):
+    return _execute_search({
+        'genome_version': GENOME_VERSION_LOOKUP[genome_version],
+        'variant_id': variant_id,
+    }, user, path='lookup')
+
+
 def _format_search_body(samples, genome_version, num_results, search):
     search_body = {
         'genome_version': GENOME_VERSION_LOOKUP[genome_version],
