@@ -18,9 +18,11 @@ async def error_middleware(request, handler):
         return await handler(request)
     except web.HTTPError as e:
         _log_exception(e, request)
+        if not e.text:
+            e.text = e.reason
         raise e
     except Exception as e:
-        caught_e = web.HTTPInternalServerError(reason=str(e))
+        caught_e = web.HTTPInternalServerError(reason=str(e), text=str(e))
         _log_exception(caught_e, request)
         raise caught_e
 

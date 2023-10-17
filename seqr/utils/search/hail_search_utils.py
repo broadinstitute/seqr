@@ -15,7 +15,10 @@ def _hail_backend_url(path):
 
 def _execute_search(search_body, user, path='search'):
     response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user.email}, timeout=300)
-    response.raise_for_status()
+
+    if 400 <= response.status_code:
+        raise requests.HTTPError(response.text or response.reason, response=response)
+
     return response.json()
 
 
