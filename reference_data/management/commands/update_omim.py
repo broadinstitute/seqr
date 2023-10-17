@@ -129,7 +129,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
             output_record = {}
             output_record['gene_id'] = record['ensembl_gene_id']
             output_record['mim_number'] = int(record['mim_number'])
-            output_record['gene_symbol'] = record['approved_gene_symbol'].strip() or record['gene_symbols'].split(",")[0]
+            output_record['gene_symbol'] = record['approved_gene_symbol'].strip() or record['gene/locus_and_other_related_symbols'].split(",")[0]
             output_record['gene_description'] = record['gene_name']
             output_record['comments'] = record['comments']
 
