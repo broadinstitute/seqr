@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Grid, Segment, Header } from 'semantic-ui-react'
+import { Grid, Header } from 'semantic-ui-react'
 
 import StateDataLoader from 'shared/components/StateDataLoader'
 import FormWrapper from 'shared/components/form/FormWrapper'
@@ -41,24 +41,20 @@ class VariantLookup extends React.PureComponent {
   render() {
     const { url } = this.state
     return (
-      <Grid>
+      <Grid divided="vertically">
         <Grid.Row>
           <Grid.Column width={5} />
           <Grid.Column width={6}>
-            <Segment padded>
-              <Header dividing size="medium" content="Lookup Variant" />
-              <FormWrapper noModal fields={FIELDS} onSubmit={this.onSubmit} />
-            </Segment>
+            <Header dividing size="medium" content="Lookup Variant" />
+            <FormWrapper noModal fields={FIELDS} onSubmit={this.onSubmit} />
           </Grid.Column>
           <Grid.Column width={5} />
         </Grid.Row>
-        <Grid.Row>
-          <StateDataLoader
-            url={url}
-            parseResponse={this.parseResponse}
-            childComponent={VariantDisplay}
-          />
-        </Grid.Row>
+        <StateDataLoader
+          url={url}
+          parseResponse={this.parseResponse}
+          childComponent={VariantDisplay}
+        />
       </Grid>
     )
   }
