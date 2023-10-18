@@ -13,11 +13,12 @@ def _hail_backend_url(path):
     return f'{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'
 
 
-def _execute_search(search_body, user, path='search'):
+def _execute_search(search_body, user, path='search', exception_map=None):
     response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user.email}, timeout=300)
 
     if response.status_code >= 400:
-        raise requests.HTTPError(response.text or response.reason, response=response)
+        error = (exception_map or {}).get(response.status_code) or response.text or response.reason
+        raise requests.HTTPError(error, response=response)
 
     return response.json()
 
@@ -74,11 +75,10 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
 
 
 def hail_variant_lookup(genome_version, variant_id, user):
-    # TODO better error message for variant not found
     return _execute_search({
         'genome_version': GENOME_VERSION_LOOKUP[genome_version],
         'variant_id': variant_id,
-    }, user, path='lookup')
+    }, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
 
 
 def _format_search_body(samples, genome_version, num_results, search):
