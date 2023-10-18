@@ -128,10 +128,7 @@ def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=
 def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None, **kwargs):
     parsed_variant_ids = {}
     for variant_id in variant_ids:
-        try:
-            parsed_variant_ids[variant_id] = _parse_variant_id(variant_id)
-        except (KeyError, ValueError):
-            parsed_variant_ids[variant_id] = None
+        parsed_variant_ids[variant_id] = _parse_variant_id(variant_id)
 
     if dataset_type:
         parsed_variant_ids = {
@@ -150,6 +147,9 @@ def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None
 
 
 def variant_lookup(genome_version, variant_id, user):
+    parsed_variant_id = _parse_variant_id(variant_id)
+    if not parsed_variant_id:
+        raise InvalidSearchException(f'Invalid variant {variant_id}')
     lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), hail_variant_lookup)
     return lookup_func(genome_version, _parse_variant_id(variant_id), user)
 
@@ -300,21 +300,25 @@ def _parse_variant_items(search_json):
         if item.startswith('rs'):
             rs_ids.append(item)
         else:
-            try:
-                variant_id = item.lstrip('chr')
-                parsed_variant_ids.append(_parse_variant_id(variant_id))
+            variant_id = item.lstrip('chr')
+            parsed_variant_id = _parse_variant_id(variant_id)
+            if parsed_variant_id:
+                parsed_variant_ids.append(parsed_variant_id)
                 variant_ids.append(variant_id)
-            except (KeyError, ValueError):
+            else:
                 invalid_items.append(item)
 
     return rs_ids, variant_ids, parsed_variant_ids, invalid_items
 
 
 def _parse_variant_id(variant_id):
-    chrom, pos, ref, alt = variant_id.split('-')
-    pos = int(pos)
-    get_xpos(chrom, pos)
-    return chrom, pos, ref, alt
+    try:
+        chrom, pos, ref, alt = variant_id.split('-')
+        pos = int(pos)
+        get_xpos(chrom, pos)
+        return chrom, pos, ref, alt
+    except (KeyError, ValueError):
+        return None
 
 
 def _validate_sort(sort, families):
