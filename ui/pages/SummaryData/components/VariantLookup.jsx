@@ -1,8 +1,8 @@
 import React from 'react'
-import PropTypes from 'prop-types'
 import { Grid, Segment, Header } from 'semantic-ui-react'
 
 import StateDataLoader from 'shared/components/StateDataLoader'
+import FormWrapper from 'shared/components/form/FormWrapper'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
 
@@ -11,45 +11,52 @@ const FIELDS = [
     name: 'variantId',
     label: 'Variant ID',
     inline: true,
+    required: true,
     component: BaseSemanticInput,
     inputType: 'Input',
   },
-  GENOME_VERSION_FIELD,
+  { required: true, ...GENOME_VERSION_FIELD },
 ]
 
-const VariantLookup = React.memo(({ queryForm, variant }) => (
-  <Grid>
-    <Grid.Row>
-      <Grid.Column width={5} />
-      <Grid.Column width={6}>
-        <Segment padded>
-          <Header dividing size="medium" content="Lookup Variant" />
-          {queryForm}
-        </Segment>
-      </Grid.Column>
-      <Grid.Column width={5} />
-    </Grid.Row>
-    <Grid.Row>
-      {variant && JSON.stringify(variant)}
-    </Grid.Row>
-  </Grid>
-))
+const VariantDisplay = ({ variant }) => JSON.stringify(variant) || 'none'
 
-VariantLookup.propTypes = {
-  queryForm: PropTypes.node,
-  variant: PropTypes.object,
+class VariantLookup extends React.PureComponent {
+
+  state = {
+    url: null,
+  }
+
+  onSubmit = ({ variantId, genomeVersion }) => (
+    new Promise(resolve => this.setState({ url: `/api/variant/${genomeVersion}/${variantId}` }, resolve))
+  )
+
+  parseResponse = variant => ({ variant })
+
+  render() {
+    const { url } = this.state
+    return (
+      <Grid>
+        <Grid.Row>
+          <Grid.Column width={5} />
+          <Grid.Column width={6}>
+            <Segment padded>
+              <Header dividing size="medium" content="Lookup Variant" />
+              <FormWrapper noModal fields={FIELDS} onSubmit={this.onSubmit} />
+            </Segment>
+          </Grid.Column>
+          <Grid.Column width={5} />
+        </Grid.Row>
+        <Grid.Row>
+          <StateDataLoader
+            url={url}
+            parseResponse={this.parseResponse}
+            childComponent={VariantDisplay}
+          />
+        </Grid.Row>
+      </Grid>
+    )
+  }
+
 }
 
-const validateQueryLoad = ({ shouldSearch }) => shouldSearch
-
-const parseResponse = variant => ({ variant })
-
-export default () => (
-  <StateDataLoader
-    url="/api/variant_lookup"
-    validateQueryLoad={validateQueryLoad}
-    parseResponse={parseResponse}
-    queryFields={FIELDS}
-    childComponent={VariantLookup}
-  />
-)
+export default VariantLookup

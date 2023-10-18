@@ -17,7 +17,6 @@ class StateDataLoader extends React.PureComponent {
     validationErrorHeader: PropTypes.string,
     validationErrorMessage: PropTypes.string,
     queryFields: PropTypes.arrayOf(PropTypes.object),
-    validateQueryLoad: PropTypes.func,
   }
 
   state = {
@@ -39,10 +38,9 @@ class StateDataLoader extends React.PureComponent {
   load = () => {
     const {
       url, errorHeader, validationErrorHeader, validationErrorMessage, parseResponse, validateResponse,
-      validateQueryLoad,
     } = this.props
     const { query } = this.state
-    if (!url || (validateQueryLoad && !validateQueryLoad(query))) {
+    if (!url) {
       this.setState({ showEmpty: true })
       return
     }
@@ -50,13 +48,12 @@ class StateDataLoader extends React.PureComponent {
     new HttpRequestHelper(url,
       (responseJson) => {
         const loadedProps = parseResponse(responseJson)
+        const updates = { loading: false, error: false, loadedProps }
         if (validateResponse && !validateResponse(loadedProps)) {
-          this.setState({
-            errorHeader: validationErrorHeader,
-            error: validationErrorMessage,
-          })
+          updates.errorHeader = validationErrorHeader
+          updates.error = validationErrorMessage
         }
-        this.setState({ loading: false, loadedProps })
+        this.setState(updates)
       },
       (e) => {
         this.setState({ loading: false, errorHeader, error: e.message })
