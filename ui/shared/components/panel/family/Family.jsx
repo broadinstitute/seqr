@@ -26,7 +26,7 @@ import {
   FAMILY_FIELD_SUCCESS_STORY_TYPE,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_NAME_LOOKUP,
-  FAMILY_FIELD_OMIM_NUMBER,
+  FAMILY_FIELD_OMIM_NUMBERS,
   FAMILY_FIELD_PMIDS, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_SUCCESS_STORY, FAMILY_NOTES_FIELDS,
   FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY,
   FAMILY_FIELD_ANALYSIS_GROUPS, FAMILY_FIELD_MONDO_ID,
@@ -112,10 +112,34 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
       </a>
     ),
   },
-  [FAMILY_FIELD_OMIM_NUMBER]: {
-    canEdit: true,
-    component: SingleFieldView,
-    fieldDisplay: value => <a target="_blank" rel="noreferrer" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
+  [FAMILY_FIELD_OMIM_NUMBERS]: {
+    canEditFamily: ({ postDiscoveryOmimOptions }) => Object.keys(postDiscoveryOmimOptions || {}).length > 0,
+    component: OptionFieldView,
+    multiple: true,
+    tagOptionLookupField: 'postDiscoveryOmimOptions',
+    formatTagOption: ({ phenotypeMimNumber, phenotypes }) => ({
+      value: phenotypeMimNumber,
+      description: (phenotypes || []).map(({ geneSymbol, phenotypeDescription }) => `${geneSymbol}: ${phenotypeDescription}`).join('; '),
+    }),
+    tagAnnotation: ({ phenotypeMimNumber, phenotypes }) => (
+      <span>
+        <a target="_blank" rel="noreferrer" href={`https://www.omim.org/entry/${phenotypeMimNumber}`}>
+          {phenotypeMimNumber}
+        </a>
+        :&nbsp;
+        {(phenotypes || []).map(
+          ({ geneSymbol, phenotypeDescription, phenotypeInheritance }, i) => (
+            <span key={phenotypeDescription}>
+              {i !== 0 && '; '}
+              <b>{geneSymbol}</b>
+              &nbsp;
+              {phenotypeDescription}
+              {phenotypeInheritance && <i>{` (${phenotypeInheritance})`}</i>}
+            </span>
+          ),
+        )}
+      </span>
+    ),
   },
   [FAMILY_FIELD_PMIDS]: {
     internal: true,
@@ -150,14 +174,17 @@ class Family extends React.PureComponent {
 
   familyField = (field) => {
     const { family, compact, disableEdit, updateFamily: dispatchUpdateFamily, disableInternalEdit } = this.props
-    const { submitArgs, component, canEdit, internal, ...fieldProps } = FAMILY_FIELD_RENDER_LOOKUP[field.id]
+    const {
+      submitArgs, component, canEdit, canEditFamily, internal, ...fieldProps
+    } = FAMILY_FIELD_RENDER_LOOKUP[field.id]
 
     const name = FAMILY_FIELD_NAME_LOOKUP[field.id]
     const submitFunc = submitArgs ?
       values => dispatchUpdateFamily({ ...values, ...submitArgs }) : dispatchUpdateFamily
     return React.createElement(component || TextFieldView, {
       key: field.id,
-      isEditable: !disableEdit && (canEdit || (!disableInternalEdit && internal)),
+      isEditable: !disableEdit && (
+        canEdit || (canEditFamily && canEditFamily(family)) || (!disableInternalEdit && internal)),
       isPrivate: internal,
       fieldName: compact ? null : name,
       field: field.id,
