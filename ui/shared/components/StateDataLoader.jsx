@@ -17,6 +17,7 @@ class StateDataLoader extends React.PureComponent {
     validationErrorHeader: PropTypes.string,
     validationErrorMessage: PropTypes.string,
     queryFields: PropTypes.arrayOf(PropTypes.object),
+    validateQueryLoad: PropTypes.func,
   }
 
   state = {
@@ -38,9 +39,10 @@ class StateDataLoader extends React.PureComponent {
   load = () => {
     const {
       url, errorHeader, validationErrorHeader, validationErrorMessage, parseResponse, validateResponse,
+      validateQueryLoad,
     } = this.props
     const { query } = this.state
-    if (!url) {
+    if (!url || (validateQueryLoad && !validateQueryLoad(query))) {
       this.setState({ showEmpty: true })
       return
     }
