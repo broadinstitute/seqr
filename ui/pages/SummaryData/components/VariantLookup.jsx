@@ -51,7 +51,7 @@ class VariantLookup extends React.PureComponent {
   render() {
     const { url } = this.state
     return (
-      <Grid divided="vertically">
+      <Grid divided="vertically" centered>
         <Grid.Row>
           <Grid.Column width={5} />
           <Grid.Column width={6}>
