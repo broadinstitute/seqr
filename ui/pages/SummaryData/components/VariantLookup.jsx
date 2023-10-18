@@ -1,7 +1,9 @@
 import React from 'react'
+import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import { Grid, Header } from 'semantic-ui-react'
 
+import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import StateDataLoader from 'shared/components/StateDataLoader'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
@@ -28,6 +30,10 @@ VariantDisplay.propTypes = {
 
 class VariantLookup extends React.PureComponent {
 
+  static propTypes = {
+    receiveData: PropTypes.func,
+  }
+
   state = {
     url: null,
   }
@@ -36,7 +42,11 @@ class VariantLookup extends React.PureComponent {
     new Promise(resolve => this.setState({ url: `/api/variant/${genomeVersion}/${variantId}` }, resolve))
   )
 
-  parseResponse = response => response
+  parseResponse = (response) => {
+    const { receiveData } = this.props
+    receiveData(response)
+    return response
+  }
 
   render() {
     const { url } = this.state
@@ -61,4 +71,8 @@ class VariantLookup extends React.PureComponent {
 
 }
 
-export default VariantLookup
+const mapDispatchToProps = dispatch => ({
+  receiveData: updatesById => dispatch({ type: RECEIVE_DATA, updatesById }),
+})
+
+export default connect(null, mapDispatchToProps)(VariantLookup)
