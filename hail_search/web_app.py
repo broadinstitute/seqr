@@ -9,8 +9,6 @@ logger = logging.getLogger(__name__)
 
 
 def _handle_exception(e, request):
-    if not e.text:
-        e.text = e.reason
     logger.error(f'{request.headers.get("From")} "{e}"')
     raise e
 
