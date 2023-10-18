@@ -102,9 +102,12 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         ht = self._read_table('annotations.ht')
         ht = self._filter_variant_ids(ht, variant_ids)
 
-        annotation_fields = {
-            k: v for k, v in self.annotation_fields().items() if k not in {'genotypes', 'familyGuids', 'genotypeFilters'}
-        }
+        annotation_fields = self.annotation_fields()
+        annotation_fields.update({
+            'familyGuids': lambda ht: hl.empty_array(hl.tstr),
+            'genotypes': lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
+            'genotypeFilters': lambda ht: hl.str(''),
+        })
         formatted = self._format_results(ht, annotation_fields=annotation_fields)
 
         variants = formatted.aggregate(hl.agg.take(formatted.row, 1))
