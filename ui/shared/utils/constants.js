@@ -241,7 +241,7 @@ export const FAMILY_FIELD_INTERNAL_SUMMARY = 'caseReviewSummary'
 export const FAMILY_FIELD_FIRST_SAMPLE = 'firstSample'
 export const FAMILY_FIELD_CODED_PHENOTYPE = 'codedPhenotype'
 export const FAMILY_FIELD_MONDO_ID = 'mondoId'
-export const FAMILY_FIELD_OMIM_NUMBER = 'postDiscoveryOmimNumber'
+export const FAMILY_FIELD_OMIM_NUMBERS = 'postDiscoveryOmimNumbers'
 export const FAMILY_FIELD_PMIDS = 'pubmedIds'
 export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
 export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
@@ -262,7 +262,7 @@ export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_MME_NOTES]: 'Matchmaker Notes',
   [FAMILY_FIELD_CODED_PHENOTYPE]: 'Phenotype Description',
   [FAMILY_FIELD_MONDO_ID]: 'MONDO ID',
-  [FAMILY_FIELD_OMIM_NUMBER]: 'Post-discovery OMIM #',
+  [FAMILY_FIELD_OMIM_NUMBERS]: 'Post-discovery OMIM #',
   [FAMILY_FIELD_PMIDS]: 'Publications on this discovery',
   [FAMILY_FIELD_INTERNAL_NOTES]: 'Internal Notes',
   [FAMILY_FIELD_INTERNAL_SUMMARY]: 'Internal Summary',
@@ -290,7 +290,7 @@ export const FAMILY_DETAIL_FIELDS = [
   ...FAMILY_NOTES_FIELDS,
   { id: FAMILY_FIELD_CODED_PHENOTYPE },
   { id: FAMILY_FIELD_MONDO_ID },
-  { id: FAMILY_FIELD_OMIM_NUMBER },
+  { id: FAMILY_FIELD_OMIM_NUMBERS },
   { id: FAMILY_FIELD_PMIDS },
 ]
 

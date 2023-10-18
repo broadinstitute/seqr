@@ -79,7 +79,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
     individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
 
     family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
-        'id', 'family_id', 'post_discovery_omim_number', 'project__name',
+        'id', 'family_id', 'post_discovery_omim_numbers', 'project__name',
         pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
         phenotype_description=Replace(
             Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
@@ -127,10 +127,9 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
 
     mim_numbers = set()
     for family in family_data:
-        if family['post_discovery_omim_number']:
-            mim_numbers.update(family['post_discovery_omim_number'].split(','))
+        mim_numbers.update(family['post_discovery_omim_numbers'])
     mim_decription_map = {
-        str(o.phenotype_mim_number): o.phenotype_description
+        o.phenotype_mim_number: o.phenotype_description
         for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers)
     }
 
@@ -140,9 +139,8 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
         family_subject_row = family_data_by_id[family_id]
         genome_version = family_subject_row.pop('genome_version')
 
-        post_discovery_omim_number = family_subject_row.pop('post_discovery_omim_number')
-        if post_discovery_omim_number:
-            mim_numbers = post_discovery_omim_number.split(',')
+        mim_numbers = family_subject_row.pop('post_discovery_omim_numbers')
+        if mim_numbers:
             family_subject_row.update({
                 'disease_id': ';'.join(['OMIM:{}'.format(mim_number) for mim_number in mim_numbers]),
                 'disease_description': ';'.join([
