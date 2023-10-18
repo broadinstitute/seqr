@@ -36,7 +36,7 @@ class VariantLookup extends React.PureComponent {
     new Promise(resolve => this.setState({ url: `/api/variant/${genomeVersion}/${variantId}` }, resolve))
   )
 
-  parseResponse = variant => ({ variant })
+  parseResponse = response => response
 
   render() {
     const { url } = this.state

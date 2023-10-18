@@ -527,4 +527,7 @@ def _flatten_variants(variants):
 
 @login_and_policies_required
 def variant_lookup_handler(request, genome_version, variant_id):
-    return create_json_response(variant_lookup(genome_version, variant_id, request.user))
+    variant = variant_lookup(genome_version, variant_id, request.user)
+    response = get_variants_response(request, saved_variants=None, response_variants=[variant])
+    response['variant'] = variant
+    return create_json_response(response)
