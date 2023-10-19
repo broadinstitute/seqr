@@ -175,6 +175,7 @@ DosageSensitivity.propTypes = {
 
 export const HI_THRESHOLD = 0.86
 export const TS_THRESHOLD = 0.94
+export const SHET_THRESHOLD = 0.1
 const HAPLOINSUFFICIENT_FIELDS = [{ field: 'phi', label: 'pHaplo' }]
 const TRIPLOSENSITIVE_FIELDS = [{ field: 'pts', label: 'pTriplo' }]
 const STAT_DETAILS = [
@@ -209,6 +210,24 @@ const STAT_DETAILS = [
     rankDescription: 'intolerant of LoF mutations',
     note: 'These metrics are based on the amount of expected variation observed in the gnomAD data and is a measure ' +
     'of how likely the gene is to be intolerant of loss-of-function mutations.',
+  },
+  {
+    title: 'Shet',
+    scoreField: 'sHet',
+    fields: [
+      { field: 'postMean', label: 'post_mean' },
+    ],
+    note: (
+      <span>
+        This score was developed by the Pritchard lab [
+        <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10245655" target="_blank" rel="noreferrer">
+          Zeng et al 2023
+        </a>
+        ] to predict gene constraint based on functional and evolutionary information. Scores &gt;
+        {SHET_THRESHOLD}
+        &nbsp; are considered to have high likelihood to be under extreme selection.
+      </span>
+    ),
   },
   {
     title: 'Haploinsufficient',

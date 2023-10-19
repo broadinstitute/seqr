@@ -4,6 +4,15 @@ import styled from 'styled-components'
 import { Button, Header, Icon, Label, Table } from 'semantic-ui-react'
 import { NavLink } from 'react-router-dom'
 
+export const ActiveDisabledNavLink = styled(NavLink)`
+  ${props => (props.padded ? 'padding-right: 1em;' : '')}
+  
+  &.active {
+    cursor: not-allowed;
+    color: ${props => props.activeColor || 'grey'};
+  }
+`
+
 const BaseButtonLink = styled(({ color, padding, ...props }) => <Button {...props} />).attrs(
   props => (props.as ? { className: `ui button basic${props.disabled ? ' disabled' : ''}` } : { basic: true }),
 )`

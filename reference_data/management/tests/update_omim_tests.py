@@ -15,7 +15,7 @@ from reference_data.models import Omim, GeneInfo
 
 OMIM_DATA = [
     '# Copyright (c) 1966-2020 Johns Hopkins University. Use of this file adheres to the terms specified at https://omim.org/help/agreement.\n',
-    '# Chromosome	Genomic Position Start	Genomic Position End	Cyto Location	Computed Cyto Location	MIM Number	Gene Symbols	Gene Name	Approved Gene Symbol	Entrez Gene ID	Ensembl Gene ID	Comments	Phenotypes	Mouse Gene Symbol/ID\n',
+    '# Chromosome	Genomic Position Start	Genomic Position End	Cyto Location	Computed Cyto Location	MIM Number	Gene/Locus And Other Related Symbols	Gene Name	Approved Gene Symbol	Entrez Gene ID	Ensembl Gene ID	Comments	Phenotypes	Mouse Gene Symbol/ID\n',
     'chr1	0	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						\n',
     'chr1	0	27600000	1p36		612367	OR4F5	Alkaline phosphatase, plasma level of, QTL 2		100196914		linkage with rs1780324	{Alkaline phosphatase, plasma level of, QTL 2}, 612367 (2)	\n',
     '# comment line\n',
@@ -102,7 +102,7 @@ class UpdateOmimTest(TestCase):
         # Test bad phenotype field in the record
         call_command('update_omim', '--omim-key=test_key')
         record = json.loads(re.search(r'No phenotypes found: ({.*})', mock_logger.error.call_args.args[0]).group(1))
-        self.assertDictEqual(record, {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "{x}, 605462 (5)", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene_symbols": "BCC1", "approved_gene_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"})
+        self.assertDictEqual(record, {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "{x}, 605462 (5)", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene/locus_and_other_related_symbols": "BCC1", "approved_gene_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"})
 
         self.assertEqual(Omim.objects.all().count(), 3)
 

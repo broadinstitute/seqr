@@ -703,7 +703,7 @@ ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGui
 
 FAMILY_FIELDS = {
     'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
-    'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst', 'codedPhenotype', 'postDiscoveryOmimNumber',
+    'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst', 'codedPhenotype', 'postDiscoveryOmimNumbers',
     'pedigreeDataset', 'analysisStatusLastModifiedDate', 'analysisStatusLastModifiedBy', 'mondoId',
 }
 CASE_REVIEW_FAMILY_FIELDS = {
@@ -794,7 +794,7 @@ GENE_FIELDS = {
     'gencodeGeneType', 'geneId', 'geneSymbol', 'startGrch37', 'startGrch38',
 }
 GENE_VARIANT_DISPLAY_FIELDS = {
-    'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity', 'genCc', 'clinGen',
+    'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity', 'genCc', 'clinGen', 'sHet',
 }
 GENE_VARIANT_DISPLAY_FIELDS.update(GENE_FIELDS)
 GENE_VARIANT_FIELDS = {

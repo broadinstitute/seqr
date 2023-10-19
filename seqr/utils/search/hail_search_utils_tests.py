@@ -151,7 +151,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         with self.assertRaises(HTTPError) as cm:
             query_variants(self.results_model, user=self.user)
         self.assertEqual(cm.exception.response.status_code, 400)
-        self.assertEqual(cm.exception.response.text, 'Bad Search Error')
+        self.assertEqual(str(cm.exception), 'Bad Search Error')
 
     @responses.activate
     def test_get_variant_query_gene_counts(self):

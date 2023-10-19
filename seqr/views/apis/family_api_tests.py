@@ -51,7 +51,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['familiesByGuid']), 1)
         family = response_json['familiesByGuid'][FAMILY_GUID]
-        family_fields = {'individualGuids', 'detailsLoaded'}
+        family_fields = {'individualGuids', 'detailsLoaded', 'postDiscoveryOmimOptions'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(family.keys()), family_fields)
         self.assertEqual(family['projectGuid'], PROJECT_GUID)
@@ -59,6 +59,13 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertListEqual(family['analysedBy'], [
             {'createdBy': 'Test No Access User', 'dataType': 'SNP', 'lastModifiedDate': '2022-07-22T19:27:08.563+00:00'},
         ])
+        self.assertListEqual(family['postDiscoveryOmimNumbers'], [615120, 615123])
+        self.assertDictEqual(family['postDiscoveryOmimOptions'], {
+            '615120': {'phenotypeMimNumber': 615120, 'phenotypes': [{
+                'geneSymbol': 'MIR1302-2HG', 'mimNumber': 103320, 'phenotypeMimNumber': 615120,
+                'phenotypeDescription': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
+                'phenotypeInheritance': 'Autosomal recessive',
+            }]}})
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
@@ -100,6 +107,23 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(len(response_json['familyNotesByGuid']), 3)
         self.assertSetEqual(set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS)
         self.assertSetEqual({FAMILY_GUID}, {f['familyGuid'] for f in response_json['familyNotesByGuid'].values()})
+
+        # Test discovery omim options
+        discovery_omim_url = reverse(family_page_data, args=['F000012_12'])
+        response = self.client.get(discovery_omim_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000012_12'})
+        self.assertListEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimNumbers'], [])
+        self.assertDictEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimOptions'], {'616126': {
+            'phenotypeMimNumber': 616126, 'phenotypes': [{
+                'geneSymbol': 'DDX11L1',
+                'mimNumber': 147571,
+                'phenotypeMimNumber': 616126,
+                'phenotypeDescription': 'Immunodeficiency 38',
+                'phenotypeInheritance': 'Autosomal recessive',
+            }]}})
 
         # Test analyst users have internal fields returned
         self.login_analyst_user()
@@ -521,7 +545,7 @@ class FamilyAPITest(AuthenticationTestCase):
                 'ENSG00000268903': {
                     'chromGrch37': '1', 'chromGrch38': '1', 'clinGen': None, 'cnSensitivity': {},
                     'codingRegionSizeGrch37': 0, 'codingRegionSizeGrch38': 0, 'constraints': {},
-                    'endGrch37': 135895, 'endGrch38': 135895, 'genCc': {},
+                    'endGrch37': 135895, 'endGrch38': 135895, 'genCc': {}, 'sHet': {},
                     'gencodeGeneType': 'processed_pseudogene', 'geneId': 'ENSG00000268903',
                     'geneSymbol': 'AL627309.7', 'mimNumber': None, 'omimPhenotypes': [],
                     'startGrch37': 135141, 'startGrch38': 135141

@@ -12,7 +12,7 @@ const TermsOfService = lazy(() => import('./components/TermsOfService'))
 export default [
   { path: `${MATCHMAKER_PATH}/matchbox`, component: MatchmakerInfo },
   { path: `${MATCHMAKER_PATH}/disclaimer`, component: MatchmakerDisclaimer },
-  { path: FAQ_PATH, component: Faq },
+  { path: `${FAQ_PATH}/:language?`, component: Faq },
   { path: PRIVACY_PATH, component: PrivacyPolicy },
   { path: TOS_PATH, component: TermsOfService },
 ]
