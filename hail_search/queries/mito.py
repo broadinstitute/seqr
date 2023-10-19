@@ -28,14 +28,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
     for pop in ['seqr', 'gnomad_mito', 'helix']:
         pop_het = f'{pop}_heteroplasmy'
         POPULATIONS.update({
-            pop: {'hom': None, 'hemi': None, 'het': None},
+            pop: {'af': 'AF_hom', 'ac': 'AC_hom', 'hom': None, 'hemi': None, 'het': None},
             pop_het: {
                 'af': 'AF_het', 'ac': 'AC_het', 'max_hl': None if pop == 'seqr' else 'max_hl',
                 'hom': None, 'hemi': None, 'het': None,
             },
         })
         POPULATION_FIELDS[pop_het] = POPULATION_FIELDS.get(pop, pop)
-    POPULATIONS['seqr'].update({'af': 'AF_hom', 'ac': 'AC_hom', 'sort': 'callset_af'})
+    POPULATIONS['seqr'].update({'sort': 'callset_af'})
     POPULATIONS['gnomad_mito']['sort'] = 'gnomad'
     PREDICTION_FIELDS_CONFIG = {
         'apogee': PredictionPath('mitimpact', 'score'),
