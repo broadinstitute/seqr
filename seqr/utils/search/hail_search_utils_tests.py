@@ -12,7 +12,7 @@ from seqr.utils.search.search_utils_tests import SearchTestHelper
 from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
     FAMILY_2_ALL_SAMPLE_DATA, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
     LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS, FAMILY_2_VARIANT_SAMPLE_DATA, \
-    FAMILY_2_MITO_SAMPLE_DATA
+    FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX
 MOCK_HOST = 'http://test-hail-host'
 
 
@@ -126,6 +126,14 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self._test_expected_search_call(
             inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
             search_fields=['annotations', 'annotations_secondary'], omit_sample_type='SV_WES',
+        )
+
+        self.search_model.search['inheritance']['mode'] = 'x_linked_recessive'
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            inheritance_mode='x_linked_recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
+            search_fields=['annotations', 'annotations_secondary'], sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX,
+            omit_sample_type='SV_WES',
         )
 
         quality_filter = {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'}
