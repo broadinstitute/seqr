@@ -28,6 +28,7 @@ VariantDisplay.propTypes = {
   variant: PropTypes.object,
 }
 
+// TODO use QueryParamsEditor to update URL params to make navagable, shareable links
 class VariantLookup extends React.PureComponent {
 
   static propTypes = {
