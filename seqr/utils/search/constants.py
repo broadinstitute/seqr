@@ -12,6 +12,7 @@ PRIORITIZED_GENE_SORT = 'prioritized_gene'
 
 COMPOUND_HET = 'compound_het'
 RECESSIVE = 'recessive'
+X_LINKED_RECESSIVE = 'x_linked_recessive'
 
 NEW_SV_FIELD = 'new_structural_variants'
 SV_ANNOTATION_TYPES = {'structural_consequence', 'structural', NEW_SV_FIELD}
