@@ -175,6 +175,11 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             variant_ids=[], variant_keys=['prefix_19107_DEL'],
             num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='SNV_INDEL')
 
+        get_single_variant(self.families, 'M-10195-C-A', user=self.user)
+        self._test_minimal_search_call(
+            variant_ids=[['M', 10195, 'C', 'A']], variant_keys=[],
+            num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='SNV_INDEL')
+
         with self.assertRaises(InvalidSearchException) as cm:
             get_single_variant(self.families, '1-91502721-G-A', user=self.user, return_all_queried_families=True)
         self.assertEqual(
