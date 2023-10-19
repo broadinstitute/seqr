@@ -161,6 +161,15 @@ class GeneCopyNumberSensitivity(models.Model):
         json_fields = ['pHI', 'pTS']
 
 
+class GeneShet(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    post_mean = models.FloatField()
+
+    class Meta:
+        json_fields = ['post_mean']
+
+
 class Omim(models.Model):
     MAP_METHOD_CHOICES = (
         ('1', 'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.'),

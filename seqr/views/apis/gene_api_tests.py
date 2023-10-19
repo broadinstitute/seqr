@@ -33,6 +33,35 @@ class GeneAPITest(AuthenticationTestCase):
         genes = response.json()['genesById']
         self.assertSetEqual(set(genes.keys()), {GENE_ID, 'ENSG00000269981'})
         self.assertSetEqual(set(genes[GENE_ID].keys()), GENE_DETAIL_FIELDS)
+        self.assertDictEqual(genes[GENE_ID], {
+            'chromGrch37': '1',
+            'chromGrch38': '1',
+            'clinGen': {'haploinsufficiency': 'No Evidence', 'href': 'https://dosage.clinicalgenome.org/clingen_gene.cgi?sym=', 'triplosensitivity': ''},
+            'cnSensitivity': {'phi': 0.90576, 'pts': 0.7346},
+            'codingRegionSizeGrch37': 0,
+            'codingRegionSizeGrch38': 0,
+            'constraints': {'louef': 1.606, 'louefRank': 0, 'misZ': -0.7773, 'misZRank': 1, 'pli': 0.00090576, 'pliRank': 1, 'totalGenes': 1},
+            'diseaseDesc': '',
+            'endGrch37': 14409,
+            'endGrch38': 14409,
+            'functionDesc': '',
+            'genCc': {'hgncId': 'HGNC:943', 'classifications': [
+                {'classification': 'Strong', 'date': '7/29/19 19:04', 'disease': 'dystonia 16', 'moi': 'Autosomal recessive', 'submitter': 'Laboratory for Molecular Medicine'},
+                {'classification': 'Supportive', 'date': '9/14/21 0:00', 'disease': 'dystonia 16', 'moi': 'Autosomal recessive', 'submitter': 'Orphanet'},
+            ]},
+            'gencodeGeneType': 'transcribed_unprocessed_pseudogene',
+            'geneId': 'ENSG00000223972',
+            'geneNames': '',
+            'geneSymbol': 'DDX11L1',
+            'mgiMarkerId': None,
+            'mimNumber': 147571,
+            'notes': [],
+            'omimPhenotypes': [{'mimNumber': 147571, 'phenotypeDescription': 'Immunodeficiency 38', 'phenotypeInheritance': 'Autosomal recessive', 'phenotypeMimNumber': 616126}],
+            'primateAi': {'percentile25': 0.587214291096, 'percentile75': 0.821286439896},
+            'sHet': {'postMean': 0.90576},
+            'startGrch37': 11869,
+            'startGrch38': 11869,
+        })
 
 
     def test_create_update_and_delete_gene_note(self):
