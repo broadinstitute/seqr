@@ -11,7 +11,8 @@ from seqr.utils.search.utils import get_variant_query_gene_counts, query_variant
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
     FAMILY_2_ALL_SAMPLE_DATA, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
-    LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS
+    LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS, FAMILY_2_VARIANT_SAMPLE_DATA, \
+    FAMILY_2_MITO_SAMPLE_DATA
 MOCK_HOST = 'http://test-hail-host'
 
 
@@ -168,7 +169,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.assertDictEqual(variant, HAIL_BACKEND_VARIANTS[0])
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
-            num_results=1, sample_data=ALL_AFFECTED_SAMPLE_DATA, omit_sample_type='SV_WES')
+            num_results=1, sample_data={'SNV_INDEL': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL']})
 
         get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
         self._test_minimal_search_call(
@@ -178,7 +179,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         get_single_variant(self.families, 'M-10195-C-A', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[['M', 10195, 'C', 'A']], variant_keys=[],
-            num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='SNV_INDEL')
+            num_results=1, sample_data=FAMILY_2_MITO_SAMPLE_DATA)
 
         with self.assertRaises(InvalidSearchException) as cm:
             get_single_variant(self.families, '1-91502721-G-A', user=self.user, return_all_queried_families=True)
@@ -190,7 +191,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         get_single_variant(self.families.filter(guid='F000002_2'), '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
-            num_results=1, sample_data=FAMILY_2_ALL_SAMPLE_DATA)
+            num_results=1, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 
         responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={'results': [], 'total': 0})
         with self.assertRaises(InvalidSearchException) as cm:
@@ -210,4 +211,4 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
             variant_keys=[],
-            num_results=2, sample_data=ALL_AFFECTED_SAMPLE_DATA, omit_sample_type='SV_WES')
+            num_results=2, sample_data={'SNV_INDEL': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL']})
