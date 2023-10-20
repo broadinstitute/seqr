@@ -25,7 +25,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     POPULATION_FIELDS = {'helix': 'helix_mito', 'seqr': 'gt_stats'}
     POPULATIONS = {}
-    for pop in ['seqr', 'gnomad_mito', 'helix']:
+    for pop, sort in {'seqr': 'callset_af', 'gnomad_mito': 'gnomad', 'helix': None}.items():
         pop_het = f'{pop}_heteroplasmy'
         POPULATIONS.update({
             pop: {'af': 'AF_hom', 'ac': 'AC_hom', 'hom': None, 'hemi': None, 'het': None},
@@ -35,8 +35,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
             },
         })
         POPULATION_FIELDS[pop_het] = POPULATION_FIELDS.get(pop, pop)
-    POPULATIONS['seqr'].update({'sort': 'callset_af'})
-    POPULATIONS['gnomad_mito']['sort'] = 'gnomad'
     PREDICTION_FIELDS_CONFIG = {
         'apogee': PredictionPath('mitimpact', 'score'),
         'haplogroup_defining': PredictionPath('haplogroup', 'is_defining', lambda v: hl.or_missing(v, 'Y')),
