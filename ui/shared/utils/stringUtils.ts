@@ -11,7 +11,7 @@ import removeMd from '@tommoor/remove-markdown'
  * // Returns: 'Hello World Example'
  */
 export const snakecaseToTitlecase =
-  (s: string): string => (s ? s.split('_').map((word:any) => word[0].toUpperCase() + word.slice(1)).join(' ') : '')
+  (s: string): string => (s ? s.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' ') : '')
 
 /**
  * Converts a camelCase string to title case.
