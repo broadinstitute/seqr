@@ -44,7 +44,7 @@
     "semi": ["error", "never"],
 
     "react/forbid-prop-types": ["error", { "forbid": ["any", "array"] }],
-    "react/jsx-filename-extension": ["error", { "extensions": [".js", ".jsx"]} ],
+    "react/jsx-filename-extension": ["error", { "extensions": [".js", ".jsx", ".ts", ".tsx"]} ],
     "react/jsx-props-no-spreading": ["error", {
       "html": "enforce",
       "custom": "ignore",
@@ -61,6 +61,7 @@
     "react/require-default-props": "off",
     "react/require-optimization": "error",
     "react/state-in-constructor": ["error", "never"],
-    "react/static-property-placement": ["error", "static public field"]
+    "react/static-property-placement": ["error", "static public field"],
+    "import/extensions": "off"
   }
 }
