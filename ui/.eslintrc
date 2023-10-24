@@ -69,7 +69,6 @@
     "@typescript-eslint/no-unused-vars": "off",
     "react/prop-types": "off",
     "no-use-before-define": "off",
-    "react/sort-comp": "off",
-    "linebreak-style": "off"
+    "react/sort-comp": "off"
   }
 }
