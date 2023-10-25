@@ -92,10 +92,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
-        gene_transcripts = getattr(ht, 'gene_transcripts', None)
+        gene_id = getattr(ht, 'gene_id', None)
+        if gene_id is not None:
+            gene_transcripts = ht.sorted_transcript_consequences.filter(lambda t: t.gene_id == ht.gene_id)
+        else:
+            gene_transcripts = getattr(ht, 'gene_transcripts', None)
 
         allowed_transcripts = getattr(ht, ALLOWED_TRANSCRIPTS, None)
-        if hasattr(ht, 'gene_id') and hasattr(ht, ALLOWED_SECONDARY_TRANSCRIPTS):
+        if gene_id is not None and hasattr(ht, ALLOWED_SECONDARY_TRANSCRIPTS):
             allowed_transcripts = hl.if_else(
                 allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht[ALLOWED_SECONDARY_TRANSCRIPTS],
             ) if allowed_transcripts is not None else ht[ALLOWED_SECONDARY_TRANSCRIPTS]

@@ -234,7 +234,12 @@ class BaseHailTableQuery(object):
             if self._is_recessive_search:
                 self._ht = self._ht.filter(self._ht.family_entries.any(hl.is_defined))
                 if self._has_secondary_annotations:
-                    self._ht = self._ht.filter(hl.any(self._get_annotation_filters(self._ht)))
+                    annotation_filters = self._get_annotation_filters(self._ht)
+                    if annotation_filters:
+                        self._ht = self._ht.filter(hl.any(annotation_filters))
+                    else:
+                        # Data type only has annotations for second hit
+                        self._ht = None
             else:
                 self._ht = None
 
@@ -688,9 +693,8 @@ class BaseHailTableQuery(object):
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht, comp_het=True))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
-        self.unfiltered_comp_het_ht = ch_ht
 
-        # Filter allowed consequences to the specific gene
+        # Filter allowed transcripts to the grouped gene
         transcript_annotations = {
             k: ch_ht[k].filter(lambda t: t.gene_id == ch_ht.gene_ids)
             for k in [ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS] if k in ch_ht.row
@@ -699,6 +703,8 @@ class BaseHailTableQuery(object):
             ch_ht = ch_ht.annotate(**transcript_annotations)
         primary_filters = self._get_annotation_filters(ch_ht)
         secondary_filters = self._get_annotation_filters(ch_ht, is_secondary=True)
+
+        self.unfiltered_comp_het_ht = ch_ht.filter(hl.any(primary_filters + secondary_filters))
         if self._has_secondary_annotations and not (primary_filters and secondary_filters):
             # In cases where comp het pairs must have different data types, there are no single data type results
             return None
@@ -710,8 +716,6 @@ class BaseHailTableQuery(object):
             secondary_variants = primary_variants
 
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
-        ch_ht = ch_ht.filter((ch_ht.v1.size() > 0) & (ch_ht.v2.size() > 0))
-
         ch_ht = self._filter_grouped_compound_hets(ch_ht)
         return ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2])})
 
