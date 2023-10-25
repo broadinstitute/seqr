@@ -1,10 +1,12 @@
 {
   "extends": [
     "airbnb",
-    "plugin:react-perf/recommended"
+    "plugin:react-perf/recommended",
+    "plugin:@typescript-eslint/recommended"
   ],
 
-  "parser": "babel-eslint",
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
   "parserOptions": {
     "ecmaFeatures": {
       "experimentalObjectRestSpread": true
@@ -62,6 +64,11 @@
     "react/require-optimization": "error",
     "react/state-in-constructor": ["error", "never"],
     "react/static-property-placement": ["error", "static public field"],
-    "import/extensions": "off"
+    // TODO: Remove all the rule below this after complete migration of the project into typescript.
+    "import/extensions": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+    "react/prop-types": "off",
+    "no-use-before-define": "off",
+    "react/sort-comp": "off"
   }
 }
