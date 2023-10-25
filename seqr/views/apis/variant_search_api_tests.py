@@ -278,6 +278,7 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Invalid index')
+        self.assertFalse('traceback' in response.json())
         mock_error_logger.assert_called_with(
             'Invalid index', self.collaborator_user, http_request_json=mock.ANY, traceback=mock.ANY, request_body=mock.ANY, detail=None)
 
