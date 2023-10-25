@@ -1,7 +1,7 @@
 import hail as hl
 
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
-    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, HAS_ALLOWED_SECONDARY_ANNOTATION, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
+    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
     PATHOGENICTY_HGMD_SORT_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
@@ -98,8 +98,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
         else:
             gene_transcripts = getattr(ht, 'gene_transcripts', None)
 
-        allowed_transcripts = getattr(ht, 'allowed_transcripts', None)
-        if hasattr(ht, HAS_ALLOWED_SECONDARY_ANNOTATION):
+        allowed_transcripts = getattr(ht, ALLOWED_TRANSCRIPTS, None)
+        if hasattr(ht, 'allowed_transcripts_secondary'):
             allowed_transcripts = hl.if_else(
                 allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht.allowed_transcripts_secondary,
             ) if allowed_transcripts is not None else ht.allowed_transcripts_secondary
