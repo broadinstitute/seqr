@@ -99,7 +99,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             gene_transcripts = getattr(ht, 'gene_transcripts', None)
 
         allowed_transcripts = getattr(ht, ALLOWED_TRANSCRIPTS, None)
-        if hasattr(ht, 'allowed_transcripts_secondary'):
+        if gene_id is not None and hasattr(ht, 'allowed_transcripts_secondary'):
             allowed_transcripts = hl.if_else(
                 allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht.allowed_transcripts_secondary,
             ) if allowed_transcripts is not None else ht.allowed_transcripts_secondary
