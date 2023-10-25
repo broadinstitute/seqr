@@ -711,7 +711,11 @@ class BaseHailTableQuery(object):
 
         primary_variants = hl.agg.filter(hl.any(primary_filters), hl.agg.collect(ch_ht.row))
         if secondary_filters:
-            secondary_variants = hl.agg.filter(hl.any(secondary_filters), hl.agg.collect(ch_ht.row))
+            row_agg = ch_ht.row
+            if ALLOWED_TRANSCRIPTS in row_agg and ALLOWED_SECONDARY_TRANSCRIPTS in row_agg:
+                # Ensure main transcripts are properly selected for primary/secondary annotations in variant pairs
+                row_agg = row_agg.annotate(**{ALLOWED_TRANSCRIPTS: row_agg[ALLOWED_SECONDARY_TRANSCRIPTS]})
+            secondary_variants = hl.agg.filter(hl.any(secondary_filters), hl.agg.collect(row_agg))
         else:
             secondary_variants = primary_variants
 
