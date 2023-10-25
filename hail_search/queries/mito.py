@@ -179,7 +179,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             ht = hl.filter_intervals(ht, parsed_intervals, keep=False)
         return ht
 
-    def _get_consequence_filter(self, allowed_consequence_ids, allowed_consequences, annotation_exprs):
+    def _get_transcript_consequence_filter(self, allowed_consequence_ids, allowed_consequences):
         canonical_consequences = {
             c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
         }
@@ -194,15 +194,10 @@ class MitoHailTableQuery(BaseHailTableQuery):
             return None
 
         allowed_consequence_ids = hl.set(allowed_consequence_ids) if allowed_consequence_ids else hl.empty_set(hl.tint)
-        allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
-            lambda tc: tc.consequence_term_ids.any(
-                (hl.if_else(hl.is_defined(tc.canonical), all_consequence_ids, allowed_consequence_ids)
-                 if canonical_consequences else allowed_consequence_ids
-            ).contains)
-        )
-
-        annotation_exprs['allowed_transcripts'] = allowed_transcripts
-        return hl.is_defined(allowed_transcripts.first())
+        return lambda tc: tc.consequence_term_ids.any(
+            (hl.if_else(hl.is_defined(tc.canonical), all_consequence_ids, allowed_consequence_ids)
+             if canonical_consequences else allowed_consequence_ids
+        ).contains)
 
     def _get_annotation_override_filters(self, annotations, pathogenicity=None, **kwargs):
         annotation_filters = []

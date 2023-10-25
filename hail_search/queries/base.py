@@ -647,12 +647,17 @@ class BaseHailTableQuery(object):
         allowed_consequence_ids = self._get_allowed_consequence_ids(allowed_consequences)
 
         annotation_exprs = {}
-        consequence_filter = self._get_consequence_filter(allowed_consequence_ids, allowed_consequences, annotation_exprs)
-        has_consequence_filter = consequence_filter is not None
+        transcript_consequence_filter = self._get_transcript_consequence_filter(allowed_consequence_ids, allowed_consequences)
+        has_consequence_filter = transcript_consequence_filter is not None
         if has_consequence_filter:
-            annotation_filters = annotation_filters + [consequence_filter]
-
+            allowed_transcripts = self._ht[self.TRANSCRIPTS_FIELD].filter(transcript_consequence_filter)
+            # TODO constants
+            annotation_exprs['allowed_transcripts'] = allowed_transcripts
+            if annotation_filters:
+                annotation_exprs['has_annotation_override'] = hl.any(annotation_filters)
+            annotation_filters = annotation_filters + [hl.is_defined(allowed_transcripts.first())]
         if has_consequence_filter or (annotation_filters and not is_secondary):
+            # TODO cleanup, no need HAS_ALLOWED_ANNOTATION?
             annotation_exprs[HAS_ALLOWED_ANNOTATION] = hl.any(annotation_filters)
 
         return annotation_exprs, allowed_consequences
@@ -660,13 +665,11 @@ class BaseHailTableQuery(object):
     def _get_allowed_consequence_ids(self, allowed_consequences):
         return self._get_enum_terms_ids(self.TRANSCRIPTS_FIELD, self.TRANSCRIPT_CONSEQUENCE_FIELD, allowed_consequences)
 
-    def _get_consequence_filter(self, allowed_consequence_ids, allowed_consequences, annotation_exprs):
+    def _get_transcript_consequence_filter(self, allowed_consequence_ids, allowed_consequences):
         if not allowed_consequence_ids:
             return None
         allowed_consequence_ids = hl.set(allowed_consequence_ids)
-        return self._ht[self.TRANSCRIPTS_FIELD].any(
-            lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
-        )
+        return lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
 
     def _get_annotation_override_filters(self, annotations, **kwargs):
         return []
@@ -693,6 +696,22 @@ class BaseHailTableQuery(object):
             secondary_variants = formatted_rows_expr
 
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
+        # TODO shared code
+        if 'allowed_transcripts' in self._ht.row:
+            transcript_filter = lambda v: v.allowed_transcripts.any(lambda t: t.gene_id == ch_ht.gene_ids)
+            if 'has_annotation_override' in self._ht.row:
+                gene_transcript_filter = transcript_filter
+                transcript_filter = lambda v: gene_transcript_filter(v) | v['has_annotation_override']
+            ch_ht = ch_ht.annotate(v1=ch_ht.v1.filter(transcript_filter))
+            ch_ht = ch_ht.filter(ch_ht.v1.size() > 0)
+        if 'allowed_transcripts_secondary' in self._ht.row:
+            transcript_filter = lambda v: v.allowed_transcripts_secondary.any(lambda t: t.gene_id == ch_ht.gene_ids)
+            if 'has_annotation_override_secondary' in self._ht.row:
+                gene_transcript_filter = transcript_filter
+                transcript_filter = lambda v: gene_transcript_filter(v) | v['has_annotation_override_secondary']
+            ch_ht = ch_ht.annotate(v2=ch_ht.v2.filter(transcript_filter))
+            ch_ht = ch_ht.filter(ch_ht.v2.size() > 0)
+
         ch_ht = self._filter_grouped_compound_hets(ch_ht)
         return ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2])})
 
