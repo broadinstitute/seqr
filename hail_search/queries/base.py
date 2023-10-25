@@ -5,7 +5,7 @@ import logging
 import os
 
 from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
-    COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, HAS_ANNOTATION_OVERRIDE, \
+    COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
     UNAFFECTED_ID, VARIANT_KEY_FIELD, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
 
@@ -666,13 +666,13 @@ class BaseHailTableQuery(object):
         return []
 
     @staticmethod
-    def _get_annotation_filters(ht, is_secondary=False, transcript_filter=hl.is_defined):
+    def _get_annotation_filters(ht, is_secondary=False):
         suffix = '_secondary' if is_secondary else ''
         annotation_filters = []
 
         allowed_transcripts_field = f'{ALLOWED_TRANSCRIPTS}{suffix}'
         if allowed_transcripts_field in ht.row:
-            annotation_filters.append(ht[allowed_transcripts_field].any(transcript_filter))
+            annotation_filters.append(hl.is_defined(ht[allowed_transcripts_field].first()))
 
         annotation_override_field = f'{HAS_ANNOTATION_OVERRIDE}{suffix}'
         if annotation_override_field in ht.row:
@@ -690,9 +690,15 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
         self.unfiltered_comp_het_ht = ch_ht
 
-        transcript_filter = lambda t: t.gene_id == ch_ht.gene_ids
-        primary_filters = self._get_annotation_filters(ch_ht, transcript_filter=transcript_filter)
-        secondary_filters = self._get_annotation_filters(ch_ht, is_secondary=True, transcript_filter=transcript_filter)
+        # Filter allowed consequences to the specific gene
+        transcript_annotations = {
+            k: ch_ht[k].filter(lambda t: t.gene_id == ch_ht.gene_ids)
+            for k in [ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS] if k in ch_ht.row
+        }
+        if transcript_annotations:
+            ch_ht = ch_ht.annotate(**transcript_annotations)
+        primary_filters = self._get_annotation_filters(ch_ht)
+        secondary_filters = self._get_annotation_filters(ch_ht, is_secondary=True)
         if self._has_secondary_annotations and not (primary_filters and secondary_filters):
             # In cases where comp het pairs must have different data types, there are no single data type results
             return None
