@@ -105,7 +105,7 @@ class BaseRnaSeqResultPage extends React.PureComponent {
             layout={RnaSeqJunctionOutliersTable}
             noTriggerButton
             data={tableData}
-            defaultSortColumn="pValue"
+            defaultSortColumn="pAdjust"
             maxHeight="600px"
           />
         )}
