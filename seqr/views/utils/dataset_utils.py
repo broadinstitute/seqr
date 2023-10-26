@@ -268,8 +268,8 @@ def load_rna_seq_tpm(*args, **kwargs):
     )
 
 
-def _get_splice_id(row):
-    return '-'.join([row[GENE_ID_COL], row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[SPLICE_TYPE_COL]])
+def _get_splice_id(gene_id, row):
+    return '-'.join([gene_id, row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[SPLICE_TYPE_COL]])
 
 
 def load_rna_seq_splice_outlier(*args, **kwargs):
@@ -344,25 +344,26 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
 
             sample_id_to_tissue_type[(sample_id, project)] = tissue_type
 
-            gene_id = row_dict[GENE_ID_COL]
-            if gene_id:
-                gene_ids.add(gene_id)
+            row_gene_ids = row_dict[GENE_ID_COL].split(';')
+            if any(row_gene_ids):
+                gene_ids.update(row_gene_ids)
 
-            if get_unique_key:
-                gene_or_unique_id = get_unique_key(row_dict)
-            else:
-                gene_or_unique_id = gene_id
-            existing_data = samples_by_id[(sample_id, project)].get(gene_or_unique_id)
-            if existing_data and existing_data != row_dict:
-                # TODO reenable validation once determine how to handle these cases
-                pass
-                # errors.append(f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries '
-                #               f'{existing_data} and {row_dict}')
+            for gene_id in row_gene_ids:
+                if get_unique_key:
+                    gene_or_unique_id = get_unique_key(gene_id, row_dict)
+                else:
+                    gene_or_unique_id = gene_id
+                existing_data = samples_by_id[(sample_id, project)].get(gene_or_unique_id)
+                if existing_data and existing_data != row_dict:
+                    # TODO reenable validation once determine how to handle these cases
+                    pass
+                    # errors.append(f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries '
+                    #               f'{existing_data} and {row_dict}')
 
-            if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
-                sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
+                if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
+                    sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
 
-            samples_by_id[(sample_id, project)][gene_or_unique_id] = row_dict
+                samples_by_id[(sample_id, project)][gene_or_unique_id] = row_dict
 
     matched_gene_ids = set(GeneInfo.objects.filter(gene_id__in=gene_ids).values_list('gene_id', flat=True))
     unknown_gene_ids = gene_ids - matched_gene_ids
