@@ -918,8 +918,8 @@ def _generate_rows(initial_row, family, samples, saved_variants, analysis_notes,
             "phenotype_class": "KNOWN",
         })
 
-    if family.post_discovery_omim_number:
-        row["omim_number_post_discovery"] = family.post_discovery_omim_number
+    if family.post_discovery_omim_numbers:
+        row["omim_number_post_discovery"] = ','.join([str(n) for n in family.post_discovery_omim_numbers])
 
     if not saved_variants:
         return [row]

@@ -11,7 +11,8 @@ from seqr.utils.search.utils import get_variant_query_gene_counts, query_variant
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
     FAMILY_2_ALL_SAMPLE_DATA, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
-    LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS
+    LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS, FAMILY_2_VARIANT_SAMPLE_DATA, \
+    FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX
 MOCK_HOST = 'http://test-hail-host'
 
 
@@ -127,6 +128,14 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             search_fields=['annotations', 'annotations_secondary'], omit_sample_type='SV_WES',
         )
 
+        self.search_model.search['inheritance']['mode'] = 'x_linked_recessive'
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            inheritance_mode='x_linked_recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
+            search_fields=['annotations', 'annotations_secondary'], sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX,
+            omit_sample_type='SV_WES',
+        )
+
         quality_filter = {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'}
         freq_filter = {'callset': {'af': 0.1}, 'gnomad_genomes': {'af': 0.01, 'ac': 3, 'hh': 3}}
         custom_query = {'term': {'customFlag': 'flagVal'}}
@@ -151,7 +160,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         with self.assertRaises(HTTPError) as cm:
             query_variants(self.results_model, user=self.user)
         self.assertEqual(cm.exception.response.status_code, 400)
-        self.assertEqual(cm.exception.response.text, 'Bad Search Error')
+        self.assertEqual(str(cm.exception), 'Bad Search Error')
 
     @responses.activate
     def test_get_variant_query_gene_counts(self):
@@ -168,12 +177,17 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.assertDictEqual(variant, HAIL_BACKEND_VARIANTS[0])
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
-            num_results=1, sample_data=ALL_AFFECTED_SAMPLE_DATA, omit_sample_type='SV_WES')
+            num_results=1, sample_data={'SNV_INDEL': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL']})
 
         get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[], variant_keys=['prefix_19107_DEL'],
             num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='SNV_INDEL')
+
+        get_single_variant(self.families, 'M-10195-C-A', user=self.user)
+        self._test_minimal_search_call(
+            variant_ids=[['M', 10195, 'C', 'A']], variant_keys=[],
+            num_results=1, sample_data=FAMILY_2_MITO_SAMPLE_DATA)
 
         with self.assertRaises(InvalidSearchException) as cm:
             get_single_variant(self.families, '1-91502721-G-A', user=self.user, return_all_queried_families=True)
@@ -185,7 +199,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         get_single_variant(self.families.filter(guid='F000002_2'), '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G']], variant_keys=[],
-            num_results=1, sample_data=FAMILY_2_ALL_SAMPLE_DATA)
+            num_results=1, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 
         responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={'results': [], 'total': 0})
         with self.assertRaises(InvalidSearchException) as cm:
@@ -205,4 +219,4 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
             variant_keys=[],
-            num_results=2, sample_data=ALL_AFFECTED_SAMPLE_DATA, omit_sample_type='SV_WES')
+            num_results=2, sample_data={'SNV_INDEL': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL']})

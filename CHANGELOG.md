@@ -2,6 +2,10 @@
 
 ## dev
 
+## 10/19/23
+* Migrate Family post_discovery_omim_number to integer array (REQUIRES DB MIGRATION)
+* Add GeneShet model to the reference DB (REQUIRES DB MIGRATION)
+
 ## 10/6/23
 * Require tissue_type in Sample model (REQUIRES DB MIGRATION)
 

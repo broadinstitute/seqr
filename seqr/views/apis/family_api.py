@@ -4,10 +4,11 @@ APIs used to retrieve and modify Individual fields
 import json
 from collections import defaultdict
 from django.contrib.auth.models import User
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.db.models.fields.files import ImageFieldFile
 
 from matchmaker.models import MatchmakerSubmission
+from reference_data.models import Omim
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.individual_utils import delete_individuals
@@ -23,7 +24,7 @@ from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample
     PhenotypePrioritization, Project
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
-from seqr.views.utils.variant_utils import get_phenotype_prioritization
+from seqr.views.utils.variant_utils import get_phenotype_prioritization, DISCOVERY_CATEGORY
 
 
 FAMILY_ID_FIELD = 'familyId'
@@ -45,7 +46,27 @@ def family_page_data(request, family_guid):
     }
 
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
-    response['familiesByGuid'][family_guid]['detailsLoaded'] = True
+    family_response = response['familiesByGuid'][family_guid]
+
+    discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY)
+    gene_ids = {
+        gene_id for transcripts in discovery_variants.values_list('saved_variant_json__transcripts', flat=True)
+        for gene_id in (transcripts or {}).keys()
+    }
+    omims = Omim.objects.filter(
+        Q(phenotype_mim_number__in=family_response['postDiscoveryOmimNumbers']) | Q(gene__gene_id__in=gene_ids)
+    ).exclude(phenotype_mim_number__isnull=True).distinct()
+    omim_map = {}
+    for o in get_json_for_queryset(omims, nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}]):
+        mim_number = o['phenotypeMimNumber']
+        if mim_number not in omim_map:
+            omim_map[mim_number] = {'phenotypeMimNumber': mim_number, 'phenotypes': []}
+        omim_map[mim_number]['phenotypes'].append(o)
+
+    family_response.update({
+        'detailsLoaded': True,
+        'postDiscoveryOmimOptions': omim_map,
+    })
 
     outlier_individual_guids = sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA)\
         .exclude(rnaseqoutlier__isnull=True, rnaseqspliceoutlier__isnull=True).values_list('individual__guid', flat=True)

@@ -1168,6 +1168,14 @@
         "pTS": 0.7346
     }
 },
+{
+    "model": "reference_data.geneshet",
+    "pk": 1,
+    "fields": {
+        "gene": 1,
+        "post_mean": 0.90576
+    }
+},
     {
     "model": "reference_data.dbnsfpgene",
     "pk": 36613,
