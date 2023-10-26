@@ -24,12 +24,16 @@ const OUTLIER_VOLCANO_PLOT_CONFIGS = [
     getLocation: (({ geneId }) => geneId),
     searchType: 'genes',
     title: 'Expression Outliers',
+    xField: 'zScore',
+    yField: 'pValue',
   },
   {
     key: 'spliceOutliers',
     getLocation: (({ chrom, start, end }) => `${chrom}:${Math.max(1, start - RNASEQ_JUNCTION_PADDING)}-${end + RNASEQ_JUNCTION_PADDING}`),
     searchType: 'regions',
     title: 'Splice Junction Outliers',
+    xField: 'deltaIntronJaccardIndex',
+    yField: 'pAdjust',
   },
 ]
 
