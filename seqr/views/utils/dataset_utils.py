@@ -208,10 +208,12 @@ def _parse_tsv_row(row):
 PROJECT_COL = 'project'
 TISSUE_COL = 'tissue'
 SAMPLE_ID_COL = 'sample_id'
+SAMPLE_ID_HEADER_COL = 'sampleID'
 INDIV_ID_COL = 'individual_id'
 GENE_ID_COL = 'gene_id'
-RNA_OUTLIER_COLUMNS = {GENE_ID_COL: 'geneID', 'p_value': 'pValue', 'p_adjust': 'padjust', 'z_score': 'zScore',
-                       SAMPLE_ID_COL: 'sampleID'}
+GENE_ID_HEADER_COL = 'geneID'
+RNA_OUTLIER_COLUMNS = {GENE_ID_COL: GENE_ID_HEADER_COL, 'p_value': 'pValue', 'p_adjust': 'padjust', 'z_score': 'zScore',
+                       SAMPLE_ID_COL: SAMPLE_ID_HEADER_COL}
 
 TPM_COL = 'TPM'
 TPM_HEADER_COLS = {col.lower(): col for col in [GENE_ID_COL, TPM_COL]}
@@ -219,33 +221,37 @@ TPM_HEADER_COLS = {col.lower(): col for col in [GENE_ID_COL, TPM_COL]}
 CHROM_COL = 'chrom'
 START_COL = 'start'
 END_COL = 'end'
-STRAND_COL = 'strand'
-READ_COUNT_COL = 'read_count'
+COUNTS_COL = 'counts'
+MEAN_COUNTS_COL = 'mean_counts'
+TOTAL_COUNTS_COL = 'total_counts'
+TOTAL_MEAN_COUNTS_COL = 'total_mean_counts'
 SPLICE_TYPE_COL = 'type'
-P_VALUE_COL ='p_value'
-Z_SCORE_COL = 'z_score'
-DELTA_PSI_COL = 'delta_psi'
-RARE_DISEASE_SAMPLES_WITH_JUNCTION = 'rare_disease_samples_with_junction'
+P_ADJUST_COL ='p_adjust'
+DELTA_INDEX_COL = 'delta_intron_jaccard_index'
+RARE_DISEASE_SAMPLES_WITH_JUNCTION = 'rare_disease_samples_with_this_junction'
 RARE_DISEASE_SAMPLES_TOTAL = 'rare_disease_samples_total'
 SPLICE_OUTLIER_COLS = [
-    CHROM_COL, START_COL, END_COL, STRAND_COL, INDIV_ID_COL, SPLICE_TYPE_COL, P_VALUE_COL, Z_SCORE_COL,
-    DELTA_PSI_COL, READ_COUNT_COL, GENE_ID_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION,
-    RARE_DISEASE_SAMPLES_TOTAL,
+    CHROM_COL, START_COL, END_COL, SPLICE_TYPE_COL, P_ADJUST_COL, DELTA_INDEX_COL, COUNTS_COL, MEAN_COUNTS_COL,
+    TOTAL_COUNTS_COL, TOTAL_MEAN_COUNTS_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION, RARE_DISEASE_SAMPLES_TOTAL,
 ]
 SPLICE_OUTLIER_FORMATTER = {
     CHROM_COL: format_chrom,
     START_COL: int,
     END_COL: int,
-    READ_COUNT_COL: int,
+    COUNTS_COL: int,
+    MEAN_COUNTS_COL: float,
+    TOTAL_COUNTS_COL: int,
+    TOTAL_MEAN_COUNTS_COL: float,
     RARE_DISEASE_SAMPLES_WITH_JUNCTION: int,
     RARE_DISEASE_SAMPLES_TOTAL: int,
-    P_VALUE_COL: float,
-    Z_SCORE_COL: float,
-    DELTA_PSI_COL: float,
+    P_ADJUST_COL: float,
+    DELTA_INDEX_COL: int,
 }
 
 SPLICE_OUTLIER_HEADER_COLS = {col: _to_camel_case(col) for col in SPLICE_OUTLIER_COLS}
-SPLICE_OUTLIER_HEADER_COLS[SAMPLE_ID_COL] = SPLICE_OUTLIER_HEADER_COLS.pop(INDIV_ID_COL)
+SPLICE_OUTLIER_HEADER_COLS.update({
+    PROJECT_COL: 'projectName', SAMPLE_ID_COL: SAMPLE_ID_HEADER_COL, GENE_ID_COL: GENE_ID_HEADER_COL,
+})
 
 REVERSE_TISSUE_TYPE = dict(Sample.TISSUE_TYPE_CHOICES)
 TISSUE_TYPE_MAP = {v: k for k, v in REVERSE_TISSUE_TYPE.items() if k != Sample.NO_TISSUE_TYPE}
@@ -262,8 +268,7 @@ def load_rna_seq_tpm(*args, **kwargs):
 
 
 def _get_splice_id(row):
-    return '-'.join([row[GENE_ID_COL], row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[STRAND_COL],
-                    row[SPLICE_TYPE_COL]])
+    return '-'.join([row[GENE_ID_COL], row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[SPLICE_TYPE_COL]])
 
 
 def load_rna_seq_splice_outlier(*args, **kwargs):
@@ -273,7 +278,7 @@ def load_rna_seq_splice_outlier(*args, **kwargs):
     )
 
     for sample_data_rows in samples_to_load.values():
-        sorted_data_rows = sorted([data_row for data_row in sample_data_rows.values()], key=lambda d: d[P_VALUE_COL])
+        sorted_data_rows = sorted([data_row for data_row in sample_data_rows.values()], key=lambda d: d[P_ADJUST_COL])
         for i, data_row in enumerate(sorted_data_rows):
             data_row['rank'] = i
 
@@ -315,7 +320,8 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
 
     samples_by_id = defaultdict(dict)
     f = file_iter(file_path, user=user)
-    header = _parse_tsv_row(next(f))
+    parsed_f = iter(parse_file(file_path, f))
+    header = next(parsed_f)
     required_column_map = _validate_rna_header(header, column_map)
 
     sample_id_to_tissue_type = {}
@@ -323,8 +329,8 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
     errors = []
     missing_required_fields = defaultdict(list)
     gene_ids = set()
-    for line in tqdm(f, unit=' rows'):
-        row = dict(zip(header, _parse_tsv_row(line)))
+    for line in tqdm(rows, unit=' rows'):
+        row = dict(zip(header, line))
         for sample_id, row_dict in _parse_rna_row(
                 row, column_map, required_column_map, missing_required_fields, allow_missing_gene, **kwargs):
             tissue_type = TISSUE_TYPE_MAP[row[TISSUE_COL]]
