@@ -478,7 +478,7 @@ export const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...PREDICTOR_FIELDS.filter
     )
     return {
       labelHelp,
-      popupProps: thresholds ? { hoverable: true } : { size: 'mini' },
+      popupProps: thresholds ? { hoverable: true } : {},
       control: Form.Input,
       type: 'number',
       min: min || 0,

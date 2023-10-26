@@ -1370,7 +1370,7 @@ export const predictorColorRanges = thresholds => (
     })}
     <small>
       {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
-      Based on 2022 ClinGen recommendations (PMID: {rangeSourceLink})
+      Based on 2022 ClinGen recommendations (PMID:&nbsp;{rangeSourceLink})
     </small>
   </div>
 )
