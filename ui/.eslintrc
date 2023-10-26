@@ -72,7 +72,6 @@
     "react/require-optimization": "error",
     "react/state-in-constructor": ["error", "never"],
     "react/static-property-placement": ["error", "static public field"],
-    "import/extensions": "off",
-    "linebreak-style": "off"
+    "import/extensions": "off"
   }
 }
