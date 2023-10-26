@@ -224,7 +224,7 @@ END_COL = 'end'
 COUNTS_COL = 'counts'
 MEAN_COUNTS_COL = 'mean_counts'
 TOTAL_COUNTS_COL = 'total_counts'
-TOTAL_MEAN_COUNTS_COL = 'total_mean_counts'
+MEAN_TITAL_COUNTS_COL = 'mean_total_counts'
 SPLICE_TYPE_COL = 'type'
 P_ADJUST_COL ='p_adjust'
 DELTA_INDEX_COL = 'delta_intron_jaccard_index'
@@ -232,7 +232,7 @@ RARE_DISEASE_SAMPLES_WITH_JUNCTION = 'rare_disease_samples_with_this_junction'
 RARE_DISEASE_SAMPLES_TOTAL = 'rare_disease_samples_total'
 SPLICE_OUTLIER_COLS = [
     CHROM_COL, START_COL, END_COL, SPLICE_TYPE_COL, P_ADJUST_COL, DELTA_INDEX_COL, COUNTS_COL, MEAN_COUNTS_COL,
-    TOTAL_COUNTS_COL, TOTAL_MEAN_COUNTS_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION, RARE_DISEASE_SAMPLES_TOTAL,
+    TOTAL_COUNTS_COL, MEAN_TITAL_COUNTS_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION, RARE_DISEASE_SAMPLES_TOTAL,
 ]
 SPLICE_OUTLIER_FORMATTER = {
     CHROM_COL: format_chrom,
@@ -241,11 +241,11 @@ SPLICE_OUTLIER_FORMATTER = {
     COUNTS_COL: int,
     MEAN_COUNTS_COL: float,
     TOTAL_COUNTS_COL: int,
-    TOTAL_MEAN_COUNTS_COL: float,
+    MEAN_TITAL_COUNTS_COL: float,
     RARE_DISEASE_SAMPLES_WITH_JUNCTION: int,
     RARE_DISEASE_SAMPLES_TOTAL: int,
     P_ADJUST_COL: float,
-    DELTA_INDEX_COL: int,
+    DELTA_INDEX_COL: float,
 }
 
 SPLICE_OUTLIER_HEADER_COLS = {col: _to_camel_case(col) for col in SPLICE_OUTLIER_COLS}
@@ -320,7 +320,7 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
 
     samples_by_id = defaultdict(dict)
     f = file_iter(file_path, user=user)
-    parsed_f = iter(parse_file(file_path, f))
+    parsed_f = parse_file(file_path, f, iter=True)
     header = next(parsed_f)
     required_column_map = _validate_rna_header(header, column_map)
 
@@ -329,12 +329,12 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
     errors = []
     missing_required_fields = defaultdict(list)
     gene_ids = set()
-    for line in tqdm(rows, unit=' rows'):
+    for line in tqdm(parsed_f, unit=' rows'):
         row = dict(zip(header, line))
         for sample_id, row_dict in _parse_rna_row(
                 row, column_map, required_column_map, missing_required_fields, allow_missing_gene, **kwargs):
             tissue_type = TISSUE_TYPE_MAP[row[TISSUE_COL]]
-            project = row[PROJECT_COL]
+            project = row[column_map.get(PROJECT_COL, PROJECT_COL)]
             if (sample_id, project) in sample_id_to_tissue_type:
                 prev_tissue_type = sample_id_to_tissue_type[(sample_id, project)]
                 if tissue_type != prev_tissue_type:

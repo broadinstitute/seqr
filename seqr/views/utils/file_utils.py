@@ -32,14 +32,22 @@ def save_temp_file(request):
     return create_json_response(response)
 
 
-def parse_file(filename, stream):
+def parse_file(filename, stream, iter=False):
     if filename.endswith('.tsv') or filename.endswith('.fam') or filename.endswith('.ped'):
-        return [[s.strip().strip('"') for s in line.rstrip('\n').split('\t')] for line in stream]
+        parse_line = lambda line: [s.strip().strip('"') for s in line.rstrip('\n').split('\t')]
+        if not iter:
+            return [parse_line(line) for line in stream]
+        for line in stream:
+            yield parse_line(line)
 
     elif filename.endswith('.csv'):
-        return [row for row in csv.reader(stream)]
+        reader = csv.reader(stream)
+        if not iter:
+            return [row for row in reader]
+        for row in reader:
+            yield row
 
-    elif filename.endswith('.xls') or filename.endswith('.xlsx'):
+    elif (filename.endswith('.xls') or filename.endswith('.xlsx')) and not iter:
         wb = xl.load_workbook(stream, read_only=True)
         ws = wb[wb.sheetnames[0]]
         rows = [[_parse_excel_string_cell(cell) for cell in row] for row in ws.iter_rows()]
@@ -53,7 +61,7 @@ def parse_file(filename, stream):
 
         return rows
 
-    elif filename.endswith('.json'):
+    elif filename.endswith('.json') and not iter:
         return json.loads(stream.read())
 
     raise ValueError("Unexpected file type: {}".format(filename))

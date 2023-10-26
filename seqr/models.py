@@ -1127,11 +1127,11 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
     start = models.IntegerField()
     end = models.IntegerField()
     type = models.CharField(max_length=12)
-    delta_intron_jaccard_index = models.IntegerField()
+    delta_intron_jaccard_index = models.FloatField()
     counts = models.IntegerField()
     mean_counts = models.FloatField()
     total_counts = models.IntegerField()
-    total_mean_counts = models.FloatField()
+    mean_total_counts = models.FloatField()
     rare_disease_samples_with_this_junction = models.IntegerField()
     rare_disease_samples_total = models.IntegerField()
 
@@ -1140,7 +1140,7 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
 
         json_fields = ['gene_id', 'p_adjust', 'chrom', 'start', 'end', 'delta_intron_jaccard_index', 'counts', 'type',
                        'rare_disease_samples_with_this_junction', 'rare_disease_samples_total', 'mean_counts',
-                       'total_counts', 'total_mean_counts']
+                       'total_counts', 'mean_total_counts']
 
 
 class PhenotypePrioritization(BulkOperationBase):
