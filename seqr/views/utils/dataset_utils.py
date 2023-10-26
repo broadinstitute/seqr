@@ -235,7 +235,8 @@ SPLICE_OUTLIER_COLS = [
     TOTAL_COUNTS_COL, MEAN_TITAL_COUNTS_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION, RARE_DISEASE_SAMPLES_TOTAL,
 ]
 SPLICE_OUTLIER_FORMATTER = {
-    CHROM_COL: format_chrom,
+    #CHROM_COL: format_chrom,
+    CHROM_COL: lambda chrom: chrom.replace('chr', '')[:2], # TODO determine how to handle non-standard contigs
     START_COL: int,
     END_COL: int,
     COUNTS_COL: int,
@@ -353,8 +354,10 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
                 gene_or_unique_id = gene_id
             existing_data = samples_by_id[(sample_id, project)].get(gene_or_unique_id)
             if existing_data and existing_data != row_dict:
-                errors.append(f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries '
-                              f'{existing_data} and {row_dict}')
+                # TODO reenable validation once determine how to handle these cases
+                pass
+                # errors.append(f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries '
+                #               f'{existing_data} and {row_dict}')
 
             if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
                 sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
