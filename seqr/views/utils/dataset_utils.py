@@ -268,8 +268,8 @@ def load_rna_seq_tpm(*args, **kwargs):
     )
 
 
-def _get_splice_id(gene_id, row):
-    return '-'.join([gene_id, row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[SPLICE_TYPE_COL]])
+def _get_splice_id(row):
+    return '-'.join([row[GENE_ID_COL], row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[SPLICE_TYPE_COL]])
 
 
 def load_rna_seq_splice_outlier(*args, **kwargs):
@@ -335,7 +335,7 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
         for sample_id, row_dict in _parse_rna_row(
                 row, column_map, required_column_map, missing_required_fields, allow_missing_gene, **kwargs):
             tissue_type = TISSUE_TYPE_MAP[row[TISSUE_COL]]
-            project = row[column_map.get(PROJECT_COL, PROJECT_COL)]
+            project = row_dict.pop(PROJECT_COL, None) or row[PROJECT_COL]
             if (sample_id, project) in sample_id_to_tissue_type:
                 prev_tissue_type = sample_id_to_tissue_type[(sample_id, project)]
                 if tissue_type != prev_tissue_type:
@@ -349,8 +349,9 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
                 gene_ids.update(row_gene_ids)
 
             for gene_id in row_gene_ids:
+                row_dict = {**row_dict, GENE_ID_COL: gene_id}
                 if get_unique_key:
-                    gene_or_unique_id = get_unique_key(gene_id, row_dict)
+                    gene_or_unique_id = get_unique_key(row_dict)
                 else:
                     gene_or_unique_id = gene_id
                 existing_data = samples_by_id[(sample_id, project)].get(gene_or_unique_id)
