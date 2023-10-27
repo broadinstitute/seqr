@@ -1,4 +1,4 @@
-import { moiToMoiInitials, panelAppUrl } from './panelAppUtils'
+import { PanelAppItem, formatPanelAppItems, moiToMoiInitials, panelAppUrl } from './panelAppUtils'
 
 const moiArray = [['1', 'PanelApp_AU', 'BIALLELIC', 'AR', 'BIALLELIC, autosomal or pseudoautosomal'],
   ['2', 'PanelApp_AU', 'MONOALLELIC', 'AD', 'MONOALLELIC, autosomal or pseudoautosomal, NOT imprinted'],
@@ -85,5 +85,44 @@ describe('Test panelAppUrl()', () => {
   test.each(panelAppData)('panelAppUrl for gene: %s', (data) => {
     const { url, panel, gene } = data
     expect(panelAppUrl(url, panel, gene)).toEqual(data.result)
+  })
+})
+
+describe('Test formatPanelAppItems()', () => {
+  test('Test return values', () => {
+    let items: PanelAppItem[] | null | undefined
+
+    expect(formatPanelAppItems(items)).toEqual([])
+
+    items = null
+    expect(formatPanelAppItems(items)).toEqual([])
+
+    items = [
+      {
+        pagene: {
+          confidenceLevel: 1,
+        },
+        display: 'Variant A',
+      },
+      {
+        pagene: {
+          confidenceLevel: 4,
+        },
+        display: 'Variant B',
+      },
+      {
+        pagene: {
+          confidenceLevel: 4,
+        },
+        display: 'Variant C',
+      },
+      {
+        pagene: {
+          confidenceLevel: 1,
+        },
+        display: 'Variant D',
+      },
+    ]
+    expect(formatPanelAppItems(items)).toEqual({ red: 'Variant A, Variant D', green: 'Variant B, Variant C' })
   })
 })
