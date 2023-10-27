@@ -65,7 +65,7 @@ def _find_or_create_samples(
             **({'tissue_type': tissue_type} if tissue_type else {
                 'tissue_type__in': {key[2] for key in sample_project_tuples}}),
             **sample_params,
-        ).values('guid', 'sample_id', 'tissue_type', 'individual__family__project__name')
+        ).values('guid', 'individual_id', 'sample_id', 'tissue_type', 'individual__family__project__name')
     }
 
     existing_samples = {
@@ -314,7 +314,7 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
 
     samples_by_id = defaultdict(dict)
     f = file_iter(file_path, user=user)
-    parsed_f = parse_file(file_path, f, iter=True)
+    parsed_f = parse_file(file_path.replace('.gz', ''), f, iter=True)
     header = next(parsed_f)
     required_column_map = _validate_rna_header(header, column_map)
 
@@ -362,10 +362,10 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
                 gene_or_unique_id = gene_id
             existing_data = samples_by_id[sample_key].get(gene_or_unique_id)
             if existing_data and existing_data != row_dict:
-                # TODO reenable validation once determine how to handle these cases
-                pass
-                # errors.append(f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries '
-                #               f'{existing_data} and {row_dict}')
+                # TODO currently need to disable to get splice data loaded
+                # pass
+                errors.append(f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries '
+                              f'{existing_data} and {row_dict}')
 
             if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
                 sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
@@ -447,7 +447,7 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
     _notify_rna_loading(model_cls, sample_projects)
 
     if remaining_sample_keys:
-        skipped_samples = ', '.join(sorted({sample_id for sample_id, _ in remaining_sample_keys}))
+        skipped_samples = ', '.join(sorted({sample_id for sample_id, _, _ in remaining_sample_keys}))
         message = f'Skipped loading for the following {len(remaining_sample_keys)} unmatched samples: {skipped_samples}'
         warnings.append(message)
     if loaded_sample_guids:
