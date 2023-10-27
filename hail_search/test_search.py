@@ -634,6 +634,18 @@ class HailSearchTestCase(AioHTTPTestCase):
             annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
         )
 
+        # Do not return pairs where annotations match in a non-paired gene
+        gcnv_annotations_no_pair = {'structural_consequence': ['COPY_GAIN']}
+        await self._assert_expected_search(
+            [], omit_sample_type='SNV_INDEL', inheritance_mode='compound_het',
+            annotations=gcnv_annotations_1, annotations_secondary=gcnv_annotations_no_pair,
+        )
+
+        await self._assert_expected_search(
+            [], omit_sample_type='SNV_INDEL', inheritance_mode='compound_het',
+            annotations={**gcnv_annotations_1, **gcnv_annotations_no_pair},
+        )
+
         await self._assert_expected_search(
             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4]], inheritance_mode='compound_het',
             annotations=annotations_1, annotations_secondary=gcnv_annotations_2,
@@ -676,6 +688,19 @@ class HailSearchTestCase(AioHTTPTestCase):
             annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
         )
 
+        selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
+        await self._assert_expected_search(
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3],
+            inheritance_mode='recessive', pathogenicity=pathogenicity,
+            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
+        )
+
+        # Do not return pairs where annotations match in a non-paired gene
+        await self._assert_expected_search(
+            [GCNV_VARIANT3], inheritance_mode='recessive',
+            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
+        )
+
         screen_annotations = {'SCREEN': ['CTCF-only']}
         await self._assert_expected_search(
             [], inheritance_mode='recessive', omit_sample_type='SV_WES',
@@ -687,7 +712,6 @@ class HailSearchTestCase(AioHTTPTestCase):
             annotations=screen_annotations, annotations_secondary=annotations_2,
         )
 
-        selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
         await self._assert_expected_search(
             [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]], inheritance_mode='recessive',
             annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,
