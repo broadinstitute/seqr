@@ -243,8 +243,7 @@ SPLICE_OUTLIER_COLS = [
     TOTAL_COUNTS_COL, MEAN_TITAL_COUNTS_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION, RARE_DISEASE_SAMPLES_TOTAL,
 ]
 SPLICE_OUTLIER_FORMATTER = {
-    #CHROM_COL: format_chrom,
-    CHROM_COL: lambda chrom: chrom.replace('chr', '')[:2], # TODO determine how to handle non-standard contigs
+    CHROM_COL: format_chrom,
     START_COL: int,
     END_COL: int,
     COUNTS_COL: int,
@@ -283,7 +282,7 @@ def _get_splice_id(row):
 def load_rna_seq_splice_outlier(*args, **kwargs):
     samples_to_load, info, warnings = _load_rna_seq(
         RnaSeqSpliceOutlier, *args, SPLICE_OUTLIER_HEADER_COLS, format_fields=SPLICE_OUTLIER_FORMATTER,
-        get_unique_key=_get_splice_id, allow_missing_gene=True, **kwargs
+        warn_format_fields=[CHROM_COL], get_unique_key=_get_splice_id, allow_missing_gene=True, **kwargs
     )
 
     for sample_data_rows in samples_to_load.values():
@@ -306,22 +305,8 @@ def _validate_rna_header(header, column_map):
     return required_column_map
 
 
-def _parse_rna_row(row, column_map, required_column_map, missing_required_fields, allow_missing_gene, should_skip=None, format_fields=None):
-    if not (should_skip and should_skip(row)):
-        row_dict = {mapped_key: row[col] for mapped_key, col in column_map.items()}
-        for mapped_key, format_func in (format_fields or {}).items():
-            row_dict[mapped_key] = format_func(row_dict[mapped_key])
-
-        missing_cols = [col_id for col, col_id in required_column_map.items() if not row.get(col)]
-        sample_id = row_dict.pop(SAMPLE_ID_COL) if SAMPLE_ID_COL in row_dict else row[SAMPLE_ID_COL]
-        if missing_cols:
-            for col in missing_cols:
-                missing_required_fields[col].append(sample_id)
-        if not missing_cols or (allow_missing_gene and missing_cols == [GENE_ID_COL]):
-            yield sample_id, row_dict
-
-
-def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_unique_key=None, allow_missing_gene=False, **kwargs):
+def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_unique_key=None, allow_missing_gene=False,
+                       should_skip=None, format_fields=None, warn_format_fields=None):
 
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
@@ -335,36 +320,57 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
 
     errors = []
     missing_required_fields = defaultdict(list)
+    invalid_format_fields = defaultdict(set)
     gene_ids = set()
     for line in tqdm(parsed_f, unit=' rows'):
         row = dict(zip(header, line))
-        for sample_id, row_dict in _parse_rna_row(
-                row, column_map, required_column_map, missing_required_fields, allow_missing_gene, **kwargs):
-            tissue_type = TISSUE_TYPE_MAP[row[TISSUE_COL]]
-            project = row_dict.pop(PROJECT_COL, None) or row[PROJECT_COL]
-            sample_key = (sample_id, project, tissue_type)
+        if should_skip and should_skip(row):
+            continue
 
-            row_gene_ids = row_dict[GENE_ID_COL].split(';')
-            if any(row_gene_ids):
-                gene_ids.update(row_gene_ids)
+        row_dict = {mapped_key: row[col] for mapped_key, col in column_map.items()}
+        is_valid = True
+        for mapped_key, format_func in (format_fields or {}).items():
+            try:
+                row_dict[mapped_key] = format_func(row_dict[mapped_key])
+            except Exception as e:
+                is_valid = False
+                invalid_format_fields[column_map[mapped_key]].add(row_dict[mapped_key])
+        if not is_valid:
+            continue
 
-            for gene_id in row_gene_ids:
-                row_dict = {**row_dict, GENE_ID_COL: gene_id}
-                if get_unique_key:
-                    gene_or_unique_id = get_unique_key(row_dict)
-                else:
-                    gene_or_unique_id = gene_id
-                existing_data = samples_by_id[sample_key].get(gene_or_unique_id)
-                if existing_data and existing_data != row_dict:
-                    # TODO reenable validation once determine how to handle these cases
-                    pass
-                    # errors.append(f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries '
-                    #               f'{existing_data} and {row_dict}')
+        missing_cols = [col_id for col, col_id in required_column_map.items() if not row.get(col)]
+        sample_id = row_dict.pop(SAMPLE_ID_COL) if SAMPLE_ID_COL in row_dict else row[SAMPLE_ID_COL]
+        if missing_cols:
+            for col in missing_cols:
+                missing_required_fields[col].append(sample_id)
+            if not (allow_missing_gene and missing_cols == [GENE_ID_COL]):
+                continue
 
-                if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
-                    sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
+        tissue_type = TISSUE_TYPE_MAP[row[TISSUE_COL]]
+        project = row_dict.pop(PROJECT_COL, None) or row[PROJECT_COL]
+        sample_key = (sample_id, project, tissue_type)
 
-                samples_by_id[sample_key][gene_or_unique_id] = row_dict
+        row_gene_ids = row_dict[GENE_ID_COL].split(';')
+        if any(row_gene_ids):
+            gene_ids.update(row_gene_ids)
+
+        for gene_id in row_gene_ids:
+            row_dict = {**row_dict, GENE_ID_COL: gene_id}
+            if get_unique_key:
+                gene_or_unique_id = get_unique_key(row_dict)
+            else:
+                gene_or_unique_id = gene_id
+            existing_data = samples_by_id[sample_key].get(gene_or_unique_id)
+            if existing_data and existing_data != row_dict:
+                # TODO reenable validation once determine how to handle these cases
+                pass
+                # errors.append(f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries '
+                #               f'{existing_data} and {row_dict}')
+
+            if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
+                sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
+
+            samples_by_id[sample_key][gene_or_unique_id] = row_dict
 
     matched_gene_ids = set(GeneInfo.objects.filter(gene_id__in=gene_ids).values_list('gene_id', flat=True))
     unknown_gene_ids = gene_ids - matched_gene_ids
@@ -378,14 +384,23 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
     if unknown_gene_ids:
         errors.append(f'Unknown Gene IDs: {", ".join(sorted(unknown_gene_ids))}')
 
+    warnings = [
+        f'Skipped loading for all rows with the following invalid {col} values: {", ".join(invalid_format_fields.pop(col))}'
+        for col in (warn_format_fields or []) if col in invalid_format_fields
+    ]
+    errors += [
+        f'Invalid "{col}" values: {", ".join(sorted(values))}'
+        for col, values in invalid_format_fields.items()
+    ]
+
     if errors:
         raise ErrorsWarningsException(errors)
 
-    return samples_by_id, sample_id_to_individual_id_mapping
+    return warnings, samples_by_id, sample_id_to_individual_id_mapping
 
 
 def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=False, **kwargs):
-    samples_by_id, sample_id_to_individual_id_mapping = _load_rna_seq_file(file_path, user, *args, **kwargs)
+    warnings, samples_by_id, sample_id_to_individual_id_mapping = _load_rna_seq_file(file_path, user, *args, **kwargs)
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
     logger.info(message, user)
@@ -431,7 +446,6 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
 
     _notify_rna_loading(model_cls, sample_projects)
 
-    warnings = []
     if remaining_sample_keys:
         skipped_samples = ', '.join(sorted({sample_id for sample_id, _ in remaining_sample_keys}))
         message = f'Skipped loading for the following {len(remaining_sample_keys)} unmatched samples: {skipped_samples}'
