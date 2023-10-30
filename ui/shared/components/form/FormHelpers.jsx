@@ -54,7 +54,7 @@ export const helpLabel = (label, labelHelp, popupProps) => (
     <label>
       {label}
       &nbsp;
-      <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} position="top center" size="small" {...popupProps} />
+      <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} position="top center" size="small" hoverable />
     </label>
   ) : label
 )
@@ -91,8 +91,7 @@ ArrayFieldItem.propTypes = {
 
 export const configuredField = (field, formProps = {}) => {
   const {
-    component, name, isArrayField, addArrayElement, addArrayElementProps,
-    arrayFieldName, key, label, labelHelp, popupProps,
+    component, name, isArrayField, addArrayElement, addArrayElementProps, arrayFieldName, key, label, labelHelp,
     ...fieldProps
   } = field
   const baseProps = {
@@ -103,7 +102,7 @@ export const configuredField = (field, formProps = {}) => {
     component: renderField,
     fieldComponent: component,
     submitForm: formProps.submitOnChange ? formProps.onSubmit : null,
-    label: helpLabel(label, labelHelp, popupProps),
+    label: helpLabel(label, labelHelp),
     data: formProps.formMetaId && { formId: formProps.formMetaId },
     ...fieldProps,
   }

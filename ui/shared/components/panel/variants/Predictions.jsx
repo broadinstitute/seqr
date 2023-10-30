@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Icon, Transition, Popup } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
-import { PRED_COLOR_MAP, PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, getVariantMainGeneId } from 'shared/utils/constants'
+import { PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, predictionFieldValue, getVariantMainGeneId } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
@@ -18,29 +18,6 @@ const PredictionValue = styled.span`
 `
 
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
-
-const predictionFieldValue = (
-  predictions, { field, thresholds, indicatorMap, infoField, infoTitle },
-) => {
-  let value = predictions[field]
-  if (value === null || value === undefined) {
-    return { value }
-  }
-
-  const infoValue = predictions[infoField]
-
-  if (thresholds) {
-    value = parseFloat(value).toPrecision(3)
-    const color = PRED_COLOR_MAP.find(
-      (clr, i) => (thresholds[i - 1] || thresholds[i]) &&
-        (thresholds[i - 1] === undefined || value >= thresholds[i - 1]) &&
-        (thresholds[i] === undefined || value < thresholds[i]),
-    )
-    return { value, color, infoValue, infoTitle, thresholds }
-  }
-
-  return indicatorMap[value[0]] || indicatorMap[value]
-}
 
 const Prediction = (
   { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, href },

@@ -1308,6 +1308,7 @@ export const NO_SV_IN_SILICO_GROUPS = [MISSENSE_IN_SILICO_GROUP, CODING_IN_SILIC
 export const SPLICE_AI_FIELD = 'splice_ai'
 
 const rangeSourceLink = <a href="https://pubmed.ncbi.nlm.nih.gov/36413997" target="_blank" rel="noreferrer">36413997</a>
+const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
 export const PREDICTOR_FIELDS = [
   { field: 'cadd', group: CODING_IN_SILICO_GROUP, thresholds: [0.151, 22.8, 25.3, 28.1, undefined], min: 1, max: 99 },
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, thresholds: [0.0161, 0.291, 0.644, 0.773, 0.932] },
@@ -1344,8 +1345,29 @@ export const PREDICTOR_FIELDS = [
   { field: 'mitotip', indicatorMap: MITOTIP_MAP },
   { field: 'hmtvar', thresholds: [undefined, undefined, 0.35, 0.35, undefined] },
 ]
-export const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
 export const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
+export const predictionFieldValue = (
+  predictions, { field, thresholds, indicatorMap, infoField, infoTitle },
+) => {
+  let value = predictions[field]
+  if (value === null || value === undefined) {
+    return { value }
+  }
+
+  const infoValue = predictions[infoField]
+
+  if (thresholds) {
+    value = parseFloat(value).toPrecision(3)
+    const color = PRED_COLOR_MAP.find(
+      (clr, i) => (thresholds[i - 1] || thresholds[i]) &&
+        (thresholds[i - 1] === undefined || value >= thresholds[i - 1]) &&
+        (thresholds[i] === undefined || value < thresholds[i]),
+    )
+    return { value, color, infoValue, infoTitle, thresholds }
+  }
+
+  return indicatorMap[value[0]] || indicatorMap[value]
+}
 export const predictorColorRanges = thresholds => (
   <div>
     {PRED_COLOR_MAP.map((c, i) => {
