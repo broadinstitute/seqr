@@ -179,10 +179,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
         if not variant_ids:
             return variant_ids
 
-        should_add_chr_prefix = any(c.startswith('chr') for c in hl.get_reference(self._genome_version).contigs)
         return [
             hl.struct(
-                locus=hl.locus(f'chr{chrom}' if should_add_chr_prefix else chrom, pos, reference_genome=self._genome_version),
+                locus=hl.locus(f'chr{chrom}' if self._genome_version == 'GRCh38' else chrom, pos, reference_genome=self._genome_version),
                 alleles=[ref, alt],
             ) for chrom, pos, ref, alt in variant_ids
         ]
