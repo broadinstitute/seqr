@@ -49,7 +49,7 @@ renderField.propTypes = {
   submitForm: PropTypes.func,
 }
 
-export const helpLabel = (label, labelHelp, popupProps) => (
+export const helpLabel = (label, labelHelp) => (
   labelHelp ? (
     <label>
       {label}
