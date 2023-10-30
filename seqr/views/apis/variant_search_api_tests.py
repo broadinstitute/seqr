@@ -761,7 +761,7 @@ class VariantSearchAPITest(object):
             'variant': VARIANT_LOOKUP_VARIANT,
         }
         self.assertDictEqual(response.json(), expected_body)
-        variant_lookup_handler.assert_called_with(self.no_access_user, )
+        mock_variant_lookup.assert_called_with(self.no_access_user, variant_id='1-10439-AC-A', genome_version='38')
 
         variant = {**VARIANTS[0], 'familyGuids': [], 'genotypes': {}}
         mock_variant_lookup.return_value = variant
@@ -774,16 +774,6 @@ class VariantSearchAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_body)
-
-
-        searched_families = mock_get_variant.call_args.args[0]
-        self.assertEqual(searched_families.count(), 1)
-        self.assertEqual(searched_families.first().guid, 'F000001_1')
-
-        mock_get_variant.side_effect = InvalidSearchException('Variant not found')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Variant not found')
 
     def test_saved_search(self):
         get_saved_search_url = reverse(get_saved_search_handler)
