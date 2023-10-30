@@ -1,4 +1,4 @@
-from aiohttp.web import HTTPBadRequest
+from aiohttp.web import HTTPBadRequest, HTTPNotFound
 from collections import defaultdict, namedtuple
 import hail as hl
 import logging
@@ -888,6 +888,7 @@ class BaseHailTableQuery(object):
     def lookup_variant(self, variant_id):
         self._parse_intervals(intervals=None, variant_ids=[variant_id], variant_keys=[variant_id])
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
+        ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         annotation_fields = self.annotation_fields()
         annotation_fields.update({
