@@ -75,26 +75,5 @@ python -u manage.py check
 # launch django server in background
 /usr/local/bin/start_server.sh
 
-if [ "$RUN_CRON_JOBS" ]; then
-    # set up cron jobs
-    # shellcheck disable=SC2016
-    echo 'SHELL=/bin/bash
-0 0 * * 0 /opt/venv/bin/python /seqr/manage.py update_omim --omim-key=$OMIM_KEY >> /proc/1/fd/1 2>&1
-0 0 * * 0 /opt/venv/bin/python /seqr/manage.py update_human_phenotype_ontology >> /proc/1/fd/1 2>&1
-0 0 * * 0 /opt/venv/bin/python /seqr/manage.py update_clingen >> /proc/1/fd/1 2>&1
-0 0 * * 0 /opt/venv/bin/python /seqr/manage.py update_gencc >> /proc/1/fd/1 2>&1
-0 0 * * 0 /opt/venv/bin/python /seqr/manage.py import_all_panels https://panelapp.agha.umccr.org/api/v1 --label=AU >> /proc/1/fd/1 2>&1
-0 0 * * 0 /opt/venv/bin/python /seqr/manage.py import_all_panels https://panelapp.genomicsengland.co.uk/api/v1 --label=UK >> /proc/1/fd/1 2>&1
-0 12 * * 1 /opt/venv/bin/python /seqr/manage.py detect_inactive_privileged_users >> /proc/1/fd/1 2>&1
-0 2 * * 0 /opt/venv/bin/python /seqr/manage.py check_bam_cram_paths >> /proc/1/fd/1 2>&1
-0 0 1 1,4,7,10 * /opt/venv/bin/python /seqr/manage.py clear_project_tags ALL_USER_DEMO --skip-confirm >> /proc/1/fd/1 2>&1
-' | crontab -
-
-    env > /etc/environment  # this is necessary for crontab commands to run with the right env. vars.
-
-    /etc/init.d/cron start
-fi
-
-
 # sleep to keep image running even if gunicorn is killed / restarted
 sleep 1000000000000
