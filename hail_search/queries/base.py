@@ -252,11 +252,14 @@ class BaseHailTableQuery(object):
     def _get_table_path(self, path):
         return self._get_generic_table_path(self._genome_version, path)
 
-    def _read_table(self, path):
+    def _read_table(self, path, drop_globals=None):
         table_path = self._get_table_path(path)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
-            return ht.annotate_globals(**hl.eval(hl.read_table(table_path).globals))
+            globals = hl.read_table(table_path).globals
+            if drop_globals:
+                globals = globals.drop(*drop_globals)
+            return ht.annotate_globals(**hl.eval(globals))
         return hl.read_table(table_path, **self._load_table_kwargs)
 
     @staticmethod
@@ -881,3 +884,20 @@ class BaseHailTableQuery(object):
         return ht.aggregate(hl.agg.group_by(
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
         ))
+
+    def lookup_variant(self, variant_id):
+        self._parse_intervals(intervals=None, variant_ids=[variant_id], variant_keys=[variant_id])
+        ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
+
+        annotation_fields = self.annotation_fields()
+        annotation_fields.update({
+            'familyGuids': lambda ht: hl.empty_array(hl.tstr),
+            'genotypes': lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
+            'genotypeFilters': lambda ht: hl.str(''),
+        })
+        formatted = self._format_results(ht, annotation_fields=annotation_fields)
+
+        variants = formatted.aggregate(hl.agg.take(formatted.row, 1))
+        if not variants:
+            raise HTTPNotFound()
+        return variants[0]

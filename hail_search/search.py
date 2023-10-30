@@ -22,7 +22,8 @@ def search_hail_backend(request, gene_counts=False):
 
 
 def lookup_variant(request):
-    query = QUERY_CLASS_MAP[SNV_INDEL_DATA_TYPE](sample_data=None, genome_version=request['genome_version'])
+    data_type = request.get('data_type', SNV_INDEL_DATA_TYPE)
+    query = QUERY_CLASS_MAP[data_type](sample_data=None, genome_version=request['genome_version'])
     return query.lookup_variant(request['variant_id'])
 
 

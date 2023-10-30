@@ -96,21 +96,3 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
             annotation_filters.append(score_filter)
 
         return annotation_filters
-
-    def lookup_variant(self, variant_id):
-        _, variant_ids = self._parse_intervals(intervals=None, variant_ids=[variant_id])
-        ht = self._read_table('annotations.ht')
-        ht = self._filter_variant_ids(ht, variant_ids)
-
-        annotation_fields = self.annotation_fields()
-        annotation_fields.update({
-            'familyGuids': lambda ht: hl.empty_array(hl.tstr),
-            'genotypes': lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
-            'genotypeFilters': lambda ht: hl.str(''),
-        })
-        formatted = self._format_results(ht, annotation_fields=annotation_fields)
-
-        variants = formatted.aggregate(hl.agg.take(formatted.row, 1))
-        if not variants:
-            raise HTTPNotFound()
-        return variants[0]
