@@ -2,17 +2,24 @@
   "extends": [
     "airbnb",
     "plugin:react-perf/recommended"
-    // "plugin:@typescript-eslint/recommended"
   ],
-  // TODO: https://github.com/broadinstitute/seqr/issues/2931 update linting after complete migration of the project into typescript.
-  // "parser": "@typescript-eslint/parser",
-  // "plugins": ["@typescript-eslint"],
   "parser": "babel-eslint",
   "parserOptions": {
     "ecmaFeatures": {
       "experimentalObjectRestSpread": true
     }
   },
+  // TODO: https://github.com/broadinstitute/seqr/issues/2931 update linting after complete migration of the project into typescript.
+  "overrides": [
+    {
+      "files": ["**/*.tsx", "**/*.ts"],
+      "parser": "@typescript-eslint/parser",
+      "plugins": ["@typescript-eslint"],
+      "extends": [
+        "plugin:@typescript-eslint/recommended"
+      ]
+    }
+  ],
   "env": {
     "mocha": true,
     "es6": true,
