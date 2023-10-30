@@ -706,8 +706,6 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'muscle', 0.112],
                 # a project mismatched sample NA20878
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
-                # conflict tissue types samples
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'fibroblasts', 0.05],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'M',
@@ -732,9 +730,9 @@ class DataManagerAPITest(AuthenticationTestCase):
                                 'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
             'duplicated_indiv_id_data': [
                 ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2',
-                 'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000135953', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000135953', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                 'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
             ],
             'write_data': {'NA20870\t\t{"ENSG00000233750-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
@@ -1001,6 +999,20 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_writes = []
         _test_basic_data_loading(data, 2, 2, 20, body, '1kg project nåme with uniçøde, Test Reprocessed Project',
                                  num_created_samples=2)
+        self.assertSetEqual(set([s.split('_', 1)[1] for s in mock_writes]), params['write_data'])
+
+        # Test loading data when where an individual has multiple tissue types
+        data = [data[1][:2] + data[0][2:], data[1]]
+        mock_writes = []
+        new_sample_individual_id = 7
+        response_json, new_sample_guid = _test_basic_data_loading(data, 2, 2, new_sample_individual_id, body, '1kg project nåme with uniçøde')
+        second_tissue_sample_guid = self._check_rna_sample_model(
+            individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz',
+            tissue_type='M' if params.get('sample_tissue_type') == 'F' else 'F',
+        )
+        self.assertTrue(second_tissue_sample_guid != new_sample_guid)
+        self.assertTrue(second_tissue_sample_guid in response_json['sampleGuids'])
+        self.assertSetEqual(set([s.split('\t')[0] for s in mock_writes]), set(response_json['sampleGuids']))
         self.assertSetEqual(set([s.split('_', 1)[1] for s in mock_writes]), params['write_data'])
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
