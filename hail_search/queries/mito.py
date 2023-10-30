@@ -9,6 +9,7 @@ from hail_search.queries.base import BaseHailTableQuery, PredictionPath, Quality
 class MitoHailTableQuery(BaseHailTableQuery):
 
     DATA_TYPE = 'MITO'
+    KEY_FIELD = ('locus', 'alleles')
 
     TRANSCRIPTS_FIELD = 'sorted_transcript_consequences'
     TRANSCRIPT_CONSEQUENCE_FIELD = 'consequence_term'
@@ -124,11 +125,11 @@ class MitoHailTableQuery(BaseHailTableQuery):
         self._filter_hts = {}
         super().__init__(*args, **kwargs)
 
-    def _parse_intervals(self, intervals, variant_ids, exclude_intervals=False, **kwargs):
-        parsed_intervals, variant_ids = super()._parse_intervals(intervals, variant_ids, **kwargs)
+    def _parse_intervals(self, intervals, exclude_intervals=False, **kwargs):
+        parsed_intervals = super()._parse_intervals(intervals,**kwargs)
         if parsed_intervals and not exclude_intervals:
             self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
-        return parsed_intervals, variant_ids
+        return parsed_intervals
 
     def _get_family_passes_quality_filter(self, quality_filter, ht=None, pathogenicity=None, **kwargs):
         passes_quality = super()._get_family_passes_quality_filter(quality_filter)
@@ -173,6 +174,18 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 for chrom, pos, ref, alt in variant_ids
             ])
         return ht.filter(variant_id_q)
+
+    def _parse_variant_keys(self, variant_ids=None, **kwargs):
+        if not variant_ids:
+            return variant_ids
+
+        should_add_chr_prefix = any(c.startswith('chr') for c in hl.get_reference(self._genome_version).contigs)
+        return [
+            hl.struct(
+                locus=hl.locus(f'chr{chrom}' if should_add_chr_prefix else chrom, pos, reference_genome=self._genome_version),
+                alleles=[ref, alt],
+            ) for chrom, pos, ref, alt in variant_ids
+        ]
 
     def _prefilter_entries_table(self, ht, parsed_intervals=None, exclude_intervals=False, **kwargs):
         if exclude_intervals and parsed_intervals:
