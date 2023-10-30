@@ -781,7 +781,7 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted(formatted_grouped_variants, key=lambda x: x._sort)})
         return ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
 
-    def _format_results(self, ht, annotation_fields=None):
+    def _format_results(self, ht, annotation_fields=None, **kwargs):
         if annotation_fields is None:
             annotation_fields = self.annotation_fields()
         annotations = {k: v(ht) for k, v in annotation_fields.items()}
@@ -888,13 +888,14 @@ class BaseHailTableQuery(object):
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
+        ht = ht.key_by(**{VARIANT_KEY_FIELD: ht.variant_id})
         annotation_fields = self.annotation_fields()
         annotation_fields.update({
             'familyGuids': lambda ht: hl.empty_array(hl.tstr),
             'genotypes': lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
             'genotypeFilters': lambda ht: hl.str(''),
         })
-        formatted = self._format_results(ht, annotation_fields=annotation_fields)
+        formatted = self._format_results(ht, annotation_fields=annotation_fields, include_genotype_overrides=False)
 
         variants = formatted.aggregate(hl.agg.take(formatted.row, 1))
         if not variants:

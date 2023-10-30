@@ -5,14 +5,15 @@ from copy import deepcopy
 from django.db import transaction
 from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
+from requests import HTTPError
 
-from hail_search.test_utils import HAIL_BACKEND_SINGLE_FAMILY_VARIANTS
+from hail_search.test_utils import HAIL_BACKEND_SINGLE_FAMILY_VARIANTS, VARIANT_LOOKUP_VARIANT
 from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
 from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
-    update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
+    update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown, variant_lookup_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
     GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     PA_LOCUS_LIST_FIELDS, INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
@@ -731,6 +732,50 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1'})
 
         mock_get_variant.assert_called_with(mock.ANY, '21-3343353-GAGA-G', user=self.collaborator_user)
+        searched_families = mock_get_variant.call_args.args[0]
+        self.assertEqual(searched_families.count(), 1)
+        self.assertEqual(searched_families.first().guid, 'F000001_1')
+
+        mock_get_variant.side_effect = InvalidSearchException('Variant not found')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Variant not found')
+
+    @mock.patch('seqr.views.apis.variant_search_api.variant_lookup')
+    def test_variant_lookup(self, mock_variant_lookup):
+        mock_variant_lookup.return_value = VARIANT_LOOKUP_VARIANT
+
+        url = f'{reverse(variant_lookup_handler)}?variantId=1-10439-AC-A&genomeVersion=38'
+        self.check_require_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        expected_body = {
+            'genesById': {},
+            'locusListsByGuid': {},
+            'mmeSubmissionsByGuid': {},
+            'phenotypeGeneScores': {},
+            'rnaSeqData': {},
+            'savedVariantsByGuid': {},
+            'transcriptsById': {},
+            'variant': VARIANT_LOOKUP_VARIANT,
+        }
+        self.assertDictEqual(response.json(), expected_body)
+        variant_lookup_handler.assert_called_with(self.no_access_user, )
+
+        variant = {**VARIANTS[0], 'familyGuids': [], 'genotypes': {}}
+        mock_variant_lookup.return_value = variant
+        expected_body.update({
+            'variant': variant,
+            'genesById': {'ENSG00000227232': EXPECTED_GENE, 'ENSG00000268903': EXPECTED_GENE},
+            'transcriptsById': EXPECTED_SEARCH_RESPONSE['transcriptsById'],
+        })
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), expected_body)
+
+
         searched_families = mock_get_variant.call_args.args[0]
         self.assertEqual(searched_families.count(), 1)
         self.assertEqual(searched_families.first().guid, 'F000001_1')

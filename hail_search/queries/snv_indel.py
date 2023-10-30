@@ -1,4 +1,3 @@
-from aiohttp.web import HTTPNotFound
 import hail as hl
 
 from hail_search.constants import HGMD_KEY, HGMD_PATH_RANGES, \
