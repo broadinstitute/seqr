@@ -535,17 +535,15 @@ class BaseHailTableQuery(object):
         if not (intervals or is_x_linked):
             return intervals
 
-        reference_genome = hl.get_reference(self._genome_version)
-        should_add_chr_prefix = any(c.startswith('chr') for c in reference_genome.contigs)
-
         raw_intervals = intervals
-        if should_add_chr_prefix:
+        if self._genome_version == 'GRCh38':
             intervals = [
                 f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
                 for interval in (intervals or [])
             ]
 
         if is_x_linked:
+            reference_genome = hl.get_reference(self._genome_version)
             intervals = (intervals or []) + [reference_genome.x_contigs[0]]
 
         parsed_intervals = [
