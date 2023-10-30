@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'
 import { Grid, Header } from 'semantic-ui-react'
 
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
+import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import StateDataLoader from 'shared/components/StateDataLoader'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
@@ -28,52 +29,48 @@ VariantDisplay.propTypes = {
   variant: PropTypes.object,
 }
 
-// TODO use QueryParamsEditor to update URL params to make navagable, shareable links
-class VariantLookup extends React.PureComponent {
+const parseResponse = receiveData => (response) => {
+  receiveData(response)
+  return response
+}
 
-  static propTypes = {
-    receiveData: PropTypes.func,
-  }
+const onSubmit = updateQueryParams => (data) => {
+  updateQueryParams(data)
+  return Promise.resolve()
+}
 
-  state = {
-    url: null,
-  }
+const VariantLookup = ({ queryParams, receiveData, updateQueryParams }) => (
+  <Grid divided="vertically" centered>
+    <Grid.Row>
+      <Grid.Column width={5} />
+      <Grid.Column width={6}>
+        <Header dividing size="medium" content="Lookup Variant" />
+        <FormWrapper noModal fields={FIELDS} initialValues={queryParams} onSubmit={onSubmit(updateQueryParams)} />
+      </Grid.Column>
+      <Grid.Column width={5} />
+    </Grid.Row>
+    <StateDataLoader
+      url={queryParams.variantId && `/api/variant/${queryParams.genomeVersion}/${queryParams.variantId}`}
+      parseResponse={parseResponse(receiveData)}
+      childComponent={VariantDisplay}
+    />
+  </Grid>
+)
 
-  onSubmit = ({ variantId, genomeVersion }) => (
-    new Promise(resolve => this.setState({ url: `/api/variant/${genomeVersion}/${variantId}` }, resolve))
-  )
-
-  parseResponse = (response) => {
-    const { receiveData } = this.props
-    receiveData(response)
-    return response
-  }
-
-  render() {
-    const { url } = this.state
-    return (
-      <Grid divided="vertically" centered>
-        <Grid.Row>
-          <Grid.Column width={5} />
-          <Grid.Column width={6}>
-            <Header dividing size="medium" content="Lookup Variant" />
-            <FormWrapper noModal fields={FIELDS} onSubmit={this.onSubmit} />
-          </Grid.Column>
-          <Grid.Column width={5} />
-        </Grid.Row>
-        <StateDataLoader
-          url={url}
-          parseResponse={this.parseResponse}
-          childComponent={VariantDisplay}
-        />
-      </Grid>
-    )
-  }
-
+VariantLookup.propTypes = {
+  receiveData: PropTypes.func,
+  updateQueryParams: PropTypes.func,
+  queryParams: PropTypes.object,
 }
 
 const mapDispatchToProps = dispatch => ({
   receiveData: updatesById => dispatch({ type: RECEIVE_DATA, updatesById }),
 })
 
-export default connect(null, mapDispatchToProps)(VariantLookup)
+const WrappedVariantLookup = props => (
+  <QueryParamsEditor {...props}>
+    <VariantLookup />
+  </QueryParamsEditor>
+)
+
+export default connect(null, mapDispatchToProps)(WrappedVariantLookup)
