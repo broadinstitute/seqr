@@ -471,12 +471,26 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get(include_airtable_url)
         self.assertEqual(response.status_code, 402)
 
+        self.reset_logs()
         responses.reset()
         responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=200)
         response = self.client.get(include_airtable_url)
         self.assertEqual(response.status_code, 500)
+        error_message = 'Unable to retrieve airtable data: Expecting value: line 1 column 1 (char 0)'
         self.assertIn(response.json()['error'], ['Unable to retrieve airtable data: No JSON object could be decoded',
-                                                 'Unable to retrieve airtable data: Expecting value: line 1 column 1 (char 0)'])
+                                                 error_message])
+        self.assertFalse('traceback' in response.json())
+        self.assert_json_logs(self.analyst_user, [
+            ('Fetching Samples records 0-2 from airtable', None),
+            (error_message, {
+                'httpRequest': mock.ANY,
+                'traceback': mock.ANY,
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+                'validate': lambda log_value: self.assertTrue(log_value['traceback'].startswith('Traceback'))
+            })
+        ])
+
 
         responses.reset()
         responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),

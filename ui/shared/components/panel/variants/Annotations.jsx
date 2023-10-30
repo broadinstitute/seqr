@@ -4,8 +4,13 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Popup, Label, Icon } from 'semantic-ui-react'
 
-import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid, getUser, getSpliceOutliersByChromFamily }
-  from 'redux/selectors'
+import {
+  getGenesById,
+  getLocusListIntervalsByChromProject,
+  getFamiliesByGuid,
+  getUser,
+  getSpliceOutliersByChromFamily,
+} from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'

@@ -236,9 +236,14 @@ class AuthenticationTestCase(TestCase):
     def assert_json_logs(self, user, expected):
         logs = self._log_stream.getvalue().split('\n')
         for i, (message, extra) in enumerate(expected):
-            self.assertDictEqual(json.loads(logs[i]), {
-                'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, 'message': message, **(extra or {}),
+            extra = extra or {}
+            validate = extra.pop('validate', None)
+            log_value = json.loads(logs[i])
+            self.assertDictEqual(log_value, {
+                'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, 'message': message, **extra,
             })
+            if validate:
+                validate(log_value)
 
     def assert_no_logs(self):
         self.assertEqual(self._log_stream.getvalue(), '')
@@ -794,7 +799,7 @@ GENE_FIELDS = {
     'gencodeGeneType', 'geneId', 'geneSymbol', 'startGrch37', 'startGrch38',
 }
 GENE_VARIANT_DISPLAY_FIELDS = {
-    'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity', 'genCc', 'clinGen',
+    'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity', 'genCc', 'clinGen', 'sHet',
 }
 GENE_VARIANT_DISPLAY_FIELDS.update(GENE_FIELDS)
 GENE_VARIANT_FIELDS = {

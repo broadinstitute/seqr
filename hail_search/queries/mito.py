@@ -1,7 +1,7 @@
 import hail as hl
 
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
-    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, HAS_ALLOWED_SECONDARY_ANNOTATION, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
+    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
     PATHOGENICTY_HGMD_SORT_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
@@ -25,18 +25,16 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     POPULATION_FIELDS = {'helix': 'helix_mito', 'seqr': 'gt_stats'}
     POPULATIONS = {}
-    for pop in ['seqr', 'gnomad_mito', 'helix']:
+    for pop, sort in {'seqr': 'callset_af', 'gnomad_mito': 'gnomad', 'helix': None}.items():
         pop_het = f'{pop}_heteroplasmy'
         POPULATIONS.update({
-            pop: {'hom': None, 'hemi': None, 'het': None},
+            pop: {'af': 'AF_hom', 'ac': 'AC_hom', 'hom': None, 'hemi': None, 'het': None, 'sort': sort},
             pop_het: {
                 'af': 'AF_het', 'ac': 'AC_het', 'max_hl': None if pop == 'seqr' else 'max_hl',
                 'hom': None, 'hemi': None, 'het': None,
             },
         })
         POPULATION_FIELDS[pop_het] = POPULATION_FIELDS.get(pop, pop)
-    POPULATIONS['seqr'].update({'af': 'AF_hom', 'ac': 'AC_hom', 'sort': 'callset_af'})
-    POPULATIONS['gnomad_mito']['sort'] = 'gnomad'
     PREDICTION_FIELDS_CONFIG = {
         'apogee': PredictionPath('mitimpact', 'score'),
         'haplogroup_defining': PredictionPath('haplogroup', 'is_defining', lambda v: hl.or_missing(v, 'Y')),
@@ -100,11 +98,11 @@ class MitoHailTableQuery(BaseHailTableQuery):
         else:
             gene_transcripts = getattr(ht, 'gene_transcripts', None)
 
-        allowed_transcripts = getattr(ht, 'allowed_transcripts', None)
-        if hasattr(ht, HAS_ALLOWED_SECONDARY_ANNOTATION):
+        allowed_transcripts = getattr(ht, ALLOWED_TRANSCRIPTS, None)
+        if gene_id is not None and hasattr(ht, ALLOWED_SECONDARY_TRANSCRIPTS):
             allowed_transcripts = hl.if_else(
-                allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht.allowed_transcripts_secondary,
-            ) if allowed_transcripts is not None else ht.allowed_transcripts_secondary
+                allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht[ALLOWED_SECONDARY_TRANSCRIPTS],
+            ) if allowed_transcripts is not None else ht[ALLOWED_SECONDARY_TRANSCRIPTS]
 
         main_transcript = ht.sorted_transcript_consequences.first()
         if gene_transcripts is not None and allowed_transcripts is not None:
@@ -181,7 +179,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             ht = hl.filter_intervals(ht, parsed_intervals, keep=False)
         return ht
 
-    def _get_consequence_filter(self, allowed_consequence_ids, allowed_consequences, annotation_exprs):
+    def _get_transcript_consequence_filter(self, allowed_consequence_ids, allowed_consequences):
         canonical_consequences = {
             c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
         }
@@ -196,15 +194,10 @@ class MitoHailTableQuery(BaseHailTableQuery):
             return None
 
         allowed_consequence_ids = hl.set(allowed_consequence_ids) if allowed_consequence_ids else hl.empty_set(hl.tint)
-        allowed_transcripts = self._ht.sorted_transcript_consequences.filter(
-            lambda tc: tc.consequence_term_ids.any(
-                (hl.if_else(hl.is_defined(tc.canonical), all_consequence_ids, allowed_consequence_ids)
-                 if canonical_consequences else allowed_consequence_ids
-            ).contains)
-        )
-
-        annotation_exprs['allowed_transcripts'] = allowed_transcripts
-        return hl.is_defined(allowed_transcripts.first())
+        return lambda tc: tc.consequence_term_ids.any(
+            (hl.if_else(hl.is_defined(tc.canonical), all_consequence_ids, allowed_consequence_ids)
+             if canonical_consequences else allowed_consequence_ids
+        ).contains)
 
     def _get_annotation_override_filters(self, annotations, pathogenicity=None, **kwargs):
         annotation_filters = []

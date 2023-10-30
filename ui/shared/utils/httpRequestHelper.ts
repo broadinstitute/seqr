@@ -1,9 +1,9 @@
 import Cookies from 'js-cookie'
 import delay from 'timeout-as-promise'
 
-export const getUrlQueryString = urlParams => Object.entries(urlParams).map(
-  ([key, value]) => [key, value].map(encodeURIComponent).join('='),
-).join('&')
+export const getUrlQueryString = (urlParams: Record<string, string>): string => Object.entries(urlParams)
+  .map(([key, value]) => [key, value].map(encodeURIComponent).join('='))
+  .join('&')
 
 /**
  * Encapsulates the cycle of:
@@ -14,6 +14,18 @@ export const getUrlQueryString = urlParams => Object.entries(urlParams).map(
  */
 export class HttpRequestHelper {
 
+  url: string
+
+  httpPostId: number
+
+  onSuccess?: (response: unknown, successArg: unknown) => void
+
+  onError?: (exception: unknown) => unknown
+
+  onClear?: (httpPostId: number) => void
+
+  delayBeforeClearing: number
+
   /**
    * Creates a new HttpPost helper.
    * @param url {string} The URL to send the request to.
@@ -22,7 +34,13 @@ export class HttpRequestHelper {
    * @param onClear {function} optional handler called some time after the onSuccess or onError handler is called
    * @param delayBeforeClearing {number} milliseconds delay before calling the onClear handler
    */
-  constructor(url, onSuccess = null, onError = null, onClear = null, delayBeforeClearing = 3000) {
+  constructor(
+    url: string,
+    onSuccess: (response: unknown, successArg: unknown) => void | null = null,
+    onError: (exception: unknown) => void | null = null,
+    onClear: (httpPostId: number) => void | null = null,
+    delayBeforeClearing: number = 3000,
+  ) {
     this.url = url
     this.httpPostId = 0
     this.onSuccess = onSuccess
@@ -36,7 +54,7 @@ export class HttpRequestHelper {
    * @param urlParams A dictionary of key-value pairs {gene: 'ENSG00012345', chrom: '1'} to encode
    *   and append to the url as HTTP GET params (eg. "?gene=ENSG00012345&chrom=1")
    */
-  get = (urlParams = {}, fetchParams = {}) => {
+  get = (urlParams: Record<string, string> = {}, fetchParams: Record<string, string> = {}) => {
     const urlQueryString = getUrlQueryString(urlParams)
 
     const p = fetch(`${this.url}?${urlQueryString}`, {
@@ -52,7 +70,7 @@ export class HttpRequestHelper {
    * Submit an HTTP POST request.
    * @param jsonBody The request body.
    */
-  post = (jsonBody = {}) => {
+  post = (jsonBody: Record<string, unknown> = {}) => {
     const csrfToken = Cookies.get('csrf_token')
     const promise = fetch(this.url, {
       method: 'POST',
@@ -69,7 +87,7 @@ export class HttpRequestHelper {
    * @param promise
    * @param onSuccessArg
    */
-  handlePromise = (promise, onSuccessArg) => promise.then((response) => {
+  handlePromise = (promise: Promise<Response>, onSuccessArg: unknown) => promise.then((response) => {
     if (response.status === 401 && !window.location.href.includes('login')) {
       response.json().then((errorJson) => {
         const { error } = errorJson
@@ -77,9 +95,12 @@ export class HttpRequestHelper {
       })
     }
     if (!response.ok) {
-      const throwJsonError = (responseJson) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const throwJsonError = (responseJson: any) => {
         const message = responseJson.error || responseJson.message || `${response.statusText.toLowerCase()} (${response.status})`
         const err = new Error(message)
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         err.body = responseJson
         throw err
       }
@@ -91,7 +112,7 @@ export class HttpRequestHelper {
       throw response.body
     }
   })
-    .then((responseJson) => {
+    .then((responseJson): unknown => {
       if (this.onSuccess) {
         this.onSuccess(responseJson, onSuccessArg)
       }
@@ -112,7 +133,7 @@ export class HttpRequestHelper {
 
       return handled || -1 // don't ever hide the error message
     })
-    .then((httpPostId) => {
+    .then((httpPostId: number) => {
       if (this.onClear && httpPostId === this.httpPostId) {
         this.onClear(httpPostId)
       }

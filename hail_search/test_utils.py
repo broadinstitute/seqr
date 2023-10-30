@@ -3,22 +3,32 @@ from copy import deepcopy
 
 FAMILY_3_SAMPLE = {
     'sample_id': 'NA20870', 'individual_guid': 'I000007_na20870', 'family_guid': 'F000003_3',
-    'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M',
+    'project_guid': 'R0001_1kg', 'affected': 'A',
 }
-FAMILY_2_VARIANT_SAMPLE_DATA = {'SNV_INDEL': [
+FAMILY_2_VARIANT_SAMPLE_DATA_WITH_SEX = {'SNV_INDEL': [
     {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
     {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
     {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
 ]}
-EXPECTED_SAMPLE_DATA = {
+FAMILY_2_VARIANT_SAMPLE_DATA = deepcopy(FAMILY_2_VARIANT_SAMPLE_DATA_WITH_SEX)
+for s in FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL']:
+    s.pop('sex')
+
+EXPECTED_SAMPLE_DATA_WITH_SEX = {
     'SV_WES': [
         {'sample_id': 'HG00731', 'individual_guid': 'I000004_hg00731', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'F'},
         {'sample_id': 'HG00732', 'individual_guid': 'I000005_hg00732', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
         {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'}
     ],
 }
-EXPECTED_SAMPLE_DATA.update(deepcopy(FAMILY_2_VARIANT_SAMPLE_DATA))
-EXPECTED_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_3_SAMPLE)
+EXPECTED_SAMPLE_DATA_WITH_SEX.update(FAMILY_2_VARIANT_SAMPLE_DATA_WITH_SEX)
+EXPECTED_SAMPLE_DATA_WITH_SEX['SNV_INDEL'].append({'sex': 'M', **FAMILY_3_SAMPLE})
+
+EXPECTED_SAMPLE_DATA = deepcopy(EXPECTED_SAMPLE_DATA_WITH_SEX)
+for samples in EXPECTED_SAMPLE_DATA.values():
+    for s in samples:
+        s.pop('sex')
+
 CUSTOM_AFFECTED_SAMPLE_DATA = {'SNV_INDEL': deepcopy(EXPECTED_SAMPLE_DATA['SNV_INDEL'])}
 CUSTOM_AFFECTED_SAMPLE_DATA['SNV_INDEL'][0]['affected'] = 'N'
 CUSTOM_AFFECTED_SAMPLE_DATA['SNV_INDEL'][1]['affected'] = 'A'
@@ -26,8 +36,8 @@ CUSTOM_AFFECTED_SAMPLE_DATA['SNV_INDEL'][2]['affected'] = 'U'
 
 FAMILY_1_SAMPLE_DATA = {
     'SNV_INDEL': [
-        {'sample_id': 'NA19675', 'individual_guid': 'I000001_na19675', 'family_guid': 'F000001_1', 'project_guid': 'R0001_1kg', 'affected': 'A', 'sex': 'M'},
-        {'sample_id': 'NA19678', 'individual_guid': 'I000002_na19678', 'family_guid': 'F000001_1', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M'},
+        {'sample_id': 'NA19675', 'individual_guid': 'I000001_na19675', 'family_guid': 'F000001_1', 'project_guid': 'R0001_1kg', 'affected': 'A'},
+        {'sample_id': 'NA19678', 'individual_guid': 'I000002_na19678', 'family_guid': 'F000001_1', 'project_guid': 'R0001_1kg', 'affected': 'N'},
     ],
 }
 FAMILY_2_MISSING_SAMPLE_DATA = deepcopy(FAMILY_1_SAMPLE_DATA)
@@ -35,7 +45,7 @@ for s in FAMILY_2_MISSING_SAMPLE_DATA['SNV_INDEL']:
     s['family_guid'] = 'F000002_2'
 
 FAMILY_2_MITO_SAMPLE_DATA = {'MITO': [
-    {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'F'},
+    {'sample_id': 'HG00733', 'individual_guid': 'I000006_hg00733', 'family_guid': 'F000002_2', 'project_guid': 'R0001_1kg', 'affected': 'N'},
 ]}
 FAMILY_2_ALL_SAMPLE_DATA = deepcopy(FAMILY_2_VARIANT_SAMPLE_DATA)
 FAMILY_2_ALL_SAMPLE_DATA.update(FAMILY_2_MITO_SAMPLE_DATA)
@@ -43,22 +53,25 @@ FAMILY_2_ALL_SAMPLE_DATA.update(FAMILY_2_MITO_SAMPLE_DATA)
 ALL_AFFECTED_SAMPLE_DATA = deepcopy(EXPECTED_SAMPLE_DATA)
 ALL_AFFECTED_SAMPLE_DATA.update(FAMILY_2_MITO_SAMPLE_DATA)
 FAMILY_5_SAMPLE = {
-    'sample_id': 'NA20874', 'individual_guid': 'I000009_na20874', 'family_guid': 'F000005_5', 'project_guid': 'R0001_1kg', 'affected': 'N', 'sex': 'M',
+    'sample_id': 'NA20874', 'individual_guid': 'I000009_na20874', 'family_guid': 'F000005_5', 'project_guid': 'R0001_1kg', 'affected': 'N',
 }
 ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_5_SAMPLE)
 FAMILY_11_SAMPLE = {
-    'sample_id': 'NA20885', 'individual_guid': 'I000015_na20885', 'family_guid': 'F000011_11', 'project_guid': 'R0003_test', 'affected': 'A', 'sex': 'M',
+    'sample_id': 'NA20885', 'individual_guid': 'I000015_na20885', 'family_guid': 'F000011_11', 'project_guid': 'R0003_test', 'affected': 'A',
 }
 MULTI_PROJECT_SAMPLE_DATA = deepcopy(FAMILY_2_VARIANT_SAMPLE_DATA)
 MULTI_PROJECT_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_11_SAMPLE)
 MULTI_PROJECT_MISSING_SAMPLE_DATA = deepcopy(FAMILY_2_MISSING_SAMPLE_DATA)
 MULTI_PROJECT_MISSING_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_11_SAMPLE)
 
-SV_WGS_SAMPLE_DATA = {'SV_WGS': [FAMILY_11_SAMPLE, {
+SV_WGS_SAMPLE_DATA_WITH_SEX = {'SV_WGS': [{'sex': 'M', **FAMILY_11_SAMPLE}, {
     'sample_id': 'NA20884', 'individual_guid': 'I000025_na20884', 'family_guid': 'F000011_11', 'project_guid': 'R0003_test', 'affected': 'N', 'sex': 'M',
 }, {
     'sample_id': 'NA20883', 'individual_guid': 'I000035_na20883', 'family_guid': 'F000011_11', 'project_guid': 'R0003_test', 'affected': 'N', 'sex': 'F',
 }]}
+SV_WGS_SAMPLE_DATA = deepcopy(SV_WGS_SAMPLE_DATA_WITH_SEX)
+for s in SV_WGS_SAMPLE_DATA['SV_WGS']:
+    s.pop('sex')
 
 SV_WES_SAMPLE_DATA = {'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'] + [FAMILY_3_SAMPLE]}
 

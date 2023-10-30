@@ -3,13 +3,23 @@
     "airbnb",
     "plugin:react-perf/recommended"
   ],
-
   "parser": "babel-eslint",
   "parserOptions": {
     "ecmaFeatures": {
       "experimentalObjectRestSpread": true
     }
   },
+  // TODO: https://github.com/broadinstitute/seqr/issues/2931 update linting after complete migration of the project into typescript.
+  "overrides": [
+    {
+      "files": ["**/*.tsx", "**/*.ts"],
+      "parser": "@typescript-eslint/parser",
+      "plugins": ["@typescript-eslint"],
+      "extends": [
+        "plugin:@typescript-eslint/recommended"
+      ]
+    }
+  ],
   "env": {
     "mocha": true,
     "es6": true,
@@ -44,7 +54,7 @@
     "semi": ["error", "never"],
 
     "react/forbid-prop-types": ["error", { "forbid": ["any", "array"] }],
-    "react/jsx-filename-extension": ["error", { "extensions": [".js", ".jsx"]} ],
+    "react/jsx-filename-extension": ["error", { "extensions": [".js", ".jsx", ".ts", ".tsx"]} ],
     "react/jsx-props-no-spreading": ["error", {
       "html": "enforce",
       "custom": "ignore",
@@ -61,6 +71,7 @@
     "react/require-default-props": "off",
     "react/require-optimization": "error",
     "react/state-in-constructor": ["error", "never"],
-    "react/static-property-placement": ["error", "static public field"]
+    "react/static-property-placement": ["error", "static public field"],
+    "import/extensions": "off"
   }
 }

@@ -34,10 +34,13 @@ ERROR_LOG_EXCEPTIONS.update(ES_ERROR_LOG_EXCEPTIONS)
 DATASET_TYPES_LOOKUP = {
     data_types[0]: data_types for data_types in [
         [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS],
+        [Sample.DATASET_TYPE_MITO_CALLS],
         [Sample.DATASET_TYPE_SV_CALLS],
     ]
 }
 DATASET_TYPES_LOOKUP[ALL_DATA_TYPES] = [dt for dts in DATASET_TYPES_LOOKUP.values() for dt in dts]
+DATASET_TYPE_SNP_INDEL_ONLY = f'{Sample.DATASET_TYPE_VARIANT_CALLS}_only'
+DATASET_TYPES_LOOKUP[DATASET_TYPE_SNP_INDEL_ONLY] = [Sample.DATASET_TYPE_VARIANT_CALLS]
 
 
 def _raise_search_error(error):
@@ -141,6 +144,9 @@ def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None
     elif all(v is None for v in parsed_variant_ids.values()):
         dataset_type = Sample.DATASET_TYPE_SV_CALLS
 
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+        dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
+
     return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
         *_get_families_search_data(families, dataset_type=dataset_type), parsed_variant_ids, user, **kwargs
     )
@@ -233,11 +239,11 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     families = search_model.families.all()
     _validate_sort(sort, families)
 
-    dataset_type, secondary_dataset_type = _search_dataset_type(parsed_search)
+    dataset_type, secondary_dataset_type, lookup_dataset_type = _search_dataset_type(parsed_search)
     parsed_search.update({'dataset_type': dataset_type, 'secondary_dataset_type': secondary_dataset_type})
     search_dataset_type = None
     if dataset_type and dataset_type != ALL_DATA_TYPES and (secondary_dataset_type is None or secondary_dataset_type == dataset_type):
-        search_dataset_type = dataset_type
+        search_dataset_type = lookup_dataset_type or dataset_type
 
     samples, genome_version = _get_families_search_data(families, dataset_type=search_dataset_type)
     if parsed_search.get('inheritance'):
@@ -327,12 +333,21 @@ def _validate_sort(sort, families):
 
 
 def _search_dataset_type(search):
-    if search['parsedLocus']['variant_ids']:
-        return Sample.DATASET_TYPE_VARIANT_CALLS, None
+    if search['parsedLocus']['parsed_variant_ids']:
+        return Sample.DATASET_TYPE_VARIANT_CALLS, None, _variant_ids_dataset_type(search['parsedLocus']['parsed_variant_ids'])
 
     dataset_type = _annotation_dataset_type(search.get('annotations'))
     secondary_dataset_type = _annotation_dataset_type(search.get('annotations_secondary'))
-    return dataset_type, secondary_dataset_type
+    return dataset_type, secondary_dataset_type, None
+
+
+def _variant_ids_dataset_type(variant_ids):
+    has_mito = [chrom for chrom, _, _, _ in variant_ids if chrom.replace('chr', '').startswith('M')]
+    if len(has_mito) == len(variant_ids):
+        return Sample.DATASET_TYPE_MITO_CALLS
+    elif not has_mito:
+        return DATASET_TYPE_SNP_INDEL_ONLY
+    return Sample.DATASET_TYPE_VARIANT_CALLS
 
 
 def _annotation_dataset_type(annotations):

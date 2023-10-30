@@ -4,7 +4,7 @@ from django.db.models import F, Min
 import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization
-from seqr.utils.search.constants import PRIORITIZED_GENE_SORT
+from seqr.utils.search.constants import PRIORITIZED_GENE_SORT, X_LINKED_RECESSIVE
 from seqr.utils.xpos_utils import MIN_POS, MAX_POS
 from settings import HAIL_BACKEND_SERVICE_HOSTNAME, HAIL_BACKEND_SERVICE_PORT
 
@@ -87,19 +87,20 @@ def _format_search_body(samples, genome_version, num_results, search):
         'num_results': num_results,
     }
     search_body.update(search)
-    search_body['sample_data'] = _get_sample_data(samples, search_body.get('inheritance_filter'))
+    search_body['sample_data'] = _get_sample_data(samples, **search_body)
     return search_body
 
 
-def _get_sample_data(samples, inheritance_filter):
-    sample_data = samples.order_by('id').values(
-        'sample_id', 'dataset_type', 'sample_type',
+def _get_sample_data(samples, inheritance_filter=None, inheritance_mode=None, **kwargs):
+    sample_values = dict(
         individual_guid=F('individual__guid'),
         family_guid=F('individual__family__guid'),
         project_guid=F('individual__family__project__guid'),
         affected=F('individual__affected'),
-        sex=F('individual__sex'),
     )
+    if inheritance_mode == X_LINKED_RECESSIVE:
+        sample_values['sex'] = F('individual__sex')
+    sample_data = samples.order_by('id').values('sample_id', 'dataset_type', 'sample_type', **sample_values)
 
     custom_affected = (inheritance_filter or {}).pop('affected', None)
     if custom_affected:

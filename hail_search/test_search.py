@@ -6,7 +6,8 @@ from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE
     LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS, SV_WGS_SAMPLE_DATA, \
     SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, \
     GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, SV_WES_SAMPLE_DATA, EXPECTED_SAMPLE_DATA, \
-    FAMILY_2_MITO_SAMPLE_DATA, FAMILY_2_ALL_SAMPLE_DATA, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3
+    FAMILY_2_MITO_SAMPLE_DATA, FAMILY_2_ALL_SAMPLE_DATA, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
+    EXPECTED_SAMPLE_DATA_WITH_SEX, SV_WGS_SAMPLE_DATA_WITH_SEX
 from hail_search.web_app import init_web_app
 
 PROJECT_2_VARIANT = {
@@ -260,8 +261,8 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         inheritance_mode = 'x_linked_recessive'
-        await self._assert_expected_search([], inheritance_mode=inheritance_mode)
-        await self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA)
+        await self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX)
+        await self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA_WITH_SEX)
 
         inheritance_mode = 'homozygous_recessive'
         await self._assert_expected_search([VARIANT2, GCNV_VARIANT3], inheritance_mode=inheritance_mode)
@@ -633,6 +634,18 @@ class HailSearchTestCase(AioHTTPTestCase):
             annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
         )
 
+        # Do not return pairs where annotations match in a non-paired gene
+        gcnv_annotations_no_pair = {'structural_consequence': ['COPY_GAIN']}
+        await self._assert_expected_search(
+            [], omit_sample_type='SNV_INDEL', inheritance_mode='compound_het',
+            annotations=gcnv_annotations_1, annotations_secondary=gcnv_annotations_no_pair,
+        )
+
+        await self._assert_expected_search(
+            [], omit_sample_type='SNV_INDEL', inheritance_mode='compound_het',
+            annotations={**gcnv_annotations_1, **gcnv_annotations_no_pair},
+        )
+
         await self._assert_expected_search(
             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4]], inheritance_mode='compound_het',
             annotations=annotations_1, annotations_secondary=gcnv_annotations_2,
@@ -675,6 +688,19 @@ class HailSearchTestCase(AioHTTPTestCase):
             annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1,
         )
 
+        selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
+        await self._assert_expected_search(
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3],
+            inheritance_mode='recessive', pathogenicity=pathogenicity,
+            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
+        )
+
+        # Do not return pairs where annotations match in a non-paired gene
+        await self._assert_expected_search(
+            [GCNV_VARIANT3], inheritance_mode='recessive',
+            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
+        )
+
         screen_annotations = {'SCREEN': ['CTCF-only']}
         await self._assert_expected_search(
             [], inheritance_mode='recessive', omit_sample_type='SV_WES',
@@ -686,7 +712,6 @@ class HailSearchTestCase(AioHTTPTestCase):
             annotations=screen_annotations, annotations_secondary=annotations_2,
         )
 
-        selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
         await self._assert_expected_search(
             [VARIANT2, [SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, VARIANT4]], inheritance_mode='recessive',
             annotations=screen_annotations, annotations_secondary=selected_transcript_annotations,

@@ -3,7 +3,7 @@ from django.db.models import Min
 from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual, Sample, PhenotypePrioritization
 from seqr.utils.search.constants import COMPOUND_HET, RECESSIVE, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, \
-    PATHOGENICTY_HGMD_SORT_KEY, PRIORITIZED_GENE_SORT
+    PATHOGENICTY_HGMD_SORT_KEY, PRIORITIZED_GENE_SORT, X_LINKED_RECESSIVE
 
 
 MAX_VARIANTS = 10000
@@ -32,7 +32,6 @@ GENOTYPE_QUERY_MAP = {
     },
 }
 
-X_LINKED_RECESSIVE = 'x_linked_recessive'
 HOMOZYGOUS_RECESSIVE = 'homozygous_recessive'
 ANY_AFFECTED = 'any_affected'
 RECESSIVE_FILTER = {
