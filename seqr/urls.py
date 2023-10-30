@@ -241,7 +241,7 @@ api_endpoints = {
     'search/(?P<search_hash>[^/]+)': query_variants_handler,
     'search/(?P<search_hash>[^/]+)/download': export_variants_handler,
     'search/(?P<search_hash>[^/]+)/gene_breakdown': get_variant_gene_breakdown,
-    'variant/(?P<genome_version>[^/]+)/(?P<variant_id>[^/]+)': variant_lookup_handler,
+    'variant_lookup': variant_lookup_handler,
     'search_context': search_context_handler,
     'saved_search/all': get_saved_search_handler,
     'saved_search/create': create_saved_search_handler,

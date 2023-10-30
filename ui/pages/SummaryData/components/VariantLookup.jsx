@@ -29,11 +29,6 @@ VariantDisplay.propTypes = {
   variant: PropTypes.object,
 }
 
-const parseResponse = receiveData => (response) => {
-  receiveData(response)
-  return response
-}
-
 const onSubmit = updateQueryParams => (data) => {
   updateQueryParams(data)
   return Promise.resolve()
@@ -50,8 +45,9 @@ const VariantLookup = ({ queryParams, receiveData, updateQueryParams }) => (
       <Grid.Column width={5} />
     </Grid.Row>
     <StateDataLoader
-      url={queryParams.variantId && `/api/variant/${queryParams.genomeVersion}/${queryParams.variantId}`}
-      parseResponse={parseResponse(receiveData)}
+      url={queryParams.variantId && '/api/variant_lookup'}
+      query={queryParams}
+      parseResponse={receiveData}
       childComponent={VariantDisplay}
     />
   </Grid>
@@ -64,7 +60,10 @@ VariantLookup.propTypes = {
 }
 
 const mapDispatchToProps = dispatch => ({
-  receiveData: updatesById => dispatch({ type: RECEIVE_DATA, updatesById }),
+  receiveData: (updatesById) => {
+    dispatch({ type: RECEIVE_DATA, updatesById })
+    return updatesById
+  },
 })
 
 const WrappedVariantLookup = props => (

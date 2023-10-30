@@ -17,7 +17,7 @@ from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PA
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
-from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
@@ -526,8 +526,8 @@ def _flatten_variants(variants):
 
 
 @login_and_policies_required
-def variant_lookup_handler(request, genome_version, variant_id):
-    variant = variant_lookup(genome_version, variant_id, request.user)
+def variant_lookup_handler(request):
+    variant = variant_lookup(request.user, **{_to_snake_case(k): v for k, v in request.GET.items()})
     response = get_variants_response(request, saved_variants=None, response_variants=[variant])
     response['variant'] = variant
     return create_json_response(response)

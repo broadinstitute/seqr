@@ -17,6 +17,7 @@ class StateDataLoader extends React.PureComponent {
     validationErrorHeader: PropTypes.string,
     validationErrorMessage: PropTypes.string,
     queryFields: PropTypes.arrayOf(PropTypes.object),
+    query: PropTypes.object,
   }
 
   state = {
@@ -28,9 +29,9 @@ class StateDataLoader extends React.PureComponent {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    const { url } = this.props
+    const { url, query: propsQuery } = this.props
     const { query } = this.state
-    if (prevProps.url !== url || prevState.query !== query) {
+    if (prevProps.url !== url || prevProps.query !== propsQuery || prevState.query !== query) {
       this.load()
     }
   }
@@ -38,6 +39,7 @@ class StateDataLoader extends React.PureComponent {
   load = () => {
     const {
       url, errorHeader, validationErrorHeader, validationErrorMessage, parseResponse, validateResponse,
+      query: propsQuery,
     } = this.props
     const { query } = this.state
     if (!url) {
@@ -57,7 +59,7 @@ class StateDataLoader extends React.PureComponent {
       },
       (e) => {
         this.setState({ loading: false, errorHeader, error: e.message })
-      }).get(query)
+      }).get(propsQuery || query)
   }
 
   updateField = name => (value) => {

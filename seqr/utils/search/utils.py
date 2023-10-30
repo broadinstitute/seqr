@@ -152,12 +152,12 @@ def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None
     )
 
 
-def variant_lookup(genome_version, variant_id, user):
+def variant_lookup(user, variant_id, **kwargs):
     parsed_variant_id = _parse_variant_id(variant_id)
     if not parsed_variant_id:
         raise InvalidSearchException(f'Invalid variant {variant_id}')
     lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), hail_variant_lookup)
-    return lookup_func(genome_version, _parse_variant_id(variant_id), user)
+    return lookup_func(user, parsed_variant_id, **kwargs)
 
 
 def _get_search_cache_key(search_model, sort=None):

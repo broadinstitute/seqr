@@ -2,7 +2,7 @@ from collections import defaultdict
 from django.db.models import F, Min
 
 import requests
-from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
+from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38
 from seqr.models import Sample, PhenotypePrioritization
 from seqr.utils.search.constants import PRIORITIZED_GENE_SORT, X_LINKED_RECESSIVE
 from seqr.utils.xpos_utils import MIN_POS, MAX_POS
@@ -74,10 +74,11 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     return response_json['results']
 
 
-def hail_variant_lookup(genome_version, variant_id, user):
+def hail_variant_lookup(user, variant_id, genome_version=None, **kwargs):
     return _execute_search({
-        'genome_version': GENOME_VERSION_LOOKUP[genome_version],
+        'genome_version': GENOME_VERSION_LOOKUP[genome_version or GENOME_VERSION_GRCh38],
         'variant_id': variant_id,
+        **kwargs,
     }, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
 
 
