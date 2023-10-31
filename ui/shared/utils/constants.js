@@ -118,6 +118,7 @@ export const DATASET_TYPE_MITO_CALLS = 'MITO'
 export const DATASET_TITLE_LOOKUP = {
   [DATASET_TYPE_SV_CALLS]: ' SV',
   [DATASET_TYPE_MITO_CALLS]: ' Mitochondria',
+  ONT_SNV_INDEL: ' ONT',
 }
 
 export const SAMPLE_TYPE_EXOME = 'WES'
