@@ -536,7 +536,7 @@ class BaseHailTableQuery(object):
             return intervals
 
         raw_intervals = intervals
-        if self._genome_version == 'GRCh38':
+        if self._should_add_chr_prefix():
             intervals = [
                 f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
                 for interval in (intervals or [])
@@ -555,6 +555,9 @@ class BaseHailTableQuery(object):
             raise HTTPBadRequest(reason=f'Invalid intervals: {", ".join(invalid_intervals)}')
 
         return parsed_intervals
+
+    def _should_add_chr_prefix(self):
+        return self._genome_version == 'GRCh38'
 
     def _filter_by_frequency(self, frequencies, pathogenicity):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
