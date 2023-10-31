@@ -1,4 +1,3 @@
-from google.oauth2 import service_account
 import json
 import os
 import random
@@ -7,6 +6,9 @@ import string
 import subprocess # nosec
 
 from ssl import create_default_context
+
+import google.auth
+import google.auth.transport.requests
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -416,10 +418,11 @@ AIRFLOW_WEBSERVER_URL = os.environ.get('AIRFLOW_WEBSERVER_URL')
 AIRFLOW_DAG_VERSION = os.environ.get('AIRFLOW_DAG_VERSION', '0.0.1')
 
 if TERRA_API_ROOT_URL:
-    service_account_file = '/.config/service-account-key.json'
     try:
-        SERVICE_ACCOUNT_CREDENTIALS = service_account.Credentials.from_service_account_file(
-            service_account_file, scopes=SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
+       # Refresh pattern taken from: https://stackoverflow.com/a/74377391
+        SERVICE_ACCOUNT_CREDENTIALS, project_id = google.auth.default(scopes=SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
+        request = google.auth.transport.requests.Request()
+        SERVICE_ACCOUNT_CREDENTIALS.refresh(request=request)
         SERVICE_ACCOUNT_FOR_ANVIL = SERVICE_ACCOUNT_CREDENTIALS.service_account_email
     except Exception:
         raise Exception('Error starting seqr - gcloud auth credentials are not properly configured')
@@ -427,11 +430,6 @@ if TERRA_API_ROOT_URL:
     # activate command line account if failed on start up
     activated_service_account = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
                                                capture_output=True, text=True, shell=True).stdout.split('\n')[0] # nosec
-    if not activated_service_account:
-        auth_output = subprocess.run([  # nosec
-            'gcloud', 'auth', 'activate-service-account', '--key-file', service_account_file
-        ], capture_output=True, text=True).stderr
-        activated_service_account = re.findall(r'\[(.*)\]', auth_output)[0]
     if activated_service_account != SERVICE_ACCOUNT_FOR_ANVIL:
         raise Exception('Error starting seqr - attempt to authenticate gcloud cli failed')
 
