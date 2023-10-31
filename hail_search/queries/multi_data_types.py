@@ -7,9 +7,12 @@ from hail_search.queries.mito import MitoHailTableQuery
 from hail_search.queries.snv_indel import SnvIndelHailTableQuery
 from hail_search.queries.sv import SvHailTableQuery
 from hail_search.queries.gcnv import GcnvHailTableQuery
+from hail_search.queries.ont_snv_indel import OntSnvIndelHailTableQuery
 
 QUERY_CLASS_MAP = {
-    cls.DATA_TYPE: cls for cls in [SnvIndelHailTableQuery, MitoHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]
+    cls.DATA_TYPE: cls for cls in [
+        SnvIndelHailTableQuery, MitoHailTableQuery, SvHailTableQuery, GcnvHailTableQuery, OntSnvIndelHailTableQuery,
+    ]
 }
 SNV_INDEL_DATA_TYPE = SnvIndelHailTableQuery.DATA_TYPE
 
