@@ -10,7 +10,7 @@ from seqr.utils.search.utils import get_single_variant, get_variants_for_variant
     query_variants, InvalidSearchException
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
 
-
+# TODO lookup tests
 class SearchTestHelper(object):
 
     def set_up(self):
