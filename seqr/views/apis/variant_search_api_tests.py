@@ -5,7 +5,6 @@ from copy import deepcopy
 from django.db import transaction
 from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
-from requests import HTTPError
 
 from hail_search.test_utils import HAIL_BACKEND_SINGLE_FAMILY_VARIANTS, VARIANT_LOOKUP_VARIANT
 from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch

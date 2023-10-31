@@ -256,10 +256,10 @@ class BaseHailTableQuery(object):
         table_path = self._get_table_path(path)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
-            globals = hl.read_table(table_path).globals
+            ht_globals = hl.read_table(table_path).globals
             if drop_globals:
-                globals = globals.drop(*drop_globals)
-            return ht.annotate_globals(**hl.eval(globals))
+                ht_globals = ht_globals.drop(*drop_globals)
+            return ht.annotate_globals(**hl.eval(ht_globals))
         return hl.read_table(table_path, **self._load_table_kwargs)
 
     @staticmethod
