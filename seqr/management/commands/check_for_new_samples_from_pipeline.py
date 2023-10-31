@@ -8,6 +8,7 @@ from seqr.models import Family, Sample
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
+from seqr.views.utils.variant_utils import reset_cached_search_results
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,9 @@ class Command(BaseCommand):
             dataset_type=dataset_type,
             user=None,
         )
+
+        # Reset cached results for all projects, as seqr AFs will have changed for all projects when new data is added
+        reset_cached_search_results(project=None)
 
         # Send loading notifications
         for project, sample_ids in samples_by_project.items():
