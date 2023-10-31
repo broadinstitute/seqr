@@ -31,6 +31,8 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 class CheckNewSamplesTest(AnvilAuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
+    @mock.patch('seqr.views.utils.variant_utils.redis.StrictRedis')
+    @mock.patch('seqr.views.utils.variant_utils.logger')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
     @mock.patch('seqr.utils.search.add_data_utils.send_html_email')
@@ -39,7 +41,9 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
-    def test_command(self, mock_logger, mock_send_email, mock_send_slack, mock_subprocess):
+    def test_command(self, mock_logger, mock_send_email, mock_send_slack, mock_subprocess, mock_utils_logger, mock_redis):
+        mock_redis.return_value.keys.side_effect = lambda pattern: [pattern]
+
         # Test errors
         with self.assertRaises(CommandError) as ce:
             call_command('check_for_new_samples_from_pipeline')
@@ -99,6 +103,9 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             mock.call('Loading 4 WES SNV_INDEL samples in 2 projects'),
             mock.call('DONE'),
         ])
+
+        mock_redis.return_value.delete.assert_called_with('search_results__*')
+        mock_utils_logger.info.assert_called_with('Reset 1 cached results')
 
         # Tests Sample models created/updated
         updated_sample_models = Sample.objects.filter(guid__in={
