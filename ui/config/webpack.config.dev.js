@@ -64,7 +64,7 @@ module.exports = {
     // We also include JSX as a common component filename extension to support
     // some tools, although we do not recommend using it, see:
     // https://github.com/facebookincubator/create-react-app/issues/290
-    extensions: ['.mjs', '.js', '.json', '.jsx', '.css'],
+    extensions: ['.mjs', '.js', '.json', '.jsx', '.css', '.ts', '.tsx'],
   },
   module: {
     strictExportPresence: true,
@@ -139,6 +139,10 @@ module.exports = {
             test: /\.(png|woff|woff2|eot|ttf|svg)$/,
             type: 'asset/inline',
           },
+          {
+            test: /\.(ts|tsx)$/,
+            loader: require.resolve("ts-loader"),
+          },
         ],
       },
     ],
@@ -146,7 +150,7 @@ module.exports = {
   plugins: [
     new ESLintPlugin({
       formatter: eslintFormatter,
-      extensions: ['js', 'jsx'],
+      extensions: ['js', 'jsx', '.ts', '.tsx'],
     }),
     new webpack.LoaderOptionsPlugin({ options: {} }),
 

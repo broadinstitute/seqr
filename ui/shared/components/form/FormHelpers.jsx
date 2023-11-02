@@ -54,7 +54,7 @@ export const helpLabel = (label, labelHelp) => (
     <label>
       {label}
       &nbsp;
-      <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" />
+      <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} position="top center" size="small" hoverable />
     </label>
   ) : label
 )

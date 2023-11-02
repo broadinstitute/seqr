@@ -5,7 +5,7 @@ import logging
 import os
 
 from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
-    COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, HAS_ALLOWED_ANNOTATION, HAS_ALLOWED_SECONDARY_ANNOTATION, \
+    COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
     UNAFFECTED_ID, VARIANT_KEY_FIELD, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
 
@@ -26,6 +26,7 @@ def _to_camel_case(snake_case_str):
 class BaseHailTableQuery(object):
 
     DATA_TYPE = None
+    KEY_FIELD = None
     LOADED_GLOBALS = None
 
     GENOTYPE_QUERY_MAP = {
@@ -224,17 +225,22 @@ class BaseHailTableQuery(object):
     def _enums(self):
         return self._globals['enums']
 
-    def _load_filtered_table(self, sample_data, intervals=None, variant_ids=None, **kwargs):
-        parsed_intervals, variant_ids = self._parse_intervals(intervals, variant_ids, **kwargs)
+    def _load_filtered_table(self, sample_data, intervals=None, **kwargs):
+        parsed_intervals = self._parse_intervals(intervals, **kwargs)
         self.import_filtered_table(
-            sample_data, parsed_intervals=parsed_intervals, variant_ids=variant_ids, **kwargs)
+            sample_data, parsed_intervals=parsed_intervals, **kwargs)
 
         if self._has_comp_het_search:
             self._comp_het_ht = self._filter_compound_hets()
-            if self._is_recessive_search and HAS_ALLOWED_ANNOTATION in self._ht.row:
+            if self._is_recessive_search:
                 self._ht = self._ht.filter(self._ht.family_entries.any(hl.is_defined))
-                if HAS_ALLOWED_SECONDARY_ANNOTATION in self._ht.row:
-                    self._ht = self._ht.filter(self._ht[HAS_ALLOWED_ANNOTATION]).drop(HAS_ALLOWED_SECONDARY_ANNOTATION)
+                if self._has_secondary_annotations:
+                    annotation_filters = self._get_annotation_filters(self._ht)
+                    if annotation_filters:
+                        self._ht = self._ht.filter(hl.any(annotation_filters))
+                    else:
+                        # Data type only has annotations for second hit
+                        self._ht = None
             else:
                 self._ht = None
 
@@ -246,7 +252,16 @@ class BaseHailTableQuery(object):
         return self._get_generic_table_path(self._genome_version, path)
 
     def _read_table(self, path):
-        return hl.read_table(self._get_table_path(path), **self._load_table_kwargs)
+        table_path = self._get_table_path(path)
+        if 'variant_ht' in self._load_table_kwargs:
+            ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
+            return ht.annotate_globals(**hl.eval(hl.read_table(table_path).globals))
+        return hl.read_table(table_path, **self._load_table_kwargs)
+
+    @staticmethod
+    def _query_table_annotations(ht, query_table_path):
+        query_result = hl.query_table(query_table_path, ht.key).first().drop(*ht.key)
+        return ht.annotate(**query_result)
 
     def import_filtered_table(self, sample_data, intervals=None, **kwargs):
         family_samples = defaultdict(list)
@@ -298,20 +313,14 @@ class BaseHailTableQuery(object):
                 families_ht = families_ht.select(**select_fields)
                 num_families += num_project_families
 
-        annotations_ht_path = self._get_table_path('annotations.ht')
-        annotation_ht_query_result = hl.query_table(
-            annotations_ht_path, families_ht.key).first().drop(*families_ht.key)
-        self._ht = families_ht.annotate(**annotation_ht_query_result)
+        self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
 
         self._filter_annotated_table(**kwargs)
         self._ht = self._ht.key_by(**{VARIANT_KEY_FIELD: self._ht.variant_id})
 
     def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, quality_filter=None,
-                              variant_ids=None, **kwargs):
-
-        if variant_ids:
-            ht = self._filter_variant_ids(ht, variant_ids)
-        elif not self._load_table_kwargs.get('_intervals'):
+                              **kwargs):
+        if not self._load_table_kwargs:
             ht = self._prefilter_entries_table(ht, **kwargs)
 
         ht, sample_id_family_index_map, num_families = self._add_entry_sample_families(ht, sample_data)
@@ -481,9 +490,8 @@ class BaseHailTableQuery(object):
     def _filter_vcf_filters(ht):
         return ht.filter(hl.is_missing(ht.filters) | (ht.filters.length() < 1))
 
-    def _filter_variant_ids(self, ht, variant_ids):
-        variant_ids_set = hl.set(variant_ids)
-        return ht.filter(variant_ids_set.contains(ht.variant_id))
+    def _parse_variant_keys(self, variant_keys=None, **kwargs):
+        return [hl.struct(**{self.KEY_FIELD[0]: key}) for key in (variant_keys or [])]
 
     def _prefilter_entries_table(self, ht, **kwargs):
         return ht
@@ -513,26 +521,25 @@ class BaseHailTableQuery(object):
         rs_id_set = hl.set(rs_ids)
         self._ht = self._ht.filter(rs_id_set.contains(self._ht.rsid))
 
-    def _parse_intervals(self, intervals, variant_ids, **kwargs):
-        is_x_linked = self._inheritance_mode == X_LINKED_RECESSIVE
-        if not (intervals or variant_ids or is_x_linked):
-            return intervals, variant_ids
+    def _parse_intervals(self, intervals, **kwargs):
+        parsed_variant_keys = self._parse_variant_keys(**kwargs)
+        if parsed_variant_keys:
+            self._load_table_kwargs['variant_ht'] = hl.Table.parallelize(parsed_variant_keys).key_by(*self.KEY_FIELD)
+            return intervals
 
-        reference_genome = hl.get_reference(self._genome_version)
-        should_add_chr_prefix = any(c.startswith('chr') for c in reference_genome.contigs)
+        is_x_linked = self._inheritance_mode == X_LINKED_RECESSIVE
+        if not (intervals or is_x_linked):
+            return intervals
 
         raw_intervals = intervals
-        if variant_ids:
-            if should_add_chr_prefix:
-                variant_ids = [(f'chr{chr}', *v_id) for chr, *v_id in variant_ids]
-            intervals = [f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
-        elif should_add_chr_prefix:
+        if self._should_add_chr_prefix():
             intervals = [
                 f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
                 for interval in (intervals or [])
             ]
 
         if is_x_linked:
+            reference_genome = hl.get_reference(self._genome_version)
             intervals = (intervals or []) + [reference_genome.x_contigs[0]]
 
         parsed_intervals = [
@@ -543,7 +550,10 @@ class BaseHailTableQuery(object):
         if invalid_intervals:
             raise HTTPBadRequest(reason=f'Invalid intervals: {", ".join(invalid_intervals)}')
 
-        return parsed_intervals, variant_ids
+        return parsed_intervals
+
+    def _should_add_chr_prefix(self):
+        return self._genome_version == 'GRCh38'
 
     def _filter_by_frequency(self, frequencies, pathogenicity):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
@@ -632,11 +642,7 @@ class BaseHailTableQuery(object):
             return
 
         self._ht = self._ht.annotate(**annotation_exprs)
-        annotation_filters = []
-        if HAS_ALLOWED_ANNOTATION in annotation_exprs:
-            annotation_filters.append(self._ht[HAS_ALLOWED_ANNOTATION])
-        if secondary_exprs:
-            annotation_filters.append(self._ht[HAS_ALLOWED_SECONDARY_ANNOTATION])
+        annotation_filters = self._get_annotation_filters(self._ht) + self._get_annotation_filters(self._ht, is_secondary=True)
         self._ht = self._ht.filter(hl.any(annotation_filters))
 
     def _get_allowed_consequences_annotations(self, annotations, annotation_filters, is_secondary=False):
@@ -647,29 +653,42 @@ class BaseHailTableQuery(object):
         allowed_consequence_ids = self._get_allowed_consequence_ids(allowed_consequences)
 
         annotation_exprs = {}
-        consequence_filter = self._get_consequence_filter(allowed_consequence_ids, allowed_consequences, annotation_exprs)
-        has_consequence_filter = consequence_filter is not None
+        transcript_consequence_filter = self._get_transcript_consequence_filter(allowed_consequence_ids, allowed_consequences)
+        has_consequence_filter = transcript_consequence_filter is not None
         if has_consequence_filter:
-            annotation_filters = annotation_filters + [consequence_filter]
-
-        if has_consequence_filter or (annotation_filters and not is_secondary):
-            annotation_exprs[HAS_ALLOWED_ANNOTATION] = hl.any(annotation_filters)
+            allowed_transcripts = self._ht[self.TRANSCRIPTS_FIELD].filter(transcript_consequence_filter)
+            annotation_exprs[ALLOWED_TRANSCRIPTS] = allowed_transcripts
+        if annotation_filters:
+            annotation_exprs[HAS_ANNOTATION_OVERRIDE] = hl.any(annotation_filters)
 
         return annotation_exprs, allowed_consequences
 
     def _get_allowed_consequence_ids(self, allowed_consequences):
         return self._get_enum_terms_ids(self.TRANSCRIPTS_FIELD, self.TRANSCRIPT_CONSEQUENCE_FIELD, allowed_consequences)
 
-    def _get_consequence_filter(self, allowed_consequence_ids, allowed_consequences, annotation_exprs):
+    def _get_transcript_consequence_filter(self, allowed_consequence_ids, allowed_consequences):
         if not allowed_consequence_ids:
             return None
         allowed_consequence_ids = hl.set(allowed_consequence_ids)
-        return self._ht[self.TRANSCRIPTS_FIELD].any(
-            lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
-        )
+        return lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
 
     def _get_annotation_override_filters(self, annotations, **kwargs):
         return []
+
+    @staticmethod
+    def _get_annotation_filters(ht, is_secondary=False):
+        suffix = '_secondary' if is_secondary else ''
+        annotation_filters = []
+
+        allowed_transcripts_field = f'{ALLOWED_TRANSCRIPTS}{suffix}'
+        if allowed_transcripts_field in ht.row:
+            annotation_filters.append(hl.is_defined(ht[allowed_transcripts_field].first()))
+
+        annotation_override_field = f'{HAS_ANNOTATION_OVERRIDE}{suffix}'
+        if annotation_override_field in ht.row:
+            annotation_filters.append(ht[annotation_override_field])
+
+        return annotation_filters
 
     def _filter_compound_hets(self):
         ch_ht = self._ht
@@ -679,18 +698,31 @@ class BaseHailTableQuery(object):
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht, comp_het=True))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
-        self.unfiltered_comp_het_ht = ch_ht
 
-        formatted_rows_expr = hl.agg.collect(ch_ht.row)
-        if self._has_secondary_annotations:
-            if HAS_ALLOWED_ANNOTATION not in self._ht.row or HAS_ALLOWED_SECONDARY_ANNOTATION not in self._ht.row:
-                # In cases where comp het pairs must have different data types, there are no single data type results
-                return None
-            primary_variants = hl.agg.filter(ch_ht[HAS_ALLOWED_ANNOTATION], formatted_rows_expr)
-            secondary_variants = hl.agg.filter(ch_ht[HAS_ALLOWED_SECONDARY_ANNOTATION], formatted_rows_expr)
+        # Filter allowed transcripts to the grouped gene
+        transcript_annotations = {
+            k: ch_ht[k].filter(lambda t: t.gene_id == ch_ht.gene_ids)
+            for k in [ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS] if k in ch_ht.row
+        }
+        if transcript_annotations:
+            ch_ht = ch_ht.annotate(**transcript_annotations)
+        primary_filters = self._get_annotation_filters(ch_ht)
+        secondary_filters = self._get_annotation_filters(ch_ht, is_secondary=True)
+
+        self.unfiltered_comp_het_ht = ch_ht.filter(hl.any(primary_filters + secondary_filters))
+        if self._has_secondary_annotations and not (primary_filters and secondary_filters):
+            # In cases where comp het pairs must have different data types, there are no single data type results
+            return None
+
+        primary_variants = hl.agg.filter(hl.any(primary_filters), hl.agg.collect(ch_ht.row))
+        if secondary_filters:
+            row_agg = ch_ht.row
+            if ALLOWED_TRANSCRIPTS in row_agg and ALLOWED_SECONDARY_TRANSCRIPTS in row_agg:
+                # Ensure main transcripts are properly selected for primary/secondary annotations in variant pairs
+                row_agg = row_agg.annotate(**{ALLOWED_TRANSCRIPTS: row_agg[ALLOWED_SECONDARY_TRANSCRIPTS]})
+            secondary_variants = hl.agg.filter(hl.any(secondary_filters), hl.agg.collect(row_agg))
         else:
-            primary_variants = formatted_rows_expr
-            secondary_variants = formatted_rows_expr
+            secondary_variants = primary_variants
 
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
         ch_ht = self._filter_grouped_compound_hets(ch_ht)
