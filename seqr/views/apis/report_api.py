@@ -614,7 +614,9 @@ def _validate_gregor_files(file_data):
 def _load_data_model_validators():
     response = requests.get(GREGOR_DATA_MODEL_URL)
     response.raise_for_status()
-    table_models = response.json()['tables']
+    # remove commented out lines from json
+    response_json = json.loads(re.sub('\\n\s*//.*\\n', '', response.text))
+    table_models = response_json['tables']
     validators = {
         t['table']: {c['column']: c for c in t['columns']}
         for t in table_models
