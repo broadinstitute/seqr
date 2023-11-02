@@ -272,101 +272,6 @@ EXPECTED_GREGOR_FILES = [
 ]
 
 MOCK_DATA_MODEL_URL = 'http://raw.githubusercontent.com/gregor_data_model.json'
-MOCK_INVALID_DATA_MODEL = {
-    'name': 'test data model',
-    'tables': [
-        {
-            'table': 'subject',
-            'required': True,
-            'columns': [{'column': 'subject_id', 'required': True}],
-        },
-        {
-            'table': 'participant',
-            'required': True,
-            'columns': [
-                {'column': 'participant_id', 'required': True, 'data_type': 'string'},
-                {'column': 'internal_project_id', 'data_type': 'reference'},
-                {'column': 'gregor_center', 'required': True, 'data_type': 'enumeration', 'enumerations': ['BCM', 'BROAD', 'UW']},
-                {'column': 'consent_code', 'required': True, 'data_type': 'enumeration', 'enumerations': ['GRU', 'HMB']},
-                {'column': 'recontactable', 'data_type': 'enumeration', 'enumerations': ['Yes', 'No']},
-                {'column': 'prior_testing', 'data_type': 'enumeration'},
-                {'column': 'family_id', 'required': True},
-                {'column': 'paternal_id'},
-                {'column': 'maternal_id'},
-                {'column': 'proband_relationship', 'required': True},
-                {'column': 'sex', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Male', 'Female', 'Unknown']},
-                {'column': 'reported_race', 'data_type': 'enumeration', 'enumerations': ['Asian', 'White', 'Black']},
-                {'column': 'reported_ethnicity', 'data_type': 'enumeration', 'enumerations': ['Hispanic or Latino', 'Not Hispanic or Latino']},
-                {'column': 'ancestry_metadata'},
-                {'column': 'affected_status', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Affected', 'Unaffected', 'Unknown']},
-                {'column': 'phenotype_description'},
-                {'column': 'age_at_enrollment', 'data_type': 'date'},
-            ],
-        },
-        {
-            'table': 'aligned_dna_short_read',
-            'required': 'CONDITIONAL (aligned_dna_short_read_set, called_variants_dna_short_read)',
-            'columns': [
-                {'column': 'aligned_dna_short_read_id', 'required': True},
-                {'column': 'experiment_dna_short_read_id', 'required': True},
-                {'column': 'aligned_dna_short_read_file', 'is_unique': True, 'data_type': 'string', 'is_bucket_path': True},
-                {'column': 'aligned_dna_short_read_index_file'},
-                {'column': 'alignment_software', 'is_unique': True},
-                {'column': 'analysis_details', 'data_type': 'string', 'is_bucket_path': True},
-                {'column': 'md5sum', 'is_unique': True},
-                {'column': 'mean_coverage', 'required': True, 'data_type': 'float'},
-                {'column': 'reference_assembly', 'data_type': 'integer'},
-                {'column': 'reference_assembly_details'},
-                {'column': 'reference_assembly_uri'},
-                {'column': 'quality_issues'},
-            ],
-        },
-        {
-            'table': 'aligned_dna_short_read_set',
-            'columns': [
-                {'column': 'aligned_dna_short_read_set_id', 'required': True},
-                {'column': 'aligned_dna_short_read_id', 'required': True},
-            ],
-        },
-        {
-            'table': 'dna_read_data',
-            'columns': [{'column': 'analyte_id', 'required': True}],
-        },
-        {
-            'table': 'dna_read_data_set',
-            'required': 'CONDITIONAL (aligned_dna_short_read_set, dna_read_data)',
-            'columns': [{'column': 'analyte_id', 'required': True}],
-        },
-        {
-            'table': 'experiment_rna_short_read',
-            'columns': [
-                {'column': 'experiment_rna_short_read_id', 'required': True},
-                {'column': 'analyte_id', 'required': True},
-                {'column': 'experiment_sample_id'},
-                {'column': 'seq_library_prep_kit_method'},
-                {'column': 'library_prep_type'},
-                {'column': 'experiment_type'},
-                {'column': 'read_length', 'data_type': 'integer'},
-                {'column': 'single_or_paired_ends'},
-                {'column': 'date_data_generation', 'data_type': 'float'},
-                {'column': 'sequencing_platform'},
-                {'column': 'within_site_batch_name'},
-                {'column': 'RIN', 'data_type': 'float'},
-                {'column': 'estimated_library_size'},
-                {'column': 'total_reads', 'data_type': 'integer'},
-                {'column': 'percent_rRNA', 'data_type': 'float'},
-                {'column': 'percent_mRNA', 'data_type': 'float'},
-                {'column': 'percent_mtRNA', 'data_type': 'float'},
-                {'column': 'percent_Globin', 'data_type': 'float'},
-                {'column': 'percent_UMI', 'data_type': 'float'},
-                {'column': '5prime3prime_bias', 'data_type': 'float'},
-                {'column': 'percent_GC', 'data_type': 'float'},
-                {'column': 'percent_chrX_Y', 'data_type': 'float'},
-            ],
-        },
-    ]
-}
-# TODO share with invalid
 MOCK_DATA_MODEL = {
     'name': 'test data model',
     'tables': [
@@ -475,7 +380,7 @@ MOCK_DATA_MODEL = {
                 {'column': 'reference_assembly_details'},
                 {'column': 'mean_coverage', 'data_type': 'float'},
                 {'column': 'alignment_software', 'required': True},
-                {'column': 'analysis_details'},
+                {'column': 'analysis_details', 'data_type': 'string'},
                 {'column': 'quality_issues'},
             ],
         },
@@ -551,6 +456,49 @@ MOCK_DATA_MODEL = {
             ],
         },
     ]
+}
+
+INVALID_MODEL_TABLES = {
+    'participant': {
+        'internal_project_id': {'data_type': 'reference'},
+        'prior_testing': {'data_type': 'enumeration'},
+        'proband_relationship': {'required': True},
+        'reported_race': {'enumerations': ['Asian', 'White', 'Black']},
+        'age_at_enrollment': {'data_type': 'date'}
+    },
+    'aligned_dna_short_read': {
+        'analysis_details': {'is_bucket_path': True},
+        'reference_assembly': {'data_type': 'integer'},
+        'mean_coverage': {'required': True},
+        'alignment_software': {'is_unique': True},
+    },
+    'aligned_dna_short_read_set': {},
+    'experiment_rna_short_read': {'date_data_generation': {'data_type': 'float'}},
+}
+INVALID_TABLES = [
+    {**t, 'columns': [{**c, **(INVALID_MODEL_TABLES[t['table']].get(c['column'], {}))} for c in t['columns']]}
+    for t in MOCK_DATA_MODEL['tables'] if t['table'] in INVALID_MODEL_TABLES
+]
+INVALID_TABLES[0]['columns'] = [c for c in INVALID_TABLES[0]['columns'] if c['column'] not in {
+    'pmid_id', 'age_at_last_observation', 'ancestry_detail',
+}]
+MOCK_INVALID_DATA_MODEL = {
+    'tables': [
+        {
+            'table': 'subject',
+            'required': True,
+            'columns': [{'column': 'subject_id', 'required': True}],
+        },
+        {
+            'table': 'dna_read_data',
+            'columns': [{'column': 'analyte_id', 'required': True}],
+        },
+        {
+            'table': 'dna_read_data_set',
+            'required': 'CONDITIONAL (aligned_dna_short_read_set, dna_read_data)',
+            'columns': [{'column': 'analyte_id', 'required': True}],
+        },
+    ] + INVALID_TABLES
 }
 
 
@@ -807,18 +755,17 @@ class ReportAPITest(AirtableTest):
             'The following columns are computed for the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id',
         ] + recommended_warnings)
         self.assertListEqual(response.json()['errors'], [
-            f'No data model found for "{file}" table' for file in reversed(EXPECTED_GREGOR_FILES)
-            if file not in {'participant', 'aligned_dna_short_read', 'aligned_dna_short_read_set', 'experiment_rna_short_read'}
+            f'No data model found for "{file}" table' for file in reversed(EXPECTED_GREGOR_FILES) if file not in INVALID_MODEL_TABLES
         ] + [
             'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
         ] + [
             'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
             'The following entries have invalid values for "age_at_enrollment" in the "participant" table. Allowed values have data type date. Invalid values: Broad_NA19675_1 (18)',
+            'The following entries have invalid values for "reference_assembly" (from Airtable) in the "aligned_dna_short_read" table. Allowed values have data type integer. Invalid values: NA20888 (GRCh38), VCGS_FAM203_621_D2 (GRCh38)',
+            'The following entries are missing required "mean_coverage" (from Airtable) in the "aligned_dna_short_read" table: VCGS_FAM203_621_D2',
             'The following entries have non-unique values for "alignment_software" (from Airtable) in the "aligned_dna_short_read" table: BWA-MEM-2.3 (NA20888, VCGS_FAM203_621_D2)',
             'The following entries have invalid values for "analysis_details" (from Airtable) in the "aligned_dna_short_read" table. Allowed values are a google bucket path starting with gs://. Invalid values: VCGS_FAM203_621_D2 (DOI:10.5281/zenodo.4469317)',
-            'The following entries are missing required "mean_coverage" (from Airtable) in the "aligned_dna_short_read" table: VCGS_FAM203_621_D2',
-            'The following entries have invalid values for "reference_assembly" (from Airtable) in the "aligned_dna_short_read" table. Allowed values have data type integer. Invalid values: NA20888 (GRCh38), VCGS_FAM203_621_D2 (GRCh38)',
             'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)',
         ])
 
