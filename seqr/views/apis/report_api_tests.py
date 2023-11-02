@@ -272,6 +272,64 @@ EXPECTED_GREGOR_FILES = [
     'experiment_rna_short_read', 'aligned_rna_short_read', 'experiment',
 ]
 
+# TODO remove
+PARTICIPANT_TABLE_COLUMNS = [
+    'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
+    'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
+    'proband_relationship_detail', 'sex', 'sex_detail', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
+    'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
+]
+GREGOR_FAMILY_TABLE_COLUMNS = [
+    'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_file', 'pedigree_file_detail', 'family_history_detail',
+]
+PHENOTYPE_TABLE_COLUMNS = [
+    'phenotype_id', 'participant_id', 'term_id', 'presence', 'ontology', 'additional_details', 'onset_age_range',
+    'additional_modifiers',
+]
+ANALYTE_TABLE_COLUMNS = [
+    'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
+    'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status', 'age_at_collection',
+    'participant_drugs_intake', 'participant_special_diet', 'hours_since_last_meal', 'passage_number', 'time_to_freeze',
+    'sample_transformation_detail', 'quality_issues',
+]
+EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
+    'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
+    'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
+]
+EXPERIMENT_TABLE_COLUMNS = [
+    'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id',
+] + EXPERIMENT_TABLE_AIRTABLE_FIELDS
+EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS = [
+    'library_prep_type', 'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size',
+    'total_reads', 'percent_rRNA', 'percent_mRNA', '5prime3prime_bias',
+]
+EXPERIMENT_RNA_TABLE_COLUMNS = ['experiment_rna_short_read_id'] + [
+    c for c in EXPERIMENT_TABLE_COLUMNS[1:] if not c.startswith('target')] + EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + [
+    'percent_mtRNA', 'percent_Globin', 'percent_UMI',  'percent_GC', 'percent_chrX_Y',
+]
+EXPERIMENT_LOOKUP_TABLE_COLUMNS = ['experiment_id', 'table_name', 'id_in_table', 'participant_id']
+READ_TABLE_AIRTABLE_FIELDS = [
+    'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
+    'mean_coverage', 'alignment_software', 'analysis_details',
+]
+READ_TABLE_COLUMNS = ['aligned_dna_short_read_id', 'experiment_dna_short_read_id'] + READ_TABLE_AIRTABLE_FIELDS + ['quality_issues']
+READ_TABLE_COLUMNS.insert(6, 'reference_assembly_details')
+READ_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')
+READ_RNA_TABLE_AIRTABLE_ID_FIELDS = ['aligned_rna_short_read_file', 'aligned_rna_short_read_index_file']
+READ_RNA_TABLE_AIRTABLE_FIELDS = [
+    'gene_annotation', 'alignment_software', 'alignment_log_file', 'percent_uniquely_aligned', 'percent_multimapped', 'percent_unaligned',
+]
+READ_RNA_TABLE_COLUMNS = ['aligned_rna_short_read_id', 'experiment_rna_short_read_id'] + \
+    READ_RNA_TABLE_AIRTABLE_ID_FIELDS + READ_TABLE_COLUMNS[4:-3] + READ_RNA_TABLE_AIRTABLE_FIELDS + ['quality_issues']
+READ_RNA_TABLE_COLUMNS.insert(READ_RNA_TABLE_COLUMNS.index('gene_annotation')+1, 'gene_annotation_details')
+READ_RNA_TABLE_COLUMNS.insert(READ_RNA_TABLE_COLUMNS.index('alignment_log_file')+1, 'alignment_postprocessing')
+READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
+CALLED_VARIANT_FILE_COLUMN = 'called_variants_dna_file'
+CALLED_TABLE_COLUMNS = [
+    'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', CALLED_VARIANT_FILE_COLUMN, 'md5sum',
+    'caller_software', 'variant_types', 'analysis_details',
+]
+
 MOCK_DATA_MODEL_URL = 'http://raw.githubusercontent.com/gregor_data_model.json'
 MOCK_DATA_MODEL = {
     'name': 'test data model',
@@ -575,7 +633,7 @@ class ReportAPITest(AirtableTest):
         responses.add(
             responses.GET, '{}/app3Y97xtbbaOopVR/GREGoR Data Model'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_RECORDS,
             status=200)
-        responses.add(responses.GET, MOCK_DATA_MODEL_URL, json=MOCK_DATA_MODEL, status=200)
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
 
         url = reverse(gregor_export)
         self.check_analyst_login(url)
@@ -602,32 +660,38 @@ class ReportAPITest(AirtableTest):
         mock_google_authenticated.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        skipped_file_validation_warnings = [
-            f'No data model found for "{file}" table so no validation was performed' for file in EXPECTED_GREGOR_FILES
-        ]
+        self.assertListEqual(response.json()['errors'], [
+            'Unable to load data model: 404 Client Error: Not Found for url: http://raw.githubusercontent.com/gregor_data_model.json',
+        ])
+
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, json=MOCK_DATA_MODEL, status=200)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['warnings'], [
-            'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
-            'The following columns are included in the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id, proband_relationship_detail, sex_detail, twin_id',
-            'The following columns are included in the "participant" data model but are missing in the report: ancestry_metadata',
-            'The following columns are included in the "participant" data model but have an unsupported data type: internal_project_id (reference)',
             'The following columns are specified as "enumeration" in the "participant" data model but are missing the allowed values definition: prior_testing',
+            'The following columns are included in the "participant" data model but have an unsupported data type: internal_project_id (reference)',
+            'The following columns are computed for the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id',
             'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
             'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
-        ] + skipped_file_validation_warnings[1:5] + skipped_file_validation_warnings[7:8] + skipped_file_validation_warnings[9:])
+        ])
         self.assertListEqual(response.json()['errors'], [
+            f'No data model found for "{file}" table' for file in reversed(EXPECTED_GREGOR_FILES)
+            if file not in {'participant', 'aligned_dna_short_read', 'aligned_dna_short_read_set', 'experiment_rna_short_read'}
+        ] + [
+            'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
+        ] + [
             'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
             'The following entries have invalid values for "age_at_enrollment" in the "participant" table. Allowed values have data type date. Invalid values: Broad_NA19675_1 (18)',
             'The following entries have invalid values for "aligned_dna_short_read_index_file" (from Airtable) in the "aligned_dna_short_read" table. Allowed values are a google bucket path starting with gs://. Invalid values: VCGS_FAM203_621_D2 (NA)',
-            'The following entries have invalid values for "reference_assembly" (from Airtable) in the "aligned_dna_short_read" table. Allowed values have data type integer. Invalid values: NA20888 (GRCh38), VCGS_FAM203_621_D2 (GRCh38)',
-            'The following entries are missing required "mean_coverage" (from Airtable) in the "aligned_dna_short_read" table: VCGS_FAM203_621_D2',
             'The following entries have non-unique values for "alignment_software" (from Airtable) in the "aligned_dna_short_read" table: BWA-MEM-2.3 (NA20888, VCGS_FAM203_621_D2)',
+            'The following entries are missing required "mean_coverage" (from Airtable) in the "aligned_dna_short_read" table: VCGS_FAM203_621_D2',
+            'The following entries have invalid values for "reference_assembly" (from Airtable) in the "aligned_dna_short_read" table. Allowed values have data type integer. Invalid values: NA20888 (GRCh38), VCGS_FAM203_621_D2 (GRCh38)',
             'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)',
         ])
 
-        responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
         responses.calls.reset()
         mock_subprocess.reset_mock()
         mock_google_authenticated.return_value = True
@@ -635,9 +699,6 @@ class ReportAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         expected_response = {
             'info': ['Successfully validated and uploaded Gregor Report for 9 families'],
-            'warnings': [
-                'Unable to load data model for validation: 404 Client Error: Not Found for url: http://raw.githubusercontent.com/gregor_data_model.json',
-            ] + skipped_file_validation_warnings,
         }
         self.assertDictEqual(response.json(), expected_response)
         self._assert_expected_gregor_files(mock_open)

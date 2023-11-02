@@ -560,7 +560,7 @@ def _populate_gregor_files(file_data):
     for file_name, expected_columns, data in file_data:
         table_config = table_configs.get(file_name)
         if not table_config:
-            errors.append(f'No data model found for "{file_name}" table so no validation was performed')
+            errors.insert(0, f'No data model found for "{file_name}" table')
             continue
 
         files.append((file_name, list(table_config.keys()), data))
@@ -569,8 +569,7 @@ def _populate_gregor_files(file_data):
         if extra_columns:
             col_summary = ', '.join(sorted(extra_columns))
             warnings.insert(
-                f'The following columns are computed for the "{file_name}" table but are missing from the data model: {col_summary}',
-                0
+                0, f'The following columns are computed for the "{file_name}" table but are missing from the data model: {col_summary}',
             )
         invalid_data_type_columns = {
             col: config['data_type'] for col, config in table_config.items()
@@ -579,8 +578,7 @@ def _populate_gregor_files(file_data):
         if invalid_data_type_columns:
             col_summary = ', '.join(sorted([f'{col} ({data_type})' for col, data_type in invalid_data_type_columns.items()]))
             warnings.insert(
-                f'The following columns are included in the "{file_name}" data model but have an unsupported data type: {col_summary}',
-                0
+                0, f'The following columns are included in the "{file_name}" data model but have an unsupported data type: {col_summary}',
             )
         invalid_enum_columns = [
             col for col, config in table_config.items()
@@ -591,8 +589,7 @@ def _populate_gregor_files(file_data):
                 table_config[col]['data_type'] = None
             col_summary = ', '.join(sorted(invalid_enum_columns))
             warnings.insert(
-                f'The following columns are specified as "enumeration" in the "{file_name}" data model but are missing the allowed values definition: {col_summary}',
-                0
+                0, f'The following columns are specified as "enumeration" in the "{file_name}" data model but are missing the allowed values definition: {col_summary}',
             )
 
         for column, config in table_config.items():
