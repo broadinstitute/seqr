@@ -154,64 +154,59 @@ GREGOR_DATA_TYPES = ['wgs', 'wes', 'rna']
 SMID_FIELD = 'SMID'
 PARTICIPANT_ID_FIELD = 'CollaboratorParticipantID'
 COLLABORATOR_SAMPLE_ID_FIELD = 'CollaboratorSampleID'
-PARTICIPANT_TABLE_COLUMNS = [
+PARTICIPANT_TABLE_COLUMNS = {
     'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
-    'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
-    'proband_relationship_detail', 'sex', 'sex_detail', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
+    'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'proband_relationship',
+    'sex', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
     'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
-]
-GREGOR_FAMILY_TABLE_COLUMNS = [
-    'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_file', 'pedigree_file_detail', 'family_history_detail',
-]
-PHENOTYPE_TABLE_COLUMNS = [
+}
+GREGOR_FAMILY_TABLE_COLUMNS = {'family_id', 'consanguinity'}
+PHENOTYPE_TABLE_COLUMNS = {
     'phenotype_id', 'participant_id', 'term_id', 'presence', 'ontology', 'additional_details', 'onset_age_range',
     'additional_modifiers',
-]
-ANALYTE_TABLE_COLUMNS = [
-    'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
-    'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status', 'age_at_collection',
-    'participant_drugs_intake', 'participant_special_diet', 'hours_since_last_meal', 'passage_number', 'time_to_freeze',
-    'sample_transformation_detail', 'quality_issues',
-]
+}
+ANALYTE_TABLE_COLUMNS = {
+    'analyte_id', 'participant_id', 'analyte_type', 'primary_biosample', 'tissue_affected_status',
+}
 EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
     'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
     'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
 ]
-EXPERIMENT_TABLE_COLUMNS = [
-    'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id',
-] + EXPERIMENT_TABLE_AIRTABLE_FIELDS
+EXPERIMENT_COLUMNS = {'analyte_id', 'experiment_sample_id'}
+EXPERIMENT_TABLE_COLUMNS = {'experiment_dna_short_read_id'}
+EXPERIMENT_TABLE_COLUMNS.update(EXPERIMENT_COLUMNS)
+EXPERIMENT_TABLE_COLUMNS.update(EXPERIMENT_TABLE_AIRTABLE_FIELDS)
 EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS = [
     'library_prep_type', 'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size',
     'total_reads', 'percent_rRNA', 'percent_mRNA', '5prime3prime_bias',
 ]
-EXPERIMENT_RNA_TABLE_COLUMNS = ['experiment_rna_short_read_id'] + [
-    c for c in EXPERIMENT_TABLE_COLUMNS[1:] if not c.startswith('target')] + EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + [
-    'percent_mtRNA', 'percent_Globin', 'percent_UMI',  'percent_GC', 'percent_chrX_Y',
-]
-EXPERIMENT_LOOKUP_TABLE_COLUMNS = ['experiment_id', 'table_name', 'id_in_table', 'participant_id']
+EXPERIMENT_RNA_TABLE_COLUMNS = {'experiment_rna_short_read_id'}
+EXPERIMENT_RNA_TABLE_COLUMNS.update(EXPERIMENT_COLUMNS)
+EXPERIMENT_RNA_TABLE_COLUMNS.update(EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS)
+EXPERIMENT_RNA_TABLE_COLUMNS.update([c for c in EXPERIMENT_TABLE_AIRTABLE_FIELDS if not c.startswith('target')])
+EXPERIMENT_LOOKUP_TABLE_COLUMNS = {'experiment_id', 'table_name', 'id_in_table', 'participant_id'}
 READ_TABLE_AIRTABLE_FIELDS = [
     'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
     'mean_coverage', 'alignment_software', 'analysis_details',
 ]
-READ_TABLE_COLUMNS = ['aligned_dna_short_read_id', 'experiment_dna_short_read_id'] + READ_TABLE_AIRTABLE_FIELDS + ['quality_issues']
-READ_TABLE_COLUMNS.insert(6, 'reference_assembly_details')
-READ_TABLE_COLUMNS.insert(6, 'reference_assembly_uri')
+READ_TABLE_COLUMNS = {'aligned_dna_short_read_id', 'experiment_dna_short_read_id'}
+READ_TABLE_COLUMNS.update(READ_TABLE_AIRTABLE_FIELDS)
 READ_RNA_TABLE_AIRTABLE_ID_FIELDS = ['aligned_rna_short_read_file', 'aligned_rna_short_read_index_file']
 READ_RNA_TABLE_AIRTABLE_FIELDS = [
     'gene_annotation', 'alignment_software', 'alignment_log_file', 'percent_uniquely_aligned', 'percent_multimapped', 'percent_unaligned',
 ]
-READ_RNA_TABLE_COLUMNS = ['aligned_rna_short_read_id', 'experiment_rna_short_read_id'] + \
-    READ_RNA_TABLE_AIRTABLE_ID_FIELDS + READ_TABLE_COLUMNS[4:-3] + READ_RNA_TABLE_AIRTABLE_FIELDS + ['quality_issues']
-READ_RNA_TABLE_COLUMNS.insert(READ_RNA_TABLE_COLUMNS.index('gene_annotation')+1, 'gene_annotation_details')
-READ_RNA_TABLE_COLUMNS.insert(READ_RNA_TABLE_COLUMNS.index('alignment_log_file')+1, 'alignment_postprocessing')
-READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
+READ_RNA_TABLE_COLUMNS = {'aligned_rna_short_read_id', 'experiment_rna_short_read_id'}
+READ_RNA_TABLE_COLUMNS.update(READ_RNA_TABLE_AIRTABLE_ID_FIELDS)
+READ_RNA_TABLE_COLUMNS.update(READ_RNA_TABLE_AIRTABLE_FIELDS)
+READ_RNA_TABLE_COLUMNS.update(READ_TABLE_AIRTABLE_FIELDS[2:-1])
+READ_SET_TABLE_COLUMNS = {'aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'}
 CALLED_VARIANT_FILE_COLUMN = 'called_variants_dna_file'
-CALLED_TABLE_COLUMNS = [
+CALLED_TABLE_COLUMNS = {
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', CALLED_VARIANT_FILE_COLUMN, 'md5sum',
     'caller_software', 'variant_types', 'analysis_details',
-]
+}
 
-RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS + ['reference_assembly_uri']
+RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS
 DATA_TYPE_OMIT = {
     'wgs': ['targeted_regions_method'] + RNA_ONLY, 'wes': RNA_ONLY, 'rna': [
         'targeted_regions_method', 'target_insert_size', 'mean_coverage', 'aligned_dna_short_read_file',
@@ -226,8 +221,9 @@ NO_DATA_TYPE_FIELDS.update(READ_RNA_TABLE_AIRTABLE_ID_FIELDS)
 
 DATA_TYPE_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + RNA_ONLY + [
     COLLABORATOR_SAMPLE_ID_FIELD, SMID_FIELD]
-ALL_AIRTABLE_COLUMNS = DATA_TYPE_AIRTABLE_COLUMNS + CALLED_TABLE_COLUMNS
-AIRTABLE_QUERY_COLUMNS = set(CALLED_TABLE_COLUMNS)
+ALL_AIRTABLE_COLUMNS = DATA_TYPE_AIRTABLE_COLUMNS + list(CALLED_TABLE_COLUMNS)
+AIRTABLE_QUERY_COLUMNS = set()
+AIRTABLE_QUERY_COLUMNS.update(CALLED_TABLE_COLUMNS)
 AIRTABLE_QUERY_COLUMNS.remove('md5sum')
 AIRTABLE_QUERY_COLUMNS.update(NO_DATA_TYPE_FIELDS)
 for data_type in GREGOR_DATA_TYPES:
@@ -397,20 +393,23 @@ def gregor_export(request):
         for analyte_id in analyte_ids:
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
-    data = {
-        'participant': participant_rows,
-        'family': list(family_map.values()),
-        'phenotype': phenotype_rows,
-        'analyte': analyte_rows,
-        'experiment_dna_short_read': airtable_rows,
-        'aligned_dna_short_read': airtable_rows,
-        'aligned_dna_short_read_set': airtable_rows,
-        'called_variants_dna_short_read': [row for row in airtable_rows if row.get(CALLED_VARIANT_FILE_COLUMN)],
-        'experiment_rna_short_read': airtable_rna_rows,
-        'aligned_rna_short_read': airtable_rna_rows,
-        'experiment': experiment_lookup_rows,
-    }
-    files, warnings = _populate_gregor_files(data)
+    file_data = [
+        ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),
+        ('family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())),
+        ('phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows),
+        ('analyte', ANALYTE_TABLE_COLUMNS, analyte_rows),
+        ('experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, airtable_rows),
+        ('aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows),
+        ('aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows),
+        ('called_variants_dna_short_read', CALLED_TABLE_COLUMNS, [
+            row for row in airtable_rows if row.get(CALLED_VARIANT_FILE_COLUMN)
+        ]),
+        ('experiment_rna_short_read', EXPERIMENT_RNA_TABLE_COLUMNS, airtable_rna_rows),
+        ('aligned_rna_short_read', READ_RNA_TABLE_COLUMNS, airtable_rna_rows),
+        ('experiment', EXPERIMENT_LOOKUP_TABLE_COLUMNS, experiment_lookup_rows),
+    ]
+
+    files, warnings = _populate_gregor_files(file_data)
     write_multiple_files_to_gs(files, file_path, request.user, file_format='tsv')
 
     return create_json_response({
@@ -548,7 +547,7 @@ def _populate_gregor_files(file_data):
     except Exception as e:
         raise ErrorsWarningsException([f'Unable to load data model: {e}'])
 
-    tables = set(file_data.keys())
+    tables = {f[0] for f in file_data}
     missing_tables = [
         table for table, validator in required_tables.items() if not _has_required_table(table, validator, tables)
     ]
@@ -558,7 +557,7 @@ def _populate_gregor_files(file_data):
         )
 
     files = []
-    for file_name, data in file_data.items():
+    for file_name, expected_columns, data in file_data:
         table_config = table_configs.get(file_name)
         if not table_config:
             errors.append(f'No data model found for "{file_name}" table so no validation was performed')
@@ -566,14 +565,22 @@ def _populate_gregor_files(file_data):
 
         files.append((file_name, list(table_config.keys()), data))
 
+        extra_columns = expected_columns.difference(table_config.keys())
+        if extra_columns:
+            col_summary = ', '.join(sorted(extra_columns))
+            warnings.insert(
+                f'The following columns are computed for the "{file_name}" table but are missing from the data model: {col_summary}',
+                0
+            )
         invalid_data_type_columns = {
             col: config['data_type'] for col, config in table_config.items()
             if config.get('data_type') and config['data_type'] not in DATA_TYPE_VALIDATORS
         }
         if invalid_data_type_columns:
             col_summary = ', '.join(sorted([f'{col} ({data_type})' for col, data_type in invalid_data_type_columns.items()]))
-            warnings.append(
-                f'The following columns are included in the "{file_name}" data model but have an unsupported data type: {col_summary}'
+            warnings.insert(
+                f'The following columns are included in the "{file_name}" data model but have an unsupported data type: {col_summary}',
+                0
             )
         invalid_enum_columns = [
             col for col, config in table_config.items()
@@ -583,8 +590,9 @@ def _populate_gregor_files(file_data):
             for col in invalid_enum_columns:
                 table_config[col]['data_type'] = None
             col_summary = ', '.join(sorted(invalid_enum_columns))
-            warnings.append(
-                f'The following columns are specified as "enumeration" in the "{file_name}" data model but are missing the allowed values definition: {col_summary}'
+            warnings.insert(
+                f'The following columns are specified as "enumeration" in the "{file_name}" data model but are missing the allowed values definition: {col_summary}',
+                0
             )
 
         for column, config in table_config.items():
