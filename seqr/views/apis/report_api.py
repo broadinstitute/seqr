@@ -397,22 +397,20 @@ def gregor_export(request):
         for analyte_id in analyte_ids:
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
-    files = [
-        ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),
-        ('family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())),
-        ('phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows),
-        ('analyte', ANALYTE_TABLE_COLUMNS, analyte_rows),
-        ('experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, airtable_rows),
-        ('aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows),
-        ('aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows),
-        ('called_variants_dna_short_read', CALLED_TABLE_COLUMNS, [
-            row for row in airtable_rows if row.get(CALLED_VARIANT_FILE_COLUMN)
-        ]),
-        ('experiment_rna_short_read', EXPERIMENT_RNA_TABLE_COLUMNS, airtable_rna_rows),
-        ('aligned_rna_short_read', READ_RNA_TABLE_COLUMNS, airtable_rna_rows),
-        ('experiment', EXPERIMENT_LOOKUP_TABLE_COLUMNS, experiment_lookup_rows),
-    ]
-    warnings = _validate_gregor_files(files)
+    data = {
+        'participant': participant_rows,
+        'family': list(family_map.values()),
+        'phenotype': phenotype_rows,
+        'analyte': analyte_rows,
+        'experiment_dna_short_read': airtable_rows,
+        'aligned_dna_short_read': airtable_rows,
+        'aligned_dna_short_read_set': airtable_rows,
+        'called_variants_dna_short_read': [row for row in airtable_rows if row.get(CALLED_VARIANT_FILE_COLUMN)],
+        'experiment_rna_short_read': airtable_rna_rows,
+        'aligned_rna_short_read': airtable_rna_rows,
+        'experiment': experiment_lookup_rows,
+    }
+    files, warnings = _populate_gregor_files(data)
     write_multiple_files_to_gs(files, file_path, request.user, file_format='tsv')
 
     return create_json_response({
@@ -541,46 +539,36 @@ DATA_TYPE_ERROR_FORMATTERS = {
     'enumeration': lambda validator: f': {", ".join(validator["enumerations"])}',
 }
 
-def _validate_gregor_files(file_data):
+
+def _populate_gregor_files(file_data):
     errors = []
     warnings = []
     try:
-        validators, required_tables = _load_data_model_validators()
+        table_configs, required_tables = _load_data_model_validators()
     except Exception as e:
-        warnings.append(f'Unable to load data model for validation: {e}')
-        validators = {}
-        required_tables = {}
+        raise ErrorsWarningsException([f'Unable to load data model: {e}'])
 
-    tables = {f[0] for f in file_data}
+    tables = set(file_data.keys())
     missing_tables = [
         table for table, validator in required_tables.items() if not _has_required_table(table, validator, tables)
     ]
     if missing_tables:
-        warnings.append(
+        errors.append(
             f'The following tables are required in the data model but absent from the reports: {", ".join(missing_tables)}'
         )
 
-    for file_name, columns, data in file_data:
-        table_validator = validators.get(file_name)
-        if not table_validator:
-            warnings.append(f'No data model found for "{file_name}" table so no validation was performed')
+    files = []
+    for file_name, data in file_data.items():
+        table_config = table_configs.get(file_name)
+        if not table_config:
+            errors.append(f'No data model found for "{file_name}" table so no validation was performed')
             continue
 
-        extra_columns = set(columns).difference(table_validator.keys())
-        if extra_columns:
-            col_summary = ', '.join(sorted(extra_columns))
-            warnings.append(
-                f'The following columns are included in the "{file_name}" table but are missing from the data model: {col_summary}'
-            )
-        missing_columns = set(table_validator.keys()).difference(columns)
-        if missing_columns:
-            col_summary = ', '.join(sorted(missing_columns))
-            warnings.append(
-                f'The following columns are included in the "{file_name}" data model but are missing in the report: {col_summary}'
-            )
+        files.append((file_name, list(table_config.keys()), data))
+
         invalid_data_type_columns = {
-            col: validator['data_type'] for col, validator in table_validator.items()
-            if validator.get('data_type') and validator['data_type'] not in DATA_TYPE_VALIDATORS
+            col: config['data_type'] for col, config in table_config.items()
+            if config.get('data_type') and config['data_type'] not in DATA_TYPE_VALIDATORS
         }
         if invalid_data_type_columns:
             col_summary = ', '.join(sorted([f'{col} ({data_type})' for col, data_type in invalid_data_type_columns.items()]))
@@ -588,39 +576,36 @@ def _validate_gregor_files(file_data):
                 f'The following columns are included in the "{file_name}" data model but have an unsupported data type: {col_summary}'
             )
         invalid_enum_columns = [
-            col for col, validator in table_validator.items()
-            if validator.get('data_type') == 'enumeration' and not validator.get('enumerations')
+            col for col, config in table_config.items()
+            if config.get('data_type') == 'enumeration' and not config.get('enumerations')
         ]
         if invalid_enum_columns:
             for col in invalid_enum_columns:
-                table_validator[col]['data_type'] = None
+                table_config[col]['data_type'] = None
             col_summary = ', '.join(sorted(invalid_enum_columns))
             warnings.append(
                 f'The following columns are specified as "enumeration" in the "{file_name}" data model but are missing the allowed values definition: {col_summary}'
             )
 
-        for column in columns:
-            _validate_column_data(
-                column, file_name, data, column_validator=table_validator.get(column, {}),
-                warnings=warnings, errors=errors,
-            )
+        for column, config in table_config.items():
+            _validate_column_data(column, file_name, data, column_validator=config, warnings=warnings, errors=errors)
 
     if errors:
         raise ErrorsWarningsException(errors, warnings)
 
-    return warnings
+    return files, warnings
 
 
 def _load_data_model_validators():
     response = requests.get(GREGOR_DATA_MODEL_URL)
     response.raise_for_status()
     table_models = response.json()['tables']
-    validators = {
+    table_configs = {
         t['table']: {c['column']: c for c in t['columns']}
         for t in table_models
     }
     required_tables = {t['table']: _parse_table_required(t['required']) for t in table_models if t.get('required')}
-    return validators, required_tables
+    return table_configs, required_tables
 
 
 def _parse_table_required(required_validator):
