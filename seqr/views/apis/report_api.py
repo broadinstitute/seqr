@@ -206,7 +206,7 @@ CALLED_TABLE_COLUMNS = {
     'caller_software', 'variant_types', 'analysis_details',
 }
 
-RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS
+RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS + ['reference_assembly_uri']
 DATA_TYPE_OMIT = {
     'wgs': ['targeted_regions_method'] + RNA_ONLY, 'wes': RNA_ONLY, 'rna': [
         'targeted_regions_method', 'target_insert_size', 'mean_coverage', 'aligned_dna_short_read_file',
@@ -389,7 +389,9 @@ def gregor_export(request):
 
         # analyte table
         if not analyte_ids:
-            analyte_ids.add(_get_analyte_id(airtable_sample))
+            analyte_id = _get_analyte_id(airtable_sample)
+            if analyte_id:
+                analyte_ids.add(analyte_id)
         for analyte_id in analyte_ids:
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
