@@ -319,7 +319,7 @@ MOCK_DATA_MODEL = {
             'required': True,
             'columns': [
                 {'column': 'phenotype_id'},
-                {'column': 'participant_id', 'required': True, 'data_type': 'string'},
+                {'column': 'participant_id', 'references': '> participant.participant_id', 'required': True, 'data_type': 'string'},
                 {'column': 'term_id', 'required': True},
                 {'column': 'presence', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Present', 'Absent', 'Unknown']},
                 {'column': 'ontology', 'required': True, 'data_type': 'enumeration', 'enumerations': ['HPO', 'MONDO']},
@@ -459,6 +459,7 @@ MOCK_DATA_MODEL = {
         },
     ]
 }
+MOCK_DATA_MODEL_RESPONSE = json.dumps(MOCK_DATA_MODEL, indent=2).replace('"references"', '//"references"')
 
 INVALID_MODEL_TABLES = {
     'participant': {
@@ -773,7 +774,7 @@ class ReportAPITest(AirtableTest):
 
         responses.calls.reset()
         mock_subprocess.reset_mock()
-        responses.add(responses.GET, MOCK_DATA_MODEL_URL, json=MOCK_DATA_MODEL, status=200)
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, body=MOCK_DATA_MODEL_RESPONSE, status=200)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         expected_response = {
