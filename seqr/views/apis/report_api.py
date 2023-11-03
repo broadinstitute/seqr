@@ -534,17 +534,19 @@ def _get_experiment_lookup_row(is_rna, row_data):
     }
 
 
-is_integer = lambda val, *args: val.isnumeric() or re.match(r'^[\d{3},]*\d{3}$', val)
 DATA_TYPE_VALIDATORS = {
     'string': lambda val, validator: (not validator.get('is_bucket_path')) or val.startswith('gs://'),
     'enumeration': lambda val, validator: val in validator['enumerations'],
-    'integer': is_integer,
-    'float': lambda val, validator: is_integer(val) or re.match(r'^\d+.\d+$', val),
+    'integer': lambda val, *args: val.isnumeric(),
+    'float': lambda val, validator: val.isnumeric() or re.match(r'^\d+.\d+$', val),
     'date': lambda val, validator: bool(re.match(r'^\d{4}-\d{2}-\d{2}$', val)),
 }
 DATA_TYPE_ERROR_FORMATTERS = {
     'string': lambda validator: ' are a google bucket path starting with gs://',
     'enumeration': lambda validator: f': {", ".join(validator["enumerations"])}',
+}
+DATA_TYPE_FORMATTERS = {
+    'integer': lambda val: val.replace(',', ''),
 }
 
 
@@ -643,6 +645,7 @@ def _has_required_table(table, validator, tables):
 def _validate_column_data(column, file_name, data, column_validator, warnings, errors):
     data_type = column_validator.get('data_type')
     data_type_validator = DATA_TYPE_VALIDATORS.get(data_type)
+    data_type_formatter = DATA_TYPE_FORMATTERS.get(data_type)
     unique = column_validator.get('is_unique')
     required = column_validator.get('required')
     recommended = column in WARN_MISSING_TABLE_COLUMNS.get(file_name, [])
@@ -662,7 +665,13 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
                 check_recommend_condition = WARN_MISSING_CONDITIONAL_COLUMNS.get(column)
                 if not check_recommend_condition or check_recommend_condition(row):
                     warn_missing.append(_get_row_id(row))
-        elif data_type_validator and not data_type_validator(value, column_validator):
+            continue
+
+        if data_type_formatter:
+            value = data_type_formatter(value)
+            row[column] = value
+
+        if data_type_validator and not data_type_validator(value, column_validator):
             invalid.append(f'{_get_row_id(row)} ({value})')
         elif unique:
             grouped_values[value].add(_get_row_id(row))

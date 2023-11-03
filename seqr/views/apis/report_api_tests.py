@@ -422,7 +422,7 @@ MOCK_DATA_MODEL = {
                 {'column': 'single_or_paired_ends'},
                 {'column': 'within_site_batch_name'},
                 {'column': 'RIN', 'data_type': 'float'},
-                {'column': 'estimated_library_size'},
+                {'column': 'estimated_library_size', 'data_type': 'integer'},
                 {'column': 'total_reads', 'data_type': 'integer'},
                 {'column': 'percent_rRNA', 'data_type': 'float'},
                 {'column': 'percent_mRNA', 'data_type': 'float'},
@@ -965,7 +965,7 @@ class ReportAPITest(AirtableTest):
         ])
         self.assertEqual(experiment_rna_file[1], [
             'Broad_paired-end_NA19679', 'Broad_SM-N1P91', 'NA19679', 'Unknown', '151', 'paired-end', '2023-02-11',
-            'NovaSeq', 'stranded poly-A pulldown', 'paired-end', 'LCSET-26942', '8.9818', '19,480,858', '106,842,386',
+            'NovaSeq', 'stranded poly-A pulldown', 'paired-end', 'LCSET-26942', '8.9818', '19480858', '106842386',
             '5.9', '80.2', '1.05', '', '', '', '', '',
         ])
 
