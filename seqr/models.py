@@ -282,6 +282,7 @@ class Family(ModelWithGUID):
         ('Rcpc', 'Reviewed, currently pursuing candidates'),
         ('Rncc', 'Reviewed, no clear candidate'),
         ('C', 'Closed, no longer under analysis'),
+        ('P', 'Partial Solve - Analysis in Progress'),
         ('I', 'Analysis in Progress'),
         ('Q', 'Waiting for data'),
         ('N', 'No data expected'),
