@@ -24,7 +24,7 @@ defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
-django==3.2.22
+django==3.2.23
     # via
     #   -r requirements.in
     #   django-anymail
@@ -44,7 +44,9 @@ django-guardian==2.4.0
 django-hijack==3.2.6
     # via -r requirements.in
 django-storages[google]==1.11.1
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   django-storages
 elasticsearch==7.9.1
     # via
     #   -r requirements.in
