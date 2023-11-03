@@ -238,6 +238,11 @@ WARN_MISSING_CONDITIONAL_COLUMNS = {
     'age_at_enrollment': lambda row: row['affected_status'] == 'Affected'
 }
 
+SOLVE_STATUS_LOOKUP = {
+    **{s: 'Yes' for s in Family.SOLVED_ANALYSIS_STATUSES},
+    **{s: 'Likely' for s in Family.STRONG_CANDIDATE_ANALYSIS_STATUSES},
+    Family.ANALYSIS_STATUS_PARTIAL_SOLVE: 'Partial',
+}
 GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
 GREGOR_ANCESTRY_DETAIL_MAP.pop(MIDDLE_EASTERN)
 GREGOR_ANCESTRY_DETAIL_MAP.update({
@@ -448,6 +453,7 @@ def _get_gregor_family_row(family):
         'consanguinity': 'Unknown',
         'pmid_id': '|'.join(family.pubmed_ids or []),
         'phenotype_description': family.coded_phenotype,
+        'solve_status': SOLVE_STATUS_LOOKUP.get(family.analysis_status, 'No'),
     }
 
 
@@ -464,6 +470,7 @@ def _get_participant_row(individual, airtable_sample):
         'ancestry_detail': GREGOR_ANCESTRY_DETAIL_MAP.get(individual.population),
         'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else None,
         'recontactable': airtable_sample.get('Recontactable'),
+        'missing_variant_case': 'No',
     }
     if individual.birth_year and individual.birth_year > 0:
         participant.update({

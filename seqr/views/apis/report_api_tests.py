@@ -301,6 +301,8 @@ MOCK_DATA_MODEL = {
                 {'column': 'affected_status', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Affected', 'Unaffected', 'Unknown']},
                 {'column': 'phenotype_description'},
                 {'column': 'age_at_enrollment'},
+                {'column': 'solve_status', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Yes', 'Likely', 'No', 'Partial']},
+                {'column': 'missing_variant_case', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Yes', 'No']},
             ],
         },
         {
@@ -824,24 +826,30 @@ class ReportAPITest(AirtableTest):
             'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
             'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
             'proband_relationship_detail', 'sex', 'sex_detail', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
-            'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
+            'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment', 'solve_status',
+            'missing_variant_case',
         ])
         row = next(r for r in participant_file if r[0] == 'Broad_NA19675_1')
         self.assertListEqual([
             'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
             '34415322|33665635', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
-            'Middle Eastern or North African', '', '', '21', 'Affected', 'myopathy', '18',
+            'Middle Eastern or North African', '', '', '21', 'Affected', 'myopathy', '18', 'No', 'No',
         ], row)
         hispanic_row = next(r for r in participant_file if r[0] == 'Broad_HG00731')
         self.assertListEqual([
             'Broad_HG00731', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_2', 'Broad_HG00732',
-            'Broad_HG00733', '', '', '', 'Female', '', '', 'Hispanic or Latino', 'Other', '', 'Affected', '', '',
+            'Broad_HG00733', '', '', '', 'Female', '', '', 'Hispanic or Latino', 'Other', '', 'Affected', '', '', 'No', 'No',
         ], hispanic_row)
+        solved_row = next(r for r in participant_file if r[0] == 'Broad_NA20876')
+        self.assertListEqual([
+            'Broad_NA20876', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_7', '0',
+            '0', '', '', '', 'Male', '', '', '', '', '', 'Affected', '', '', 'Yes', 'No',
+        ], solved_row)
         multi_data_type_row = next(r for r in participant_file if r[0] == 'Broad_NA20888')
         self.assertListEqual([
             'Broad_NA20888', 'Broad_Test Reprocessed Project' if has_second_project else 'Broad_1kg project nme with unide',
             'BROAD', 'HMB', 'No', '', '', 'Broad_12' if has_second_project else 'Broad_8', '0', '0', '', '', '',
-            'Male' if has_second_project else 'Female', '', '', '', '', '', 'Affected', '', '',
+            'Male' if has_second_project else 'Female', '', '', '', '', '', 'Affected', '', '', 'No', 'No',
         ], multi_data_type_row)
 
         self.assertEqual(len(family_file), 11 if has_second_project else 10)
