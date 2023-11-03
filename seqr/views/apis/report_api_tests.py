@@ -168,7 +168,7 @@ AIRTABLE_GREGOR_RECORDS = {
         'target_insert_size_wes': '385',
         'sequencing_platform_wes': 'NovaSeq',
         'aligned_dna_short_read_file_wes': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
-        'aligned_dna_short_read_index_file_wes': 'NA',
+        'aligned_dna_short_read_index_file_wes': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai',
         'md5sum_wes': '129c28163df082',
         'reference_assembly': 'GRCh38',
         'alignment_software_dna': 'BWA-MEM-2.3',
@@ -205,7 +205,6 @@ AIRTABLE_GREGOR_RECORDS = {
         'sequencing_platform_rna': 'NovaSeq',
         'aligned_rna_short_read_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.cram',
         'aligned_rna_short_read_index_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.crai',
-        'aligned_rna_short_read_id': '',
         'md5sum_rna': 'f6490b8ebdf2',
         '5prime3prime_bias_rna': '1.05',
         'gene_annotation_rna': 'GENCODEv26',
@@ -277,31 +276,94 @@ MOCK_DATA_MODEL = {
     'name': 'test data model',
     'tables': [
         {
-            'table': 'subject',
-            'required': True,
-            'columns': [{'column': 'subject_id', 'required': True}],
-        },
-        {
             'table': 'participant',
             'required': True,
             'columns': [
                 {'column': 'participant_id', 'required': True, 'data_type': 'string'},
-                {'column': 'internal_project_id', 'data_type': 'reference'},
+                {'column': 'internal_project_id'},
                 {'column': 'gregor_center', 'required': True, 'data_type': 'enumeration', 'enumerations': ['BCM', 'BROAD', 'UW']},
                 {'column': 'consent_code', 'required': True, 'data_type': 'enumeration', 'enumerations': ['GRU', 'HMB']},
                 {'column': 'recontactable', 'data_type': 'enumeration', 'enumerations': ['Yes', 'No']},
-                {'column': 'prior_testing', 'data_type': 'enumeration'},
+                {'column': 'prior_testing'},
+                {'column': 'pmid_id'},
                 {'column': 'family_id', 'required': True},
                 {'column': 'paternal_id'},
                 {'column': 'maternal_id'},
-                {'column': 'proband_relationship', 'required': True},
+                {'column': 'twin_id'},
+                {'column': 'proband_relationship'},
+                {'column': 'proband_relationship_detail'},
                 {'column': 'sex', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Male', 'Female', 'Unknown']},
-                {'column': 'reported_race', 'data_type': 'enumeration', 'enumerations': ['Asian', 'White', 'Black']},
+                {'column': 'sex_detail'},
+                {'column': 'reported_race', 'data_type': 'enumeration', 'enumerations': ['American Indian or Alaska Native', 'Asian', 'Black or African American', 'Native Hawaiian or Other Pacific Islander', 'Middle Eastern or North African', 'White']},
                 {'column': 'reported_ethnicity', 'data_type': 'enumeration', 'enumerations': ['Hispanic or Latino', 'Not Hispanic or Latino']},
-                {'column': 'ancestry_metadata'},
+                {'column': 'ancestry_detail'},
+                {'column': 'age_at_last_observation'},
                 {'column': 'affected_status', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Affected', 'Unaffected', 'Unknown']},
                 {'column': 'phenotype_description'},
-                {'column': 'age_at_enrollment', 'data_type': 'date'},
+                {'column': 'age_at_enrollment'},
+            ],
+        },
+        {
+            'table': 'family',
+            'required': True,
+            'columns': [
+                {'column': 'family_id', 'required': True, 'data_type': 'string'},
+                {'column': 'consanguinity', 'required': True, 'data_type': 'enumeration', 'enumerations': ['None suspected', 'Suspected', 'Present', 'Unknown']},
+                {'column': 'consanguinity_detail'},
+            ]
+        },
+        {
+            'table': 'phenotype',
+            'required': True,
+            'columns': [
+                {'column': 'phenotype_id'},
+                {'column': 'participant_id', 'required': True, 'data_type': 'string'},
+                {'column': 'term_id', 'required': True},
+                {'column': 'presence', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Present', 'Absent', 'Unknown']},
+                {'column': 'ontology', 'required': True, 'data_type': 'enumeration', 'enumerations': ['HPO', 'MONDO']},
+                {'column': 'additional_details'},
+                {'column': 'onset_age_range'},
+                {'column': 'additional_modifiers'},
+            ]
+        },
+        {
+            'table': 'analyte',
+            'required': True,
+            'columns': [
+                {'column': 'analyte_id', 'required': True, 'data_type': 'string'},
+                {'column': 'participant_id', 'required': True, 'data_type': 'string'},
+                {'column': 'analyte_type', 'data_type': 'enumeration', 'enumerations': ['DNA', 'RNA', 'cDNA', 'blood plasma', 'frozen whole blood', 'high molecular weight DNA', 'urine']},
+                {'column': 'analyte_processing_details'},
+                {'column': 'primary_biosample'},
+                {'column': 'primary_biosample_id'},
+                {'column': 'primary_biosample_details'},
+                {'column': 'tissue_affected_status', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Yes', 'No']},
+            ]
+        },
+        {
+            'table': 'experiment',
+            'columns': [
+                {'column': 'experiment_id', 'required': True, 'data_type': 'string'},
+                {'column': 'table_name', 'required': True, 'data_type': 'enumeration', 'enumerations': ['experiment_dna_short_read', 'experiment_rna_short_read']},
+                {'column': 'id_in_table', 'required': True},
+                {'column': 'participant_id', 'required': True},
+            ]
+        },
+        {
+            'table': 'experiment_dna_short_read',
+            'required': 'CONDITIONAL (aligned_dna_short_read, aligned_dna_short_read_set, called_variants_dna_short_read)',
+            'columns': [
+                {'column': 'experiment_dna_short_read_id', 'required': True},
+                {'column': 'analyte_id', 'required': True},
+                {'column': 'experiment_sample_id', 'required': True},
+                {'column': 'seq_library_prep_kit_method'},
+                {'column': 'read_length', 'data_type': 'integer'},
+                {'column': 'experiment_type', 'required': True, 'data_type': 'enumeration', 'enumerations': ['targeted', 'genome', 'exome']},
+                {'column': 'targeted_regions_method'},
+                {'column': 'targeted_region_bed_file', 'data_type': 'string', 'is_bucket_path': True},
+                {'column': 'date_data_generation', 'data_type': 'date'},
+                {'column': 'target_insert_size', 'data_type': 'integer'},
+                {'column': 'sequencing_platform'},
             ],
         },
         {
@@ -312,22 +374,120 @@ MOCK_DATA_MODEL = {
                 {'column': 'experiment_dna_short_read_id', 'required': True},
                 {'column': 'aligned_dna_short_read_file', 'is_unique': True, 'data_type': 'string', 'is_bucket_path': True},
                 {'column': 'aligned_dna_short_read_index_file', 'data_type': 'string', 'is_bucket_path': True},
-                {'column': 'alignment_software', 'is_unique': True},
-                {'column': 'analysis_details'},
                 {'column': 'md5sum', 'is_unique': True},
-                {'column': 'mean_coverage', 'required': True, 'data_type': 'float'},
-                {'column': 'reference_assembly', 'data_type': 'integer'},
-                {'column': 'reference_assembly_details'},
+                {'column': 'reference_assembly', 'data_type': 'enumeration', 'enumerations': ['GRCh38', 'GRCh37']},
                 {'column': 'reference_assembly_uri'},
+                {'column': 'reference_assembly_details'},
+                {'column': 'mean_coverage', 'data_type': 'float'},
+                {'column': 'alignment_software', 'required': True},
+                {'column': 'analysis_details', 'data_type': 'string'},
                 {'column': 'quality_issues'},
             ],
         },
         {
             'table': 'aligned_dna_short_read_set',
+            'required': 'CONDITIONAL (called_variants_dna_short_read)',
             'columns': [
                 {'column': 'aligned_dna_short_read_set_id', 'required': True},
                 {'column': 'aligned_dna_short_read_id', 'required': True},
             ],
+        },
+        {
+            'table': 'called_variants_dna_short_read',
+            'columns': [
+                {'column': 'called_variants_dna_short_read_id', 'required': True, 'is_unique': True},
+                {'column': 'aligned_dna_short_read_set_id', 'required': True},
+                {'column': 'called_variants_dna_file', 'is_unique': True, 'data_type': 'string', 'is_bucket_path': True},
+                {'column': 'md5sum', 'required': True, 'is_unique': True},
+                {'column': 'caller_software', 'required': True},
+                {'column': 'variant_types', 'required': True, 'data_type': 'enumeration', 'enumerations': ['SNV', 'INDEL', 'SV', 'CNV', 'RE','MEI', 'STR']},
+                {'column': 'analysis_details'},
+            ],
+        },
+        {
+            'table': 'experiment_rna_short_read',
+            'required': 'CONDITIONAL (aligned_rna_short_read)',
+            'columns': [
+                {'column': 'experiment_rna_short_read_id', 'required': True},
+                {'column': 'analyte_id', 'required': True},
+                {'column': 'experiment_sample_id'},
+                {'column': 'seq_library_prep_kit_method'},
+                {'column': 'read_length', 'data_type': 'integer'},
+                {'column': 'experiment_type'},
+                {'column': 'date_data_generation', 'data_type': 'date'},
+                {'column': 'sequencing_platform'},
+                {'column': 'library_prep_type'},
+                {'column': 'single_or_paired_ends'},
+                {'column': 'within_site_batch_name'},
+                {'column': 'RIN', 'data_type': 'float'},
+                {'column': 'estimated_library_size'},
+                {'column': 'total_reads', 'data_type': 'integer'},
+                {'column': 'percent_rRNA', 'data_type': 'float'},
+                {'column': 'percent_mRNA', 'data_type': 'float'},
+                {'column': '5prime3prime_bias', 'data_type': 'float'},
+                {'column': 'percent_mtRNA', 'data_type': 'float'},
+                {'column': 'percent_Globin', 'data_type': 'float'},
+                {'column': 'percent_UMI', 'data_type': 'float'},
+                {'column': 'percent_GC', 'data_type': 'float'},
+                {'column': 'percent_chrX_Y', 'data_type': 'float'},
+            ],
+        },
+        {
+            'table': 'aligned_rna_short_read',
+            'columns': [
+                {'column': 'aligned_rna_short_read_id', 'required': True},
+                {'column': 'experiment_rna_short_read_id', 'required': True},
+                {'column': 'aligned_rna_short_read_file', 'is_unique': True, 'data_type': 'string', 'is_bucket_path': True},
+                {'column': 'aligned_rna_short_read_index_file', 'data_type': 'string', 'is_bucket_path': True},
+                {'column': 'md5sum', 'is_unique': True},
+                {'column': 'reference_assembly', 'data_type': 'enumeration', 'enumerations': ['GRCh38', 'GRCh37']},
+                {'column': 'reference_assembly_uri'},
+                {'column': 'reference_assembly_details'},
+                {'column': 'mean_coverage', 'data_type': 'float'},
+                {'column': 'gene_annotation', 'required': True},
+                {'column': 'gene_annotation_details'},
+                {'column': 'alignment_software', 'required': True},
+                {'column': 'alignment_log_file', 'required': True},
+                {'column': 'alignment_postprocessing'},
+                {'column': 'percent_uniquely_aligned'},
+                {'column': 'percent_multimapped'},
+                {'column': 'percent_unaligned'},
+                {'column': 'quality_issues'},
+            ],
+        },
+    ]
+}
+
+INVALID_MODEL_TABLES = {
+    'participant': {
+        'internal_project_id': {'data_type': 'reference'},
+        'prior_testing': {'data_type': 'enumeration'},
+        'proband_relationship': {'required': True},
+        'reported_race': {'enumerations': ['Asian', 'White', 'Black']},
+        'age_at_enrollment': {'data_type': 'date'}
+    },
+    'aligned_dna_short_read': {
+        'analysis_details': {'is_bucket_path': True},
+        'reference_assembly': {'data_type': 'integer'},
+        'mean_coverage': {'required': True},
+        'alignment_software': {'is_unique': True},
+    },
+    'aligned_dna_short_read_set': {},
+    'experiment_rna_short_read': {'date_data_generation': {'data_type': 'float'}},
+}
+INVALID_TABLES = [
+    {**t, 'columns': [{**c, **(INVALID_MODEL_TABLES[t['table']].get(c['column'], {}))} for c in t['columns']]}
+    for t in MOCK_DATA_MODEL['tables'] if t['table'] in INVALID_MODEL_TABLES
+]
+INVALID_TABLES[0]['columns'] = [c for c in INVALID_TABLES[0]['columns'] if c['column'] not in {
+    'pmid_id', 'age_at_last_observation', 'ancestry_detail',
+}]
+MOCK_INVALID_DATA_MODEL = {
+    'tables': [
+        {
+            'table': 'subject',
+            'required': True,
+            'columns': [{'column': 'subject_id', 'required': True}],
         },
         {
             'table': 'dna_read_data',
@@ -338,34 +498,7 @@ MOCK_DATA_MODEL = {
             'required': 'CONDITIONAL (aligned_dna_short_read_set, dna_read_data)',
             'columns': [{'column': 'analyte_id', 'required': True}],
         },
-        {
-            'table': 'experiment_rna_short_read',
-            'columns': [
-                {'column': 'experiment_rna_short_read_id', 'required': True},
-                {'column': 'analyte_id', 'required': True},
-                {'column': 'experiment_sample_id'},
-                {'column': 'seq_library_prep_kit_method'},
-                {'column': 'library_prep_type'},
-                {'column': 'experiment_type'},
-                {'column': 'read_length', 'data_type': 'integer'},
-                {'column': 'single_or_paired_ends'},
-                {'column': 'date_data_generation', 'data_type': 'float'},
-                {'column': 'sequencing_platform'},
-                {'column': 'within_site_batch_name'},
-                {'column': 'RIN', 'data_type': 'float'},
-                {'column': 'estimated_library_size'},
-                {'column': 'total_reads', 'data_type': 'integer'},
-                {'column': 'percent_rRNA', 'data_type': 'float'},
-                {'column': 'percent_mRNA', 'data_type': 'float'},
-                {'column': 'percent_mtRNA', 'data_type': 'float'},
-                {'column': 'percent_Globin', 'data_type': 'float'},
-                {'column': 'percent_UMI', 'data_type': 'float'},
-                {'column': '5prime3prime_bias', 'data_type': 'float'},
-                {'column': 'percent_GC', 'data_type': 'float'},
-                {'column': 'percent_chrX_Y', 'data_type': 'float'},
-            ],
-        },
-    ]
+    ] + INVALID_TABLES
 }
 
 
@@ -575,7 +708,7 @@ class ReportAPITest(AirtableTest):
         responses.add(
             responses.GET, '{}/app3Y97xtbbaOopVR/GREGoR Data Model'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_RECORDS,
             status=200)
-        responses.add(responses.GET, MOCK_DATA_MODEL_URL, json=MOCK_DATA_MODEL, status=200)
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
 
         url = reverse(gregor_export)
         self.check_analyst_login(url)
@@ -602,42 +735,48 @@ class ReportAPITest(AirtableTest):
         mock_google_authenticated.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        skipped_file_validation_warnings = [
-            f'No data model found for "{file}" table so no validation was performed' for file in EXPECTED_GREGOR_FILES
-        ]
-        self.assertListEqual(response.json()['warnings'], [
-            'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
-            'The following columns are included in the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id, proband_relationship_detail, sex_detail, twin_id',
-            'The following columns are included in the "participant" data model but are missing in the report: ancestry_metadata',
-            'The following columns are included in the "participant" data model but have an unsupported data type: internal_project_id (reference)',
-            'The following columns are specified as "enumeration" in the "participant" data model but are missing the allowed values definition: prior_testing',
+        self.assertListEqual(response.json()['errors'], [
+            'Unable to load data model: 404 Client Error: Not Found for url: http://raw.githubusercontent.com/gregor_data_model.json',
+        ])
+
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, json=MOCK_INVALID_DATA_MODEL, status=200)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+
+        recommended_warnings = [
             'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
             'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
-        ] + skipped_file_validation_warnings[1:5] + skipped_file_validation_warnings[7:8] + skipped_file_validation_warnings[9:])
+        ]
+        self.assertListEqual(response.json()['warnings'], [
+            'The following columns are specified as "enumeration" in the "participant" data model but are missing the allowed values definition: prior_testing',
+            'The following columns are included in the "participant" data model but have an unsupported data type: internal_project_id (reference)',
+            'The following columns are computed for the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id',
+        ] + recommended_warnings)
         self.assertListEqual(response.json()['errors'], [
+            f'No data model found for "{file}" table' for file in reversed(EXPECTED_GREGOR_FILES) if file not in INVALID_MODEL_TABLES
+        ] + [
+            'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
+        ] + [
             'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
             'The following entries have invalid values for "age_at_enrollment" in the "participant" table. Allowed values have data type date. Invalid values: Broad_NA19675_1 (18)',
-            'The following entries have invalid values for "aligned_dna_short_read_index_file" (from Airtable) in the "aligned_dna_short_read" table. Allowed values are a google bucket path starting with gs://. Invalid values: VCGS_FAM203_621_D2 (NA)',
             'The following entries have invalid values for "reference_assembly" (from Airtable) in the "aligned_dna_short_read" table. Allowed values have data type integer. Invalid values: NA20888 (GRCh38), VCGS_FAM203_621_D2 (GRCh38)',
             'The following entries are missing required "mean_coverage" (from Airtable) in the "aligned_dna_short_read" table: VCGS_FAM203_621_D2',
             'The following entries have non-unique values for "alignment_software" (from Airtable) in the "aligned_dna_short_read" table: BWA-MEM-2.3 (NA20888, VCGS_FAM203_621_D2)',
+            'The following entries have invalid values for "analysis_details" (from Airtable) in the "aligned_dna_short_read" table. Allowed values are a google bucket path starting with gs://. Invalid values: VCGS_FAM203_621_D2 (DOI:10.5281/zenodo.4469317)',
             'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)',
         ])
 
-        responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
         responses.calls.reset()
         mock_subprocess.reset_mock()
-        mock_google_authenticated.return_value = True
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, json=MOCK_DATA_MODEL, status=200)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         expected_response = {
             'info': ['Successfully validated and uploaded Gregor Report for 9 families'],
-            'warnings': [
-                'Unable to load data model for validation: 404 Client Error: Not Found for url: http://raw.githubusercontent.com/gregor_data_model.json',
-            ] + skipped_file_validation_warnings,
+            'warnings': recommended_warnings,
         }
         self.assertDictEqual(response.json(), expected_response)
         self._assert_expected_gregor_files(mock_open)
@@ -661,6 +800,9 @@ class ReportAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         expected_response['info'][0] = expected_response['info'][0].replace('9', '10')
+        expected_response['warnings'][0] = expected_response['warnings'][0] + ', Broad_NA20885, Broad_NA20889'
+        expected_response['warnings'][2] = expected_response['warnings'][2].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
+        expected_response['warnings'][3] = expected_response['warnings'][3].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
         self.assertDictEqual(response.json(), expected_response)
         self._assert_expected_gregor_files(mock_open, has_second_project=True)
         self._test_expected_gregor_airtable_calls(additional_samples=['NA20885', 'NA20889'])
@@ -704,12 +846,11 @@ class ReportAPITest(AirtableTest):
 
         self.assertEqual(len(family_file), 11 if has_second_project else 10)
         self.assertEqual(family_file[0], [
-            'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_file', 'pedigree_file_detail',
-            'family_history_detail',
+            'family_id', 'consanguinity', 'consanguinity_detail',
         ])
-        self.assertIn(['Broad_1', 'Present', '', '', '', ''], family_file)
-        fam_8_row = ['Broad_8', 'Unknown', '', '', '', '']
-        fam_11_row = ['Broad_11', 'None suspected', '', '', '', '']
+        self.assertIn(['Broad_1', 'Present', ''], family_file)
+        fam_8_row = ['Broad_8', 'Unknown', '']
+        fam_11_row = ['Broad_11', 'None suspected', '']
         if has_second_project:
             self.assertIn(fam_11_row, family_file)
             self.assertNotIn(fam_8_row, family_file)
@@ -729,21 +870,19 @@ class ReportAPITest(AirtableTest):
             '', 'Broad_NA19675_1', 'HP:0001674', 'Absent', 'HPO', 'originally indicated', '', '',
         ], phenotype_file)
 
-        self.assertEqual(len(analyte_file), 17 if has_second_project else 14)
+        self.assertEqual(len(analyte_file), 6 if has_second_project else 5)
         self.assertEqual(analyte_file[0], [
             'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
-            'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status', 'age_at_collection',
-            'participant_drugs_intake', 'participant_special_diet', 'hours_since_last_meal', 'passage_number',
-            'time_to_freeze', 'sample_transformation_detail', 'quality_issues',
+            'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status',
         ])
         row = next(r for r in analyte_file if r[1] == 'Broad_NA19675_1')
         self.assertListEqual(
-            ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', '', ''],
+            ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No'],
             row)
         self.assertIn(
-            ['Broad_SM-L5QMP', 'Broad_NA20888', '', '', '', '', '', 'No', '', '', '', '', '', '', '', ''], analyte_file)
+            ['Broad_SM-L5QMP', 'Broad_NA20888', '', '', '', '', '', 'No'], analyte_file)
         self.assertEqual(
-            ['Broad_SM-L5QMWP', 'Broad_NA20888', '', '', '', '', '', 'No', '', '', '', '', '', '', '', ''] in analyte_file,
+            ['Broad_SM-L5QMWP', 'Broad_NA20888', '', '', '', '', '', 'No'] in analyte_file,
             has_second_project
         )
 
@@ -776,7 +915,8 @@ class ReportAPITest(AirtableTest):
         self.assertIn([
             'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
-            'NA', '129c28163df082', 'GRCh38', '', '', '', 'BWA-MEM-2.3', 'DOI:10.5281/zenodo.4469317', '',
+            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai',
+            '129c28163df082', 'GRCh38', '', '', '', 'BWA-MEM-2.3', 'DOI:10.5281/zenodo.4469317', '',
         ], read_file)
         self.assertIn([
             'Broad_exome_NA20888_1', 'Broad_exome_NA20888',
@@ -830,7 +970,7 @@ class ReportAPITest(AirtableTest):
             'percent_multimapped', 'percent_unaligned', 'quality_issues'
         ])
         self.assertEqual(aligned_rna_file[1], [
-            '', 'Broad_paired-end_NA19679', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.cram',
+            'Broad_paired-end_NA19679_1', 'Broad_paired-end_NA19679', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.crai', 'f6490b8ebdf2', 'GRCh38',
             'gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta', '', '', 'GENCODEv26', '',
             'STARv2.7.10b', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Log.final.out', '', '80.53', '17.08',
