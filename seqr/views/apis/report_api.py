@@ -157,7 +157,7 @@ COLLABORATOR_SAMPLE_ID_FIELD = 'CollaboratorSampleID'
 PARTICIPANT_TABLE_COLUMNS = {
     'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
     'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'proband_relationship',
-    'sex', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
+    'sex', 'reported_race', 'reported_ethnicity', 'ancestry_detail', 'solve_status', 'missing_variant_case',
     'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
 }
 GREGOR_FAMILY_TABLE_COLUMNS = {'family_id', 'consanguinity'}

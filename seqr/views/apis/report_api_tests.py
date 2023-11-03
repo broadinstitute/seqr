@@ -482,7 +482,7 @@ INVALID_TABLES = [
     for t in MOCK_DATA_MODEL['tables'] if t['table'] in INVALID_MODEL_TABLES
 ]
 INVALID_TABLES[0]['columns'] = [c for c in INVALID_TABLES[0]['columns'] if c['column'] not in {
-    'pmid_id', 'age_at_last_observation', 'ancestry_detail',
+    'pmid_id', 'age_at_last_observation', 'ancestry_detail', 'missing_variant_case',
 }]
 MOCK_INVALID_DATA_MODEL = {
     'tables': [
@@ -754,7 +754,7 @@ class ReportAPITest(AirtableTest):
         self.assertListEqual(response.json()['warnings'], [
             'The following columns are specified as "enumeration" in the "participant" data model but are missing the allowed values definition: prior_testing',
             'The following columns are included in the "participant" data model but have an unsupported data type: internal_project_id (reference)',
-            'The following columns are computed for the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id',
+            'The following columns are computed for the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, missing_variant_case, pmid_id',
         ] + recommended_warnings)
         self.assertListEqual(response.json()['errors'], [
             f'No data model found for "{file}" table' for file in reversed(EXPECTED_GREGOR_FILES) if file not in INVALID_MODEL_TABLES
