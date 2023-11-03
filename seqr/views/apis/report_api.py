@@ -548,6 +548,7 @@ DATA_TYPE_ERROR_FORMATTERS = {
 DATA_TYPE_FORMATTERS = {
     'integer': lambda val: val.replace(',', ''),
 }
+DATA_TYPE_FORMATTERS['float'] = DATA_TYPE_FORMATTERS['integer']
 
 
 def _populate_gregor_files(file_data):

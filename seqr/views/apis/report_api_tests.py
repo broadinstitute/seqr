@@ -422,7 +422,7 @@ MOCK_DATA_MODEL = {
                 {'column': 'single_or_paired_ends'},
                 {'column': 'within_site_batch_name'},
                 {'column': 'RIN', 'data_type': 'float'},
-                {'column': 'estimated_library_size', 'data_type': 'integer'},
+                {'column': 'estimated_library_size', 'data_type': 'float'},
                 {'column': 'total_reads', 'data_type': 'integer'},
                 {'column': 'percent_rRNA', 'data_type': 'float'},
                 {'column': 'percent_mRNA', 'data_type': 'float'},
