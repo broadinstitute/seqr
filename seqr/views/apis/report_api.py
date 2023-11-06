@@ -29,7 +29,7 @@ from seqr.views.utils.variant_utils import get_variant_main_transcript, get_save
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
-from reference_data.models import Omim, HumanPhenotypeOntology
+from reference_data.models import Omim, HumanPhenotypeOntology, GENOME_VERSION_LOOKUP
 from settings import GREGOR_DATA_MODEL_URL
 
 
@@ -205,6 +205,12 @@ CALLED_TABLE_COLUMNS = {
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', CALLED_VARIANT_FILE_COLUMN, 'md5sum',
     'caller_software', 'variant_types', 'analysis_details',
 }
+GENETIC_FINDINGS_TABLE_COLUMNS = {
+    'chrom', 'pos', 'ref', 'alt', 'variant_type', 'variant_reference_assembly', 'gene', 'transcript', 'hgvsc', 'hgvsp',
+    'gene_known_for_phenotype', 'known_condition_name', 'condition_id', 'condition_inheritance', 'phenotype_contribution',
+    'genetic_findings_id', 'participant_id', 'experiment_id', 'zygosity', 'allele_balance_or_heteroplasmy_percentage',
+    'variant_inheritance', 'linked_variant', 'additional_family_members_with_variant', 'method_of_discovery',
+}
 
 RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS + ['reference_assembly_uri']
 DATA_TYPE_OMIT = {
@@ -329,6 +335,12 @@ def gregor_export(request):
     for i in individuals:
         grouped_data_type_individuals[i.individual_id].update({data_type: i for data_type in individual_data_types[i.id]})
 
+    saved_variants_by_family = get_saved_discovery_variants_by_family(
+        variant_filter={'family__project__in': projects, 'alt__isnull': False},
+        format_variants=_parse_variant_genetic_findings,
+        get_family_id=lambda v: v['family_id'],
+    )
+
     airtable_sample_records, airtable_metadata_by_participant = _get_gregor_airtable_data(
         grouped_data_type_individuals.keys(), request.user)
 
@@ -339,6 +351,7 @@ def gregor_export(request):
     airtable_rows = []
     airtable_rna_rows = []
     experiment_lookup_rows = []
+    genetic_findings_rows = []
     for data_type_individuals in grouped_data_type_individuals.values():
         # If multiple individual records, prefer WGS
         individual = next(
@@ -400,6 +413,8 @@ def gregor_export(request):
         for analyte_id in analyte_ids:
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
+        genetic_findings_rows += _get_gregor_genetic_findings_rows(saved_variants_by_family.get(family.id), participant_id)
+
     file_data = [
         ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),
         ('family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())),
@@ -414,6 +429,7 @@ def gregor_export(request):
         ('experiment_rna_short_read', EXPERIMENT_RNA_TABLE_COLUMNS, airtable_rna_rows),
         ('aligned_rna_short_read', READ_RNA_TABLE_COLUMNS, airtable_rna_rows),
         ('experiment', EXPERIMENT_LOOKUP_TABLE_COLUMNS, experiment_lookup_rows),
+        ('genetic_findings', GENETIC_FINDINGS_TABLE_COLUMNS, genetic_findings_rows),
     ]
 
     files, warnings = _populate_gregor_files(file_data)
@@ -494,6 +510,56 @@ def _get_phenotype_row(feature):
     }
 
 
+def _parse_variant_genetic_findings(variant_models, *args):
+    variants = []
+    for variant in variant_models:
+        chrom, pos = get_chrom_pos(variant.xpos)
+        main_transcript = _get_variant_model_main_transcript(variant)
+        parsed_variant = {
+            'family_id': variant.family_id,
+            'chrom': chrom,
+            'pos': pos,
+            'ref': variant.ref,
+            'alt': variant.alt,
+            'variant_type': 'SNV/INDEL',
+            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant.saved_variant_json['genomeVersion']],
+            'gene_id': main_transcript['geneId'],  # TODO need gene symbol
+            'transcript': main_transcript['transcriptId'],
+            'hgvsc': main_transcript['hgvsc'],
+            'hgvsp': main_transcript['hgvsp'],
+            'gene_known_for_phenotype': 'Candidate',
+            'phenotype_contribution': 'Full',
+        }
+        omim_condition = None  # TODO
+        if omim_condition:
+            parsed_variant.update({
+                'gene_known_for_phenotype': 'Known',
+                'known_condition_name': '',
+                'condition_id': '',
+                'condition_inheritance': '',
+            })
+        variants.append(parsed_variant)
+
+    return variants
+
+
+def _get_gregor_genetic_findings_rows(rows, participant_id):
+    if not rows:
+        return []
+    return [{
+        'genetic_findings_id': f'{participant_id}_{row["chrom"]}_{row["pos"]}',
+        'participant_id': participant_id,
+        'experiment_id': '', # TODO
+        'zygosity': '', # TODO
+        'allele_balance_or_heteroplasmy_percentage': '', # TODO
+        'variant_inheritance': '', # TODO
+        'linked_variant': '', # TODO
+        'additional_family_members_with_variant': '', # TODO
+        'method_of_discovery': '', # TODO
+        **row,
+    } for row in rows]
+
+
 def _get_analyte_row(individual):
     return {
         'analyte_type': individual.get_analyte_type_display(),
@@ -546,7 +612,7 @@ DATA_TYPE_ERROR_FORMATTERS = {
     'enumeration': lambda validator: f': {", ".join(validator["enumerations"])}',
 }
 DATA_TYPE_FORMATTERS = {
-    'integer': lambda val: val.replace(',', ''),
+    'integer': lambda val: str(val).replace(',', ''),
 }
 DATA_TYPE_FORMATTERS['float'] = DATA_TYPE_FORMATTERS['integer']
 
@@ -997,11 +1063,15 @@ def _update_variant_inheritance(variant, affected_individual_guids, unaffected_i
     for gene_id in potential_compound_het_gene_ids:
         potential_compound_het_genes[gene_id].add(variant)
 
-    variant_json = variant.saved_variant_json
-    variant_json['selectedMainTranscriptId'] = variant.selected_main_transcript_id
-    main_transcript = get_variant_main_transcript(variant_json)
+    main_transcript = _get_variant_model_main_transcript(variant)
     if main_transcript.get('geneId'):
         variant.saved_variant_json['mainTranscriptGeneId'] = main_transcript['geneId']
+
+
+def _get_variant_model_main_transcript(variant):
+    variant_json = variant.saved_variant_json
+    variant_json['selectedMainTranscriptId'] = variant.selected_main_transcript_id
+    return get_variant_main_transcript(variant_json)
 
 
 def _get_gene_to_variant_info_map(saved_variants, potential_compound_het_genes):
