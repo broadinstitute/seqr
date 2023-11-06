@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from datetime import datetime
 from dateutil import relativedelta as rdelta
-from django.db.models import Prefetch, Count, Q
+from django.db.models import Prefetch, Count, Q, F
 from django.utils import timezone
 import json
 import re
@@ -261,6 +261,15 @@ GREGOR_ANCESTRY_MAP.update({
     HISPANIC: None,
     OTHER_POPULATION: None,
 })
+MIM_INHERITANCE_MAP = {
+    'Digenic dominant': 'Digenic',
+    'Digenic recessive': 'Digenic',
+    'X-linked dominant': 'X-linked',
+    'X-linked recessive': 'X-linked',
+}
+MIM_INHERITANCE_MAP.update({inheritance: 'Other' for inheritance in [
+    'Isolated cases', 'Multifactorial', 'Pseudoautosomal dominant', 'Pseudoautosomal recessive', 'Somatic mutation'
+]})
 
 HPO_QUALIFIERS = {
     'age_of_onset': {
@@ -511,11 +520,31 @@ def _get_phenotype_row(feature):
 
 
 def _parse_variant_genetic_findings(variant_models, *args):
+    variant_models = variant_models.annotate(
+        omim_numbers=F('family__post_discovery_omim_numbers'),
+        mondo_id=F('family__mondo_id'),
+    )
     variants = []
+    gene_ids = set()
+    mim_numbers = set()
+    mondo_ids = set()
     for variant in variant_models:
         chrom, pos = get_chrom_pos(variant.xpos)
+
         main_transcript = _get_variant_model_main_transcript(variant)
-        parsed_variant = {
+        gene_id = main_transcript['geneId']
+        gene_ids.add(gene_id)
+
+        condition_id = ''
+        if variant.omim_numbers:
+            mim_number = variant.omim_numbers[0]
+            mim_numbers.add(mim_number)
+            condition_id = f'OMIM:{mim_number}'
+        elif variant.mondo_id:
+            mondo_ids.add(int(variant.mondo_id))
+            condition_id = f'MONDO:{variant.mondo_id}'
+
+        variants.append({
             'family_id': variant.family_id,
             'chrom': chrom,
             'pos': pos,
@@ -523,22 +552,31 @@ def _parse_variant_genetic_findings(variant_models, *args):
             'alt': variant.alt,
             'variant_type': 'SNV/INDEL',
             'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant.saved_variant_json['genomeVersion']],
-            'gene_id': main_transcript['geneId'],  # TODO need gene symbol
+            'gene_id': gene_id,
             'transcript': main_transcript['transcriptId'],
             'hgvsc': main_transcript['hgvsc'],
             'hgvsp': main_transcript['hgvsp'],
-            'gene_known_for_phenotype': 'Candidate',
+            'gene_known_for_phenotype': 'Known' if condition_id else 'Candidate',
+            'condition_id': condition_id,
             'phenotype_contribution': 'Full',
-        }
-        omim_condition = None  # TODO
-        if omim_condition:
-            parsed_variant.update({
-                'gene_known_for_phenotype': 'Known',
-                'known_condition_name': '',
-                'condition_id': '',
-                'condition_inheritance': '',
-            })
-        variants.append(parsed_variant)
+        })
+
+    genes_by_id = get_genes(gene_ids)
+    mim_conditions_by_number = {
+        str(number):  {
+            'known_condition_name': description,
+            'condition_inheritance': '|'.join([
+                MIM_INHERITANCE_MAP.get(i, i) for i in (inheritance or '').split(', ')
+            ]),
+        } for number, description, inheritance in Omim.objects.filter(phenotype_mim_number__in=mim_numbers).values_list(
+            'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
+        )
+    }
+    for row in variants:
+        row['gene'] = genes_by_id[row['gene_id']]['geneSymbol']
+        if row['condition_id'].startswith('OMIM'):
+            row.update(mim_conditions_by_number[row['condition_id'].replace('OMIM:', '')])
+        # TODO MONDO
 
     return variants
 
@@ -599,10 +637,14 @@ def _get_experiment_lookup_row(is_rna, row_data):
         'experiment_id': f'{table_name}.{id_in_table}',
     }
 
+def _validate_enumeration(val, validator):
+    delimiter = validator.get('multi_value_delimiter')
+    values = val.split(delimiter) if delimiter else [val]
+    return all(v in validator['enumerations'] for v in values)
 
 DATA_TYPE_VALIDATORS = {
     'string': lambda val, validator: (not validator.get('is_bucket_path')) or val.startswith('gs://'),
-    'enumeration': lambda val, validator: val in validator['enumerations'],
+    'enumeration': _validate_enumeration,
     'integer': lambda val, *args: val.isnumeric(),
     'float': lambda val, validator: val.isnumeric() or re.match(r'^\d+.\d+$', val),
     'date': lambda val, validator: bool(re.match(r'^\d{4}-\d{2}-\d{2}$', val)),
