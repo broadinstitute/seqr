@@ -270,6 +270,14 @@ MIM_INHERITANCE_MAP = {
 MIM_INHERITANCE_MAP.update({inheritance: 'Other' for inheritance in [
     'Isolated cases', 'Multifactorial', 'Pseudoautosomal dominant', 'Pseudoautosomal recessive', 'Somatic mutation'
 ]})
+ZYGOSITY_MAP = {
+    1: 'Heterozygous',
+    2: 'Homozygous',
+}
+MITO_ZYGOSITY_MAP = {
+    1: 'Heteroplasmy',
+    2: 'Homoplasmy',
+}
 
 HPO_QUALIFIERS = {
     'age_of_onset': {
@@ -398,6 +406,7 @@ def gregor_export(request):
         ]
 
         analyte_ids = set()
+        experiment_id = None
         # airtable data
         if airtable_sample:
             airtable_metadata = airtable_metadata_by_participant.get(airtable_sample[PARTICIPANT_ID_FIELD]) or {}
@@ -409,6 +418,7 @@ def gregor_export(request):
                 is_rna = data_type == 'RNA'
                 if not is_rna:
                     row['alignment_software'] = row['alignment_software_dna']
+                    experiment_id = row['experiment_dna_short_read_id']
                 (airtable_rna_rows if is_rna else airtable_rows).append(row)
                 experiment_lookup_rows.append(
                     {'participant_id': participant_id, **_get_experiment_lookup_row(is_rna, row)}
@@ -422,7 +432,9 @@ def gregor_export(request):
         for analyte_id in analyte_ids:
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
-        genetic_findings_rows += _get_gregor_genetic_findings_rows(saved_variants_by_family.get(family.id), participant_id)
+        genetic_findings_rows += _get_gregor_genetic_findings_rows(
+            saved_variants_by_family.get(family.id), individual.guid, participant_id, experiment_id,
+        )
 
     file_data = [
         ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),
@@ -552,6 +564,7 @@ def _parse_variant_genetic_findings(variant_models, *args):
             'alt': variant.alt,
             'variant_type': 'SNV/INDEL',
             'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant.saved_variant_json['genomeVersion']],
+            'genotypes': variant.saved_variant_json['genotypes'],
             'gene_id': gene_id,
             'transcript': main_transcript['transcriptId'],
             'hgvsc': main_transcript.get('hgvsc'),
@@ -595,21 +608,27 @@ def _get_mondo_condition_data(mondo_id):
         return {}
 
 
-def _get_gregor_genetic_findings_rows(rows, participant_id):
+def _get_gregor_genetic_findings_rows(rows, individual_guid, participant_id, experiment_id):
     if not rows:
         return []
-    return [{
-        'genetic_findings_id': f'{participant_id}_{row["chrom"]}_{row["pos"]}',
-        'participant_id': participant_id,
-        'experiment_id': '', # TODO
-        'zygosity': '', # TODO
-        'allele_balance_or_heteroplasmy_percentage': '', # TODO
-        'variant_inheritance': '', # TODO
-        'linked_variant': '', # TODO
-        'additional_family_members_with_variant': '', # TODO
-        'method_of_discovery': '', # TODO
-        **row,
-    } for row in rows]
+    parsed_rows = []
+    for row in rows:
+        genotype = row['genotypes'].get(individual_guid)
+        if genotype and genotype['numAlt'] > 0:
+            heteroplasmy = genotype.get('hl')
+            parsed_rows.append({
+                'genetic_findings_id': f'{participant_id}_{row["chrom"]}_{row["pos"]}',
+                'participant_id': participant_id,
+                'experiment_id': experiment_id,
+                'zygosity': (ZYGOSITY_MAP if heteroplasmy is None else MITO_ZYGOSITY_MAP)[genotype['numAlt']],
+                'allele_balance_or_heteroplasmy_percentage': heteroplasmy,
+                'variant_inheritance': '', # TODO
+                'linked_variant': '', # TODO
+                'additional_family_members_with_variant': '', # TODO
+                'method_of_discovery': '', # TODO
+                **row,
+            })
+    return parsed_rows
 
 
 def _get_analyte_row(individual):
