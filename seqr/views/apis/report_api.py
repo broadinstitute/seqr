@@ -541,8 +541,8 @@ def _parse_variant_genetic_findings(variant_models, *args):
             mim_numbers.add(mim_number)
             condition_id = f'OMIM:{mim_number}'
         elif variant.mondo_id:
-            mondo_ids.add(int(variant.mondo_id))
-            condition_id = f'MONDO:{variant.mondo_id}'
+            condition_id = f"MONDO:{variant.mondo_id.replace('MONDO:', '')}"
+            mondo_ids.add(condition_id)
 
         variants.append({
             'family_id': variant.family_id,
@@ -554,16 +554,16 @@ def _parse_variant_genetic_findings(variant_models, *args):
             'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant.saved_variant_json['genomeVersion']],
             'gene_id': gene_id,
             'transcript': main_transcript['transcriptId'],
-            'hgvsc': main_transcript['hgvsc'],
-            'hgvsp': main_transcript['hgvsp'],
+            'hgvsc': main_transcript.get('hgvsc'),
+            'hgvsp': main_transcript.get('hgvsp'),
             'gene_known_for_phenotype': 'Known' if condition_id else 'Candidate',
             'condition_id': condition_id,
             'phenotype_contribution': 'Full',
         })
 
     genes_by_id = get_genes(gene_ids)
-    mim_conditions_by_number = {
-        str(number):  {
+    conditions_by_id = {
+        f'OMIM:{number}':  {
             'known_condition_name': description,
             'condition_inheritance': '|'.join([
                 MIM_INHERITANCE_MAP.get(i, i) for i in (inheritance or '').split(', ')
@@ -572,13 +572,27 @@ def _parse_variant_genetic_findings(variant_models, *args):
             'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
         )
     }
+    conditions_by_id.update({mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids})
+    # TODO add conditional validation that have details if have condition_id
     for row in variants:
         row['gene'] = genes_by_id[row['gene_id']]['geneSymbol']
-        if row['condition_id'].startswith('OMIM'):
-            row.update(mim_conditions_by_number[row['condition_id'].replace('OMIM:', '')])
-        # TODO MONDO
-
+        row.update(conditions_by_id.get(row['condition_id'], {}))
     return variants
+
+
+def _get_mondo_condition_data(mondo_id):
+    try:
+        response = requests.get(f'https://monarchinitiative.org/v3/api/entity/{mondo_id}')
+        data = response.json()
+        inheritance = data['inheritance']
+        if inheritance:
+            inheritance = HumanPhenotypeOntology.objects.get(hpo_id=inheritance['id']).name.replace(' inheritance', '')
+        return {
+            'known_condition_name': data['name'],
+            'condition_inheritance': inheritance,
+        }
+    except Exception:
+        return {}
 
 
 def _get_gregor_genetic_findings_rows(rows, participant_id):
