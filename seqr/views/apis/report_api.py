@@ -157,7 +157,7 @@ COLLABORATOR_SAMPLE_ID_FIELD = 'CollaboratorSampleID'
 PARTICIPANT_TABLE_COLUMNS = {
     'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
     'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'proband_relationship',
-    'sex', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
+    'sex', 'reported_race', 'reported_ethnicity', 'ancestry_detail', 'solve_status', 'missing_variant_case',
     'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
 }
 GREGOR_FAMILY_TABLE_COLUMNS = {'family_id', 'consanguinity'}
@@ -238,6 +238,11 @@ WARN_MISSING_CONDITIONAL_COLUMNS = {
     'age_at_enrollment': lambda row: row['affected_status'] == 'Affected'
 }
 
+SOLVE_STATUS_LOOKUP = {
+    **{s: 'Yes' for s in Family.SOLVED_ANALYSIS_STATUSES},
+    **{s: 'Likely' for s in Family.STRONG_CANDIDATE_ANALYSIS_STATUSES},
+    Family.ANALYSIS_STATUS_PARTIAL_SOLVE: 'Partial',
+}
 GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
 GREGOR_ANCESTRY_DETAIL_MAP.pop(MIDDLE_EASTERN)
 GREGOR_ANCESTRY_DETAIL_MAP.update({
@@ -448,6 +453,7 @@ def _get_gregor_family_row(family):
         'consanguinity': 'Unknown',
         'pmid_id': '|'.join(family.pubmed_ids or []),
         'phenotype_description': family.coded_phenotype,
+        'solve_status': SOLVE_STATUS_LOOKUP.get(family.analysis_status, 'No'),
     }
 
 
@@ -464,6 +470,7 @@ def _get_participant_row(individual, airtable_sample):
         'ancestry_detail': GREGOR_ANCESTRY_DETAIL_MAP.get(individual.population),
         'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else None,
         'recontactable': airtable_sample.get('Recontactable'),
+        'missing_variant_case': 'No',
     }
     if individual.birth_year and individual.birth_year > 0:
         participant.update({
@@ -527,18 +534,21 @@ def _get_experiment_lookup_row(is_rna, row_data):
     }
 
 
-is_integer = lambda val, *args: val.isnumeric() or re.match(r'^[\d{3},]*\d{3}$', val)
 DATA_TYPE_VALIDATORS = {
     'string': lambda val, validator: (not validator.get('is_bucket_path')) or val.startswith('gs://'),
     'enumeration': lambda val, validator: val in validator['enumerations'],
-    'integer': is_integer,
-    'float': lambda val, validator: is_integer(val) or re.match(r'^\d+.\d+$', val),
+    'integer': lambda val, *args: val.isnumeric(),
+    'float': lambda val, validator: val.isnumeric() or re.match(r'^\d+.\d+$', val),
     'date': lambda val, validator: bool(re.match(r'^\d{4}-\d{2}-\d{2}$', val)),
 }
 DATA_TYPE_ERROR_FORMATTERS = {
     'string': lambda validator: ' are a google bucket path starting with gs://',
     'enumeration': lambda validator: f': {", ".join(validator["enumerations"])}',
 }
+DATA_TYPE_FORMATTERS = {
+    'integer': lambda val: val.replace(',', ''),
+}
+DATA_TYPE_FORMATTERS['float'] = DATA_TYPE_FORMATTERS['integer']
 
 
 def _populate_gregor_files(file_data):
@@ -606,7 +616,9 @@ def _populate_gregor_files(file_data):
 def _load_data_model_validators():
     response = requests.get(GREGOR_DATA_MODEL_URL)
     response.raise_for_status()
-    table_models = response.json()['tables']
+    # remove commented out lines from json
+    response_json = json.loads(re.sub('\\n\s*//.*\\n', '', response.text))
+    table_models = response_json['tables']
     table_configs = {
         t['table']: {c['column']: c for c in t['columns']}
         for t in table_models
@@ -634,6 +646,7 @@ def _has_required_table(table, validator, tables):
 def _validate_column_data(column, file_name, data, column_validator, warnings, errors):
     data_type = column_validator.get('data_type')
     data_type_validator = DATA_TYPE_VALIDATORS.get(data_type)
+    data_type_formatter = DATA_TYPE_FORMATTERS.get(data_type)
     unique = column_validator.get('is_unique')
     required = column_validator.get('required')
     recommended = column in WARN_MISSING_TABLE_COLUMNS.get(file_name, [])
@@ -653,7 +666,13 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
                 check_recommend_condition = WARN_MISSING_CONDITIONAL_COLUMNS.get(column)
                 if not check_recommend_condition or check_recommend_condition(row):
                     warn_missing.append(_get_row_id(row))
-        elif data_type_validator and not data_type_validator(value, column_validator):
+            continue
+
+        if data_type_formatter:
+            value = data_type_formatter(value)
+            row[column] = value
+
+        if data_type_validator and not data_type_validator(value, column_validator):
             invalid.append(f'{_get_row_id(row)} ({value})')
         elif unique:
             grouped_values[value].add(_get_row_id(row))

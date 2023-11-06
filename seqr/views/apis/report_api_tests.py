@@ -301,6 +301,8 @@ MOCK_DATA_MODEL = {
                 {'column': 'affected_status', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Affected', 'Unaffected', 'Unknown']},
                 {'column': 'phenotype_description'},
                 {'column': 'age_at_enrollment'},
+                {'column': 'solve_status', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Yes', 'Likely', 'No', 'Partial']},
+                {'column': 'missing_variant_case', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Yes', 'No']},
             ],
         },
         {
@@ -317,7 +319,7 @@ MOCK_DATA_MODEL = {
             'required': True,
             'columns': [
                 {'column': 'phenotype_id'},
-                {'column': 'participant_id', 'required': True, 'data_type': 'string'},
+                {'column': 'participant_id', 'references': '> participant.participant_id', 'required': True, 'data_type': 'string'},
                 {'column': 'term_id', 'required': True},
                 {'column': 'presence', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Present', 'Absent', 'Unknown']},
                 {'column': 'ontology', 'required': True, 'data_type': 'enumeration', 'enumerations': ['HPO', 'MONDO']},
@@ -420,7 +422,7 @@ MOCK_DATA_MODEL = {
                 {'column': 'single_or_paired_ends'},
                 {'column': 'within_site_batch_name'},
                 {'column': 'RIN', 'data_type': 'float'},
-                {'column': 'estimated_library_size'},
+                {'column': 'estimated_library_size', 'data_type': 'float'},
                 {'column': 'total_reads', 'data_type': 'integer'},
                 {'column': 'percent_rRNA', 'data_type': 'float'},
                 {'column': 'percent_mRNA', 'data_type': 'float'},
@@ -457,6 +459,7 @@ MOCK_DATA_MODEL = {
         },
     ]
 }
+MOCK_DATA_MODEL_RESPONSE = json.dumps(MOCK_DATA_MODEL, indent=2).replace('"references"', '//"references"')
 
 INVALID_MODEL_TABLES = {
     'participant': {
@@ -480,7 +483,7 @@ INVALID_TABLES = [
     for t in MOCK_DATA_MODEL['tables'] if t['table'] in INVALID_MODEL_TABLES
 ]
 INVALID_TABLES[0]['columns'] = [c for c in INVALID_TABLES[0]['columns'] if c['column'] not in {
-    'pmid_id', 'age_at_last_observation', 'ancestry_detail',
+    'pmid_id', 'age_at_last_observation', 'ancestry_detail', 'missing_variant_case',
 }]
 MOCK_INVALID_DATA_MODEL = {
     'tables': [
@@ -752,7 +755,7 @@ class ReportAPITest(AirtableTest):
         self.assertListEqual(response.json()['warnings'], [
             'The following columns are specified as "enumeration" in the "participant" data model but are missing the allowed values definition: prior_testing',
             'The following columns are included in the "participant" data model but have an unsupported data type: internal_project_id (reference)',
-            'The following columns are computed for the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id',
+            'The following columns are computed for the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, missing_variant_case, pmid_id',
         ] + recommended_warnings)
         self.assertListEqual(response.json()['errors'], [
             f'No data model found for "{file}" table' for file in reversed(EXPECTED_GREGOR_FILES) if file not in INVALID_MODEL_TABLES
@@ -771,7 +774,7 @@ class ReportAPITest(AirtableTest):
 
         responses.calls.reset()
         mock_subprocess.reset_mock()
-        responses.add(responses.GET, MOCK_DATA_MODEL_URL, json=MOCK_DATA_MODEL, status=200)
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, body=MOCK_DATA_MODEL_RESPONSE, status=200)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         expected_response = {
@@ -824,24 +827,30 @@ class ReportAPITest(AirtableTest):
             'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
             'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
             'proband_relationship_detail', 'sex', 'sex_detail', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
-            'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
+            'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment', 'solve_status',
+            'missing_variant_case',
         ])
         row = next(r for r in participant_file if r[0] == 'Broad_NA19675_1')
         self.assertListEqual([
             'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
             '34415322|33665635', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
-            'Middle Eastern or North African', '', '', '21', 'Affected', 'myopathy', '18',
+            'Middle Eastern or North African', '', '', '21', 'Affected', 'myopathy', '18', 'No', 'No',
         ], row)
         hispanic_row = next(r for r in participant_file if r[0] == 'Broad_HG00731')
         self.assertListEqual([
             'Broad_HG00731', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_2', 'Broad_HG00732',
-            'Broad_HG00733', '', '', '', 'Female', '', '', 'Hispanic or Latino', 'Other', '', 'Affected', '', '',
+            'Broad_HG00733', '', '', '', 'Female', '', '', 'Hispanic or Latino', 'Other', '', 'Affected', '', '', 'No', 'No',
         ], hispanic_row)
+        solved_row = next(r for r in participant_file if r[0] == 'Broad_NA20876')
+        self.assertListEqual([
+            'Broad_NA20876', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_7', '0',
+            '0', '', '', '', 'Male', '', '', '', '', '', 'Affected', '', '', 'Yes', 'No',
+        ], solved_row)
         multi_data_type_row = next(r for r in participant_file if r[0] == 'Broad_NA20888')
         self.assertListEqual([
             'Broad_NA20888', 'Broad_Test Reprocessed Project' if has_second_project else 'Broad_1kg project nme with unide',
             'BROAD', 'HMB', 'No', '', '', 'Broad_12' if has_second_project else 'Broad_8', '0', '0', '', '', '',
-            'Male' if has_second_project else 'Female', '', '', '', '', '', 'Affected', '', '',
+            'Male' if has_second_project else 'Female', '', '', '', '', '', 'Affected', '', '', 'No', 'No',
         ], multi_data_type_row)
 
         self.assertEqual(len(family_file), 11 if has_second_project else 10)
@@ -957,7 +966,7 @@ class ReportAPITest(AirtableTest):
         ])
         self.assertEqual(experiment_rna_file[1], [
             'Broad_paired-end_NA19679', 'Broad_SM-N1P91', 'NA19679', 'Unknown', '151', 'paired-end', '2023-02-11',
-            'NovaSeq', 'stranded poly-A pulldown', 'paired-end', 'LCSET-26942', '8.9818', '19,480,858', '106,842,386',
+            'NovaSeq', 'stranded poly-A pulldown', 'paired-end', 'LCSET-26942', '8.9818', '19480858', '106842386',
             '5.9', '80.2', '1.05', '', '', '', '', '',
         ])
 
