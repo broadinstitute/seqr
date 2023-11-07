@@ -1,7 +1,6 @@
 import hail as hl
 
-from hail_search.constants import ALT_ALT, REF_REF, CONSEQUENCE_SORT, OMIM_SORT, GROUPED_VARIANTS_FIELD, \
-    VARIANT_KEY_FIELD
+from hail_search.constants import ALT_ALT, REF_REF, CONSEQUENCE_SORT, OMIM_SORT, GROUPED_VARIANTS_FIELD
 from hail_search.queries.base import BaseHailTableQuery
 from hail_search.queries.mito import MitoHailTableQuery
 from hail_search.queries.snv_indel import SnvIndelHailTableQuery
@@ -112,8 +111,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         return ht
 
     def _format_comp_het_result(self, v, data_type):
-        return self._data_type_queries[data_type]._format_results(v).annotate(
-            **{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
+        return self._data_type_queries[data_type]._format_results(v)
 
     def _merged_sort_expr(self, data_type, ht):
         # Certain sorts have an extra element for variant-type data, so need to add an element for SV data

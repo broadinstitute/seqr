@@ -7,7 +7,7 @@ import os
 from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
-    UNAFFECTED_ID, VARIANT_KEY_FIELD, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
+    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -55,6 +55,7 @@ class BaseHailTableQuery(object):
     BASE_ANNOTATION_FIELDS = {
         'familyGuids': lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
+        'variantId': lambda r: r.variant_id,
     }
     ENUM_ANNOTATION_FIELDS = {
         'transcripts': {
@@ -320,7 +321,6 @@ class BaseHailTableQuery(object):
         self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
 
         self._filter_annotated_table(**kwargs)
-        self._ht = self._ht.key_by(**{VARIANT_KEY_FIELD: self._ht.variant_id})
 
     def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, quality_filter=None,
                               **kwargs):
@@ -729,13 +729,14 @@ class BaseHailTableQuery(object):
             secondary_variants = primary_variants
 
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
-        ch_ht = self._filter_grouped_compound_hets(ch_ht)
+        ch_ht = self._filter_grouped_compound_hets(ch_ht).key_by()
+
         return ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2])})
 
     def _filter_grouped_compound_hets(self, ch_ht):
         ch_ht = ch_ht.explode(ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v2)
-        ch_ht = ch_ht.filter(ch_ht.v1[VARIANT_KEY_FIELD] != ch_ht.v2[VARIANT_KEY_FIELD])
+        ch_ht = ch_ht.filter(ch_ht.v1.variant_id != ch_ht.v2.variant_id)
 
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(valid_families=hl.enumerate(ch_ht.v1.comp_het_family_entries).map(
@@ -744,9 +745,8 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.filter(ch_ht.valid_families.any(lambda x: x))
 
         # Format pairs as lists and de-duplicate
-        ch_ht = ch_ht.key_by(**{
-            VARIANT_KEY_FIELD: hl.str(':').join(hl.sorted([ch_ht.v1[VARIANT_KEY_FIELD], ch_ht.v2[VARIANT_KEY_FIELD]]))
-        })
+        # TODO not deduplicating
+        ch_ht = ch_ht.key_by(key=hl.str(':').join(hl.sorted([ch_ht.v1.variant_id, ch_ht.v2.variant_id])))
         ch_ht = ch_ht.distinct()
         ch_ht = ch_ht.select(**{k: self._annotated_comp_het_variant(ch_ht, k) for k in ['v1', 'v2']})
 
@@ -778,8 +778,7 @@ class BaseHailTableQuery(object):
 
     def _format_comp_het_results(self, ch_ht, annotation_fields):
         formatted_grouped_variants = ch_ht[GROUPED_VARIANTS_FIELD].map(
-            lambda v: self._format_results(v, annotation_fields=annotation_fields).annotate(
-                **{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
+            lambda v: self._format_results(v, annotation_fields=annotation_fields)
         )
         ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted(formatted_grouped_variants, key=lambda x: x._sort)})
         return ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
@@ -802,7 +801,7 @@ class BaseHailTableQuery(object):
             ch_ht = self._format_comp_het_results(self._comp_het_ht, annotation_fields)
 
         if self._ht:
-            ht = self._format_results(self._ht, annotation_fields=annotation_fields)
+            ht = self._format_results(self._ht.key_by(), annotation_fields=annotation_fields)
             if ch_ht:
                 ht = ht.join(ch_ht, 'outer')
                 ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
@@ -891,7 +890,6 @@ class BaseHailTableQuery(object):
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
-        ht = ht.key_by(**{VARIANT_KEY_FIELD: ht.variant_id})
         annotation_fields = self.annotation_fields()
         annotation_fields.update({
             'familyGuids': lambda ht: hl.empty_array(hl.tstr),
