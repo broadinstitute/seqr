@@ -227,7 +227,7 @@ NO_DATA_TYPE_FIELDS.update(READ_RNA_TABLE_AIRTABLE_ID_FIELDS)
 
 DATA_TYPE_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + RNA_ONLY + [
     COLLABORATOR_SAMPLE_ID_FIELD, SMID_FIELD]
-ALL_AIRTABLE_COLUMNS = DATA_TYPE_AIRTABLE_COLUMNS + list(CALLED_TABLE_COLUMNS)
+ALL_AIRTABLE_COLUMNS = DATA_TYPE_AIRTABLE_COLUMNS + list(CALLED_TABLE_COLUMNS) + ['experiment_id']
 AIRTABLE_QUERY_COLUMNS = set()
 AIRTABLE_QUERY_COLUMNS.update(CALLED_TABLE_COLUMNS)
 AIRTABLE_QUERY_COLUMNS.remove('md5sum')
@@ -277,6 +277,10 @@ ZYGOSITY_MAP = {
 MITO_ZYGOSITY_MAP = {
     1: 'Heteroplasmy',
     2: 'Homoplasmy',
+}
+METHOD_MAP = {
+    Sample.SAMPLE_TYPE_WES: 'SR-ES',
+    Sample.SAMPLE_TYPE_WGS: 'SR-GS',
 }
 
 HPO_QUALIFIERS = {
@@ -432,9 +436,10 @@ def gregor_export(request):
         for analyte_id in analyte_ids:
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
-        genetic_findings_rows += _get_gregor_genetic_findings_rows(
-            saved_variants_by_family.get(family.id), individual.guid, participant_id, experiment_id,
-        )
+        if participant['proband_relationship'] == 'Self':
+            genetic_findings_rows += _get_gregor_genetic_findings_rows(
+                saved_variants_by_family.get(family.id), individual, participant_id, experiment_id,
+            )
 
     file_data = [
         ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),
@@ -608,27 +613,56 @@ def _get_mondo_condition_data(mondo_id):
         return {}
 
 
-def _get_gregor_genetic_findings_rows(rows, individual_guid, participant_id, experiment_id):
+def _get_gregor_genetic_findings_rows(rows, individual, participant_id, experiment_id):
     if not rows:
         return []
+
     parsed_rows = []
+    findings_by_gene = defaultdict(list)
     for row in rows:
-        genotype = row['genotypes'].get(individual_guid)
-        if genotype and genotype['numAlt'] > 0:
-            heteroplasmy = genotype.get('hl')
+        genotypes = row['genotypes']
+        individual_genotype = genotypes.get(individual.guid)
+        if individual_genotype and individual_genotype['numAlt'] > 0:
+            heteroplasmy = individual_genotype.get('hl')
+            findings_id = f'{participant_id}_{row["chrom"]}_{row["pos"]}'
+            findings_by_gene[row['gene']].append(findings_by_gene)
             parsed_rows.append({
-                'genetic_findings_id': f'{participant_id}_{row["chrom"]}_{row["pos"]}',
+                'genetic_findings_id': findings_id,
                 'participant_id': participant_id,
                 'experiment_id': experiment_id,
-                'zygosity': (ZYGOSITY_MAP if heteroplasmy is None else MITO_ZYGOSITY_MAP)[genotype['numAlt']],
+                'zygosity': (ZYGOSITY_MAP if heteroplasmy is None else MITO_ZYGOSITY_MAP)[individual_genotype['numAlt']],
                 'allele_balance_or_heteroplasmy_percentage': heteroplasmy,
-                'variant_inheritance': '', # TODO
-                'linked_variant': '', # TODO
-                'additional_family_members_with_variant': '', # TODO
-                'method_of_discovery': '', # TODO
+                'variant_inheritance': _get_variant_inheritance(individual, genotypes),
+                'additional_family_members_with_variant': '|'.join([
+                    f'Broad_{g["sampleId"]}' for g in genotypes.values() if g != individual_genotype and g['numAlt'] > 0
+                ]),
+                'method_of_discovery': METHOD_MAP.get(individual_genotype['sampleType']),  # TODO add back to hail backend
                 **row,
             })
+
+    for row in parsed_rows:
+        gene_findings = findings_by_gene[row['gene']]
+        if len(gene_findings) > 1:
+            row['linked_variant'] = next(f for f in gene_findings if f != row['genetic_findings_id'])
+
     return parsed_rows
+
+
+def _get_variant_inheritance(individual, genotypes):
+    parental_inheritance = tuple(
+        None if parent is None else genotypes.get(parent.guid, {}).get('numAlt', -1) > 0
+        for parent in [individual.mother, individual.father]
+    )
+    return {
+        (False, False): 'de novo',
+        (True, True): 'biparental',
+        (True, False): 'maternal',
+        (True, None): 'maternal',
+        (False, True): 'paternal',
+        (None, True): 'paternal',
+        (False, None): 'nonmaternal',
+        (None, False): 'nonpaternal',
+    }.get(parental_inheritance, 'unknown')
 
 
 def _get_analyte_row(individual):
