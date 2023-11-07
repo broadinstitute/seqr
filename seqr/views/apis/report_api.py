@@ -238,10 +238,12 @@ for data_type in GREGOR_DATA_TYPES:
 
 WARN_MISSING_TABLE_COLUMNS = {
     'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
+    'genetic_findings': ['known_condition_name'],
 }
 WARN_MISSING_CONDITIONAL_COLUMNS = {
     'reported_race': lambda row: not row['ancestry_detail'],
-    'age_at_enrollment': lambda row: row['affected_status'] == 'Affected'
+    'age_at_enrollment': lambda row: row['affected_status'] == 'Affected',
+    'known_condition_name': lambda row: row['condition_id'],
 }
 
 SOLVE_STATUS_LOOKUP = {
@@ -591,7 +593,6 @@ def _parse_variant_genetic_findings(variant_models, *args):
         )
     }
     conditions_by_id.update({mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids})
-    # TODO add conditional validation that have details if have condition_id
     for row in variants:
         row['gene'] = genes_by_id[row['gene_id']]['geneSymbol']
         row.update(conditions_by_id.get(row['condition_id'], {}))
