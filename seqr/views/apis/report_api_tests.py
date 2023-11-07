@@ -604,8 +604,8 @@ class ReportAPITest(AirtableTest):
         url = reverse(anvil_export, args=[PROJECT_GUID])
         self.check_analyst_login(url)
 
-        unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
-        response = self.client.get(unauthorized_project_url)
+        no_analyst_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
+        response = self.client.get(no_analyst_project_url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
@@ -683,6 +683,12 @@ class ReportAPITest(AirtableTest):
             'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, '
             'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
+
+        added_perm = self.add_analyst_project(4)
+        if added_perm:
+            response = self.client.get(no_analyst_project_url)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['errors'], ['Discovery variant 12-48367227-TC-T in family 14 has no associated gene'])
 
         self.check_no_analyst_no_access(url)
 

@@ -8,6 +8,7 @@ from reference_data.models import Omim
 from seqr.models import Family, Individual
 from seqr.views.utils.airtable_utils import get_airtable_samples
 from seqr.utils.gene_utils import get_genes
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, \
@@ -75,7 +76,7 @@ DISCOVERY_ROW_TYPE = 'discovery'
 
 
 def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, family_values=None,
-                          get_additional_sample_fields=None, get_additional_variant_fields=None):
+                          get_additional_sample_fields=None, get_additional_variant_fields=None, allow_missing_discovery_genes=False):
     individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
 
     family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
@@ -160,7 +161,9 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
 
         parsed_variants = [
             _parse_anvil_family_saved_variant(
-                variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_fields)
+                variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id,
+                get_additional_variant_fields, allow_missing_discovery_genes,
+            )
             for variant in saved_variants]
 
         for sample in family_samples:
@@ -273,7 +276,8 @@ def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv
     return compound_het_gene_id_by_family
 
 
-def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id, get_additional_variant_fields):
+def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id,
+                                      get_additional_variant_fields, allow_missing_discovery_genes):
     if variant['inheritance_models']:
         inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
     else:
@@ -302,9 +306,16 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
             'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType']),
         })
     else:
-        gene_id = compound_het_gene_id_by_family.get(family_id) or variant['main_transcript']['geneId']
+        gene_id = compound_het_gene_id_by_family.get(family_id) or variant['main_transcript'].get('geneId')
+        if gene_id:
+            gene = genes_by_id[gene_id]['geneSymbol']
+        elif allow_missing_discovery_genes:
+            gene = None
+        else:
+            family = Family.objects.get(id=family_id).family_id
+            raise ErrorsWarningsException([f'Discovery variant {variant["variantId"]} in family {family} has no associated gene'])
         parsed_variant.update({
-            'Gene': genes_by_id[gene_id]['geneSymbol'],
+            'Gene': gene,
             'Ref': variant['ref'],
             'Alt': variant['alt'],
             'hgvsc': (variant['main_transcript'].get('hgvsc') or '').split(':')[-1],
