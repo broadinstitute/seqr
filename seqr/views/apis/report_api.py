@@ -626,7 +626,7 @@ def _get_gregor_genetic_findings_rows(rows, individual, participant_id, experime
         if individual_genotype and individual_genotype['numAlt'] > 0:
             heteroplasmy = individual_genotype.get('hl')
             findings_id = f'{participant_id}_{row["chrom"]}_{row["pos"]}'
-            findings_by_gene[row['gene']].append(findings_by_gene)
+            findings_by_gene[row['gene']].append(findings_id)
             parsed_rows.append({
                 'genetic_findings_id': findings_id,
                 'participant_id': participant_id,
