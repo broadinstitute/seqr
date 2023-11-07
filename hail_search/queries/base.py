@@ -745,8 +745,7 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.filter(ch_ht.valid_families.any(lambda x: x))
 
         # Format pairs as lists and de-duplicate
-        # TODO not deduplicating
-        ch_ht = ch_ht.key_by(key=hl.str(':').join(hl.sorted([ch_ht.v1.variant_id, ch_ht.v2.variant_id])))
+        ch_ht = ch_ht.key_by(key_field=hl.str(':').join(hl.sorted([ch_ht.v1.variant_id, ch_ht.v2.variant_id])))
         ch_ht = ch_ht.distinct()
         ch_ht = ch_ht.select(**{k: self._annotated_comp_het_variant(ch_ht, k) for k in ['v1', 'v2']})
 
@@ -803,8 +802,7 @@ class BaseHailTableQuery(object):
         if self._ht:
             ht = self._format_results(self._ht.key_by(), annotation_fields=annotation_fields)
             if ch_ht:
-                ht = ht.join(ch_ht, 'outer')
-                ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
+                ht = ht.union(ch_ht, unify=True)
         else:
             ht = ch_ht
         return ht
