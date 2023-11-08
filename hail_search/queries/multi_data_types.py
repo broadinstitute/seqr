@@ -41,7 +41,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             sv_query = self._data_type_queries[data_type]
             merged_ht = self._filter_data_type_comp_hets(variant_ht, variant_families, sv_query)
             if merged_ht is not None:
-                self._comp_het_hts[data_type] = merged_ht
+                self._comp_het_hts[data_type] = merged_ht.key_by()
 
     def _filter_data_type_comp_hets(self, variant_ht, variant_families, sv_query):
         sv_ht = sv_query.unfiltered_comp_het_ht
@@ -105,8 +105,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
         ht = hts[0]
         for sub_ht in hts[1:]:
-            ht = ht.join(sub_ht, 'outer')
-            ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
+            ht = ht.union(sub_ht, unify=True)
 
         return ht
 
