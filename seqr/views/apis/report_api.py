@@ -551,7 +551,7 @@ def _parse_variant_genetic_findings(variant_models, *args):
         chrom, pos = get_chrom_pos(variant.xpos)
 
         main_transcript = _get_variant_model_main_transcript(variant)
-        gene_id = main_transcript['geneId']
+        gene_id = main_transcript.get('geneId')
         gene_ids.add(gene_id)
 
         condition_id = ''
@@ -573,7 +573,7 @@ def _parse_variant_genetic_findings(variant_models, *args):
             'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant.saved_variant_json['genomeVersion']],
             'genotypes': variant.saved_variant_json['genotypes'],
             'gene_id': gene_id,
-            'transcript': main_transcript['transcriptId'],
+            'transcript': main_transcript.get('transcriptId'),
             'hgvsc': (main_transcript.get('hgvsc') or '').split(':')[-1],
             'hgvsp': (main_transcript.get('hgvsp') or '').split(':')[-1],
             'gene_known_for_phenotype': 'Known' if condition_id else 'Candidate',
@@ -594,7 +594,7 @@ def _parse_variant_genetic_findings(variant_models, *args):
     }
     conditions_by_id.update({mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids})
     for row in variants:
-        row['gene'] = genes_by_id[row['gene_id']]['geneSymbol']
+        row['gene'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
         row.update(conditions_by_id.get(row['condition_id'], {}))
     return variants
 
