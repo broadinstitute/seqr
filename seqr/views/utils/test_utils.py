@@ -89,6 +89,12 @@ class AuthenticationTestCase(TestCase):
         pm_group = Group.objects.get(pk=5)
         pm_group.user_set.add(cls.pm_user)
 
+    @classmethod
+    def add_analyst_project(cls, project_id):
+        analyst_group = Group.objects.get(pk=4)
+        assign_perm(user_or_group=analyst_group, perm=CAN_VIEW, obj=Project.objects.filter(id=project_id))
+        return True
+
     def check_require_login(self, url, **request_kwargs):
         self._check_login(url, self.AUTHENTICATED_USER, **request_kwargs)
 
@@ -529,6 +535,10 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
     def add_additional_user_groups(cls):
         analyst_group = Group.objects.get(pk=4)
         analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
+
+    @classmethod
+    def add_analyst_project(cls, project_id):
+        return False
 
     def assert_no_extra_anvil_calls(self):
         self.mock_get_ws_acl.assert_not_called()

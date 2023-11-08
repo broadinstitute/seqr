@@ -2070,18 +2070,7 @@
         "variant_id": "12-48367227-TC-T",
         "saved_variant_json": {
             "liftedOverGenomeVersion": "38",  "liftedOverPos": "", "genomeVersion": "37", "pos": 248367227,
-            "mainTranscriptId": "ENST00000505820", "transcripts": {
-                "ENSG00000135953": [
-                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000228198"}
-                ],
-                "ENSG00000240361": [
-                    {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding",
-                        "geneSymbol": "MIB2", "majorConsequence": "intron_variant", "canonical": 1,
-                        "hgvsp": "ENST00000505820.2:c.1586-17C>G", "lof": "", "lofFlags": "", "codons": "Gtg/Atg",
-                        "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000240361",
-                        "aminoAcids": "V/M", "cdnaPosition": "3955"}
-                ]
-            }, "chrom": "1", "genotypes": {
+            "transcripts": {}, "chrom": "1", "genotypes": {
                 "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}}},
         "family": 14
     }

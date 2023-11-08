@@ -10,7 +10,8 @@ from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
-from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend
+from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend, \
+    hail_variant_lookup
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 
@@ -130,10 +131,7 @@ def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=
 def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None, **kwargs):
     parsed_variant_ids = {}
     for variant_id in variant_ids:
-        try:
-            parsed_variant_ids[variant_id] = _parse_variant_id(variant_id)
-        except (KeyError, ValueError):
-            parsed_variant_ids[variant_id] = None
+        parsed_variant_ids[variant_id] = _parse_variant_id(variant_id)
 
     if dataset_type:
         parsed_variant_ids = {
@@ -152,6 +150,14 @@ def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None
     return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
         *_get_families_search_data(families, dataset_type=dataset_type), parsed_variant_ids, user, **kwargs
     )
+
+
+def variant_lookup(user, variant_id, **kwargs):
+    parsed_variant_id = _parse_variant_id(variant_id)
+    if not parsed_variant_id:
+        raise InvalidSearchException(f'Invalid variant {variant_id}')
+    lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), hail_variant_lookup)
+    return lookup_func(user, parsed_variant_id, **kwargs)
 
 
 def _get_search_cache_key(search_model, sort=None):
@@ -300,21 +306,25 @@ def _parse_variant_items(search_json):
         if item.startswith('rs'):
             rs_ids.append(item)
         else:
-            try:
-                variant_id = item.lstrip('chr')
-                parsed_variant_ids.append(_parse_variant_id(variant_id))
+            variant_id = item.lstrip('chr')
+            parsed_variant_id = _parse_variant_id(variant_id)
+            if parsed_variant_id:
+                parsed_variant_ids.append(parsed_variant_id)
                 variant_ids.append(variant_id)
-            except (KeyError, ValueError):
+            else:
                 invalid_items.append(item)
 
     return rs_ids, variant_ids, parsed_variant_ids, invalid_items
 
 
 def _parse_variant_id(variant_id):
-    chrom, pos, ref, alt = variant_id.split('-')
-    pos = int(pos)
-    get_xpos(chrom, pos)
-    return chrom, pos, ref, alt
+    try:
+        chrom, pos, ref, alt = variant_id.split('-')
+        pos = int(pos)
+        get_xpos(chrom, pos)
+        return chrom, pos, ref, alt
+    except (KeyError, ValueError):
+        return None
 
 
 def _validate_sort(sort, families):

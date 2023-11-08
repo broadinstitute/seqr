@@ -226,6 +226,7 @@ def sample_metadata_export(request, project_guid):
 
     parse_anvil_metadata(
         projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user, _add_row,
+        allow_missing_discovery_genes=True,
         omit_airtable=not include_airtable,
         get_additional_variant_fields=_get_additional_variant_fields,
         get_additional_sample_fields=lambda sample, airtable_metadata: {
