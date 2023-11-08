@@ -729,7 +729,13 @@ class BaseHailTableQuery(object):
             secondary_variants = primary_variants
 
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
-        ch_ht = self._filter_grouped_compound_hets(ch_ht).key_by()
+        ch_ht = self._filter_grouped_compound_hets(ch_ht)
+
+        # Format pairs as lists and de-duplicate
+        ch_ht = ch_ht._key_by_assert_sorted(key_pair=hl.sorted([
+            hl.tuple([ch_ht[v][k] for k in self.KEY_FIELD]) for v in ['v1', 'v2']
+        ]))
+        ch_ht = ch_ht.distinct().key_by()
 
         return ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2])})
 
@@ -743,10 +749,6 @@ class BaseHailTableQuery(object):
             lambda x: self._is_valid_comp_het_family(ch_ht, x[1], ch_ht.v2.comp_het_family_entries[x[0]])
         ))
         ch_ht = ch_ht.filter(ch_ht.valid_families.any(lambda x: x))
-
-        # Format pairs as lists and de-duplicate
-        ch_ht = ch_ht.key_by(key_field=hl.str(':').join(hl.sorted([ch_ht.v1.variant_id, ch_ht.v2.variant_id])))
-        ch_ht = ch_ht.distinct()
         ch_ht = ch_ht.select(**{k: self._annotated_comp_het_variant(ch_ht, k) for k in ['v1', 'v2']})
 
         return ch_ht
