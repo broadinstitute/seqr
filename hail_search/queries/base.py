@@ -875,10 +875,9 @@ class BaseHailTableQuery(object):
 
     def gene_counts(self):
         hts = self.format_gene_count_hts()
-        ht = hts[0]
+        ht = hts[0].key_by()
         for sub_ht in hts[1:]:
-            ht = ht.join(sub_ht, 'outer')
-            ht = ht.transmute(**{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in self._gene_count_selects()})
+            ht = ht.union(sub_ht.key_by(), unify=True)
 
         ht = ht.explode('gene_ids').explode('families')
         return ht.aggregate(hl.agg.group_by(
@@ -888,7 +887,7 @@ class BaseHailTableQuery(object):
     def lookup_variant(self, variant_id):
         self._parse_intervals(intervals=None, variant_ids=[variant_id], variant_keys=[variant_id])
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
-        ht = ht.filter(hl.is_defined(ht[XPOS]))
+        ht = ht.filter(hl.is_defined(ht[XPOS])).key_by()
 
         annotation_fields = self.annotation_fields()
         annotation_fields.update({
