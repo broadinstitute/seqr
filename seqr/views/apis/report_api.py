@@ -379,8 +379,8 @@ def gregor_export(request):
     genetic_findings_rows = []
     for data_type_individuals in grouped_data_type_individuals.values():
         # If multiple individual records, prefer WGS
-        individual, individual_data_type = next(
-            (data_type_individuals[data_type.upper()], data_type.upper()) for data_type in GREGOR_DATA_TYPES
+        individual = next(
+            data_type_individuals[data_type.upper()] for data_type in GREGOR_DATA_TYPES
             if data_type_individuals.get(data_type.upper())
         )
 
@@ -423,11 +423,10 @@ def gregor_export(request):
                     continue
                 row = _get_airtable_row(data_type, airtable_metadata)
                 analyte_ids.add(row['analyte_id'])
-                if data_type == individual_data_type:
-                    experiment_id = row['experiment_dna_short_read_id']
                 is_rna = data_type == 'RNA'
                 if not is_rna:
                     row['alignment_software'] = row['alignment_software_dna']
+                    experiment_id = row['experiment_dna_short_read_id']
                 (airtable_rna_rows if is_rna else airtable_rows).append(row)
                 experiment_lookup_rows.append(
                     {'participant_id': participant_id, **_get_experiment_lookup_row(is_rna, row)}
@@ -444,7 +443,7 @@ def gregor_export(request):
         if participant['proband_relationship'] == 'Self':
             genetic_findings_rows += _get_gregor_genetic_findings_rows(
                 saved_variants_by_family.get(family.id), individual, participant_id, experiment_id,
-                individual_data_type, family_individuals[family.id],
+                data_type_individuals.keys(), family_individuals[family.id],
             )
 
     file_data = [
@@ -622,7 +621,7 @@ def _get_mondo_condition_data(mondo_id):
         return {}
 
 
-def _get_gregor_genetic_findings_rows(rows, individual, participant_id, experiment_id, data_type, family_individuals):
+def _get_gregor_genetic_findings_rows(rows, individual, participant_id, experiment_id, individual_data_types, family_individuals):
     if not rows:
         return []
 
@@ -646,7 +645,9 @@ def _get_gregor_genetic_findings_rows(rows, individual, participant_id, experime
                     f'Broad_{_get_participant_id(family_individuals[guid])}' for guid, g in genotypes.items()
                     if guid != individual.guid and g['numAlt'] > 0
                 ]),
-                'method_of_discovery': METHOD_MAP.get(data_type),
+                'method_of_discovery': '|'.join([
+                    METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type != Sample.SAMPLE_TYPE_RNA
+                ]),
                 **row,
             })
 

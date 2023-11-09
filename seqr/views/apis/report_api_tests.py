@@ -486,7 +486,7 @@ MOCK_DATA_MODEL = {
                 {'column': 'phenotype_contribution', 'data_type': 'enumeration', 'enumerations': ['Partial', 'Full', 'Uncertain']},
                 {'column': 'partial_contribution_explained'},
                 {'column': 'additional_family_members_with_variant'},
-                {'column': 'method_of_discovery', 'data_type': 'enumeration', 'enumerations': ['SR-ES', 'SR-GS', 'LR-GS', 'SNP array']},
+                {'column': 'method_of_discovery', 'data_type': 'enumeration', 'multi_value_delimiter': '|', 'enumerations': ['SR-ES', 'SR-GS', 'LR-GS', 'SNP array']},
                 {'column': 'notes'}
             ]
         },
