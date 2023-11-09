@@ -268,7 +268,7 @@ AIRTABLE_GREGOR_RECORDS = {
 EXPECTED_GREGOR_FILES = [
     'participant', 'family', 'phenotype', 'analyte', 'experiment_dna_short_read',
     'aligned_dna_short_read', 'aligned_dna_short_read_set', 'called_variants_dna_short_read',
-    'experiment_rna_short_read', 'aligned_rna_short_read', 'experiment',
+    'experiment_rna_short_read', 'aligned_rna_short_read', 'experiment', 'genetic_findings',
 ]
 
 MOCK_DATA_MODEL_URL = 'http://raw.githubusercontent.com/gregor_data_model.json'
@@ -457,6 +457,39 @@ MOCK_DATA_MODEL = {
                 {'column': 'quality_issues'},
             ],
         },
+        {
+            'table': 'genetic_findings',
+            'columns': [
+                {'column': 'genetic_findings_id', 'required': True},
+                {'column': 'participant_id', 'required': True},
+                {'column': 'experiment_id'},
+                {'column': 'variant_type', 'required': True, 'data_type': 'enumeration', 'enumerations': ['SNV/INDEL', 'SV', 'CNV', 'RE', 'MEI']},
+                {'column': 'variant_reference_assembly', 'required': True, 'data_type': 'enumeration', 'enumerations': ['GRCh37', 'GRCh38']},
+                {'column': 'chrom', 'required': True},
+                {'column': 'pos', 'required': True, 'data_type': 'integer'},
+                {'column': 'ref','required': True},
+                {'column': 'alt', 'required': True},
+                {'column': 'ClinGen_allele_ID'},
+                {'column': 'gene', 'required': True},
+                {'column': 'transcript'},
+                {'column': 'hgvsc'},
+                {'column': 'hgvsp'},
+                {'column': 'zygosity', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Heterozygous', 'Homozygous', 'Hemizygous', 'Heteroplasmy', 'Homoplasmy', 'Mosaic']},
+                {'column': 'allele_balance_or_heteroplasmy_percentage', 'data_type': 'float'},
+                {'column': 'variant_inheritance', 'data_type': 'enumeration', 'enumerations': ['de novo', 'maternal', 'paternal', 'biparental', 'nonmaternal', 'nonpaternal', 'unknown']},
+                {'column': 'linked_variant'},
+                {'column': 'linked_variant_phase'},
+                {'column': 'gene_known_for_phenotype', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Known', 'Candidate']},
+                {'column': 'known_condition_name'},
+                {'column': 'condition_id'},
+                {'column': 'condition_inheritance', 'data_type': 'enumeration', 'multi_value_delimiter': '|', 'enumerations': ['Autosomal recessive', 'Autosomal dominant', 'X-linked', 'Mitochondrial', 'Y-linked', 'Contiguous gene syndrome', 'Somatic mosaicism', 'Digenic', 'Other', 'Unknown']},
+                {'column': 'phenotype_contribution', 'data_type': 'enumeration', 'enumerations': ['Partial', 'Full', 'Uncertain']},
+                {'column': 'partial_contribution_explained'},
+                {'column': 'additional_family_members_with_variant'},
+                {'column': 'method_of_discovery', 'data_type': 'enumeration', 'enumerations': ['SR-ES', 'SR-GS', 'LR-GS', 'SNP array']},
+                {'column': 'notes'}
+            ]
+        },
     ]
 }
 MOCK_DATA_MODEL_RESPONSE = json.dumps(MOCK_DATA_MODEL, indent=2).replace('"references"', '//"references"')
@@ -477,6 +510,7 @@ INVALID_MODEL_TABLES = {
     },
     'aligned_dna_short_read_set': {},
     'experiment_rna_short_read': {'date_data_generation': {'data_type': 'float'}},
+    'genetic_findings': {'experiment_id': {'required': True}},
 }
 INVALID_TABLES = [
     {**t, 'columns': [{**c, **(INVALID_MODEL_TABLES[t['table']].get(c['column'], {}))} for c in t['columns']]}
@@ -776,6 +810,7 @@ class ReportAPITest(AirtableTest):
             'The following entries have non-unique values for "alignment_software" (from Airtable) in the "aligned_dna_short_read" table: BWA-MEM-2.3 (NA20888, VCGS_FAM203_621_D2)',
             'The following entries have invalid values for "analysis_details" (from Airtable) in the "aligned_dna_short_read" table. Allowed values are a google bucket path starting with gs://. Invalid values: VCGS_FAM203_621_D2 (DOI:10.5281/zenodo.4469317)',
             'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)',
+            'The following entries are missing required "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_NA19675_1',
         ])
 
         responses.calls.reset()
@@ -826,7 +861,7 @@ class ReportAPITest(AirtableTest):
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
         ]
         participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, \
-        called_file, experiment_rna_file, aligned_rna_file, experiment_lookup_file = files
+        called_file, experiment_rna_file, aligned_rna_file, experiment_lookup_file, genetic_findings_file = files
 
         self.assertEqual(len(participant_file), 16 if has_second_project else 14)
         self.assertEqual(participant_file[0], [
@@ -1010,6 +1045,28 @@ class ReportAPITest(AirtableTest):
             'experiment_dna_short_read.Broad_genome_NA20888_1', 'experiment_dna_short_read', 'Broad_genome_NA20888_1',
             'Broad_NA20888',
         ] in experiment_lookup_file, has_second_project)
+
+        self.assertEqual(len(genetic_findings_file), 2)
+        self.assertEqual(genetic_findings_file[0], [
+            'genetic_findings_id', 'participant_id', 'experiment_id', 'variant_type', 'variant_reference_assembly',
+            'chrom', 'pos', 'ref', 'alt', 'ClinGen_allele_ID', 'gene', 'transcript', 'hgvsc', 'hgvsp', 'zygosity',
+            'allele_balance_or_heteroplasmy_percentage', 'variant_inheritance', 'linked_variant', 'linked_variant_phase',
+            'gene_known_for_phenotype', 'known_condition_name', 'condition_id', 'condition_inheritance',
+            'phenotype_contribution', 'partial_contribution_explained', 'additional_family_members_with_variant',
+            'method_of_discovery', 'notes',
+        ])
+        self.assertEqual(genetic_findings_file[1], [
+            'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'SNV/INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
+            'RP11', 'ENST00000258436', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '', 'Known',
+            'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120', 'Autosomal recessive',
+            'Full', '', '', 'SR-ES', '',
+        ])
+        # TODO test multiple condition_inheritance, MIM_INHERITANCE_MAP
+        # TODO test mondo
+        # TOdo test missing known_condition_name
+        # TODO test missing gene?
+        # TODO test manual variant
+        # TODO test additional_family_members_with_variant/ variant_inheritance
 
     def _test_expected_gregor_airtable_calls(self, additional_samples=None):
         self.assertEqual(len(responses.calls), 4)
