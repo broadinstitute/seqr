@@ -1061,14 +1061,21 @@ class ReportAPITest(AirtableTest):
             'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120', 'Autosomal recessive',
             'Full', '', '', 'SR-ES', '',
         ], genetic_findings_file)
-        import pdb; pdb.set_trace()
-        # TODO test extra rows
+        self.assertIn([
+            'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh37', '1',
+            '248367227', 'TC', 'T', '', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Candidate', '', '',
+            '', 'Full', '', 'Broad_Broad_HG00732', 'SR-ES', '',
+        ], genetic_findings_file)
+        if has_second_project:
+            self.assertIn([
+                'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '248367227', 'TC', 'T', '',
+                'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown', '', '',
+                'Candidate', '', '', '', 'Full', '', '', 'SR-ES', '',
+            ], genetic_findings_file)
         # TODO test multiple condition_inheritance, MIM_INHERITANCE_MAP
         # TODO test mondo
         # TOdo test missing known_condition_name
         # TODO test missing gene?
-        # TODO test manual variant
-        # TODO test additional_family_members_with_variant/ variant_inheritance
         # TODO test linked variants
 
     def _test_expected_gregor_airtable_calls(self, additional_samples=None):
