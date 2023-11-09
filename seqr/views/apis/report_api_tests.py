@@ -1061,6 +1061,7 @@ class ReportAPITest(AirtableTest):
             'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120', 'Autosomal recessive',
             'Full', '', '', 'SR-ES', '',
         ], genetic_findings_file)
+        import pdb; pdb.set_trace()
         # TODO test extra rows
         # TODO test multiple condition_inheritance, MIM_INHERITANCE_MAP
         # TODO test mondo
