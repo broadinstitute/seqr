@@ -635,12 +635,13 @@ class BaseHailTableQuery(object):
         annotation_override_filters = self._get_annotation_override_filters(annotations, pathogenicity=pathogenicity)
 
         annotation_exprs, _ = self._get_allowed_consequences_annotations(annotations, annotation_override_filters)
-        secondary_exprs, allowed_secondary_consequences = self._get_allowed_consequences_annotations(
-            annotations_secondary or {}, annotation_override_filters, is_secondary=True)
-        if secondary_exprs:
-            annotation_exprs.update({f'{k}_secondary': v for k, v in secondary_exprs.items()})
-        if secondary_exprs or allowed_secondary_consequences:
-            self._has_secondary_annotations = True
+        if self._has_comp_het_search:
+            secondary_exprs, allowed_secondary_consequences = self._get_allowed_consequences_annotations(
+                annotations_secondary or {}, annotation_override_filters, is_secondary=True)
+            if secondary_exprs:
+                annotation_exprs.update({f'{k}_secondary': v for k, v in secondary_exprs.items()})
+            if secondary_exprs or allowed_secondary_consequences:
+                self._has_secondary_annotations = True
 
         if not annotation_exprs:
             return
