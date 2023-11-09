@@ -2043,6 +2043,7 @@
             "svType": "DEL",
             "variantId": "prefix_19107_DEL",
             "chrom": "12",
+            "genomeVersion": "37",
             "transcripts": {"ENSG00000240361": [], "ENSG00000135953": [], "ENSG00000223972":  []}
         },
         "family": 12

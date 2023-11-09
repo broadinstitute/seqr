@@ -622,12 +622,9 @@ def _get_mondo_condition_data(mondo_id):
 
 
 def _get_gregor_genetic_findings_rows(rows, individual, participant_id, experiment_id, individual_data_types, family_individuals):
-    if not rows:
-        return []
-
     parsed_rows = []
     findings_by_gene = defaultdict(list)
-    for row in rows:
+    for row in (rows or []):
         genotypes = row['genotypes']
         individual_genotype = genotypes.get(individual.guid)
         if individual_genotype and individual_genotype['numAlt'] > 0:

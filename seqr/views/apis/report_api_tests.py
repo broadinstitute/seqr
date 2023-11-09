@@ -6,7 +6,7 @@ import pytz
 import responses
 from settings import AIRTABLE_URL
 
-from seqr.models import Project
+from seqr.models import Project, SavedVariant
 from seqr.views.apis.report_api import seqr_stats, get_category_projects, discovery_sheet, anvil_export, gregor_export
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
 
@@ -840,6 +840,15 @@ class ReportAPITest(AirtableTest):
         project.consent_code = 'H'
         project.save()
 
+        # Currently not reporting SV discoveries, so modify fixture data to report comp het pair
+        # Remove this once we are reporting SVs
+        variant = SavedVariant.objects.get(id=7)
+        variant.ref = 'A'
+        variant.alt = 'G'
+        variant.saved_variant_json['genotypes']['I000017_na20889']['numAlt'] = 1
+        variant.saved_variant_json['transcripts'] = {'ENSG00000240361': []}
+        variant.save()
+
         responses.calls.reset()
         responses.add(responses.GET, 'https://monarchinitiative.org/v3/api/entity/MONDO:0008788', status=200, json={
             'id': 'MONDO:0008788',
@@ -1057,7 +1066,7 @@ class ReportAPITest(AirtableTest):
             'Broad_NA20888',
         ] in experiment_lookup_file, has_second_project)
 
-        self.assertEqual(len(genetic_findings_file), 4 if has_second_project else 3)
+        self.assertEqual(len(genetic_findings_file), 5 if has_second_project else 3)
         self.assertEqual(genetic_findings_file[0], [
             'genetic_findings_id', 'participant_id', 'experiment_id', 'variant_type', 'variant_reference_assembly',
             'chrom', 'pos', 'ref', 'alt', 'ClinGen_allele_ID', 'gene', 'transcript', 'hgvsc', 'hgvsp', 'zygosity',
@@ -1079,17 +1088,24 @@ class ReportAPITest(AirtableTest):
         ], genetic_findings_file)
         if has_second_project:
             self.assertIn([
-                'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '248367227', 'TC', 'T', '',
-                'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown', '', '',
-                'Known', 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant', 'Full', '', '', 'SR-ES', '',
+                'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '248367227', 'TC', 'T',
+                '', 'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown',
+                'Broad_NA20889_1_249045487', '', 'Known', 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant',
+                'Full', '', '', 'SR-ES', '',
             ], genetic_findings_file)
-        # TODO test linked variants
+            self.assertIn([
+                'Broad_NA20889_1_249045487', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '249045487', 'A', 'G', '',
+                'OR4G11P', '', '', '', 'Heterozygous', '', 'unknown', 'Broad_NA20889_1_248367227', '', 'Known',
+                'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant', 'Full', '', '', 'SR-ES', '',
+            ], genetic_findings_file)
 
     def _test_expected_gregor_airtable_calls(self, additional_samples=None, additional_mondo_ids=None):
         mondo_ids = ['0044970'] + (additional_mondo_ids or [])
         self.assertEqual(len(responses.calls), len(mondo_ids) + 4)
-        for i, mondo_id in enumerate(mondo_ids):
-            self.assertEqual(responses.calls[i].request.url, f'https://monarchinitiative.org/v3/api/entity/MONDO:{mondo_id}')
+        self.assertSetEqual(
+            {call.request.url for call in responses.calls[:len(mondo_ids)]},
+            {f'https://monarchinitiative.org/v3/api/entity/MONDO:{mondo_id}' for mondo_id in mondo_ids}
+        )
 
         sample_ids = {
              'HG00731', 'HG00732', 'HG00733', 'NA19675_1', 'NA19678', 'NA19679', 'NA20870', 'NA20872', 'NA20874',
