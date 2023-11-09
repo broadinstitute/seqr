@@ -355,8 +355,10 @@ def gregor_export(request):
         'family__project', 'mother', 'father')
 
     grouped_data_type_individuals = defaultdict(dict)
+    family_individuals = defaultdict(dict)
     for i in individuals:
         grouped_data_type_individuals[i.individual_id].update({data_type: i for data_type in individual_data_types[i.id]})
+        family_individuals[i.family_id][i.guid] = i
 
     saved_variants_by_family = get_saved_discovery_variants_by_family(
         variant_filter={'family__project__in': projects, 'alt__isnull': False},
@@ -377,8 +379,8 @@ def gregor_export(request):
     genetic_findings_rows = []
     for data_type_individuals in grouped_data_type_individuals.values():
         # If multiple individual records, prefer WGS
-        individual = next(
-            data_type_individuals[data_type.upper()] for data_type in GREGOR_DATA_TYPES
+        individual, individual_data_type = next(
+            (data_type_individuals[data_type.upper()], data_type.upper()) for data_type in GREGOR_DATA_TYPES
             if data_type_individuals.get(data_type.upper())
         )
 
@@ -392,7 +394,7 @@ def gregor_export(request):
 
         # participant table
         airtable_sample = airtable_sample_records.get(individual.individual_id, {})
-        participant_id = f'Broad_{individual.individual_id}'
+        participant_id = _get_participant_id(individual)
         participant = _get_participant_row(individual, airtable_sample)
         participant.update(family_map[family])
         participant.update({
@@ -421,10 +423,11 @@ def gregor_export(request):
                     continue
                 row = _get_airtable_row(data_type, airtable_metadata)
                 analyte_ids.add(row['analyte_id'])
+                if data_type == individual_data_type:
+                    experiment_id = row['experiment_dna_short_read_id']
                 is_rna = data_type == 'RNA'
                 if not is_rna:
                     row['alignment_software'] = row['alignment_software_dna']
-                    experiment_id = row['experiment_dna_short_read_id']
                 (airtable_rna_rows if is_rna else airtable_rows).append(row)
                 experiment_lookup_rows.append(
                     {'participant_id': participant_id, **_get_experiment_lookup_row(is_rna, row)}
@@ -441,6 +444,7 @@ def gregor_export(request):
         if participant['proband_relationship'] == 'Self':
             genetic_findings_rows += _get_gregor_genetic_findings_rows(
                 saved_variants_by_family.get(family.id), individual, participant_id, experiment_id,
+                individual_data_type, family_individuals[family.id],
             )
 
     file_data = [
@@ -499,6 +503,10 @@ def _get_gregor_family_row(family):
         'phenotype_description': family.coded_phenotype,
         'solve_status': SOLVE_STATUS_LOOKUP.get(family.analysis_status, 'No'),
     }
+
+
+def _get_participant_id(individual):
+    return f'Broad_{individual.individual_id}'
 
 
 def _get_participant_row(individual, airtable_sample):
@@ -614,7 +622,7 @@ def _get_mondo_condition_data(mondo_id):
         return {}
 
 
-def _get_gregor_genetic_findings_rows(rows, individual, participant_id, experiment_id):
+def _get_gregor_genetic_findings_rows(rows, individual, participant_id, experiment_id, data_type, family_individuals):
     if not rows:
         return []
 
@@ -635,9 +643,10 @@ def _get_gregor_genetic_findings_rows(rows, individual, participant_id, experime
                 'allele_balance_or_heteroplasmy_percentage': heteroplasmy,
                 'variant_inheritance': _get_variant_inheritance(individual, genotypes),
                 'additional_family_members_with_variant': '|'.join([
-                    f'Broad_{g["sampleId"]}' for g in genotypes.values() if g != individual_genotype and g['numAlt'] > 0
+                    f'Broad_{_get_participant_id(family_individuals[guid])}' for guid, g in genotypes.items()
+                    if guid != individual.guid and g['numAlt'] > 0
                 ]),
-                'method_of_discovery': METHOD_MAP.get(individual_genotype['sampleType']),  # TODO add back to hail backend
+                'method_of_discovery': METHOD_MAP.get(data_type),
                 **row,
             })
 
