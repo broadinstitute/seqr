@@ -297,7 +297,7 @@ class BaseHailTableQuery(object):
             entry_type = families_ht.family_entries.dtype.element_type
             for project_ht, num_project_families in filtered_project_hts[1:]:
                 families_ht = families_ht.join(project_ht, how='outer')
-                families_ht = families_ht.annotate_globals(
+                families_ht = families_ht.select_globals(
                     family_guids=families_ht.family_guids.extend(families_ht.family_guids_1)
                 )
                 select_fields = {
