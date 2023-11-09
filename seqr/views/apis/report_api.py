@@ -608,7 +608,7 @@ def _parse_variant_genetic_findings(variant_models, *args):
 
 def _get_mondo_condition_data(mondo_id):
     try:
-        response = requests.get(f'https://monarchinitiative.org/v3/api/entity/{mondo_id}')
+        response = requests.get(f'https://monarchinitiative.org/v3/api/entity/{mondo_id}', timeout=10)
         data = response.json()
         inheritance = data['inheritance']
         if inheritance:
