@@ -791,6 +791,7 @@ class ReportAPITest(AirtableTest):
             'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
+            'The following entries are missing recommended "known_condition_name" in the "genetic_findings" table: Broad_HG00731',
         ]
         self.assertListEqual(response.json()['warnings'], [
             'The following columns are specified as "enumeration" in the "participant" data model but are missing the allowed values definition: prior_testing',
@@ -840,6 +841,16 @@ class ReportAPITest(AirtableTest):
         project.save()
 
         responses.calls.reset()
+        responses.add(responses.GET, 'https://monarchinitiative.org/v3/api/entity/MONDO:0008788', status=200, json={
+            'id': 'MONDO:0008788',
+            'category': 'biolink:Disease',
+            'name': 'IRIDA syndrome',
+            'inheritance': {
+                'id': 'HP:0000006',
+                'category': 'biolink:PhenotypicFeature',
+                'name': 'Autosomal dominant inheritance (HPO)',
+            },
+        })
         mock_open.reset_mock()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
@@ -849,7 +860,7 @@ class ReportAPITest(AirtableTest):
         expected_response['warnings'][3] = expected_response['warnings'][3].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
         self.assertDictEqual(response.json(), expected_response)
         self._assert_expected_gregor_files(mock_open, has_second_project=True)
-        self._test_expected_gregor_airtable_calls(additional_samples=['NA20885', 'NA20889'])
+        self._test_expected_gregor_airtable_calls(additional_samples=['NA20885', 'NA20889'], additional_mondo_ids=['0008788'])
 
         self.check_no_analyst_no_access(url)
 
@@ -1058,28 +1069,28 @@ class ReportAPITest(AirtableTest):
         self.assertIn([
             'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'SNV/INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
             'RP11', 'ENST00000258436', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '', 'Known',
-            'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120', 'Autosomal recessive',
+            'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120', 'Autosomal recessive|X-linked',
             'Full', '', '', 'SR-ES', '',
         ], genetic_findings_file)
         self.assertIn([
             'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh37', '1',
-            '248367227', 'TC', 'T', '', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Candidate', '', '',
-            '', 'Full', '', 'Broad_Broad_HG00732', 'SR-ES', '',
+            '248367227', 'TC', 'T', '', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
+            'MONDO:0044970', '', 'Full', '', 'Broad_Broad_HG00732', 'SR-ES', '',
         ], genetic_findings_file)
         if has_second_project:
             self.assertIn([
                 'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '248367227', 'TC', 'T', '',
                 'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown', '', '',
-                'Candidate', '', '', '', 'Full', '', '', 'SR-ES', '',
+                'Known', 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant', 'Full', '', '', 'SR-ES', '',
             ], genetic_findings_file)
-        # TODO test multiple condition_inheritance, MIM_INHERITANCE_MAP
-        # TODO test mondo
-        # TOdo test missing known_condition_name
-        # TODO test missing gene?
         # TODO test linked variants
 
-    def _test_expected_gregor_airtable_calls(self, additional_samples=None):
-        self.assertEqual(len(responses.calls), 4)
+    def _test_expected_gregor_airtable_calls(self, additional_samples=None, additional_mondo_ids=None):
+        mondo_ids = ['0044970'] + (additional_mondo_ids or [])
+        self.assertEqual(len(responses.calls), len(mondo_ids) + 4)
+        for i, mondo_id in enumerate(mondo_ids):
+            self.assertEqual(responses.calls[i].request.url, f'https://monarchinitiative.org/v3/api/entity/MONDO:{mondo_id}')
+
         sample_ids = {
              'HG00731', 'HG00732', 'HG00733', 'NA19675_1', 'NA19678', 'NA19679', 'NA20870', 'NA20872', 'NA20874',
              'NA20875', 'NA20876', 'NA20881', 'NA20888',
@@ -1087,11 +1098,11 @@ class ReportAPITest(AirtableTest):
         sample_ids.update(additional_samples or [])
         sample_filter = ','.join([f"{{CollaboratorSampleID}}='{sample_id}'" for sample_id in sorted(sample_ids)])
         sample_fields = ['CollaboratorSampleID', 'SMID', 'CollaboratorParticipantID', 'Recontactable']
-        self.assert_expected_airtable_call(0, f"OR({sample_filter})", sample_fields)
+        self.assert_expected_airtable_call(len(mondo_ids), f"OR({sample_filter})", sample_fields)
         sample_ids -= {'NA19675_1', 'NA19679', 'NA20888'}
         secondary_sample_filter = ','.join([f"{{SeqrCollaboratorSampleID}}='{sample_id}'" for sample_id in sorted(sample_ids)])
         sample_fields[0] = 'SeqrCollaboratorSampleID'
-        self.assert_expected_airtable_call(1, f"OR({secondary_sample_filter})", sample_fields)
+        self.assert_expected_airtable_call(len(mondo_ids) + 1, f"OR({secondary_sample_filter})", sample_fields)
         metadata_fields = [
             'CollaboratorParticipantID', '5prime3prime_bias_rna', 'CollaboratorSampleID_rna', 'CollaboratorSampleID_wes',
             'CollaboratorSampleID_wgs', 'RIN_rna', 'SMID_rna', 'SMID_wes', 'SMID_wgs', 'aligned_dna_short_read_file_wes',
@@ -1111,11 +1122,11 @@ class ReportAPITest(AirtableTest):
             'variant_types', 'within_site_batch_name_rna',
         ]
         self.assert_expected_airtable_call(
-            2, "OR(CollaboratorParticipantID='NA19675',CollaboratorParticipantID='NA19679',CollaboratorParticipantID='NA20888',CollaboratorParticipantID='VCGS_FAM203_621')",
+            len(mondo_ids) + 2, "OR(CollaboratorParticipantID='NA19675',CollaboratorParticipantID='NA19679',CollaboratorParticipantID='NA20888',CollaboratorParticipantID='VCGS_FAM203_621')",
             metadata_fields,
         )
 
-        self.assertEqual(responses.calls[3].request.url, MOCK_DATA_MODEL_URL)
+        self.assertEqual(responses.calls[len(mondo_ids) + 3].request.url, MOCK_DATA_MODEL_URL)
 
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):

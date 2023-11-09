@@ -144,6 +144,7 @@
         "description": "",
         "pedigree_image": "ped_2.png",
         "analysis_status": "Q",
+        "mondo_id": "MONDO:0044970",
         "case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
         "case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
     }
@@ -326,6 +327,7 @@
         "analysis_status": "Q",
         "success_story": "Published with Gleeson and Reza (PMID 31668703)",
         "success_story_types": ["C", "D"],
+        "mondo_id": "0008788",
         "case_review_notes": "<div><span style=\"text-decoration: underline;\"><span style=\"font-family: 'book antiqua', palatino, serif;\">case review notes for family 12</span></span></div>\n<ul>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note1</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 2</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 3</span></li>\n</ul>",
         "case_review_summary": "<div><span style=\"font-family: 'courier new', courier, monospace;\"><strong>summary for family 12</strong></span></div>"
     }
