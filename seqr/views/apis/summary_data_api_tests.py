@@ -75,7 +75,7 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "family_id": "12",
     "MME": "Y",
     "subject_id": "NA20889",
-    "proband_relationship": "",
+    "proband_relationship": "Self",
     "consanguinity": "None suspected",
 }
 EXPECTED_SAMPLE_METADATA_ROW = {
@@ -109,7 +109,7 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'phenotype_description': None,
     'phenotype_group': '',
     'pmid_id': None,
-    'proband_relationship': '',
+    'proband_relationship': 'Self',
     'sex': 'Female',
     'solve_state': 'Tier 1',
     'Alt-1': 'T',

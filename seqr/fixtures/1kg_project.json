@@ -522,6 +522,7 @@
         "father_id": 5,
         "sex": "F",
         "affected": "A",
+        "proband_relationship": "S",
         "display_name": "HG00731_a",
 	"notes": "",
         "case_review_status": "3",
@@ -816,6 +817,7 @@
         "father_id": null,
         "sex": "F",
         "affected": "A",
+        "proband_relationship": "S",
         "display_name": ""
     }
 },
@@ -831,6 +833,7 @@
         "individual_id": "NA21234",
         "mother_id": null,
         "father_id": null,
+        "proband_relationship": "S",
         "sex": "F",
         "affected": "A"
     }
@@ -1827,21 +1830,9 @@
             "chrom": "1",
             "genotypes": {
                 "I000004_hg00731": {
-                    "sampleId": "HG00731",
-                    "ab": 0.0,
-                    "ad": "71,0",
-                    "gq": 99.0,
-                    "dp": "71",
-                    "pl": "0,213,1918",
                     "numAlt": 2
                 },
                 "I000005_hg00732": {
-                    "sampleId": "HG00732",
-                    "ab": 0.0,
-                    "ad": "77,0",
-                    "gq": 99.0,
-                    "dp": "77",
-                    "pl": "0,232,3036",
                     "numAlt": 1
                 }
             }
@@ -2015,7 +2006,7 @@
                         "aminoAcids": "V/M", "cdnaPosition": "3955"}
                 ]
             }, "chrom": "1", "genotypes": {
-                "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}}},
+                "I000017_na20889": {"sampleId": "NA20885", "sampleType": "WES", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}}},
         "family": 12
     }
 },
@@ -2043,7 +2034,7 @@
             "genotypeFilters": [],
             "ref": null,
             "genotypes": {
-                "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
+                "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "sampleType": "WES", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
             },
             "liftedOverPos": null,
             "liftedOverChrom": null,
@@ -2071,7 +2062,7 @@
         "saved_variant_json": {
             "liftedOverGenomeVersion": "38",  "liftedOverPos": "", "genomeVersion": "37", "pos": 248367227,
             "transcripts": {}, "chrom": "1", "genotypes": {
-                "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}}},
+                "I000018_na21234": {"sampleId": "NA20885", "sampleType": "WGS", "ab": 0.0, "gq": 99.0, "numAlt": 1}}},
         "family": 14
     }
 },

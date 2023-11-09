@@ -1067,6 +1067,7 @@ class ReportAPITest(AirtableTest):
         # TODO test missing gene?
         # TODO test manual variant
         # TODO test additional_family_members_with_variant/ variant_inheritance
+        # TODO test linked variants
 
     def _test_expected_gregor_airtable_calls(self, additional_samples=None):
         self.assertEqual(len(responses.calls), 4)
