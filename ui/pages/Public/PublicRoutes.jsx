@@ -8,7 +8,7 @@ const MatchmakerInfo = lazy(() => import('./components/MatchmakerInfo'))
 const Faq = lazy(() => import('./components/Faq'))
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'))
 const TermsOfService = lazy(() => import('./components/TermsOfService'))
-const FeatureUpdates = lazy(() => import('./components/Faq'))
+const FeatureUpdates = lazy(() => import('./components/FeatureUpdates'))
 
 export default [
   { path: `${MATCHMAKER_PATH}/matchbox`, component: MatchmakerInfo },

@@ -143,6 +143,7 @@ from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_pro
     grant_workspace_access, validate_anvil_vcf, add_workspace_data, get_anvil_vcf_list
 from matchmaker.views import external_api
 from seqr.views.utils.file_utils import save_temp_file
+from seqr.views.apis.feature_updates_api import get_feature_updates
 
 react_app_pages = [
     'dashboard',
@@ -168,7 +169,7 @@ no_login_react_app_pages = [
     'privacy_policy',
     'terms_of_service',
     'faq/.*',
-
+    'feature_updates',
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix
@@ -335,6 +336,8 @@ api_endpoints = {
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/validate_vcf': validate_anvil_vcf,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/submit': create_project_from_workspace,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/get_vcf_list': get_anvil_vcf_list,
+
+    'feature_updates': get_feature_updates,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs
