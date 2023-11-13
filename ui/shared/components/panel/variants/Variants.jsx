@@ -127,7 +127,7 @@ VariantLayout.propTypes = {
   children: PropTypes.node,
 }
 
-const Variant = React.memo((
+export const Variant = React.memo((
   { variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, updateReads, ...props },
 ) => {
   const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)

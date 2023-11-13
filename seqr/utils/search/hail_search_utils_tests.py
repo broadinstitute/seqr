@@ -7,12 +7,12 @@ import responses
 
 from seqr.models import Family
 from seqr.utils.search.utils import get_variant_query_gene_counts, query_variants, get_single_variant, \
-    get_variants_for_variant_ids, InvalidSearchException
+    get_variants_for_variant_ids, variant_lookup, InvalidSearchException
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
     FAMILY_2_ALL_SAMPLE_DATA, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
     LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS, FAMILY_2_VARIANT_SAMPLE_DATA, \
-    FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX
+    FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT
 MOCK_HOST = 'http://test-hail-host'
 
 
@@ -27,8 +27,8 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'results': HAIL_BACKEND_VARIANTS, 'total': 5,
         })
 
-    def _test_minimal_search_call(self, **kwargs):
-        expected_search = get_hail_search_body(genome_version='GRCh37', **kwargs)
+    def _test_minimal_search_call(self, expected_search_body=None, **kwargs):
+        expected_search = expected_search_body or get_hail_search_body(genome_version='GRCh37', **kwargs)
 
         executed_request = responses.calls[-1].request
         self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')
@@ -170,6 +170,28 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.assertDictEqual(gene_counts, GENE_COUNTS)
         self.assert_cached_results({'gene_aggs': gene_counts})
         self._test_expected_search_call(sort=None)
+
+    @responses.activate
+    def test_variant_lookup(self):
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=200, json=VARIANT_LOOKUP_VARIANT)
+        variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='37', foo='bar')
+        self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
+        self._test_minimal_search_call(expected_search_body={
+            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37', 'foo': 'bar',
+        })
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            variant_lookup(self.user, 'prefix_123_DEL')
+        self.assertEqual(str(cm.exception), 'Invalid variant prefix_123_DEL')
+
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=404)
+        with self.assertRaises(HTTPError) as cm:
+            variant_lookup(self.user, '1-10439-AC-A')
+        self.assertEqual(cm.exception.response.status_code, 404)
+        self.assertEqual(str(cm.exception), 'Variant not present in seqr')
+        self._test_minimal_search_call(expected_search_body={
+            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh38'
+        })
 
     @responses.activate
     def test_get_single_variant(self):

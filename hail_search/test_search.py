@@ -7,7 +7,7 @@ from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE
     SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, \
     GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, SV_WES_SAMPLE_DATA, EXPECTED_SAMPLE_DATA, \
     FAMILY_2_MITO_SAMPLE_DATA, FAMILY_2_ALL_SAMPLE_DATA, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
-    EXPECTED_SAMPLE_DATA_WITH_SEX, SV_WGS_SAMPLE_DATA_WITH_SEX
+    EXPECTED_SAMPLE_DATA_WITH_SEX, SV_WGS_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT
 from hail_search.web_app import init_web_app
 
 PROJECT_2_VARIANT = {
@@ -300,9 +300,9 @@ class HailSearchTestCase(AioHTTPTestCase):
             inheritance_mode=inheritance_mode, gene_counts={
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
+                'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 3}},
+                'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
             }, **COMP_HET_ALL_PASS_FILTERS,
         )
 
@@ -342,9 +342,9 @@ class HailSearchTestCase(AioHTTPTestCase):
             inheritance_mode=inheritance_mode, gene_counts={
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 3}},
-                'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
-                'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 3}},
-                'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000275023': {'total': 4, 'families': {'F000002_2': 4}},
+                'ENSG00000277258': {'total': 4, 'families': {'F000002_2': 4}},
+                'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
             }, **COMP_HET_ALL_PASS_FILTERS,
         )
 
@@ -480,6 +480,37 @@ class HailSearchTestCase(AioHTTPTestCase):
         await self._assert_expected_search([SV_VARIANT2, SV_VARIANT4], sample_data=SV_WGS_SAMPLE_DATA, variant_keys=[
             'cohort_2911.chr1.final_cleanup_INS_chr1_160', 'phase2_DEL_chr14_4640',
         ])
+
+    async def test_variant_lookup(self):
+        body = {'genome_version': 'GRCh38', 'variant_id': VARIANT_ID_SEARCH['variant_ids'][0]}
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, VARIANT_LOOKUP_VARIANT)
+
+        body['variant_id'] = VARIANT_ID_SEARCH['variant_ids'][1]
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 404)
+
+        body.update({'variant_id': ['M', 4429, 'G', 'A'], 'data_type': 'MITO'})
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {**MITO_VARIANT1, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''})
+
+        body.update({'variant_id': 'phase2_DEL_chr14_4640', 'data_type': 'SV_WGS'})
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {**SV_VARIANT4, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''})
+
+        body.update({'variant_id': 'suffix_140608_DUP', 'data_type': 'SV_WES'})
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {
+            **GCNV_VARIANT4, 'numExon': 8, 'end': 38736268, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': '',
+        })
 
     async def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
