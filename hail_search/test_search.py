@@ -300,9 +300,9 @@ class HailSearchTestCase(AioHTTPTestCase):
             inheritance_mode=inheritance_mode, gene_counts={
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000177000': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000275023': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}},
-                'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
+                'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 3}},
+                'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
             }, **COMP_HET_ALL_PASS_FILTERS,
         )
 
@@ -342,9 +342,9 @@ class HailSearchTestCase(AioHTTPTestCase):
             inheritance_mode=inheritance_mode, gene_counts={
                 'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
                 'ENSG00000177000': {'total': 3, 'families': {'F000002_2': 3}},
-                'ENSG00000275023': {'total': 3, 'families': {'F000002_2': 3}},
-                'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 3}},
-                'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
+                'ENSG00000275023': {'total': 4, 'families': {'F000002_2': 4}},
+                'ENSG00000277258': {'total': 4, 'families': {'F000002_2': 4}},
+                'ENSG00000277972': {'total': 2, 'families': {'F000002_2': 2}},
             }, **COMP_HET_ALL_PASS_FILTERS,
         )
 
