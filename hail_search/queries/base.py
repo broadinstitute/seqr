@@ -734,7 +734,8 @@ class BaseHailTableQuery(object):
 
         # Format pairs as lists and de-duplicate
         ch_ht = ch_ht._key_by_assert_sorted(key_pair=hl.sorted([
-            hl.tuple([ch_ht[v][k] for k in self.KEY_FIELD]) for v in ['v1', 'v2']
+            ch_ht[v][self.KEY_FIELD[0]] if len(self.KEY_FIELD) == 1 else hl.tuple([ch_ht[v][k] for k in self.KEY_FIELD])
+            for v in ['v1', 'v2']
         ]))
         ch_ht = ch_ht.distinct().key_by()
 
