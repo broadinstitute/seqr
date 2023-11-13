@@ -2,6 +2,9 @@
 
 ## dev
 
+## 11/13/23
+* Add Partial Solve analysis status in Family model (REQUIRES DB MIGRATION)
+
 ## 10/19/23
 * Migrate Family post_discovery_omim_number to integer array (REQUIRES DB MIGRATION)
 * Add GeneShet model to the reference DB (REQUIRES DB MIGRATION)
