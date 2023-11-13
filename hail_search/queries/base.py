@@ -372,7 +372,7 @@ class BaseHailTableQuery(object):
         num_families = len(family_index_map)
         family_sample_indices = [None] * num_families
         sample_id_family_index_map = {}
-        for sample_id, family_guid in sample_id_family_map.items():
+        for sample_id, family_guid in sorted(sample_id_family_map.items()):
             sample_index = sample_id_index_map[sample_id]
             family_index = family_index_map[family_guid]
             if not family_sample_indices[family_index]:

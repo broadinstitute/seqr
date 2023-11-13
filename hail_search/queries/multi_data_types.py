@@ -57,7 +57,6 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         sv_ch_ht = self._family_filtered_ch_ht(sv_ht, overlapped_families, sv_families, 'v2')
 
         ch_ht = variant_ch_ht.join(sv_ch_ht)
-        # TODO not working for sv/varint pairs, phasing is wrong
         return self._filter_grouped_compound_hets(ch_ht)
 
     @staticmethod
