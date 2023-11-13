@@ -297,7 +297,7 @@ class BaseHailTableQuery(object):
             entry_type = families_ht.family_entries.dtype.element_type
             for project_ht, num_project_families in filtered_project_hts[1:]:
                 families_ht = families_ht.join(project_ht, how='outer')
-                families_ht = families_ht.annotate_globals(
+                families_ht = families_ht.select_globals(
                     family_guids=families_ht.family_guids.extend(families_ht.family_guids_1)
                 )
                 select_fields = {
@@ -372,7 +372,7 @@ class BaseHailTableQuery(object):
         num_families = len(family_index_map)
         family_sample_indices = [None] * num_families
         sample_id_family_index_map = {}
-        for sample_id, family_guid in sample_id_family_map.items():
+        for sample_id, family_guid in sorted(sample_id_family_map.items()):
             sample_index = sample_id_index_map[sample_id]
             family_index = family_index_map[family_guid]
             if not family_sample_indices[family_index]:
@@ -635,12 +635,13 @@ class BaseHailTableQuery(object):
         annotation_override_filters = self._get_annotation_override_filters(annotations, pathogenicity=pathogenicity)
 
         annotation_exprs, _ = self._get_allowed_consequences_annotations(annotations, annotation_override_filters)
-        secondary_exprs, allowed_secondary_consequences = self._get_allowed_consequences_annotations(
-            annotations_secondary or {}, annotation_override_filters, is_secondary=True)
-        if secondary_exprs:
-            annotation_exprs.update({f'{k}_secondary': v for k, v in secondary_exprs.items()})
-        if secondary_exprs or allowed_secondary_consequences:
-            self._has_secondary_annotations = True
+        if self._has_comp_het_search:
+            secondary_exprs, allowed_secondary_consequences = self._get_allowed_consequences_annotations(
+                annotations_secondary or {}, annotation_override_filters, is_secondary=True)
+            if secondary_exprs:
+                annotation_exprs.update({f'{k}_secondary': v for k, v in secondary_exprs.items()})
+            if secondary_exprs or allowed_secondary_consequences:
+                self._has_secondary_annotations = True
 
         if not annotation_exprs:
             return
@@ -733,7 +734,8 @@ class BaseHailTableQuery(object):
 
         # Format pairs as lists and de-duplicate
         ch_ht = ch_ht._key_by_assert_sorted(key_pair=hl.sorted([
-            hl.tuple([ch_ht[v][k] for k in self.KEY_FIELD]) for v in ['v1', 'v2']
+            ch_ht[v][self.KEY_FIELD[0]] if len(self.KEY_FIELD) == 1 else hl.tuple([ch_ht[v][k] for k in self.KEY_FIELD])
+            for v in ['v1', 'v2']
         ]))
         ch_ht = ch_ht.distinct().key_by()
 
