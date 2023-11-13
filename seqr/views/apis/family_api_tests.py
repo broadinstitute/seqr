@@ -64,7 +64,7 @@ class FamilyAPITest(AuthenticationTestCase):
             '615120': {'phenotypeMimNumber': 615120, 'phenotypes': [{
                 'geneSymbol': 'MIR1302-2HG', 'mimNumber': 103320, 'phenotypeMimNumber': 615120,
                 'phenotypeDescription': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
-                'phenotypeInheritance': 'Autosomal recessive',
+                'phenotypeInheritance': 'Autosomal recessive, X-linked recessive',
             }]}})
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)

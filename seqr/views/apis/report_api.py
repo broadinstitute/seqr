@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from datetime import datetime
 from dateutil import relativedelta as rdelta
-from django.db.models import Prefetch, Count, Q
+from django.db.models import Prefetch, Count, Q, F
 from django.utils import timezone
 import json
 import re
@@ -29,11 +29,13 @@ from seqr.views.utils.variant_utils import get_variant_main_transcript, get_save
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
-from reference_data.models import Omim, HumanPhenotypeOntology
+from reference_data.models import Omim, HumanPhenotypeOntology, GENOME_VERSION_LOOKUP
 from settings import GREGOR_DATA_MODEL_URL
 
 
 logger = SeqrLogger(__name__)
+
+MONDO_BASE_URL = 'https://monarchinitiative.org/v3/api/entity'
 
 
 @analyst_required
@@ -205,6 +207,12 @@ CALLED_TABLE_COLUMNS = {
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', CALLED_VARIANT_FILE_COLUMN, 'md5sum',
     'caller_software', 'variant_types', 'analysis_details',
 }
+GENETIC_FINDINGS_TABLE_COLUMNS = {
+    'chrom', 'pos', 'ref', 'alt', 'variant_type', 'variant_reference_assembly', 'gene', 'transcript', 'hgvsc', 'hgvsp',
+    'gene_known_for_phenotype', 'known_condition_name', 'condition_id', 'condition_inheritance', 'phenotype_contribution',
+    'genetic_findings_id', 'participant_id', 'experiment_id', 'zygosity', 'allele_balance_or_heteroplasmy_percentage',
+    'variant_inheritance', 'linked_variant', 'additional_family_members_with_variant', 'method_of_discovery',
+}
 
 RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS + ['reference_assembly_uri']
 DATA_TYPE_OMIT = {
@@ -221,7 +229,7 @@ NO_DATA_TYPE_FIELDS.update(READ_RNA_TABLE_AIRTABLE_ID_FIELDS)
 
 DATA_TYPE_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + RNA_ONLY + [
     COLLABORATOR_SAMPLE_ID_FIELD, SMID_FIELD]
-ALL_AIRTABLE_COLUMNS = DATA_TYPE_AIRTABLE_COLUMNS + list(CALLED_TABLE_COLUMNS)
+ALL_AIRTABLE_COLUMNS = DATA_TYPE_AIRTABLE_COLUMNS + list(CALLED_TABLE_COLUMNS) + ['experiment_id']
 AIRTABLE_QUERY_COLUMNS = set()
 AIRTABLE_QUERY_COLUMNS.update(CALLED_TABLE_COLUMNS)
 AIRTABLE_QUERY_COLUMNS.remove('md5sum')
@@ -232,10 +240,12 @@ for data_type in GREGOR_DATA_TYPES:
 
 WARN_MISSING_TABLE_COLUMNS = {
     'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
+    'genetic_findings': ['known_condition_name'],
 }
 WARN_MISSING_CONDITIONAL_COLUMNS = {
     'reported_race': lambda row: not row['ancestry_detail'],
-    'age_at_enrollment': lambda row: row['affected_status'] == 'Affected'
+    'age_at_enrollment': lambda row: row['affected_status'] == 'Affected',
+    'known_condition_name': lambda row: row['condition_id'],
 }
 
 SOLVE_STATUS_LOOKUP = {
@@ -255,6 +265,27 @@ GREGOR_ANCESTRY_MAP.update({
     HISPANIC: None,
     OTHER_POPULATION: None,
 })
+MIM_INHERITANCE_MAP = {
+    'Digenic dominant': 'Digenic',
+    'Digenic recessive': 'Digenic',
+    'X-linked dominant': 'X-linked',
+    'X-linked recessive': 'X-linked',
+}
+MIM_INHERITANCE_MAP.update({inheritance: 'Other' for inheritance in [
+    'Isolated cases', 'Multifactorial', 'Pseudoautosomal dominant', 'Pseudoautosomal recessive', 'Somatic mutation'
+]})
+ZYGOSITY_MAP = {
+    1: 'Heterozygous',
+    2: 'Homozygous',
+}
+MITO_ZYGOSITY_MAP = {
+    1: 'Heteroplasmy',
+    2: 'Homoplasmy',
+}
+METHOD_MAP = {
+    Sample.SAMPLE_TYPE_WES: 'SR-ES',
+    Sample.SAMPLE_TYPE_WGS: 'SR-GS',
+}
 
 HPO_QUALIFIERS = {
     'age_of_onset': {
@@ -326,8 +357,16 @@ def gregor_export(request):
         'family__project', 'mother', 'father')
 
     grouped_data_type_individuals = defaultdict(dict)
+    family_individuals = defaultdict(dict)
     for i in individuals:
         grouped_data_type_individuals[i.individual_id].update({data_type: i for data_type in individual_data_types[i.id]})
+        family_individuals[i.family_id][i.guid] = i
+
+    saved_variants_by_family = get_saved_discovery_variants_by_family(
+        variant_filter={'family__project__in': projects, 'alt__isnull': False},
+        format_variants=_parse_variant_genetic_findings,
+        get_family_id=lambda v: v['family_id'],
+    )
 
     airtable_sample_records, airtable_metadata_by_participant = _get_gregor_airtable_data(
         grouped_data_type_individuals.keys(), request.user)
@@ -339,6 +378,7 @@ def gregor_export(request):
     airtable_rows = []
     airtable_rna_rows = []
     experiment_lookup_rows = []
+    genetic_findings_rows = []
     for data_type_individuals in grouped_data_type_individuals.values():
         # If multiple individual records, prefer WGS
         individual = next(
@@ -356,7 +396,7 @@ def gregor_export(request):
 
         # participant table
         airtable_sample = airtable_sample_records.get(individual.individual_id, {})
-        participant_id = f'Broad_{individual.individual_id}'
+        participant_id = _get_participant_id(individual)
         participant = _get_participant_row(individual, airtable_sample)
         participant.update(family_map[family])
         participant.update({
@@ -376,6 +416,7 @@ def gregor_export(request):
         ]
 
         analyte_ids = set()
+        experiment_id = None
         # airtable data
         if airtable_sample:
             airtable_metadata = airtable_metadata_by_participant.get(airtable_sample[PARTICIPANT_ID_FIELD]) or {}
@@ -387,6 +428,7 @@ def gregor_export(request):
                 is_rna = data_type == 'RNA'
                 if not is_rna:
                     row['alignment_software'] = row['alignment_software_dna']
+                    experiment_id = row['experiment_dna_short_read_id']
                 (airtable_rna_rows if is_rna else airtable_rows).append(row)
                 experiment_lookup_rows.append(
                     {'participant_id': participant_id, **_get_experiment_lookup_row(is_rna, row)}
@@ -399,6 +441,12 @@ def gregor_export(request):
                 analyte_ids.add(analyte_id)
         for analyte_id in analyte_ids:
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
+
+        if participant['proband_relationship'] == 'Self':
+            genetic_findings_rows += _get_gregor_genetic_findings_rows(
+                saved_variants_by_family.get(family.id), individual, participant_id, experiment_id,
+                data_type_individuals.keys(), family_individuals[family.id],
+            )
 
     file_data = [
         ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),
@@ -414,6 +462,7 @@ def gregor_export(request):
         ('experiment_rna_short_read', EXPERIMENT_RNA_TABLE_COLUMNS, airtable_rna_rows),
         ('aligned_rna_short_read', READ_RNA_TABLE_COLUMNS, airtable_rna_rows),
         ('experiment', EXPERIMENT_LOOKUP_TABLE_COLUMNS, experiment_lookup_rows),
+        ('genetic_findings', GENETIC_FINDINGS_TABLE_COLUMNS, genetic_findings_rows),
     ]
 
     files, warnings = _populate_gregor_files(file_data)
@@ -457,6 +506,10 @@ def _get_gregor_family_row(family):
     }
 
 
+def _get_participant_id(individual):
+    return f'Broad_{individual.individual_id}'
+
+
 def _get_participant_row(individual, airtable_sample):
     participant = {
         'gregor_center': 'BROAD',
@@ -492,6 +545,135 @@ def _get_phenotype_row(feature):
         'onset_age_range': onset_age,
         'additional_modifiers': '|'.join(qualifiers_by_type.values()),
     }
+
+
+def _parse_variant_genetic_findings(variant_models, *args):
+    variant_models = variant_models.annotate(
+        omim_numbers=F('family__post_discovery_omim_numbers'),
+        mondo_id=F('family__mondo_id'),
+    )
+    variants = []
+    gene_ids = set()
+    mim_numbers = set()
+    mondo_ids = set()
+    for variant in variant_models:
+        chrom, pos = get_chrom_pos(variant.xpos)
+
+        main_transcript = _get_variant_model_main_transcript(variant)
+        gene_id = main_transcript.get('geneId')
+        gene_ids.add(gene_id)
+
+        condition_id = ''
+        if variant.omim_numbers:
+            mim_number = variant.omim_numbers[0]
+            mim_numbers.add(mim_number)
+            condition_id = f'OMIM:{mim_number}'
+        elif variant.mondo_id:
+            condition_id = f"MONDO:{variant.mondo_id.replace('MONDO:', '')}"
+            mondo_ids.add(condition_id)
+
+        variants.append({
+            'family_id': variant.family_id,
+            'chrom': chrom,
+            'pos': pos,
+            'ref': variant.ref,
+            'alt': variant.alt,
+            'variant_type': 'SNV/INDEL',
+            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant.saved_variant_json['genomeVersion']],
+            'genotypes': variant.saved_variant_json['genotypes'],
+            'gene_id': gene_id,
+            'transcript': main_transcript.get('transcriptId'),
+            'hgvsc': (main_transcript.get('hgvsc') or '').split(':')[-1],
+            'hgvsp': (main_transcript.get('hgvsp') or '').split(':')[-1],
+            'gene_known_for_phenotype': 'Known' if condition_id else 'Candidate',
+            'condition_id': condition_id,
+            'phenotype_contribution': 'Full',
+        })
+
+    genes_by_id = get_genes(gene_ids)
+    conditions_by_id = {
+        f'OMIM:{number}':  {
+            'known_condition_name': description,
+            'condition_inheritance': '|'.join([
+                MIM_INHERITANCE_MAP.get(i, i) for i in (inheritance or '').split(', ')
+            ]),
+        } for number, description, inheritance in Omim.objects.filter(phenotype_mim_number__in=mim_numbers).values_list(
+            'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
+        )
+    }
+    conditions_by_id.update({mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids})
+    for row in variants:
+        row['gene'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
+        row.update(conditions_by_id.get(row['condition_id'], {}))
+    return variants
+
+
+def _get_mondo_condition_data(mondo_id):
+    try:
+        response = requests.get(f'{MONDO_BASE_URL}/{mondo_id}', timeout=10)
+        data = response.json()
+        inheritance = data['inheritance']
+        if inheritance:
+            inheritance = HumanPhenotypeOntology.objects.get(hpo_id=inheritance['id']).name.replace(' inheritance', '')
+        return {
+            'known_condition_name': data['name'],
+            'condition_inheritance': inheritance,
+        }
+    except Exception:
+        return {}
+
+
+def _get_gregor_genetic_findings_rows(rows, individual, participant_id, experiment_id, individual_data_types, family_individuals):
+    parsed_rows = []
+    findings_by_gene = defaultdict(list)
+    for row in (rows or []):
+        genotypes = row['genotypes']
+        individual_genotype = genotypes.get(individual.guid)
+        if individual_genotype and individual_genotype['numAlt'] > 0:
+            heteroplasmy = individual_genotype.get('hl')
+            findings_id = f'{participant_id}_{row["chrom"]}_{row["pos"]}'
+            findings_by_gene[row['gene']].append(findings_id)
+            parsed_rows.append({
+                'genetic_findings_id': findings_id,
+                'participant_id': participant_id,
+                'experiment_id': experiment_id,
+                'zygosity': (ZYGOSITY_MAP if heteroplasmy is None else MITO_ZYGOSITY_MAP)[individual_genotype['numAlt']],
+                'allele_balance_or_heteroplasmy_percentage': heteroplasmy,
+                'variant_inheritance': _get_variant_inheritance(individual, genotypes),
+                'additional_family_members_with_variant': '|'.join([
+                    f'Broad_{_get_participant_id(family_individuals[guid])}' for guid, g in genotypes.items()
+                    if guid != individual.guid and g['numAlt'] > 0
+                ]),
+                'method_of_discovery': '|'.join([
+                    METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type != Sample.SAMPLE_TYPE_RNA
+                ]),
+                **row,
+            })
+
+    for row in parsed_rows:
+        gene_findings = findings_by_gene[row['gene']]
+        if len(gene_findings) > 1:
+            row['linked_variant'] = next(f for f in gene_findings if f != row['genetic_findings_id'])
+
+    return parsed_rows
+
+
+def _get_variant_inheritance(individual, genotypes):
+    parental_inheritance = tuple(
+        None if parent is None else genotypes.get(parent.guid, {}).get('numAlt', -1) > 0
+        for parent in [individual.mother, individual.father]
+    )
+    return {
+        (True, True): 'biparental',
+        (True, False): 'maternal',
+        (True, None): 'maternal',
+        (False, True): 'paternal',
+        (False, False): 'de novo',
+        (False, None): 'nonmaternal',
+        (None, True): 'paternal',
+        (None, False): 'nonpaternal',
+        (None, None): 'unknown',
+    }[parental_inheritance]
 
 
 def _get_analyte_row(individual):
@@ -533,10 +715,14 @@ def _get_experiment_lookup_row(is_rna, row_data):
         'experiment_id': f'{table_name}.{id_in_table}',
     }
 
+def _validate_enumeration(val, validator):
+    delimiter = validator.get('multi_value_delimiter')
+    values = val.split(delimiter) if delimiter else [val]
+    return all(v in validator['enumerations'] for v in values)
 
 DATA_TYPE_VALIDATORS = {
     'string': lambda val, validator: (not validator.get('is_bucket_path')) or val.startswith('gs://'),
-    'enumeration': lambda val, validator: val in validator['enumerations'],
+    'enumeration': _validate_enumeration,
     'integer': lambda val, *args: val.isnumeric(),
     'float': lambda val, validator: val.isnumeric() or re.match(r'^\d+.\d+$', val),
     'date': lambda val, validator: bool(re.match(r'^\d{4}-\d{2}-\d{2}$', val)),
@@ -546,7 +732,7 @@ DATA_TYPE_ERROR_FORMATTERS = {
     'enumeration': lambda validator: f': {", ".join(validator["enumerations"])}',
 }
 DATA_TYPE_FORMATTERS = {
-    'integer': lambda val: val.replace(',', ''),
+    'integer': lambda val: str(val).replace(',', ''),
 }
 DATA_TYPE_FORMATTERS['float'] = DATA_TYPE_FORMATTERS['integer']
 
@@ -997,11 +1183,15 @@ def _update_variant_inheritance(variant, affected_individual_guids, unaffected_i
     for gene_id in potential_compound_het_gene_ids:
         potential_compound_het_genes[gene_id].add(variant)
 
-    variant_json = variant.saved_variant_json
-    variant_json['selectedMainTranscriptId'] = variant.selected_main_transcript_id
-    main_transcript = get_variant_main_transcript(variant_json)
+    main_transcript = _get_variant_model_main_transcript(variant)
     if main_transcript.get('geneId'):
         variant.saved_variant_json['mainTranscriptGeneId'] = main_transcript['geneId']
+
+
+def _get_variant_model_main_transcript(variant):
+    variant_json = variant.saved_variant_json
+    variant_json['selectedMainTranscriptId'] = variant.selected_main_transcript_id
+    return get_variant_main_transcript(variant_json)
 
 
 def _get_gene_to_variant_info_map(saved_variants, potential_compound_het_genes):
