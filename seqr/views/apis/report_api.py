@@ -35,6 +35,8 @@ from settings import GREGOR_DATA_MODEL_URL
 
 logger = SeqrLogger(__name__)
 
+MONDO_BASE_URL = 'https://monarchinitiative.org/v3/api/entity'
+
 
 @analyst_required
 def seqr_stats(request):
@@ -608,7 +610,7 @@ def _parse_variant_genetic_findings(variant_models, *args):
 
 def _get_mondo_condition_data(mondo_id):
     try:
-        response = requests.get(f'https://monarchinitiative.org/v3/api/entity/{mondo_id}', timeout=10)
+        response = requests.get(f'{MONDO_BASE_URL}/{mondo_id}', timeout=10)
         data = response.json()
         inheritance = data['inheritance']
         if inheritance:
@@ -662,15 +664,16 @@ def _get_variant_inheritance(individual, genotypes):
         for parent in [individual.mother, individual.father]
     )
     return {
-        (False, False): 'de novo',
         (True, True): 'biparental',
         (True, False): 'maternal',
         (True, None): 'maternal',
         (False, True): 'paternal',
-        (None, True): 'paternal',
+        (False, False): 'de novo',
         (False, None): 'nonmaternal',
+        (None, True): 'paternal',
         (None, False): 'nonpaternal',
-    }.get(parental_inheritance, 'unknown')
+        (None, None): 'unknown',
+    }[parental_inheritance]
 
 
 def _get_analyte_row(individual):
