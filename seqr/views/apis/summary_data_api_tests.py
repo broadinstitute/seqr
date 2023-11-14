@@ -5,7 +5,7 @@ import mock
 import responses
 
 from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, hpo_summary_data, \
-    bulk_update_family_analysed_by, sample_metadata_export
+    bulk_update_family_external_analysis, sample_metadata_export
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
 from seqr.models import FamilyAnalysedBy
 from settings import AIRTABLE_URL
@@ -381,7 +381,7 @@ class SummaryDataAPITest(AirtableTest):
 
     @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
     def test_bulk_update_family_analysed_by(self, mock_load_uploaded_file):
-        url = reverse(bulk_update_family_analysed_by)
+        url = reverse(bulk_update_family_external_analysis)
         self.check_analyst_login(url)
 
         mock_load_uploaded_file.return_value = [['foo', 'bar']]

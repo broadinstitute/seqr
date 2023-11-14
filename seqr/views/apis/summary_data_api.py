@@ -136,7 +136,7 @@ def hpo_summary_data(request, hpo_id):
 
 
 @analyst_required
-def bulk_update_family_analysed_by(request):
+def bulk_update_family_external_analysis(request):
     request_json = json.loads(request.body)
     data_type =request_json['dataType']
     family_upload_data = load_uploaded_file(request_json['familiesFile']['uploadedFileId'])
