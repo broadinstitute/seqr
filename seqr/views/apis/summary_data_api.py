@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.db.models import CharField, F, Value, Case, When
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
@@ -10,11 +11,13 @@ from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissio
     get_mme_metrics, get_hpo_terms_by_id
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Project, Family, Individual, VariantTagType, SavedVariant, FamilyAnalysedBy
+from seqr.models import Project, Family, Individual, VariantTag, VariantTagType, SavedVariant, FamilyAnalysedBy
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.gene_utils import get_genes
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions, get_json_for_saved_variants,\
     add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
@@ -138,8 +141,12 @@ def hpo_summary_data(request, hpo_id):
 @analyst_required
 def bulk_update_family_external_analysis(request):
     request_json = json.loads(request.body)
-    data_type =request_json['dataType']
+    data_type = request_json['dataType']
     family_upload_data = load_uploaded_file(request_json['familiesFile']['uploadedFileId'])
+
+    if data_type == 'AIP':
+        return _load_aip_data(family_upload_data, request.user)
+
     header = [col.split()[0].lower() for col in family_upload_data[0]]
     if not ('project' in header and 'family' in header):
         return create_json_response({'error': 'Project and Family columns are required'}, status=400)
@@ -169,6 +176,84 @@ def bulk_update_family_external_analysis(request):
     return create_json_response({
         'warnings': warnings,
         'info': [f'Updated "analysed by" for {len(analysed_by_models)} families'],
+    })
+
+
+def _load_aip_data(data, user):
+    category_map = data['metadata']['categories']
+    results = data['results']
+
+    family_id_map = dict(Individual.objects.filter(
+        family__project__in=get_internal_projects(), individual_id__in=results.keys(),
+    ).values_list('individual_id', 'family_id'))
+    missing_individuals = set(results.keys()) - set(family_id_map.keys())
+    if missing_individuals:
+        raise ErrorsWarningsException([f'Unable to find the following individuals: {", ".join(sorted(missing_individuals))}'])
+
+    all_variant_ids = set()
+    family_variant_data = {}
+    for family_id, variant_pred in results.items():
+        family_variant_data.update({
+            (family_id_map[family_id], variant_id): pred for variant_id, pred in variant_pred.items()
+        })
+        all_variant_ids.update(variant_pred.keys())
+
+    saved_variant_map = {
+        (family_id, variant_id): id for id, family_id, variant_id in SavedVariant.objects.filter(
+            family_id__in=family_id_map.values(), variant_id__in=all_variant_ids,
+        ).values_list('id', 'family_id', 'variant_id')
+    }
+
+    new_variants = set(family_variant_data.keys()) - set(saved_variant_map.keys())
+    # TODO create saved variant models for missing variants
+
+    aip_tag_type = VariantTagType.objects.get(name='AIP', project=None)
+    existing_tags = {
+        tuple(t.saved_variant_ids): t for t in VariantTag.objects.filter(
+            variant_tag_type=aip_tag_type, saved_variants__in=saved_variant_map.values(),
+        ).annotate(saved_variant_ids=ArrayAgg('saved_variants__id', ordering='id'))
+    }
+
+    today = datetime.now().strftime('%Y-%m-%d')
+    update_tags = []
+    num_new = 0
+    for key, pred in family_variant_data.items():
+        if key not in saved_variant_map:
+            # TODO remove
+            continue
+        sv_id = saved_variant_map[key]
+        metadata = {category: {'name': category_map[category], 'date': today} for category in pred['categories']}
+        existing_tag = existing_tags.get(tuple([sv_id]))
+        if existing_tag:
+            existing_metadata = json.loads(existing_tag.metadata or '{}')
+            metadata = {k: existing_metadata.get(k, v) for k, v in metadata.items()}
+            metadata['removed'] = {k: v for k, v in existing_metadata.get('removed', {}).items() if
+                                   k not in metadata}
+            metadata['removed'].update({k: v for k, v in existing_metadata.items() if k not in metadata})
+            existing_tag.metadata = json.dumps(metadata)
+            update_tags.append(existing_tag)
+        else:
+            tag = create_model_from_json(VariantTag, {'variant_tag_type': aip_tag_type, 'metadata': metadata}, user)
+            tag.saved_variants.add(sv_id)
+            num_new += 1
+
+        if pred['support_vars']:
+            if not all((key[0], support_id) in saved_variant_map for support_id in pred['support_vars']):
+                # TODO remove
+                continue
+            variant_ids = [sv_id] + [saved_variant_map[(key[0], support_id)] for support_id in pred['support_vars']]
+            variant_id_key = tuple(sorted(variant_ids))
+            if variant_id_key not in existing_tags:
+                tag = create_model_from_json(VariantTag, {'variant_tag_type': aip_tag_type}, user)
+                tag.saved_variants.set(variant_ids)
+                existing_tags[variant_id_key] = True
+
+    VariantTag.bulk_update_models(user, update_tags, ['metadata'])
+
+    # TODO slack notificaton
+
+    return create_json_response({
+        'info': [f'Loaded {num_new} new and {len(update_tags)} updated AIP tags for {len(family_id_map)} families'],
     })
 
 
