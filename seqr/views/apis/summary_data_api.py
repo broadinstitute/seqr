@@ -14,6 +14,7 @@ from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Project, Family, Individual, VariantTag, VariantTagType, SavedVariant, FamilyAnalysedBy
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.file_utils import load_uploaded_file
+from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.json_utils import create_json_response
@@ -25,6 +26,7 @@ from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, \
     FAMILY_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.variant_utils import get_variants_response, get_discovery_phenotype_class, DISCOVERY_CATEGORY
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 MAX_SAVED_VARIANTS = 10000
 
@@ -233,7 +235,8 @@ def _load_aip_data(data, user):
             existing_tag.metadata = json.dumps(metadata)
             update_tags.append(existing_tag)
         else:
-            tag = create_model_from_json(VariantTag, {'variant_tag_type': aip_tag_type, 'metadata': metadata}, user)
+            tag = create_model_from_json(
+                VariantTag, {'variant_tag_type': aip_tag_type, 'metadata': json.dumps(metadata)}, user)
             tag.saved_variants.add(sv_id)
             num_new += 1
 
@@ -250,10 +253,14 @@ def _load_aip_data(data, user):
 
     VariantTag.bulk_update_models(user, update_tags, ['metadata'])
 
-    # TODO slack notificaton
+    summary_message = f'Loaded {num_new} new and {len(update_tags)} updated AIP tags for {len(family_id_map)} families'
+    safe_post_to_slack(
+        SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
+        f'{summary_message}:\n```{", ".join(sorted(family_id_map.keys()))}```',
+    )
 
     return create_json_response({
-        'info': [f'Loaded {num_new} new and {len(update_tags)} updated AIP tags for {len(family_id_map)} families'],
+        'info': [summary_message],
     })
 
 
