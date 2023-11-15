@@ -58,6 +58,7 @@ const VARIANT_NOTE_FIELDS = [{
 }]
 
 const DEPRECATED_MME_TAG = 'seqr MME (old)'
+const AIP_TAG = 'AIP'
 
 const aipCategoryRow = ([key, { name, date }]) => (
   <Table.Row key={key}>
@@ -276,6 +277,7 @@ const FamilyVariantTags = React.memo(({
               tagOptions={projectTagTypes}
               displayMetadata
               disabledTagType={DEPRECATED_MME_TAG}
+              noEditTagType={AIP_TAG}
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
