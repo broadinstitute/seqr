@@ -65,7 +65,7 @@ def parse_saved_variant_json(variant_json, family):
     xpos = variant_json['xpos']
     ref = variant_json.get('ref')
     alt = variant_json.get('alt')
-    var_length = variant_json['end'] - variant_json['pos'] if 'end' in variant_json else len(ref) - 1
+    var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else len(ref) - 1
     update_json = {'saved_variant_json': variant_json}
     return {
         'xpos': xpos,

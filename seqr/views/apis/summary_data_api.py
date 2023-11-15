@@ -252,11 +252,10 @@ def _search_new_saved_variants(family_variant_ids, user):
         variant_families[variant_id].append(family_id)
     families_by_id = {f.id: f for f in Family.objects.filter(id__in=family_ids)}
 
-    search_variants = get_variants_for_variant_ids(
-        families=families_by_id.values(), variant_ids=variant_families.keys(), user=user,
-    )
     search_variants_by_id = {
-        v['variantId']: v for v in search_variants
+        v['variantId']: v for v in get_variants_for_variant_ids(
+            families=families_by_id.values(), variant_ids=variant_families.keys(), user=user,
+        )
     }
 
     new_variants = []
