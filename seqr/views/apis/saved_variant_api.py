@@ -4,7 +4,6 @@ from django.db.models import Q
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     Family, GeneNote, Project
-from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -13,7 +12,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
-    get_variants_response
+    get_variants_response, parse_saved_variant_json
 
 
 logger = logging.getLogger(__name__)
