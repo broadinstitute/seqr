@@ -58,6 +58,24 @@ def update_project_saved_variant_json(project, family_id=None, user=None):
     return updated_saved_variant_guids
 
 
+def parse_saved_variant_json(variant_json, family):
+    if 'xpos' not in variant_json:
+        variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
+    xpos = variant_json['xpos']
+    ref = variant_json.get('ref')
+    alt = variant_json.get('alt')
+    var_length = variant_json['end'] - variant_json['pos'] if 'end' in variant_json else len(ref) - 1
+    update_json = {'saved_variant_json': variant_json}
+    return {
+        'xpos': xpos,
+        'xpos_end': xpos + var_length,
+        'ref': ref,
+        'alt': alt,
+        'family': family,
+        'variant_id': variant_json['variantId']
+    }, update_json
+
+
 def reset_cached_search_results(project, reset_index_metadata=False):
     try:
         redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, port=REDIS_SERVICE_PORT, socket_connect_timeout=3)

@@ -62,12 +62,12 @@ def create_saved_variant_handler(request):
     saved_variant_guids = []
     for single_variant_json in variants_json:
         try:
-            parsed_variant_json = _get_parsed_variant_args(single_variant_json, family)
+            create_json, update_json = parse_saved_variant_json(single_variant_json, family)
         except ValueError as e:
             return create_json_response({'error': str(e)}, status=400)
         saved_variant, _ = get_or_create_model_from_json(
-            SavedVariant, create_json=parsed_variant_json,
-            update_json={'saved_variant_json': single_variant_json}, user=request.user, update_on_create_only=True)
+            SavedVariant, create_json=create_json, update_json=update_json,
+            user=request.user, update_on_create_only=True)
         saved_variant_guids.append(saved_variant.guid)
     saved_variants = SavedVariant.objects.filter(guid__in=saved_variant_guids)
 
@@ -79,23 +79,6 @@ def create_saved_variant_handler(request):
 
     response.update(get_json_for_saved_variants_with_tags(saved_variants, add_details=True))
     return create_json_response(response)
-
-
-def _get_parsed_variant_args(variant_json, family):
-    if 'xpos' not in variant_json:
-        variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
-    xpos = variant_json['xpos']
-    ref = variant_json.get('ref')
-    alt = variant_json.get('alt')
-    var_length = variant_json['end'] - variant_json['pos'] if 'end' in variant_json else len(ref) - 1
-    return {
-        'xpos': xpos,
-        'xpos_end':  xpos + var_length,
-        'ref':  ref,
-        'alt':  alt,
-        'family':  family,
-        'variant_id': variant_json['variantId']
-    }
 
 
 @login_and_policies_required

@@ -17,6 +17,7 @@ from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
+from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions, get_json_for_saved_variants,\
@@ -25,7 +26,8 @@ from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst
     login_and_policies_required, get_project_and_check_permissions, get_internal_projects
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, \
     FAMILY_ROW_TYPE, DISCOVERY_ROW_TYPE
-from seqr.views.utils.variant_utils import get_variants_response, get_discovery_phenotype_class, DISCOVERY_CATEGORY
+from seqr.views.utils.variant_utils import get_variants_response, get_discovery_phenotype_class, parse_saved_variant_json, \
+    DISCOVERY_CATEGORY
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 MAX_SAVED_VARIANTS = 10000
@@ -207,7 +209,8 @@ def _load_aip_data(data, user):
     }
 
     new_variants = set(family_variant_data.keys()) - set(saved_variant_map.keys())
-    # TODO create saved variant models for missing variants
+    if new_variants:
+        saved_variant_map.update(_search_new_saved_variants(new_variants, user))
 
     aip_tag_type = VariantTagType.objects.get(name='AIP', project=None)
     existing_tags = {
@@ -220,9 +223,6 @@ def _load_aip_data(data, user):
     update_tags = []
     num_new = 0
     for key, pred in family_variant_data.items():
-        if key not in saved_variant_map:
-            # TODO remove
-            continue
         sv_id = saved_variant_map[key]
         metadata = {category: {'name': category_map[category], 'date': today} for category in pred['categories']}
         existing_tag = existing_tags.get(tuple([sv_id]))
@@ -241,9 +241,6 @@ def _load_aip_data(data, user):
             num_new += 1
 
         if pred['support_vars']:
-            if not all((key[0], support_id) in saved_variant_map for support_id in pred['support_vars']):
-                # TODO remove
-                continue
             variant_ids = [sv_id] + [saved_variant_map[(key[0], support_id)] for support_id in pred['support_vars']]
             variant_id_key = tuple(sorted(variant_ids))
             if variant_id_key not in existing_tags:
@@ -262,6 +259,45 @@ def _load_aip_data(data, user):
     return create_json_response({
         'info': [summary_message],
     })
+
+
+def _search_new_saved_variants(family_variant_ids, user):
+    family_ids = set()
+    variant_families = defaultdict(list)
+    for family_id, variant_id in family_variant_ids:
+        family_ids.add(family_id)
+        variant_families[variant_id].append(family_id)
+    families_by_id = {f.id: f for f in Family.objects.filter(id__in=family_ids)}
+
+    search_variants = get_variants_for_variant_ids(
+        families=families_by_id.values(), variant_ids=variant_families.keys(), user=user,
+    )
+    search_variants_by_id = {
+        v['variantId']: v for v in search_variants
+    }
+
+    new_variants = []
+    missing = defaultdict(list)
+    for variant_id, family_ids in variant_families.items():
+        variant = search_variants_by_id.get(variant_id) or {'familyGuids': []}
+        for family_id in family_ids:
+            family = families_by_id[family_id]
+            if family.guid in variant['familyGuids']:
+                create_json, update_json = parse_saved_variant_json(variant, family)
+                variant_model = SavedVariant(**create_json, **update_json)
+                variant_model.guid = f'SV{str(variant_model)}'[:SavedVariant.MAX_GUID_SIZE]
+                new_variants.append(variant_model)
+            else:
+                missing[family.family_id].append(variant_id)
+
+    if missing:
+        missing_summary = [f'{family} ({", ".join(sorted(variant_ids))})' for family, variant_ids in missing.items()]
+        raise ErrorsWarningsException([
+            f"Unable to find the following family's AIP variants in the search backend: {', '.join(missing_summary)}",
+        ])
+
+    saved_variants = SavedVariant.bulk_create(user, new_variants)
+    return {(v.family_id, v.variant_id): v.id for v in saved_variants}
 
 
 ALL_PROJECTS = 'all'
