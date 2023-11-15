@@ -11,12 +11,13 @@ from seqr.views.utils.json_utils import create_json_response
 @dataclass
 class FeedEntry:
     """Class representative of one Atom feed entry."""
-    title: str
-    markdown: str
-    published_datestr: str
-    link: str
+
     author: str
     author_link: str
+    link: str
+    markdown: str
+    published_datestr: str
+    title: str
 
 
 def get_feature_updates(request):
@@ -24,8 +25,7 @@ def get_feature_updates(request):
     Fetches the feature-updates GitHub Discussion Atom feed, converts feed entries into markdown, and returns
     markdown and information for each feed entry.
     """
-    # url = "https://github.com/broadinstitute/seqr/discussions/categories/feature-updates.atom"
-    url = "https://github.com/broadinstitute/seqr/discussions/categories/announcements.atom"
+    url = "https://github.com/broadinstitute/seqr/discussions/categories/feature-updates.atom"
     response = requests.get(url)
     response.raise_for_status()
 
@@ -34,12 +34,18 @@ def get_feature_updates(request):
     entries = []
     for entry in feed.entries:
         # Atom feeds can have multiple content elements per feed entry
-        markdown = ''
-        for content in entry.content:
-            markdown = markdown + (md(content.value)) + md("<br>")
-
+        markdown = "".join(md(content.value) for content in entry.content)
         entries.append(
-            asdict(FeedEntry(title=entry.title, markdown=markdown, published_datestr=entry.published, link=entry.link,
-                             author=entry.author, author_link=entry.href)))
+            asdict(
+                FeedEntry(
+                    author=entry.author,
+                    author_link=entry.href,
+                    link=entry.link,
+                    markdown=markdown,
+                    published_datestr=entry.published,
+                    title=entry.title,
+                )
+            )
+        )
 
-    return create_json_response({'entries': entries})
+    return create_json_response({"entries": entries})
