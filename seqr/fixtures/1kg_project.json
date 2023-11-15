@@ -1694,6 +1694,22 @@
     }
 },
 {
+    "model": "seqr.varianttagtype",
+    "pk": 5,
+    "fields": {
+        "guid": "VTT_aip",
+        "created_date": "2021-11-14T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "AIP",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#E09AE2",
+        "order": 17.5
+    }
+},
+{
     "model": "seqr.savedvariant",
     "pk": 1,
     "fields": {
@@ -2173,6 +2189,20 @@
         "saved_variants": [8],
         "variant_tag_type": 1,
         "search_hash": null
+    }
+},
+{
+    "model": "seqr.varianttag",
+    "pk": 1726985,
+    "fields": {
+        "guid": "VT1726985_2103343353_r0390_100",
+        "created_date": "2023-11-15T21:01:33.193Z",
+        "created_by": null,
+        "last_modified_date": "2023-11-15T21:01:33.193Z",
+        "saved_variants": [2],
+        "variant_tag_type": 5,
+        "metadata": "{\"4\": {\"date\": \"2023-11-15\", \"name\": \"de Novo\"}, \"support\": {\"date\": \"2023-11-15\", \"name\": \"High in Silico Scores\"}}"
+
     }
 },
 {
