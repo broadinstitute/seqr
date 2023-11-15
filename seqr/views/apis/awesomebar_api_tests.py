@@ -125,8 +125,8 @@ class AwesomebarAPITest(object):
         hpo_terms = matches['hpo_terms']['results']
         self.assertEqual(len(hpo_terms), 5)
         self.assertListEqual([h['title'] for h in hpo_terms], [
-            'Tetralogy of Fallot', 'Arrhythmia', 'Complete atrioventricular canal defect',
-            'Defect in the atrial septum', 'Failure to thrive',
+            'Tetralogy of Fallot', 'Arrhythmia',  'Autosomal dominant inheritance', 'Complete atrioventricular canal defect',
+            'Defect in the atrial septum',
         ])
         self.assertDictEqual(hpo_terms[0], {
             'key': 'HP:0001636',

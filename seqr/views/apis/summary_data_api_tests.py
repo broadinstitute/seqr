@@ -75,7 +75,7 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "family_id": "12",
     "MME": "Y",
     "subject_id": "NA20889",
-    "proband_relationship": "",
+    "proband_relationship": "Self",
     "consanguinity": "None suspected",
 }
 EXPECTED_SAMPLE_METADATA_ROW = {
@@ -85,6 +85,40 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "multiple_datasets": "No",
 }
 EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
+EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
+    'subject_id': 'NA21234',
+    'sample_id': 'NA21234',
+    'family_guid': 'F000014_14',
+    'family_id': '14',
+    'project_guid': 'R0004_non_analyst_project',
+    'project_id': 'Non-Analyst Project',
+    'affected_status': 'Affected',
+    'ancestry': '',
+    'congenital_status': 'Unknown',
+    'consanguinity': 'None suspected',
+    'data_type': 'WGS',
+    'date_data_generation': '2018-02-05',
+    'hpo_absent': '',
+    'hpo_present': '',
+    'inheritance_description-1': 'Autosomal dominant',
+    'maternal_id': '',
+    'MME': 'Y',
+    'novel_mendelian_gene-1': 'Y',
+    'num_saved_variants': 1,
+    'paternal_id': '',
+    'phenotype_description': None,
+    'phenotype_group': '',
+    'pmid_id': None,
+    'proband_relationship': 'Self',
+    'sex': 'Female',
+    'solve_state': 'Tier 1',
+    'Alt-1': 'T',
+    'Chrom-1': '1',
+    'Gene_Class-1': 'Tier 1 - Candidate',
+    'Pos-1': '248367227',
+    'Ref-1': 'TC',
+    'Zygosity-1': 'Heterozygous',
+}
 
 AIRTABLE_SAMPLE_RECORDS = {
   "records": [
@@ -248,8 +282,6 @@ class SummaryDataAPITest(AirtableTest):
         expected_variant_guids = {
             'SV0000001_2103343353_r0390_100', 'SV0000007_prefix_19107_DEL_r00', 'SV0000006_1248367227_r0003_tes',
         }
-        if self.MANAGER_VARIANT_GUID:
-            expected_variant_guids.add(self.MANAGER_VARIANT_GUID)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
@@ -262,7 +294,6 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
-        expected_variant_guids.discard(self.MANAGER_VARIANT_GUID)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
 
         all_tag_url = reverse(saved_variants_page, args=['ALL'])
@@ -437,10 +468,16 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
+        # Test no gene for discovery variant
+        self.login_manager()
+        no_analyst_project_url = reverse(sample_metadata_export, args=['R0004_non_analyst_project'])
+        response = self.client.get(no_analyst_project_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'rows': [EXPECTED_NO_GENE_SAMPLE_METADATA_ROW]})
+
         # Test analyst access
         self.login_analyst_user()
-        unauthorized_project_url = reverse(sample_metadata_export, args=['R0004_non_analyst_project'])
-        response = self.client.get(unauthorized_project_url)
+        response = self.client.get(no_analyst_project_url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
@@ -537,7 +574,6 @@ class SummaryDataAPITest(AirtableTest):
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
     NUM_MANAGER_SUBMISSIONS = 4
-    MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
     ADDITIONAL_SAMPLES = ['NA21234']
 
 
@@ -554,7 +590,6 @@ def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
 class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     NUM_MANAGER_SUBMISSIONS = 4
-    MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
     ADDITIONAL_SAMPLES = []
 
     def test_mme_details(self, *args):

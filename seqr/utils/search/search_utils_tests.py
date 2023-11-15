@@ -4,13 +4,13 @@ from django.test import TestCase
 import json
 import mock
 
-from hail_search.test_utils import GENE_COUNTS
+from hail_search.test_utils import GENE_COUNTS, VARIANT_LOOKUP_VARIANT
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.utils import get_single_variant, get_variants_for_variant_ids, get_variant_query_gene_counts, \
-    query_variants, InvalidSearchException
+    query_variants, variant_lookup, InvalidSearchException
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
 
-# TODO lookup tests
+
 class SearchTestHelper(object):
 
     def set_up(self):
@@ -48,6 +48,17 @@ class SearchUtilsTests(SearchTestHelper):
             'S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733',
         ])
         self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
+
+    @mock.patch('seqr.utils.search.utils.hail_variant_lookup')
+    def test_variant_lookup(self, mock_variant_lookup):
+        mock_variant_lookup.return_value = VARIANT_LOOKUP_VARIANT
+        variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='38')
+        self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
+        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='38')
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            variant_lookup(self.user, '100-10439-AC-A')
+        self.assertEqual(str(cm.exception), 'Invalid variant 100-10439-AC-A')
 
     def test_get_single_variant(self, mock_get_variants_for_ids):
         mock_get_variants_for_ids.return_value = [PARSED_VARIANTS[0]]
@@ -398,6 +409,11 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
 
     def setUp(self):
         self.set_up()
+
+    def test_variant_lookup(self, *args, **kwargs):
+        with self.assertRaises(InvalidSearchException) as cm:
+            super().test_variant_lookup(*args, **kwargs)
+        self.assertEqual(str(cm.exception), 'Hail backend is disabled')
 
     @mock.patch('seqr.utils.search.utils.get_es_variants_for_variant_ids')
     def test_get_single_variant(self, mock_get_variants_for_ids):

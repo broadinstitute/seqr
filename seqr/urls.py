@@ -101,6 +101,7 @@ from seqr.views.apis.variant_search_api import \
     get_variant_gene_breakdown, \
     create_saved_search_handler,\
     update_saved_search_handler, \
+    variant_lookup_handler, \
     delete_saved_search_handler
 
 from seqr.views.apis.users_api import \
@@ -241,6 +242,7 @@ api_endpoints = {
     'search/(?P<search_hash>[^/]+)': query_variants_handler,
     'search/(?P<search_hash>[^/]+)/download': export_variants_handler,
     'search/(?P<search_hash>[^/]+)/gene_breakdown': get_variant_gene_breakdown,
+    'variant_lookup': variant_lookup_handler,
     'search_context': search_context_handler,
     'saved_search/all': get_saved_search_handler,
     'saved_search/create': create_saved_search_handler,

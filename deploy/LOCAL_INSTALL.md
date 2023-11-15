@@ -53,7 +53,7 @@ docker-compose logs -f seqr  # (optional) continuously print seqr logs to see wh
 
 To update reference data in seqr, such as OMIM, HPO, etc., run the following
 ```bash
-docker-compose exec seqr manage.py update_all_reference_data --use-cached-omim --skip-gencode
+docker-compose exec seqr ./manage.py update_all_reference_data --use-cached-omim --skip-gencode
 ```
    
 ### Annotating and loading VCF callsets 

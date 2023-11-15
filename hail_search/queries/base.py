@@ -1,4 +1,4 @@
-from aiohttp.web import HTTPBadRequest
+from aiohttp.web import HTTPBadRequest, HTTPNotFound
 from collections import defaultdict, namedtuple
 import hail as hl
 import logging
@@ -7,7 +7,7 @@ import os
 from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
-    UNAFFECTED_ID, VARIANT_KEY_FIELD, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
+    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 
@@ -55,6 +55,7 @@ class BaseHailTableQuery(object):
     BASE_ANNOTATION_FIELDS = {
         'familyGuids': lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
+        'variantId': lambda r: r.variant_id,
     }
     ENUM_ANNOTATION_FIELDS = {
         'transcripts': {
@@ -207,7 +208,8 @@ class BaseHailTableQuery(object):
         self._has_secondary_annotations = False
         self._load_table_kwargs = {}
 
-        self._load_filtered_table(sample_data, inheritance_mode=inheritance_mode, **kwargs)
+        if sample_data:
+            self._load_filtered_table(sample_data, inheritance_mode=inheritance_mode, **kwargs)
 
     @property
     def _is_recessive_search(self):
@@ -251,11 +253,14 @@ class BaseHailTableQuery(object):
     def _get_table_path(self, path):
         return self._get_generic_table_path(self._genome_version, path)
 
-    def _read_table(self, path):
+    def _read_table(self, path, drop_globals=None):
         table_path = self._get_table_path(path)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
-            return ht.annotate_globals(**hl.eval(hl.read_table(table_path).globals))
+            ht_globals = hl.read_table(table_path).globals
+            if drop_globals:
+                ht_globals = ht_globals.drop(*drop_globals)
+            return ht.annotate_globals(**hl.eval(ht_globals))
         return hl.read_table(table_path, **self._load_table_kwargs)
 
     @staticmethod
@@ -316,7 +321,6 @@ class BaseHailTableQuery(object):
         self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
 
         self._filter_annotated_table(**kwargs)
-        self._ht = self._ht.key_by(**{VARIANT_KEY_FIELD: self._ht.variant_id})
 
     def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, quality_filter=None,
                               **kwargs):
@@ -726,24 +730,25 @@ class BaseHailTableQuery(object):
 
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
         ch_ht = self._filter_grouped_compound_hets(ch_ht)
+
+        # Format pairs as lists and de-duplicate
+        ch_ht = ch_ht._key_by_assert_sorted(key_pair=hl.sorted([
+            hl.tuple([ch_ht[v][k] for k in self.KEY_FIELD]) for v in ['v1', 'v2']
+        ]))
+        ch_ht = ch_ht.distinct().key_by()
+
         return ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2])})
 
     def _filter_grouped_compound_hets(self, ch_ht):
         ch_ht = ch_ht.explode(ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v2)
-        ch_ht = ch_ht.filter(ch_ht.v1[VARIANT_KEY_FIELD] != ch_ht.v2[VARIANT_KEY_FIELD])
+        ch_ht = ch_ht.filter(ch_ht.v1.variant_id != ch_ht.v2.variant_id)
 
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(valid_families=hl.enumerate(ch_ht.v1.comp_het_family_entries).map(
             lambda x: self._is_valid_comp_het_family(ch_ht, x[1], ch_ht.v2.comp_het_family_entries[x[0]])
         ))
         ch_ht = ch_ht.filter(ch_ht.valid_families.any(lambda x: x))
-
-        # Format pairs as lists and de-duplicate
-        ch_ht = ch_ht.key_by(**{
-            VARIANT_KEY_FIELD: hl.str(':').join(hl.sorted([ch_ht.v1[VARIANT_KEY_FIELD], ch_ht.v2[VARIANT_KEY_FIELD]]))
-        })
-        ch_ht = ch_ht.distinct()
         ch_ht = ch_ht.select(**{k: self._annotated_comp_het_variant(ch_ht, k) for k in ['v1', 'v2']})
 
         return ch_ht
@@ -774,13 +779,12 @@ class BaseHailTableQuery(object):
 
     def _format_comp_het_results(self, ch_ht, annotation_fields):
         formatted_grouped_variants = ch_ht[GROUPED_VARIANTS_FIELD].map(
-            lambda v: self._format_results(v, annotation_fields=annotation_fields).annotate(
-                **{VARIANT_KEY_FIELD: v[VARIANT_KEY_FIELD]})
+            lambda v: self._format_results(v, annotation_fields=annotation_fields)
         )
         ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted(formatted_grouped_variants, key=lambda x: x._sort)})
         return ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
 
-    def _format_results(self, ht, annotation_fields=None):
+    def _format_results(self, ht, annotation_fields=None, **kwargs):
         if annotation_fields is None:
             annotation_fields = self.annotation_fields()
         annotations = {k: v(ht) for k, v in annotation_fields.items()}
@@ -798,10 +802,9 @@ class BaseHailTableQuery(object):
             ch_ht = self._format_comp_het_results(self._comp_het_ht, annotation_fields)
 
         if self._ht:
-            ht = self._format_results(self._ht, annotation_fields=annotation_fields)
+            ht = self._format_results(self._ht.key_by(), annotation_fields=annotation_fields)
             if ch_ht:
-                ht = ht.join(ch_ht, 'outer')
-                ht = ht.transmute(_sort=hl.or_else(ht._sort, ht._sort_1))
+                ht = ht.union(ch_ht, unify=True)
         else:
             ht = ch_ht
         return ht
@@ -872,12 +875,29 @@ class BaseHailTableQuery(object):
 
     def gene_counts(self):
         hts = self.format_gene_count_hts()
-        ht = hts[0]
+        ht = hts[0].key_by()
         for sub_ht in hts[1:]:
-            ht = ht.join(sub_ht, 'outer')
-            ht = ht.transmute(**{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in self._gene_count_selects()})
+            ht = ht.union(sub_ht.key_by(), unify=True)
 
         ht = ht.explode('gene_ids').explode('families')
         return ht.aggregate(hl.agg.group_by(
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
         ))
+
+    def lookup_variant(self, variant_id):
+        self._parse_intervals(intervals=None, variant_ids=[variant_id], variant_keys=[variant_id])
+        ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
+        ht = ht.filter(hl.is_defined(ht[XPOS])).key_by()
+
+        annotation_fields = self.annotation_fields()
+        annotation_fields.update({
+            'familyGuids': lambda ht: hl.empty_array(hl.tstr),
+            'genotypes': lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
+            'genotypeFilters': lambda ht: hl.str(''),
+        })
+        formatted = self._format_results(ht, annotation_fields=annotation_fields, include_genotype_overrides=False)
+
+        variants = formatted.aggregate(hl.agg.take(formatted.row, 1))
+        if not variants:
+            raise HTTPNotFound()
+        return variants[0]
