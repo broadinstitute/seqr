@@ -1,48 +1,56 @@
 import React, { useEffect, useState } from 'react'
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { Feed, Header } from 'semantic-ui-react'
-import parse from 'html-react-parser'
+import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 const FeatureUpdates = () => {
-  const [feedLink, setFeedLink] = useState([])
   const [feedEntries, setFeedEntries] = useState([])
 
   useEffect(() => {
     new HttpRequestHelper('/api/feature_updates',
       (responseJson) => {
-        setFeedLink(responseJson.link)
         setFeedEntries(responseJson.entries)
       }).get()
   }, [])
+
+  const createMarkdownObject = markdown => ({ markdown })
+
+  const getDateFromDateStr = dateStr => (
+    new Date(dateStr).toLocaleDateString(
+      'en-us', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' },
+    ))
 
   return (
     <div>
       <Header dividing size="huge">
         Feature Updates
         <Header.Subheader>
-          Recent discussions in
+          This page serves as an announcement hub for new seqr functionality, sourced from this
           {' '}
-          <a href={feedLink}>broadinstitute/seqr, category: feature-updates</a>
+          <a href="https://github.com/broadinstitute/seqr/discussions/categories/feature-updates">GitHub Discussion</a>
+          .
         </Header.Subheader>
       </Header>
-      <Feed>
+      <Feed size="large">
         {feedEntries.map(entry => (
-          <Feed.Event key={entry.id}>
+          <Feed.Event key={entry.link}>
             <Feed.Content>
               <Feed.Summary>
                 <a href={entry.link}>{entry.title}</a>
                 {' '}
-                posted by
+                by
                 {' '}
-                <a href={entry.href}>{entry.author}</a>
+                <a href={entry.author_link}>{entry.author}</a>
                 <Feed.Date>
-                  <div>{new Date(entry.published).toLocaleDateString('en-us', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</div>
+                  <div>{getDateFromDateStr(entry.published_datestr)}</div>
                 </Feed.Date>
               </Feed.Summary>
-              <Feed.Extra text>
-                {/* TODO: parse is not xss-attack safe. however, html from entry.summary is sanitized by backend
-                https://feedparser.readthedocs.io/en/latest/reference-entry-summary.html */}
-                {parse(entry.summary)}
+              <Feed.Extra>
+                <TextFieldView
+                  field="markdown"
+                  isEditable={false}
+                  initialValues={createMarkdownObject(entry.markdown)}
+                />
               </Feed.Extra>
             </Feed.Content>
           </Feed.Event>

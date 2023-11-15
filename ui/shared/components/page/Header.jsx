@@ -28,7 +28,7 @@ const PageHeader = React.memo(({ user, googleLoginEnabled, onSubmit }) => (
       <Menu.Item key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
     ] : null }
     <Menu.Item key="spacer" position="right" />
-    <Menu.Item key="feature_updates" as={Link} to={FEATURE_UPDATES_PATH} content="Feature updates" />
+    <Menu.Item key="feature_updates" as={Link} to={FEATURE_UPDATES_PATH} content="Feature Updates (NEW)" />
     {Object.keys(user).length ? [
       <Dropdown
         item
@@ -52,9 +52,8 @@ const PageHeader = React.memo(({ user, googleLoginEnabled, onSubmit }) => (
         </Dropdown.Menu>
       </Dropdown>,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
-    ] : [
-      <Menu.Item as="a" href={googleLoginEnabled ? GOOGLE_LOGIN_URL : LOCAL_LOGIN_URL}>Log in</Menu.Item>,
-    ]}
+    ] :
+    <Menu.Item as="a" href={googleLoginEnabled ? GOOGLE_LOGIN_URL : LOCAL_LOGIN_URL}>Log in</Menu.Item>}
   </HeaderMenu>
 ))
 
