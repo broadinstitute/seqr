@@ -12,7 +12,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
-    get_variants_response, parse_saved_variant_json
+    get_variants_response, parse_saved_variant_json, AIP_TAG_TYPE
 
 
 logger = logging.getLogger(__name__)
@@ -190,7 +190,7 @@ def _get_tag_type_create_data(tag, saved_variants=None):
 def update_variant_tags_handler(request, variant_guids):
     return _update_variant_tag_models(
         request, variant_guids, tag_key='tags', response_guid_key='tagGuids', model_cls=VariantTag,
-        get_tag_create_data=_get_tag_type_create_data, delete_variants_if_empty=True)
+        get_tag_create_data=_get_tag_type_create_data, delete_variants_if_empty=True, protected_tag_type=AIP_TAG_TYPE)
 
 @login_and_policies_required
 def update_variant_acmg_classification_handler(request, variant_guid):
@@ -219,7 +219,7 @@ def update_variant_functional_data_handler(request, variant_guids):
         get_tag_create_data=lambda tag, **kwargs: {'functional_data_tag': tag.get('name')})
 
 
-def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_tag_create_data, response_guid_key=None, delete_variants_if_empty=False):
+def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_tag_create_data, response_guid_key=None, delete_variants_if_empty=False, protected_tag_type=None):
     request_json = json.loads(request.body)
 
     family_guid = request_json.pop('familyGuid')
@@ -235,7 +235,7 @@ def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_t
 
     tag_type = tag_key.lower().rstrip('s')
     updated_data = request_json.get(tag_key, [])
-    deleted_guids = _delete_removed_tags(saved_variants, all_variant_guids, updated_data, request.user, tag_type)
+    deleted_guids = _delete_removed_tags(saved_variants, all_variant_guids, updated_data, request.user, tag_type, protected_tag_type)
 
     _update_tags(saved_variants, request_json, request.user, tag_key, model_cls, get_tag_create_data)
 
@@ -265,11 +265,14 @@ def _get_tag_set(saved_variant, tag_type):
     return getattr(saved_variant, 'variant{}_set'.format(tag_type))
 
 
-def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, tag_type):
+def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, tag_type, protected_tag_type):
     existing_tag_guids = [tag['tagGuid'] for tag in tag_updates if tag.get('tagGuid')]
     deleted_tag_guids = []
     tag_set = _get_tag_set(saved_variants[0], tag_type)
-    for tag in tag_set.exclude(guid__in=existing_tag_guids):
+    remove_tags = tag_set.exclude(guid__in=existing_tag_guids)
+    if protected_tag_type:
+        remove_tags = remove_tags.exclude(variant_tag_type__name=protected_tag_type)
+    for tag in remove_tags:
         tag_variant_guids = {sv.guid for sv in tag.saved_variants.all()}
         if tag_variant_guids == all_variant_guids:
             deleted_tag_guids.append(tag.guid)

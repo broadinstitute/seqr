@@ -27,7 +27,7 @@ from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, \
     FAMILY_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.variant_utils import get_variants_response, get_discovery_phenotype_class, parse_saved_variant_json, \
-    DISCOVERY_CATEGORY
+    AIP_TAG_TYPE, DISCOVERY_CATEGORY
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 MAX_SAVED_VARIANTS = 10000
@@ -148,7 +148,7 @@ def bulk_update_family_external_analysis(request):
     data_type = request_json['dataType']
     family_upload_data = load_uploaded_file(request_json['familiesFile']['uploadedFileId'])
 
-    if data_type == 'AIP':
+    if data_type == AIP_TAG_TYPE:
         return _load_aip_data(family_upload_data, request.user)
 
     header = [col.split()[0].lower() for col in family_upload_data[0]]
@@ -211,7 +211,7 @@ def _load_aip_data(data, user):
     if new_variants:
         saved_variant_map.update(_search_new_saved_variants(new_variants, user))
 
-    aip_tag_type = VariantTagType.objects.get(name='AIP', project=None)
+    aip_tag_type = VariantTagType.objects.get(name=AIP_TAG_TYPE, project=None)
     existing_tags = {
         tuple(t.saved_variant_ids): t for t in VariantTag.objects.filter(
             variant_tag_type=aip_tag_type, saved_variants__in=saved_variant_map.values(),
