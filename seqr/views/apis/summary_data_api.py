@@ -203,9 +203,8 @@ def _load_aip_data(data, user):
         all_variant_ids.update(variant_pred.keys())
 
     saved_variant_map = {
-        (family_id, variant_id): id for id, family_id, variant_id in SavedVariant.objects.filter(
-            family_id__in=family_id_map.values(), variant_id__in=all_variant_ids,
-        ).values_list('id', 'family_id', 'variant_id')
+        (v.family_id, v.variant_id): v
+        for v in SavedVariant.objects.filter(family_id__in=family_id_map.values(), variant_id__in=all_variant_ids)
     }
 
     new_variants = set(family_variant_data.keys()) - set(saved_variant_map.keys())
@@ -223,30 +222,14 @@ def _load_aip_data(data, user):
     update_tags = []
     num_new = 0
     for key, pred in family_variant_data.items():
-        sv_id = saved_variant_map[key]
         metadata = {category: {'name': category_map[category], 'date': today} for category in pred['categories']}
-        existing_tag = existing_tags.get(tuple([sv_id]))
-        if existing_tag:
-            existing_metadata = json.loads(existing_tag.metadata or '{}')
-            metadata = {k: existing_metadata.get(k, v) for k, v in metadata.items()}
-            metadata['removed'] = {k: v for k, v in existing_metadata.get('removed', {}).items() if
-                                   k not in metadata}
-            metadata['removed'].update({k: v for k, v in existing_metadata.items() if k not in metadata})
-            existing_tag.metadata = json.dumps(metadata)
-            update_tags.append(existing_tag)
+        updated_tag = _set_aip_tags(
+            key, metadata, pred['support_vars'], saved_variant_map, existing_tags, aip_tag_type, user,
+        )
+        if updated_tag:
+            update_tags.append(updated_tag)
         else:
-            tag = create_model_from_json(
-                VariantTag, {'variant_tag_type': aip_tag_type, 'metadata': json.dumps(metadata)}, user)
-            tag.saved_variants.add(sv_id)
             num_new += 1
-
-        if pred['support_vars']:
-            variant_ids = [sv_id] + [saved_variant_map[(key[0], support_id)] for support_id in pred['support_vars']]
-            variant_id_key = tuple(sorted(variant_ids))
-            if variant_id_key not in existing_tags:
-                tag = create_model_from_json(VariantTag, {'variant_tag_type': aip_tag_type}, user)
-                tag.saved_variants.set(variant_ids)
-                existing_tags[variant_id_key] = True
 
     VariantTag.bulk_update_models(user, update_tags, ['metadata'])
 
@@ -297,7 +280,42 @@ def _search_new_saved_variants(family_variant_ids, user):
         ])
 
     saved_variants = SavedVariant.bulk_create(user, new_variants)
-    return {(v.family_id, v.variant_id): v.id for v in saved_variants}
+    return {(v.family_id, v.variant_id): v for v in saved_variants}
+
+
+def _set_aip_tags(key, metadata, support_var_ids, saved_variant_map, existing_tags, aip_tag_type, user):
+    variant = saved_variant_map[key]
+    existing_tag = existing_tags.get(tuple([variant.id]))
+    updated_tag = None
+    if existing_tag:
+        existing_metadata = json.loads(existing_tag.metadata or '{}')
+        metadata = {k: existing_metadata.get(k, v) for k, v in metadata.items()}
+        removed = {k: v for k, v in existing_metadata.get('removed', {}).items() if k not in metadata}
+        removed.update({k: v for k, v in existing_metadata.items() if k not in metadata})
+        if removed:
+            metadata['removed'] = removed
+        existing_tag.metadata = json.dumps(metadata)
+        updated_tag = existing_tag
+    else:
+        tag = create_model_from_json(
+            VariantTag, {'variant_tag_type': aip_tag_type, 'metadata': json.dumps(metadata)}, user)
+        tag.saved_variants.add(variant)
+
+    variant_genes = set(variant.saved_variant_json['transcripts'].keys())
+    support_vars = []
+    for support_id in support_var_ids:
+        support_v = saved_variant_map[(key[0], support_id)]
+        if variant_genes.intersection(set(support_v.saved_variant_json['transcripts'].keys())):
+            support_vars.append(support_v)
+    if support_vars:
+        variants = [variant] + support_vars
+        variant_id_key = tuple(sorted([v.id for v in variants]))
+        if variant_id_key not in existing_tags:
+            tag = create_model_from_json(VariantTag, {'variant_tag_type': aip_tag_type}, user)
+            tag.saved_variants.set(variants)
+            existing_tags[variant_id_key] = True
+
+    return updated_tag
 
 
 ALL_PROJECTS = 'all'
