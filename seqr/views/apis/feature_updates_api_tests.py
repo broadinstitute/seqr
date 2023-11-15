@@ -1,5 +1,3 @@
-from urllib.error import HTTPError
-
 from django.test import TestCase
 from django.urls.base import reverse
 
@@ -77,7 +75,6 @@ class FeatureUpdatesPageTestCase(TestCase):
 
         url = reverse(get_feature_updates)
         response = self.client.get(url)
-        print(response.json())
 
         expected_response_json = {
             "entries": [

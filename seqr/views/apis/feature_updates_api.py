@@ -26,7 +26,7 @@ def get_feature_updates(request):
     markdown and information for each feed entry.
     """
     url = "https://github.com/broadinstitute/seqr/discussions/categories/feature-updates.atom"
-    response = requests.get(url)
+    response = requests.get(url, timeout=5)
     response.raise_for_status()
 
     feed = parse(response.content)
