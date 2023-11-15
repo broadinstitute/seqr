@@ -1016,10 +1016,9 @@ def discovery_sheet(request, project_guid):
             'errors': errors,
         })
 
+    sequencing_approach = None
     if "external" in project.name.lower() or "reprocessed" in project.name.lower():
         sequencing_approach = "REAN"
-    else:
-        sequencing_approach = next(iter(loaded_samples_by_family.values()))[-1].sample_type
     initial_row = {
         "project_guid": project.guid,
         "collaborator": project.name,
@@ -1036,6 +1035,8 @@ def discovery_sheet(request, project_guid):
         saved_variants = saved_variants_by_family.get(family.id)
         analysis_notes = analysis_notes_by_family.get(family.guid)
         submitted_to_mme = family.guid in mme_submission_family_guids
+        if sequencing_approach is None:
+            initial_row['sequencing_approach'] = samples[-1].sample_type
 
         rows += _generate_rows(initial_row, family, samples, saved_variants, analysis_notes, submitted_to_mme, now=now)
 
