@@ -59,18 +59,34 @@ const VARIANT_NOTE_FIELDS = [{
 
 const DEPRECATED_MME_TAG = 'seqr MME (old)'
 
+const aipCategoryRow = ([key, { name, date }]) => (
+  <Table.Row key={key}>
+    <Table.HeaderCell content={`${key} - ${name} `} />
+    <Table.Cell disabled content={`(${new Date(date).toLocaleDateString()})`} />
+  </Table.Row>
+)
+
 export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
   <Popup
     position="top right"
     size="tiny"
     trigger={trigger}
-    header={title || 'Tagged by'}
+    header={title || (tag.aipMetadata ? 'Categories' : 'Tagged by')}
     hoverable
     flowing
     content={
       <div>
-        {tag.createdBy || 'unknown user'}
-        {tag.lastModifiedDate && <span>{` on ${new Date(tag.lastModifiedDate).toLocaleDateString()}`}</span>}
+        {tag.aipMetadata ? (
+          <NoBorderTable basic="very" compact="very">
+            <Table.Body>
+              {Object.entries(tag.aipMetadata).filter(e => e[0] !== 'removed').map(aipCategoryRow)}
+              {tag.aipMetadata.removed && [
+                <Table.Row key="removedHeader"><Table.HeaderCell colSpan={2} content="Removed Categories" /></Table.Row>,
+                ...Object.entries(tag.aipMetadata.removed).map(aipCategoryRow),
+              ]}
+            </Table.Body>
+          </NoBorderTable>
+        ) : `${tag.createdBy || 'unknown user'}${tag.lastModifiedDate ? ` on ${new Date(tag.lastModifiedDate).toLocaleDateString()}` : ''}`}
         {tag.metadata && !hideMetadata && (
           <div>
             {tag.metadataTitle ? (

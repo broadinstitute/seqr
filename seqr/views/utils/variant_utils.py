@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 MAX_VARIANTS_FETCH = 1000
 DISCOVERY_CATEGORY = 'CMG Discovery Tags'
-AIP_TAG_TYPE = 'AIP'
 
 
 def update_project_saved_variant_json(project, family_id=None, user=None):

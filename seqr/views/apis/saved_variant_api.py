@@ -8,11 +8,11 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
-    get_json_for_saved_variants_child_entities, get_json_for_gene_notes_by_gene_id
+    get_json_for_saved_variants_child_entities, get_json_for_gene_notes_by_gene_id, AIP_TAG_TYPE
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
-    get_variants_response, parse_saved_variant_json, AIP_TAG_TYPE
+    get_variants_response, parse_saved_variant_json
 
 
 logger = logging.getLogger(__name__)
