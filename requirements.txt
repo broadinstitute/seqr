@@ -8,6 +8,8 @@ asgiref==3.6.0
     # via django
 async-timeout==4.0.2
     # via redis
+beautifulsoup4==4.12.2
+    # via markdownify
 cachetools==5.3.0
     # via google-auth
 certifi==2023.7.22
@@ -80,6 +82,8 @@ idna==3.4
     # via requests
 jmespath==1.0.1
     # via -r requirements.in
+markdownify==0.11.6
+    # via -r requirements.in
 oauthlib==3.2.2
     # via
     #   requests-oauthlib
@@ -136,6 +140,7 @@ six==1.16.0
     # via
     #   elasticsearch-dsl
     #   google-auth
+    #   markdownify
     #   python-dateutil
 slacker==0.14.0
     # via -r requirements.in
@@ -147,6 +152,8 @@ social-auth-core==4.3.0
     # via
     #   -r requirements.in
     #   social-auth-app-django
+soupsieve==2.5
+    # via beautifulsoup4
 sqlparse==0.4.4
     # via django
 tqdm==4.64.1
