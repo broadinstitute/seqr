@@ -11,6 +11,7 @@ from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.file_utils import get_gs_file_list
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH
+from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from settings import AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, AIRFLOW_DAG_VERSION, \
     SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
@@ -22,12 +23,17 @@ class DagRunningException(Exception):
 
 
 def trigger_data_loading(projects, sample_type, data_path, user, success_message, success_slack_channel, error_message,
-                         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, genome_version=GENOME_VERSION_GRCh38, is_internal=False):
+                         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, genome_version=GENOME_VERSION_GRCh38,
+                         is_internal=False, upload_files=None):
     success = True
     dag_name = _construct_dag_name(sample_type, dataset_type, is_internal)
     updated_variables = _construct_dag_variables(
         projects, data_path, sample_type, genome_version, dag_name, is_internal, user)
     dag_id = f'seqr_vcf_to_es_{dag_name}_v{AIRFLOW_DAG_VERSION}'
+
+    upload_info = []
+    if upload_files:
+        upload_info = _upload_data_loading_files(upload_files, projects, genome_version, sample_type, user)
 
     try:
         _check_dag_running_state(dag_id)
@@ -41,11 +47,12 @@ def trigger_data_loading(projects, sample_type, data_path, user, success_message
         success = False
 
     if success or success_slack_channel != SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL:
-        _send_load_data_slack_msg(success_message, success_slack_channel, dag_id, updated_variables)
+        _send_load_data_slack_msg([success_message] + upload_info, success_slack_channel, dag_id, updated_variables)
     return success
 
 
-def _send_load_data_slack_msg(message, channel, dag_id, dag):
+def _send_load_data_slack_msg(messages, channel, dag_id, dag):
+    message = '\n\n        '.join(messages)
     message_content = f"""{message}
 
         DAG {dag_id} is triggered with following:
@@ -95,6 +102,18 @@ def _construct_dag_variables(projects, data_path, sample_type, genome_version, d
         path = _get_anvil_loading_project_path(projects[0], genome_version, sample_type)
         dag_variables['project_path'] = f'{path}/v{datetime.now().strftime("%Y%m%d")}'
     return dag_variables
+
+
+def _upload_data_loading_files(upload_files, projects, genome_version, sample_type, user):
+    gs_path = f'{_get_anvil_loading_project_path(projects[0], genome_version, sample_type)}/base'
+    try:
+        write_multiple_files_to_gs(upload_files, gs_path, user, file_format='txt')
+    except Exception as e:
+        logger.error(
+            f'Uploading sample IDs to Google Storage failed. Errors: {e}', user,
+            detail=[row['s'] for row in upload_files[0][2]],
+        )
+    return [f'The sample IDs to load have been uploaded to {gs_path}']
 
 
 def _get_anvil_loading_project_path(project, genome_version, sample_type):

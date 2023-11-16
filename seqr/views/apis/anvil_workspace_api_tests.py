@@ -675,8 +675,8 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             sample_summary += ' and 7 re-loaded'
         slack_message = """
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
-        gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})  
-  
+        gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
+
         The sample IDs to load have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base
 
         DAG seqr_vcf_to_es_AnVIL_WES_v0.0.1 is triggered with following:
@@ -732,10 +732,10 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(**workspace)
 
-        self.mock_api_logger.error.assert_called_with(
+        self.mock_airflow_logger.error.assert_called_with(
             'Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
             self.manager_user, detail=samples)
-        self.mock_airflow_logger.error.assert_not_called()
+        self.mock_api_logger.error.assert_not_called()
         self.mock_airflow_logger.warning.assert_called_with(
             'seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again.', self.manager_user)
         self.mock_airtable_logger.error.assert_called_with(

@@ -16,10 +16,9 @@ from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project, CAN_EDIT, Sample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession
-from seqr.utils.search.constants import VCF_FILE_EXTENSIONS, SEQR_DATSETS_GS_PATH
+from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
 from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.airflow_utils import trigger_data_loading
-from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
@@ -254,28 +253,18 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     )
     num_updated_individuals = len(sample_ids)
 
-    # Upload sample IDs to a file on Google Storage
-    # TODO move to helper
-    gs_path = f'{_get_loading_project_path(project, sample_type)}base'
     sample_ids.update(previous_loaded_ids or [])
-    sample_file_data = [{'s': sample_id} for sample_id in sorted(sample_ids)]
-    try:
-        write_multiple_files_to_gs([(f'{project.guid}_ids', ['s'], sample_file_data)], gs_path, user, file_format='txt')
-    except Exception as ee:
-        logger.error('Uploading sample IDs to Google Storage failed. Errors: {}'.format(str(ee)), user,
-                     detail=sorted(sample_ids))
+    sample_file_data = [(f'{project.guid}_ids', ['s'], [{'s': sample_id} for sample_id in sorted(sample_ids)])]
 
     # use airflow api to trigger AnVIL dags
     reload_summary = f' and {len(previous_loaded_ids)} re-loaded' if previous_loaded_ids else ''
     success_message = f"""
         *{user.email}* requested to load {num_updated_individuals} new{reload_summary} {sample_type} samples ({GENOME_VERSION_LOOKUP.get(project.genome_version)}) from AnVIL workspace *{project.workspace_namespace}/{project.workspace_name}* at 
-        {data_path} to seqr project <{_get_seqr_project_url(project)}|*{project.name}*> (guid: {project.guid})  
-  
-        The sample IDs to load have been uploaded to {gs_path}"""
+        {data_path} to seqr project <{_get_seqr_project_url(project)}|*{project.name}*> (guid: {project.guid})"""
     trigger_success = trigger_data_loading(
         [project.guid], sample_type, data_path, user, success_message,
         SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, f'ERROR triggering AnVIL loading for project {project.guid}',
-        genome_version=project.genome_version,
+        genome_version=project.genome_version, upload_files=sample_file_data,
     )
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
         'AnVIL Seqr Loading Requests Tracking', {
@@ -309,12 +298,6 @@ def _wait_for_service_account_access(user, namespace, name):
         if has_service_account_access(user, namespace, name):
             return True
     raise TerraAPIException('Failed to grant seqr service account access to the workspace', 400)
-
-
-# TODO remove
-def _get_loading_project_path(project, sample_type):
-    return f'{SEQR_DATSETS_GS_PATH}/{project.get_genome_version_display()}/AnVIL_{sample_type}/{project.guid}/'
-
 
 def _get_seqr_project_url(project):
     return f'{BASE_URL}project/{project.guid}/project_page'
