@@ -145,7 +145,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
                     mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
             })
 
-        affected_individual_guids, _, _ = individual_data_by_family[family_id]
+        affected_individual_guids = individual_data_by_family[family_id][0]
 
         family_consanguinity = any(sample.individual.consanguinity is True for sample in family_samples)
         family_row = {
@@ -186,10 +186,15 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
 
 
 def parse_family_sample_affected_data(family_samples):
+    indiv_id_map = {s.individual.id: s.individual.guid for s in family_samples}
     return (
         {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_AFFECTED},
         {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_UNAFFECTED},
         {s.individual.guid for s in family_samples if s.individual.sex == Individual.SEX_MALE},
+        {s.individual.guid: [
+            indiv_id_map[parent_id] for parent_id in [s.individual.mother_id, s.individual.father_id]
+            if parent_id in indiv_id_map
+        ] for s in family_samples},
     )
 
 

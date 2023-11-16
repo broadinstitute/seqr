@@ -309,7 +309,7 @@ HEMI = 'Hemizygous'
 
 
 def get_variant_inheritance_models(variant_json, family_individual_data):
-    affected_individual_guids, unaffected_individual_guids, male_individual_guids = family_individual_data
+    affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
     inheritance_models = set()
 
     affected_indivs_with_hom_alt_variants = set()
@@ -344,10 +344,14 @@ def get_variant_inheritance_models(variant_json, family_individual_data):
             inheritance_models.add("AR-homozygote")
 
     if not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
-        if unaffected_individual_guids:
-            inheritance_models.add("de novo")
-        else:
+        inherited = any(
+            guid for guid in affected_indivs_with_het_variants
+            if any(parent_guid in affected_indivs_with_het_variants for parent_guid in parent_guid_map[guid])
+        )
+        if inherited or not unaffected_individual_guids:
             inheritance_models.add("AD")
+        else:
+            inheritance_models.add("de novo")
 
     potential_compound_het_gene_ids = set()
     if (len(unaffected_individual_guids) < 2 or unaffected_indivs_with_het_variants) \
