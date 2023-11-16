@@ -1,10 +1,16 @@
+from datetime import datetime
 import json
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
+import re
 import requests
 
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
+from seqr.models import Sample
 from seqr.utils.communication_utils import safe_post_to_slack
+from seqr.utils.file_utils import get_gs_file_list
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH
 from settings import AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, AIRFLOW_DAG_VERSION, \
     SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
@@ -15,10 +21,12 @@ class DagRunningException(Exception):
     pass
 
 
-def trigger_data_loading(dag_name, projects, data_path, additional_dag_variables, user,
-                         success_message, success_slack_channel, error_message):
+def trigger_data_loading(projects, sample_type, data_path, user, success_message, success_slack_channel, error_message,
+                         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, genome_version=GENOME_VERSION_GRCh38, is_internal=False):
     success = True
-    updated_variables = _construct_dag_variables(projects, data_path, additional_dag_variables)
+    dag_name = _construct_dag_name(sample_type, dataset_type, is_internal)
+    updated_variables = _construct_dag_variables(
+        projects, data_path, sample_type, genome_version, dag_name, is_internal, user)
     dag_id = f'seqr_vcf_to_es_{dag_name}_v{AIRFLOW_DAG_VERSION}'
 
     try:
@@ -63,14 +71,34 @@ def _check_dag_running_state(dag_id):
         raise DagRunningException(f'{dag_id} is running and cannot be triggered again.')
 
 
-def _construct_dag_variables(projects, data_path, additional_variables):
+def _construct_dag_name(sample_type, dataset_type, is_internal):
+    if is_internal:
+        dag_dataset_type = 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
+            else dataset_type
+        return f'RDG_{sample_type}_Broad_Internal_{dag_dataset_type}'
+    return f'AnVIL_{sample_type}'
+
+
+def _construct_dag_variables(projects, data_path, sample_type, genome_version, dag_name, is_internal, user):
     dag_variables = {
         "active_projects": projects,
         "projects_to_run": projects,
         "vcf_path": data_path,
     }
-    dag_variables.update(additional_variables)
+    if is_internal:
+        version_path_prefix = f'{SEQR_DATSETS_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_name}'
+        version_paths = get_gs_file_list(version_path_prefix, user=user, allow_missing=True, check_subfolders=False)
+        versions = [re.findall(f'{version_path_prefix}/v(\d\d)/', p) for p in version_paths]
+        curr_version = max([int(v[0]) for v in versions if v] + [0])
+        dag_variables['version_path'] = f'{version_path_prefix}/v{curr_version + 1:02d}'
+    else:
+        path = _get_anvil_loading_project_path(projects[0], genome_version, sample_type)
+        dag_variables['project_path'] = f'{path}/v{datetime.now().strftime("%Y%m%d")}'
     return dag_variables
+
+
+def _get_anvil_loading_project_path(project, genome_version, sample_type):
+    return f'{SEQR_DATSETS_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/AnVIL_{sample_type}/{project}'
 
 
 def _wait_for_dag_variable_update(dag_id, projects):

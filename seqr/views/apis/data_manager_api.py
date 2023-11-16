@@ -17,7 +17,7 @@ from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH
-from seqr.utils.file_utils import file_iter, does_file_exist, get_gs_file_list
+from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.vcf_utils import validate_vcf_exists
 
@@ -443,20 +443,11 @@ def load_data(request):
     dataset_type = request_json['datasetType']
     projects = request_json['projects']
 
-    dag_dataset_type = 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
-        else dataset_type
-    dag_name = f'RDG_{sample_type}_Broad_Internal_{dag_dataset_type}'
-
-    version_path_prefix = f'{SEQR_DATSETS_GS_PATH}/GRCh38/{dag_name}'
-    version_paths = get_gs_file_list(version_path_prefix, user=request.user, allow_missing=True, check_subfolders=False)
-    versions = [re.findall(f'{version_path_prefix}/v(\d\d)/', p) for p in version_paths]
-    curr_version = max([int(v[0]) for v in versions if v] + [0])
-    dag_variables = {'version_path': f'{version_path_prefix}/v{curr_version+1:02d}'}
-
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
     trigger_data_loading(
-        dag_name, projects, request_json['filePath'], dag_variables, request.user, success_message,
+        projects, sample_type, request_json['filePath'], request.user, success_message,
         SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
+        dataset_type=dataset_type, is_internal=True,
     )
 
     return create_json_response({'success': True})

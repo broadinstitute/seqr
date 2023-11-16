@@ -263,6 +263,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     num_updated_individuals = len(sample_ids)
 
     # Upload sample IDs to a file on Google Storage
+    # TODO move to helper
     ids_path = '{}base/{guid}_ids.txt'.format(_get_loading_project_path(project, sample_type), guid=project.guid)
     sample_ids.update(previous_loaded_ids or [])
     try:
@@ -273,9 +274,6 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
                      detail=sorted(sample_ids))
 
     # use airflow api to trigger AnVIL dags
-    dag_variables = {
-        'project_path': '{}v{}'.format(_get_loading_project_path(project, sample_type), datetime.now().strftime("%Y%m%d")),
-    }
     reload_summary = f' and {len(previous_loaded_ids)} re-loaded' if previous_loaded_ids else ''
     success_message = f"""
         *{user.email}* requested to load {num_updated_individuals} new{reload_summary} {sample_type} samples ({GENOME_VERSION_LOOKUP.get(project.genome_version)}) from AnVIL workspace *{project.workspace_namespace}/{project.workspace_name}* at 
@@ -283,8 +281,9 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
   
         The sample IDs to load have been uploaded to {ids_path}."""
     trigger_success = trigger_data_loading(
-        f'AnVIL_{sample_type}', [project.guid], data_path, dag_variables, user, success_message,
+        [project.guid], sample_type, data_path, user, success_message,
         SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, f'ERROR triggering AnVIL loading for project {project.guid}',
+        genome_version=project.genome_version,
     )
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
         'AnVIL Seqr Loading Requests Tracking', {
@@ -320,6 +319,7 @@ def _wait_for_service_account_access(user, namespace, name):
     raise TerraAPIException('Failed to grant seqr service account access to the workspace', 400)
 
 
+# TODO remove
 def _get_loading_project_path(project, sample_type):
     return f'{SEQR_DATSETS_GS_PATH}/{project.get_genome_version_display()}/AnVIL_{sample_type}/{project.guid}/'
 
