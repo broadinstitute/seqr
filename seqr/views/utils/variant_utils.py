@@ -317,11 +317,13 @@ def get_variant_inheritance_models(variant_json, affected_individual_guids, unaf
     is_x_linked = False
 
     genotypes = variant_json.get('genotypes')
+    genotype_zygosity = {}
     if genotypes:
         chrom = variant_json['chrom']
         is_x_linked = "X" in chrom
         for sample_guid, genotype in genotypes.items():
-            zygosity = get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
+            zygosity = _get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
+            genotype_zygosity[sample_guid] = zygosity
             if zygosity in (HOM_ALT, HEMI) and sample_guid in unaffected_individual_guids:
                 # No valid inheritance modes for hom alt unaffected individuals
                 return set(), set()
@@ -352,10 +354,10 @@ def get_variant_inheritance_models(variant_json, affected_individual_guids, unaf
             and 'transcripts' in variant_json:
         potential_compound_het_gene_ids.update(list(variant_json['transcripts'].keys()))
 
-    return inheritance_models, potential_compound_het_gene_ids
+    return inheritance_models, potential_compound_het_gene_ids, genotype_zygosity
 
 
-def get_genotype_zygosity(genotype, is_hemi_variant):
+def _get_genotype_zygosity(genotype, is_hemi_variant):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
     if num_alt == 2 or cn == 0 or (cn != None and cn > 3):

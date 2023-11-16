@@ -1177,7 +1177,7 @@ def _get_basic_row(initial_row, family, samples, now):
 
 
 def _update_variant_inheritance(variant, affected_individual_guids, unaffected_individual_guids, male_individual_guids, potential_compound_het_genes):
-    inheritance_models, potential_compound_het_gene_ids = get_variant_inheritance_models(
+    inheritance_models, potential_compound_het_gene_ids, _ = get_variant_inheritance_models(
         variant.saved_variant_json, affected_individual_guids, unaffected_individual_guids, male_individual_guids)
     variant.saved_variant_json['inheritance'] = inheritance_models
 
