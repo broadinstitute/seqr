@@ -111,19 +111,16 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
         individual_id_map[individual.id] = individual.individual_id
         sample_ids.add(sample.sample_id)
 
-    family_individual_affected_guids = {}
-    for family_id, family_samples in samples_by_family_id.items():
-        family_individual_affected_guids[family_id] = (
-            {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_AFFECTED},
-            {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_UNAFFECTED},
-            {s.individual.guid for s in family_samples if s.individual.sex == Individual.SEX_MALE},
-        )
+    individual_data_by_family = {
+        family_id: parse_family_sample_affected_data(family_samples)
+        for family_id, family_samples in samples_by_family_id.items()
+    }
 
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(list(sample_ids), user)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(samples_by_family_id.keys()))
     compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
-        saved_variants_by_family, family_individual_affected_guids)
+        saved_variants_by_family, individual_data_by_family)
     genes_by_id = get_genes(gene_ids)
 
     mim_numbers = set()
@@ -148,7 +145,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
                     mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
             })
 
-        affected_individual_guids, _, _ = family_individual_affected_guids[family_id]
+        affected_individual_guids, _, _ = individual_data_by_family[family_id]
 
         family_consanguinity = any(sample.individual.consanguinity is True for sample in family_samples)
         family_row = {
@@ -188,6 +185,14 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
             add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 
+def parse_family_sample_affected_data(family_samples):
+    return (
+        {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_AFFECTED},
+        {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_UNAFFECTED},
+        {s.individual.guid for s in family_samples if s.individual.sex == Individual.SEX_MALE},
+    )
+
+
 def _get_nested_variant_name(variant):
     return get_sv_name(variant) if variant.get('svType') else variant['variantId']
 
@@ -205,7 +210,7 @@ def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date
     return {sample.individual: sample for sample in loaded_samples}
 
 
-def _process_saved_variants(saved_variants_by_family, family_individual_affected_guids):
+def _process_saved_variants(saved_variants_by_family, individual_data_by_family):
     gene_ids = set()
     compound_het_gene_id_by_family = {}
     for family_id, saved_variants in saved_variants_by_family.items():
@@ -216,9 +221,8 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
             if variant['main_transcript']:
                 gene_ids.add(variant['main_transcript']['geneId'])
 
-            affected_individual_guids, unaffected_individual_guids, male_individual_guids = family_individual_affected_guids[family_id]
             inheritance_models, potential_compound_het_gene_ids, genotype_zygosity = get_variant_inheritance_models(
-                variant, affected_individual_guids, unaffected_individual_guids, male_individual_guids)
+                variant, individual_data_by_family[family_id])
             variant.update({
                 'inheritance_models': inheritance_models,
                 'genotype_zygosity': genotype_zygosity,

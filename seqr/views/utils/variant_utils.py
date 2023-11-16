@@ -308,7 +308,8 @@ HOM_ALT = 'Homozygous'
 HEMI = 'Hemizygous'
 
 
-def get_variant_inheritance_models(variant_json, affected_individual_guids, unaffected_individual_guids, male_individual_guids):
+def get_variant_inheritance_models(variant_json, family_individual_data):
+    affected_individual_guids, unaffected_individual_guids, male_individual_guids = family_individual_data
     inheritance_models = set()
 
     affected_indivs_with_hom_alt_variants = set()
