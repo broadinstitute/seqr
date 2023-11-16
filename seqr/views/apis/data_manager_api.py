@@ -1,8 +1,7 @@
 import base64
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from datetime import datetime
 import gzip
-import itertools
 import json
 import os
 import re
@@ -16,12 +15,11 @@ from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
-from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.vcf_utils import validate_vcf_exists
 
-from seqr.views.utils.airflow_utils import trigger_data_loading
+from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
 from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file, \
     load_rna_seq_splice_outlier
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
@@ -388,25 +386,10 @@ def load_phenotype_prioritization_data(request):
 @data_manager_required
 def write_pedigree(request, project_guid):
     project = Project.objects.get(guid=project_guid)
-
-    possible_file_paths = [
-        f'{SEQR_DATSETS_GS_PATH}/{project.get_genome_version_display()}/RDG_{sample_type}_Broad_{callset}/base/projects/{project.guid}'
-        for callset, sample_type in itertools.product(['Internal', 'External'], ['WGS', 'WES'])
-    ]
-    file_path = next((path for path in possible_file_paths if does_file_exist(path)), None)
-    if not file_path:
-        return create_json_response(
-            {'error': f'No {SEQR_DATSETS_GS_PATH} project directory found for {project.guid}'}, status=400,
-        )
-
-    annotations = OrderedDict({
-        'Project_GUID': Value(project.guid), 'Family_GUID': F('family__guid'), 'Family_ID': F('family__family_id'), 'Individual_ID': F('individual_id'),
-        'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
-    })
-    data = Individual.objects.filter(family__project=project).order_by('family_id', 'individual_id').values(**dict(annotations))
-    write_multiple_files_to_gs(
-        [(f'{project.guid}_pedigree', annotations.keys(), data)],
-        file_path, request.user, file_format='tsv')
+    try:
+        write_data_loading_pedigree(project, request.user)
+    except ValueError as e:
+        return create_json_response({'error': str(e)}, status=400)
 
     return create_json_response({'success': True})
 
