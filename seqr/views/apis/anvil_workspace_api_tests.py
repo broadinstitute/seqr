@@ -468,13 +468,16 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         self.mock_load_file = patcher.start()
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.apis.anvil_workspace_api.mv_file_to_gs')
+        patcher = mock.patch('seqr.views.utils.export_utils.mv_file_to_gs')
         self.mock_mv_file = patcher.start()
         self.mock_mv_file.return_value = True
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.apis.anvil_workspace_api.tempfile.NamedTemporaryFile')
-        self.mock_tempfile = patcher.start()
-        self.mock_tempfile.return_value.__enter__.return_value.name = TEMP_PATH
+        patcher = mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
+        mock_tempdir = patcher.start()
+        mock_tempdir.return_value.__enter__.return_value = TEMP_PATH
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.export_utils.open')
+        self.mock_temp_open = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.logger')
         self.mock_api_logger = patcher.start()
@@ -640,18 +643,18 @@ class LoadAnvilDataAPITest(AirflowTestCase):
     def _assert_valid_operation(self, project, test_add_data=True):
         if test_add_data:
             genome_version = 'GRCh37'
-            temp_file_data = b's\nHG00731\nHG00732\nHG00733\nHG00735\nNA19675\nNA19675_1\nNA19678\nNA20870\nNA20874'
+            temp_file_data = 's\nHG00731\nHG00732\nHG00733\nHG00735\nNA19675\nNA19675_1\nNA19678\nNA20870\nNA20874'
         else:
             genome_version = 'GRCh38'
-            temp_file_data = b's\nHG00735\nNA19675\nNA19678'
+            temp_file_data = 's\nHG00735\nNA19675\nNA19678'
 
         self.mock_api_logger.error.assert_not_called()
 
-        self.mock_tempfile.assert_called_with(mode='wb', delete=False)
-        self.mock_tempfile.return_value.__enter__.return_value.write.assert_called_with(temp_file_data)
+        self.mock_temp_open.assert_called_with(f'{TEMP_PATH}/{project.guid}_ids.txt', 'w')
+        self.mock_temp_open.return_value.__enter__.return_value.write.assert_called_with(temp_file_data)
         self.mock_mv_file.assert_called_with(
-            TEMP_PATH, f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base/{project.guid}_ids.txt',
-            user=self.manager_user
+            f'{TEMP_PATH}/*', f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base',
+            self.manager_user
         )
 
         self.assert_airflow_calls(additional_tasks_check=test_add_data)
@@ -674,7 +677,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})  
   
-        The sample IDs to load have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/{guid}_ids.txt.
+        The sample IDs to load have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base
 
         DAG seqr_vcf_to_es_AnVIL_WES_v0.0.1 is triggered with following:
         ```{{
