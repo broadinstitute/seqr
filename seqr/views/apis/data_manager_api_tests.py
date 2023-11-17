@@ -1285,8 +1285,13 @@ class LoadDataAPITest(AirflowTestCase):
         responses.replace(responses.GET, f'{self.dag_url}/dagRuns', json={'dag_runs': []})
         mock_subprocess.return_value.communicate.return_value = b'', b'File not found'
         body = {'filePath': 'gs://test_bucket/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'projects': [
-            'R0001_1kg', 'R0004_non_analyst_project',
+            'R0001_1kg', 'R0004_non_analyst_project', 'R0005_not_project',
         ]}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
+
+        body['projects'] = body['projects'][:-1]
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})

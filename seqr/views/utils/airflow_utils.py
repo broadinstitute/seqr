@@ -27,21 +27,20 @@ class DagRunningException(Exception):
 
 def trigger_data_loading(projects, sample_type, data_path, user, success_message, success_slack_channel, error_message,
                          dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, genome_version=GENOME_VERSION_GRCh38,
-                         is_internal=False, upload_files=None):
+                         is_internal=False):
     success = True
     dag_name = _construct_dag_name(sample_type, is_internal, dataset_type)
+    project_guids = [p.guid for p in projects]
     updated_variables = _construct_dag_variables(
-        projects, data_path, genome_version, dag_name, is_internal, user)
+        project_guids, data_path, genome_version, dag_name, is_internal, user)
     dag_id = f'seqr_vcf_to_es_{dag_name}_v{AIRFLOW_DAG_VERSION}'
 
-    upload_info = []
-    if upload_files:
-        upload_info = _upload_data_loading_files(upload_files, projects, genome_version, dag_name, is_internal, user)
+    upload_info = _upload_data_loading_files(projects, genome_version, dag_name, is_internal, user)
 
     try:
         _check_dag_running_state(dag_id)
         _update_variables(dag_name, updated_variables)
-        _wait_for_dag_variable_update(dag_id, projects)
+        _wait_for_dag_variable_update(dag_id, project_guids)
         _trigger_dag(dag_id)
     except Exception as e:
         logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
@@ -138,17 +137,30 @@ def _construct_dag_variables(projects, data_path, genome_version, dag_name, is_i
     return dag_variables
 
 
-def _upload_data_loading_files(upload_files, projects, genome_version, dag_name, is_internal, user):
-    # TODO compute sample_ids from project models
-    gs_path = _get_dag_project_gs_path(projects[0], genome_version, dag_name, is_internal)
-    try:
-        write_multiple_files_to_gs(upload_files, gs_path, user, file_format='txt')
-    except Exception as e:
-        logger.error(
-            f'Uploading sample IDs to Google Storage failed. Errors: {e}', user,
-            detail=[row['s'] for row in upload_files[0][2]],
-        )
-    return [f'The sample IDs to load have been uploaded to {gs_path}']
+def _upload_data_loading_files(projects, genome_version, dag_name, is_internal, user):
+    if is_internal:
+        return []
+
+    file_annotations = {'s': F('individual_id')}
+    annotations = {'project': F('family__project__guid'), **file_annotations}
+    data = Individual.objects.filter(family__project__in=projects).order_by('family_id', 'individual_id').values(
+        **dict(annotations))
+    data_by_project = defaultdict(list)
+    for row in data:
+        data_by_project[row.pop('project')].append(row)
+
+    info = []
+    for project_guid, rows in data_by_project.items():
+        gs_path = _get_dag_project_gs_path(project_guid, genome_version, dag_name, is_internal)
+        file_name = f'{project_guid}_ids'
+        file_type = file_name.split("_")[-1]
+        try:
+            write_multiple_files_to_gs([(file_name, file_annotations.keys(), rows)], gs_path, user, file_format='txt')
+        except Exception as e:
+            logger.error(f'Uploading {file_type} to Google Storage failed. Errors: {e}', user, detail=rows)
+        info.append(f'{file_type.title()} file has been uploaded to {gs_path}')
+
+    return info
 
 
 def _get_dag_project_gs_path(project, genome_version, dag_name, is_internal):

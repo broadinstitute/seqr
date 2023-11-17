@@ -67,7 +67,7 @@ MOCK_AIRTABLE_URL = 'http://testairtable'
 MOCK_AIRTABLE_KEY = 'mock_key' # nosec
 
 PROJECT1_SAMPLES = ['HG00735', 'NA19675', 'NA19678', 'NA20870', 'HG00732', 'NA19675_1', 'NA20874', 'HG00733', 'HG00731']
-PROJECT2_SAMPLES = ['HG00735', 'NA19675', 'NA19678', 'NA20885']
+PROJECT2_SAMPLES = ['NA20885', 'NA19675', 'NA19678', 'HG00735']
 
 REQUEST_BODY_ADD_DATA = deepcopy(REQUEST_BODY)
 REQUEST_BODY_ADD_DATA['vcfSamples'] = PROJECT1_SAMPLES
@@ -546,7 +546,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
         self._test_mv_file_and_triggering_dag_exception(
             url, {'workspace_namespace': TEST_WORKSPACE_NAMESPACE, 'workspace_name': TEST_NO_PROJECT_WORKSPACE_NAME2},
-            ['HG00735', 'NA19675', 'NA19678'], 'GRCh38', REQUEST_BODY)
+            ['NA19675', 'NA19678', 'HG00735'], 'GRCh38', REQUEST_BODY)
 
     @responses.activate
     @mock.patch('seqr.views.utils.individual_utils.Individual._compute_guid')
@@ -600,7 +600,10 @@ class LoadAnvilDataAPITest(AirflowTestCase):
 
         mock_compute_indiv_guid.side_effect = ['I0000021_na19675_1', 'I0000022_na19678', 'I0000023_hg00735']
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
-        self._test_mv_file_and_triggering_dag_exception(url, {'guid': PROJECT2_GUID}, PROJECT2_SAMPLES, 'GRCh37', REQUEST_BODY_ADD_DATA2)
+        all_project_2_samples = [PROJECT2_SAMPLES[0], 'NA20870', 'NA20888', 'NA20889'] + PROJECT2_SAMPLES[1:]
+        self._test_mv_file_and_triggering_dag_exception(
+            url, {'guid': PROJECT2_GUID}, all_project_2_samples, 'GRCh37', REQUEST_BODY_ADD_DATA2,
+            num_samples=len(PROJECT2_SAMPLES))
 
     def _test_errors(self, url, fields, workspace_name):
         # Test missing required fields in the request body
@@ -643,10 +646,10 @@ class LoadAnvilDataAPITest(AirflowTestCase):
     def _assert_valid_operation(self, project, test_add_data=True):
         if test_add_data:
             genome_version = 'GRCh37'
-            temp_file_data = 's\nHG00731\nHG00732\nHG00733\nHG00735\nNA19675\nNA19675_1\nNA19678\nNA20870\nNA20874'
+            temp_file_data = 's\nNA19675\nNA19678\nNA19679\nHG00731\nHG00732\nHG00733\nNA20870\nNA20872\nNA20874\nNA20875\nNA20876\nNA20888\nNA20878\nNA20881\nHG00735'
         else:
             genome_version = 'GRCh38'
-            temp_file_data = 's\nHG00735\nNA19675\nNA19678'
+            temp_file_data = 's\nNA19675\nNA19678\nHG00735'
 
         self.mock_api_logger.error.assert_not_called()
 
@@ -677,7 +680,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
 
-        The sample IDs to load have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base
+        Ids file has been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base
 
         DAG seqr_vcf_to_es_AnVIL_WES_v0.0.1 is triggered with following:
         ```{{
@@ -721,7 +724,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             'father__individual_id': None, 'sex': 'M', 'affected': 'N', 'notes': 'a individual note'
         }, individual_model_data)
 
-    def _test_mv_file_and_triggering_dag_exception(self, url, workspace, samples, genome_version, request_body):
+    def _test_mv_file_and_triggering_dag_exception(self, url, workspace, samples, genome_version, request_body, num_samples=None):
         # Test saving ID file exception
         responses.calls.reset()
         self.mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
@@ -733,8 +736,8 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         project = Project.objects.get(**workspace)
 
         self.mock_airflow_logger.error.assert_called_with(
-            'Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
-            self.manager_user, detail=samples)
+            'Uploading ids to Google Storage failed. Errors: Something wrong while moving the ID file.',
+            self.manager_user, detail=[{'s': sample_id} for sample_id in samples])
         self.mock_api_logger.error.assert_not_called()
         self.mock_airflow_logger.warning.assert_called_with(
             'seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again.', self.manager_user)
@@ -769,7 +772,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             'Requester Email': 'test_user_manager@test.com',
             'AnVIL Project URL': f'http://testserver/project/{project.guid}/project_page',
             'Initial Request Date': '2021-03-01',
-            'Number of Samples': len(samples),
+            'Number of Samples': num_samples or len(samples),
             'Status': 'Loading Requested',
         }}]})
 

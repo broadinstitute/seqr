@@ -426,9 +426,14 @@ def load_data(request):
     dataset_type = request_json['datasetType']
     projects = request_json['projects']
 
+    project_models = Project.objects.filter(guid__in=projects)
+    if len(project_models) < len(projects):
+        missing = sorted(set(projects) - {p.guid for p in project_models})
+        return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
+
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
     trigger_data_loading(
-        projects, sample_type, request_json['filePath'], request.user, success_message,
+        project_models, sample_type, request_json['filePath'], request.user, success_message,
         SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
         dataset_type=dataset_type, is_internal=True,
     )
