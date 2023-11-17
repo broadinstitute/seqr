@@ -41,6 +41,7 @@ def trigger_data_loading(projects, sample_type, data_path, user, success_message
     upload_info = []
     if not is_internal:
         dag_path = _get_dag_gs_path(genome_version, dag_name)
+        # TODO make backend specific
         upload_info = _upload_data_loading_files(SAMPLE_SUBSET_FILE_CONFIG, projects, dag_path, is_internal, user)
 
     try:
