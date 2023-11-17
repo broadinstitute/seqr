@@ -252,9 +252,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
         project, individual_records=pedigree_records, user=user, get_update_json=get_pedigree_json, get_updated_individual_ids=True,
     )
     num_updated_individuals = len(sample_ids)
-
     sample_ids.update(previous_loaded_ids or [])
-    sample_file_data = [(f'{project.guid}_ids', ['s'], [{'s': sample_id} for sample_id in sorted(sample_ids)])]
 
     # use airflow api to trigger AnVIL dags
     reload_summary = f' and {len(previous_loaded_ids)} re-loaded' if previous_loaded_ids else ''

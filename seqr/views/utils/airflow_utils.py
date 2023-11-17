@@ -13,12 +13,13 @@ from seqr.models import Individual, Sample
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.file_utils import get_gs_file_list, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from settings import AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, AIRFLOW_DAG_VERSION, \
     SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
+
+SEQR_DATASETS_GS_PATH = 'gs://seqr-datasets/v02'
 
 
 class DagRunningException(Exception):
@@ -31,8 +32,7 @@ def trigger_data_loading(projects, sample_type, data_path, user, success_message
     success = True
     dag_name = _construct_dag_name(sample_type, is_internal, dataset_type)
     project_guids = [p.guid for p in projects]
-    updated_variables = _construct_dag_variables(
-        project_guids, data_path, genome_version, dag_name, is_internal, user)
+    updated_variables = _construct_dag_variables(project_guids, data_path, genome_version, dag_name, is_internal, user)
     dag_id = f'seqr_vcf_to_es_{dag_name}_v{AIRFLOW_DAG_VERSION}'
 
     upload_info = []
@@ -65,7 +65,7 @@ def write_data_loading_pedigree(project, user):
         _get_dag_project_gs_path(project.guid, dag_path, is_internal=True)
     )), None)
     if not dag_path:
-        raise ValueError(f'No {SEQR_DATSETS_GS_PATH} project directory found for {project.guid}')
+        raise ValueError(f'No {SEQR_DATASETS_GS_PATH} project directory found for {project.guid}')
     _upload_data_loading_files(PEDIGREE_FILE_CONFIG, [project], dag_path, is_internal=True, user=user)
 
 
@@ -110,15 +110,14 @@ def _construct_dag_variables(projects, data_path, genome_version, dag_name, is_i
         "projects_to_run": projects,
         "vcf_path": data_path,
     }
+    dag_path = _get_dag_gs_path(genome_version, dag_name)
     if is_internal:
-        version_path_prefix = f'{SEQR_DATSETS_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_name}'
-        version_paths = get_gs_file_list(version_path_prefix, user=user, allow_missing=True, check_subfolders=False)
-        versions = [re.findall(f'{version_path_prefix}/v(\d\d)/', p) for p in version_paths]
+        version_paths = get_gs_file_list(dag_path, user=user, allow_missing=True, check_subfolders=False)
+        versions = [re.findall(f'{dag_path}/v(\d\d)/', p) for p in version_paths]
         curr_version = max([int(v[0]) for v in versions if v] + [0])
-        dag_variables['version_path'] = f'{version_path_prefix}/v{curr_version + 1:02d}'
+        dag_variables['version_path'] = f'{dag_path}/v{curr_version + 1:02d}'
     else:
-        path = _get_dag_gs_path(genome_version, dag_name)
-        dag_variables['project_path'] = f'{path}/{projects[0]}/v{datetime.now().strftime("%Y%m%d")}'
+        dag_variables['project_path'] = f'{dag_path}/{projects[0]}/v{datetime.now().strftime("%Y%m%d")}'
     return dag_variables
 
 
@@ -159,7 +158,7 @@ def _get_dag_project_gs_path(project, dag_path, is_internal):
 
 
 def _get_dag_gs_path(genome_version, dag_name):
-    return f'{SEQR_DATSETS_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_name}'
+    return f'{SEQR_DATASETS_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_name}'
 
 
 def _wait_for_dag_variable_update(dag_id, projects):
