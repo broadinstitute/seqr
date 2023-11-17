@@ -35,7 +35,10 @@ def trigger_data_loading(projects, sample_type, data_path, user, success_message
         project_guids, data_path, genome_version, dag_name, is_internal, user)
     dag_id = f'seqr_vcf_to_es_{dag_name}_v{AIRFLOW_DAG_VERSION}'
 
-    upload_info = _upload_data_loading_files(projects, genome_version, dag_name, is_internal, user)
+    upload_info = []
+    if not is_internal:
+        dag_path = _get_dag_gs_path(genome_version, dag_name)
+        upload_info = _upload_data_loading_files(SAMPLE_SUBSET_FILE_CONFIG, projects, dag_path, is_internal, user)
 
     try:
         _check_dag_running_state(dag_id)
@@ -54,34 +57,16 @@ def trigger_data_loading(projects, sample_type, data_path, user, success_message
 
 
 def write_data_loading_pedigree(project, user):
-    possible_dag_names = [
-        _construct_dag_name(sample_type, is_internal=True, callset=callset) 
+    possible_dag_paths = [
+        _get_dag_gs_path(project.genome_version, _construct_dag_name(sample_type, is_internal=True, callset=callset))
         for callset, sample_type in itertools.product(['Internal', 'External'], ['WGS', 'WES'])
     ]
-    dag_name = next((dag_name for dag_name in possible_dag_names if does_file_exist(
-        _get_dag_project_gs_path(project.guid, project.genome_version, dag_name, is_internal=True)
+    dag_path = next((dag_path for dag_path in possible_dag_paths if does_file_exist(
+        _get_dag_project_gs_path(project.guid, dag_path, is_internal=True)
     )), None)
-    if not dag_name:
+    if not dag_path:
         raise ValueError(f'No {SEQR_DATSETS_GS_PATH} project directory found for {project.guid}')
-    _write_projects_pedigrees([project], project.genome_version, dag_name, user, is_internal=True)
-
-
-def _write_projects_pedigrees(projects, genome_version, dag_name, user, is_internal):
-    # TODO share behavior for _upload_data_loading_files
-    annotations = OrderedDict({
-        'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'), 'Family_ID': F('family__family_id'),
-        'Individual_ID': F('individual_id'),
-        'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
-    })
-    data = Individual.objects.filter(family__project__in=projects).order_by('family_id', 'individual_id').values(
-        **dict(annotations))
-    data_by_project = defaultdict(list)
-    for row in data:
-        data_by_project[row['Project_GUID']].append(row)
-    for project_guid, rows in data_by_project.items():
-        gs_path = _get_dag_project_gs_path(project_guid, genome_version, dag_name, is_internal)
-        write_multiple_files_to_gs(
-            [(f'{project_guid}_pedigree', annotations.keys(), rows)], gs_path, user, file_format='tsv')
+    _upload_data_loading_files(PEDIGREE_FILE_CONFIG, [project], dag_path, is_internal=True, user=user)
 
 
 def _send_load_data_slack_msg(messages, channel, dag_id, dag):
@@ -137,25 +122,31 @@ def _construct_dag_variables(projects, data_path, genome_version, dag_name, is_i
     return dag_variables
 
 
-def _upload_data_loading_files(projects, genome_version, dag_name, is_internal, user):
-    if is_internal:
-        return []
+SAMPLE_SUBSET_FILE_CONFIG = ('ids', 'txt', {'s': F('individual_id')})
+PEDIGREE_FILE_CONFIG = ('pedigree', 'tsv', OrderedDict({
+    'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'), 'Family_ID': F('family__family_id'),
+    'Individual_ID': F('individual_id'),
+    'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
+}))
 
-    file_annotations = {'s': F('individual_id')}
+
+def _upload_data_loading_files(config, projects, dag_path, is_internal, user):
+    file_type, file_format, file_annotations = config
     annotations = {'project': F('family__project__guid'), **file_annotations}
     data = Individual.objects.filter(family__project__in=projects).order_by('family_id', 'individual_id').values(
         **dict(annotations))
+
     data_by_project = defaultdict(list)
     for row in data:
         data_by_project[row.pop('project')].append(row)
 
     info = []
     for project_guid, rows in data_by_project.items():
-        gs_path = _get_dag_project_gs_path(project_guid, genome_version, dag_name, is_internal)
-        file_name = f'{project_guid}_ids'
-        file_type = file_name.split("_")[-1]
+        gs_path = _get_dag_project_gs_path(project_guid, dag_path, is_internal)
         try:
-            write_multiple_files_to_gs([(file_name, file_annotations.keys(), rows)], gs_path, user, file_format='txt')
+            write_multiple_files_to_gs(
+                [(f'{project_guid}_{file_type}', file_annotations.keys(), rows)], gs_path, user, file_format=file_format,
+            )
         except Exception as e:
             logger.error(f'Uploading {file_type} to Google Storage failed. Errors: {e}', user, detail=rows)
         info.append(f'{file_type.title()} file has been uploaded to {gs_path}')
@@ -163,8 +154,7 @@ def _upload_data_loading_files(projects, genome_version, dag_name, is_internal, 
     return info
 
 
-def _get_dag_project_gs_path(project, genome_version, dag_name, is_internal):
-    dag_path = _get_dag_gs_path(genome_version, dag_name)
+def _get_dag_project_gs_path(project, dag_path, is_internal):
     return f'{dag_path}/base/projects/{project}' if is_internal else f'{dag_path}/{project}/base'
 
 
