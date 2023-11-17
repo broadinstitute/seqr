@@ -505,6 +505,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         })
         return variables
 
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')  # TODO
     @mock.patch('seqr.models.Project._compute_guid', lambda project: f'P_{project.name}')
     @responses.activate
     def test_create_project_from_workspace(self):
@@ -549,6 +550,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             ['NA19675', 'NA19678', 'HG00735'], 'GRCh38', REQUEST_BODY)
 
     @responses.activate
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')  # TODO
     @mock.patch('seqr.views.utils.individual_utils.Individual._compute_guid')
     def test_add_workspace_data(self, mock_compute_indiv_guid):
         # Test insufficient Anvil workspace permission

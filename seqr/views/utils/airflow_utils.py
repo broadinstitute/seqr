@@ -13,6 +13,7 @@ from seqr.models import Individual, Sample
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.file_utils import get_gs_file_list, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from settings import AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, AIRFLOW_DAG_VERSION, \
     SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
@@ -30,9 +31,11 @@ def trigger_data_loading(projects, sample_type, data_path, user, success_message
                          dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, genome_version=GENOME_VERSION_GRCh38,
                          is_internal=False):
     success = True
-    dag_name = _construct_dag_name(sample_type, is_internal, dataset_type)
+    dag_name = backend_specific_call(_construct_v2_dag_name, _construct_v3_dag_name)(
+        sample_type=sample_type, dataset_type=dataset_type, is_internal=is_internal)
     project_guids = [p.guid for p in projects]
-    updated_variables = _construct_dag_variables(project_guids, data_path, genome_version, dag_name, is_internal, user)
+    updated_variables = backend_specific_call(_construct_v2_dag_variables, _construct_v3_dag_variables)(
+        project_guids, data_path, genome_version, is_internal, dag_name=dag_name, user=user, sample_type=sample_type)
     dag_id = f'seqr_vcf_to_es_{dag_name}_v{AIRFLOW_DAG_VERSION}'
 
     upload_info = []
@@ -58,7 +61,7 @@ def trigger_data_loading(projects, sample_type, data_path, user, success_message
 
 def write_data_loading_pedigree(project, user):
     possible_dag_paths = [
-        _get_dag_gs_path(project.genome_version, _construct_dag_name(sample_type, is_internal=True, callset=callset))
+        _get_dag_gs_path(project.genome_version, _construct_v2_dag_name(sample_type, callset=callset))
         for callset, sample_type in itertools.product(['Internal', 'External'], ['WGS', 'WES'])
     ]
     dag_path = next((dag_path for dag_path in possible_dag_paths if does_file_exist(
@@ -96,15 +99,23 @@ def _check_dag_running_state(dag_id):
         raise DagRunningException(f'{dag_id} is running and cannot be triggered again.')
 
 
-def _construct_dag_name(sample_type, is_internal, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, callset='Internal'):
+def _construct_v2_dag_name(sample_type, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, is_internal=True, callset='Internal'):
     if is_internal:
-        dag_dataset_type = '_GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
-            else f'_{dataset_type}'
+        dag_dataset_type = f'_{_dag_dataset_type(sample_type, dataset_type)}'
         return f'RDG_{sample_type}_Broad_{callset}{"" if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else dag_dataset_type}'
     return f'AnVIL_{sample_type}'
 
 
-def _construct_dag_variables(projects, data_path, genome_version, dag_name, is_internal, user):
+def _construct_v3_dag_name(sample_type, dataset_type, **kwargs):
+    return f'v03_pipeline-{_dag_dataset_type(sample_type, dataset_type)}'
+
+
+def _dag_dataset_type(sample_type, dataset_type):
+    return 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
+        else dataset_type
+
+
+def _construct_v2_dag_variables(projects, data_path, genome_version, is_internal, dag_name, user, **kwargs):
     dag_variables = {
         "active_projects": projects,
         "projects_to_run": projects,
@@ -119,6 +130,16 @@ def _construct_dag_variables(projects, data_path, genome_version, dag_name, is_i
     else:
         dag_variables['project_path'] = f'{dag_path}/{projects[0]}/v{datetime.now().strftime("%Y%m%d")}'
     return dag_variables
+
+
+def _construct_v3_dag_variables(projects, data_path, genome_version, is_internal, sample_type, **kwargs):
+    return {
+        'projects_to_run': projects,
+        'callset_path': data_path,
+        'sample_source': 'Broad_Internal' if is_internal else 'AnVIL',
+        'sample_type': sample_type,
+        'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
+    }
 
 
 SAMPLE_SUBSET_FILE_CONFIG = ('ids', 'txt', {'s': F('individual_id')})

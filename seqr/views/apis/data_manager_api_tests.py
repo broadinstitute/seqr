@@ -1276,6 +1276,7 @@ class LoadDataAPITest(AirflowTestCase):
         return variables
 
     @responses.activate
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')  # TODO
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_load_data(self, mock_subprocess):
