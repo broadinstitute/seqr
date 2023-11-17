@@ -38,11 +38,9 @@ def trigger_data_loading(projects, sample_type, data_path, user, success_message
         project_guids, data_path, genome_version, is_internal, dag_name=dag_name, user=user, sample_type=sample_type)
     dag_id = f'seqr_vcf_to_es_{dag_name}_v{AIRFLOW_DAG_VERSION}'
 
-    upload_info = []
-    if not is_internal:
-        dag_path = _get_dag_gs_path(genome_version, dag_name)
-        # TODO make backend specific
-        upload_info = _upload_data_loading_files(SAMPLE_SUBSET_FILE_CONFIG, projects, dag_path, is_internal, user)
+    file_upload_config = backend_specific_call(_get_v2_upload_file, _get_v3_upload_file)(is_internal)
+    upload_info = _upload_data_loading_files(
+        file_upload_config, projects, _get_dag_gs_path(genome_version, dag_name), is_internal, user)
 
     try:
         _check_dag_running_state(dag_id)
@@ -151,7 +149,18 @@ PEDIGREE_FILE_CONFIG = ('pedigree', 'tsv', OrderedDict({
 }))
 
 
+def _get_v2_upload_file(is_internal):
+    return None if is_internal else SAMPLE_SUBSET_FILE_CONFIG
+
+
+def _get_v3_upload_file(*args):
+    return PEDIGREE_FILE_CONFIG
+
+
 def _upload_data_loading_files(config, projects, dag_path, is_internal, user):
+    if config is None:
+        return []
+
     file_type, file_format, file_annotations = config
     annotations = {'project': F('family__project__guid'), **file_annotations}
     data = Individual.objects.filter(family__project__in=projects).order_by('family_id', 'individual_id').values(

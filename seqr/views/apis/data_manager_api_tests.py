@@ -1290,6 +1290,7 @@ class LoadDataAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
+        # TODO failing for v3
         self.assert_airflow_calls()
         if self.SHOULD_LS_FILES:
             mock_subprocess.assert_called_with(
@@ -1359,7 +1360,7 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
     DAG_NAME = 'v03_pipeline-MITO'
     SECOND_DAG_NAME = 'v03_pipeline-GCNV'
     ES_ENABLED = False
-    SHOULD_LS_FILES = False  # TODO
+    SHOULD_LS_FILES = False
 
     def setUp(self):
         self.patch_es('')
