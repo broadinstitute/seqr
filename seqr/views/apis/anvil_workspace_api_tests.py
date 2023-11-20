@@ -438,14 +438,11 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         ])
 
 
-class LoadAnvilDataAPITest(AirflowTestCase):
-    fixtures = ['users', 'social_auth', '1kg_project']
-
+class LoadAnvilDataAPITest(object):
     DAG_NAME = 'AnVIL_WES'
     LOADING_PROJECT_GUID = f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
-    ADDITIONAL_REQUEST_COUNT = 1
 
-    def setUp(self):
+    def setup_patchers(self):
         # Set up api responses
         responses.add(responses.POST, f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', status=400)
         patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', MOCK_AIRTABLE_KEY)
@@ -493,19 +490,10 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.send_html_email')
         self.mock_send_email = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', self.ES_HOST)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
-        super(LoadAnvilDataAPITest, self).setUp()
-
-    def _get_expected_dag_variables(self, additional_tasks_check=False, **kwargs):
-        variables = super(LoadAnvilDataAPITest, self)._get_expected_dag_variables(
-            omit_project=self.LOADING_PROJECT_GUID if additional_tasks_check else PROJECT1_GUID)
-        variables.update({
-            'vcf_path': 'gs://test_bucket/test_path.vcf',
-            'project_path': f'gs://seqr-datasets/v02/GRCh{"37" if additional_tasks_check else "38"}/{self.DAG_NAME}/{variables["active_projects"][0]}/v20210301',
-        })
-        return variables
-
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')  # TODO
     @mock.patch('seqr.models.Project._compute_guid', lambda project: f'P_{project.name}')
     @responses.activate
     def test_create_project_from_workspace(self):
@@ -550,7 +538,6 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             ['NA19675', 'NA19678', 'HG00735'], 'GRCh38', REQUEST_BODY)
 
     @responses.activate
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')  # TODO
     @mock.patch('seqr.views.utils.individual_utils.Individual._compute_guid')
     def test_add_workspace_data(self, mock_compute_indiv_guid):
         # Test insufficient Anvil workspace permission
@@ -831,6 +818,38 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             """, subject='Delay in loading AnVIL in seqr', to=['test_user_manager@test.com'])
         self.mock_api_logger.error.assert_called_with(
             'AnVIL loading delay email error: Unable to send email', self.manager_user)
+
+
+class LoadAnvilEsDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    ES_HOST = 'testhost'
+    ADDITIONAL_REQUEST_COUNT = 1
+
+    def setUp(self):
+        super().setup_patchers()
+        super().setUp()
+
+    def _get_expected_dag_variables(self, additional_tasks_check=False, **kwargs):
+        variables = super()._get_expected_dag_variables(
+            omit_project=self.LOADING_PROJECT_GUID if additional_tasks_check else PROJECT1_GUID)
+        variables.update({
+            'vcf_path': 'gs://test_bucket/test_path.vcf',
+            'project_path': f'gs://seqr-datasets/v02/GRCh{"37" if additional_tasks_check else "38"}/{self.DAG_NAME}/{variables["active_projects"][0]}/v20210301',
+        })
+        return variables
+
+
+
+class LoadAnvilHailDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    ES_HOST = ''
+    ADDITIONAL_REQUEST_COUNT = 1
+
+    def setUp(self):
+        super().setup_patchers()
+        super().setUp()
 
 
 class NoGoogleAnvilWorkspaceAPITest(AuthenticationTestCase):
