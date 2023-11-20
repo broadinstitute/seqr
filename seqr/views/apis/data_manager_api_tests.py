@@ -1296,18 +1296,14 @@ class LoadDataAPITest(object):
             mock_subprocess.assert_called_with(
                 f'gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO', stdout=-1, stderr=-1, shell=True)  # nosec
 
-        slack_message = f"""*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
-
-        DAG seqr_vcf_to_es_{self.DAG_NAME}_v0.0.1 is triggered with following:
-        ```{json.dumps(self._get_expected_dag_variables(), indent=4)}```
-    """
+        slack_message = f'*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects{self.SUCCESS_SLACK_DETAIL}'
 
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message)
 
         # Test loading trigger error
         self.mock_slack.reset_mock()
         responses.calls.reset()
-        mock_subprocess.return_value.communicate.return_value = b'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_SV/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v01/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v02/', b''
+        mock_subprocess.return_value.communicate.return_value = b'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_SV/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v01/\ngs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_GCNV/v02/', b''
 
         body.update({'datasetType': 'SV', 'filePath': 'gs://test_bucket/sv_callset.vcf', 'sampleType': 'WES'})
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1324,13 +1320,7 @@ class LoadDataAPITest(object):
         error = self.mock_airflow_logger.error.call_args.args[0]
         self.assertRegex(error, 'Connection refused by Responses')
 
-        expected_variables = self._get_expected_dag_variables(
-            callset_path='gs://test_bucket/sv_callset.vcf', sample_type='WES', dag_name=self.SECOND_DAG_NAME)
-        error_message = f"""ERROR triggering internal WES SV loading: {error}
-        
-        DAG seqr_vcf_to_es_{self.SECOND_DAG_NAME}_v0.0.1 should be triggered with following: 
-        ```{json.dumps(expected_variables, indent=4)}```
-        """
+        error_message = f'ERROR triggering internal WES SV loading: {error}{self.ERROR_SLACK_DETAIL}'
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
 
@@ -1340,17 +1330,48 @@ class LoadEsDataAPITest(AirflowTestCase, LoadDataAPITest):
     SECOND_DAG_NAME = 'RDG_WES_Broad_Internal_GCNV'
     ES_ENABLED = True
     SHOULD_LS_FILES = True
+    SUCCESS_SLACK_DETAIL = """
+
+        DAG seqr_vcf_to_es_RDG_WGS_Broad_Internal_MITO_v0.0.1 is triggered with following:
+        ```{
+    "active_projects": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "vcf_path": "gs://test_bucket/mito_callset.mt",
+    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01"
+}```
+    """
+    ERROR_SLACK_DETAIL = """
+        
+        DAG seqr_vcf_to_es_RDG_WES_Broad_Internal_GCNV_v0.0.1 should be triggered with following: 
+        ```{
+    "active_projects": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "vcf_path": "gs://test_bucket/sv_callset.vcf",
+    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_GCNV/v03"
+}```
+        """
 
     def setUp(self):
         self.patch_es('testhost')
         super().setUp()
 
-
-    def _get_expected_dag_variables(self, *args, callset_path='gs://test_bucket/mito_callset.mt', dag_name=DAG_NAME, **kwargs):
-        variables = super()._get_expected_dag_variables()
+    def _get_expected_dag_variables(self, **kwargs):
+        variables = super()._get_expected_dag_variables(**kwargs)
         variables.update({
-            'vcf_path': callset_path,
-            'version_path': f'gs://seqr-datasets/v02/GRCh38/{dag_name}/v01',
+            'vcf_path': 'gs://test_bucket/mito_callset.mt',
+            'version_path': 'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01',
         })
         return variables
 
@@ -1359,20 +1380,49 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     DAG_NAME = 'v03_pipeline-MITO'
     SECOND_DAG_NAME = 'v03_pipeline-GCNV'
-    ES_ENABLED = False
-    SHOULD_LS_FILES = False
+    ES_ENABLED = False  # TODO needed?
+    HAS_DAG_ID_PREFIX = False
+    SHOULD_LS_FILES = False  # TODO needed?
+    SUCCESS_SLACK_DETAIL = """
+
+            DAG v03_pipeline-MITO is triggered with following:
+            ```{
+        "projects_to_run": [
+            "R0001_1kg",
+            "R0004_non_analyst_project"
+        ],
+        "callset_path": "gs://test_bucket/mito_callset.mt",
+        "sample_source": "Broad_Internal",
+        "sample_type": "WGS",
+        "reference_genome": "GRCh38"
+    }```
+        """
+    ERROR_SLACK_DETAIL = """
+
+            DAG v03_pipeline-GCNV should be triggered with following: 
+            ```{
+        "projects_to_run": [
+            "R0001_1kg",
+            "R0004_non_analyst_project"
+        ],
+        "callset_path": "gs://test_bucket/sv_callset.vcf",
+        "sample_source": "Broad_Internal",
+        "sample_type": "WES",
+        "reference_genome": "GRCh38"
+    }```
+            """
 
     def setUp(self):
         self.patch_es('')
         super().setUp()
 
-    def _get_expected_dag_variables(self, *args, callset_path='gs://test_bucket/mito_callset.mt', sample_type='WGS', **kwargs):
-        variables = super()._get_expected_dag_variables()
+    def _get_expected_dag_variables(self, **kwargs):
+        variables = super()._get_expected_dag_variables(**kwargs)
         del variables['active_projects']
         variables.update({
-            'callset_path': callset_path,
+            'callset_path': 'gs://test_bucket/mito_callset.mt',
             'sample_source': 'Broad_Internal',
-            'sample_type': sample_type,
+            'sample_type': 'WGS',
             'reference_genome': 'GRCh38',
         })
         return variables

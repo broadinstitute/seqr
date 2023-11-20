@@ -36,7 +36,7 @@ def trigger_data_loading(projects, sample_type, data_path, user, success_message
     project_guids = [p.guid for p in projects]
     updated_variables = backend_specific_call(_construct_v2_dag_variables, _construct_v3_dag_variables)(
         project_guids, data_path, genome_version, is_internal, dag_name=dag_name, user=user, sample_type=sample_type)
-    dag_id = f'seqr_vcf_to_es_{dag_name}_v{AIRFLOW_DAG_VERSION}'
+    dag_id = backend_specific_call(_construct_v2_dag_id, lambda name: name)(dag_name)
 
     file_upload_config = backend_specific_call(_get_v2_upload_file, _get_v3_upload_file)(is_internal)
     upload_info = _upload_data_loading_files(
@@ -107,6 +107,10 @@ def _construct_v2_dag_name(sample_type, dataset_type=Sample.DATASET_TYPE_VARIANT
 
 def _construct_v3_dag_name(sample_type, dataset_type, **kwargs):
     return f'v03_pipeline-{_dag_dataset_type(sample_type, dataset_type)}'
+
+
+def _construct_v2_dag_id(dag_name):
+    return f'seqr_vcf_to_es_{dag_name}_v{AIRFLOW_DAG_VERSION}'
 
 
 def _dag_dataset_type(sample_type, dataset_type):
