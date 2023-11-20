@@ -271,7 +271,7 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
-            'F000002_2': {'Excluded': 1, 'Known gene for phenotype': 1},
+            'F000002_2': {'AIP': 1, 'Excluded': 1, 'Known gene for phenotype': 1},
         })
 
         # Test compound het counts

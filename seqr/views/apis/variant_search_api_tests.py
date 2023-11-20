@@ -48,6 +48,14 @@ PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'genomeVersion', 'variantTagTypes', 'v
 
 EXPECTED_TAG = {k: mock.ANY for k in TAG_FIELDS}
 expected_functional_tag = {k: mock.ANY for k in FUNCTIONAL_FIELDS}
+expected_aip_tag = {
+    'aipMetadata': {
+        '4': {'date': '2023-11-15', 'name': 'de Novo'},
+        'support': {'date': '2023-11-15', 'name': 'High in Silico Scores'},
+    },
+    **EXPECTED_TAG,
+}
+del expected_aip_tag['metadata']
 EXPECTED_GENE = {k: mock.ANY for k in GENE_VARIANT_FIELDS}
 EXPECTED_GENE['locusListGuids'] = []
 expected_pa_gene = deepcopy(EXPECTED_GENE)
@@ -93,6 +101,7 @@ EXPECTED_SEARCH_RESPONSE = {
     'variantTagsByGuid': {
         'VT1708633_2103343353_r0390_100': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
         'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726961_2103343353_r0390_100': EXPECTED_TAG,
+        'VT1726985_2103343353_r0390_100': expected_aip_tag,
     },
     'variantNotesByGuid': {
         'VN0714935_2103343353_r0390_100': {k: mock.ANY for k in VARIANT_NOTE_FIELDS},
@@ -386,7 +395,7 @@ class VariantSearchAPITest(object):
             ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
              '1', '', '', '', '', '', 'NA19679', '0', '99.0', '0.0', '', '', '', '', '', '', '', ''],
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-             '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '', '', '',
+             '', '2', 'AIP (None)|Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '', '', '',
              '', '', '', '', '', '', '', '', ''],
             ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
              '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
@@ -420,7 +429,7 @@ class VariantSearchAPITest(object):
                 ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
                  '1', '', '', 'NA19679', '0', '99.0', '0.0', '', '', '', '', '', '', '', '',],
                 ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-                 '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)',
+                 '', '2', 'AIP (None)|Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)',
                  '', '', '', '', '', '', '', '', '', '', '', '',],
                 ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
                  '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
@@ -471,6 +480,7 @@ class VariantSearchAPITest(object):
             'transcriptsById': {},
             'variantTagsByGuid': {
                 'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
+                'VT1726985_2103343353_r0390_100': expected_aip_tag,
             },
             'variantFunctionalDataByGuid': {},
             'phenotypeGeneScores': {},
@@ -718,8 +728,10 @@ class VariantSearchAPITest(object):
         })
         expected_search_response.pop('search')
         expected_search_response['savedVariantsByGuid'].pop('SV0000002_1248367227_r0390_100')
-        expected_search_response['variantTagsByGuid'].pop('VT1726945_2103343353_r0390_100')
-        expected_search_response['variantTagsByGuid'].pop('VT1726970_2103343353_r0004_tes')
+        expected_search_response['variantTagsByGuid'] = {
+            k: EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE['variantTagsByGuid'][k]
+            for k in {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'}
+        }
         expected_search_response['variantNotesByGuid'] = {}
         expected_search_response['genesById'] = {
             k: v for k, v in expected_search_response['genesById'].items() if k in {'ENSG00000227232', 'ENSG00000268903'}

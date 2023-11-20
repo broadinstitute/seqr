@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+* Support AIP upload
+  * To add the required tag type, run `./manage.py loaddata new_variant_tag_types`
 
 ## 11/13/23
 * Add Partial Solve analysis status in Family model (REQUIRES DB MIGRATION)

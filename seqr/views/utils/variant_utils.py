@@ -10,6 +10,7 @@ from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, L
     RnaSeqTpm, PhenotypePrioritization, Project, Sample, VariantTagType
 from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
+from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
@@ -56,6 +57,24 @@ def update_project_saved_variant_json(project, family_id=None, user=None):
                 updated_saved_variant_guids.append(saved_variant.guid)
 
     return updated_saved_variant_guids
+
+
+def parse_saved_variant_json(variant_json, family):
+    if 'xpos' not in variant_json:
+        variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
+    xpos = variant_json['xpos']
+    ref = variant_json.get('ref')
+    alt = variant_json.get('alt')
+    var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else len(ref) - 1
+    update_json = {'saved_variant_json': variant_json}
+    return {
+        'xpos': xpos,
+        'xpos_end': xpos + var_length,
+        'ref': ref,
+        'alt': alt,
+        'family': family,
+        'variant_id': variant_json['variantId']
+    }, update_json
 
 
 def reset_cached_search_results(project, reset_index_metadata=False):

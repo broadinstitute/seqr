@@ -128,7 +128,7 @@ from seqr.views.apis.report_api import \
     gregor_export, \
     seqr_stats
 from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, hpo_summary_data, \
-    bulk_update_family_analysed_by, sample_metadata_export
+    bulk_update_family_external_analysis, sample_metadata_export
 from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -330,7 +330,7 @@ api_endpoints = {
     'summary_data/hpo/(?P<hpo_id>[^/]+)': hpo_summary_data,
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
     'summary_data/matchmaker': mme_details,
-    'summary_data/update_analysed_by': bulk_update_family_analysed_by,
+    'summary_data/update_external_analysis': bulk_update_family_external_analysis,
     'summary_data/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
 
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/grant_access': grant_workspace_access,

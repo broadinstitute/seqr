@@ -15,7 +15,10 @@ const UPLOAD_FIELDS = [
     name: 'dataType',
     label: 'Data Type',
     component: Select,
-    options: FAMILY_ANALYSED_BY_DATA_TYPES.map(([value, text]) => ({ value, text })),
+    options: [
+      ...FAMILY_ANALYSED_BY_DATA_TYPES.map(([value, text]) => ({ value, text })),
+      { value: 'AIP' },
+    ],
     validate: validators.required,
   },
   {
@@ -26,7 +29,7 @@ const UPLOAD_FIELDS = [
         Drag-drop or click here to upload analysed families
         <br />
         <br />
-        File should include a &quot;Project&quot; and a &quot;Family&quot; column
+        File should include a &quot;Project&quot; and a &quot;Family&quot; column OR be valid AIP JSON
       </div>
     ),
     validate: validateUploadedFile,

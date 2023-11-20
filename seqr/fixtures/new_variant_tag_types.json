@@ -3,16 +3,16 @@
     "model": "seqr.varianttagtype",
     "pk": null,
     "fields": {
-        "guid": "VTT_returned",
-        "created_date": "2021-04-27T00:00:00.000Z",
+        "guid": "VTT_aip",
+        "created_date": "2021-11-14T00:00:00.000Z",
         "created_by": null,
         "last_modified_date": null,
         "project": null,
-        "name": "Returned",
+        "name": "AIP",
         "category": "Collaboration",
         "description": "",
-        "color": "#52caae",
-        "order": 16.5
+        "color": "#E09AE2",
+        "order": 17.5
     }
 }
 ]
