@@ -8,6 +8,7 @@ from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharF
 from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JSONObject
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
+import json
 
 from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
@@ -433,6 +434,14 @@ def _format_functional_tags(tags):
     return tags
 
 
+AIP_TAG_TYPE = 'AIP'
+def _format_variant_tags(tags):
+    for tag in tags:
+        if tag['name'] == AIP_TAG_TYPE and tag['metadata']:
+            tag['aipMetadata'] = json.loads(tag.pop('metadata'))
+    return tags
+
+
 def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, tag_filter=None):
     variant_tag_id_map = defaultdict(list)
     for savedvariant_id, tag_id in tag_cls.saved_variants.through.objects.filter(
@@ -456,6 +465,8 @@ def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, ta
         tag_models, guid_key=guid_key, nested_fields=nested_fields, additional_model_fields=['id'])
     if tag_cls == VariantFunctionalData:
         _format_functional_tags(tags)
+    elif tag_cls == VariantTag:
+        _format_variant_tags(tags)
 
     variant_tag_map = defaultdict(list)
     for tag in tags:
