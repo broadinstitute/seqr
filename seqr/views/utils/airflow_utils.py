@@ -1,5 +1,6 @@
 from collections import defaultdict, OrderedDict
 from datetime import datetime
+from django.contrib.auth.models import User
 from django.db.models import F
 import itertools
 import json
@@ -9,7 +10,7 @@ import re
 import requests
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
-from seqr.models import Individual, Sample
+from seqr.models import Individual, Sample, Project
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.file_utils import get_gs_file_list, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
@@ -27,9 +28,10 @@ class DagRunningException(Exception):
     pass
 
 
-def trigger_data_loading(projects, sample_type, data_path, user, success_message, success_slack_channel, error_message,
-                         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, genome_version=GENOME_VERSION_GRCh38,
-                         is_internal=False):
+def trigger_data_loading(projects: list[Project], sample_type: str, data_path: str, user: User, success_message: str,
+                         success_slack_channel: str, error_message: str,
+                         dataset_type: str = Sample.DATASET_TYPE_VARIANT_CALLS, genome_version: str = GENOME_VERSION_GRCh38,
+                         is_internal: bool = False):
     success = True
     dag_name = backend_specific_call(_construct_v2_dag_name, _construct_v3_dag_name)(
         sample_type=sample_type, dataset_type=dataset_type, is_internal=is_internal)
@@ -57,7 +59,7 @@ def trigger_data_loading(projects, sample_type, data_path, user, success_message
     return success
 
 
-def write_data_loading_pedigree(project, user):
+def write_data_loading_pedigree(project: Project, user: User):
     match = next((
         (callset, sample_type) for callset, sample_type in itertools.product(['Internal', 'External'], ['WGS', 'WES'])
         if does_file_exist(_get_dag_project_gs_path(project.guid, _get_dag_gs_path(
@@ -73,7 +75,7 @@ def write_data_loading_pedigree(project, user):
     )
 
 
-def _send_load_data_slack_msg(messages, channel, dag_id, dag):
+def _send_load_data_slack_msg(messages: list[str], channel: str, dag_id: str, dag: dict):
     message = '\n\n        '.join(messages)
     message_content = f"""{message}
 
@@ -100,27 +102,29 @@ def _check_dag_running_state(dag_id):
         raise DagRunningException(f'{dag_id} is running and cannot be triggered again.')
 
 
-def _construct_v2_dag_name(sample_type, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, is_internal=True, callset='Internal'):
+def _construct_v2_dag_name(sample_type: str, dataset_type: str = Sample.DATASET_TYPE_VARIANT_CALLS,
+                           is_internal: bool = True, callset: str = 'Internal'):
     if is_internal:
         dag_dataset_type = f'_{_dag_dataset_type(sample_type, dataset_type)}'
         return f'RDG_{sample_type}_Broad_{callset}{"" if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else dag_dataset_type}'
     return f'AnVIL_{sample_type}'
 
 
-def _construct_v3_dag_name(sample_type, dataset_type, **kwargs):
+def _construct_v3_dag_name(sample_type: str, dataset_type: str, **kwargs):
     return f'v03_pipeline-{_dag_dataset_type(sample_type, dataset_type)}'
 
 
-def _construct_v2_dag_id(dag_name):
+def _construct_v2_dag_id(dag_name: str):
     return f'seqr_vcf_to_es_{dag_name}_v{AIRFLOW_DAG_VERSION}'
 
 
-def _dag_dataset_type(sample_type, dataset_type):
+def _dag_dataset_type(sample_type: str, dataset_type: str):
     return 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
         else dataset_type
 
 
-def _construct_v2_dag_variables(projects, data_path, genome_version, is_internal, dag_name, user, **kwargs):
+def _construct_v2_dag_variables(projects: list[str], data_path: str, genome_version: str, is_internal: bool,
+                                dag_name: str, user: User, **kwargs):
     dag_variables = {
         "active_projects": projects,
         "projects_to_run": projects,
@@ -137,7 +141,8 @@ def _construct_v2_dag_variables(projects, data_path, genome_version, is_internal
     return dag_variables
 
 
-def _construct_v3_dag_variables(projects, data_path, genome_version, is_internal, sample_type, **kwargs):
+def _construct_v3_dag_variables(projects: list[str], data_path: str, genome_version: str, is_internal: bool,
+                                sample_type: str, **kwargs):
     return {
         'projects_to_run': projects,
         'callset_path': data_path,
@@ -155,7 +160,7 @@ PEDIGREE_FILE_CONFIG = ('pedigree', 'tsv', OrderedDict({
 }))
 
 
-def _get_v2_upload_file(is_internal):
+def _get_v2_upload_file(is_internal: bool):
     return None if is_internal else SAMPLE_SUBSET_FILE_CONFIG
 
 
@@ -163,7 +168,8 @@ def _get_v3_upload_file(*args):
     return PEDIGREE_FILE_CONFIG
 
 
-def _upload_data_loading_files(config, projects, is_internal, user, genome_version, sample_type, **kwargs):
+def _upload_data_loading_files(config: tuple[str, str, dict[str, F]], projects: list[Project], is_internal: bool,
+                               user: User, genome_version: str, sample_type: str, **kwargs):
     if config is None:
         return []
 
@@ -192,11 +198,11 @@ def _upload_data_loading_files(config, projects, is_internal, user, genome_versi
     return info
 
 
-def _get_dag_project_gs_path(project, dag_path, is_internal):
+def _get_dag_project_gs_path(project: str, dag_path: str, is_internal: bool):
     return f'{dag_path}/base/projects/{project}' if is_internal else f'{dag_path}/{project}/base'
 
 
-def _get_dag_gs_path(genome_version, dag_name):
+def _get_dag_gs_path(genome_version: str, dag_name: str):
     return f'{SEQR_DATASETS_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_name}'
 
 
