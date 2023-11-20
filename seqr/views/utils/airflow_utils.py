@@ -39,8 +39,7 @@ def trigger_data_loading(projects, sample_type, data_path, user, success_message
     dag_id = backend_specific_call(_construct_v2_dag_id, lambda name: name)(dag_name)
 
     file_upload_config = backend_specific_call(_get_v2_upload_file, _get_v3_upload_file)(is_internal)
-    upload_info = _upload_data_loading_files(
-        file_upload_config, projects, _get_dag_gs_path(genome_version, dag_name), is_internal, user)
+    upload_info = _upload_data_loading_files(file_upload_config, projects, is_internal, user, genome_version, sample_type)
 
     try:
         _check_dag_running_state(dag_id)
@@ -59,16 +58,19 @@ def trigger_data_loading(projects, sample_type, data_path, user, success_message
 
 
 def write_data_loading_pedigree(project, user):
-    possible_dag_paths = [
-        _get_dag_gs_path(project.genome_version, _construct_v2_dag_name(sample_type, callset=callset))
-        for callset, sample_type in itertools.product(['Internal', 'External'], ['WGS', 'WES'])
-    ]
-    dag_path = next((dag_path for dag_path in possible_dag_paths if does_file_exist(
-        _get_dag_project_gs_path(project.guid, dag_path, is_internal=True)
+    match = next((
+        (callset, sample_type) for callset, sample_type in itertools.product(['Internal', 'External'], ['WGS', 'WES'])
+        if does_file_exist(_get_dag_project_gs_path(project.guid, _get_dag_gs_path(
+            project.genome_version, _construct_v2_dag_name(sample_type, callset=callset)
+        ), is_internal=True)
     )), None)
-    if not dag_path:
+    if not match:
         raise ValueError(f'No {SEQR_DATASETS_GS_PATH} project directory found for {project.guid}')
-    _upload_data_loading_files(PEDIGREE_FILE_CONFIG, [project], dag_path, is_internal=True, user=user)
+    callset, sample_type = match
+    _upload_data_loading_files(
+        PEDIGREE_FILE_CONFIG, [project], is_internal=True, user=user, genome_version=project.genome_version,
+        sample_type=sample_type, callset=callset,
+    )
 
 
 def _send_load_data_slack_msg(messages, channel, dag_id, dag):
@@ -161,7 +163,7 @@ def _get_v3_upload_file(*args):
     return PEDIGREE_FILE_CONFIG
 
 
-def _upload_data_loading_files(config, projects, dag_path, is_internal, user):
+def _upload_data_loading_files(config, projects, is_internal, user, genome_version, sample_type, **kwargs):
     if config is None:
         return []
 
@@ -173,6 +175,8 @@ def _upload_data_loading_files(config, projects, dag_path, is_internal, user):
     data_by_project = defaultdict(list)
     for row in data:
         data_by_project[row.pop('project')].append(row)
+
+    dag_path = _get_dag_gs_path(genome_version, _construct_v2_dag_name(sample_type, is_internal=is_internal, **kwargs))
 
     info = []
     for project_guid, rows in data_by_project.items():

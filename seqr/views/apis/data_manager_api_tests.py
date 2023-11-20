@@ -1303,7 +1303,9 @@ class LoadDataAPITest(object):
 
         # Test loading trigger error
         self.mock_slack.reset_mock()
+        mock_open.reset_mock()
         responses.calls.reset()
+        mock_subprocess.reset_mock()
         mock_subprocess.return_value.communicate.return_value = b'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_SV/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v01/\ngs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_GCNV/v02/', b''
 
         body.update({'datasetType': 'SV', 'filePath': 'gs://test_bucket/sv_callset.vcf', 'sampleType': 'WES'})
@@ -1312,7 +1314,7 @@ class LoadDataAPITest(object):
         self.assertDictEqual(response.json(), {'success': True})
 
         self.assert_airflow_calls(trigger_error=True, dag_name=self.SECOND_DAG_NAME)
-        self._has_expected_gs_calls(mock_subprocess, mock_open, dag_name=self.SECOND_DAG_NAME)
+        self._has_expected_gs_calls(mock_subprocess, mock_open, dag_name=self.SECOND_DAG_NAME, sample_type='WES')
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
         error = self.mock_airflow_logger.error.call_args.args[0]
@@ -1371,7 +1373,7 @@ class LoadEsDataAPITest(AirflowTestCase, LoadDataAPITest):
         })
         return variables
 
-    def _has_expected_gs_calls(self, mock_subprocess, mock_open, dag_name=DAG_NAME):
+    def _has_expected_gs_calls(self, mock_subprocess, mock_open, dag_name=DAG_NAME, **kwargs):
         mock_open.assert_not_called()
         mock_subprocess.assert_called_with(
             f'gsutil ls gs://seqr-datasets/v02/GRCh38/{dag_name}', stdout=-1, stderr=-1, shell=True)  # nosec
@@ -1384,9 +1386,9 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
     HAS_DAG_ID_PREFIX = False
     SUCCESS_SLACK_DETAIL = """
 
-        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/v03_pipeline-MITO/base/projects/R0001_1kg
+        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg
 
-        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/v03_pipeline-MITO/base/projects/R0004_non_analyst_project
+        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project
 
         DAG v03_pipeline-MITO is triggered with following:
         ```{
@@ -1430,10 +1432,10 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
         })
         return variables
 
-    def _has_expected_gs_calls(self, mock_subprocess, mock_open, **kwargs):
+    def _has_expected_gs_calls(self, mock_subprocess, mock_open, sample_type='WGS', **kwargs):
+        projects = ['R0001_1kg', 'R0004_non_analyst_project']
         mock_open.assert_has_calls([
-            mock.call('/mock/tmp/R0001_1kg_pedigree.tsv', 'w'),
-            mock.call('/mock/tmp/R0004_non_analyst_project_pedigree.tsv', 'w'),
+            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in projects
         ], any_order=True)
         files = [
             [row.split('\t') for row in write_call.args[0].split('\n')]
@@ -1451,11 +1453,7 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
 
         mock_subprocess.assert_has_calls([
             mock.call(
-                'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg',
-                stdout=-1, stderr=-2, shell=True),
-            mock.call().wait(),
-            mock.call(
-                'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project',
-                stdout=-1, stderr=-2, shell=True),
-            mock.call().wait(),
-        ])
+                f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}',
+                stdout=-1, stderr=-2, shell=True,
+            ) for project in projects
+        ], any_order=True)
