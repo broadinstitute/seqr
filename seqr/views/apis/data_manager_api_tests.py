@@ -1264,6 +1264,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
 class LoadDataAPITest(object):
     LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
+    PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
 
     def patch_es(self, es_host):
         patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', es_host)
@@ -1366,12 +1367,12 @@ class LoadEsDataAPITest(AirflowTestCase, LoadDataAPITest):
         super().setUp()
 
     def _get_expected_dag_variables(self, **kwargs):
-        variables = super()._get_expected_dag_variables(**kwargs)
-        variables.update({
+        return {
+            'active_projects': self.PROJECTS,
+            'projects_to_run': self.PROJECTS,
             'vcf_path': 'gs://test_bucket/mito_callset.mt',
             'version_path': 'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01',
-        })
-        return variables
+        }
 
     def _has_expected_gs_calls(self, mock_subprocess, mock_open, dag_name=DAG_NAME, **kwargs):
         mock_open.assert_not_called()
@@ -1422,20 +1423,17 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
         super().setUp()
 
     def _get_expected_dag_variables(self, **kwargs):
-        variables = super()._get_expected_dag_variables(**kwargs)
-        del variables['active_projects']
-        variables.update({
+        return {
+            'projects_to_run': self.PROJECTS,
             'callset_path': 'gs://test_bucket/mito_callset.mt',
             'sample_source': 'Broad_Internal',
             'sample_type': 'WGS',
             'reference_genome': 'GRCh38',
-        })
-        return variables
+        }
 
     def _has_expected_gs_calls(self, mock_subprocess, mock_open, sample_type='WGS', **kwargs):
-        projects = ['R0001_1kg', 'R0004_non_analyst_project']
         mock_open.assert_has_calls([
-            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in projects
+            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in self.PROJECTS
         ], any_order=True)
         files = [
             [row.split('\t') for row in write_call.args[0].split('\n')]
@@ -1455,5 +1453,5 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
             mock.call(
                 f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}',
                 stdout=-1, stderr=-2, shell=True,
-            ) for project in projects
+            ) for project in self.PROJECTS
         ], any_order=True)

@@ -680,11 +680,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         return f'seqr_vcf_to_es_{self.DAG_NAME}_v0.0.1' if self.HAS_DAG_ID_PREFIX else self.DAG_NAME
 
     def _get_expected_dag_variables(self, **kwargs):
-        projects = [PROJECT_GUID, self.LOADING_PROJECT_GUID]
-        return {
-            'active_projects': projects,
-            'projects_to_run': projects,
-        }
+        raise NotImplementedError
 
 
 class AirtableTest(object):
