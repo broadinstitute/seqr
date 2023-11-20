@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import datetime
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
+from django.contrib.auth.models import User
 from django.db.models import CharField, F, Value, Case, When
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
@@ -183,7 +184,7 @@ def bulk_update_family_external_analysis(request):
     })
 
 
-def _load_aip_data(data, user):
+def _load_aip_data(data: dict, user: User):
     category_map = data['metadata']['categories']
     results = data['results']
 
@@ -244,7 +245,10 @@ def _load_aip_data(data, user):
     })
 
 
-def _search_new_saved_variants(family_variant_ids, user):
+FamilyVariantKey = tuple[int, str]
+
+
+def _search_new_saved_variants(family_variant_ids: list[FamilyVariantKey], user: User):
     family_ids = set()
     variant_families = defaultdict(list)
     for family_id, variant_id in family_variant_ids:
@@ -282,7 +286,9 @@ def _search_new_saved_variants(family_variant_ids, user):
     return {(v.family_id, v.variant_id): v for v in saved_variants}
 
 
-def _set_aip_tags(key, metadata, support_var_ids, saved_variant_map, existing_tags, aip_tag_type, user):
+def _set_aip_tags(key: FamilyVariantKey, metadata: dict[str, dict], support_var_ids: list[str],
+                  saved_variant_map: dict[FamilyVariantKey, SavedVariant], existing_tags: dict[tuple[int, ...], VariantTag],
+                  aip_tag_type: VariantTagType, user: User):
     variant = saved_variant_map[key]
     existing_tag = existing_tags.get(tuple([variant.id]))
     updated_tag = None
