@@ -27,9 +27,7 @@ const FeatureUpdatesFeed = ({ entries }) => (
           <Feed.Content>
             <Feed.Summary>
               <a href={entry.link}>{entry.title}</a>
-              &nbsp;
-              by
-              &nbsp;
+              &nbsp;by&nbsp;
               <a href={entry.author_link}>{entry.author}</a>
               <Feed.Date>
                 <div>{getDateFromDateStr(entry.published_datestr)}</div>
