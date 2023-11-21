@@ -877,7 +877,7 @@ class LoadAnvilHailDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
     def _get_project_dag_variables(project, genome_version):
         return {
             'projects_to_run': [project],
-            'callset_path': 'gs://test_bucket/test_path.vcf',
+            'callset_paths': ['gs://test_bucket/test_path.vcf'],
             'sample_source': 'AnVIL',
             'sample_type': 'WES',
             'reference_genome': genome_version,

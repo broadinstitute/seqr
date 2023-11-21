@@ -260,7 +260,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
         *{user.email}* requested to load {num_updated_individuals} new{reload_summary} {sample_type} samples ({GENOME_VERSION_LOOKUP.get(project.genome_version)}) from AnVIL workspace *{project.workspace_namespace}/{project.workspace_name}* at 
         {data_path} to seqr project <{_get_seqr_project_url(project)}|*{project.name}*> (guid: {project.guid})"""
     trigger_success = trigger_data_loading(
-        [project], sample_type, data_path, user, success_message,
+        [project], sample_type, Sample.DATASET_TYPE_VARIANT_CALLS, data_path, user, success_message,
         SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, f'ERROR triggering AnVIL loading for project {project.guid}',
         genome_version=project.genome_version,
     )

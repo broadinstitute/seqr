@@ -432,9 +432,9 @@ def load_data(request):
 
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
     trigger_data_loading(
-        project_models, sample_type, request_json['filePath'], request.user, success_message,
+        project_models, sample_type, dataset_type, request_json['filePath'], request.user, success_message,
         SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
-        dataset_type=dataset_type, is_internal=True,
+        is_internal=True,
     )
 
     return create_json_response({'success': True})

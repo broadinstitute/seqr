@@ -28,10 +28,9 @@ class DagRunningException(Exception):
     pass
 
 
-def trigger_data_loading(projects: list[Project], sample_type: str, data_path: str, user: User, success_message: str,
-                         success_slack_channel: str, error_message: str,
-                         dataset_type: str = Sample.DATASET_TYPE_VARIANT_CALLS, genome_version: str = GENOME_VERSION_GRCh38,
-                         is_internal: bool = False):
+def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type: str, data_path: str, user: User,
+                         success_message: str, success_slack_channel: str, error_message: str,
+                         genome_version: str = GENOME_VERSION_GRCh38, is_internal: bool = False):
     success = True
     dag_name = backend_specific_call(_construct_v2_dag_name, _construct_v3_dag_name)(
         sample_type=sample_type, dataset_type=dataset_type, is_internal=is_internal)
@@ -145,7 +144,7 @@ def _construct_v3_dag_variables(projects: list[str], data_path: str, genome_vers
                                 sample_type: str, **kwargs):
     return {
         'projects_to_run': projects,
-        'callset_path': data_path,
+        'callset_paths': [data_path],
         'sample_source': 'Broad_Internal' if is_internal else 'AnVIL',
         'sample_type': sample_type,
         'reference_genome': GENOME_VERSION_LOOKUP[genome_version],

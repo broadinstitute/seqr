@@ -1397,7 +1397,9 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
         "R0001_1kg",
         "R0004_non_analyst_project"
     ],
-    "callset_path": "gs://test_bucket/mito_callset.mt",
+    "callset_paths": [
+        "gs://test_bucket/mito_callset.mt"
+    ],
     "sample_source": "Broad_Internal",
     "sample_type": "WGS",
     "reference_genome": "GRCh38"
@@ -1411,7 +1413,9 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
         "R0001_1kg",
         "R0004_non_analyst_project"
     ],
-    "callset_path": "gs://test_bucket/sv_callset.vcf",
+    "callset_paths": [
+        "gs://test_bucket/sv_callset.vcf"
+    ],
     "sample_source": "Broad_Internal",
     "sample_type": "WES",
     "reference_genome": "GRCh38"
@@ -1425,7 +1429,7 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
     def _get_expected_dag_variables(self, **kwargs):
         return {
             'projects_to_run': self.PROJECTS,
-            'callset_path': 'gs://test_bucket/mito_callset.mt',
+            'callset_paths': ['gs://test_bucket/mito_callset.mt'],
             'sample_source': 'Broad_Internal',
             'sample_type': 'WGS',
             'reference_genome': 'GRCh38',
