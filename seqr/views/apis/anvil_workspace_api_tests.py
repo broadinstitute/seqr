@@ -749,7 +749,6 @@ class LoadAnvilDataAPITest(object):
         ```{dag}```
         """.format(
             guid=project.guid,
-            version=genome_version,
             dag_id=self._get_dag_id(),
             dag=json.dumps(self._get_project_dag_variables(project.guid, genome_version), indent=4),
         )

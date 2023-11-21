@@ -1452,6 +1452,6 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
         mock_subprocess.assert_has_calls([
             mock.call(
                 f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}',
-                stdout=-1, stderr=-2, shell=True,
+                stdout=-1, stderr=-2, shell=True,  # nosec
             ) for project in self.PROJECTS
         ], any_order=True)

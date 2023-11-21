@@ -9,7 +9,7 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max, Value, F, Q
+from django.db.models import Max, F, Q
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
@@ -22,7 +22,6 @@ from seqr.utils.vcf_utils import validate_vcf_exists
 from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
 from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file, \
     load_rna_seq_splice_outlier
-from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
