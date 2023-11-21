@@ -111,6 +111,4 @@ def load_uploaded_file(upload_file_id):
     with gzip.open(serialized_file_path, "rt") as f:
         json_records = json.load(f)
 
-    os.remove(serialized_file_path)
-
     return json_records

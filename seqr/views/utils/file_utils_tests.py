@@ -85,9 +85,9 @@ class FileUtilsTest(AuthenticationTestCase):
         uploaded_file_id = response_json['uploadedFileId']
         file_content = load_uploaded_file(uploaded_file_id)
         self.assertListEqual(file_content, PARSED_DATA)
-        # File should be removed after loading it once
-        with self.assertRaises(IOError):
-            load_uploaded_file(uploaded_file_id)
+        # File should be unchanged if reloaded multiple times
+        reload_file_content = load_uploaded_file(uploaded_file_id)
+        self.assertEqual(file_content, reload_file_content)
 
         # Test uploading with returned data and test with file formats
         wb = xl.Workbook()
