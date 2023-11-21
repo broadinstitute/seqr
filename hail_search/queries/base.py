@@ -159,15 +159,15 @@ class BaseHailTableQuery(object):
         if hasattr(value, 'map'):
             if empty_array:
                 value = hl.or_else(value, hl.empty_array(value.dtype.element_type))
-            value = value.map(lambda x: cls._enum_field(x, enum, **kwargs))
+            value = value.map(lambda x: cls._enum_field(field, x, enum, **kwargs))
             if format_array_values:
                 value = format_array_values(value, r)
             return value
 
-        return cls._enum_field(value, enum, **kwargs)
+        return cls._enum_field(field, value, enum, **kwargs)
 
     @staticmethod
-    def _enum_field(value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, enum_keys=None, **kwargs):
+    def _enum_field(field_name, value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, enum_keys=None, include_version=False, **kwargs):
         annotations = {}
         drop = [] + (drop_fields or [])
         value_keys = value.keys()
@@ -183,9 +183,12 @@ class BaseHailTableQuery(object):
             else:
                 annotations[field] = enum_array[value[value_field]]
 
+        if include_version:
+            annotations['version'] = ht_globals['versions'][field_name]
+
         value = value.annotate(**annotations)
         if annotate_value:
-            annotations = annotate_value(value, enum, ht_globals)
+            annotations = annotate_value(value, enum)
             value = value.annotate(**annotations)
         value = value.drop(*drop)
 

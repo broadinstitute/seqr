@@ -12,6 +12,7 @@ SPLICE_AI_FIELD = 'splice_ai'
 NEW_SV_FIELD = 'new_structural_variants'
 SCREEN_KEY = 'SCREEN'  # uses all caps to match filter provided by the seqr UI
 CLINVAR_KEY = 'clinvar'
+CLINVAR_MITO_KEY = 'clinvar_mito'
 HGMD_KEY = 'hgmd'
 STRUCTURAL_ANNOTATION_FIELD = 'structural'
 
