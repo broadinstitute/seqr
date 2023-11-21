@@ -215,7 +215,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             },
             'genotypeFilters': 'RefCall',
             'populations': {
-                'seqr': {'af': 0.25, 'ac': 1, 'an': 4, 'hom': 0},
+                'seqr': {'af': 0.1666666716337204, 'ac': 2, 'an': 12, 'hom': 0},
                 'topmed': {'af': 0.0023385800886899233, 'ac': 619, 'an': 264690, 'hom': 11, 'het': 597},
                 'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
                 'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
