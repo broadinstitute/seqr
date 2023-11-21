@@ -51,6 +51,9 @@ database so the data looks comparable. You will want to periodically re-run this
 ./deploy/kubectl_helpers/restore_local_db.sh prod seqrdb
 ./deploy/kubectl_helpers/restore_local_db.sh prod reference_data_db
 ```
+Note: If either database restore script fails due to the `gcloud sql export` command taking longer than expected,
+you can update the `FILENAME` property in the script to match an existing export, comment out the `gcloud sql export`
+line, and re-run the script.
 
 #### Stand alone seqr instance
 

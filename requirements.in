@@ -22,3 +22,5 @@ slacker                           # library for sending slack messages
 slugify                           # used for encoding names for guids
 tqdm                              # convenient way to create progress bar for long-running command-line operations
 whitenoise
+feedparser
+markdownify

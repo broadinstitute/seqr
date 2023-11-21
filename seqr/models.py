@@ -145,6 +145,12 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         return entity_ids
 
     @classmethod
+    def bulk_update_models(cls, user, models, fields):
+        """Helper bulk update method that logs the update and allows different update data for each model"""
+        log_model_bulk_update(logger, models, user, 'update', update_fields=fields)
+        cls.objects.bulk_update(models, fields)
+
+    @classmethod
     def bulk_delete(cls, user, queryset=None, **filter_kwargs):
         """Helper bulk delete method that logs the deletion"""
         if queryset is None:

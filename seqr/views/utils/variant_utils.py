@@ -10,6 +10,7 @@ from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, L
     RnaSeqTpm, PhenotypePrioritization, Project, Sample, VariantTagType
 from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
+from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
@@ -56,6 +57,24 @@ def update_project_saved_variant_json(project, family_id=None, user=None):
                 updated_saved_variant_guids.append(saved_variant.guid)
 
     return updated_saved_variant_guids
+
+
+def parse_saved_variant_json(variant_json, family):
+    if 'xpos' not in variant_json:
+        variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
+    xpos = variant_json['xpos']
+    ref = variant_json.get('ref')
+    alt = variant_json.get('alt')
+    var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else len(ref) - 1
+    update_json = {'saved_variant_json': variant_json}
+    return {
+        'xpos': xpos,
+        'xpos_end': xpos + var_length,
+        'ref': ref,
+        'alt': alt,
+        'family': family,
+        'variant_id': variant_json['variantId']
+    }, update_json
 
 
 def reset_cached_search_results(project, reset_index_metadata=False):
@@ -308,7 +327,8 @@ HOM_ALT = 'Homozygous'
 HEMI = 'Hemizygous'
 
 
-def get_variant_inheritance_models(variant_json, affected_individual_guids, unaffected_individual_guids, male_individual_guids):
+def get_variant_inheritance_models(variant_json, family_individual_data):
+    affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
     inheritance_models = set()
 
     affected_indivs_with_hom_alt_variants = set()
@@ -317,11 +337,13 @@ def get_variant_inheritance_models(variant_json, affected_individual_guids, unaf
     is_x_linked = False
 
     genotypes = variant_json.get('genotypes')
+    genotype_zygosity = {}
     if genotypes:
         chrom = variant_json['chrom']
         is_x_linked = "X" in chrom
         for sample_guid, genotype in genotypes.items():
-            zygosity = get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
+            zygosity = _get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
+            genotype_zygosity[sample_guid] = zygosity
             if zygosity in (HOM_ALT, HEMI) and sample_guid in unaffected_individual_guids:
                 # No valid inheritance modes for hom alt unaffected individuals
                 return set(), set()
@@ -341,10 +363,14 @@ def get_variant_inheritance_models(variant_json, affected_individual_guids, unaf
             inheritance_models.add("AR-homozygote")
 
     if not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
-        if unaffected_individual_guids:
-            inheritance_models.add("de novo")
-        else:
+        inherited = any(
+            guid for guid in affected_indivs_with_het_variants
+            if any(parent_guid in affected_indivs_with_het_variants for parent_guid in parent_guid_map[guid])
+        )
+        if inherited or not unaffected_individual_guids:
             inheritance_models.add("AD")
+        else:
+            inheritance_models.add("de novo")
 
     potential_compound_het_gene_ids = set()
     if (len(unaffected_individual_guids) < 2 or unaffected_indivs_with_het_variants) \
@@ -352,10 +378,10 @@ def get_variant_inheritance_models(variant_json, affected_individual_guids, unaf
             and 'transcripts' in variant_json:
         potential_compound_het_gene_ids.update(list(variant_json['transcripts'].keys()))
 
-    return inheritance_models, potential_compound_het_gene_ids
+    return inheritance_models, potential_compound_het_gene_ids, genotype_zygosity
 
 
-def get_genotype_zygosity(genotype, is_hemi_variant):
+def _get_genotype_zygosity(genotype, is_hemi_variant):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
     if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
