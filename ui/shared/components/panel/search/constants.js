@@ -473,7 +473,7 @@ export const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...PREDICTOR_FIELDS.filter
     const labelHelp = (
       <div>
         {`Enter a numeric cutoff for ${label}`}
-        {thresholds && predictorColorRanges(thresholds)}
+        {thresholds && predictorColorRanges(thresholds, label)}
       </div>
     )
     return {

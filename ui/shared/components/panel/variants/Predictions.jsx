@@ -34,7 +34,7 @@ const Prediction = (
     <Popup
       header={`${fieldName} Color Ranges`}
       hoverable
-      content={predictorColorRanges(thresholds)}
+      content={predictorColorRanges(thresholds, fieldName)}
       trigger={<span>{fieldName}</span>}
     />
   ) : fieldName
