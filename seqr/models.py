@@ -145,6 +145,12 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         return entity_ids
 
     @classmethod
+    def bulk_update_models(cls, user, models, fields):
+        """Helper bulk update method that logs the update and allows different update data for each model"""
+        log_model_bulk_update(logger, models, user, 'update', update_fields=fields)
+        cls.objects.bulk_update(models, fields)
+
+    @classmethod
     def bulk_delete(cls, user, queryset=None, **filter_kwargs):
         """Helper bulk delete method that logs the deletion"""
         if queryset is None:
@@ -264,32 +270,33 @@ class ProjectCategory(ModelWithGUID):
 
 class Family(ModelWithGUID):
     ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS='I'
+    ANALYSIS_STATUS_PARTIAL_SOLVE = 'P'
     ANALYSIS_STATUS_WAITING_FOR_DATA='Q'
-    ANALYSIS_STATUS_SOLVED = 'S'
-    ANALYSIS_STATUS_SOLVED_KGP = 'S_kgfp'
-    ANALYSIS_STATUS_SOLVED_KGDP = 'S_kgdp'
-    ANALYSIS_STATUS_SOLVED_NOVEL = 'S_ng'
-    ANALYSIS_STATUS_SOLVED_EXTERNAL = 'ES'
-    ANALYSIS_STATUS_CHOICES = (
+    SOLVED_ANALYSIS_STATUS_CHOICES = (
         ('S', 'Solved'),
         ('S_kgfp', 'Solved - known gene for phenotype'),
         ('S_kgdp', 'Solved - gene linked to different phenotype'),
         ('S_ng', 'Solved - novel gene'),
         ('ES', 'External solve'),
+    )
+    STRONG_CANDIDATE_STATUS_CHOICES = (
         ('Sc_kgfp', 'Strong candidate - known gene for phenotype'),
         ('Sc_kgdp', 'Strong candidate - gene linked to different phenotype'),
         ('Sc_ng', 'Strong candidate - novel gene'),
+    )
+    ANALYSIS_STATUS_CHOICES = (
+        *SOLVED_ANALYSIS_STATUS_CHOICES,
+        *STRONG_CANDIDATE_STATUS_CHOICES,
         ('Rcpc', 'Reviewed, currently pursuing candidates'),
         ('Rncc', 'Reviewed, no clear candidate'),
         ('C', 'Closed, no longer under analysis'),
-        ('I', 'Analysis in Progress'),
-        ('Q', 'Waiting for data'),
+        (ANALYSIS_STATUS_PARTIAL_SOLVE, 'Partial Solve - Analysis in Progress'),
+        (ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS, 'Analysis in Progress'),
+        (ANALYSIS_STATUS_WAITING_FOR_DATA, 'Waiting for data'),
         ('N', 'No data expected'),
     )
-    SOLVED_ANALYSIS_STATUSES = [
-        ANALYSIS_STATUS_SOLVED, ANALYSIS_STATUS_SOLVED_KGP, ANALYSIS_STATUS_SOLVED_KGDP, ANALYSIS_STATUS_SOLVED_NOVEL,
-        ANALYSIS_STATUS_SOLVED_EXTERNAL,
-    ]
+    SOLVED_ANALYSIS_STATUSES = [status for status, _ in SOLVED_ANALYSIS_STATUS_CHOICES]
+    STRONG_CANDIDATE_ANALYSIS_STATUSES = [status for status, _ in STRONG_CANDIDATE_STATUS_CHOICES]
 
     SUCCESS_STORY_TYPE_CHOICES = (
         ('N', 'Novel Discovery'),

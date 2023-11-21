@@ -101,6 +101,7 @@ from seqr.views.apis.variant_search_api import \
     get_variant_gene_breakdown, \
     create_saved_search_handler,\
     update_saved_search_handler, \
+    variant_lookup_handler, \
     delete_saved_search_handler
 
 from seqr.views.apis.users_api import \
@@ -127,7 +128,7 @@ from seqr.views.apis.report_api import \
     gregor_export, \
     seqr_stats
 from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, hpo_summary_data, \
-    bulk_update_family_analysed_by, sample_metadata_export
+    bulk_update_family_external_analysis, sample_metadata_export
 from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -143,6 +144,7 @@ from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_pro
     grant_workspace_access, validate_anvil_vcf, add_workspace_data, get_anvil_vcf_list
 from matchmaker.views import external_api
 from seqr.views.utils.file_utils import save_temp_file
+from seqr.views.apis.feature_updates_api import get_feature_updates
 
 react_app_pages = [
     'dashboard',
@@ -168,7 +170,7 @@ no_login_react_app_pages = [
     'privacy_policy',
     'terms_of_service',
     'faq/.*',
-
+    'feature_updates',
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix
@@ -240,6 +242,7 @@ api_endpoints = {
     'search/(?P<search_hash>[^/]+)': query_variants_handler,
     'search/(?P<search_hash>[^/]+)/download': export_variants_handler,
     'search/(?P<search_hash>[^/]+)/gene_breakdown': get_variant_gene_breakdown,
+    'variant_lookup': variant_lookup_handler,
     'search_context': search_context_handler,
     'saved_search/all': get_saved_search_handler,
     'saved_search/create': create_saved_search_handler,
@@ -328,13 +331,15 @@ api_endpoints = {
     'summary_data/hpo/(?P<hpo_id>[^/]+)': hpo_summary_data,
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
     'summary_data/matchmaker': mme_details,
-    'summary_data/update_analysed_by': bulk_update_family_analysed_by,
+    'summary_data/update_external_analysis': bulk_update_family_external_analysis,
     'summary_data/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
 
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/grant_access': grant_workspace_access,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/validate_vcf': validate_anvil_vcf,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/submit': create_project_from_workspace,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/get_vcf_list': get_anvil_vcf_list,
+
+    'feature_updates': get_feature_updates,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs

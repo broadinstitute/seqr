@@ -1082,7 +1082,7 @@
         "mim_number": 103320,
         "gene_description": "Agrin",
         "comments": "",
-        "phenotype_inheritance": "Autosomal recessive",
+        "phenotype_inheritance": "Autosomal recessive, X-linked recessive",
         "phenotype_mim_number": 615120,
         "phenotype_description": "Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects",
         "phenotype_map_method": "3"
@@ -1428,6 +1428,18 @@
         "category_id": "HP:0033127",
         "is_category": "f",
         "name": "Tetralogy of Fallot",
+        "definition": "",
+        "comment": ""
+    }
+}, {
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 12,
+    "fields": {
+        "hpo_id": "HP:0000006",
+        "parent_id": "HP:0034345",
+        "category_id": "",
+        "is_category": "f",
+        "name": "Autosomal dominant inheritance",
         "definition": "",
         "comment": ""
     }

@@ -6,7 +6,7 @@ from urllib3.connectionpool import connection_from_url
 
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
+from seqr.utils.search.constants import VCF_FILE_EXTENSIONS, XPOS_SORT_KEY
 from seqr.utils.search.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.search.elasticsearch.es_search import EsSearch, get_compound_het_page
 from seqr.views.utils.json_utils import  _to_camel_case
@@ -265,7 +265,7 @@ def _get_es_indices(client):
 
 def get_es_variants_for_variant_ids(samples, genome_version, variants_by_id, user, return_all_queried_families=False):
     variants = EsSearch(
-        samples, genome_version, user=user, return_all_queried_families=return_all_queried_families,
+        samples, genome_version, user=user, return_all_queried_families=return_all_queried_families, sort=XPOS_SORT_KEY,
     ).filter_by_variant_ids(list(variants_by_id.keys()))
     return variants.search(num_results=len(variants_by_id))
 

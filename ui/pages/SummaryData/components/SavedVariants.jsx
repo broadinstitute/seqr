@@ -50,6 +50,7 @@ const TAG_OPTIONS = [
   'Sanger did not confirm',
   'Confident AR one hit',
   'Analyst high priority',
+  'AIP',
   'seqr MME (old)',
   'Submit to Clinvar',
   'Share with KOMP',

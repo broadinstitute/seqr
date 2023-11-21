@@ -362,6 +362,8 @@ VARIANT4 = {
     '_sort': [1091511686],
 }
 
+VARIANT_LOOKUP_VARIANT = {**VARIANT1, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''}
+
 FAMILY_3_VARIANT = deepcopy(VARIANT3)
 FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
 FAMILY_3_VARIANT['genotypes'] = {

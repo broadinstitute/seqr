@@ -151,6 +151,7 @@ const FAMILY_STATUS_STRONG_CANDIDATE_NOVEL_GENE = 'Sc_ng'
 const FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES = 'Rcpc'
 const FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE = 'Rncc'
 const FAMILY_STATUS_CLOSED = 'C'
+const FAMILY_STATUS_PARTIAL_SOLVE = 'P'
 const FAMILY_STATUS_ANALYSIS_IN_PROGRESS = 'I'
 const FAMILY_STATUS_WAITING_FOR_DATA = 'Q'
 const FAMILY_STATUS_NO_DATA = 'N'
@@ -169,6 +170,7 @@ export const SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES, color: '#EB9F38', name: 'Reviewed, currently pursuing candidates' },
   { value: FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE, color: '#EF5350', name: 'Reviewed, no clear candidate' },
   { value: FAMILY_STATUS_CLOSED, color: '#9c0502', name: 'Closed, no longer under analysis' },
+  { value: FAMILY_STATUS_PARTIAL_SOLVE, color: '#288582', name: 'Partial Solve - Analysis in Progress' },
   { value: FAMILY_STATUS_ANALYSIS_IN_PROGRESS, color: '#4682B4', name: 'Analysis in Progress' },
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
   { value: FAMILY_STATUS_NO_DATA, color: '#646464', name: 'No data expected' },
@@ -1756,4 +1758,5 @@ export const FAQ_PATH = '/faq'
 export const MATCHMAKER_PATH = '/matchmaker'
 export const PRIVACY_PATH = '/privacy_policy'
 export const TOS_PATH = '/terms_of_service'
-export const PUBLIC_PAGES = [MATCHMAKER_PATH, FAQ_PATH, PRIVACY_PATH, TOS_PATH]
+export const FEATURE_UPDATES_PATH = '/feature_updates'
+export const PUBLIC_PAGES = [MATCHMAKER_PATH, FAQ_PATH, PRIVACY_PATH, TOS_PATH, FEATURE_UPDATES_PATH]
