@@ -16,9 +16,9 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import get_airtable_samples
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION, \
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, parse_family_sample_affected_data, \
     ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
-    SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE
+    SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
@@ -1122,21 +1122,10 @@ def _generate_rows(initial_row, family, samples, saved_variants, analysis_notes,
     if not saved_variants:
         return [row]
 
-    affected_individual_guids = set()
-    unaffected_individual_guids = set()
-    male_individual_guids = set()
-    for sample in samples:
-        if sample.individual.affected == "A":
-            affected_individual_guids.add(sample.individual.guid)
-        elif sample.individual.affected == "N":
-            unaffected_individual_guids.add(sample.individual.guid)
-        if sample.individual.sex == Individual.SEX_MALE:
-            male_individual_guids.add(sample.individual.guid)
-
     potential_compound_het_genes = defaultdict(set)
     for variant in saved_variants:
         _update_variant_inheritance(
-            variant, affected_individual_guids, unaffected_individual_guids, male_individual_guids, potential_compound_het_genes)
+            variant, parse_family_sample_affected_data(samples), potential_compound_het_genes)
 
     gene_ids_to_saved_variants, gene_ids_to_variant_tag_names, gene_ids_to_inheritance = _get_gene_to_variant_info_map(
         saved_variants, potential_compound_het_genes)
@@ -1176,9 +1165,9 @@ def _get_basic_row(initial_row, family, samples, now):
     return row
 
 
-def _update_variant_inheritance(variant, affected_individual_guids, unaffected_individual_guids, male_individual_guids, potential_compound_het_genes):
-    inheritance_models, potential_compound_het_gene_ids = get_variant_inheritance_models(
-        variant.saved_variant_json, affected_individual_guids, unaffected_individual_guids, male_individual_guids)
+def _update_variant_inheritance(variant, family_individual_data, potential_compound_het_genes):
+    inheritance_models, potential_compound_het_gene_ids, _ = get_variant_inheritance_models(
+        variant.saved_variant_json, family_individual_data)
     variant.saved_variant_json['inheritance'] = inheritance_models
 
     for gene_id in potential_compound_het_gene_ids:

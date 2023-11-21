@@ -12,7 +12,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, \
-    get_variant_inheritance_models, get_sv_name, get_genotype_zygosity
+    get_variant_inheritance_models, get_sv_name
 
 SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
     'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
@@ -111,19 +111,16 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
         individual_id_map[individual.id] = individual.individual_id
         sample_ids.add(sample.sample_id)
 
-    family_individual_affected_guids = {}
-    for family_id, family_samples in samples_by_family_id.items():
-        family_individual_affected_guids[family_id] = (
-            {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_AFFECTED},
-            {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_UNAFFECTED},
-            {s.individual.guid for s in family_samples if s.individual.sex == Individual.SEX_MALE},
-        )
+    individual_data_by_family = {
+        family_id: parse_family_sample_affected_data(family_samples)
+        for family_id, family_samples in samples_by_family_id.items()
+    }
 
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(list(sample_ids), user)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(samples_by_family_id.keys()))
     compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
-        saved_variants_by_family, family_individual_affected_guids)
+        saved_variants_by_family, individual_data_by_family)
     genes_by_id = get_genes(gene_ids)
 
     mim_numbers = set()
@@ -148,7 +145,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
                     mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
             })
 
-        affected_individual_guids, _, male_individual_guids = family_individual_affected_guids[family_id]
+        affected_individual_guids = individual_data_by_family[family_id][0]
 
         family_consanguinity = any(sample.individual.consanguinity is True for sample in family_samples)
         family_row = {
@@ -184,8 +181,21 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
             sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additional_sample_fields)
             add_row(sample_row, family_id, SAMPLE_ROW_TYPE)
 
-            discovery_row = _get_discovery_rows(sample, parsed_variants, male_individual_guids)
+            discovery_row = _get_discovery_rows(sample, parsed_variants)
             add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
+
+
+def parse_family_sample_affected_data(family_samples):
+    indiv_id_map = {s.individual.id: s.individual.guid for s in family_samples}
+    return (
+        {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_AFFECTED},
+        {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_UNAFFECTED},
+        {s.individual.guid for s in family_samples if s.individual.sex == Individual.SEX_MALE},
+        {s.individual.guid: [
+            indiv_id_map[parent_id] for parent_id in [s.individual.mother_id, s.individual.father_id]
+            if parent_id in indiv_id_map
+        ] for s in family_samples},
+    )
 
 
 def _get_nested_variant_name(variant):
@@ -205,7 +215,7 @@ def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date
     return {sample.individual: sample for sample in loaded_samples}
 
 
-def _process_saved_variants(saved_variants_by_family, family_individual_affected_guids):
+def _process_saved_variants(saved_variants_by_family, individual_data_by_family):
     gene_ids = set()
     compound_het_gene_id_by_family = {}
     for family_id, saved_variants in saved_variants_by_family.items():
@@ -216,10 +226,12 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
             if variant['main_transcript']:
                 gene_ids.add(variant['main_transcript']['geneId'])
 
-            affected_individual_guids, unaffected_individual_guids, male_individual_guids = family_individual_affected_guids[family_id]
-            inheritance_models, potential_compound_het_gene_ids = get_variant_inheritance_models(
-                variant, affected_individual_guids, unaffected_individual_guids, male_individual_guids)
-            variant['inheritance_models'] = inheritance_models
+            inheritance_models, potential_compound_het_gene_ids, genotype_zygosity = get_variant_inheritance_models(
+                variant, individual_data_by_family[family_id])
+            variant.update({
+                'inheritance_models': inheritance_models,
+                'genotype_zygosity': genotype_zygosity,
+            })
             for gene_id in potential_compound_het_gene_ids:
                 potential_com_het_gene_variants[gene_id].append(variant)
             for guid in variant['discovery_tag_guids_by_name'].values():
@@ -322,7 +334,7 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
             'hgvsp': (variant['main_transcript'].get('hgvsp') or '').split(':')[-1],
             'Transcript': variant['main_transcript'].get('transcriptId'),
         })
-    return variant['genotypes'], parsed_variant
+    return variant['genotype_zygosity'], parsed_variant
 
 def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map):
     features_present = [feature['id'] for feature in individual.features or []]
@@ -373,19 +385,15 @@ def _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additio
     return sample_row
 
 
-def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
+def _get_discovery_rows(sample, parsed_variants):
     individual = sample.individual
     discovery_row = {
         'subject_id': individual.individual_id,
         'sample_id': sample.sample_id,
     }
     discovery_rows = []
-    for genotypes, parsed_variant in parsed_variants:
-        genotype = genotypes.get(individual.guid, {})
-        chrom = parsed_variant.get('Chrom', '')
-        is_x_linked = "X" in chrom
-        zygosity = get_genotype_zygosity(
-            genotype, is_hemi_variant=is_x_linked and individual.guid in male_individual_guids)
+    for genotypes_zygosity, parsed_variant in parsed_variants:
+        zygosity = genotypes_zygosity.get(individual.guid)
         if zygosity:
             variant_discovery_row = {
                 'Zygosity': zygosity,
