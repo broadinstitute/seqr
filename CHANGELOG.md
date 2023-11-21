@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 11/21/23
 * Support AIP upload
   * To add the required tag type, run `./manage.py loaddata new_variant_tag_types`
 
