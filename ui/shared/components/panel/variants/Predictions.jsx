@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Icon, Transition, Popup } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
-import { PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, predictionFieldValue, getVariantMainGeneId } from 'shared/utils/constants'
+import { PRIMARY_PREDICTOR_FIELDS, SECONDARY_PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, predictionFieldValue, getVariantMainGeneId } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
@@ -16,8 +16,6 @@ const PredictionValue = styled.span`
   color: black;
   text-transform: uppercase;
 `
-
-const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
 
 const Prediction = (
   { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, href },
@@ -61,6 +59,14 @@ Prediction.propTypes = {
   href: PropTypes.string,
 }
 
+// eslint-disable-next-line max-len
+const getPredictorFields = (variant, predictorFieldsMap, predictions, genePredictors) => predictorFieldsMap.map(({ fieldTitle, getHref, ...predictorField }) => ({
+  field: predictorField.field,
+  fieldTitle,
+  href: getHref && getHref(variant),
+  ...predictionFieldValue(predictions, genePredictors[predictorField.field] || predictorField),
+})).filter(predictorField => predictorField.value !== null && predictorField.value !== undefined)
+
 class Predictions extends React.PureComponent {
 
   static propTypes = {
@@ -92,22 +98,20 @@ class Predictions extends React.PureComponent {
       }
     }
 
-    const predictorFields = PREDICTOR_FIELDS.map(({ fieldTitle, getHref, ...predictorField }) => ({
-      field: predictorField.field,
-      fieldTitle,
-      href: getHref && getHref(variant),
-      ...predictionFieldValue(predictions, genePredictors[predictorField.field] || predictorField),
-    })).filter(predictorField => predictorField.value !== null && predictorField.value !== undefined)
+    const primaryPredictorFields = getPredictorFields(variant, PRIMARY_PREDICTOR_FIELDS, predictions, genePredictors)
+    // eslint-disable-next-line max-len
+    const secondaryPredictorFields = getPredictorFields(variant, SECONDARY_PREDICTOR_FIELDS, predictions, genePredictors)
+
     return (
       <div>
         {
-          predictorFields.slice(0, NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (
+          primaryPredictorFields.map(predictorField => (
             <Prediction key={predictorField.field} {...predictorField} />))
         }
-        {predictorFields.length > NUM_TO_SHOW_ABOVE_THE_FOLD && (
+        {secondaryPredictorFields.length > 0 && (
           <Transition.Group animation="fade down" duration="500">
             {
-              showMore && predictorFields.slice(NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (
+              showMore && secondaryPredictorFields.map(predictorField => (
                 <Prediction key={predictorField.field} {...predictorField} />
               ))
             }

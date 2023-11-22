@@ -1311,10 +1311,12 @@ export const SPLICE_AI_FIELD = 'splice_ai'
 
 const rangeSourceLink = <a href="https://pubmed.ncbi.nlm.nih.gov/36413997" target="_blank" rel="noreferrer">36413997</a>
 const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
-export const PREDICTOR_FIELDS = [
+
+export const PRIMARY_PREDICTOR_FIELDS = [
   { field: 'cadd', group: CODING_IN_SILICO_GROUP, thresholds: [0.151, 22.8, 25.3, 28.1, undefined], min: 1, max: 99, fieldTitle: 'CADD' },
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, thresholds: [0.0161, 0.291, 0.644, 0.773, 0.932], fieldTitle: 'REVEL' },
-  { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.484, 0.79, 0.867, undefined], fieldTitle: 'PrimateAI' },
+  { field: 'vest', thresholds: [undefined, 0.45, 0.764, 0.861, 0.965], fieldTitle: 'VEST' },
+  { field: 'mut_pred', thresholds: [0.0101, 0.392, 0.737, 0.829, 0.932], fieldTitle: 'MutPred' },
   { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1.36, 1.828, undefined], max: 5, fieldTitle: 'MPC' },
   {
     field: SPLICE_AI_FIELD,
@@ -1327,6 +1329,10 @@ export const PREDICTOR_FIELDS = [
       `https://spliceailookup.broadinstitute.org/#variant=${chrom}-${pos}-${ref}-${alt}&hg=${genomeVersion}&distance=1000&mask=1`
     ),
   },
+]
+
+export const SECONDARY_PREDICTOR_FIELDS = [
+  { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.484, 0.79, 0.867, undefined], fieldTitle: 'PrimateAI' },
   { field: 'eigen', group: CODING_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1, 2, undefined], max: 99 },
   { field: 'dann', displayOnly: true, thresholds: [undefined, undefined, 0.93, 0.96, undefined] },
   { field: 'strvctvre', group: SV_IN_SILICO_GROUP, thresholds: [undefined, undefined, 0.5, 0.75, undefined] },
@@ -1334,8 +1340,6 @@ export const PREDICTOR_FIELDS = [
   { field: 'sift', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP, fieldTitle: 'SIFT' },
   { field: 'mut_taster', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: MUTTASTER_MAP, fieldTitle: 'MutTaster' },
   { field: 'fathmm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: FATHMM_MAP, fieldTitle: 'FATHMM' },
-  { field: 'vest', thresholds: [undefined, 0.45, 0.764, 0.861, 0.965], fieldTitle: 'VEST' },
-  { field: 'mut_pred', thresholds: [0.0101, 0.392, 0.737, 0.829, 0.932], fieldTitle: 'MutPred' },
   { field: 'apogee', thresholds: [undefined, undefined, 0.5, 0.5, undefined] },
   {
     field: 'gnomad_noncoding',
@@ -1344,9 +1348,11 @@ export const PREDICTOR_FIELDS = [
     thresholds: [undefined, undefined, 2.18, 4, undefined],
   },
   { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
-  { field: 'mitotip', indicatorMap: MITOTIP_MAP },
-  { field: 'hmtvar', thresholds: [undefined, undefined, 0.35, 0.35, undefined] },
+  { field: 'mitotip', indicatorMap: MITOTIP_MAP, fieldTitle: 'MitoTIP' },
+  { field: 'hmtvar', thresholds: [undefined, undefined, 0.35, 0.35, undefined], fieldTitle: 'HmtVar' },
 ]
+export const PREDICTOR_FIELDS = [...PRIMARY_PREDICTOR_FIELDS, ...SECONDARY_PREDICTOR_FIELDS]
+
 export const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
 export const predictionFieldValue = (
   predictions, { field, thresholds, indicatorMap, infoField, infoTitle },
