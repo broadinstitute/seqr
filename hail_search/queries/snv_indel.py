@@ -62,7 +62,8 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
 
     SORTS = {
         **MitoHailTableQuery.SORTS,
-        PATHOGENICTY_HGMD_SORT_KEY: lambda r: MitoHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [r.hgmd.class_id],
+        PATHOGENICTY_SORT_KEY: lambda r: [MitoHailTableQuery.CLINVAR_SORT(CLINVAR_KEY, r)],
+        PATHOGENICTY_HGMD_SORT_KEY: lambda r: [MitoHailTableQuery.CLINVAR_SORT(CLINVAR_KEY, r), r.hgmd.class_id],
     }
 
     def _prefilter_entries_table(self, ht, *args, **kwargs):

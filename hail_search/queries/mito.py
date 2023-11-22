@@ -6,6 +6,10 @@ from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
 
+def _clinvar_sort(clinvar_field, r):
+    return hl.or_else(r[clinvar_field].pathogenicity_id, ABSENT_PATH_SORT_OFFSET)
+
+
 class MitoHailTableQuery(BaseHailTableQuery):
 
     DATA_TYPE = 'MITO'
@@ -85,12 +89,13 @@ class MitoHailTableQuery(BaseHailTableQuery):
         }
     }
 
+    CLINVAR_SORT = _clinvar_sort
     SORTS = {
         CONSEQUENCE_SORT: lambda r: [
             hl.min(r.sorted_transcript_consequences.flatmap(lambda t: t.consequence_term_ids)),
             hl.min(r.selected_transcript.consequence_term_ids),
         ],
-        PATHOGENICTY_SORT_KEY: lambda r: [hl.or_else(r.clinvar.pathogenicity_id, ABSENT_PATH_SORT_OFFSET)],
+        PATHOGENICTY_SORT_KEY: lambda r: [_clinvar_sort(CLINVAR_MITO_KEY, r)],
         **BaseHailTableQuery.SORTS,
     }
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
