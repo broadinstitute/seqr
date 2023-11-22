@@ -1,4 +1,5 @@
 import hail as hl
+import os
 
 from hail_search.constants import ALT_ALT, REF_REF, CONSEQUENCE_SORT, OMIM_SORT, GROUPED_VARIANTS_FIELD
 from hail_search.queries.base import BaseHailTableQuery
@@ -6,10 +7,14 @@ from hail_search.queries.mito import MitoHailTableQuery
 from hail_search.queries.snv_indel import SnvIndelHailTableQuery
 from hail_search.queries.sv import SvHailTableQuery
 from hail_search.queries.gcnv import GcnvHailTableQuery
+from hail_search.queries.ont_snv_indel import OntSnvIndelHailTableQuery
 
-QUERY_CLASS_MAP = {
-    cls.DATA_TYPE: cls for cls in [SnvIndelHailTableQuery, MitoHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]
-}
+ONT_ENABLED = os.environ.get('ONT_ENABLED')
+
+QUERY_CLASSES = [SnvIndelHailTableQuery, MitoHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]
+if ONT_ENABLED:
+    QUERY_CLASSES.append(OntSnvIndelHailTableQuery)
+QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in QUERY_CLASSES}
 SNV_INDEL_DATA_TYPE = SnvIndelHailTableQuery.DATA_TYPE
 
 

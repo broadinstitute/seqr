@@ -653,6 +653,7 @@ class Sample(ModelWithGUID):
         (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
         (DATASET_TYPE_SV_CALLS, 'SV Calls'),
         (DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
+        ('ONT_SNV_INDEL', 'ONT Calls'),
     )
     DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
@@ -669,7 +670,7 @@ class Sample(ModelWithGUID):
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
 
     sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
-    dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES)
+    dataset_type = models.CharField(max_length=13, choices=DATASET_TYPE_CHOICES)
 
     tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES)
 

@@ -54,7 +54,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(str(ce.exception), 'Run failed for GRCh38/SNV_INDEL: auto__2023-08-08, unable to load data')
 
         metadata = {
-            'callset': '1kg.vcf.gz',
+            'callsets': ['1kg.vcf.gz'],
             'sample_type': 'WES',
             'families': {
                 'F0000123_ABC': ['NA22882', 'NA20885'],
