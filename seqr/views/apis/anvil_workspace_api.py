@@ -1,7 +1,6 @@
 """APIs for management of projects related to AnVIL workspaces."""
 import json
 import time
-import tempfile
 import os
 import re
 from datetime import datetime
@@ -17,7 +16,7 @@ from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project, CAN_EDIT, Sample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession
-from seqr.utils.search.constants import VCF_FILE_EXTENSIONS, SEQR_DATSETS_GS_PATH
+from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
 from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.airflow_utils import trigger_data_loading
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
@@ -28,7 +27,7 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
 from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, JsonConstants
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
-from seqr.utils.file_utils import mv_file_to_gs, get_gs_file_list
+from seqr.utils.file_utils import get_gs_file_list
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, validate_vcf_exists
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
@@ -38,14 +37,6 @@ from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, A
 logger = SeqrLogger(__name__)
 
 anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_LOGIN_REQUIRED_URL)
-
-
-def save_temp_data(data):
-    if isinstance(data, str):
-        data = data.encode('utf-8')
-    with tempfile.NamedTemporaryFile(mode='wb', delete=False) as fp:
-        fp.write(data)
-        return fp.name
 
 
 def anvil_auth_and_policies_required(wrapped_func=None, policy_url=API_POLICY_REQUIRED_URL):
@@ -261,30 +252,17 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
         project, individual_records=pedigree_records, user=user, get_update_json=get_pedigree_json, get_updated_individual_ids=True,
     )
     num_updated_individuals = len(sample_ids)
-
-    # Upload sample IDs to a file on Google Storage
-    ids_path = '{}base/{guid}_ids.txt'.format(_get_loading_project_path(project, sample_type), guid=project.guid)
     sample_ids.update(previous_loaded_ids or [])
-    try:
-        temp_path = save_temp_data('\n'.join(['s'] + sorted(sample_ids)))
-        mv_file_to_gs(temp_path, ids_path, user=user)
-    except Exception as ee:
-        logger.error('Uploading sample IDs to Google Storage failed. Errors: {}'.format(str(ee)), user,
-                     detail=sorted(sample_ids))
 
     # use airflow api to trigger AnVIL dags
-    dag_variables = {
-        'project_path': '{}v{}'.format(_get_loading_project_path(project, sample_type), datetime.now().strftime("%Y%m%d")),
-    }
     reload_summary = f' and {len(previous_loaded_ids)} re-loaded' if previous_loaded_ids else ''
     success_message = f"""
         *{user.email}* requested to load {num_updated_individuals} new{reload_summary} {sample_type} samples ({GENOME_VERSION_LOOKUP.get(project.genome_version)}) from AnVIL workspace *{project.workspace_namespace}/{project.workspace_name}* at 
-        {data_path} to seqr project <{_get_seqr_project_url(project)}|*{project.name}*> (guid: {project.guid})  
-  
-        The sample IDs to load have been uploaded to {ids_path}."""
+        {data_path} to seqr project <{_get_seqr_project_url(project)}|*{project.name}*> (guid: {project.guid})"""
     trigger_success = trigger_data_loading(
-        f'AnVIL_{sample_type}', [project.guid], data_path, dag_variables, user, success_message,
+        [project], sample_type, Sample.DATASET_TYPE_VARIANT_CALLS, data_path, user, success_message,
         SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, f'ERROR triggering AnVIL loading for project {project.guid}',
+        genome_version=project.genome_version,
     )
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
         'AnVIL Seqr Loading Requests Tracking', {
@@ -318,11 +296,6 @@ def _wait_for_service_account_access(user, namespace, name):
         if has_service_account_access(user, namespace, name):
             return True
     raise TerraAPIException('Failed to grant seqr service account access to the workspace', 400)
-
-
-def _get_loading_project_path(project, sample_type):
-    return f'{SEQR_DATSETS_GS_PATH}/{project.get_genome_version_display()}/AnVIL_{sample_type}/{project.guid}/'
-
 
 def _get_seqr_project_url(project):
     return f'{BASE_URL}project/{project.guid}/project_page'

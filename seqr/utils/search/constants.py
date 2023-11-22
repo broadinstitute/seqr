@@ -1,5 +1,3 @@
-SEQR_DATSETS_GS_PATH = 'gs://seqr-datasets/v02'
-
 VCF_FILE_EXTENSIONS = ('.vcf', '.vcf.gz', '.vcf.bgz')
 
 MAX_EXPORT_VARIANTS = 1000

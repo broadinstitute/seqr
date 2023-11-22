@@ -553,9 +553,10 @@ PROJECT_GUID = 'R0001_1kg'
 
 class AirflowTestCase(AnvilAuthenticationTestCase):
     ADDITIONAL_REQUEST_COUNT = 0
+    HAS_DAG_ID_PREFIX = True
 
     def setUp(self):
-        self.dag_url = f'{MOCK_AIRFLOW_URL}/api/v1/dags/seqr_vcf_to_es_{self.DAG_NAME}_v0.0.1'
+        self.dag_url = f'{MOCK_AIRFLOW_URL}/api/v1/dags/{self._get_dag_id()}'
         self.auth_header = f'Bearer {MOCK_TOKEN}'
         headers = {'Authorization': self.auth_header}
 
@@ -616,7 +617,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
     def set_dag_trigger_error_response(self):
         responses.replace(responses.GET, f'{self.dag_url}/dagRuns', json={'dag_runs': [{
             'conf': {},
-            'dag_id': f'seqr_vcf_to_es_{self.DAG_NAME}_v0.0.1',
+            'dag_id': self._get_dag_id(),
             'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
             'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00',
             'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00',
@@ -675,12 +676,11 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_not_called()
 
-    def _get_expected_dag_variables(self, omit_project=None, **kwargs):
-        projects = [project for project in [PROJECT_GUID, self.LOADING_PROJECT_GUID] if project != omit_project]
-        return {
-            'active_projects': projects,
-            'projects_to_run': projects,
-        }
+    def _get_dag_id(self):
+        return f'seqr_vcf_to_es_{self.DAG_NAME}_v0.0.1' if self.HAS_DAG_ID_PREFIX else self.DAG_NAME
+
+    def _get_expected_dag_variables(self, **kwargs):
+        raise NotImplementedError
 
 
 class AirtableTest(object):

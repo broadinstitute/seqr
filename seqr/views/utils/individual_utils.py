@@ -52,7 +52,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     families_by_id = {f.family_id: f for f in Family.objects.filter(project=project, family_id__in=family_ids)}
 
     missing_family_ids = family_ids - set(families_by_id.keys())
-    for family_id in missing_family_ids:
+    for family_id in sorted(missing_family_ids):
         family = create_model_from_json(Family, {'project': project, 'family_id': family_id}, user)
         families_by_id[family_id] = family
         updated_family_ids.add(family.id)
