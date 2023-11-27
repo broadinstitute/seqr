@@ -769,7 +769,7 @@ class BaseHailTableQuery(object):
     def _annotated_comp_het_variant(ch_ht, field):
         variant = ch_ht[field]
         return variant.annotate(
-            gene_id=ch_ht.gene_ids,
+            #gene_id=ch_ht.gene_ids, TODO store gene id
             family_entries=hl.enumerate(ch_ht.valid_families).filter(
                 lambda x: x[1]).map(lambda x: variant.comp_het_family_entries[x[0]]),
         )
