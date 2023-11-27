@@ -733,22 +733,29 @@ class BaseHailTableQuery(object):
             secondary_variants = primary_variants
 
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
+
+        # Compute all distinct variant pairs
+        key_expr = lambda v: v[self.KEY_FIELD[0]] if len(self.KEY_FIELD) == 1 else hl.tuple([v[k] for k in self.KEY_FIELD])
+        ch_ht = ch_ht.annotate(
+            v1_set=hl.set(ch_ht.v1.map(key_expr)),
+            v2=ch_ht.v2.group_by(key_expr).map_values(lambda x: x[0]),
+        )
+        ch_ht = ch_ht.explode(ch_ht.v1)
+
+        v1_key = key_expr(ch_ht.v1)
+        ch_ht = ch_ht.annotate(v2=ch_ht.v2.items().filter(
+            lambda x: ~ch_ht.v2.contains(v1_key) | ~ch_ht.v1_set.contains(x[0]) | (x[0] > v1_key)
+        ))
+        ch_ht = ch_ht.group_by('v1').aggregate(v2_items=hl.agg.collect(ch_ht.v2).flatmap(lambda x: x))
+        ch_ht = ch_ht.annotate(v2=hl.dict(ch_ht.v2_items).values())
+        ch_ht = ch_ht.explode(ch_ht.v2)._key_by_assert_sorted()
+
         ch_ht = self._filter_grouped_compound_hets(ch_ht)
 
-        # Format pairs as lists and de-duplicate
-        ch_ht = ch_ht._key_by_assert_sorted(key_pair=hl.sorted([
-            ch_ht[v][self.KEY_FIELD[0]] if len(self.KEY_FIELD) == 1 else hl.tuple([ch_ht[v][k] for k in self.KEY_FIELD])
-            for v in ['v1', 'v2']
-        ]))
-        ch_ht = ch_ht.distinct().key_by()
-
+        # Return pairs formatted as lists
         return ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2])})
 
     def _filter_grouped_compound_hets(self, ch_ht):
-        ch_ht = ch_ht.explode(ch_ht.v1)
-        ch_ht = ch_ht.explode(ch_ht.v2)
-        ch_ht = ch_ht.filter(ch_ht.v1.variant_id != ch_ht.v2.variant_id)
-
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(valid_families=hl.enumerate(ch_ht.v1.comp_het_family_entries).map(
             lambda x: self._is_valid_comp_het_family(ch_ht, x[1], ch_ht.v2.comp_het_family_entries[x[0]])
