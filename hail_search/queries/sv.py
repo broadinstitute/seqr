@@ -50,6 +50,10 @@ class SvHailTableQuery(BaseHailTableQuery):
         )],
     }
 
+    @classmethod
+    def _get_sample_type(cls, *args):
+        return cls.DATA_TYPE.split('_')[-1]
+
     def _filter_annotated_table(self, *args, parsed_intervals=None, exclude_intervals=False, **kwargs):
         if parsed_intervals:
             interval_filter = hl.array(parsed_intervals).any(lambda interval: hl.if_else(

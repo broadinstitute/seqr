@@ -25,7 +25,7 @@ PROJECT_2_VARIANT = {
     'familyGuids': ['F000011_11'],
     'genotypes': {
         'I000015_na20885': {
-            'sampleId': 'NA20885', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+            'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'dp': 8, 'gq': 14, 'ab': 0.875,
         }
     },
@@ -66,7 +66,7 @@ FAMILY_3_VARIANT = deepcopy(VARIANT3)
 FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
 FAMILY_3_VARIANT['genotypes'] = {
     'I000007_na20870': {
-        'sampleId': 'NA20870', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
+        'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
         'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.6785714285714286,
     },
 }
@@ -85,7 +85,7 @@ PROJECT_2_VARIANT1 = deepcopy(VARIANT1)
 PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
 PROJECT_2_VARIANT1['genotypes'] = {
     'I000015_na20885': {
-        'sampleId': 'NA20885', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+        'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
         'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0,
     },
 }
@@ -95,7 +95,7 @@ MULTI_PROJECT_VARIANT1['genotypes'].update(PROJECT_2_VARIANT1['genotypes'])
 MULTI_PROJECT_VARIANT2 = deepcopy(VARIANT2)
 MULTI_PROJECT_VARIANT2['familyGuids'].append('F000011_11')
 MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = {
-    'sampleId': 'NA20885', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+    'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
     'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5,
 }
 
@@ -147,6 +147,8 @@ class HailSearchTestCase(AioHTTPTestCase):
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
         self.assertEqual(resp_json['total'], len(results))
         for i, result in enumerate(resp_json['results']):
+            if result != results[i]:
+                import pdb; pdb.set_trace()
             self.assertEqual(result, results[i])
 
         if gene_counts:
@@ -203,13 +205,13 @@ class HailSearchTestCase(AioHTTPTestCase):
             'familyGuids': ['F000002_2'],
             'genotypes': {
                 'I000004_hg00731': {
-                    'sampleId': 'HG00731', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
+                    'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
                     'numAlt': 1, 'dp': 21, 'gq': 3, 'ab': 0.6190476190476191,
                 }, 'I000005_hg00732': {
-                    'sampleId': 'HG00732', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
+                    'sampleId': 'HG00732', 'sampleType': 'WGS', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
                     'numAlt': 0, 'dp': 0, 'gq': 13, 'ab': None,
                 }, 'I000006_hg00733': {
-                    'sampleId': 'HG00733', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
+                    'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
                     'numAlt': -1, 'dp': None, 'gq': 0, 'ab': None,
                 },
             },
