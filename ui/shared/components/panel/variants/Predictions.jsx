@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Icon, Transition, Popup } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
-import { PRIMARY_PREDICTOR_FIELDS, SECONDARY_PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, predictionFieldValue, getVariantMainGeneId } from 'shared/utils/constants'
+import { PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, predictionFieldValue, getVariantMainGeneId } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
@@ -17,8 +17,10 @@ const PredictionValue = styled.span`
   text-transform: uppercase;
 `
 
+const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
+
 const Prediction = (
-  { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, href },
+  { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, href, requiresCitation },
 ) => {
   const indicator = infoValue ? (
     <Popup
@@ -32,7 +34,7 @@ const Prediction = (
     <Popup
       header={`${fieldName} Color Ranges`}
       hoverable
-      content={predictorColorRanges(thresholds, field)}
+      content={predictorColorRanges(thresholds, requiresCitation)}
       trigger={<span>{fieldName}</span>}
     />
   ) : fieldName
@@ -57,10 +59,11 @@ Prediction.propTypes = {
   color: PropTypes.string,
   thresholds: PropTypes.arrayOf(PropTypes.number),
   href: PropTypes.string,
+  requiresCitation: PropTypes.bool,
 }
 
-const getPredictorFields = (variant, predictorFieldsMap, predictions, genePredictors) => {
-  const mappedFields = predictorFieldsMap.map(({
+const getPredictorFields = (variant, predictions, genePredictors) => {
+  const mappedFields = PREDICTOR_FIELDS.map(({
     fieldTitle,
     getHref,
     ...predictorField
@@ -68,9 +71,18 @@ const getPredictorFields = (variant, predictorFieldsMap, predictions, genePredic
     field: predictorField.field,
     fieldTitle,
     href: getHref && getHref(variant),
+    requiresCitation: predictorField.requiresCitation,
+    displaySortOrder: predictorField.displaySortOrder,
     ...predictionFieldValue(predictions, genePredictors[predictorField.field] || predictorField),
   }))
-  return mappedFields.filter(predictorField => predictorField.value !== null && predictorField.value !== undefined)
+
+  return mappedFields.filter(
+    predictorField => predictorField.value !== null && predictorField.value !== undefined,
+  ).sort((a, b) => {
+    const aSortOrder = a.displaySortOrder || Number.MAX_SAFE_INTEGER
+    const bSortOrder = b.displaySortOrder || Number.MAX_SAFE_INTEGER
+    return aSortOrder - bSortOrder || 0
+  })
 }
 
 class Predictions extends React.PureComponent {
@@ -104,25 +116,18 @@ class Predictions extends React.PureComponent {
       }
     }
 
-    const primaryPredictorFields = getPredictorFields(variant, PRIMARY_PREDICTOR_FIELDS, predictions, genePredictors)
-    const secondaryPredictorFields = getPredictorFields(
-      variant,
-      SECONDARY_PREDICTOR_FIELDS,
-      predictions,
-      genePredictors,
-    )
+    const predictorFields = getPredictorFields(variant, predictions, genePredictors)
 
     return (
       <div>
-        {/* Show primary predictor fields above the fold, then any secondary predictor fields below */}
         {
-          primaryPredictorFields.map(predictorField => (
+          predictorFields.slice(0, NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (
             <Prediction key={predictorField.field} {...predictorField} />))
         }
-        {secondaryPredictorFields.length > 0 && (
+        {predictorFields.length > NUM_TO_SHOW_ABOVE_THE_FOLD && (
           <Transition.Group animation="fade down" duration="500">
             {
-              showMore && secondaryPredictorFields.map(predictorField => (
+              showMore && predictorFields.slice(NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (
                 <Prediction key={predictorField.field} {...predictorField} />
               ))
             }
