@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Icon, Transition, Popup } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
-import { PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, predictionFieldValue, getVariantMainGeneId } from 'shared/utils/constants'
+import { ORDERED_PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, predictionFieldValue, getVariantMainGeneId } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
@@ -63,7 +63,7 @@ Prediction.propTypes = {
 }
 
 const getPredictorFields = (variant, predictions, genePredictors) => {
-  const mappedFields = PREDICTOR_FIELDS.map(({
+  const mappedFields = ORDERED_PREDICTOR_FIELDS.map(({
     fieldTitle,
     getHref,
     ...predictorField
@@ -78,11 +78,7 @@ const getPredictorFields = (variant, predictions, genePredictors) => {
 
   return mappedFields.filter(
     predictorField => predictorField.value !== null && predictorField.value !== undefined,
-  ).sort((a, b) => {
-    const aSortOrder = a.displaySortOrder || Number.MAX_SAFE_INTEGER
-    const bSortOrder = b.displaySortOrder || Number.MAX_SAFE_INTEGER
-    return aSortOrder - bSortOrder || 0
-  })
+  )
 }
 
 class Predictions extends React.PureComponent {
