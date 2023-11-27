@@ -32,7 +32,7 @@ const Prediction = (
     <Popup
       header={`${fieldName} Color Ranges`}
       hoverable
-      content={predictorColorRanges(thresholds, fieldName)}
+      content={predictorColorRanges(thresholds, field)}
       trigger={<span>{fieldName}</span>}
     />
   ) : fieldName
@@ -59,13 +59,19 @@ Prediction.propTypes = {
   href: PropTypes.string,
 }
 
-// eslint-disable-next-line max-len
-const getPredictorFields = (variant, predictorFieldsMap, predictions, genePredictors) => predictorFieldsMap.map(({ fieldTitle, getHref, ...predictorField }) => ({
-  field: predictorField.field,
-  fieldTitle,
-  href: getHref && getHref(variant),
-  ...predictionFieldValue(predictions, genePredictors[predictorField.field] || predictorField),
-})).filter(predictorField => predictorField.value !== null && predictorField.value !== undefined)
+const getPredictorFields = (variant, predictorFieldsMap, predictions, genePredictors) => {
+  const mappedFields = predictorFieldsMap.map(({
+    fieldTitle,
+    getHref,
+    ...predictorField
+  }) => ({
+    field: predictorField.field,
+    fieldTitle,
+    href: getHref && getHref(variant),
+    ...predictionFieldValue(predictions, genePredictors[predictorField.field] || predictorField),
+  }))
+  return mappedFields.filter(predictorField => predictorField.value !== null && predictorField.value !== undefined)
+}
 
 class Predictions extends React.PureComponent {
 
@@ -99,11 +105,16 @@ class Predictions extends React.PureComponent {
     }
 
     const primaryPredictorFields = getPredictorFields(variant, PRIMARY_PREDICTOR_FIELDS, predictions, genePredictors)
-    // eslint-disable-next-line max-len
-    const secondaryPredictorFields = getPredictorFields(variant, SECONDARY_PREDICTOR_FIELDS, predictions, genePredictors)
+    const secondaryPredictorFields = getPredictorFields(
+      variant,
+      SECONDARY_PREDICTOR_FIELDS,
+      predictions,
+      genePredictors,
+    )
 
     return (
       <div>
+        {/* Show primary predictor fields above the fold, then any secondary predictor fields below */}
         {
           primaryPredictorFields.map(predictorField => (
             <Prediction key={predictorField.field} {...predictorField} />))

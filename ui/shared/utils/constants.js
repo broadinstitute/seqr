@@ -1308,6 +1308,7 @@ const SPLICING_IN_SILICO_GROUP = 'Splicing'
 export const SV_IN_SILICO_GROUP = 'Structural'
 export const NO_SV_IN_SILICO_GROUPS = [MISSENSE_IN_SILICO_GROUP, CODING_IN_SILICO_GROUP]
 export const SPLICE_AI_FIELD = 'splice_ai'
+const MPC_FIELD = 'mpc'
 
 const rangeSourceLink = <a href="https://pubmed.ncbi.nlm.nih.gov/36413997" target="_blank" rel="noreferrer">36413997</a>
 const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
@@ -1317,7 +1318,7 @@ export const PRIMARY_PREDICTOR_FIELDS = [
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, thresholds: [0.0161, 0.291, 0.644, 0.773, 0.932], fieldTitle: 'REVEL' },
   { field: 'vest', thresholds: [undefined, 0.45, 0.764, 0.861, 0.965], fieldTitle: 'VEST' },
   { field: 'mut_pred', thresholds: [0.0101, 0.392, 0.737, 0.829, 0.932], fieldTitle: 'MutPred' },
-  { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1.36, 1.828, undefined], max: 5, fieldTitle: 'MPC' },
+  { field: MPC_FIELD, group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1.36, 1.828, undefined], max: 5, fieldTitle: 'MPC' },
   {
     field: SPLICE_AI_FIELD,
     group: SPLICING_IN_SILICO_GROUP,
@@ -1376,7 +1377,7 @@ export const predictionFieldValue = (
 
   return indicatorMap[value[0]] || indicatorMap[value]
 }
-export const predictorColorRanges = (thresholds, fieldName) => (
+export const predictorColorRanges = (thresholds, field) => (
   <div>
     {PRED_COLOR_MAP.map((c, i) => {
       const prevUndefined = thresholds[i - 1] === undefined
@@ -1398,13 +1399,13 @@ export const predictorColorRanges = (thresholds, fieldName) => (
         </div>
       )
     })}
-    {/* The thresholds for SpliceAI and MPC do not require a citation. */}
-    {!(['MPC', 'SpliceAI'].includes(fieldName)) ? (
+    {/* The thresholds for SpliceAI and MPC do not require a citation */}
+    {!([SPLICE_AI_FIELD, MPC_FIELD].includes(field)) && (
       <small>
         {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
         Based on 2022 ClinGen recommendations (PMID:&nbsp;{rangeSourceLink})
       </small>
-    ) : null}
+    )}
   </div>
 )
 
