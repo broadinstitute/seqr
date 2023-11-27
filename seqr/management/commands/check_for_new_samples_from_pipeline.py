@@ -12,7 +12,7 @@ from seqr.views.utils.variant_utils import reset_cached_search_results
 
 logger = logging.getLogger(__name__)
 
-GS_PATH_TEMPLATE = 'gs://seqr-datasets/v03/{path}/runs/{version}/'
+GS_PATH_TEMPLATE = 'gs://seqr-hail-search-data/v03/{path}/runs/{version}/'
 
 
 class Command(BaseCommand):
