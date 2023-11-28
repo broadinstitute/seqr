@@ -95,7 +95,7 @@ class BaseHailTableQuery(object):
             'genotypes': lambda r: r.family_entries.flatmap(lambda x: x).filter(
                 lambda gt: hl.is_defined(gt.individualGuid)
             ).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0].select(
-                'sampleId', 'individualGuid', 'familyGuid',
+                'sampleId', 'sampleType', 'individualGuid', 'familyGuid',
                 numAlt=hl.if_else(hl.is_defined(x[0].GT), x[0].GT.n_alt_alleles(), self.MISSING_NUM_ALT),
                 **{k: x[0][field] for k, field in self.GENOTYPE_FIELDS.items()},
                 **{_to_camel_case(k): v(x[0], k, r) for k, v in self.COMPUTED_GENOTYPE_FIELDS.items()},
@@ -351,7 +351,8 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _add_entry_sample_families(cls, ht, sample_data):
-        sample_index_id_map = dict(enumerate(hl.eval(ht.sample_ids)))
+        ht_globals = hl.eval(ht.globals)
+        sample_index_id_map = dict(enumerate(ht_globals.sample_ids))
         sample_id_index_map = {v: k for k, v in sample_index_id_map.items()}
         sample_index_id_map = hl.dict(sample_index_id_map)
         sample_individual_map = {s['sample_id']: s['individual_guid'] for s in sample_data}
@@ -389,6 +390,7 @@ class BaseHailTableQuery(object):
             family_entries=family_sample_indices.map(lambda sample_indices: sample_indices.map(
                 lambda i: ht.entries[i].annotate(
                     sampleId=sample_index_id_map.get(i),
+                    sampleType=cls._get_sample_type(ht_globals),
                     individualGuid=sample_index_individual_map.get(i),
                     familyGuid=sample_index_family_map.get(i),
                     affected_id=sample_index_affected_status.get(i),
@@ -397,6 +399,10 @@ class BaseHailTableQuery(object):
         )
 
         return ht, sample_id_family_index_map, num_families
+
+    @classmethod
+    def _get_sample_type(cls, ht_globals):
+        return ht_globals.sample_type
 
     def _filter_inheritance(self, ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map):
         any_valid_entry = lambda x: self.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
