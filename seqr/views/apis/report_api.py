@@ -1166,9 +1166,9 @@ def _get_basic_row(initial_row, family, samples, now):
 
 
 def _update_variant_inheritance(variant, family_individual_data, potential_compound_het_genes):
-    inheritance_models, potential_compound_het_gene_ids, _ = get_variant_inheritance_models(
+    inheritance_model, potential_compound_het_gene_ids, _ = get_variant_inheritance_models(
         variant.saved_variant_json, family_individual_data)
-    variant.saved_variant_json['inheritance'] = inheritance_models
+    variant.saved_variant_json['inheritance'] = {inheritance_model} if inheritance_model else set()
 
     for gene_id in potential_compound_het_gene_ids:
         potential_compound_het_genes[gene_id].add(variant)

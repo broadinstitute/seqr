@@ -226,10 +226,10 @@ def _process_saved_variants(saved_variants_by_family, individual_data_by_family)
             if variant['main_transcript']:
                 gene_ids.add(variant['main_transcript']['geneId'])
 
-            inheritance_models, potential_compound_het_gene_ids, genotype_zygosity = get_variant_inheritance_models(
+            inheritance_model, potential_compound_het_gene_ids, genotype_zygosity = get_variant_inheritance_models(
                 variant, individual_data_by_family[family_id])
             variant.update({
-                'inheritance_models': inheritance_models,
+                'inheritance_model': inheritance_model,
                 'genotype_zygosity': genotype_zygosity,
             })
             for gene_id in potential_compound_het_gene_ids:
@@ -274,7 +274,7 @@ def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv
         if len(comp_het_variants) > 1:
             main_gene_ids = set()
             for variant in comp_het_variants:
-                variant['inheritance_models'] = {'AR-comphet'}
+                variant['inheritance_model'] = 'AR-comphet'
                 if variant['main_transcript']:
                     main_gene_ids.add(variant['main_transcript']['geneId'])
                 else:
@@ -290,8 +290,8 @@ def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv
 
 def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id,
                                       get_additional_variant_fields, allow_missing_discovery_genes):
-    if variant['inheritance_models']:
-        inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
+    if variant['inheritance_model']:
+        inheritance_mode = INHERITANCE_MODE_MAP[variant['inheritance_model']]
     else:
         inheritance_mode = 'Unknown / Other'
 

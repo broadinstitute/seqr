@@ -329,56 +329,36 @@ HEMI = 'Hemizygous'
 
 def get_variant_inheritance_models(variant_json, family_individual_data):
     affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
-    inheritance_models = set()
 
-    affected_indivs_with_hom_alt_variants = set()
-    affected_indivs_with_het_variants = set()
-    unaffected_indivs_with_het_variants = set()
-    is_x_linked = False
+    is_x_linked = 'X' in variant_json.get('chrom', '')
+    genotype_zygosity = {
+        sample_guid: _get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
+        for sample_guid, genotype in variant_json.get('genotypes', {}).items()
+    }
 
-    genotypes = variant_json.get('genotypes')
-    genotype_zygosity = {}
-    if genotypes:
-        chrom = variant_json['chrom']
-        is_x_linked = "X" in chrom
-        for sample_guid, genotype in genotypes.items():
-            zygosity = _get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
-            genotype_zygosity[sample_guid] = zygosity
-            if zygosity in (HOM_ALT, HEMI) and sample_guid in unaffected_individual_guids:
-                # No valid inheritance modes for hom alt unaffected individuals
-                return set(), set()
+    affected_zygosities = {genotype_zygosity[g] for g in affected_individual_guids if g in genotype_zygosity}
+    unaffected_zygosities = {genotype_zygosity[g] for g in unaffected_individual_guids if g in genotype_zygosity}
 
-            if zygosity in (HOM_ALT, HEMI) and sample_guid in affected_individual_guids:
-                affected_indivs_with_hom_alt_variants.add(sample_guid)
-            elif zygosity == HET and sample_guid in affected_individual_guids:
-                affected_indivs_with_het_variants.add(sample_guid)
-            elif zygosity == HET and sample_guid in unaffected_individual_guids:
-                unaffected_indivs_with_het_variants.add(sample_guid)
-
-    # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
-    if affected_indivs_with_hom_alt_variants:
-        if is_x_linked:
-            inheritance_models.add("X-linked")
-        else:
-            inheritance_models.add("AR-homozygote")
-
-    if not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
-        inherited = any(
-            guid for guid in affected_indivs_with_het_variants
-            if any(parent_guid in affected_indivs_with_het_variants for parent_guid in parent_guid_map[guid])
-        )
-        if inherited or not unaffected_individual_guids:
-            inheritance_models.add("AD")
-        else:
-            inheritance_models.add("de novo")
-
+    inheritance_model = None
     potential_compound_het_gene_ids = set()
-    if (len(unaffected_individual_guids) < 2 or unaffected_indivs_with_het_variants) \
-            and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants \
-            and 'transcripts' in variant_json:
-        potential_compound_het_gene_ids.update(list(variant_json['transcripts'].keys()))
+    if any(zygosity in unaffected_zygosities for zygosity in {HOM_ALT, HEMI}):
+        # No valid inheritance modes for hom alt unaffected individuals
+        inheritance_model = None
+    elif any(zygosity in affected_zygosities for zygosity in {HOM_ALT, HEMI}):
+        inheritance_model = 'X-linked' if is_x_linked else 'AR-homozygote'
+    elif HET in affected_zygosities:
+        if HET not in unaffected_zygosities:
+            inherited = (not unaffected_individual_guids) or any(
+                guid for guid in affected_individual_guids
+                if genotype_zygosity.get(guid) == HET and
+                any(genotype_zygosity.get(parent_guid) == HET for parent_guid in parent_guid_map[guid])
+            )
+            inheritance_model = 'AD' if inherited else 'de novo'
 
-    return inheritance_models, potential_compound_het_gene_ids, genotype_zygosity
+        if (len(unaffected_individual_guids) < 2 or HET in unaffected_zygosities) and 'transcripts' in variant_json:
+            potential_compound_het_gene_ids.update(list(variant_json['transcripts'].keys()))
+
+    return inheritance_model, potential_compound_het_gene_ids, genotype_zygosity
 
 
 def _get_genotype_zygosity(genotype, is_hemi_variant):
