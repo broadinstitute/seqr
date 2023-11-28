@@ -72,7 +72,6 @@ const getPredictorFields = (variant, predictions, genePredictors) => {
     fieldTitle,
     href: getHref && getHref(variant),
     requiresCitation: predictorField.requiresCitation,
-    displaySortOrder: predictorField.displaySortOrder,
     ...predictionFieldValue(predictions, genePredictors[predictorField.field] || predictorField),
   }))
 
