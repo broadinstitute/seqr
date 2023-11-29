@@ -332,7 +332,9 @@ DE_NOVO = 'de novo'
 DOMINANT = 'Autosomal dominant'
 
 
-def get_variant_inheritance_models(variant_json, family_individual_data):
+def update_variant_inheritance(variant, family_individual_data, update_potential_comp_het_gene):
+    variant_json = variant.saved_variant_json if isinstance(variant, SavedVariant) else variant
+
     affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
 
     is_x_linked = 'X' in variant_json.get('chrom', '')
@@ -344,11 +346,10 @@ def get_variant_inheritance_models(variant_json, family_individual_data):
     affected_zygosities = {genotype_zygosity[g] for g in affected_individual_guids if g in genotype_zygosity}
     unaffected_zygosities = {genotype_zygosity[g] for g in unaffected_individual_guids if g in genotype_zygosity}
 
-    inheritance_model = None
-    potential_compound_het_gene_ids = set()
+    inheritance_model = ''
     if any(zygosity in unaffected_zygosities for zygosity in {HOM_ALT, HEMI}):
         # No valid inheritance modes for hom alt unaffected individuals
-        inheritance_model = None
+        inheritance_model = ''
     elif any(zygosity in affected_zygosities for zygosity in {HOM_ALT, HEMI}):
         inheritance_model = X_LINKED if is_x_linked else RECESSIVE
     elif HET in affected_zygosities:
@@ -361,9 +362,13 @@ def get_variant_inheritance_models(variant_json, family_individual_data):
             inheritance_model = DOMINANT if inherited else DE_NOVO
 
         if (len(unaffected_individual_guids) < 2 or HET in unaffected_zygosities) and 'transcripts' in variant_json:
-            potential_compound_het_gene_ids.update(list(variant_json['transcripts'].keys()))
+            for gene_id in variant_json['transcripts'].keys():
+                update_potential_comp_het_gene(gene_id)
 
-    return inheritance_model, potential_compound_het_gene_ids, genotype_zygosity
+    variant_json.update({
+        'inheritance': inheritance_model,
+        'genotype_zygosity': genotype_zygosity,
+    })
 
 
 def _get_genotype_zygosity(genotype, is_hemi_variant):
