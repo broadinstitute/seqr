@@ -1167,7 +1167,8 @@ def _get_basic_row(initial_row, family, samples, now):
 
 def _update_variant_inheritance(variant, family_individual_data, potential_compound_het_genes):
     update_variant_inheritance(
-        variant, family_individual_data, lambda gene_id: potential_compound_het_genes[gene_id].add(variant))
+        variant.saved_variant_json, family_individual_data,
+        lambda gene_id: potential_compound_het_genes[gene_id].add(variant))
 
     main_transcript = _get_variant_model_main_transcript(variant)
     if main_transcript.get('geneId'):

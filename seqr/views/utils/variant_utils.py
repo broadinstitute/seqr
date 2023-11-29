@@ -3,6 +3,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F
 import logging
 import redis
+from typing import Callable
 
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo
@@ -332,8 +333,11 @@ DE_NOVO = 'de novo'
 DOMINANT = 'Autosomal dominant'
 
 
-def update_variant_inheritance(variant, family_individual_data, update_potential_comp_het_gene):
-    variant_json = variant.saved_variant_json if isinstance(variant, SavedVariant) else variant
+def update_variant_inheritance(
+        variant_json: dict, family_individual_data: tuple[set[str], set[str], set[str], dict[str: list[str]]],
+        update_potential_comp_het_gene: Callable[str, None]
+):
+    """Compute the inheritance mode for the given variant and family"""
 
     affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
 
