@@ -326,6 +326,11 @@ HET = 'Heterozygous'
 HOM_ALT = 'Homozygous'
 HEMI = 'Hemizygous'
 
+X_LINKED = 'X - linked'
+RECESSIVE = 'Autosomal recessive (homozygous)'
+DE_NOVO = 'de novo'
+DOMINANT = 'Autosomal dominant'
+
 
 def get_variant_inheritance_models(variant_json, family_individual_data):
     affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
@@ -345,7 +350,7 @@ def get_variant_inheritance_models(variant_json, family_individual_data):
         # No valid inheritance modes for hom alt unaffected individuals
         inheritance_model = None
     elif any(zygosity in affected_zygosities for zygosity in {HOM_ALT, HEMI}):
-        inheritance_model = 'X-linked' if is_x_linked else 'AR-homozygote'
+        inheritance_model = X_LINKED if is_x_linked else RECESSIVE
     elif HET in affected_zygosities:
         if HET not in unaffected_zygosities:
             inherited = (not unaffected_individual_guids) or any(
@@ -353,7 +358,7 @@ def get_variant_inheritance_models(variant_json, family_individual_data):
                 if genotype_zygosity.get(guid) == HET and
                 any(genotype_zygosity.get(parent_guid) == HET for parent_guid in parent_guid_map[guid])
             )
-            inheritance_model = 'AD' if inherited else 'de novo'
+            inheritance_model = DOMINANT if inherited else DE_NOVO
 
         if (len(unaffected_individual_guids) < 2 or HET in unaffected_zygosities) and 'transcripts' in variant_json:
             potential_compound_het_gene_ids.update(list(variant_json['transcripts'].keys()))

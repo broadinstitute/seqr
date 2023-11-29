@@ -47,14 +47,6 @@ ANCESTRY_DETAIL_MAP = {
   'SAS': 'South Asian',
 }
 
-INHERITANCE_MODE_MAP = {
-    'X-linked': 'X - linked',
-    'AR-homozygote': 'Autosomal recessive (homozygous)',
-    'AR-comphet': 'Autosomal recessive (compound heterozygous)',
-    'de novo': 'de novo',
-    'AD': 'Autosomal dominant',
-}
-
 SV_TYPE_MAP = {
     'DUP': 'Duplication',
     'DEL': 'Deletion',
@@ -274,7 +266,7 @@ def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv
         if len(comp_het_variants) > 1:
             main_gene_ids = set()
             for variant in comp_het_variants:
-                variant['inheritance_model'] = 'AR-comphet'
+                variant['inheritance_model'] = 'Autosomal recessive (compound heterozygous)'
                 if variant['main_transcript']:
                     main_gene_ids.add(variant['main_transcript']['geneId'])
                 else:
@@ -290,14 +282,9 @@ def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv
 
 def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id,
                                       get_additional_variant_fields, allow_missing_discovery_genes):
-    if variant['inheritance_model']:
-        inheritance_mode = INHERITANCE_MODE_MAP[variant['inheritance_model']]
-    else:
-        inheritance_mode = 'Unknown / Other'
-
     parsed_variant = {
         'Gene_Class': 'Known',
-        'inheritance_description': inheritance_mode,
+        'inheritance_description': variant['inheritance_model'] or 'Unknown / Other',
         'discovery_notes': variant.get('discovery_notes', ''),
         'Chrom': variant.get('chrom', ''),
         'Pos': str(variant.get('pos', '')),
