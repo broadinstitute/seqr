@@ -338,19 +338,33 @@ def update_variant_inheritance(
         update_potential_comp_het_gene: Callable[str, None]
 ):
     """Compute the inheritance mode for the given variant and family"""
-
-    affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
-
     is_x_linked = 'X' in variant_json.get('chrom', '')
     genotype_zygosity = {
         sample_guid: _get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
         for sample_guid, genotype in variant_json.get('genotypes', {}).items()
     }
+    inheritance_model, possible_comp_het = _get_inheritance_model(genotype_zygosity, family_individual_data, is_x_linked)
+
+    if possible_comp_het:
+        for gene_id in variant_json.get('transcripts', {}).keys():
+            update_potential_comp_het_gene(gene_id)
+
+    variant_json.update({
+        'inheritance': inheritance_model,
+        'genotype_zygosity': genotype_zygosity,
+    })
+
+
+# TODO test
+
+def _get_inheritance_model(genotype_zygosity, family_individual_data, is_x_linked):
+    affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
 
     affected_zygosities = {genotype_zygosity[g] for g in affected_individual_guids if g in genotype_zygosity}
     unaffected_zygosities = {genotype_zygosity[g] for g in unaffected_individual_guids if g in genotype_zygosity}
 
     inheritance_model = ''
+    possible_comp_het = False
     if any(zygosity in unaffected_zygosities for zygosity in {HOM_ALT, HEMI}):
         # No valid inheritance modes for hom alt unaffected individuals
         inheritance_model = ''
@@ -365,14 +379,10 @@ def update_variant_inheritance(
             )
             inheritance_model = DOMINANT if inherited else DE_NOVO
 
-        if (len(unaffected_individual_guids) < 2 or HET in unaffected_zygosities) and 'transcripts' in variant_json:
-            for gene_id in variant_json['transcripts'].keys():
-                update_potential_comp_het_gene(gene_id)
+        if len(unaffected_individual_guids) < 2 or HET in unaffected_zygosities:
+            possible_comp_het = True
 
-    variant_json.update({
-        'inheritance': inheritance_model,
-        'genotype_zygosity': genotype_zygosity,
-    })
+    return inheritance_model, possible_comp_het
 
 
 def _get_genotype_zygosity(genotype, is_hemi_variant):
