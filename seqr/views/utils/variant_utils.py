@@ -358,8 +358,6 @@ def update_variant_inheritance(
     })
 
 
-# TODO test
-
 def _get_inheritance_model(
         genotype_zygosity: dict[str, str], affected_individual_guids: set[str], unaffected_individual_guids: set[str],
         parent_guid_map: dict[str: list[str]], is_x_linked: bool) -> tuple[str, bool]:
