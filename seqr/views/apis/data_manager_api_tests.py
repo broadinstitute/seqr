@@ -1189,7 +1189,9 @@ class DataManagerAPITest(AuthenticationTestCase):
             self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg') +
             self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg') +
             self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_External/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_External/base/projects/R0001_1kg')
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_External/base/projects/R0001_1kg') +
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/AnVIL_WGS/R0001_1kg/base') +
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/AnVIL_WES/R0001_1kg/base')
         )
 
         # Test success

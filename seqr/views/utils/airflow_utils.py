@@ -60,11 +60,10 @@ def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type
 
 def write_data_loading_pedigree(project: Project, user: User):
     match = next((
-        (callset, sample_type) for callset, sample_type in itertools.product(['Internal', 'External'], ['WGS', 'WES'])
-        if does_file_exist(_get_dag_project_gs_path(project.guid, _get_dag_gs_path(
-            project.genome_version, _construct_v2_dag_name(sample_type, callset=callset)
-        ), is_internal=True)
-    )), None)
+        (callset, sample_type) for callset, sample_type in itertools.product(['Internal', 'External', 'AnVIL'], ['WGS', 'WES'])
+        if does_file_exist(_get_dag_project_gs_path(
+        project.guid, project.genome_version, sample_type, is_internal=callset != 'AnVIL', callset=callset,
+    ))), None)
     if not match:
         raise ValueError(f'No {SEQR_DATASETS_GS_PATH} project directory found for {project.guid}')
     callset, sample_type = match
@@ -181,11 +180,9 @@ def _upload_data_loading_files(config: tuple[str, str, dict[str, F]], projects: 
     for row in data:
         data_by_project[row.pop('project')].append(row)
 
-    dag_path = _get_dag_gs_path(genome_version, _construct_v2_dag_name(sample_type, is_internal=is_internal, **kwargs))
-
     info = []
     for project_guid, rows in data_by_project.items():
-        gs_path = _get_dag_project_gs_path(project_guid, dag_path, is_internal)
+        gs_path = _get_dag_project_gs_path(project_guid, genome_version, sample_type, is_internal, **kwargs)
         try:
             write_multiple_files_to_gs(
                 [(f'{project_guid}_{file_type}', file_annotations.keys(), rows)], gs_path, user, file_format=file_format,
@@ -197,7 +194,9 @@ def _upload_data_loading_files(config: tuple[str, str, dict[str, F]], projects: 
     return info
 
 
-def _get_dag_project_gs_path(project: str, dag_path: str, is_internal: bool):
+def _get_dag_project_gs_path(project: str, genome_version: str, sample_type: str, is_internal: bool, **kwargs):
+    dag_name = _construct_v2_dag_name(sample_type, is_internal=is_internal, **kwargs)
+    dag_path = _get_dag_gs_path(genome_version, dag_name)
     return f'{dag_path}/base/projects/{project}' if is_internal else f'{dag_path}/{project}/base'
 
 
