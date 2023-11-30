@@ -335,15 +335,18 @@ DOMINANT = 'Autosomal dominant'
 
 def update_variant_inheritance(
         variant_json: dict, family_individual_data: tuple[set[str], set[str], set[str], dict[str: list[str]]],
-        update_potential_comp_het_gene: Callable[str, None]
-):
+        update_potential_comp_het_gene: Callable[str, None]) -> None:
     """Compute the inheritance mode for the given variant and family"""
+
+    affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
     is_x_linked = 'X' in variant_json.get('chrom', '')
+
     genotype_zygosity = {
         sample_guid: _get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
         for sample_guid, genotype in variant_json.get('genotypes', {}).items()
     }
-    inheritance_model, possible_comp_het = _get_inheritance_model(genotype_zygosity, family_individual_data, is_x_linked)
+    inheritance_model, possible_comp_het = _get_inheritance_model(
+        genotype_zygosity, affected_individual_guids, unaffected_individual_guids, parent_guid_map, is_x_linked)
 
     if possible_comp_het:
         for gene_id in variant_json.get('transcripts', {}).keys():
@@ -357,8 +360,9 @@ def update_variant_inheritance(
 
 # TODO test
 
-def _get_inheritance_model(genotype_zygosity, family_individual_data, is_x_linked):
-    affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
+def _get_inheritance_model(
+        genotype_zygosity: dict[str, str], affected_individual_guids: set[str], unaffected_individual_guids: set[str],
+        parent_guid_map: dict[str: list[str]], is_x_linked: bool) -> tuple[str, bool]:
 
     affected_zygosities = {genotype_zygosity[g] for g in affected_individual_guids if g in genotype_zygosity}
     unaffected_zygosities = {genotype_zygosity[g] for g in unaffected_individual_guids if g in genotype_zygosity}
