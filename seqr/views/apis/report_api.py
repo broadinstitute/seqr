@@ -25,7 +25,7 @@ from seqr.views.utils.permissions_utils import analyst_required, get_project_and
     check_project_permissions, get_project_guids_user_can_view, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, \
-    get_variant_inheritance_models, get_sv_name, get_discovery_phenotype_class
+    update_variant_inheritance, get_sv_name, get_discovery_phenotype_class
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
@@ -1166,12 +1166,9 @@ def _get_basic_row(initial_row, family, samples, now):
 
 
 def _update_variant_inheritance(variant, family_individual_data, potential_compound_het_genes):
-    inheritance_models, potential_compound_het_gene_ids, _ = get_variant_inheritance_models(
-        variant.saved_variant_json, family_individual_data)
-    variant.saved_variant_json['inheritance'] = inheritance_models
-
-    for gene_id in potential_compound_het_gene_ids:
-        potential_compound_het_genes[gene_id].add(variant)
+    update_variant_inheritance(
+        variant.saved_variant_json, family_individual_data,
+        lambda gene_id: potential_compound_het_genes[gene_id].add(variant))
 
     main_transcript = _get_variant_model_main_transcript(variant)
     if main_transcript.get('geneId'):
@@ -1207,7 +1204,7 @@ def _get_gene_to_variant_info_map(saved_variants, potential_compound_het_genes):
                     del gene_ids_to_variant_tag_names[existing_gene_id]
             else:
                 for variant in variants:
-                    variant.saved_variant_json['inheritance'] = {"AR-comphet"}
+                    variant.saved_variant_json['inheritance'] = "AR-comphet"
                     gene_ids_to_variant_tag_names[gene_id].update(
                         {vt.variant_tag_type.name for vt in variant.discovery_tags})
                 gene_ids_to_saved_variants[gene_id].update(variants)
@@ -1220,7 +1217,7 @@ def _get_gene_to_variant_info_map(saved_variants, potential_compound_het_genes):
                 gene_id = get_sv_name(variant.saved_variant_json)
             gene_ids_to_saved_variants[gene_id].add(variant)
             gene_ids_to_variant_tag_names[gene_id].update({vt.variant_tag_type.name for vt in variant.discovery_tags})
-            gene_ids_to_inheritance[gene_id].update(variant.saved_variant_json['inheritance'])
+            gene_ids_to_inheritance[gene_id].add(variant.saved_variant_json['inheritance'])
 
     return gene_ids_to_saved_variants, gene_ids_to_variant_tag_names, gene_ids_to_inheritance
 
