@@ -87,7 +87,7 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 206)
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
         mock_subprocess.assert_called_with(
-            'dd skip=100 count=150 bs=1 if=/project_A/sample_1.bai',
+            'dd skip=100 count=151 bs=1 if=/project_A/sample_1.bai status="none"',
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
         mock_open.assert_not_called()
 
