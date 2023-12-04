@@ -122,18 +122,20 @@ def get_anvil_vcf_list(request, namespace, name, workspace_meta):
 
 @anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
 def validate_anvil_vcf(request, namespace, name, workspace_meta):
-    path = json.loads(request.body).get('dataPath')
-    if not path:
-        error = 'dataPath is required'
+    body = json.loads(request.body)
+    missing_fields = [field for field in ['genomeVersion', 'dataPath'] if not body.get(field)]
+    if missing_fields:
+        error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Validate the data path
+    path = body['dataPath']
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=path.lstrip('/'))
     file_to_check = validate_vcf_exists(data_path, request.user, path_name=path)
 
     # Validate the VCF to see if it contains all the required samples
-    samples = validate_vcf_and_get_samples(file_to_check)
+    samples = validate_vcf_and_get_samples(file_to_check, body['genomeVersion'])
 
     return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
 

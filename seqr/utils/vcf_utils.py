@@ -26,7 +26,7 @@ def _validate_vcf_header(header):
         raise ErrorsWarningsException([f'Missing required VCF header field(s) {missing_fields}.'], [])
 
 
-def _validate_vcf_meta(meta):
+def _validate_vcf_meta(meta, genome_version):
     errors = []
     for field, sub_field_meta in EXPECTED_META_FIELDS.items():
         missing_meta = [m for m in EXPECTED_META_FIELDS[field] if not meta.get(field, {}).get(m)]
@@ -37,18 +37,29 @@ def _validate_vcf_meta(meta):
             value = meta.get(field, {}).get(sub_field)
             if value and value != expected:
                 errors.append(f'Incorrect meta Type for {field}.{sub_field} - expected "{expected}", got "{value}"')
+
+    if 'reference' in meta and len(meta['reference']) == 1:
+        meta_version = next(iter(meta['reference'].keys()))
+        if meta_version != genome_version:
+            errors.append(
+                f'Mismatched genome version - VCF metadata indicates GRCh{meta_version}, GRCH{genome_version} provided')
+
     if errors:
         raise ErrorsWarningsException(errors, [])
 
 
 def _get_vcf_meta_info(line):
-    r = re.search(r'##(?P<field>.*?)=<ID=(?P<id>[^,]*).*Type=(?P<type>[^,]*).*>$', line)
-    if r:
-        return r.groupdict()
+    for meta_regex in [
+        r'##(?P<field>.*?)=<ID=(?P<id>[^,]*).*Type=(?P<type>[^,]*).*>$',
+        r'##(?P<field>reference)=.*(?P<type>GRCh|grch)(?P<id>3(7|8)).*$',
+    ]:
+        r = re.search(meta_regex, line)
+        if r:
+            return r.groupdict()
     return None
 
 
-def validate_vcf_and_get_samples(vcf_filename):
+def validate_vcf_and_get_samples(vcf_filename, genome_version):
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
     samples = {}
     header = []
@@ -72,7 +83,7 @@ def validate_vcf_and_get_samples(vcf_filename):
     _validate_vcf_header(header)
     if not samples:
         raise ErrorsWarningsException(['No samples found in the provided VCF.'], [])
-    _validate_vcf_meta(meta)
+    _validate_vcf_meta(meta, genome_version)
 
     return samples
 

@@ -118,6 +118,7 @@ INFO_META = [
 BAD_FORMAT_META = [
     b'##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
     b'##FORMAT=<ID=GQ,Number=1,Type=String,Description="Genotype Quality">\n',
+    b'##reference=file:///references/grch37/reference.bin\n',
 ]
 
 FORMAT_META = [
@@ -125,6 +126,10 @@ FORMAT_META = [
     b'##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
     b'##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
     b'##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+]
+
+REFERENCE_META = [
+    b'##reference=file:///gpfs/internal/sweng/production/Resources/GRCh38_1000genomes/GRCh38_full_analysis_set_plus_decoy_hla.fa\n'
 ]
 
 BAD_HEADER_LINE = [b'#CHROM\tID\tREF\tALT\tQUAL\n']
@@ -276,7 +281,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         # Test missing required fields in the request body
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'dataPath is required')
+        self.assertEqual(response.reason_phrase, 'Field(s) "genomeVersion, dataPath" are required')
         self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE,
                                                          TEST_NO_PROJECT_WORKSPACE_NAME,
                                                          meta_fields=['workspace.bucketName'])
@@ -359,13 +364,14 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Missing required FORMAT field(s) GT',
-            'Incorrect meta Type for FORMAT.GQ - expected "Integer", got "String"'
+            'Incorrect meta Type for FORMAT.GQ - expected "Integer", got "String"',
+            'Mismatched genome version - VCF metadata indicates GRCh37, GRCH38 provided',
         ])
 
         # Test valid operations
         mock_subprocess.reset_mock()
         mock_file_logger.reset_mock()
-        mock_subprocess.return_value.stdout = BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES
+        mock_subprocess.return_value.stdout = BASIC_META + INFO_META + FORMAT_META + REFERENCE_META + HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(VALIDATE_VCF_BODY))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), VALIDATE_VFC_RESPONSE)
