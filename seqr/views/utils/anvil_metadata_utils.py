@@ -16,7 +16,7 @@ from seqr.views.utils.variant_utils import get_variant_main_transcript, get_save
     update_variant_inheritance, get_sv_name
 
 SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
-    'Gene', 'gene_id', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
+    'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
     'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'discovery_notes',
 ]
 
@@ -343,7 +343,7 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
         'hpo_present': '|'.join(features_present),
         'hpo_absent': '|'.join(features_absent),
         'disorders': individual.disorders,
-        'filter_flags': json.dumps(individual.filter_flags),
+        'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
         'solve_state': solve_state,
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
         'paternal_id': paternal_ids[0],
