@@ -49,13 +49,13 @@ const CORE_COLUMNS = [
     name: PROJECT_ID_FIELD,
     format:
       row => <Link to={`/project/${row.project_guid}/project_page`} target="_blank">{row[PROJECT_ID_FIELD]}</Link>,
-    noFormatExport: true,
+    secondaryExportColumn: 'project_guid',
   },
   {
     name: FAMILY_FIELD_ID,
     format:
       row => <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row[FAMILY_FIELD_ID]}</Link>,
-    noFormatExport: true,
+    secondaryExportColumn: 'family_guid',
   },
   { name: 'pmid_id' },
   { name: 'paternal_id' },
