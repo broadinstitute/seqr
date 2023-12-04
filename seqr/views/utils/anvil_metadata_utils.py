@@ -15,7 +15,7 @@ from seqr.views.utils.variant_utils import get_variant_main_transcript, get_save
     update_variant_inheritance, get_sv_name
 
 SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
-    'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
+    'Gene', 'gene_id', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
     'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'discovery_notes',
 ]
 
@@ -96,11 +96,11 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
         family_data_by_id[family_id] = f
 
     samples_by_family_id = defaultdict(list)
-    individual_id_map = {}
+    individual_ids_map = {}
     sample_ids = set()
     for individual, sample in individual_samples.items():
         samples_by_family_id[individual.family_id].append(sample)
-        individual_id_map[individual.id] = individual.individual_id
+        individual_ids_map[individual.id] = (individual.individual_id, individual.guid)
         sample_ids.add(sample.sample_id)
 
     individual_data_by_family = {
@@ -166,7 +166,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
                 has_dbgap_submission = sample.sample_type in dbgap_submission
 
             subject_row = _get_subject_row(
-                individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map)
+                individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_ids_map)
             subject_row.update(family_subject_row)
             add_row(subject_row, family_id, SUBJECT_ROW_TYPE)
 
@@ -310,6 +310,7 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
             raise ErrorsWarningsException([f'Discovery variant {variant["variantId"]} in family {family} has no associated gene'])
         parsed_variant.update({
             'Gene': gene,
+            'gene_id': gene_id,
             'Ref': variant['ref'],
             'Alt': variant['alt'],
             'hgvsc': (variant['main_transcript'].get('hgvsc') or '').split(':')[-1],
@@ -318,7 +319,7 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
         })
     return variant['genotype_zygosity'], parsed_variant
 
-def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map):
+def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_ids_map):
     features_present = [feature['id'] for feature in individual.features or []]
     features_absent = [feature['id'] for feature in individual.absent_features or []]
     onset = individual.onset_age
@@ -328,8 +329,11 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
         all_tier_2 = all(variant[1]['Gene_Class'] == 'Tier 2 - Candidate' for variant in parsed_variants)
         solve_state = 'Tier 2' if all_tier_2 else 'Tier 1'
 
+    paternal_ids = individual_ids_map.get(individual.father_id, ('', ''))
+    maternal_ids = individual_ids_map.get(individual.mother_id, ('', ''))
     subject_row = {
         'subject_id': individual.individual_id,
+        'individual_guid': individual.guid,
         'sex': Individual.SEX_LOOKUP[individual.sex],
         'ancestry': ANCESTRY_MAP.get(individual.population, ''),
         'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
@@ -339,8 +343,10 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
         'hpo_absent': '|'.join(features_absent),
         'solve_state': solve_state,
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
-        'paternal_id': individual_id_map.get(individual.father_id, ''),
-        'maternal_id': individual_id_map.get(individual.mother_id, ''),
+        'paternal_id': paternal_ids[0],
+        'paternal_guid': paternal_ids[1],
+        'maternal_id': maternal_ids[0],
+        'maternal_guid': maternal_ids[1],
     }
     if airtable_metadata is not None:
         sequencing = airtable_metadata.get('SequencingProduct') or set()

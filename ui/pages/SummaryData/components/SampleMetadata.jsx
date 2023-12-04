@@ -44,7 +44,7 @@ const PROJECT_ID_FIELD = 'project_id'
 const FAMILY_FIELD_ID = 'family_id'
 
 const CORE_COLUMNS = [
-  { name: 'subject_id' },
+  { name: 'subject_id', secondaryExportColumn: 'individual_guid' },
   {
     name: PROJECT_ID_FIELD,
     format:
@@ -58,8 +58,8 @@ const CORE_COLUMNS = [
     secondaryExportColumn: 'family_guid',
   },
   { name: 'pmid_id' },
-  { name: 'paternal_id' },
-  { name: 'maternal_id' },
+  { name: 'paternal_id', secondaryExportColumn: 'paternal_guid' },
+  { name: 'maternal_id', secondaryExportColumn: 'maternal_guid' },
   { name: 'proband_relationship' },
   { name: 'sex' },
   { name: 'ancestry' },
@@ -90,8 +90,9 @@ const AIRTABLE_COLUMNS = [
   { name: 'sample_provider' },
 ]
 
+const GENE_COL = 'Gene'
 const VARIANT_COLUMNS = [
-  'Gene',
+  GENE_COL,
   'Gene_Class',
   'novel_mendelian_gene',
   'phenotype_class',
@@ -120,7 +121,9 @@ const getColumns = (data) => {
   const maxSavedVariants = Math.max(1, ...(data || []).map(row => row.num_saved_variants))
   const hasAirtable = data && data[0] && data[0][AIRTABLE_DBGAP_SUBMISSION_FIELD]
   return [...CORE_COLUMNS, ...(hasAirtable ? AIRTABLE_COLUMNS : [])].concat(
-    ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_COLUMNS.map(col => ({ name: `${col}-${i + 1}` }))),
+    ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_COLUMNS.map(
+      col => ({ name: `${col}-${i + 1}`, secondaryExportColumn: col === GENE_COL ? `gene_id-${i + 1}` : null }),
+    )),
   ).map(({ name, ...props }) => ({ name, content: name, ...props }))
 }
 
