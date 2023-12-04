@@ -127,7 +127,7 @@ const getColumns = (data) => {
   ).map(({ name, ...props }) => ({ name, content: name, ...props }))
 }
 
-const SampleMetadata = React.memo(({ projectGuid, queryForm, data, user }) => (
+export const SampleMetadata = React.memo(({ projectGuid, queryForm, data, user }) => (
   <div>
     <InlineHeader size="medium" content="Project:" />
     <AwesomeBar
@@ -144,7 +144,18 @@ const SampleMetadata = React.memo(({ projectGuid, queryForm, data, user }) => (
     ))}
     <HorizontalSpacer width={20} />
     {queryForm}
-    <SampleMetadataDataTable projectGuid={projectGuid} data={data} />
+    <DataTable
+      striped
+      collapsing
+      horizontalScroll
+      downloadFileName={`${FILENAME_LOOKUP[projectGuid] || (data?.length && data[0].project_id.replace(/ /g, '_'))}_${new Date().toISOString().slice(0, 10)}_Metadata`}
+      idField="subject_id"
+      defaultSortColumn="family_id"
+      emptyContent={projectGuid ? '0 cases found' : 'Select a project to view data'}
+      data={data}
+      columns={getColumns(data)}
+      rowsPerPage={100}
+    />
   </div>
 ))
 
@@ -153,26 +164,6 @@ SampleMetadata.propTypes = {
   projectGuid: PropTypes.string,
   queryForm: PropTypes.node,
   user: PropTypes.object,
-}
-
-export const SampleMetadataDataTable = ({ projectGuid, data }) => (
-  <DataTable
-    striped
-    collapsing
-    horizontalScroll
-    downloadFileName={`${FILENAME_LOOKUP[projectGuid] || (data?.length && data[0].project_id.replace(/ /g, '_'))}_${new Date().toISOString().slice(0, 10)}_Metadata`}
-    idField="subject_id"
-    defaultSortColumn="family_id"
-    emptyContent={projectGuid ? '0 cases found' : 'Select a project to view data'}
-    data={data}
-    columns={getColumns(data)}
-    rowsPerPage={100}
-  />
-)
-
-SampleMetadataDataTable.propTypes = {
-  data: PropTypes.arrayOf(PropTypes.object),
-  projectGuid: PropTypes.string,
 }
 
 const parseResponse = ({ rows }) => ({ data: rows })

@@ -3,7 +3,7 @@ import { BrowserRouter as Router } from 'react-router-dom'
 import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 
-import { SampleMetadataDataTable } from './SampleMetadata'
+import { SampleMetadata } from './SampleMetadata'
 
 configure({ adapter: new Adapter() })
 
@@ -66,8 +66,8 @@ const DATA = [
 ]
 
 test('SampleMetadataDataTable render and export', () => {
-  const sampleMetadataTable = mount(<Router><SampleMetadataDataTable projectGuid='all' data={DATA} /></Router>)
-  const exportConfig = sampleMetadataTable.find('DataTable').instance().exportConfig(DATA)[0]
+  const sampleMetadata = mount(<Router><SampleMetadata projectGuid="all" data={DATA} user={{}} /></Router>)
+  const exportConfig = sampleMetadata.find('DataTable').instance().exportConfig(DATA)[0]
   expect(exportConfig.headers).toEqual([
     'subject_id', 'individual_guid', 'project_id', 'projectGuid', 'family_id', 'familyGuid', 'pmid_id', 'paternal_id',
     'paternal_guid', 'maternal_id', 'maternal_guid', 'proband_relationship', 'sex', 'ancestry', 'phenotype_group',
