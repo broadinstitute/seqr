@@ -612,7 +612,7 @@ def get_json_for_locus_lists(locus_lists, user, include_metadata=True, additiona
         ll_additional_values.update(additional_values)
     if include_metadata:
         ll_additional_values.update({
-            'numEntries': Count('locuslistgene') + Count('locuslistinterval'),
+            'numEntries': Count('locuslistgene', distinct=True) + Count('locuslistinterval', distinct=True),
             'canEdit': Case(When(created_by=user, then=Value(True)), default=Value(False)),
         })
 
