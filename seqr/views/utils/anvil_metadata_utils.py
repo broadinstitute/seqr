@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from django.db.models import F, Q, Value, CharField
 from django.db.models.functions import Replace, JSONObject
 from django.contrib.postgres.aggregates import ArrayAgg
+import json
 
 from reference_data.models import Omim
 from seqr.models import Family, Individual
@@ -341,6 +342,8 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
         'congenital_status': Individual.ONSET_AGE_LOOKUP[onset] if onset else 'Unknown',
         'hpo_present': '|'.join(features_present),
         'hpo_absent': '|'.join(features_absent),
+        'disorders': individual.disorders,
+        'filter_flags': json.dumps(individual.filter_flags),
         'solve_state': solve_state,
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
         'paternal_id': paternal_ids[0],

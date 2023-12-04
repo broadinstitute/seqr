@@ -9,6 +9,7 @@ import DataTable from 'shared/components/table/DataTable'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import StateDataLoader from 'shared/components/StateDataLoader'
 import { InlineHeader, ActiveDisabledNavLink } from 'shared/components/StyledComponents'
+import { NoHoverFamilyLink } from 'shared/components/buttons/FamilyLink'
 import { BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
 
 const ALL_PROJECTS_PATH = 'all'
@@ -48,14 +49,13 @@ const CORE_COLUMNS = [
   {
     name: PROJECT_ID_FIELD,
     format:
-      row => <Link to={`/project/${row.project_guid}/project_page`} target="_blank">{row[PROJECT_ID_FIELD]}</Link>,
-    secondaryExportColumn: 'project_guid',
+      row => <Link to={`/project/${row.projectGuid}/project_page`} target="_blank">{row[PROJECT_ID_FIELD]}</Link>,
+    secondaryExportColumn: 'projectGuid',
   },
   {
     name: FAMILY_FIELD_ID,
-    format:
-      row => <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row[FAMILY_FIELD_ID]}</Link>,
-    secondaryExportColumn: 'family_guid',
+    format: row => <NoHoverFamilyLink family={row} target="_blank" />,
+    secondaryExportColumn: 'familyGuid',
   },
   { name: 'pmid_id' },
   { name: 'paternal_id', secondaryExportColumn: 'paternal_guid' },
@@ -65,17 +65,17 @@ const CORE_COLUMNS = [
   { name: 'ancestry' },
   { name: 'phenotype_group' },
   { name: 'disease_id' },
-  { name: 'disease_description' },
+  { name: 'disease_description', secondaryExportColumn: 'disorders' },
   { name: 'affected_status' },
   { name: 'congenital_status' },
   { name: 'hpo_present', style: { minWidth: '400px' } },
   { name: 'hpo_absent', style: { minWidth: '400px' } },
   { name: 'phenotype_description', style: { minWidth: '200px' } },
-  { name: 'solve_state' },
+  { name: 'solve_state', secondaryExportColumn: 'analysisStatus' },
   { name: 'MME' },
   { name: 'sample_id' },
   { name: 'data_type' },
-  { name: 'date_data_generation' },
+  { name: 'date_data_generation', secondaryExportColumn: 'filter_flags' },
   { name: 'consanguinity' },
   { name: 'family_history' },
 ]

@@ -385,8 +385,10 @@ def sample_metadata_export(request, project_guid):
             'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
         }, family_values={
-            'family_guid': F('guid'),
-            'project_guid': F('project__guid'),
+            'familyGuid': F('guid'),
+            'projectGuid': F('project__guid'),
+            'analysisStatus': F('analysis_status'),
+            'displayName': F('family_id'),
             'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
         },
     )
