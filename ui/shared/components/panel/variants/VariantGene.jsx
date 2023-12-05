@@ -268,6 +268,25 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
+export const omimPhenotypesDetail = (phenotypes, showCoordinates) => (
+  <List>
+    {phenotypes.map(phenotype => (
+      <ListItemLink
+        key={phenotype.phenotypeDescription}
+        content={(
+          <span>
+            {phenotype.phenotypeDescription}
+            {phenotype.phenotypeInheritance && <i>{` (${phenotype.phenotypeInheritance})`}</i>}
+            {showCoordinates && ` ${phenotype.chrom}:${phenotype.start}-${phenotype.end}`}
+          </span>
+        )}
+        target="_blank"
+        href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
+      />
+    ))}
+  </List>
+)
+
 const GENE_DISEASE_DETAIL_SECTIONS = [
   {
     color: 'violet',
@@ -294,27 +313,10 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
     color: 'orange',
     description: 'Disease Phenotypes',
     label: 'IN OMIM',
-    expandedLabel: 'OMIM',
     compactLabel: 'OMIM Disease Phenotypes',
     expandedDisplay: true,
     showDetails: gene => gene.omimPhenotypes.length > 0,
-    detailsDisplay: gene => (
-      <List>
-        {gene.omimPhenotypes.map(phenotype => (
-          <ListItemLink
-            key={phenotype.phenotypeDescription}
-            content={phenotype.phenotypeInheritance ? (
-              <span>
-                {phenotype.phenotypeDescription}
-                <i>{` (${phenotype.phenotypeInheritance})`}</i>
-              </span>
-            ) : phenotype.phenotypeDescription}
-            target="_blank"
-            href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
-          />
-        ))}
-      </List>
-    ),
+    detailsDisplay: gene => omimPhenotypesDetail(gene.omimPhenotypes),
   },
 ]
 
@@ -486,6 +488,22 @@ const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: tru
   }
 `
 
+export const LabeledOmimSegment = ({ color = 'orange', children }) => (
+  <OmimSegments>
+    <Segment color={color}>
+      <Label size="mini" color={color} content="OMIM" />
+    </Segment>
+    <Segment color={color}>
+      {children}
+    </Segment>
+  </OmimSegments>
+)
+
+LabeledOmimSegment.propTypes = {
+  color: PropTypes.string,
+  children: PropTypes.node,
+}
+
 const getDetailSections = (configs, gene, compact, labelProps, individualGeneData, noExpand) => configs.map(
   ({ showDetails, detailsDisplay, ...sectionConfig }) => (
     {
@@ -497,16 +515,9 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
     ...acc,
     ...config.detail.map(detail => ({ ...config, ...detail })),
   ] : [...acc, config]),
-[]).map(({ detail, expandedDisplay, expandedLabel, ...sectionConfig }) => (
+[]).map(({ detail, expandedDisplay, ...sectionConfig }) => (
   (expandedDisplay && !compact && !noExpand) ? (
-    <OmimSegments key={sectionConfig.label}>
-      <Segment color={sectionConfig.color}>
-        <Label size="mini" color={sectionConfig.color} content={expandedLabel} />
-      </Segment>
-      <Segment color={sectionConfig.color}>
-        {detail}
-      </Segment>
-    </OmimSegments>
+    <LabeledOmimSegment key={sectionConfig.label} color={sectionConfig.color}>{detail}</LabeledOmimSegment>
   ) : (
     <GeneDetailSection
       key={sectionConfig.label}
@@ -755,7 +766,7 @@ class VariantGenes extends React.PureComponent {
         {!mainGeneId && (
           <div>
             {[...GENE_DISEASE_DETAIL_SECTIONS, ...GENE_DETAIL_SECTIONS].map(
-              ({ showDetails, detailsDisplay, expandedDisplay, expandedLabel, ...sectionConfig }) => {
+              ({ showDetails, detailsDisplay, expandedDisplay, ...sectionConfig }) => {
                 const sectionGenes = genes.filter(gene => showDetails(gene))
                 return (
                   <GeneDetailSection

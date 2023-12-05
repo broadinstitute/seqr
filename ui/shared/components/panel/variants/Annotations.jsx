@@ -7,6 +7,7 @@ import { Popup, Label, Icon } from 'semantic-ui-react'
 import {
   getGenesById,
   getLocusListIntervalsByChromProject,
+  getOmimIntervalsByChrom,
   getFamiliesByGuid,
   getUser,
   getSpliceOutliersByChromFamily,
@@ -18,7 +19,7 @@ import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import RnaSeqJunctionOutliersTable from '../../table/RnaSeqJunctionOutliersTable'
 import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts from './Transcripts'
-import VariantGenes, { LocusListLabels } from './VariantGene'
+import VariantGenes, { LocusListLabels, LabeledOmimSegment, omimPhenotypesDetail } from './VariantGene'
 import {
   getLocus,
   has37Coords,
@@ -26,44 +27,57 @@ import {
   ProteinSequence,
   TranscriptLink,
   getOverlappedIntervals,
-  getOverlappedSpliceOutliers,
+  SPLICE_OUTLIER_OVERLAP_ARGS,
 } from './VariantUtils'
 import {
   GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS,
 } from '../../../utils/constants'
 
-const BaseSpliceOutlierLabel = React.memo(({ variant, spliceOutliersByFamily }) => {
-  if (!spliceOutliersByFamily || spliceOutliersByFamily.length < 1) {
+const OverlappedIntervalLabels = React.memo(({ groupedIntervals, variant, getOverlapArgs, labelDisplay }) => {
+  const chromIntervals = groupedIntervals[variant.chrom]
+  if (!chromIntervals || chromIntervals.length < 1) {
     return null
   }
 
-  const overlappedOutliers = getOverlappedSpliceOutliers(variant, spliceOutliersByFamily)
+  const intervals = getOverlappedIntervals(variant, chromIntervals, ...getOverlapArgs)
 
-  if (overlappedOutliers.length < 1) {
-    return null
-  }
-
-  return (
-    <Popup
-      trigger={<Label size="mini" content={<span>RNA splice</span>} color="pink" />}
-      content={<RnaSeqJunctionOutliersTable basic="very" compact="very" singleLine data={overlappedOutliers} showPopupColumns />}
-      size="tiny"
-      wide
-      hoverable
-    />
-  )
+  return intervals.length > 0 ? labelDisplay(intervals) : null
 })
 
-BaseSpliceOutlierLabel.propTypes = {
-  spliceOutliersByFamily: PropTypes.object,
+OverlappedIntervalLabels.propTypes = {
+  groupedIntervals: PropTypes.object,
   variant: PropTypes.object,
+  getOverlapArgs: PropTypes.arrayOf(PropTypes.any),
+  labelDisplay: PropTypes.func,
 }
 
-const mapSpliceOutliersStateToProps = (state, ownProps) => ({
-  spliceOutliersByFamily: getSpliceOutliersByChromFamily(state)[ownProps.variant.chrom],
+const spliceOutlierLabel = overlappedOutliers => (
+  <Popup
+    trigger={<Label size="mini" content={<span>RNA splice</span>} color="pink" />}
+    content={<RnaSeqJunctionOutliersTable basic="very" compact="very" singleLine data={overlappedOutliers} showPopupColumns />}
+    size="tiny"
+    wide
+    hoverable
+  />
+)
+
+const mapSpliceOutliersStateToProps = state => ({
+  groupedIntervals: getSpliceOutliersByChromFamily(state),
+  getOverlapArgs: SPLICE_OUTLIER_OVERLAP_ARGS,
+  labelDisplay: spliceOutlierLabel,
 })
 
-const SpliceOutlierLabel = connect(mapSpliceOutliersStateToProps)(BaseSpliceOutlierLabel)
+const SpliceOutlierLabel = connect(mapSpliceOutliersStateToProps)(OverlappedIntervalLabels)
+
+const omimLabel = phenotypes => <LabeledOmimSegment>{omimPhenotypesDetail(phenotypes, true)}</LabeledOmimSegment>
+
+const mapOmimStateToProps = state => ({
+  groupedIntervals: getOmimIntervalsByChrom(state),
+  getOverlapArgs: [() => 'omim'],
+  labelDisplay: omimLabel,
+})
+
+const OmimLabel = connect(mapOmimStateToProps)(OverlappedIntervalLabels)
 
 const LargeText = styled.div`
   font-size: 1.2em;
@@ -346,29 +360,17 @@ const mapStateToProps = state => ({
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
 
-const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, familiesByGuid, variant }) => {
-  if (!locusListIntervalsByProject || locusListIntervalsByProject.length < 1) {
-    return null
-  }
-
-  const locusListGuids = getOverlappedIntervals(variant, locusListIntervalsByProject,
-    fGuid => familiesByGuid[fGuid].projectId).map(({ locusListGuid }) => locusListGuid)
-
-  return locusListGuids.length > 0 && <LocusListLabels locusListGuids={locusListGuids} />
-})
-
-BaseVariantLocusListLabels.propTypes = {
-  locusListIntervalsByProject: PropTypes.object,
-  familiesByGuid: PropTypes.object,
-  variant: PropTypes.object,
-}
+const locusListLabels = locusLists => (
+  <LocusListLabels locusListGuids={locusLists.map(({ locusListGuid }) => locusListGuid)} />
+)
 
 const mapLocusListStateToProps = (state, ownProps) => ({
-  locusListIntervalsByProject: getLocusListIntervalsByChromProject(state, ownProps)[ownProps.variant.chrom],
-  familiesByGuid: getFamiliesByGuid(state),
+  groupedIntervals: getLocusListIntervalsByChromProject(state, ownProps),
+  getOverlapArgs: [fGuid => getFamiliesByGuid(state)[fGuid].projectId],
+  labelDisplay: locusListLabels,
 })
 
-const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocusListLabels)
+const VariantLocusListLabels = connect(mapLocusListStateToProps)(OverlappedIntervalLabels)
 
 const svSizeDisplay = (size) => {
   if (size < 1000) {
@@ -555,6 +557,7 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
       <VerticalSpacer height={5} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
       <SpliceOutlierLabel variant={variant} />
+      <OmimLabel variant={variant} />
       <VerticalSpacer height={5} />
       <SearchLinks variant={variant} mainTranscript={mainTranscript} />
     </div>
