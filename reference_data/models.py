@@ -178,7 +178,11 @@ class Omim(models.Model):
         ('4', 'a contiguous gene deletion or duplication syndrome, multiple genes are deleted or duplicated causing the phenotype.'),
     )
 
-    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE, null=True, blank=True)
+
+    chrom = models.CharField(max_length=2)
+    start = models.IntegerField()
+    end = models.IntegerField()
 
     mim_number = models.IntegerField()  # Example: 601365
     gene_description = models.TextField(null=True, blank=True)  # Example: "Dishevelled 1 (homologous to Drosophila dsh)"

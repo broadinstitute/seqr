@@ -182,9 +182,9 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
         for omim_record in models:
             omim_record.phenotypic_series_number = mim_number_to_phenotypic_series.get(omim_record.mim_number)
         logger.info('Found {} records with phenotypic series'.format(len(mim_number_to_phenotypic_series)))
-
-        if self.cache_parsed_records:
-            self._cache_records(models)
+        #
+        # if self.cache_parsed_records:
+        #     self._cache_records(models)
 
     @staticmethod
     def _cache_records(models):

@@ -121,6 +121,7 @@ def _get_sample_data(samples, inheritance_filter=None, inheritance_mode=None, **
 def _get_sort_metadata(sort, samples):
     sort_metadata = None
     if sort == 'in_omim':
+        # TODO
         sort_metadata = list(Omim.objects.filter(phenotype_mim_number__isnull=False).values_list('gene__gene_id', flat=True))
     elif sort == 'constraint':
         sort_metadata = {
