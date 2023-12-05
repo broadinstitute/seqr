@@ -181,12 +181,14 @@ def _get_family_has_rna_tpm(family_genes, gene_ids, sample_family_map):
     tpm_family_genes = RnaSeqTpm.objects.filter(
         sample_id__in=sample_family_map.keys(), gene_id__in=gene_ids,
     ).values('sample_id').annotate(genes=ArrayAgg('gene_id', distinct=True))
-    family_tpms = defaultdict(lambda: {'tpmGenes': []})
+    family_tpms = {}
     for agg in tpm_family_genes.iterator():
         family_guid = sample_family_map[agg['sample_id']]
-        genes = [gene for gene in agg['genes'] if gene in family_genes[family_guid]]
+        genes = {gene for gene in agg['genes'] if gene in family_genes[family_guid]}
+        if family_guid in family_tpms:
+            genes.update(family_tpms[family_guid]['tpmGenes'])
         if genes:
-            family_tpms[family_guid]['tpmGenes'] += genes
+            family_tpms[family_guid] = {'tpmGenes': list(genes)}
     return family_tpms
 
 
@@ -277,9 +279,13 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
             has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
         )
 
-        if rna_tpm:
-            for family_guid, data in rna_tpm.items():
-                response['familiesByGuid'][family_guid].update(data)
+    if rna_tpm:
+        if 'familiesByGuid' not in response:
+            response['familiesByGuid'] = {}
+        for family_guid, data in rna_tpm.items():
+            if family_guid not in response['familiesByGuid']:
+                response['familiesByGuid'][family_guid] = {}
+            response['familiesByGuid'][family_guid].update(data)
 
     return response
 
