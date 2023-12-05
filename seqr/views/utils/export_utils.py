@@ -12,6 +12,7 @@ from seqr.views.utils.json_utils import _to_title_case
 DELIMITERS = {
     'csv': ',',
     'tsv': '\t',
+    'txt': '\t',
 }
 
 

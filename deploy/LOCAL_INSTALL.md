@@ -140,6 +140,12 @@ The steps below describe how to annotate a callset and then load it into your on
    ```bash
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
    ```
+
+1. authenticate into your google cloud account.
+This is required for hail to access buckets hosted on gcloud.
+   ```bash
+   docker-compose exec pipeline-runner  gcloud auth application-default login
+   ```
    
 1. if you haven't already, download VEP and other reference data to the docker image's mounted directories. 
 This should be done once per build version, and does not need to be repeated for subsequent loading jobs.

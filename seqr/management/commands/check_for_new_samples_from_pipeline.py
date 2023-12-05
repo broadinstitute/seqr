@@ -12,7 +12,7 @@ from seqr.views.utils.variant_utils import reset_cached_search_results
 
 logger = logging.getLogger(__name__)
 
-GS_PATH_TEMPLATE = 'gs://seqr-datasets/v03/{path}/runs/{version}/'
+GS_PATH_TEMPLATE = 'gs://seqr-hail-search-data/v03/{path}/runs/{version}/'
 
 
 class Command(BaseCommand):
@@ -66,7 +66,7 @@ class Command(BaseCommand):
         updated_samples, inactivated_sample_guids, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
-            sample_data={'data_source': version, 'elasticsearch_index': metadata['callset']},
+            sample_data={'data_source': version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
             sample_type=sample_type,
             dataset_type=dataset_type,
             user=None,

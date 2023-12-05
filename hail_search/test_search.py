@@ -25,7 +25,7 @@ PROJECT_2_VARIANT = {
     'familyGuids': ['F000011_11'],
     'genotypes': {
         'I000015_na20885': {
-            'sampleId': 'NA20885', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+            'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'dp': 8, 'gq': 14, 'ab': 0.875,
         }
     },
@@ -66,7 +66,7 @@ FAMILY_3_VARIANT = deepcopy(VARIANT3)
 FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
 FAMILY_3_VARIANT['genotypes'] = {
     'I000007_na20870': {
-        'sampleId': 'NA20870', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
+        'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
         'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.6785714285714286,
     },
 }
@@ -85,7 +85,7 @@ PROJECT_2_VARIANT1 = deepcopy(VARIANT1)
 PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
 PROJECT_2_VARIANT1['genotypes'] = {
     'I000015_na20885': {
-        'sampleId': 'NA20885', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+        'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
         'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0,
     },
 }
@@ -95,7 +95,7 @@ MULTI_PROJECT_VARIANT1['genotypes'].update(PROJECT_2_VARIANT1['genotypes'])
 MULTI_PROJECT_VARIANT2 = deepcopy(VARIANT2)
 MULTI_PROJECT_VARIANT2['familyGuids'].append('F000011_11')
 MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = {
-    'sampleId': 'NA20885', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+    'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
     'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5,
 }
 
@@ -188,6 +188,91 @@ class HailSearchTestCase(AioHTTPTestCase):
                 'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'], **FAMILY_2_ALL_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA,
             }, gene_counts={**variant_gene_counts, **mito_gene_counts, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
         )
+
+        await self._assert_expected_search([{
+            'variantId': '1-8403825-CTTTTTTTT-C',
+            'xpos': 1008403825,
+            'chrom': '1',
+            'pos': 8403825,
+            'ref': 'CTTTTTTTT',
+            'alt': 'C',
+            'genomeVersion': '38',
+            'liftedOverGenomeVersion': '37',
+            'liftedOverChrom': '1',
+            'liftedOverPos': 8463885,
+            'familyGuids': ['F000002_2'],
+            'genotypes': {
+                'I000004_hg00731': {
+                    'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
+                    'numAlt': 1, 'dp': 21, 'gq': 3, 'ab': 0.6190476190476191,
+                }, 'I000005_hg00732': {
+                    'sampleId': 'HG00732', 'sampleType': 'WGS', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
+                    'numAlt': 0, 'dp': 0, 'gq': 13, 'ab': None,
+                }, 'I000006_hg00733': {
+                    'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
+                    'numAlt': -1, 'dp': None, 'gq': 0, 'ab': None,
+                },
+            },
+            'genotypeFilters': 'RefCall',
+            'populations': {
+                'seqr': {'af': 0.1666666716337204, 'ac': 2, 'an': 12, 'hom': 0},
+                'topmed': {'af': 0.0023385800886899233, 'ac': 619, 'an': 264690, 'hom': 11, 'het': 597},
+                'exac': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'het': 0, 'filter_af': 0.0},
+                'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
+                'gnomad_genomes': {'af': 0.002653343603014946, 'ac': 188, 'an': 70854, 'hom': 2, 'hemi': 0, 'filter_af': 0.00288608786650002},
+            },
+            'predictions': {
+                'cadd': 0.6510000228881836, 'eigen': None, 'fathmm': None, 'gnomad_noncoding': None, 'mpc': None,
+                'mut_pred': None, 'primate_ai': None, 'splice_ai': None, 'splice_ai_consequence': None, 'vest': None,
+                'mut_taster': None, 'polyphen': None, 'revel': None, 'sift': None,
+            },
+            'screenRegionType': None,
+            'clinvar': None,
+            'hgmd': None,
+            'transcripts': {
+                'ENSG00000142599': [
+                    {'aminoAcids': None, 'canonical': 1, 'codons': None, 'geneId': 'ENSG00000142599',
+                     'hgvsc': 'ENST00000337907.7:c.1284+18894_1284+18901del', 'hgvsp': None,
+                     'transcriptId': 'ENST00000337907', 'isLofNagnag': None, 'transcriptRank': 0,
+                     'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+                    {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000142599',
+                     'hgvsc': 'ENST00000377464.5:c.480+18894_480+18901del', 'hgvsp': None,
+                     'transcriptId': 'ENST00000377464', 'isLofNagnag': None, 'transcriptRank': 1,
+                     'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+                    {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000142599',
+                     'hgvsc': 'ENST00000400907.6:c.1284+18894_1284+18901del', 'hgvsp': None,
+                     'transcriptId': 'ENST00000400907', 'isLofNagnag': None, 'transcriptRank': 2,
+                     'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+                    {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000142599',
+                     'hgvsc': 'ENST00000400908.6:c.1284+18894_1284+18901del', 'hgvsp': None,
+                     'transcriptId': 'ENST00000400908', 'isLofNagnag': None, 'transcriptRank': 3,
+                     'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+                    {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000142599',
+                     'hgvsc': 'ENST00000476556.5:c.-379+18894_-379+18901del', 'hgvsp': None,
+                     'transcriptId': 'ENST00000476556', 'isLofNagnag': None, 'transcriptRank': 4,
+                     'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+                    {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000142599',
+                     'hgvsc': 'ENST00000488215.5:c.-379+18894_-379+18901del', 'hgvsp': None,
+                     'transcriptId': 'ENST00000488215', 'isLofNagnag': None, 'transcriptRank': 5,
+                     'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+                    {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000142599',
+                     'hgvsc': 'ENST00000460659.5:n.334+18894_334+18901del', 'hgvsp': None,
+                     'transcriptId': 'ENST00000460659', 'isLofNagnag': None, 'transcriptRank': 6,
+                     'biotype': 'processed_transcript', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+                    {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000142599',
+                     'hgvsc': 'ENST00000465125.1:n.301+18894_301+18901del', 'hgvsp': None,
+                     'transcriptId': 'ENST00000465125', 'isLofNagnag': None, 'transcriptRank': 7,
+                     'biotype': 'processed_transcript', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+                    {'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000142599',
+                     'hgvsc': 'ENST00000492766.5:n.268+18894_268+18901del', 'hgvsp': None,
+                     'transcriptId': 'ENST00000492766', 'isLofNagnag': None, 'transcriptRank': 8,
+                     'biotype': 'processed_transcript', 'lofFilters': None, 'majorConsequence': 'intron_variant'},
+                ],
+            },
+            'mainTranscriptId': 'ENST00000337907',
+            'selectedMainTranscriptId': None,
+            '_sort': [1008403825],
+        }], sample_data={'ONT_SNV_INDEL': FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL']})
 
     async def test_single_project_search(self):
         variant_gene_counts = {

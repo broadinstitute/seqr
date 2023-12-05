@@ -1,9 +1,13 @@
 import hail as hl
 
-from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
+from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
     PATHOGENICTY_HGMD_SORT_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
+
+
+def _clinvar_sort(clinvar_field, r):
+    return hl.or_else(r[clinvar_field].pathogenicity_id, ABSENT_PATH_SORT_OFFSET)
 
 
 class MitoHailTableQuery(BaseHailTableQuery):
@@ -48,6 +52,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
     PATHOGENICITY_FILTERS = {
         CLINVAR_KEY: ('pathogenicity', CLINVAR_PATH_RANGES),
     }
+    PATHOGENICITY_FIELD_MAP = {CLINVAR_KEY: CLINVAR_MITO_KEY}
 
     GLOBALS = BaseHailTableQuery.GLOBALS + ['versions']
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
@@ -69,11 +74,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
         **BaseHailTableQuery.BASE_ANNOTATION_FIELDS,
     }
     ENUM_ANNOTATION_FIELDS = {
-        'clinvar': {'annotate_value': lambda value, enum, ht_globals: {
-            'conflictingPathogenicities': MitoHailTableQuery._format_enum(
-                value, 'conflictingPathogenicities', enum, enum_keys=['pathogenicity']),
-            'version': ht_globals['versions'].clinvar,
-        }},
+        CLINVAR_MITO_KEY: {
+            'response_key': CLINVAR_KEY,
+            'include_version': True,
+            'annotate_value': lambda value, enum: {
+                'conflictingPathogenicities': MitoHailTableQuery._format_enum(
+                    value, 'conflictingPathogenicities', enum, enum_keys=['pathogenicity']),
+            },
+        },
         TRANSCRIPTS_FIELD: {
             **BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
             'annotate_value': lambda transcript, *args: {'major_consequence': transcript.consequence_terms.first()},
@@ -81,12 +89,13 @@ class MitoHailTableQuery(BaseHailTableQuery):
         }
     }
 
+    CLINVAR_SORT = _clinvar_sort
     SORTS = {
         CONSEQUENCE_SORT: lambda r: [
             hl.min(r.sorted_transcript_consequences.flatmap(lambda t: t.consequence_term_ids)),
             hl.min(r.selected_transcript.consequence_term_ids),
         ],
-        PATHOGENICTY_SORT_KEY: lambda r: [hl.or_else(r.clinvar.pathogenicity_id, ABSENT_PATH_SORT_OFFSET)],
+        PATHOGENICTY_SORT_KEY: lambda r: [_clinvar_sort(CLINVAR_MITO_KEY, r)],
         **BaseHailTableQuery.SORTS,
     }
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
@@ -233,7 +242,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def _has_path_expr(self, terms, field):
         subfield, range_configs = self.PATHOGENICITY_FILTERS[field]
-        enum_lookup = self._get_enum_lookup(field, subfield)
+        field_name = self.PATHOGENICITY_FIELD_MAP.get(field, field)
+        enum_lookup = self._get_enum_lookup(field_name, subfield)
 
         ranges = [[None, None]]
         for path_filter, start, end in range_configs:
@@ -245,7 +255,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ranges.append([None, None])
 
         ranges = [r for r in ranges if r[0] is not None]
-        value = self._ht[field][f'{subfield}_id']
+        value = self._ht[field_name][f'{subfield}_id']
         return hl.any(lambda r: (value >= r[0]) & (value <= r[1]), ranges)
 
     def _format_results(self, ht, *args, **kwargs):

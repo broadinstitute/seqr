@@ -3,6 +3,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F
 import logging
 import redis
+from typing import Callable
 
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo
@@ -180,12 +181,14 @@ def _get_family_has_rna_tpm(family_genes, gene_ids, sample_family_map):
     tpm_family_genes = RnaSeqTpm.objects.filter(
         sample_id__in=sample_family_map.keys(), gene_id__in=gene_ids,
     ).values('sample_id').annotate(genes=ArrayAgg('gene_id', distinct=True))
-    family_tpms = defaultdict(lambda: {'tpmGenes': []})
+    family_tpms = {}
     for agg in tpm_family_genes.iterator():
         family_guid = sample_family_map[agg['sample_id']]
-        genes = [gene for gene in agg['genes'] if gene in family_genes[family_guid]]
+        genes = {gene for gene in agg['genes'] if gene in family_genes[family_guid]}
+        if family_guid in family_tpms:
+            genes.update(family_tpms[family_guid]['tpmGenes'])
         if genes:
-            family_tpms[family_guid]['tpmGenes'] += genes
+            family_tpms[family_guid] = {'tpmGenes': list(genes)}
     return family_tpms
 
 
@@ -276,9 +279,13 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
             has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
         )
 
-        if rna_tpm:
-            for family_guid, data in rna_tpm.items():
-                response['familiesByGuid'][family_guid].update(data)
+    if rna_tpm:
+        if 'familiesByGuid' not in response:
+            response['familiesByGuid'] = {}
+        for family_guid, data in rna_tpm.items():
+            if family_guid not in response['familiesByGuid']:
+                response['familiesByGuid'][family_guid] = {}
+            response['familiesByGuid'][family_guid].update(data)
 
     return response
 
@@ -326,59 +333,64 @@ HET = 'Heterozygous'
 HOM_ALT = 'Homozygous'
 HEMI = 'Hemizygous'
 
+X_LINKED = 'X - linked'
+RECESSIVE = 'Autosomal recessive (homozygous)'
+DE_NOVO = 'de novo'
+DOMINANT = 'Autosomal dominant'
 
-def get_variant_inheritance_models(variant_json, family_individual_data):
+
+def update_variant_inheritance(
+        variant_json: dict, family_individual_data: tuple[set[str], set[str], set[str], dict[str: list[str]]],
+        update_potential_comp_het_gene: Callable[str, None]) -> None:
+    """Compute the inheritance mode for the given variant and family"""
+
     affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
-    inheritance_models = set()
+    is_x_linked = 'X' in variant_json.get('chrom', '')
 
-    affected_indivs_with_hom_alt_variants = set()
-    affected_indivs_with_het_variants = set()
-    unaffected_indivs_with_het_variants = set()
-    is_x_linked = False
+    genotype_zygosity = {
+        sample_guid: _get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
+        for sample_guid, genotype in variant_json.get('genotypes', {}).items()
+    }
+    inheritance_model, possible_comp_het = _get_inheritance_model(
+        genotype_zygosity, affected_individual_guids, unaffected_individual_guids, parent_guid_map, is_x_linked)
 
-    genotypes = variant_json.get('genotypes')
-    genotype_zygosity = {}
-    if genotypes:
-        chrom = variant_json['chrom']
-        is_x_linked = "X" in chrom
-        for sample_guid, genotype in genotypes.items():
-            zygosity = _get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
-            genotype_zygosity[sample_guid] = zygosity
-            if zygosity in (HOM_ALT, HEMI) and sample_guid in unaffected_individual_guids:
-                # No valid inheritance modes for hom alt unaffected individuals
-                return set(), set()
+    if possible_comp_het:
+        for gene_id in variant_json.get('transcripts', {}).keys():
+            update_potential_comp_het_gene(gene_id)
 
-            if zygosity in (HOM_ALT, HEMI) and sample_guid in affected_individual_guids:
-                affected_indivs_with_hom_alt_variants.add(sample_guid)
-            elif zygosity == HET and sample_guid in affected_individual_guids:
-                affected_indivs_with_het_variants.add(sample_guid)
-            elif zygosity == HET and sample_guid in unaffected_individual_guids:
-                unaffected_indivs_with_het_variants.add(sample_guid)
+    variant_json.update({
+        'inheritance': inheritance_model,
+        'genotype_zygosity': genotype_zygosity,
+    })
 
-    # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
-    if affected_indivs_with_hom_alt_variants:
-        if is_x_linked:
-            inheritance_models.add("X-linked")
-        else:
-            inheritance_models.add("AR-homozygote")
 
-    if not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
-        inherited = any(
-            guid for guid in affected_indivs_with_het_variants
-            if any(parent_guid in affected_indivs_with_het_variants for parent_guid in parent_guid_map[guid])
-        )
-        if inherited or not unaffected_individual_guids:
-            inheritance_models.add("AD")
-        else:
-            inheritance_models.add("de novo")
+def _get_inheritance_model(
+        genotype_zygosity: dict[str, str], affected_individual_guids: set[str], unaffected_individual_guids: set[str],
+        parent_guid_map: dict[str: list[str]], is_x_linked: bool) -> tuple[str, bool]:
 
-    potential_compound_het_gene_ids = set()
-    if (len(unaffected_individual_guids) < 2 or unaffected_indivs_with_het_variants) \
-            and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants \
-            and 'transcripts' in variant_json:
-        potential_compound_het_gene_ids.update(list(variant_json['transcripts'].keys()))
+    affected_zygosities = {genotype_zygosity[g] for g in affected_individual_guids if g in genotype_zygosity}
+    unaffected_zygosities = {genotype_zygosity[g] for g in unaffected_individual_guids if g in genotype_zygosity}
 
-    return inheritance_models, potential_compound_het_gene_ids, genotype_zygosity
+    inheritance_model = ''
+    possible_comp_het = False
+    if any(zygosity in unaffected_zygosities for zygosity in {HOM_ALT, HEMI}):
+        # No valid inheritance modes for hom alt unaffected individuals
+        inheritance_model = ''
+    elif any(zygosity in affected_zygosities for zygosity in {HOM_ALT, HEMI}):
+        inheritance_model = X_LINKED if is_x_linked else RECESSIVE
+    elif HET in affected_zygosities:
+        if HET not in unaffected_zygosities:
+            inherited = (not unaffected_individual_guids) or any(
+                guid for guid in affected_individual_guids
+                if genotype_zygosity.get(guid) == HET and
+                any(genotype_zygosity.get(parent_guid) == HET for parent_guid in parent_guid_map[guid])
+            )
+            inheritance_model = DOMINANT if inherited else DE_NOVO
+
+        if len(unaffected_individual_guids) < 2 or HET in unaffected_zygosities:
+            possible_comp_het = True
+
+    return inheritance_model, possible_comp_het
 
 
 def _get_genotype_zygosity(genotype, is_hemi_variant):

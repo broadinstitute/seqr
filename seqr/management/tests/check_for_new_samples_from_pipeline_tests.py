@@ -54,7 +54,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(str(ce.exception), 'Run failed for GRCh38/SNV_INDEL: auto__2023-08-08, unable to load data')
 
         metadata = {
-            'callset': '1kg.vcf.gz',
+            'callsets': ['1kg.vcf.gz'],
             'sample_type': 'WES',
             'families': {
                 'F0000123_ABC': ['NA22882', 'NA20885'],
@@ -94,8 +94,8 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
 
         mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [
-            'gsutil ls gs://seqr-datasets/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/_SUCCESS',
-            'gsutil cat gs://seqr-datasets/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/metadata.json',
+            'gsutil ls gs://seqr-hail-search-data/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/_SUCCESS',
+            'gsutil cat gs://seqr-hail-search-data/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/metadata.json',
         ]], any_order=True)
 
         mock_logger.info.assert_has_calls([
