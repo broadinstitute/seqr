@@ -1071,6 +1071,9 @@
         "phenotype_inheritance": "Autosomal recessive",
         "phenotype_mim_number": 616126,
         "phenotype_description": "Immunodeficiency 38",
+        "chrom": "1",
+        "start": 11869,
+        "end": 14409,
         "phenotype_map_method": "3"
     }
 },
@@ -1080,6 +1083,9 @@
     "fields": {
         "gene": 3,
         "mim_number": 103320,
+        "chrom": "1",
+        "start": 29554,
+        "end": 31109,
         "gene_description": "Agrin",
         "comments": "",
         "phenotype_inheritance": "Autosomal recessive, X-linked recessive",
@@ -1094,6 +1100,9 @@
     "fields": {
         "gene": 5,
         "mim_number": 600315,
+        "chrom": "1",
+        "start": 52473,
+        "end": 53312,
         "gene_description": "Tumor necrosis factor receptor superfamily, member 4",
         "comments": "mutation identified in 1 IMD16 family",
         "phenotype_inheritance": "Autosomal recessive",

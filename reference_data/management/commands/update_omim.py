@@ -69,6 +69,7 @@ CACHED_RECORDS_FILENAME = 'parsed_omim_records.txt'
 CACHED_RECORDS_HEADER = [
     'gene_id', 'mim_number', 'gene_description', 'comments', 'phenotype_description',
     'phenotype_mim_number', 'phenotype_map_method', 'phenotype_inheritance', 'phenotypic_series_number',
+    'chrom', 'start', 'end',
 ]
 
 class CachedOmimReferenceDataHandler(ReferenceDataHandler):
@@ -76,6 +77,7 @@ class CachedOmimReferenceDataHandler(ReferenceDataHandler):
     model_cls = Omim
     url = 'https://storage.googleapis.com/{bucket}{filename}'.format(
         filename=CACHED_RECORDS_FILENAME, bucket=CACHED_RECORDS_BUCKET)
+    allow_missing_gene = True
 
     @staticmethod
     def get_file_header(f):
@@ -163,7 +165,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     def post_process_models(self, models):
         logger.info('Adding phenotypic series information')
         mim_numbers = {omim_record.mim_number for omim_record in models if omim_record.phenotype_mim_number}
-        mim_numbers = list(map(str, list(mim_numbers)))
+        mim_numbers = sorted(map(str, list(mim_numbers)))
         mim_number_to_phenotypic_series = {}
         for i in range(0, len(mim_numbers), 20):
             logger.debug('Fetching entries {}-{}'.format(i, i + 20))
@@ -195,7 +197,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     def _cache_records(models):
         with open(CACHED_RECORDS_FILENAME, 'w') as f:
             f.write('\n'.join([
-                '\t'.join([model.gene.gene_id] + [str(getattr(model, field) or '') for field in CACHED_RECORDS_HEADER[1:]])
+                '\t'.join([model.gene.gene_id if model.gene else ''] + [str(getattr(model, field) or '') for field in CACHED_RECORDS_HEADER[1:]])
                 for model in models]))
 
         command = 'gsutil mv {filename} gs://{bucket}'.format(filename=CACHED_RECORDS_FILENAME, bucket=CACHED_RECORDS_BUCKET)
