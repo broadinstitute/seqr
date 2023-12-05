@@ -6,7 +6,7 @@ import redis
 from typing import Callable
 
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
-from reference_data.models import TranscriptInfo
+from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqTpm, PhenotypePrioritization, Project, Sample, VariantTagType
 from seqr.utils.search.utils import get_variants_for_variant_ids
@@ -132,6 +132,12 @@ def _saved_variant_genes_transcripts(variants):
     return genes, transcripts, family_genes
 
 
+def _get_omim_intervals(variants):
+    chroms = {v['chrom'] for v in variants}
+    omims = Omim.objects.filter(phenotype_mim_number__isnull=False, gene__isnull=True, chrom__in=chroms)
+    return {o['phenotypeMimNumber']: o for o in get_json_for_queryset(omims)}
+
+
 def _add_locus_lists(projects, genes, add_list_detail=False, user=None):
     locus_lists = LocusList.objects.filter(projects__in=projects)
 
@@ -239,6 +245,9 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     if discovery_tags:
         _add_discovery_tags(variants, discovery_tags)
     response['genesById'] = genes
+
+    if any(p.genome_version == GENOME_VERSION_GRCh38 for p in projects):
+        response['omimIntervals'] = _get_omim_intervals(variants)
 
     mme_submission_genes = MatchmakerSubmissionGenes.objects.filter(
         saved_variant__guid__in=response['savedVariantsByGuid'].keys()).values(

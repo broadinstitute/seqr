@@ -197,7 +197,8 @@ class Omim(models.Model):
         # ('mim_number', 'phenotype_mim_number') is not unique - for example ('124020', '609535')
         unique_together = ('mim_number', 'phenotype_mim_number', 'phenotype_description')
 
-        json_fields = ['mim_number', 'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance']
+        json_fields = ['mim_number', 'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
+                       'chrom', 'start', 'end',]
 
 
 # based on dbNSFPv3.5a_gene fields

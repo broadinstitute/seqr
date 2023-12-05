@@ -77,7 +77,6 @@ def _add_dbnsfp(gene):
         return _get_empty_json_for_model(dbNSFPGene)
 
 def _add_omim(gene):
-    # TODO shared code?
     omim_phenotypes = _get_json_for_models(gene.omim_set.all())
     return {
         'omimPhenotypes': [phenotype for phenotype in omim_phenotypes if phenotype['phenotypeMimNumber']],
