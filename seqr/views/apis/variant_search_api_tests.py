@@ -121,6 +121,7 @@ EXPECTED_SEARCH_RESPONSE = {
         'I000002_na19678': {'ENSG00000268903': {'lirical': EXPECTED_LIRICAL_DATA}},
     },
     'mmeSubmissionsByGuid': {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}},
+    'familiesByGuid': {'F000001_1': {'tpmGenes': ['ENSG00000227232']}},
 }
 
 EXPECTED_SEARCH_CONTEXT_RESPONSE = {
@@ -134,13 +135,13 @@ EXPECTED_SEARCH_CONTEXT_RESPONSE = {
 }
 
 EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE = {
+    **EXPECTED_SEARCH_RESPONSE,
     'familiesByGuid': {'F000001_1': mock.ANY, 'F000002_2': mock.ANY},
     'individualsByGuid': mock.ANY,
     'igvSamplesByGuid': mock.ANY,
     'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY},
     'familyNotesByGuid': mock.ANY,
 }
-EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE.update(deepcopy(EXPECTED_SEARCH_RESPONSE))
 
 def _get_es_variants(results_model, **kwargs):
     results_model.save()
@@ -471,7 +472,6 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
         expected_search_response = deepcopy(EXPECTED_SEARCH_RESPONSE)
         expected_search_response.update({
             'searchedVariants': COMP_HET_VARAINTS,
@@ -488,6 +488,8 @@ class VariantSearchAPITest(object):
             'mmeSubmissionsByGuid': {},
         })
         expected_search_response['search']['totalResults'] = 1
+        del expected_search_response['familiesByGuid']
+        self.assertSetEqual(set(response_json.keys()), set(expected_search_response.keys()))
         self.assertDictEqual(response_json, expected_search_response)
         self._assert_expected_results_context(response_json, has_pa_detail=False, rnaseq=False)
         mock_error_logger.assert_not_called()
@@ -501,7 +503,7 @@ class VariantSearchAPITest(object):
         expected_search_results = deepcopy(EXPECTED_SEARCH_RESPONSE)
         expected_search_results['searchedVariants'] = VARIANTS_WITH_DISCOVERY_TAGS
         expected_search_results['savedVariantsByGuid']['SV0000002_1248367227_r0390_100']['discoveryTags'] = DISCOVERY_TAGS
-        expected_search_results['familiesByGuid'] = {'F000012_12': mock.ANY}
+        expected_search_results['familiesByGuid'].update({'F000012_12': mock.ANY})
         self.assertSetEqual(set(response_json.keys()), set(expected_search_results.keys()))
         self.assertDictEqual(response_json, expected_search_results)
         self._assert_expected_results_context(response_json)
