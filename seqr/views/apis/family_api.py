@@ -53,7 +53,7 @@ def family_page_data(request, family_guid):
         gene_id for transcripts in discovery_variants.values_list('saved_variant_json__transcripts', flat=True)
         for gene_id in (transcripts or {}).keys()
     }
-    # TODO
+    # TODO include overlapped
     omims = Omim.objects.filter(
         Q(phenotype_mim_number__in=family_response['postDiscoveryOmimNumbers']) | Q(gene__gene_id__in=gene_ids)
     ).exclude(phenotype_mim_number__isnull=True).distinct()
