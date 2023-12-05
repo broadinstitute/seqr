@@ -90,6 +90,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = Omim
     url = "https://data.omim.org/downloads/{omim_key}/genemap2.txt"
+    allow_missing_gene = True
 
     def __init__(self, omim_key=None, skip_cache_parsed_records=False, **kwargs):
         """Init OMIM handler."""
@@ -126,12 +127,16 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
 
         else:
             # rename some of the fields
-            output_record = {}
-            output_record['gene_id'] = record['ensembl_gene_id']
-            output_record['mim_number'] = int(record['mim_number'])
-            output_record['gene_symbol'] = record['approved_gene_symbol'].strip() or record['gene/locus_and_other_related_symbols'].split(",")[0]
-            output_record['gene_description'] = record['gene_name']
-            output_record['comments'] = record['comments']
+            output_record = {
+                'gene_id': record['ensembl_gene_id'],
+                'mim_number': int(record['mim_number']),
+                'chrom': record['#_chromosome'].replace('chr', ''),
+                'start': int(record['genomic_position_start']),
+                'end': int(record['genomic_position_end']),
+                'gene_symbol': record['approved_gene_symbol'].strip() or record['gene/locus_and_other_related_symbols'].split(",")[0],
+                'gene_description': record['gene_name'],
+                'comments': record['comments'],
+            }
 
             phenotype_field = record['phenotypes'].strip()
 
@@ -182,9 +187,9 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
         for omim_record in models:
             omim_record.phenotypic_series_number = mim_number_to_phenotypic_series.get(omim_record.mim_number)
         logger.info('Found {} records with phenotypic series'.format(len(mim_number_to_phenotypic_series)))
-        #
-        # if self.cache_parsed_records:
-        #     self._cache_records(models)
+
+        if self.cache_parsed_records:
+            self._cache_records(models)
 
     @staticmethod
     def _cache_records(models):

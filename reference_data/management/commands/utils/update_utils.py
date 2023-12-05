@@ -19,6 +19,7 @@ class ReferenceDataHandler(object):
     post_process_models = None
     batch_size = None
     keep_existing_records = False
+    allow_missing_gene = False
     gene_key = 'gene'
 
     def __init__(self, **kwargs):
@@ -50,7 +51,7 @@ class ReferenceDataHandler(object):
         gene = self.gene_reference['gene_ids_to_gene'].get(gene_id) or \
                self.gene_reference['gene_symbols_to_gene'].get(gene_symbol)
 
-        if not gene:
+        if not gene and not self.allow_missing_gene:
             raise ValueError('Gene "{}" not found in the GeneInfo table'.format(gene_id or gene_symbol))
         return gene
 
