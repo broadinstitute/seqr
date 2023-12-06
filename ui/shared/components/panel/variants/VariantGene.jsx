@@ -61,7 +61,7 @@ const BaseGeneLabelContent = styled(({ color, customColor, label, maxWidth, disp
     }
   }
 `
-const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
+export const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
 
 const GeneLinks = styled.div`
   font-size: .9em;
@@ -189,7 +189,7 @@ const BaseLocusListLabels = React.memo(({
       paLocusList,
       geneSymbol,
     }) : {
-      description: label,
+      description: locusListDescription,
       initials: false,
       customColor: false,
     }
@@ -228,7 +228,7 @@ const mapLocusListStateToProps = state => ({
   locusListsByGuid: getLocusListsByGuid(state),
 })
 
-export const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
+const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
 
 const ClinGenRow = ({ value, label, href }) => (
   <Table.Row>
@@ -313,6 +313,7 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
     color: 'orange',
     description: 'Disease Phenotypes',
     label: 'IN OMIM',
+    expandedLabel: 'OMIM',
     compactLabel: 'OMIM Disease Phenotypes',
     expandedDisplay: true,
     showDetails: gene => gene.omimPhenotypes.length > 0,
@@ -488,22 +489,6 @@ const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: tru
   }
 `
 
-export const LabeledOmimSegment = ({ color = 'orange', children }) => (
-  <OmimSegments>
-    <Segment color={color}>
-      <Label size="mini" color={color} content="OMIM" />
-    </Segment>
-    <Segment color={color}>
-      {children}
-    </Segment>
-  </OmimSegments>
-)
-
-LabeledOmimSegment.propTypes = {
-  color: PropTypes.string,
-  children: PropTypes.node,
-}
-
 const getDetailSections = (configs, gene, compact, labelProps, individualGeneData, noExpand) => configs.map(
   ({ showDetails, detailsDisplay, ...sectionConfig }) => (
     {
@@ -515,9 +500,16 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
     ...acc,
     ...config.detail.map(detail => ({ ...config, ...detail })),
   ] : [...acc, config]),
-[]).map(({ detail, expandedDisplay, ...sectionConfig }) => (
+[]).map(({ detail, expandedDisplay, expandedLabel, ...sectionConfig }) => (
   (expandedDisplay && !compact && !noExpand) ? (
-    <LabeledOmimSegment key={sectionConfig.label} color={sectionConfig.color}>{detail}</LabeledOmimSegment>
+    <OmimSegments key={sectionConfig.label}>
+      <Segment color={sectionConfig.color}>
+        <Label size="mini" color={sectionConfig.color} content={expandedLabel} />
+      </Segment>
+      <Segment color={sectionConfig.color}>
+        {detail}
+      </Segment>
+    </OmimSegments>
   ) : (
     <GeneDetailSection
       key={sectionConfig.label}
@@ -766,7 +758,7 @@ class VariantGenes extends React.PureComponent {
         {!mainGeneId && (
           <div>
             {[...GENE_DISEASE_DETAIL_SECTIONS, ...GENE_DETAIL_SECTIONS].map(
-              ({ showDetails, detailsDisplay, expandedDisplay, ...sectionConfig }) => {
+              ({ showDetails, detailsDisplay, expandedDisplay, expandedLabel, ...sectionConfig }) => {
                 const sectionGenes = genes.filter(gene => showDetails(gene))
                 return (
                   <GeneDetailSection
