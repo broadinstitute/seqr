@@ -81,9 +81,8 @@ class XHRUploaderWithEvents extends XHRUploader {
         }
       }
       xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          progressCallback(e.loaded / e.total * 100) // eslint-disable-line no-mixed-operators
-        }
+        const progress = e.lengthComputable ? (e.loaded / e.total * 100) : 50 // eslint-disable-line no-mixed-operators
+        progressCallback(progress === 100 ? 80 : progress)
       }
       xhr.open(this.props.method, this.props.url, true)
       xhr.setRequestHeader('X-CSRFToken', Cookies.get('csrf_token'))
