@@ -1,6 +1,6 @@
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F
+from django.db.models import F, Q
 import logging
 import redis
 from typing import Callable
@@ -132,9 +132,13 @@ def _saved_variant_genes_transcripts(variants):
     return genes, transcripts, family_genes
 
 
-def _get_omim_intervals(variants):
+def get_omim_intervals_query(variants):
     chroms = {v['chrom'] for v in variants}
-    omims = Omim.objects.filter(phenotype_mim_number__isnull=False, gene__isnull=True, chrom__in=chroms)
+    return Q(phenotype_mim_number__isnull=False, gene__isnull=True, chrom__in=chroms)
+
+
+def _get_omim_intervals(variants):
+    omims = Omim.objects.filter(get_omim_intervals_query(variants))
     return {o['phenotypeMimNumber']: o for o in get_json_for_queryset(omims)}
 
 
