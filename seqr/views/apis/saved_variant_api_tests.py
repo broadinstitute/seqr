@@ -257,6 +257,26 @@ class SavedVariantAPITest(object):
         response = self.client.get('{}foo'.format(url))
         self.assertEqual(response.status_code, 404)
 
+        # build 38 projects include omim intervals
+        self.login_manager()
+        response = self.client.get(url.replace(PROJECT_GUID, 'R0004_non_analyst_project'))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        response_keys = {'omimIntervals'}
+        response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
+        response_keys.remove('familiesByGuid')
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+
+        self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), {'SV0000006_1248367227_r0004_non'})
+        self.assertDictEqual(response_json['omimIntervals'], {'615593': {
+            'chrom': '1',
+            'start': 249044482,
+            'end': 249055991,
+            'mimNumber': 600315,
+            'phenotypeDescription': '?Immunodeficiency 16', 'phenotypeInheritance': 'Autosomal recessive',
+            'phenotypeMimNumber': 615593,
+        }})
+
         # Test cross-project discovery for analyst users
         self.login_analyst_user()
         response = self.client.get(url)
