@@ -399,7 +399,8 @@ class SummaryDataAPITest(AirtableTest):
     @mock.patch('seqr.views.apis.summary_data_api.get_variants_for_variant_ids')
     @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
     def test_bulk_update_family_external_analysis(self, mock_load_uploaded_file, mock_get_variants_for_variant_ids, mock_datetime):
-        mock_datetime.now.return_value = datetime(2023, 12, 5, 20, 16, 1)
+        mock_created_time = datetime(2023, 12, 5, 20, 16, 1)
+        mock_datetime.now.return_value = mock_created_time
 
         url = reverse(bulk_update_family_external_analysis)
         self.check_analyst_login(url)
@@ -417,7 +418,6 @@ class SummaryDataAPITest(AirtableTest):
             ['Test Reprocessed Project', 'not_a_family'],
             ['not_a_project', '2'],
         ]
-        created_time = datetime.now()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertDictEqual(response.json(), {
             'warnings': [
@@ -426,7 +426,7 @@ class SummaryDataAPITest(AirtableTest):
             'info': ['Updated "analysed by" for 2 families'],
         })
 
-        models = FamilyAnalysedBy.objects.filter(last_modified_date__gte=created_time)
+        models = FamilyAnalysedBy.objects.filter(last_modified_date__gte=mock_created_time)
         self.assertEqual(len(models), 2)
         self.assertSetEqual({fab.data_type for fab in models}, {'RNA'})
         self.assertSetEqual({fab.created_by for fab in models}, {self.analyst_user})
