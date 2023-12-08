@@ -11,6 +11,7 @@ import XHRUploader from 'react-xhr-uploader'
 
 const NO_DISPLAY_STYLE = { display: 'none' }
 const POINTER_CURSOR_STYLE = { cursor: 'pointer' }
+const MAX_UNCOMPLETED_PROGRESS = 80
 
 const onClickInput = (event) => {
   // allows the same file to be selected more than once (see
@@ -81,9 +82,8 @@ class XHRUploaderWithEvents extends XHRUploader {
         }
       }
       xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          progressCallback(e.loaded / e.total * 100) // eslint-disable-line no-mixed-operators
-        }
+        const progress = e.lengthComputable ? (e.loaded / e.total * 100) : 50 // eslint-disable-line no-mixed-operators
+        progressCallback(progress > MAX_UNCOMPLETED_PROGRESS ? MAX_UNCOMPLETED_PROGRESS : progress)
       }
       xhr.open(this.props.method, this.props.url, true)
       xhr.setRequestHeader('X-CSRFToken', Cookies.get('csrf_token'))
