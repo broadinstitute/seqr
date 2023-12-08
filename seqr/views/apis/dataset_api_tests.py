@@ -214,6 +214,7 @@ class DatasetAPITest(object):
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
         mock_send_email.assert_not_called()
+        self.assertEqual(len(responses.calls), 0)
         if self.SLACK_MESSAGE_TEMPLATE:
             mock_send_slack.assert_called_with(
                 'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES SV', samples='NA19675_1', count=1))
