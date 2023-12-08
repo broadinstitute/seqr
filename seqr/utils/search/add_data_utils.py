@@ -2,6 +2,7 @@ from seqr.models import Sample
 from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
 from seqr.utils.search.utils import backend_specific_call
 from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_and_get_samples
+from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL, ANVIL_UI_URL, \
@@ -66,6 +67,13 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
 
     if is_internal:
         return
+
+    AirtableSession(user=None, base=AirtableSession.ANVIL_BASE, no_auth=True).safe_patch_record(
+        ANVIL_REQUEST_TRACKING_TABLE,
+        record_or_filters={'Status': ['Loading', 'Loading Requested']},
+        record_and_filters={'AnVIL Project URL': url},
+        update={'Status': 'Available in Seqr'},
+    )
 
     user = project.created_by
     send_html_email("""Hi {user},

@@ -12,6 +12,8 @@ logger = SeqrLogger(__name__)
 PAGE_SIZE = 100
 MAX_OR_FILTERS = PAGE_SIZE - 5
 
+ANVIL_REQUEST_TRACKING_TABLE = 'AnVIL Seqr Loading Requests Tracking'
+
 
 class AirtableSession(object):
 
@@ -22,9 +24,10 @@ class AirtableSession(object):
         ANVIL_BASE: 'appUelDNM3BnWaR7M',
     }
 
-    def __init__(self, user, base=RDG_BASE):
+    def __init__(self, user, base=RDG_BASE, no_auth=False):
         self._user = user
-        self._check_user_access(base)
+        if not no_auth:
+            self._check_user_access(base)
         self._url = f'{AIRTABLE_URL}/{self.AIRTABLE_BASES[base]}'
 
         self._session = requests.Session()
@@ -44,15 +47,39 @@ class AirtableSession(object):
         except Exception as e:
             logger.error(f'Airtable create "{record_type}" error: {e}', self._user)
 
-    def fetch_records(self, record_type, fields, or_filters):
-        self._session.params.update({'fields[]': fields, 'pageSize': PAGE_SIZE})
+    def safe_patch_record(self, record_type, record_or_filters, record_and_filters, update):
+        try:
+            self._patch_record(record_type, record_or_filters, record_and_filters, update)
+        except Exception as e:
+            logger.error(f'Airtable patch "{record_type}" error: {e}', self._user, detail={
+                'or_filters': record_or_filters, 'and_filters': record_and_filters, 'update': update,
+            })
+
+    def _patch_record(self, record_type, record_or_filters, record_and_filters, update):
+        records = self.fetch_records(
+            record_type, fields=record_or_filters.keys(), or_filters=record_or_filters, and_filters=record_and_filters,
+            page_size=2,
+        )
+        if len(records) != 1:
+            raise ValueError('Unable to identify record to update')
+
+        record_id = next(iter(records.keys()))
+        response = self._session.patch(f'{self._url}/{record_type}/{record_id}', json={'fields': update})
+        response.raise_for_status()
+
+    def fetch_records(self, record_type, fields, or_filters, and_filters=None, page_size=PAGE_SIZE):
+        self._session.params.update({'fields[]': fields, 'pageSize': page_size})
         filter_formulas = []
         for key, values in or_filters.items():
             filter_formulas += [f"{key}='{value}'" for value in sorted(values)]
+        and_filter_formulas = ','.join([f"{{key}}='{value}'" for key, value in (and_filters or {}).items()])
         records = {}
         for i in range(0, len(filter_formulas), MAX_OR_FILTERS):
             filter_formula_group = filter_formulas[i:i + MAX_OR_FILTERS]
-            self._session.params.update({'filterByFormula': f'OR({",".join(filter_formula_group)})'})
+            filter_formula = f'OR({",".join(filter_formula_group)})'
+            if and_filters:
+                filter_formula = f'AND({and_filter_formulas},{filter_formula})'
+            self._session.params.update({'filterByFormula': filter_formula})
             logger.info(f'Fetching {record_type} records {i}-{i + len(filter_formula_group)} from airtable', self._user)
             self._populate_records(record_type, records)
         logger.info('Fetched {} {} records from airtable'.format(len(records), record_type), self._user)
