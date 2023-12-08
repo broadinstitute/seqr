@@ -69,7 +69,7 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
         return
 
     AirtableSession(user=None, base=AirtableSession.ANVIL_BASE, no_auth=True).safe_patch_record(
-        ANVIL_REQUEST_TRACKING_TABLE,
+        ANVIL_REQUEST_TRACKING_TABLE, max_records=1,
         record_or_filters={'Status': ['Loading', 'Loading Requested']},
         record_and_filters={'AnVIL Project URL': url},
         update={'Status': 'Available in Seqr'},

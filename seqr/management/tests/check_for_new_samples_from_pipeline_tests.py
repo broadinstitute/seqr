@@ -50,7 +50,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         responses.add(
             responses.GET,
             "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
-            json={'records': []})
+            json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
 
         # Test errors
         with self.assertRaises(CommandError) as ce:

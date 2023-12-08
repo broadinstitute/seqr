@@ -47,26 +47,33 @@ class AirtableSession(object):
         except Exception as e:
             logger.error(f'Airtable create "{record_type}" error: {e}', self._user)
 
-    def safe_patch_record(self, record_type, record_or_filters, record_and_filters, update):
+    def safe_patch_record(self, record_type, record_or_filters, record_and_filters, update, max_records=PAGE_SIZE-1):
         try:
-            self._patch_record(record_type, record_or_filters, record_and_filters, update)
+            self._patch_record(record_type, record_or_filters, record_and_filters, update, max_records)
         except Exception as e:
             logger.error(f'Airtable patch "{record_type}" error: {e}', self._user, detail={
                 'or_filters': record_or_filters, 'and_filters': record_and_filters, 'update': update,
             })
 
-    def _patch_record(self, record_type, record_or_filters, record_and_filters, update):
+    def _patch_record(self, record_type, record_or_filters, record_and_filters, update, max_records):
         records = self.fetch_records(
             record_type, fields=record_or_filters.keys(), or_filters=record_or_filters, and_filters=record_and_filters,
-            page_size=2,
+            page_size=max_records+1,
         )
-        if len(records) != 1:
+        if not records or len(records) > max_records:
             raise ValueError('Unable to identify record to update')
 
-        record_id = next(iter(records.keys()))
         self._session.params = {}
-        response = self._session.patch(f'{self._url}/{record_type}/{record_id}', json={'fields': update})
-        response.raise_for_status()
+        errors = []
+        for record_id in records.keys():
+            response = self._session.patch(f'{self._url}/{record_type}/{record_id}', json={'fields': update})
+            try:
+                response.raise_for_status()
+            except Exception as e:
+                errors.append(e)
+
+        if errors:
+            raise Excpetion(';'.join(errors))
 
     def fetch_records(self, record_type, fields, or_filters, and_filters=None, page_size=PAGE_SIZE):
         self._session.params.update({'fields[]': fields, 'pageSize': page_size})
