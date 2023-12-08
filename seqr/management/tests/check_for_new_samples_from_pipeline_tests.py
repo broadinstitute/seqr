@@ -3,6 +3,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 import json
 import mock
+import responses
 
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 from seqr.models import Project, Family, Individual, Sample
@@ -32,17 +33,24 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
     @mock.patch('seqr.views.utils.variant_utils.redis.StrictRedis')
+    @mock.patch('seqr.views.utils.airtable_utils.logger')
     @mock.patch('seqr.views.utils.variant_utils.logger')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
     @mock.patch('seqr.utils.search.add_data_utils.send_html_email')
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.logger')
     @mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: GUID_ID)
+    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', 'http://testairtable')
     @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
-    def test_command(self, mock_logger, mock_send_email, mock_send_slack, mock_subprocess, mock_utils_logger, mock_redis):
+    @responses.activate
+    def test_command(self, mock_logger, mock_send_email, mock_send_slack, mock_subprocess, mock_utils_logger, mock_airtable_utils, mock_redis):
         mock_redis.return_value.keys.side_effect = lambda pattern: [pattern]
+        responses.add(
+            responses.GET,
+            "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
+            json={'records': []})
 
         # Test errors
         with self.assertRaises(CommandError) as ce:
@@ -175,6 +183,11 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
         self.assertEqual(mock_send_email.call_count, 1)
         mock_send_email.assert_called_with(EMAIL, subject='New data available in seqr', to=['test_user_manager@test.com'])
+        mock_airtable_utils.error.assert_called_with(
+            'Airtable patch "AnVIL Seqr Loading Requests Tracking" error: Unable to identify record to update', None, detail={
+                'or_filters': {'Status': ['Loading', 'Loading Requested']},
+                'and_filters': {'AnVIL Project URL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'},
+                'update': {'Status': 'Available in Seqr'}})
 
         # Test reloading has no effect
         mock_logger.reset_mock()

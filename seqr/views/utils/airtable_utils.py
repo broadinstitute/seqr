@@ -64,6 +64,7 @@ class AirtableSession(object):
             raise ValueError('Unable to identify record to update')
 
         record_id = next(iter(records.keys()))
+        self._session.params = {}
         response = self._session.patch(f'{self._url}/{record_type}/{record_id}', json={'fields': update})
         response.raise_for_status()
 
@@ -72,7 +73,7 @@ class AirtableSession(object):
         filter_formulas = []
         for key, values in or_filters.items():
             filter_formulas += [f"{key}='{value}'" for value in sorted(values)]
-        and_filter_formulas = ','.join([f"{{key}}='{value}'" for key, value in (and_filters or {}).items()])
+        and_filter_formulas = ','.join([f"{{{key}}}='{value}'" for key, value in (and_filters or {}).items()])
         records = {}
         for i in range(0, len(filter_formulas), MAX_OR_FILTERS):
             filter_formula_group = filter_formulas[i:i + MAX_OR_FILTERS]
