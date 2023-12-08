@@ -25,7 +25,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     has_workspace_perm, has_case_review_permissions, is_internal_anvil_project
 from seqr.views.utils.project_context_utils import families_discovery_tags, \
     add_project_tag_types, get_project_analysis_groups, get_project_locus_lists, MME_TAG_NAME
-from seqr.views.utils.terra_api_utils import is_anvil_authenticated
+from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
 from settings import BASE_URL
 
 
@@ -357,8 +357,8 @@ def _delete_project(project_guid, user):
 
     project.delete_model(user, user_can_delete=True)
 
-    if not is_internal_anvil_project(project):
-        AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_patch_record(
+    if anvil_enabled() and not is_internal_anvil_project(project):
+        AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_patch_records(
             ANVIL_REQUEST_TRACKING_TABLE,
             record_or_filters={'Status': ['Loading', 'Loading Requested', 'Available in Seqr']},
             record_and_filters={'AnVIL Project URL': f'{BASE_URL}project/{project_guid}/project_page'},

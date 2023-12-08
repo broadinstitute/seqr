@@ -68,7 +68,7 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
     if is_internal:
         return
 
-    AirtableSession(user=None, base=AirtableSession.ANVIL_BASE, no_auth=True).safe_patch_record(
+    AirtableSession(user=None, base=AirtableSession.ANVIL_BASE, no_auth=True).safe_patch_records(
         ANVIL_REQUEST_TRACKING_TABLE, max_records=1,
         record_or_filters={'Status': ['Loading', 'Loading Requested']},
         record_and_filters={'AnVIL Project URL': url},
