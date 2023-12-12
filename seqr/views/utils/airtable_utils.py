@@ -70,10 +70,10 @@ class AirtableSession(object):
             try:
                 response.raise_for_status()
             except Exception as e:
-                errors.append(e)
+                errors.append(str(e))
 
         if errors:
-            raise Excpetion(';'.join(errors))
+            raise Exception(';'.join(errors))
 
     def fetch_records(self, record_type, fields, or_filters, and_filters=None, page_size=PAGE_SIZE):
         self._session.params.update({'fields[]': fields, 'pageSize': page_size})

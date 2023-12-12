@@ -45,11 +45,12 @@ class ProjectAPITest(object):
     REQUIRED_FIELDS = ['name', 'genomeVersion', 'workspaceNamespace', 'workspaceName']
     AIRTABLE_TRACKING_URL = f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking'
 
+    @mock.patch('seqr.views.utils.airtable_utils.logger')
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', MOCK_AIRTABLE_URL)
     @mock.patch('seqr.models.uuid.uuid4', lambda: MOCK_GROUP_UUID)
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @responses.activate
-    def test_create_and_delete_project(self):
+    def test_create_and_delete_project(self, mock_airtable_logger):
         create_project_url = reverse(create_project_handler)
         self.check_pm_login(create_project_url)
 
@@ -104,7 +105,7 @@ class ProjectAPITest(object):
             Group.objects.filter(name__in=['new_project_can_edit_123abd', 'new_project_can_view_123abd']).count(), 0,
         )
 
-        self._assert_expected_airtable_requests()
+        self._assert_expected_airtable_requests(mock_airtable_logger)
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_update_project(self):
@@ -549,7 +550,7 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(WORKSPACE_JSON))
         self.assertEqual(response.status_code, 403)
 
-    def _assert_expected_airtable_requests(self):
+    def _assert_expected_airtable_requests(self, *args, **kwargs):
         self.assertEqual(len(responses.calls), 0)
 
 
@@ -573,7 +574,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
             mock.call(self.pm_user, 'ext-data', 'anvil-non-analyst-project 1000 Genomes Demo'),
         ])
 
-    def _assert_expected_airtable_requests(self):
+    def _assert_expected_airtable_requests(self, mock_airtable_logger):
         self.assertEqual(responses.calls[1].request.url, f'{self.AIRTABLE_TRACKING_URL}/recH4SEO1CeoIlOiE')
         self.assertEqual(responses.calls[1].request.method, 'PATCH')
         self.assertDictEqual(json.loads(responses.calls[1].request.body), {'fields': {'Status': 'Project Deleted'}})
@@ -582,6 +583,12 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(responses.calls[2].request.method, 'PATCH')
         self.assertDictEqual(json.loads(responses.calls[2].request.body), {'fields': {'Status': 'Project Deleted'}})
 
+        mock_airtable_logger.error.assert_called_with(
+            'Airtable patch "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking/recH4SEO1CeoIlOiE',
+            self.pm_user, detail={
+                'or_filters': {'Status': ['Loading', 'Loading Requested', 'Available in Seqr']},
+                'and_filters': {'AnVIL Project URL': '/project/R0005_new_project/project_page'},
+                'update': {'Status': 'Project Deleted'}})
 
     def _check_created_project_groups(self, project):
         self.assertIsNone(project.can_edit_group)
