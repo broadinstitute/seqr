@@ -16,7 +16,7 @@ const LOADING_PROPS = { inline: true }
 
 const getResultHref = result => `/report/discovery_sheet/${result.key}`
 
-const DiscoverySheet = React.memo(({ match, data, loading, load, loadingError }) => (
+const FamilyMetadata = React.memo(({ match, data, loading, load, loadingError }) => (
   <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
     <InlineHeader size="medium" content="Project:" />
     <AwesomeBar
@@ -45,7 +45,7 @@ const DiscoverySheet = React.memo(({ match, data, loading, load, loadingError })
   </DataLoader>
 ))
 
-DiscoverySheet.propTypes = {
+FamilyMetadata.propTypes = {
   match: PropTypes.object,
   data: PropTypes.arrayOf(PropTypes.object),
   loading: PropTypes.bool,
@@ -63,4 +63,4 @@ const mapDispatchToProps = {
   load: loadDiscoverySheet,
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(DiscoverySheet)
+export default connect(mapStateToProps, mapDispatchToProps)(FamilyMetadata)
