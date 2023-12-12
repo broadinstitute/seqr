@@ -1,9 +1,6 @@
-import React from 'react'
 import { connect } from 'react-redux'
-import { Link } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
-import { NoHoverFamilyLink } from 'shared/components/buttons/FamilyLink'
 import { BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
 import LoadReportTable from 'shared/components/table/LoadReportTable'
 
@@ -31,22 +28,8 @@ const AIRTABLE_FIELDS = [
   },
 ]
 
-const PROJECT_ID_FIELD = 'project_id'
-const FAMILY_FIELD_ID = 'family_id'
-
 const CORE_COLUMNS = [
   { name: 'subject_id', secondaryExportColumn: 'individual_guid' },
-  {
-    name: PROJECT_ID_FIELD,
-    format:
-      row => <Link to={`/project/${row.projectGuid}/project_page`} target="_blank">{row[PROJECT_ID_FIELD]}</Link>,
-    secondaryExportColumn: 'projectGuid',
-  },
-  {
-    name: FAMILY_FIELD_ID,
-    format: row => <NoHoverFamilyLink family={row} target="_blank" />,
-    secondaryExportColumn: 'familyGuid',
-  },
   { name: 'pmid_id' },
   { name: 'paternal_id', secondaryExportColumn: 'paternal_guid' },
   { name: 'maternal_id', secondaryExportColumn: 'maternal_guid' },
@@ -113,7 +96,7 @@ const getColumns = (data) => {
     ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_COLUMNS.map(
       col => ({ name: `${col}-${i + 1}`, secondaryExportColumn: col === GENE_COL ? `gene_id-${i + 1}` : null }),
     )),
-  ).map(({ name, ...props }) => ({ name, content: name, ...props }))
+  )
 }
 
 const mapStateToProps = (state, ownProps) => {

@@ -1,6 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { Link } from 'react-router-dom'
 
+import { NoHoverFamilyLink } from 'shared/components/buttons/FamilyLink'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import DataTable from 'shared/components/table/DataTable'
 import { HorizontalSpacer } from 'shared/components/Spacers'
@@ -11,8 +13,25 @@ const SEARCH_CATEGORIES = ['projects']
 
 const getResultHref = urlBase => result => `/${urlBase}/${result.key}`
 
+const PROJECT_ID_FIELD = 'project_id'
+
+const getTableColumns = columns => ([
+  {
+    name: PROJECT_ID_FIELD,
+    format:
+      row => <Link to={`/project/${row.projectGuid}/project_page`} target="_blank">{row[PROJECT_ID_FIELD]}</Link>,
+    secondaryExportColumn: 'projectGuid',
+  },
+  {
+    name: 'family_id',
+    format: row => <NoHoverFamilyLink family={row} target="_blank" />,
+    secondaryExportColumn: 'familyGuid',
+  },
+  ...columns,
+].map(({ name, ...props }) => ({ name, content: name, ...props })))
+
 const ReportTable = React.memo((
-  { projectGuid, queryForm, data, urlBase, viewAllPages, getColumns, idField, fileName },
+  { projectGuid, queryForm, data, urlBase, viewAllPages, columns, getColumns, idField, fileName },
 ) => (
   <div>
     <InlineHeader size="medium" content="Project:" />
@@ -39,7 +58,7 @@ const ReportTable = React.memo((
       defaultSortColumn="family_id"
       emptyContent={projectGuid ? '0 cases found' : 'Select a project to view data'}
       data={data}
-      columns={getColumns(data)}
+      columns={getTableColumns(columns || getColumns(data))}
       rowsPerPage={100}
     />
   </div>
@@ -50,6 +69,7 @@ ReportTable.propTypes = {
   projectGuid: PropTypes.string,
   viewAllPages: PropTypes.arrayOf(PropTypes.object),
   queryForm: PropTypes.node,
+  columns: PropTypes.arrayOf(PropTypes.object),
   getColumns: PropTypes.func,
   urlBase: PropTypes.string,
   idField: PropTypes.string,

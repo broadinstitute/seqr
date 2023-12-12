@@ -1,66 +1,40 @@
 import React from 'react'
-import PropTypes from 'prop-types'
-import { connect } from 'react-redux'
 
-import AwesomeBar from 'shared/components/page/AwesomeBar'
-import DataTable from 'shared/components/table/DataTable'
-import DataLoader from 'shared/components/DataLoader'
-import { InlineHeader, ActiveDisabledNavLink } from 'shared/components/StyledComponents'
-import { DISCOVERY_SHEET_COLUMNS, CMG_PROJECT_PATH } from '../constants'
-import { loadDiscoverySheet } from '../reducers'
-import { getDiscoverySheetLoading, getDiscoverySheetLoadingError, getDiscoverySheetRows } from '../selectors'
+import LoadReportTable from 'shared/components/table/LoadReportTable'
 
-const SEARCH_CATEGORIES = ['projects']
+const VIEW_ALL_PAGES = [{ name: 'Broad', downloadName: 'All', path: 'all' }]
 
-const LOADING_PROPS = { inline: true }
+const COLUMNS = [
+  { name: 'data_type' },
+  { name: 'date_data_generation' },
+  { name: 'phenotype_description' },
+  { name: 'consanguinity' },
+  { name: 'analysisStatus', content: 'analysis_status' },
+  { name: 'solve_state' },
+  { name: 'genes' },
+  { name: 'inheritance_model' },
+  { name: 'disease_id' },
+  { name: 'disease_description' },
+  { name: 'individual_count', content: '# individuals' },
+  { name: 'family_structure' },
+  { name: 'proband_id' },
+  { name: 'paternal_id' },
+  { name: 'maternal_id' },
+  { name: 'other_individual_ids' },
+  { name: 'collaborator' },
+  { name: 'analysis_groups' },
+  { name: 'pmid_id' },
+]
 
-const getResultHref = result => `/report/discovery_sheet/${result.key}`
+const FamilyMetadata = props => (
+  <LoadReportTable
+    columns={COLUMNS}
+    viewAllPages={VIEW_ALL_PAGES}
+    urlBase="report/family_metadata"
+    idField="family_id"
+    fileName="Family_Metadata"
+    {...props}
+  />
+)
 
-const FamilyMetadata = React.memo(({ match, data, loading, load, loadingError }) => (
-  <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
-    <InlineHeader size="medium" content="Project:" />
-    <AwesomeBar
-      categories={SEARCH_CATEGORIES}
-      placeholder="Enter project name"
-      inputwidth="350px"
-      getResultHref={getResultHref}
-    />
-    <span>
-      &nbsp; or &nbsp;
-      <ActiveDisabledNavLink to={`/report/discovery_sheet/${CMG_PROJECT_PATH}`}>view all CMG projects</ActiveDisabledNavLink>
-    </span>
-    <DataTable
-      striped
-      collapsing
-      horizontalScroll
-      downloadFileName={`discovery_sheet_${match.params.projectGuid}`}
-      idField="row_id"
-      defaultSortColumn="family_id"
-      emptyContent={loadingError || (match.params.projectGuid ? '0 cases found' : 'Select a project to view data')}
-      loading={loading}
-      data={data}
-      columns={DISCOVERY_SHEET_COLUMNS}
-      loadingProps={LOADING_PROPS}
-    />
-  </DataLoader>
-))
-
-FamilyMetadata.propTypes = {
-  match: PropTypes.object,
-  data: PropTypes.arrayOf(PropTypes.object),
-  loading: PropTypes.bool,
-  loadingError: PropTypes.string,
-  load: PropTypes.func,
-}
-
-const mapStateToProps = state => ({
-  data: getDiscoverySheetRows(state),
-  loading: getDiscoverySheetLoading(state),
-  loadingError: getDiscoverySheetLoadingError(state),
-})
-
-const mapDispatchToProps = {
-  load: loadDiscoverySheet,
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(FamilyMetadata)
+export default FamilyMetadata
