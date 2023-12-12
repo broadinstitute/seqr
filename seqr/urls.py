@@ -124,6 +124,7 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
 from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
+    family_metadata, \
     get_category_projects, \
     gregor_export, \
     seqr_stats
@@ -309,6 +310,7 @@ api_endpoints = {
     'upload_temp_file': save_temp_file,
 
     'report/anvil/(?P<project_guid>[^/]+)': anvil_export,
+    'report/family_metadata/(?P<project_guid>[^/]+)': family_metadata,
     'report/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
     'report/gregor': gregor_export,
     'report/get_category_projects/(?P<category>[^/]+)': get_category_projects,

@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
-from django.db.models import F, Q, Value, CharField
+from django.db.models import F, Q, Value, CharField, Case, When
 from django.db.models.functions import Replace, JSONObject
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
@@ -67,12 +67,17 @@ SUBJECT_ROW_TYPE = 'subject'
 SAMPLE_ROW_TYPE = 'sample'
 DISCOVERY_ROW_TYPE = 'discovery'
 
+METADATA_FAMILY_VALUES = {
+    'familyGuid': F('guid'),
+    'projectGuid': F('project__guid'),
+    'analysisStatus': F('analysis_status'),
+    'displayName': F('family_id'),
+    'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
+}
 
-def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, family_values=None,
-                          get_additional_sample_fields=None, get_additional_variant_fields=None, allow_missing_discovery_genes=False):
-    individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
 
-    family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
+def get_families_metadata(family_filter, extra_metadata=False, additional_values=None):
+    family_data = Family.objects.filter(**family_filter).distinct().values(
         'id', 'family_id', 'post_discovery_omim_numbers', 'project__name',
         pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
         phenotype_description=Replace(
@@ -84,14 +89,25 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
             'project__projectcategory__name', distinct=True,
             filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
         ),
-        **(family_values or {}),
+        **(METADATA_FAMILY_VALUES if extra_metadata else {}),
+        **(additional_values or {}),
     )
+    for f in family_data:
+        f['project_id'] = f.pop('project__name')
+    return family_data
+
+
+def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, include_family_metadata=False,
+                          get_additional_sample_fields=None, get_additional_variant_fields=None, allow_missing_discovery_genes=False):
+    individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
+
+    family_data = get_families_metadata(
+        {'individual__in': individual_samples}, extra_metadata=include_family_metadata)
 
     family_data_by_id = {}
     for f in family_data:
         family_id = f.pop('id')
         f.update({
-            'project_id': f.pop('project__name'),
             'phenotype_group': '|'.join(f.pop('phenotype_groups')),
         })
         family_data_by_id[family_id] = f

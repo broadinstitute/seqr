@@ -3,7 +3,9 @@ from copy import deepcopy
 
 from datetime import datetime
 from dateutil import relativedelta as rdelta
-from django.db.models import Prefetch, Count, Q, F
+from django.db.models import Prefetch, Count, Case, Value, When, Q, F
+from django.db.models.functions import JSONObject
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.utils import timezone
 import json
 import re
@@ -16,7 +18,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import get_airtable_samples
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, parse_family_sample_affected_data, \
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, get_families_metadata, parse_family_sample_affected_data, \
     ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
     SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
@@ -982,6 +984,57 @@ METADATA_FUNCTIONAL_DATA_FIELDS = {
     OVERLAPPING_KINDREDS_FIELD,
     ADDITIONAL_KINDREDS_FIELD,
 }
+
+
+@analyst_required
+def family_metadata(request, project_guid):
+    if project_guid == 'all':
+        projects = get_internal_projects()
+    else:
+        projects = [get_project_and_check_permissions(project_guid, request.user)]
+
+    """
+  'data_type'
+  'date_data_generation'
+  'solve_state'
+  'genes'
+  'inheritance_model'
+  'disease_id'
+  'disease_description'
+  'collaborator'
+    """
+
+    family_data = get_families_metadata({'project__in': projects}, extra_metadata=True, additional_values={
+        'probands': ArrayAgg(JSONObject(
+            proband_id='individual__individual_id',
+            paternal_id='individual__father__individual_id',
+            maternal_id='individual__mother__individual_id',
+        ), distinct=True, filter=Q(individual__proband_relationship=Individual.SELF_RELATIONSHIP)),
+        'individuals_ids': ArrayAgg('individual__individual_id', distinct=True, filter=Q(individual__individual_id__isnull=False)),
+        'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
+        'consanguinity':  Case(When(individual__consanguinity=True, then=Value('yes')), default=Value('no')),
+    })
+    for f in family_data:
+        probands = f.pop('probands')
+        individuals_ids = f.pop('individuals_ids') or []
+        family_structure = 'singleton' if len(individuals_ids) == 1 else 'other'
+        f.update({
+            'individual_count': len(individuals_ids),
+        })
+        proband = probands[0] if probands else None
+        if proband:
+            f.update(proband)
+            individuals_ids = sorted(set(individuals_ids) - set(proband.values()))
+            if proband['paternal_id'] and proband['maternal_id'] and len(individuals_ids) < 2:
+                family_structure = 'quad' if individuals_ids else 'trio'
+            elif (not individuals_ids) and (proband['paternal_id'] or proband['maternal_id']):
+                family_structure = 'duo'
+        f.update({
+            'other_individual_ids':  '; '.join(individuals_ids),
+            'family_structure': family_structure,
+        })
+
+    return create_json_response({'rows': list(family_data)})
 
 
 @analyst_required

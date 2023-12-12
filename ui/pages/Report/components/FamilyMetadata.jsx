@@ -9,7 +9,7 @@ const COLUMNS = [
   { name: 'date_data_generation' },
   { name: 'phenotype_description' },
   { name: 'consanguinity' },
-  { name: 'analysisStatus', content: 'analysis_status' },
+  { name: 'analysis_status', content: 'analysis_status' },
   { name: 'solve_state' },
   { name: 'genes' },
   { name: 'inheritance_model' },

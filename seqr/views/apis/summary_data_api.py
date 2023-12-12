@@ -3,7 +3,7 @@ from datetime import datetime
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.models import User
-from django.db.models import CharField, F, Value, Case, When
+from django.db.models import CharField, F, Value
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
 from random import randint
@@ -378,18 +378,13 @@ def sample_metadata_export(request, project_guid):
     parse_anvil_metadata(
         projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user, _add_row,
         allow_missing_discovery_genes=True,
+        include_family_metadata=True,
         omit_airtable=not include_airtable,
         get_additional_variant_fields=_get_additional_variant_fields,
         get_additional_sample_fields=lambda sample, airtable_metadata: {
             'data_type': sample.sample_type,
             'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
-        }, family_values={
-            'familyGuid': F('guid'),
-            'projectGuid': F('project__guid'),
-            'analysisStatus': F('analysis_status'),
-            'displayName': F('family_id'),
-            'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
         },
     )
 
