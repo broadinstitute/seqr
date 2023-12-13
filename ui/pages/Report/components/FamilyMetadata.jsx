@@ -1,15 +1,20 @@
 import React from 'react'
 
 import LoadReportTable from 'shared/components/table/LoadReportTable'
+import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 
 const VIEW_ALL_PAGES = [{ name: 'Broad', downloadName: 'All', path: 'all' }]
 
 const COLUMNS = [
   { name: 'data_type' },
-  { name: 'date_data_generation' },
+  { name: 'date_data_generation', format: ({ date_data_generation: date }) => date && new Date(date).toLocaleDateString() },
   { name: 'phenotype_description' },
   { name: 'consanguinity' },
-  { name: 'analysisStatus', content: 'analysis_status' },
+  {
+    name: 'analysisStatus',
+    content: 'analysis_status',
+    format: ({ analysisStatus }) => FAMILY_ANALYSIS_STATUS_LOOKUP[analysisStatus]?.name,
+  },
   { name: 'solve_state' },
   { name: 'genes' },
   { name: 'inheritance_model' },
