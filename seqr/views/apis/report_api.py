@@ -1003,17 +1003,17 @@ def family_metadata(request, project_guid):
             family_individuals[family_id][row['subject_id']] = row
         elif row_type == SAMPLE_ROW_TYPE:
             family_individuals[family_id][row['subject_id']].update(row)
+        elif row_type == DISCOVERY_ROW_TYPE:
+            families_by_id[family_id].update({
+                'genes': '; '.join({v.get('Gene', v.get('sv_name')) for v in row}),
+                'inheritance_model': '; '.join({v['inheritance_description'] for v in row}),
+            })
 
     parse_anvil_metadata(
         projects, max_loaded_date=datetime.now().strftime('%Y-%m-%d'), user=request.user, add_row=_add_row,
         omit_airtable=True, include_metadata=True, include_no_individual_families=True, no_variant_zygosity=True,
         family_values={'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False))})
 
-    """
-  'genes'
-  'inheritance_model'
-  'collaborator'
-    """
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]
         family_structure = 'singleton' if len(individuals_by_id) == 1 else 'other'

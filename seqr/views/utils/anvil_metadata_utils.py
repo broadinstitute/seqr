@@ -172,9 +172,10 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
         }
         if len(affected_individual_guids) > 1:
             family_row['family_history'] = 'Yes'
-        if no_variant_zygosity:
-            family_row['parsed_variants'] = [v for _, v in parsed_variants]
         add_row(family_row, family_id, FAMILY_ROW_TYPE)
+
+        if no_variant_zygosity:
+            add_row([v for _, v in parsed_variants], family_id, DISCOVERY_ROW_TYPE)
 
         for sample in family_samples:
             individual = sample.individual
