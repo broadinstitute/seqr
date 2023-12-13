@@ -377,13 +377,10 @@ def sample_metadata_export(request, project_guid):
 
     parse_anvil_metadata(
         projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user, _add_row,
-        allow_missing_discovery_genes=True,
-        include_family_metadata=True,
+        include_metadata=True,
         omit_airtable=not include_airtable,
         get_additional_variant_fields=_get_additional_variant_fields,
         get_additional_sample_fields=lambda sample, airtable_metadata: {
-            'data_type': sample.sample_type,
-            'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
         },
     )

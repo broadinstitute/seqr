@@ -76,9 +76,9 @@ METADATA_FAMILY_VALUES = {
 }
 
 
-def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, include_family_metadata=False, family_values=None,
-                          get_additional_sample_fields=None, get_additional_variant_fields=None, allow_missing_discovery_genes=False,
-                         include_no_individual_families=False):
+def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, include_metadata=False, family_values=None,
+                          get_additional_sample_fields=None, get_additional_variant_fields=None,
+                         include_no_individual_families=False, no_variant_zygosity=False):
     individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
 
     family_filter = {'project__in': projects} if include_no_individual_families else {'individual__in': individual_samples}
@@ -94,7 +94,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
             'project__projectcategory__name', distinct=True,
             filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
         ),
-        **(METADATA_FAMILY_VALUES if include_family_metadata else {}),
+        **(METADATA_FAMILY_VALUES if include_metadata else {}),
         **(family_values or {}),
     )
 
@@ -149,23 +149,32 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
                     mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
             })
 
-        affected_individual_guids = individual_data_by_family[family_id][0]
+        affected_individual_guids = individual_data_by_family[family_id][0] if family_id in individual_data_by_family else []
 
         family_consanguinity = any(sample.individual.consanguinity is True for sample in family_samples)
-        family_row = {
-            'family_id': family_subject_row['family_id'],
-            'consanguinity': 'Present' if family_consanguinity else 'None suspected',
-        }
-        if len(affected_individual_guids) > 1:
-            family_row['family_history'] = 'Yes'
-        add_row(family_row, family_id, FAMILY_ROW_TYPE)
 
         parsed_variants = [
             _parse_anvil_family_saved_variant(
                 variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id,
-                get_additional_variant_fields, allow_missing_discovery_genes,
+                get_additional_variant_fields, allow_missing_discovery_genes=include_metadata,
             )
             for variant in saved_variants]
+        solve_state = 'Unsolved'
+        if parsed_variants:
+            all_tier_2 = all(variant[1]['Gene_Class'] == 'Tier 2 - Candidate' for variant in parsed_variants)
+            solve_state = 'Tier 2' if all_tier_2 else 'Tier 1'
+        family_subject_row['solve_state'] = solve_state
+
+        family_row = {
+            'family_id': family_subject_row['family_id'],
+            'consanguinity': 'Present' if family_consanguinity else 'None suspected',
+            **family_subject_row,
+        }
+        if len(affected_individual_guids) > 1:
+            family_row['family_history'] = 'Yes'
+        if no_variant_zygosity:
+            family_row['parsed_variants'] = [v for _, v in parsed_variants]
+        add_row(family_row, family_id, FAMILY_ROW_TYPE)
 
         for sample in family_samples:
             individual = sample.individual
@@ -178,15 +187,16 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
                 has_dbgap_submission = sample.sample_type in dbgap_submission
 
             subject_row = _get_subject_row(
-                individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_ids_map)
+                individual, has_dbgap_submission, airtable_metadata, individual_ids_map)
             subject_row.update(family_subject_row)
             add_row(subject_row, family_id, SUBJECT_ROW_TYPE)
 
-            sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additional_sample_fields)
+            sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields)
             add_row(sample_row, family_id, SAMPLE_ROW_TYPE)
 
-            discovery_row = _get_discovery_rows(sample, parsed_variants)
-            add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
+            if not no_variant_zygosity:
+                discovery_row = _get_discovery_rows(sample, parsed_variants)
+                add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 
 def parse_family_sample_affected_data(family_samples):
@@ -331,15 +341,10 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
         })
     return variant['genotype_zygosity'], parsed_variant
 
-def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_ids_map):
+def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map):
     features_present = [feature['id'] for feature in individual.features or []]
     features_absent = [feature['id'] for feature in individual.absent_features or []]
     onset = individual.onset_age
-
-    solve_state = 'Unsolved'
-    if parsed_variants:
-        all_tier_2 = all(variant[1]['Gene_Class'] == 'Tier 2 - Candidate' for variant in parsed_variants)
-        solve_state = 'Tier 2' if all_tier_2 else 'Tier 1'
 
     paternal_ids = individual_ids_map.get(individual.father_id, ('', ''))
     maternal_ids = individual_ids_map.get(individual.mother_id, ('', ''))
@@ -355,7 +360,6 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
         'hpo_absent': '|'.join(features_absent),
         'disorders': individual.disorders,
         'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
-        'solve_state': solve_state,
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
         'paternal_id': paternal_ids[0],
         'paternal_guid': paternal_ids[1],
@@ -374,7 +378,7 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
     return subject_row
 
 
-def _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additional_sample_fields=None):
+def _get_sample_row(sample, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields=None):
     individual = sample.individual
     sample_row = {
         'subject_id': individual.individual_id,
@@ -382,6 +386,11 @@ def _get_sample_row(sample, has_dbgap_submission, airtable_metadata, get_additio
     }
     if has_dbgap_submission:
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
+    if include_metadata:
+        sample_row.update({
+            'data_type': sample.sample_type,
+            'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
+        })
     if get_additional_sample_fields:
         sample_row.update(get_additional_sample_fields(sample, airtable_metadata))
     return sample_row

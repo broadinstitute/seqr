@@ -993,48 +993,57 @@ def family_metadata(request, project_guid):
     else:
         projects = [get_project_and_check_permissions(project_guid, request.user)]
 
+    families_by_id = {}
+    family_individuals = defaultdict(dict)
+
+    def _add_row(row, family_id, row_type):
+        if row_type == FAMILY_ROW_TYPE:
+            families_by_id[family_id] = row
+        elif row_type == SUBJECT_ROW_TYPE:
+            family_individuals[family_id][row['subject_id']] = row
+        elif row_type == SAMPLE_ROW_TYPE:
+            family_individuals[family_id][row['subject_id']].update(row)
+
+    parse_anvil_metadata(
+        projects, max_loaded_date=datetime.now().strftime('%Y-%m-%d'), user=request.user, add_row=_add_row,
+        omit_airtable=True, include_metadata=True, include_no_individual_families=True, no_variant_zygosity=True,
+        family_values={'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False))})
+
     """
-  'solve_state'
   'genes'
   'inheritance_model'
   'collaborator'
     """
-    family_data = get_families_metadata({'project__in': projects}, extra_metadata=True, additional_values={
-        'probands': ArrayAgg(JSONObject(
-            proband_id='individual__individual_id',
-            paternal_id='individual__father__individual_id',
-            maternal_id='individual__mother__individual_id',
-            date_data_generation='individual__sample__loaded_date',
-        ), distinct=True, filter=Q(individual__proband_relationship=Individual.SELF_RELATIONSHIP)),
-        'individuals_ids': ArrayAgg('individual__individual_id', distinct=True, filter=Q(individual__individual_id__isnull=False)),
-        'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
-        'consanguinity': Case(When(individual__consanguinity=True, then=Value('yes')), default=Value('no')),
-        'data_type': ArrayAgg('individual__sample__sample_type', distinct=True, filter=Q(individual__sample__isnull=False)),
-        'date_data_generation': Substr(Cast(
-            ArrayAgg('individual__sample__loaded_date', filter=Q(individual__sample__isnull=False)),
-            output_field=CharField()), 3, length=29),
-    })
-    for f in family_data:
-        probands = f.pop('probands')
-        individuals_ids = f.pop('individuals_ids') or []
-        family_structure = 'singleton' if len(individuals_ids) == 1 else 'other'
-        f.update({
-            'individual_count': len(individuals_ids),
-        })
-        proband = probands[0] if probands else None
+    for family_id, f in families_by_id.items():
+        individuals_by_id = family_individuals[family_id]
+        family_structure = 'singleton' if len(individuals_by_id) == 1 else 'other'
+        proband = next((i for i in individuals_by_id.values() if i['proband_relationship'] == 'Self'), None)
+        individuals_ids = set(individuals_by_id.keys())
         if proband:
-            f.update(proband)
-            individuals_ids = sorted(set(individuals_ids) - set(proband.values()))
+            known_ids = {
+                'proband_id': proband['subject_id'],
+                'paternal_id': proband['paternal_id'],
+                'maternal_id': proband['maternal_id'],
+            }
+            f.update(known_ids)
+            individuals_ids -= set(known_ids.values())
             if proband['paternal_id'] and proband['maternal_id'] and len(individuals_ids) < 2:
                 family_structure = 'quad' if individuals_ids else 'trio'
             elif (not individuals_ids) and (proband['paternal_id'] or proband['maternal_id']):
                 family_structure = 'duo'
+
+        sorted_samples = sorted(individuals_by_id.values(), key=lambda x: x.get('date_data_generation', ''))
+        earliest_sample = next((s for s in [proband or {}] + sorted_samples if s.get('date_data_generation')), {})
+
         f.update({
-            'other_individual_ids':  '; '.join(individuals_ids),
+            'individual_count': len(individuals_by_id),
+            'other_individual_ids':  '; '.join(sorted(individuals_ids)),
             'family_structure': family_structure,
+            'data_type': earliest_sample.get('data_type'),
+            'date_data_generation': earliest_sample.get('date_data_generation'),
         })
 
-    return create_json_response({'rows': list(family_data)})
+    return create_json_response({'rows': list(families_by_id.values())})
 
 
 @analyst_required
