@@ -1005,7 +1005,7 @@ def family_metadata(request, project_guid):
             family_individuals[family_id][row['subject_id']].update(row)
         elif row_type == DISCOVERY_ROW_TYPE:
             families_by_id[family_id].update({
-                'genes': '; '.join({v.get('Gene', v.get('sv_name')) for v in row}),
+                'genes': '; '.join(sorted({v.get('Gene', v.get('sv_name')) or v.get('gene_id') or '' for v in row})),
                 'inheritance_model': '; '.join({v['inheritance_description'] for v in row}),
             })
 

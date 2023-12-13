@@ -1144,9 +1144,86 @@ class ReportAPITest(AirtableTest):
 
         self.assertEqual(responses.calls[len(mondo_ids) + 3].request.url, MOCK_DATA_MODEL_URL)
 
+    def test_family_metadata(self):
+        url = reverse(family_metadata, args=['R0003_test'])
+        self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertListEqual(sorted([r['familyGuid'] for r in response_json['rows']]), ['F000011_11', 'F000012_12'])
+        test_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000012_12')
+        self.assertDictEqual(test_row, {
+            'projectGuid': 'R0003_test',
+            'project_id': 'Test Reprocessed Project',
+            'familyGuid': 'F000012_12',
+            'family_id': '12',
+            'displayName': '12',
+            'solve_state': 'Tier 1',
+            'inheritance_model': 'Autosomal recessive (compound heterozygous)',
+            'date_data_generation': '2017-02-05',
+            'data_type': 'WES',
+            'proband_id': 'NA20889',
+            'maternal_id': '',
+            'paternal_id': '',
+            'other_individual_ids': 'NA20888',
+            'individual_count': 2,
+            'family_structure': 'other',
+            'family_history': 'Yes',
+            'genes': 'DEL:chr12:49045487-49045898; OR4G11P',
+            'pmid_id': None,
+            'phenotype_description': None,
+            'phenotype_group': '',
+            'analysisStatus': 'Q',
+            'analysis_groups': [],
+            'MME': 'Y',
+            'consanguinity': 'None suspected',
+        })
+
+        # Test all projects
+        all_projects_url = reverse(family_metadata, args=['all'])
+        response = self.client.get(all_projects_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertListEqual(sorted([r['familyGuid'] for r in response_json['rows']]), [
+            'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
+            'F000009_9', 'F000010_10', 'F000011_11', 'F000012_12', 'F000013_13'] + self.ADDITIONAL_FAMILIES)
+        test_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000003_3')
+        self.assertDictEqual(test_row, {
+            'projectGuid': 'R0001_1kg',
+            'project_id': '1kg project nåme with uniçøde',
+            'familyGuid': 'F000003_3',
+            'family_id': '3',
+            'displayName': '3',
+            'solve_state': 'Unsolved',
+            'inheritance_model': '',
+            'date_data_generation': '2017-02-05',
+            'data_type': 'WES',
+            'other_individual_ids': 'NA20870',
+            'individual_count': 1,
+            'family_structure': 'singleton',
+            'genes': '',
+            'pmid_id': None,
+            'phenotype_description': None,
+            'phenotype_group': '',
+            'analysisStatus': 'Q',
+            'analysis_groups': ['Accepted', 'Test Group 1'],
+            'MME': 'N',
+            'consanguinity': 'None suspected',
+        })
+
+        # Test empty project
+        empty_project_url = reverse(family_metadata, args=['R0002_empty'])
+        response = self.client.get(empty_project_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'rows': []})
+
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
+    ADDITIONAL_FAMILIES = ['F000014_14']
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
         'familiesCount': {'non_demo': 12, 'demo': 2},
@@ -1163,6 +1240,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 
 class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
+    ADDITIONAL_FAMILIES = []
     STATS_DATA = {
         'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},
