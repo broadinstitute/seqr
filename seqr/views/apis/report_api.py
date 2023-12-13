@@ -3,9 +3,8 @@ from copy import deepcopy
 
 from datetime import datetime
 from dateutil import relativedelta as rdelta
-from django.db.models import Prefetch, Count, Case,CharField,  Value, When, Q, F
-from django.db.models.functions import Cast, JSONObject, Substr
-from django.contrib.postgres.aggregates import ArrayAgg, StringAgg
+from django.db.models import Prefetch, Count, Q, F
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.utils import timezone
 import json
 import re
