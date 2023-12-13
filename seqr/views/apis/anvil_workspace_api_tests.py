@@ -665,7 +665,7 @@ class LoadAnvilDataAPITest(object):
             '\n'.join(self._expected_upload_data(test_add_data))
         )
         self.mock_mv_file.assert_called_with(
-            f'{TEMP_PATH}/*', f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base',
+            f'{TEMP_PATH}/*', f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base/',
             self.manager_user
         )
 
@@ -689,7 +689,7 @@ class LoadAnvilDataAPITest(object):
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
 
-        {file_type} file has been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base
+        {file_type} file has been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/
 
         DAG {dag_id} is triggered with following:
         ```{dag}```

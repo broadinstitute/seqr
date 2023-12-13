@@ -1186,12 +1186,12 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], f'No gs://seqr-datasets/v02 project directory found for {PROJECT_GUID}')
         mock_subprocess.assert_has_calls(
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_External/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_External/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/AnVIL_WGS/R0001_1kg/base') +
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/AnVIL_WES/R0001_1kg/base')
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/') +
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg/') +
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_External/base/projects/R0001_1kg/') +
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_External/base/projects/R0001_1kg/') +
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/AnVIL_WGS/R0001_1kg/base/') +
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/AnVIL_WES/R0001_1kg/base/')
         )
 
         # Test success
@@ -1208,11 +1208,11 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertListEqual(file[:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS)
 
         mock_subprocess.assert_has_calls(
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg') +
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/') +
             self._ls_subprocess_calls(
-                'gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg', is_error=False,
+                'gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg/', is_error=False,
             ) + [
-            mock.call('gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg/', stdout=-1, stderr=-2, shell=True),
             mock.call().wait(),
         ])
 
@@ -1389,9 +1389,9 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
     HAS_DAG_ID_PREFIX = False
     SUCCESS_SLACK_DETAIL = """
 
-        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg
+        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/
 
-        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project
+        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project/
 
         DAG v03_pipeline-MITO is triggered with following:
         ```{
@@ -1457,7 +1457,7 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
 
         mock_subprocess.assert_has_calls([
             mock.call(
-                f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}',
+                f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/',
                 stdout=-1, stderr=-2, shell=True,  # nosec
             ) for project in self.PROJECTS
         ], any_order=True)
