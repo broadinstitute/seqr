@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from datetime import datetime
 from dateutil import relativedelta as rdelta
-from django.db.models import Prefetch, Count, Case, Value, When, Q, F
+from django.db.models import Prefetch, Count, Case, Min, Value, When, Q, F
 from django.db.models.functions import JSONObject
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.utils import timezone
@@ -1009,8 +1009,10 @@ def family_metadata(request, project_guid):
             proband_id='individual__individual_id',
             paternal_id='individual__father__individual_id',
             maternal_id='individual__mother__individual_id',
+            date_data_generation=Min('individual__sample__loaded_date'),
         ), distinct=True, filter=Q(individual__proband_relationship=Individual.SELF_RELATIONSHIP)),
         'individuals_ids': ArrayAgg('individual__individual_id', distinct=True, filter=Q(individual__individual_id__isnull=False)),
+        'date_data_generation': Min('individual__sample__loaded_date'),
         'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
         'consanguinity':  Case(When(individual__consanguinity=True, then=Value('yes')), default=Value('no')),
     })
