@@ -1227,7 +1227,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         for path in project_directory_paths[:success_index]:
             expected_calls += self._ls_subprocess_calls(path)
         expected_calls += self._ls_subprocess_calls(success_path, is_error=False) + [
-            mock.call('gsutil mv /mock/tmp/* ' + success_path, stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil mv /mock/tmp/* ' + success_path, stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
         ]
         mock_subprocess.assert_has_calls(expected_calls)
