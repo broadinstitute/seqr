@@ -1,9 +1,11 @@
 import React from 'react'
 import { BrowserRouter as Router } from 'react-router-dom'
+import { Provider } from 'react-redux'
+import configureStore from 'redux-mock-store'
 import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 
-import { SampleMetadata } from './SampleMetadata'
+import SampleMetadata from './SampleMetadata'
 
 configure({ adapter: new Adapter() })
 
@@ -66,10 +68,11 @@ const DATA = [
 ]
 
 test('SampleMetadataDataTable render and export', () => {
-  const sampleMetadata = mount(<Router><SampleMetadata projectGuid="all" data={DATA} user={{}} /></Router>)
+  const store = configureStore()({ user: {} })
+  const sampleMetadata = mount(<Provider store={store}><Router><SampleMetadata projectGuid="all" data={DATA} match={{params: {}}} /></Router></Provider>)
   const exportConfig = sampleMetadata.find('DataTable').instance().exportConfig(DATA)[0]
   expect(exportConfig.headers).toEqual([
-    'subject_id', 'individual_guid', 'project_id', 'projectGuid', 'family_id', 'familyGuid', 'pmid_id', 'paternal_id',
+    'project_id', 'projectGuid', 'family_id', 'familyGuid', 'subject_id', 'individual_guid', 'pmid_id', 'paternal_id',
     'paternal_guid', 'maternal_id', 'maternal_guid', 'proband_relationship', 'sex', 'ancestry', 'phenotype_group',
     'disease_id', 'disease_description', 'disorders', 'affected_status', 'congenital_status', 'hpo_present', 'hpo_absent',
     'phenotype_description', 'solve_state', 'analysisStatus', 'MME', 'sample_id', 'data_type', 'date_data_generation',
@@ -79,7 +82,7 @@ test('SampleMetadataDataTable render and export', () => {
     'novel_mendelian_gene-2', 'phenotype_class-2', 'inheritance_description-2', 'Zygosity-2', 'Chrom-2', 'Pos-2',
     'Ref-2', 'Alt-2', 'hgvsc-2', 'hgvsp-2', 'Transcript-2', 'sv_name-2', 'sv_type-2', 'discovery_notes-2'])
   expect(exportConfig.processRow(DATA[0])).toEqual([
-    'NA20889', 'I000017_na20889', 'Test Reprocessed Project', 'R0003_test', '12', 'F000012_12', null, '', '', '', '',
+    'Test Reprocessed Project', 'R0003_test', '12', 'F000012_12', 'NA20889', 'I000017_na20889', null, '', '', '', '',
     'Self', 'Female', 'Ashkenazi Jewish', '', undefined, undefined, null, 'Affected', 'Unknown',
     'HP:0011675 (Arrhythmia)|HP:0001509 ()', '', null, 'Tier 1', 'Q', 'Y', 'NA20889', 'WES', '2017-02-05', '',
     'None suspected', 'Yes', 'OR4G11P', 'ENSG00000240361', 'Tier 1 - Candidate', 'Y', undefined,
