@@ -642,7 +642,7 @@ def _get_gregor_genetic_findings_rows(rows, individual, participant_id, experime
                 'variant_inheritance': _get_variant_inheritance(individual, genotypes),
                 'additional_family_members_with_variant': '|'.join([
                     f'Broad_{_get_participant_id(family_individuals[guid])}' for guid, g in genotypes.items()
-                    if guid != individual.guid and g['numAlt'] > 0
+                    if guid != individual.guid and guid in family_individuals and g['numAlt'] > 0
                 ]),
                 'method_of_discovery': '|'.join([
                     METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type != Sample.SAMPLE_TYPE_RNA
