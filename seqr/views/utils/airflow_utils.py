@@ -60,15 +60,15 @@ def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type
 
 def write_data_loading_pedigree(project: Project, user: User):
     match = next((
-        (callset, sample_type) for callset, sample_type in itertools.product(['Internal', 'External', False], ['WGS', 'WES'])
+        (callset, sample_type) for callset, sample_type in itertools.product(['Internal', 'External', 'AnVIL'], ['WGS', 'WES'])
         if does_file_exist(_get_dag_project_gs_path(
-        project.guid, project.genome_version, sample_type, is_internal=bool(callset), callset=callset,
+        project.guid, project.genome_version, sample_type, is_internal=callset != 'AnVIL', callset=callset,
     ))), None)
     if not match:
         raise ValueError(f'No {SEQR_DATASETS_GS_PATH} project directory found for {project.guid}')
     callset, sample_type = match
     _upload_data_loading_files(
-        PEDIGREE_FILE_CONFIG, [project], is_internal=bool(callset), user=user, genome_version=project.genome_version,
+        PEDIGREE_FILE_CONFIG, [project], is_internal=callset != 'AnVIL', user=user, genome_version=project.genome_version,
         sample_type=sample_type, callset=callset,
     )
 
