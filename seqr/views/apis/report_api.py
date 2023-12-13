@@ -3,9 +3,9 @@ from copy import deepcopy
 
 from datetime import datetime
 from dateutil import relativedelta as rdelta
-from django.db.models import Prefetch, Count, Case, Min, Value, When, Q, F
-from django.db.models.functions import JSONObject
-from django.contrib.postgres.aggregates import ArrayAgg
+from django.db.models import Prefetch, Count, Case,CharField,  Value, When, Q, F
+from django.db.models.functions import Cast, JSONObject, Substr
+from django.contrib.postgres.aggregates import ArrayAgg, StringAgg
 from django.utils import timezone
 import json
 import re
@@ -995,7 +995,6 @@ def family_metadata(request, project_guid):
 
     """
   'data_type'
-  'date_data_generation'
   'solve_state'
   'genes'
   'inheritance_model'
@@ -1003,16 +1002,17 @@ def family_metadata(request, project_guid):
   'disease_description'
   'collaborator'
     """
-
     family_data = get_families_metadata({'project__in': projects}, extra_metadata=True, additional_values={
         'probands': ArrayAgg(JSONObject(
             proband_id='individual__individual_id',
             paternal_id='individual__father__individual_id',
             maternal_id='individual__mother__individual_id',
-            date_data_generation=Min('individual__sample__loaded_date'),
+            date_data_generation='individual__sample__loaded_date',
         ), distinct=True, filter=Q(individual__proband_relationship=Individual.SELF_RELATIONSHIP)),
         'individuals_ids': ArrayAgg('individual__individual_id', distinct=True, filter=Q(individual__individual_id__isnull=False)),
-        'date_data_generation': Min('individual__sample__loaded_date'),
+        'date_data_generation': Substr(Cast(
+            ArrayAgg('individual__sample__loaded_date', filter=Q(individual__sample__isnull=False)),
+            output_field=CharField()), 3, length=29),
         'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
         'consanguinity':  Case(When(individual__consanguinity=True, then=Value('yes')), default=Value('no')),
     })
