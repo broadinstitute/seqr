@@ -197,7 +197,7 @@ def _upload_data_loading_files(config: tuple[str, str, dict[str, F]], projects: 
 def _get_dag_project_gs_path(project: str, genome_version: str, sample_type: str, is_internal: bool, **kwargs):
     dag_name = _construct_v2_dag_name(sample_type, is_internal=is_internal, **kwargs)
     dag_path = _get_dag_gs_path(genome_version, dag_name)
-    return f'{dag_path}/base/projects/{project}' if is_internal else f'{dag_path}/{project}/base'
+    return f'{dag_path}/base/projects/{project}/' if is_internal else f'{dag_path}/{project}/base/'
 
 
 def _get_dag_gs_path(genome_version: str, dag_name: str):
