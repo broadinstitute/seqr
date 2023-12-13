@@ -76,7 +76,12 @@ METADATA_FAMILY_VALUES = {
 }
 
 
-def get_families_metadata(family_filter, extra_metadata=False, additional_values=None):
+def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, include_family_metadata=False, family_values=None,
+                          get_additional_sample_fields=None, get_additional_variant_fields=None, allow_missing_discovery_genes=False,
+                         include_no_individual_families=False):
+    individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
+
+    family_filter = {'project__in': projects} if include_no_individual_families else {'individual__in': individual_samples}
     family_data = Family.objects.filter(**family_filter).distinct().values(
         'id', 'family_id', 'post_discovery_omim_numbers', 'project__name',
         pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
@@ -89,41 +94,15 @@ def get_families_metadata(family_filter, extra_metadata=False, additional_values
             'project__projectcategory__name', distinct=True,
             filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
         ),
-        **(METADATA_FAMILY_VALUES if extra_metadata else {}),
-        **(additional_values or {}),
+        **(METADATA_FAMILY_VALUES if include_family_metadata else {}),
+        **(family_values or {}),
     )
-
-    all_mim_numbers = set()
-    for f in family_data:
-        all_mim_numbers.update(f['post_discovery_omim_numbers'])
-    mim_decription_map = {
-        o.phenotype_mim_number: o.phenotype_description
-        for o in Omim.objects.filter(phenotype_mim_number__in=all_mim_numbers)
-    }
-
-    for f in family_data:
-        f['project_id'] = f.pop('project__name')
-        mim_numbers = f.pop('post_discovery_omim_numbers')
-        if mim_numbers:
-            f.update({
-                'disease_id': ';'.join(['OMIM:{}'.format(mim_number) for mim_number in mim_numbers]),
-                'disease_description': ';'.join([
-                    mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
-            })
-    return family_data
-
-
-def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, include_family_metadata=False,
-                          get_additional_sample_fields=None, get_additional_variant_fields=None, allow_missing_discovery_genes=False):
-    individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
-
-    family_data = get_families_metadata(
-        {'individual__in': individual_samples}, extra_metadata=include_family_metadata)
 
     family_data_by_id = {}
     for f in family_data:
         family_id = f.pop('id')
         f.update({
+            'project_id': f.pop('project__name'),
             'phenotype_group': '|'.join(f.pop('phenotype_groups')),
         })
         family_data_by_id[family_id] = f
@@ -143,16 +122,32 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
 
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(list(sample_ids), user)
 
-    saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(samples_by_family_id.keys()))
+    saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(family_data_by_id.keys()))
     compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
         saved_variants_by_family, individual_data_by_family)
     genes_by_id = get_genes(gene_ids)
 
-    for family_id, family_samples in samples_by_family_id.items():
+    mim_numbers = set()
+    for family in family_data:
+        mim_numbers.update(family['post_discovery_omim_numbers'])
+    mim_decription_map = {
+        o.phenotype_mim_number: o.phenotype_description
+        for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers)
+    }
+
+    for family_id, family_subject_row in family_data_by_id.items():
         saved_variants = saved_variants_by_family[family_id]
 
-        family_subject_row = family_data_by_id[family_id]
+        family_samples = samples_by_family_id[family_id]
         genome_version = family_subject_row.pop('genome_version')
+
+        mim_numbers = family_subject_row.pop('post_discovery_omim_numbers')
+        if mim_numbers:
+            family_subject_row.update({
+                'disease_id': ';'.join(['OMIM:{}'.format(mim_number) for mim_number in mim_numbers]),
+                'disease_description': ';'.join([
+                    mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
+            })
 
         affected_individual_guids = individual_data_by_family[family_id][0]
 
