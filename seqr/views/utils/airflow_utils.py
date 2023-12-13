@@ -34,7 +34,7 @@ def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type
     success = True
     dag_name = backend_specific_call(_construct_v2_dag_name, _construct_v3_dag_name)(
         sample_type=sample_type, dataset_type=dataset_type, is_internal=is_internal)
-    project_guids = [p.guid for p in projects]
+    project_guids = sorted([p.guid for p in projects])
     updated_variables = backend_specific_call(_construct_v2_dag_variables, _construct_v3_dag_variables)(
         project_guids, data_path, genome_version, is_internal, dag_name=dag_name, user=user, sample_type=sample_type)
     dag_id = backend_specific_call(_construct_v2_dag_id, lambda name: name)(dag_name)
