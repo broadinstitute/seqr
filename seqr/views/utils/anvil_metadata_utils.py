@@ -92,8 +92,24 @@ def get_families_metadata(family_filter, extra_metadata=False, additional_values
         **(METADATA_FAMILY_VALUES if extra_metadata else {}),
         **(additional_values or {}),
     )
+
+    all_mim_numbers = set()
+    for f in family_data:
+        all_mim_numbers.update(f['post_discovery_omim_numbers'])
+    mim_decription_map = {
+        o.phenotype_mim_number: o.phenotype_description
+        for o in Omim.objects.filter(phenotype_mim_number__in=all_mim_numbers)
+    }
+
     for f in family_data:
         f['project_id'] = f.pop('project__name')
+        mim_numbers = f.pop('post_discovery_omim_numbers')
+        if mim_numbers:
+            f.update({
+                'disease_id': ';'.join(['OMIM:{}'.format(mim_number) for mim_number in mim_numbers]),
+                'disease_description': ';'.join([
+                    mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
+            })
     return family_data
 
 
@@ -132,27 +148,11 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
         saved_variants_by_family, individual_data_by_family)
     genes_by_id = get_genes(gene_ids)
 
-    mim_numbers = set()
-    for family in family_data:
-        mim_numbers.update(family['post_discovery_omim_numbers'])
-    mim_decription_map = {
-        o.phenotype_mim_number: o.phenotype_description
-        for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers)
-    }
-
     for family_id, family_samples in samples_by_family_id.items():
         saved_variants = saved_variants_by_family[family_id]
 
         family_subject_row = family_data_by_id[family_id]
         genome_version = family_subject_row.pop('genome_version')
-
-        mim_numbers = family_subject_row.pop('post_discovery_omim_numbers')
-        if mim_numbers:
-            family_subject_row.update({
-                'disease_id': ';'.join(['OMIM:{}'.format(mim_number) for mim_number in mim_numbers]),
-                'disease_description': ';'.join([
-                    mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
-            })
 
         affected_individual_guids = individual_data_by_family[family_id][0]
 

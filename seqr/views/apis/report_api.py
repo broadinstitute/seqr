@@ -994,12 +994,9 @@ def family_metadata(request, project_guid):
         projects = [get_project_and_check_permissions(project_guid, request.user)]
 
     """
-  'data_type'
   'solve_state'
   'genes'
   'inheritance_model'
-  'disease_id'
-  'disease_description'
   'collaborator'
     """
     family_data = get_families_metadata({'project__in': projects}, extra_metadata=True, additional_values={
@@ -1010,11 +1007,12 @@ def family_metadata(request, project_guid):
             date_data_generation='individual__sample__loaded_date',
         ), distinct=True, filter=Q(individual__proband_relationship=Individual.SELF_RELATIONSHIP)),
         'individuals_ids': ArrayAgg('individual__individual_id', distinct=True, filter=Q(individual__individual_id__isnull=False)),
+        'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
+        'consanguinity': Case(When(individual__consanguinity=True, then=Value('yes')), default=Value('no')),
+        'data_type': ArrayAgg('individual__sample__sample_type', distinct=True, filter=Q(individual__sample__isnull=False)),
         'date_data_generation': Substr(Cast(
             ArrayAgg('individual__sample__loaded_date', filter=Q(individual__sample__isnull=False)),
             output_field=CharField()), 3, length=29),
-        'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
-        'consanguinity':  Case(When(individual__consanguinity=True, then=Value('yes')), default=Value('no')),
     })
     for f in family_data:
         probands = f.pop('probands')
