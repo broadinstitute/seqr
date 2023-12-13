@@ -68,7 +68,7 @@ def write_data_loading_pedigree(project: Project, user: User):
         raise ValueError(f'No {SEQR_DATASETS_GS_PATH} project directory found for {project.guid}')
     callset, sample_type = match
     _upload_data_loading_files(
-        PEDIGREE_FILE_CONFIG, [project], is_internal=True, user=user, genome_version=project.genome_version,
+        PEDIGREE_FILE_CONFIG, [project], is_internal=callset != 'AnVIL', user=user, genome_version=project.genome_version,
         sample_type=sample_type, callset=callset,
     )
 
