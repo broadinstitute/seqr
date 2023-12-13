@@ -2,69 +2,16 @@ from django.urls.base import reverse
 from django.utils.dateparse import parse_datetime
 import json
 import mock
-import pytz
 import responses
 from settings import AIRTABLE_URL
 
 from seqr.models import Project, SavedVariant
-from seqr.views.apis.report_api import seqr_stats, get_category_projects, discovery_sheet, anvil_export, gregor_export, family_metadata
+from seqr.views.apis.report_api import seqr_stats, anvil_export, gregor_export, family_metadata
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
 
 
 PROJECT_GUID = 'R0001_1kg'
-NON_PROJECT_GUID ='NON_GUID'
-PROJECT_EMPTY_GUID = 'R0002_empty'
-COMPOUND_HET_PROJECT_GUID = 'R0003_test'
 NO_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
-
-EXPECTED_DISCOVERY_SHEET_ROW = \
-    {'project_guid': 'R0001_1kg', 'pubmed_ids': '34415322; 33665635', 'posted_publicly': '',
-     'solved': 'TIER 1 GENE', 'head_or_neck': 'N', 'analysis_complete_status': 'complete',
-     'cardiovascular_system': 'N', 'n_kindreds_overlapping_sv_similar_phenotype': '2',
-     'biochemical_function': 'Y', 'omim_number_post_discovery': '615120,615123',
-     'genome_wide_linkage': 'NA 2', 'metabolism_homeostasis': 'N', 'growth': 'N',
-     't0': '2017-02-05T06:42:55.397Z', 'months_since_t0': 38, 'sample_source': 'CMG',
-     'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
-     'expected_inheritance_model': 'Autosomal recessive inheritance',
-     'extras_variant_tag_list': ['21-3343353-GAGA-G  RP11  tier 1 - novel gene and phenotype'],
-     'protein_interaction': 'N', 'n_kindreds': '1', 'num_individuals_sequenced': 3,
-     'musculature': 'Y', 'sequencing_approach': 'WES', 'neoplasm': 'N',
-     'collaborator': '1kg project n\xe5me with uni\xe7\xf8de',
-     'actual_inheritance_model': 'de novo', 'novel_mendelian_gene': 'Y',
-     'endocrine_system': 'N', 'patient_cells': 'N', 'komp_early_release': 'N',
-     'connective_tissue': 'N', 'prenatal_development_or_birth': 'N', 'rescue': 'N',
-     'family_guid': 'F000001_1', 'immune_system': 'N',
-     'analysis_summary': '*\r\nF\u00e5mily analysis summ\u00e5ry.\r\n*; Some additional follow up',
-     'gene_count': 'NA', 'gene_id': 'ENSG00000135953', 'abdomen': 'N', 'limbs': 'N',
-     'blood': 'N', 'phenotype_class': 'KNOWN', 'submitted_to_mme': 'Y',
-     'n_unrelated_kindreds_with_causal_variants_in_gene': '3',
-     'row_id': 'F000001_1ENSG00000135953', 'eye_defects': 'N', 'omim_number_initial': '12345',
-     'p_value': 'NA', 'respiratory': 'N', 'nervous_system': 'Y', 'ear_defects': 'N',
-     'thoracic_cavity': 'N', 'non_patient_cell_model': 'N',
-     't0_copy': '2017-02-05T06:42:55.397Z', 'extras_pedigree_url': '/media/ped_1.png',
-     'family_id': '1', 'genitourinary_system': 'N', 'coded_phenotype': 'myopathy',
-     'animal_model': 'N', 'non_human_cell_culture_model': 'N', 'expression': 'N',
-     'gene_name': 'RP11', 'breast': 'N'}
-
-EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW = {
-    'project_guid': 'R0003_test', 'pubmed_ids': '', 'posted_publicly': '', 'solved': 'TIER 1 GENE', 'head_or_neck': 'N',
-    'analysis_complete_status': 'complete', 'cardiovascular_system': 'Y',
-    'n_kindreds_overlapping_sv_similar_phenotype': 'NA', 'biochemical_function': 'N', 'omim_number_post_discovery': 'NA',
-    'genome_wide_linkage': 'NA', 'metabolism_homeostasis': 'N', 'growth': 'N', 't0': '2017-02-05T06:42:55.397Z',
-    'months_since_t0': 38, 'sample_source': 'CMG', 'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
-    'expected_inheritance_model': 'multiple', 'num_individuals_sequenced': 2, 'sequencing_approach': 'REAN',
-    'extras_variant_tag_list': ['1-248367227-TC-T  OR4G11P  tier 1 - novel gene and phenotype',
-        'prefix_19107_DEL  OR4G11P  tier 1 - novel gene and phenotype'], 'protein_interaction': 'N', 'n_kindreds': '1',
-    'neoplasm': 'N', 'collaborator': 'Test Reprocessed Project', 'actual_inheritance_model': 'AR-comphet',
-    'novel_mendelian_gene': 'Y', 'endocrine_system': 'N', 'komp_early_release': 'N', 'connective_tissue': 'N',
-    'prenatal_development_or_birth': 'N', 'rescue': 'N', 'family_guid': 'F000012_12', 'immune_system': 'N',
-    'analysis_summary': '', 'gene_count': 'NA', 'gene_id': 'ENSG00000240361', 'abdomen': 'N', 'limbs': 'N',
-    'phenotype_class': 'New', 'submitted_to_mme': 'Y', 'n_unrelated_kindreds_with_causal_variants_in_gene': '1',
-    'blood': 'N',  'row_id': 'F000012_12ENSG00000240361', 'eye_defects': 'N', 'omim_number_initial': 'NA',
-    'p_value': 'NA', 'respiratory': 'N', 'nervous_system': 'N', 'ear_defects': 'N', 'thoracic_cavity': 'N',
-    'non_patient_cell_model': 'N', 't0_copy': '2017-02-05T06:42:55.397Z', 'extras_pedigree_url': '',
-    'family_id': '12', 'genitourinary_system': 'N', 'coded_phenotype': '', 'animal_model': 'N', 'expression': 'N',
-    'non_human_cell_culture_model': 'N', 'gene_name': 'OR4G11P', 'breast': 'N', 'musculature': 'N', 'patient_cells': 'N',}
 
 AIRTABLE_SAMPLE_RECORDS = {
   "records": [
@@ -567,66 +514,6 @@ class ReportAPITest(AirtableTest):
         self.assertDictEqual(response_json['individualsCount'], self.STATS_DATA['individualsCount'])
         self.assertDictEqual(response_json['familiesCount'], self.STATS_DATA['familiesCount'])
         self.assertDictEqual(response_json['sampleCountsByType'], self.STATS_DATA['sampleCountsByType'])
-
-        self.check_no_analyst_no_access(url)
-
-    def test_get_category_projects(self):
-        url = reverse(get_category_projects, args=['GREGoR'])
-        self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['projectGuids'])
-        self.assertSetEqual(set(response_json['projectGuids']), {PROJECT_GUID, COMPOUND_HET_PROJECT_GUID})
-
-        self.check_no_analyst_no_access(url)
-
-    @mock.patch('seqr.views.apis.report_api.timezone')
-    def test_discovery_sheet(self, mock_timezone):
-        non_project_url = reverse(discovery_sheet, args=[NON_PROJECT_GUID])
-        self.check_analyst_login(non_project_url)
-
-        mock_timezone.now.return_value = pytz.timezone("US/Eastern").localize(parse_datetime("2020-04-27 20:16:01"), is_dst=None)
-        response = self.client.get(non_project_url)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Invalid project {}'.format(NON_PROJECT_GUID))
-        response_json = response.json()
-        self.assertEqual(response_json['error'], 'Invalid project {}'.format(NON_PROJECT_GUID))
-
-        unauthorized_project_url = reverse(discovery_sheet, args=[NO_ANALYST_PROJECT_GUID])
-        response = self.client.get(unauthorized_project_url)
-        self.assertEqual(response.status_code, 403)
-
-        empty_project_url = reverse(discovery_sheet, args=[PROJECT_EMPTY_GUID])
-
-        response = self.client.get(empty_project_url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'rows', 'errors'})
-        self.assertListEqual(response_json['rows'], [])
-        self.assertListEqual(response_json['errors'], ["No data loaded for project: Empty Project"])
-
-        url = reverse(discovery_sheet, args=[PROJECT_GUID])
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'rows', 'errors'})
-        self.assertListEqual(response_json['errors'], ['No data loaded for family: 9. Skipping...', 'No data loaded for family: no_individuals. Skipping...'])
-        self.assertEqual(len(response_json['rows']), 10)
-        self.assertIn(EXPECTED_DISCOVERY_SHEET_ROW, response_json['rows'])
-
-        # test compound het reporting
-        url = reverse(discovery_sheet, args=[COMPOUND_HET_PROJECT_GUID])
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'rows', 'errors'})
-        self.assertListEqual(response_json['errors'], [
-            'HPO category field not set for some HPO terms in 11', 'HPO category field not set for some HPO terms in 12',
-        ])
-        self.assertEqual(len(response_json['rows']), 2)
-        self.assertIn(EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW, response_json['rows'])
 
         self.check_no_analyst_no_access(url)
 
