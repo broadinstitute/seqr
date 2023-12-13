@@ -556,7 +556,9 @@ def _parse_variant_genetic_findings(variant_models, *args):
     for variant in variant_models:
         chrom, pos = get_chrom_pos(variant.xpos)
 
-        main_transcript = _get_variant_model_main_transcript(variant)
+        variant_json = variant.saved_variant_json
+        variant_json['selectedMainTranscriptId'] = variant.selected_main_transcript_id
+        main_transcript = get_variant_main_transcript(variant_json)
         gene_id = main_transcript.get('geneId')
         gene_ids.add(gene_id)
 
@@ -948,9 +950,3 @@ def family_metadata(request, project_guid):
         })
 
     return create_json_response({'rows': list(families_by_id.values())})
-
-
-def _get_variant_model_main_transcript(variant):
-    variant_json = variant.saved_variant_json
-    variant_json['selectedMainTranscriptId'] = variant.selected_main_transcript_id
-    return get_variant_main_transcript(variant_json)
