@@ -343,7 +343,7 @@ def _get_metadata_projects(request, project_guid):
 
 
 @login_and_policies_required
-def sample_metadata_export(request, project_guid):
+def individual_metadata(request, project_guid):
     projects, include_airtable = _get_metadata_projects(request, project_guid)
 
     family_rows_by_id = {}

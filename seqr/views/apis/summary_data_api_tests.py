@@ -6,7 +6,7 @@ import mock
 import responses
 
 from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, hpo_summary_data, \
-    bulk_update_family_external_analysis, sample_metadata_export
+    bulk_update_family_external_analysis, individual_metadata
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest, PARSED_VARIANTS
 from seqr.models import FamilyAnalysedBy, SavedVariant, VariantTag
 from settings import AIRTABLE_URL
@@ -529,7 +529,7 @@ class SummaryDataAPITest(AirtableTest):
     @responses.activate
     def test_sample_metadata_export(self, mock_google_authenticated):
         mock_google_authenticated.return_value = False
-        url = reverse(sample_metadata_export, args=['R0003_test'])
+        url = reverse(individual_metadata, args=['R0003_test'])
         self.check_require_login(url)
 
         response = self.client.get(url)
@@ -548,7 +548,7 @@ class SummaryDataAPITest(AirtableTest):
         self._has_expected_metadata_response(response, expected_samples)
 
         # Test all projects
-        all_projects_url = reverse(sample_metadata_export, args=['all'])
+        all_projects_url = reverse(individual_metadata, args=['all'])
         multi_project_samples = {
             'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
             'NA20872', 'NA20881', 'HG00733',
@@ -558,14 +558,14 @@ class SummaryDataAPITest(AirtableTest):
         self._has_expected_metadata_response(response, multi_project_samples, has_duplicate=True)
 
         # Test gregor projects no access
-        gregor_projects_url = reverse(sample_metadata_export, args=['gregor'])
+        gregor_projects_url = reverse(individual_metadata, args=['gregor'])
         response = self.client.get(gregor_projects_url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
         # Test no gene for discovery variant
         self.login_manager()
-        no_analyst_project_url = reverse(sample_metadata_export, args=['R0004_non_analyst_project'])
+        no_analyst_project_url = reverse(individual_metadata, args=['R0004_non_analyst_project'])
         response = self.client.get(no_analyst_project_url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'rows': [EXPECTED_NO_GENE_SAMPLE_METADATA_ROW]})
@@ -580,7 +580,7 @@ class SummaryDataAPITest(AirtableTest):
         self._has_expected_metadata_response(response, expected_samples)
 
         # Test empty project
-        empty_project_url = reverse(sample_metadata_export, args=['R0002_empty'])
+        empty_project_url = reverse(individual_metadata, args=['R0002_empty'])
         response = self.client.get(empty_project_url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'rows': []})
