@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from django.db.models import F, Q, Value, CharField, Case, When
 from django.db.models.functions import Replace, JSONObject
-from django.contrib.postgres.aggregates import ArrayAgg
+from django.contrib.postgres.aggregates import ArrayAgg, StringAgg
 import json
 
 from reference_data.models import Omim
@@ -72,6 +72,8 @@ METADATA_FAMILY_VALUES = {
     'analysisStatus': F('analysis_status'),
     'displayName': F('family_id'),
     'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
+    'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
+    'notes': ArrayAgg('familynote__note', distinct=True, filter=Q(familynote__note_type='A')),
 }
 
 
@@ -104,6 +106,8 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
             'project_id': f.pop('project__name'),
             'phenotype_group': '|'.join(f.pop('phenotype_groups')),
         })
+        if include_metadata:
+            f.update({k: '; '.join(f[k]) for k in ['analysis_groups', 'notes']})
         family_data_by_id[family_id] = f
 
     samples_by_family_id = defaultdict(list)

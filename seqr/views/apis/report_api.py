@@ -917,10 +917,7 @@ def family_metadata(request, project_guid):
 
     parse_anvil_metadata(
         projects, max_loaded_date=datetime.now().strftime('%Y-%m-%d'), user=request.user, add_row=_add_row,
-        omit_airtable=True, include_metadata=True, include_no_individual_families=True, no_variant_zygosity=True,
-        family_values={'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False))})
-
-    analysis_notes_by_family = _get_analysis_notes_by_family(projects)
+        omit_airtable=True, include_metadata=True, include_no_individual_families=True, no_variant_zygosity=True)
 
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]
@@ -949,18 +946,6 @@ def family_metadata(request, project_guid):
             'family_structure': family_structure,
             'data_type': earliest_sample.get('data_type'),
             'date_data_generation': earliest_sample.get('date_data_generation'),
-            'notes': analysis_notes_by_family.get(f['familyGuid']),
         })
 
     return create_json_response({'rows': list(families_by_id.values())})
-
-
-def _get_analysis_notes_by_family(projects):
-    notes = FamilyNote.objects.filter(
-        family__project__in=projects, note_type='A').select_related('family').order_by('last_modified_date')
-
-    analysis_notes_by_family = defaultdict(list)
-    for note in notes:
-        analysis_notes_by_family[note.family.guid].append(note.note)
-
-    return {k: '; '.join(v) for k, v in analysis_notes_by_family.items()}

@@ -1063,10 +1063,10 @@ class ReportAPITest(AirtableTest):
             'phenotype_description': None,
             'phenotype_group': '',
             'analysisStatus': 'Q',
-            'analysis_groups': [],
+            'analysis_groups': '',
             'MME': 'Y',
             'consanguinity': 'None suspected',
-            'notes': None,
+            'notes': '',
         })
 
         # Test all projects
@@ -1097,10 +1097,10 @@ class ReportAPITest(AirtableTest):
             'phenotype_description': None,
             'phenotype_group': '',
             'analysisStatus': 'Q',
-            'analysis_groups': ['Accepted', 'Test Group 1'],
+            'analysis_groups': 'Accepted; Test Group 1',
             'MME': 'N',
             'consanguinity': 'None suspected',
-            'notes': None,
+            'notes': '',
         })
 
         # Test empty project
