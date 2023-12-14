@@ -3,6 +3,7 @@ import { connect } from 'react-redux'
 import { getUser } from 'redux/selectors'
 import { BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
 import LoadReportTable from 'shared/components/table/LoadReportTable'
+import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 
 const ALL_PROJECTS_PATH = 'all'
 const GREGOR_PROJECT_PATH = 'gregor'
@@ -29,28 +30,33 @@ const AIRTABLE_FIELDS = [
 ]
 
 const CORE_COLUMNS = [
-  { name: 'subject_id', secondaryExportColumn: 'individual_guid' },
+  { name: 'participant_id', secondaryExportColumn: 'individual_guid' },
   { name: 'pmid_id' },
   { name: 'paternal_id', secondaryExportColumn: 'paternal_guid' },
   { name: 'maternal_id', secondaryExportColumn: 'maternal_guid' },
   { name: 'proband_relationship' },
   { name: 'sex' },
   { name: 'ancestry' },
-  { name: 'phenotype_group' },
   { name: 'disease_id' },
   { name: 'disease_description', secondaryExportColumn: 'disorders' },
   { name: 'affected_status' },
-  { name: 'congenital_status' },
   { name: 'hpo_present', style: { minWidth: '400px' } },
   { name: 'hpo_absent', style: { minWidth: '400px' } },
   { name: 'phenotype_description', style: { minWidth: '200px' } },
-  { name: 'solve_state', secondaryExportColumn: 'analysisStatus' },
+  { name: 'analysis_groups' },
+  {
+    name: 'analysisStatus',
+    content: 'analysis_status',
+    format: ({ analysisStatus }) => FAMILY_ANALYSIS_STATUS_LOOKUP[analysisStatus]?.name,
+  },
+  { name: 'solve_state' },
   { name: 'MME' },
   { name: 'sample_id' },
   { name: 'data_type' },
   { name: 'date_data_generation', secondaryExportColumn: 'filter_flags' },
   { name: 'consanguinity' },
   { name: 'family_history' },
+  { name: 'notes' },
 ]
 
 const AIRTABLE_DBGAP_SUBMISSION_FIELD = 'dbgap_submission'
