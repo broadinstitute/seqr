@@ -66,8 +66,8 @@ class AirtableSession(object):
         self._session.params = {}
         errors = []
         for record_id in records.keys():
-            response = self._session.patch(f'{self._url}/{record_type}/{record_id}', json={'fields': update})
             try:
+                response = self._session.patch(f'{self._url}/{record_type}/{record_id}', json={'fields': update})
                 response.raise_for_status()
             except Exception as e:
                 errors.append(str(e))
