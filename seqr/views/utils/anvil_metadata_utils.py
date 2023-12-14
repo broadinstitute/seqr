@@ -245,9 +245,7 @@ def _process_saved_variants(saved_variants_by_family, individual_data_by_family)
             if variant['main_transcript']:
                 gene_ids.add(variant['main_transcript']['geneId'])
 
-            _update_variant_inheritance(
-                variant, individual_data_by_family[family_id],
-                lambda gene_id: potential_com_het_gene_variants[gene_id].append(variant))
+            _update_variant_inheritance(variant, individual_data_by_family[family_id], potential_com_het_gene_variants)
             for guid in variant['discovery_tag_guids_by_name'].values():
                 potential_mnvs[guid].append(variant)
 
@@ -261,7 +259,7 @@ def _process_saved_variants(saved_variants_by_family, individual_data_by_family)
 
 def _update_variant_inheritance(
         variant_json: dict, family_individual_data: tuple[set[str], set[str], set[str], dict[str: list[str]]],
-        update_potential_comp_het_gene: Callable[str, None]) -> None:
+        potential_com_het_gene_variants: dict[str: list[str]]) -> None:
     """Compute the inheritance mode for the given variant and family"""
 
     affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
@@ -276,7 +274,7 @@ def _update_variant_inheritance(
 
     if possible_comp_het:
         for gene_id in variant_json.get('transcripts', {}).keys():
-            update_potential_comp_het_gene(gene_id)
+            potential_com_het_gene_variants[gene_id].append(variant_json)
 
     variant_json.update({
         'inheritance': inheritance_model,
