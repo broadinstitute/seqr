@@ -105,7 +105,7 @@ const mapStateToProps = (state, ownProps) => {
     getColumns,
     queryFields: (user.isAnalyst && ownProps.match.params.projectGuid !== ALL_PROJECTS_PATH) ? AIRTABLE_FIELDS : FIELDS,
     viewAllPages: (user.isAnalyst ? ANALYST_VIEW_ALL_PAGES : VIEW_ALL_PAGES),
-    urlBase: 'summary_data/sample_metadata',
+    urlBase: 'summary_data/individual_metadata',
     idField: 'subject_id',
     fileName: 'Metadata',
   }

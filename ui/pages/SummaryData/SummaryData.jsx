@@ -15,7 +15,7 @@ import GeneInfoSearch from './components/GeneInfoSearch'
 import LocusLists from './components/LocusLists'
 import ExternalAnalysis from './components/ExternalAnalysis'
 import Hpo from './components/Hpo'
-import LoadedSampleMetadata from './components/SampleMetadata'
+import IndividualMetadata from './components/IndividualMetadata'
 import VariantLookup from './components/VariantLookup'
 
 const GenePage = ({ match }) => (
@@ -30,7 +30,7 @@ const SUMMARY_DATA_PAGES = [
   { path: 'gene_info', params: '/:geneId?', component: GenePage },
   { path: 'gene_lists', component: LocusLists },
   { path: 'saved_variants', component: SavedVariants },
-  { path: 'sample_metadata', params: '/:projectGuid?', component: LoadedSampleMetadata },
+  { path: 'individual_metadata', params: '/:projectGuid?', component: IndividualMetadata },
   { path: 'hpo_terms', component: Hpo },
   { path: 'matchmaker', component: Matchmaker },
 ]

@@ -5,7 +5,7 @@ import configureStore from 'redux-mock-store'
 import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 
-import SampleMetadata from './SampleMetadata'
+import IndividualMetadata from './IndividualMetadata'
 
 configure({ adapter: new Adapter() })
 
@@ -67,9 +67,9 @@ const DATA = [
   },
 ]
 
-test('SampleMetadataDataTable render and export', () => {
+test('IndividualMetadata render and export', () => {
   const store = configureStore()({ user: {} })
-  const sampleMetadata = mount(<Provider store={store}><Router><SampleMetadata projectGuid="all" data={DATA} match={{params: {}}} /></Router></Provider>)
+  const sampleMetadata = mount(<Provider store={store}><Router><IndividualMetadata projectGuid="all" data={DATA} match={{params: {}}} /></Router></Provider>)
   const exportConfig = sampleMetadata.find('DataTable').instance().exportConfig(DATA)[0]
   expect(exportConfig.headers).toEqual([
     'project_id', 'projectGuid', 'family_id', 'familyGuid', 'subject_id', 'individual_guid', 'pmid_id', 'paternal_id',
