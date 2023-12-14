@@ -562,7 +562,7 @@ class ReportAPITest(AirtableTest):
             'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', 'Other', 'Middle Eastern', '-',
             '-', 'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
             'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508',
-            'myopathy', 'Tier 1'], subject_file)
+            'myopathy', 'No'], subject_file)
 
         self.assertEqual(sample_file[0], [
             'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sequencing_center',
@@ -1047,7 +1047,7 @@ class ReportAPITest(AirtableTest):
             'familyGuid': 'F000012_12',
             'family_id': '12',
             'displayName': '12',
-            'solve_state': 'Tier 1',
+            'solve_state': 'No',
             'inheritance_model': 'Autosomal recessive (compound heterozygous)',
             'date_data_generation': '2017-02-05',
             'data_type': 'WES',
@@ -1085,7 +1085,7 @@ class ReportAPITest(AirtableTest):
             'familyGuid': 'F000003_3',
             'family_id': '3',
             'displayName': '3',
-            'solve_state': 'Unsolved',
+            'solve_state': 'No',
             'inheritance_model': '',
             'date_data_generation': '2017-02-05',
             'data_type': 'WES',

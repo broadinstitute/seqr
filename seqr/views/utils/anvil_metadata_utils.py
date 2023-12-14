@@ -61,6 +61,12 @@ MULTIPLE_DATASET_PRODUCTS = {
     'Standard Germline Exome v6 Plus GSA Array',
 }
 
+SOLVE_STATUS_LOOKUP = {
+    **{s: 'Yes' for s in Family.SOLVED_ANALYSIS_STATUSES},
+    **{s: 'Likely' for s in Family.STRONG_CANDIDATE_ANALYSIS_STATUSES},
+    Family.ANALYSIS_STATUS_PARTIAL_SOLVE: 'Partial',
+}
+
 FAMILY_ROW_TYPE = 'family'
 SUBJECT_ROW_TYPE = 'subject'
 SAMPLE_ROW_TYPE = 'sample'
@@ -69,7 +75,6 @@ DISCOVERY_ROW_TYPE = 'discovery'
 METADATA_FAMILY_VALUES = {
     'familyGuid': F('guid'),
     'projectGuid': F('project__guid'),
-    'analysisStatus': F('analysis_status'),
     'displayName': F('family_id'),
     'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
     'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
@@ -85,6 +90,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
     family_filter = {'project__in': projects} if include_no_individual_families else {'individual__in': individual_samples}
     family_data = Family.objects.filter(**family_filter).distinct().values(
         'id', 'family_id', 'post_discovery_omim_numbers', 'project__name',
+        analysisStatus=F('analysis_status'),
         pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
         phenotype_description=Replace(
             Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
@@ -105,6 +111,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
         f.update({
             'project_id': f.pop('project__name'),
             'phenotype_group': '|'.join(f.pop('phenotype_groups')),
+            'solve_state': get_family_solve_state(f['analysisStatus']),
         })
         if include_metadata:
             f.update({k: '; '.join(f[k]) for k in ['analysis_groups', 'notes']})
@@ -162,11 +169,6 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
                 get_additional_variant_fields, allow_missing_discovery_genes=include_metadata,
             )
             for variant in saved_variants]
-        solve_state = 'Unsolved'
-        if parsed_variants:
-            all_tier_2 = all(variant[1]['Gene_Class'] == 'Tier 2 - Candidate' for variant in parsed_variants)
-            solve_state = 'Tier 2' if all_tier_2 else 'Tier 1'
-        family_subject_row['solve_state'] = solve_state
 
         family_row = {
             'family_id': family_subject_row['family_id'],
@@ -201,6 +203,10 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
             if not no_variant_zygosity:
                 discovery_row = _get_discovery_rows(sample, parsed_variants)
                 add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
+
+
+def get_family_solve_state(analysis_status):
+    return SOLVE_STATUS_LOOKUP.get(analysis_status, 'No')
 
 
 def _parse_family_sample_affected_data(family_samples):

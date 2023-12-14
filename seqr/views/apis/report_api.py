@@ -15,7 +15,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import get_airtable_samples
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, \
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, get_family_solve_state, \
     ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
     SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
@@ -245,11 +245,6 @@ WARN_MISSING_CONDITIONAL_COLUMNS = {
     'known_condition_name': lambda row: row['condition_id'],
 }
 
-SOLVE_STATUS_LOOKUP = {
-    **{s: 'Yes' for s in Family.SOLVED_ANALYSIS_STATUSES},
-    **{s: 'Likely' for s in Family.STRONG_CANDIDATE_ANALYSIS_STATUSES},
-    Family.ANALYSIS_STATUS_PARTIAL_SOLVE: 'Partial',
-}
 GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
 GREGOR_ANCESTRY_DETAIL_MAP.pop(MIDDLE_EASTERN)
 GREGOR_ANCESTRY_DETAIL_MAP.update({
@@ -499,7 +494,7 @@ def _get_gregor_family_row(family):
         'consanguinity': 'Unknown',
         'pmid_id': '|'.join(family.pubmed_ids or []),
         'phenotype_description': family.coded_phenotype,
-        'solve_status': SOLVE_STATUS_LOOKUP.get(family.analysis_status, 'No'),
+        'solve_status': get_family_solve_state(family.analysis_status),
     }
 
 

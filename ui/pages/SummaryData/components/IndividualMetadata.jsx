@@ -30,7 +30,7 @@ const AIRTABLE_FIELDS = [
 ]
 
 const CORE_COLUMNS = [
-  { name: 'participant_id', secondaryExportColumn: 'individual_guid' },
+  { name: 'subject_id', content: 'participant_id', secondaryExportColumn: 'individual_guid' },
   { name: 'pmid_id' },
   { name: 'paternal_id', secondaryExportColumn: 'paternal_guid' },
   { name: 'maternal_id', secondaryExportColumn: 'maternal_guid' },
@@ -51,7 +51,7 @@ const CORE_COLUMNS = [
   },
   { name: 'solve_state' },
   { name: 'MME' },
-  { name: 'sample_id' },
+  { name: 'sample_id' }, // TODO
   { name: 'data_type' },
   { name: 'date_data_generation', secondaryExportColumn: 'filter_flags' },
   { name: 'consanguinity' },
