@@ -34,7 +34,7 @@ def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type
     success = True
     dag_name = backend_specific_call(_construct_v2_dag_name, _construct_v3_dag_name)(
         sample_type=sample_type, dataset_type=dataset_type, is_internal=is_internal)
-    project_guids = [p.guid for p in projects]
+    project_guids = sorted([p.guid for p in projects])
     updated_variables = backend_specific_call(_construct_v2_dag_variables, _construct_v3_dag_variables)(
         project_guids, data_path, genome_version, is_internal, dag_name=dag_name, user=user, sample_type=sample_type)
     dag_id = backend_specific_call(_construct_v2_dag_id, lambda name: name)(dag_name)
@@ -68,7 +68,7 @@ def write_data_loading_pedigree(project: Project, user: User):
         raise ValueError(f'No {SEQR_DATASETS_GS_PATH} project directory found for {project.guid}')
     callset, sample_type = match
     _upload_data_loading_files(
-        PEDIGREE_FILE_CONFIG, [project], is_internal=True, user=user, genome_version=project.genome_version,
+        PEDIGREE_FILE_CONFIG, [project], is_internal=callset != 'AnVIL', user=user, genome_version=project.genome_version,
         sample_type=sample_type, callset=callset,
     )
 
@@ -197,7 +197,7 @@ def _upload_data_loading_files(config: tuple[str, str, dict[str, F]], projects: 
 def _get_dag_project_gs_path(project: str, genome_version: str, sample_type: str, is_internal: bool, **kwargs):
     dag_name = _construct_v2_dag_name(sample_type, is_internal=is_internal, **kwargs)
     dag_path = _get_dag_gs_path(genome_version, dag_name)
-    return f'{dag_path}/base/projects/{project}' if is_internal else f'{dag_path}/{project}/base'
+    return f'{dag_path}/base/projects/{project}/' if is_internal else f'{dag_path}/{project}/base/'
 
 
 def _get_dag_gs_path(genome_version: str, dag_name: str):
