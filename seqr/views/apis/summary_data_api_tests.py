@@ -35,7 +35,7 @@ SAVED_VARIANT_RESPONSE_KEYS = {
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "projectGuid": "R0003_test",
     "num_saved_variants": 2,
-    "solve_state": "Tier 1",
+    "solve_state": "No",
     "sample_id": "NA20889",
     "Gene_Class-1": "Tier 1 - Candidate",
     "Gene_Class-2": "Tier 1 - Candidate",
@@ -81,11 +81,13 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "disorders": None,
     "family_id": "12",
     "displayName": "12",
-    "MME": "Y",
+    "MME": "Yes",
     "subject_id": "NA20889",
     "individual_guid": "I000017_na20889",
     "proband_relationship": "Self",
     "consanguinity": "None suspected",
+    'analysis_groups': '',
+    'notes': '',
 }
 EXPECTED_SAMPLE_METADATA_ROW = {
     "dbgap_submission": "No",
@@ -117,7 +119,8 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'inheritance_description-1': 'Autosomal dominant',
     'maternal_guid': '',
     'maternal_id': '',
-    'MME': 'Y',
+    'MME': 'Yes',
+    'family_history': 'Yes',
     'novel_mendelian_gene-1': 'Y',
     'num_saved_variants': 1,
     'paternal_guid': '',
@@ -127,13 +130,15 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'pmid_id': None,
     'proband_relationship': 'Self',
     'sex': 'Female',
-    'solve_state': 'Tier 1',
+    'solve_state': 'No',
     'Alt-1': 'T',
     'Chrom-1': '1',
     'Gene_Class-1': 'Tier 1 - Candidate',
     'Pos-1': '248367227',
     'Ref-1': 'TC',
     'Zygosity-1': 'Heterozygous',
+    'analysis_groups': '',
+    'notes': '',
 }
 
 AIRTABLE_SAMPLE_RECORDS = {
@@ -510,13 +515,13 @@ class SummaryDataAPITest(AirtableTest):
 
         self.check_no_analyst_no_access(url)
 
-    def _has_expected_metadata_response(self, response, expected_samples, has_airtable=False, has_duplicate=False):
+    def _has_expected_metadata_response(self, response, expected_individuals, has_airtable=False, has_duplicate=False):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertEqual(len(response_json['rows']), len(expected_samples) + (1 if has_duplicate else 0))
-        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
-        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertSetEqual({r['subject_id'] for r in response_json['rows']}, expected_individuals)
+        self.assertEqual(len(response_json['rows']), len(expected_individuals) + (2 if has_duplicate else 0))
+        test_row = next(r for r in response_json['rows'] if r['subject_id'] == 'NA20889')
         self.assertDictEqual(
             EXPECTED_SAMPLE_METADATA_ROW if has_airtable else EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row
         )
@@ -539,23 +544,23 @@ class SummaryDataAPITest(AirtableTest):
         # Test collaborator access
         self.login_collaborator()
         response = self.client.get(url)
-        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
-        self._has_expected_metadata_response(response, expected_samples)
+        expected_individuals = {'NA20885', 'NA20888', 'NA20889', 'NA20870'}
+        self._has_expected_metadata_response(response, expected_individuals)
 
         # Test airtable not returned for non-analysts
         include_airtable_url = f'{url}?includeAirtable=true'
         response = self.client.get(include_airtable_url)
-        self._has_expected_metadata_response(response, expected_samples)
+        self._has_expected_metadata_response(response, expected_individuals)
 
         # Test all projects
         all_projects_url = reverse(individual_metadata, args=['all'])
-        multi_project_samples = {
-            'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
-            'NA20872', 'NA20881', 'HG00733',
+        multi_project_individuals = {
+            'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675_1', 'HG00731',
+            'NA20872', 'NA20881', 'HG00733', 'NA20878',
         }
-        multi_project_samples.update(expected_samples)
+        multi_project_individuals.update(expected_individuals)
         response = self.client.get(all_projects_url)
-        self._has_expected_metadata_response(response, multi_project_samples, has_duplicate=True)
+        self._has_expected_metadata_response(response, multi_project_individuals, has_duplicate=True)
 
         # Test gregor projects no access
         gregor_projects_url = reverse(individual_metadata, args=['gregor'])
@@ -568,7 +573,10 @@ class SummaryDataAPITest(AirtableTest):
         no_analyst_project_url = reverse(individual_metadata, args=['R0004_non_analyst_project'])
         response = self.client.get(no_analyst_project_url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'rows': [EXPECTED_NO_GENE_SAMPLE_METADATA_ROW]})
+        rows = response.json()['rows']
+        self.assertEqual(len(rows), 2)
+        test_row = next(r for r in rows if r['subject_id'] == 'NA21234')
+        self.assertDictEqual(test_row, EXPECTED_NO_GENE_SAMPLE_METADATA_ROW)
 
         # Test analyst access
         self.login_analyst_user()
@@ -577,7 +585,7 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.get(url)
-        self._has_expected_metadata_response(response, expected_samples)
+        self._has_expected_metadata_response(response, expected_individuals)
 
         # Test empty project
         empty_project_url = reverse(individual_metadata, args=['R0002_empty'])
@@ -587,11 +595,11 @@ class SummaryDataAPITest(AirtableTest):
 
         # Test all projects
         response = self.client.get(all_projects_url)
-        all_project_samples = {*multi_project_samples, *self.ADDITIONAL_SAMPLES}
-        self._has_expected_metadata_response(response, all_project_samples, has_duplicate=True)
+        all_project_individuals = {*multi_project_individuals, *self.ADDITIONAL_SAMPLES}
+        self._has_expected_metadata_response(response, all_project_individuals, has_duplicate=True)
 
         response = self.client.get(f'{all_projects_url}?includeAirtable=true')
-        self._has_expected_metadata_response(response, all_project_samples, has_duplicate=True)
+        self._has_expected_metadata_response(response, all_project_individuals, has_duplicate=True)
 
         # Test invalid airtable responses
         response = self.client.get(include_airtable_url)
@@ -651,7 +659,7 @@ class SummaryDataAPITest(AirtableTest):
 
         # Test airtable success
         response = self.client.get(include_airtable_url)
-        self._has_expected_metadata_response(response, expected_samples, has_airtable=True)
+        self._has_expected_metadata_response(response, expected_individuals, has_airtable=True)
         self.assertEqual(len(responses.calls), 8)
         self.assert_expected_airtable_call(
             -1, "OR(RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
@@ -659,17 +667,17 @@ class SummaryDataAPITest(AirtableTest):
 
         # Test gregor projects
         response = self.client.get(gregor_projects_url)
-        self._has_expected_metadata_response(response, multi_project_samples, has_duplicate=True)
+        self._has_expected_metadata_response(response, multi_project_individuals, has_duplicate=True)
 
         response = self.client.get(f'{gregor_projects_url}?includeAirtable=true')
-        self._has_expected_metadata_response(response, multi_project_samples, has_airtable=True, has_duplicate=True)
+        self._has_expected_metadata_response(response, multi_project_individuals, has_airtable=True, has_duplicate=True)
 
 
 # Tests for AnVIL access disabled
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
     NUM_MANAGER_SUBMISSIONS = 4
-    ADDITIONAL_SAMPLES = ['NA21234']
+    ADDITIONAL_SAMPLES = ['NA21234', 'NA21987']
 
 
 def assert_has_expected_calls(self, users, skip_group_call_idxs=None):

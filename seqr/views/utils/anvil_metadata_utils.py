@@ -1,10 +1,11 @@
 from collections import defaultdict
 from datetime import datetime
-from django.db.models import F, Q, Value, CharField, Case, When
+from django.db.models import F, Q, Value, CharField
 from django.db.models.functions import Replace, JSONObject
 from django.contrib.postgres.aggregates import ArrayAgg, StringAgg
 import json
 
+from matchmaker.models import MatchmakerSubmission
 from reference_data.models import Omim
 from seqr.models import Family, Individual
 from seqr.views.utils.airtable_utils import get_airtable_samples
@@ -76,7 +77,6 @@ METADATA_FAMILY_VALUES = {
     'familyGuid': F('guid'),
     'projectGuid': F('project__guid'),
     'displayName': F('family_id'),
-    'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
     'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
     'notes': ArrayAgg('familynote__note', distinct=True, filter=Q(familynote__note_type='A')),
 }
@@ -149,6 +149,9 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
         for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers)
     }
 
+    matchmaker_individuals = set(MatchmakerSubmission.objects.filter(
+        individual__in=individual_samples).values_list('individual_id', flat=True)) if include_metadata else set()
+
     for family_id, family_subject_row in family_data_by_id.items():
         saved_variants = saved_variants_by_family[family_id]
 
@@ -198,6 +201,8 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
 
             subject_row = _get_subject_row(
                 individual, has_dbgap_submission, airtable_metadata, individual_ids_map)
+            if individual.id in matchmaker_individuals:
+                subject_row['MME'] = 'Yes'
             subject_row.update(family_subject_row)
             add_row(subject_row, family_id, SUBJECT_ROW_TYPE)
 

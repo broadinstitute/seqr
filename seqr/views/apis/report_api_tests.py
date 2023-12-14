@@ -1064,7 +1064,6 @@ class ReportAPITest(AirtableTest):
             'phenotype_group': '',
             'analysisStatus': 'Q',
             'analysis_groups': '',
-            'MME': 'Y',
             'consanguinity': 'None suspected',
             'notes': '',
         })
@@ -1098,7 +1097,6 @@ class ReportAPITest(AirtableTest):
             'phenotype_group': '',
             'analysisStatus': 'Q',
             'analysis_groups': 'Accepted; Test Group 1',
-            'MME': 'N',
             'consanguinity': 'None suspected',
             'notes': '',
         })
