@@ -1,7 +1,7 @@
 from collections import defaultdict
 from copy import deepcopy
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.db.models import Count, Q, F
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
@@ -128,8 +128,9 @@ def anvil_export(request, project_guid):
                 row[entity_id_field] = row[id_field]
             parsed_rows[row_type].append(row)
 
+    max_loaded_date = request.GET.get('loadedBefore') or (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
     parse_anvil_metadata(
-        [project], request.GET.get('loadedBefore'), request.user, _add_row,
+        [project], request.user, _add_row, max_loaded_date=max_loaded_date,
         get_additional_variant_fields=lambda variant, genome_version: {
             'variant_genome_build': GENOME_BUILD_MAP.get(variant.get('genomeVersion') or genome_version) or '',
         },
@@ -911,8 +912,7 @@ def family_metadata(request, project_guid):
             })
 
     parse_anvil_metadata(
-        projects, max_loaded_date=datetime.now().strftime('%Y-%m-%d'), user=request.user, add_row=_add_row,
-        omit_airtable=True, include_metadata=True, include_no_individual_families=True, no_variant_zygosity=True)
+        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_metadata=True, no_variant_zygosity=True)
 
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]

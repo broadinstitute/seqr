@@ -51,7 +51,6 @@ const CORE_COLUMNS = [
   },
   { name: 'solve_state' },
   { name: 'MME' },
-  { name: 'sample_id' }, // TODO
   { name: 'data_type' },
   { name: 'date_data_generation', secondaryExportColumn: 'filter_flags' },
   { name: 'consanguinity' },

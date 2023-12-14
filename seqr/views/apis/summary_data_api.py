@@ -375,7 +375,7 @@ def individual_metadata(request, project_guid):
             rows_by_subject_family_id[row_key].update(row)
 
     parse_anvil_metadata(
-        projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user, _add_row,
+        projects, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
         include_metadata=True,
         omit_airtable=not include_airtable,
         get_additional_variant_fields=_get_additional_variant_fields,
