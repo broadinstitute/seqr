@@ -4,7 +4,6 @@ from django.db.models import F, Q, Value, CharField, Case, When
 from django.db.models.functions import Replace, JSONObject
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
-from typing import Callable
 
 from reference_data.models import Omim
 from seqr.models import Family, Individual
