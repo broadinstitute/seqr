@@ -68,6 +68,7 @@ const AIRTABLE_COLUMNS = [
   { name: 'sample_provider' },
 ]
 
+// TODO update to match sheet
 const GENE_COL = 'Gene'
 const VARIANT_COLUMNS = [
   GENE_COL,
