@@ -25,7 +25,7 @@ from seqr.views.utils.permissions_utils import analyst_required, get_project_and
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family
 
-from seqr.models import Project, Family, Sample, Individual
+from seqr.models import Project, Family, Sample, Individual, FamilyNote
 from reference_data.models import Omim, HumanPhenotypeOntology, GENOME_VERSION_LOOKUP
 from settings import GREGOR_DATA_MODEL_URL
 
@@ -920,6 +920,8 @@ def family_metadata(request, project_guid):
         omit_airtable=True, include_metadata=True, include_no_individual_families=True, no_variant_zygosity=True,
         family_values={'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False))})
 
+    analysis_notes_by_family = _get_analysis_notes_by_family(projects)
+
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]
         family_structure = 'singleton' if len(individuals_by_id) == 1 else 'other'
@@ -947,6 +949,18 @@ def family_metadata(request, project_guid):
             'family_structure': family_structure,
             'data_type': earliest_sample.get('data_type'),
             'date_data_generation': earliest_sample.get('date_data_generation'),
+            'notes': analysis_notes_by_family.get(f['familyGuid']),
         })
 
     return create_json_response({'rows': list(families_by_id.values())})
+
+
+def _get_analysis_notes_by_family(projects):
+    notes = FamilyNote.objects.filter(
+        family__project__in=projects, note_type='A').select_related('family').order_by('last_modified_date')
+
+    analysis_notes_by_family = defaultdict(list)
+    for note in notes:
+        analysis_notes_by_family[note.family.guid].append(note.note)
+
+    return {k: '; '.join(v) for k, v in analysis_notes_by_family.items()}
