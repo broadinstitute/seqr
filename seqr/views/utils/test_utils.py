@@ -260,6 +260,8 @@ TEST_WORKSPACE_NAME1 = 'anvil-project 1000 Genomes Demo'
 TEST_EMPTY_PROJECT_WORKSPACE = 'empty'
 TEST_NO_PROJECT_WORKSPACE_NAME = 'anvil-no-project-workspace1'
 TEST_NO_PROJECT_WORKSPACE_NAME2 = 'anvil-no-project-workspace2'
+EXT_WORKSPACE_NAMESPACE = 'ext-data'
+EXT_WORKSPACE_NAME = 'anvil-non-analyst-project 1000 Genomes Demo'
 
 TEST_SERVICE_ACCOUNT = 'test_account@my-seqr.iam.gserviceaccount.com'
 
@@ -398,8 +400,8 @@ ANVIL_WORKSPACES = [{
         'bucketName': 'test_bucket'
     },
 }, {
-    'workspace_namespace': 'ext-data',
-    'workspace_name': 'anvil-non-analyst-project 1000 Genomes Demo',
+    'workspace_namespace': EXT_WORKSPACE_NAMESPACE,
+    'workspace_name': EXT_WORKSPACE_NAME,
     'public': True,
     'acl': {
         'test_user_manager@test.com': {
@@ -407,6 +409,12 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": True,
             "canCompute": True
+        },
+        'test_pm_user@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
         },
     },
     'workspace': {
