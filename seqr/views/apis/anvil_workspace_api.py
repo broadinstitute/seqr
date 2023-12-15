@@ -15,7 +15,7 @@ from django.shortcuts import redirect
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project, CAN_EDIT, Sample
 from seqr.views.react_app import render_app_html
-from seqr.views.utils.airtable_utils import AirtableSession
+from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
 from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.airflow_utils import trigger_data_loading
@@ -267,7 +267,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
         genome_version=project.genome_version,
     )
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
-        'AnVIL Seqr Loading Requests Tracking', {
+        ANVIL_REQUEST_TRACKING_TABLE, {
             'Requester Name': user.get_full_name(),
             'Requester Email': user.email,
             'AnVIL Project URL': _get_seqr_project_url(project),

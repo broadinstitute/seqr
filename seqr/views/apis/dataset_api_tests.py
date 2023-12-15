@@ -4,6 +4,7 @@ from copy import deepcopy
 from datetime import datetime
 from django.urls.base import reverse
 from io import StringIO
+import responses
 
 from seqr.models import Sample, Family
 from seqr.views.apis.dataset_api import add_variants_dataset_handler
@@ -40,6 +41,11 @@ MOCK_REDIS = mock.MagicMock()
 MOCK_OPEN = mock.MagicMock()
 MOCK_FILE_ITER = MOCK_OPEN.return_value.__enter__.return_value.__iter__
 
+MOCK_AIRTABLE_URL = 'http://testairtable'
+MOCK_RECORD_ID = 'recH4SEO1CeoIlOiE'
+MOCK_RECORDS = {'records': [{'id': MOCK_RECORD_ID, 'fields': {'Status': 'Loading'}}]}
+
+
 @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
 @mock.patch('seqr.utils.file_utils.open', MOCK_OPEN)
@@ -48,10 +54,12 @@ class DatasetAPITest(object):
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
     @mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
     @mock.patch('seqr.utils.search.add_data_utils.send_html_email')
+    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', MOCK_AIRTABLE_URL)
     @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @urllib3_responses.activate
+    @responses.activate
     def test_add_variants_dataset(self, mock_send_email, mock_send_slack, mock_random):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
         self.check_data_manager_login(url)
@@ -75,6 +83,12 @@ class DatasetAPITest(object):
         self.assertEqual(Sample.objects.filter(sample_id='NA20878').count(), 0)
 
         mock_random.return_value = 98765432101234567890
+
+        airtable_tracking_url = f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking'
+        responses.add(
+            responses.GET,
+            airtable_tracking_url + "?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
+            json=MOCK_RECORDS)
 
         urllib3_responses.add_json('/{}/_mapping'.format(INDEX_NAME), MAPPING_JSON)
         urllib3_responses.add_json('/{}/_search?size=0'.format(INDEX_NAME), {'aggregations': {
@@ -200,6 +214,7 @@ class DatasetAPITest(object):
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
         mock_send_email.assert_not_called()
+        self.assertEqual(len(responses.calls), 0)
         if self.SLACK_MESSAGE_TEMPLATE:
             mock_send_slack.assert_called_with(
                 'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES SV', samples='NA19675_1', count=1))
@@ -293,6 +308,10 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
                 'anvil-data-loading',
                 f'1 new WES samples are loaded in {SEQR_URL}/project/{NON_ANALYST_PROJECT_GUID}/project_page',
             )
+
+            self.assertEqual(responses.calls[1].request.url, f'{airtable_tracking_url}/{MOCK_RECORD_ID}')
+            self.assertEqual(responses.calls[1].request.method, 'PATCH')
+            self.assertDictEqual(json.loads(responses.calls[1].request.body), {'fields': {'Status': 'Available in Seqr'}})
 
     @urllib3_responses.activate
     def test_add_variants_dataset_errors(self):

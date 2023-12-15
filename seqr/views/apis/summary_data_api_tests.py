@@ -33,7 +33,7 @@ SAVED_VARIANT_RESPONSE_KEYS = {
 }
 
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
-    "project_guid": "R0003_test",
+    "projectGuid": "R0003_test",
     "num_saved_variants": 2,
     "solve_state": "Tier 1",
     "sample_id": "NA20889",
@@ -55,11 +55,13 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "Pos-2": "49045487",
     "maternal_id": "",
     "paternal_id": "",
+    "maternal_guid": "",
+    "paternal_guid": "",
     "hgvsp-1": "c.1586-17C>G",
     "project_id": "Test Reprocessed Project",
     "Pos-1": "248367227",
     "data_type": "WES",
-    "family_guid": "F000012_12",
+    "familyGuid": "F000012_12",
     "congenital_status": "Unknown",
     "family_history": "Yes",
     "hpo_present": "HP:0011675 (Arrhythmia)|HP:0001509 ()",
@@ -70,12 +72,18 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "Chrom-1": "1",
     "Alt-1": "T",
     "Gene-1": "OR4G11P",
+    "gene_id-1": "ENSG00000240361",
     "pmid_id": None,
     "phenotype_description": None,
     "affected_status": "Affected",
+    "analysisStatus": "Q",
+    "filter_flags": "",
+    "disorders": None,
     "family_id": "12",
+    "displayName": "12",
     "MME": "Y",
     "subject_id": "NA20889",
+    "individual_guid": "I000017_na20889",
     "proband_relationship": "Self",
     "consanguinity": "None suspected",
 }
@@ -89,23 +97,30 @@ EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
 EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'subject_id': 'NA21234',
     'sample_id': 'NA21234',
-    'family_guid': 'F000014_14',
+    'familyGuid': 'F000014_14',
     'family_id': '14',
-    'project_guid': 'R0004_non_analyst_project',
+    'displayName': '14',
+    'projectGuid': 'R0004_non_analyst_project',
     'project_id': 'Non-Analyst Project',
     'affected_status': 'Affected',
+    'analysisStatus': 'Rncc',
     'ancestry': '',
     'congenital_status': 'Unknown',
     'consanguinity': 'None suspected',
     'data_type': 'WGS',
     'date_data_generation': '2018-02-05',
+    'disorders': None,
+    'filter_flags': '',
+    'individual_guid': 'I000018_na21234',
     'hpo_absent': '',
     'hpo_present': '',
     'inheritance_description-1': 'Autosomal dominant',
+    'maternal_guid': '',
     'maternal_id': '',
     'MME': 'Y',
     'novel_mendelian_gene-1': 'Y',
     'num_saved_variants': 1,
+    'paternal_guid': '',
     'paternal_id': '',
     'phenotype_description': None,
     'phenotype_group': '',
@@ -384,7 +399,8 @@ class SummaryDataAPITest(AirtableTest):
     @mock.patch('seqr.views.apis.summary_data_api.get_variants_for_variant_ids')
     @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
     def test_bulk_update_family_external_analysis(self, mock_load_uploaded_file, mock_get_variants_for_variant_ids, mock_datetime):
-        mock_datetime.now.return_value = datetime(2023, 12, 5, 20, 16, 1)
+        mock_created_time = datetime(2023, 12, 5, 20, 16, 1)
+        mock_datetime.now.return_value = mock_created_time
 
         url = reverse(bulk_update_family_external_analysis)
         self.check_analyst_login(url)
@@ -402,7 +418,6 @@ class SummaryDataAPITest(AirtableTest):
             ['Test Reprocessed Project', 'not_a_family'],
             ['not_a_project', '2'],
         ]
-        created_time = datetime.now()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertDictEqual(response.json(), {
             'warnings': [
@@ -411,7 +426,7 @@ class SummaryDataAPITest(AirtableTest):
             'info': ['Updated "analysed by" for 2 families'],
         })
 
-        models = FamilyAnalysedBy.objects.filter(last_modified_date__gte=created_time)
+        models = FamilyAnalysedBy.objects.filter(last_modified_date__gte=mock_created_time)
         self.assertEqual(len(models), 2)
         self.assertSetEqual({fab.data_type for fab in models}, {'RNA'})
         self.assertSetEqual({fab.created_by for fab in models}, {self.analyst_user})

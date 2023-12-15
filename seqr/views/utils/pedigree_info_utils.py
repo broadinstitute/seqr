@@ -103,7 +103,9 @@ def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
                     i + 1, len(row), ', '.join(row), len(header), ', '.join(header)
                 ))
 
-        return [dict(zip(header, row)) for row in rows], header
+        formatted_rows = [{header_item: field.strip() for header_item, field in zip(header, row)} for row in rows]
+        return formatted_rows, header
+
     except Exception as e:
         raise ErrorsWarningsException(['Error while parsing file: {}. {}'.format(filename, e)], [])
 
