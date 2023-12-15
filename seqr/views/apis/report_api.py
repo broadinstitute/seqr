@@ -1009,7 +1009,7 @@ def family_metadata(request, project_guid):
             })
 
     parse_anvil_metadata(
-        projects, max_loaded_date=datetime.now().strftime('%Y-%m-%d'), user=request.user, add_row=_add_row,
+        projects, max_loaded_date=None, user=request.user, add_row=_add_row,
         omit_airtable=True, include_metadata=True, include_no_individual_families=True, no_variant_zygosity=True,
         family_values={'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False))})
 
@@ -1197,7 +1197,7 @@ def _generate_rows(initial_row, family, samples, saved_variants, analysis_notes,
     potential_compound_het_genes = defaultdict(set)
     for variant in saved_variants:
         _update_variant_inheritance(
-            variant, parse_family_sample_affected_data(samples), potential_compound_het_genes)
+            variant, parse_family_sample_affected_data(individuals), potential_compound_het_genes)
 
     gene_ids_to_saved_variants, gene_ids_to_variant_tag_names, gene_ids_to_inheritance = _get_gene_to_variant_info_map(
         saved_variants, potential_compound_het_genes)
