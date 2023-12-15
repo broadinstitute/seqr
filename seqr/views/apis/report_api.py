@@ -1017,9 +1017,9 @@ def family_metadata(request, project_guid):
 
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]
-        family_structure = 'singleton' if len(individuals_by_id) == 1 else 'other'
         proband = next((i for i in individuals_by_id.values() if i['proband_relationship'] == 'Self'), None)
         individuals_ids = set(individuals_by_id.keys())
+        known_ids = {}
         if proband:
             known_ids = {
                 'proband_id': proband['subject_id'],
@@ -1028,10 +1028,6 @@ def family_metadata(request, project_guid):
             }
             f.update(known_ids)
             individuals_ids -= set(known_ids.values())
-            if proband['paternal_id'] and proband['maternal_id'] and len(individuals_ids) < 2:
-                family_structure = 'quad' if individuals_ids else 'trio'
-            elif (not individuals_ids) and (proband['paternal_id'] or proband['maternal_id']):
-                family_structure = 'duo'
 
         sorted_samples = sorted(individuals_by_id.values(), key=lambda x: x.get('date_data_generation', ''))
         earliest_sample = next((s for s in [proband or {}] + sorted_samples if s.get('date_data_generation')), {})
@@ -1039,13 +1035,28 @@ def family_metadata(request, project_guid):
         f.update({
             'individual_count': len(individuals_by_id),
             'other_individual_ids':  '; '.join(sorted(individuals_ids)),
-            'family_structure': family_structure,
+            'family_structure': _get_family_structure(len(individuals_by_id), sum(1 for id in known_ids.values() if id)),
             'data_type': earliest_sample.get('data_type'),
             'date_data_generation': earliest_sample.get('date_data_generation'),
             'notes': analysis_notes_by_family.get(f['familyGuid']),
         })
 
     return create_json_response({'rows': list(families_by_id.values())})
+
+
+FAMILY_STRUCTURES = {
+    1: 'singleton',
+    2: 'duo',
+    3: 'trio',
+    4: 'quad',
+}
+
+
+def _get_family_structure(num_individuals, num_known_individuals):
+    if (num_individuals and num_known_individuals == num_individuals) or (
+            num_known_individuals in {0, 3} and num_individuals == num_known_individuals + 1):
+        return FAMILY_STRUCTURES[num_individuals]
+    return 'other'
 
 
 @analyst_required
