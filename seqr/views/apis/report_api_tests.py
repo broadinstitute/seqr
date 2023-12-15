@@ -1179,7 +1179,6 @@ class ReportAPITest(AirtableTest):
             'analysis_groups': [],
             'MME': 'Y',
             'consanguinity': 'None suspected',
-            'notes': None,
         })
 
         # Test all projects
@@ -1213,7 +1212,6 @@ class ReportAPITest(AirtableTest):
             'analysis_groups': ['Accepted', 'Test Group 1'],
             'MME': 'N',
             'consanguinity': 'None suspected',
-            'notes': None,
         })
 
         # Test empty project
