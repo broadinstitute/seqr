@@ -25,7 +25,7 @@ from seqr.views.utils.permissions_utils import analyst_required, get_project_and
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family
 
-from seqr.models import Project, Family, Sample, Individual, FamilyNote
+from seqr.models import Project, Family, Sample, Individual
 from reference_data.models import Omim, HumanPhenotypeOntology, GENOME_VERSION_LOOKUP
 from settings import GREGOR_DATA_MODEL_URL
 
