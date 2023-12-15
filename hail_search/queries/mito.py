@@ -19,7 +19,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
     TRANSCRIPT_CONSEQUENCE_FIELD = 'consequence_term'
     GENOTYPE_FIELDS = {
         'dp': 'DP',
-        'gq': 'GQ',
         'hl': 'HL',
         'mitoCn': 'mito_cn',
         'contamination': 'contamination',
