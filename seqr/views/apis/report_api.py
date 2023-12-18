@@ -17,7 +17,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import get_airtable_samples
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, parse_family_sample_affected_data, \
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, parse_family_individual_affected_data, \
     ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
     SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
@@ -1197,7 +1197,7 @@ def _generate_rows(initial_row, family, samples, saved_variants, analysis_notes,
     potential_compound_het_genes = defaultdict(set)
     for variant in saved_variants:
         _update_variant_inheritance(
-            variant, parse_family_sample_affected_data(individuals), potential_compound_het_genes)
+            variant, parse_family_individual_affected_data(individuals), potential_compound_het_genes)
 
     gene_ids_to_saved_variants, gene_ids_to_variant_tag_names, gene_ids_to_inheritance = _get_gene_to_variant_info_map(
         saved_variants, potential_compound_het_genes)

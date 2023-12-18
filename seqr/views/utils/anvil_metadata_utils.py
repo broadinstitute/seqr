@@ -122,7 +122,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
             sample_ids.add(sample.sample_id)
 
     individual_data_by_family = {
-        family_id: parse_family_sample_affected_data(family_individuals)
+        family_id: parse_family_individual_affected_data(family_individuals)
         for family_id, family_individuals in individuals_by_family_id.items()
     }
 
@@ -208,7 +208,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
                 add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 
-def parse_family_sample_affected_data(family_individuals):
+def parse_family_individual_affected_data(family_individuals):
     indiv_id_map = {individual.id: individual.guid for individual in family_individuals}
     return (
         {individual.guid for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED},
