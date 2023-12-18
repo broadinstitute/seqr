@@ -3,7 +3,6 @@ import { combineReducers } from 'redux'
 import { loadingReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { CMG_PROJECT_PATH } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 const REQUEST_DISCOVERY_SHEET = 'REQUEST_DISCOVERY_SHEET'
@@ -14,53 +13,6 @@ const REQUEST_SEQR_STATS = 'REQUEST_SEQR_STATS'
 const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
 
 // Data actions
-const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (projectGuid, filterValues) => (dispatch) => {
-  if (projectGuid === CMG_PROJECT_PATH) {
-    dispatch({ type: requestAction })
-
-    const errors = new Set()
-    const rows = []
-    new HttpRequestHelper(`/api/report/get_category_projects/${projectGuid}`,
-      (projectsResponseJson) => {
-        const chunkedProjects = projectsResponseJson.projectGuids.reduce((acc, guid) => {
-          if (acc[0].length === 5) {
-            acc.unshift([])
-          }
-          acc[0].push(guid)
-          return acc
-        }, [[]])
-        chunkedProjects.reduce((previousPromise, projectsChunk) => previousPromise.then(
-          () => Promise.all(projectsChunk.map(cmgProjectGuid => new HttpRequestHelper(
-            `/api/report/${urlPath}/${cmgProjectGuid}`,
-            (responseJson) => {
-              rows.push(...responseJson.rows)
-            },
-            e => errors.add(e.message),
-          ).get())),
-        ), Promise.resolve()).then(() => {
-          if (errors.size) {
-            dispatch({ type: receiveAction, error: [...errors].join(', '), newValue: [] })
-          } else {
-            dispatch({ type: receiveAction, newValue: rows })
-          }
-        })
-      },
-      (e) => {
-        dispatch({ type: receiveAction, error: e.message, newValue: [] })
-      }).get(filterValues)
-  } else if (projectGuid) {
-    dispatch({ type: requestAction })
-    new HttpRequestHelper(`/api/report/${urlPath}/${projectGuid}`,
-      (responseJson) => {
-        dispatch({ type: receiveAction, newValue: responseJson.rows })
-      },
-      (e) => {
-        dispatch({ type: receiveAction, error: e.message, newValue: [] })
-      }).get(filterValues)
-  }
-}
-
-export const loadDiscoverySheet = loadMultiProjectData(REQUEST_DISCOVERY_SHEET, RECEIVE_DISCOVERY_SHEET, 'discovery_sheet')
 
 export const loadSeqrStats = () => (dispatch) => {
   dispatch({ type: REQUEST_SEQR_STATS })

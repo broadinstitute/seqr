@@ -1,23 +1,11 @@
-import React from 'react'
-import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Link } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
-import AwesomeBar from 'shared/components/page/AwesomeBar'
-import DataTable from 'shared/components/table/DataTable'
-import { HorizontalSpacer } from 'shared/components/Spacers'
-import StateDataLoader from 'shared/components/StateDataLoader'
-import { InlineHeader, ActiveDisabledNavLink } from 'shared/components/StyledComponents'
 import { BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
+import LoadReportTable from 'shared/components/table/LoadReportTable'
 
 const ALL_PROJECTS_PATH = 'all'
 const GREGOR_PROJECT_PATH = 'gregor'
-
-const FILENAME_LOOKUP = {
-  [ALL_PROJECTS_PATH]: 'All_AnVIL_Projects',
-  [GREGOR_PROJECT_PATH]: 'All_GREGoR_Projects',
-}
 
 const FIELDS = [
   {
@@ -40,42 +28,27 @@ const AIRTABLE_FIELDS = [
   },
 ]
 
-const PROJECT_ID_FIELD = 'project_id'
-const FAMILY_FIELD_ID = 'family_id'
-
 const CORE_COLUMNS = [
-  { name: 'subject_id' },
-  {
-    name: PROJECT_ID_FIELD,
-    format:
-      row => <Link to={`/project/${row.project_guid}/project_page`} target="_blank">{row[PROJECT_ID_FIELD]}</Link>,
-    noFormatExport: true,
-  },
-  {
-    name: FAMILY_FIELD_ID,
-    format:
-      row => <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row[FAMILY_FIELD_ID]}</Link>,
-    noFormatExport: true,
-  },
+  { name: 'subject_id', secondaryExportColumn: 'individual_guid' },
   { name: 'pmid_id' },
-  { name: 'paternal_id' },
-  { name: 'maternal_id' },
+  { name: 'paternal_id', secondaryExportColumn: 'paternal_guid' },
+  { name: 'maternal_id', secondaryExportColumn: 'maternal_guid' },
   { name: 'proband_relationship' },
   { name: 'sex' },
   { name: 'ancestry' },
   { name: 'phenotype_group' },
   { name: 'disease_id' },
-  { name: 'disease_description' },
+  { name: 'disease_description', secondaryExportColumn: 'disorders' },
   { name: 'affected_status' },
   { name: 'congenital_status' },
   { name: 'hpo_present', style: { minWidth: '400px' } },
   { name: 'hpo_absent', style: { minWidth: '400px' } },
   { name: 'phenotype_description', style: { minWidth: '200px' } },
-  { name: 'solve_state' },
+  { name: 'solve_state', secondaryExportColumn: 'analysisStatus' },
   { name: 'MME' },
   { name: 'sample_id' },
   { name: 'data_type' },
-  { name: 'date_data_generation' },
+  { name: 'date_data_generation', secondaryExportColumn: 'filter_flags' },
   { name: 'consanguinity' },
   { name: 'family_history' },
 ]
@@ -90,8 +63,9 @@ const AIRTABLE_COLUMNS = [
   { name: 'sample_provider' },
 ]
 
+const GENE_COL = 'Gene'
 const VARIANT_COLUMNS = [
-  'Gene',
+  GENE_COL,
   'Gene_Class',
   'novel_mendelian_gene',
   'phenotype_class',
@@ -109,80 +83,32 @@ const VARIANT_COLUMNS = [
   'discovery_notes',
 ]
 
-const ANALYST_VIEW_ALL_PAGES = [{ name: 'GREGoR', path: GREGOR_PROJECT_PATH }, { name: 'Broad', path: ALL_PROJECTS_PATH }]
-const VIEW_ALL_PAGES = [{ name: 'my', path: ALL_PROJECTS_PATH }]
-
-const SEARCH_CATEGORIES = ['projects']
-
-const getResultHref = result => `/summary_data/sample_metadata/${result.key}`
+const ANALYST_VIEW_ALL_PAGES = [
+  { name: 'GREGoR', downloadName: 'All_GREGoR_Projects', path: GREGOR_PROJECT_PATH },
+  { name: 'Broad', downloadName: 'All_AnVIL_Projects', path: ALL_PROJECTS_PATH },
+]
+const VIEW_ALL_PAGES = [{ name: 'my', downloadName: 'All_Projects', path: ALL_PROJECTS_PATH }]
 
 const getColumns = (data) => {
   const maxSavedVariants = Math.max(1, ...(data || []).map(row => row.num_saved_variants))
   const hasAirtable = data && data[0] && data[0][AIRTABLE_DBGAP_SUBMISSION_FIELD]
   return [...CORE_COLUMNS, ...(hasAirtable ? AIRTABLE_COLUMNS : [])].concat(
-    ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_COLUMNS.map(col => ({ name: `${col}-${i + 1}` }))),
-  ).map(({ name, ...props }) => ({ name, content: name, ...props }))
+    ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_COLUMNS.map(
+      col => ({ name: `${col}-${i + 1}`, secondaryExportColumn: col === GENE_COL ? `gene_id-${i + 1}` : null }),
+    )),
+  )
 }
 
-const SampleMetadata = React.memo(({ projectGuid, queryForm, data, user }) => (
-  <div>
-    <InlineHeader size="medium" content="Project:" />
-    <AwesomeBar
-      categories={SEARCH_CATEGORIES}
-      placeholder="Enter project name"
-      inputwidth="350px"
-      getResultHref={getResultHref}
-    />
-    {(user.isAnalyst ? ANALYST_VIEW_ALL_PAGES : VIEW_ALL_PAGES).map(({ name, path }) => (
-      <span key={path}>
-        &nbsp; or &nbsp;
-        <ActiveDisabledNavLink to={`/summary_data/sample_metadata/${path}`}>{`view all ${name} projects`}</ActiveDisabledNavLink>
-      </span>
-    ))}
-    <HorizontalSpacer width={20} />
-    {queryForm}
-    <DataTable
-      striped
-      collapsing
-      horizontalScroll
-      downloadFileName={`${FILENAME_LOOKUP[projectGuid] || (data?.length && data[0].project_id.replace(/ /g, '_'))}_${new Date().toISOString().slice(0, 10)}_Metadata`}
-      idField="subject_id"
-      defaultSortColumn="family_id"
-      emptyContent={projectGuid ? '0 cases found' : 'Select a project to view data'}
-      data={data}
-      columns={getColumns(data)}
-      rowsPerPage={100}
-    />
-  </div>
-))
-
-SampleMetadata.propTypes = {
-  data: PropTypes.arrayOf(PropTypes.object),
-  projectGuid: PropTypes.string,
-  queryForm: PropTypes.node,
-  user: PropTypes.object,
+const mapStateToProps = (state, ownProps) => {
+  const user = getUser(state)
+  return {
+    getColumns,
+    queryFields: (user.isAnalyst && ownProps.match.params.projectGuid !== ALL_PROJECTS_PATH) ? AIRTABLE_FIELDS : FIELDS,
+    viewAllPages: (user.isAnalyst ? ANALYST_VIEW_ALL_PAGES : VIEW_ALL_PAGES),
+    urlBase: 'summary_data/sample_metadata',
+    idField: 'subject_id',
+    fileName: 'Metadata',
+  }
 }
 
-const parseResponse = ({ rows }) => ({ data: rows })
-
-const LoadedSampleMetadata = ({ match, user }) => (
-  <StateDataLoader
-    url={match.params.projectGuid ? `/api/summary_data/sample_metadata/${match.params.projectGuid}` : ''}
-    parseResponse={parseResponse}
-    queryFields={(user.isAnalyst && match.params.projectGuid !== ALL_PROJECTS_PATH) ? AIRTABLE_FIELDS : FIELDS}
-    childComponent={SampleMetadata}
-    projectGuid={match.params.projectGuid}
-    user={user}
-  />
-)
-
-LoadedSampleMetadata.propTypes = {
-  match: PropTypes.object,
-  user: PropTypes.object,
-}
-
-const mapStateToProps = state => ({
-  user: getUser(state),
-})
-
-export default connect(mapStateToProps)(LoadedSampleMetadata)
+export default connect(mapStateToProps)(LoadReportTable)

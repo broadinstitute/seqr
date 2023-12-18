@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from seqr.views.utils.variant_utils import _get_inheritance_model
+from seqr.views.utils.anvil_metadata_utils import _get_inheritance_model
 
 
 class VariantUtilsTest(TestCase):

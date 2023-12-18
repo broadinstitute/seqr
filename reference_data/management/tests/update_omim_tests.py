@@ -23,51 +23,7 @@ OMIM_DATA = [
     'chr1	1	567800000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	{Basal cell carcinoma, susceptibility to, 1}, 605462 (2)	\n',
 ]
 
-OMIM_ENTRIES = {
-    "omim": {
-        "version": "1.0",
-        "entryList": [
-            {
-                "entry": {
-                    "prefix": "#",
-                    "mimNumber": 612367,
-                    "status": "live",
-                    "titles": {
-                        "preferredTitle": "IMMUNODEFICIENCY 38 WITH BASAL GANGLIA CALCIFICATION; IMD38",
-                        "alternativeTitles": "IMMUNODEFICIENCY 38, MYCOBACTERIOSIS, AUTOSOMAL RECESSIVE;;\nISG15 DEFICIENCY, AUTOSOMAL RECESSIVE"
-                    },
-                    "geneMap": {
-                    "phenotypeMapList": [
-                        {
-                            "phenotypeMap": {
-                                "mimNumber": 147571,
-                                "phenotype": "Immunodeficiency 38",
-                                "phenotypeMimNumber": 612367,
-                                "phenotypeMappingKey": 3,
-                                "phenotypeInheritance": "Autosomal recessive",
-                                "phenotypicSeriesNumber": "PS300755",
-                                "sequenceID": 7271,
-                                "chromosome": 1,
-                                "chromosomeSymbol": "1",
-                                "chromosomeSort": 23,
-                                "chromosomeLocationStart": 1013496,
-                                "chromosomeLocationEnd": 1014539,
-                                "transcript": "ENST00000649529.1",
-                                "cytoLocation": "1p36.33",
-                                "computedCytoLocation": "1p36.33",
-                                "geneSymbols": "ISG15, G1P2, IFI15, IMD38"
-                            }
-                        }
-                    ]}
-                }
-            },
-            {"entry": {"mimNumber": 605462}},
-            {"entry": {"mimNumber": 606788}},
-        ]
-    }
-}
-
-CACHED_OMIM_DATA = "ENSG00000235249\t607413\tAlzheimer disease neuronal thread protein\t\t\t\t\t\t\t1\t1\t27600000\nENSG00000186092\t612367\tAlkaline phosphatase, plasma level of, QTL 2\tlinkage with rs1780324\tAlkaline phosphatase, plasma level of, QTL 2\t612367\t2\t\tPS300755\t1\t1\t27600000\n\t606788\tAnorexia nervosa, susceptibility to, 1\t\tAnorexia nervosa, susceptibility to, 1\t606788\t2\t\t\t1\t1\t123400000\n\t605462\tBasal cell carcinoma, susceptibility to, 1\tassociated with rs7538876\tBasal cell carcinoma, susceptibility to, 1\t605462\t2\t\t\t1\t1\t567800000"
+CACHED_OMIM_DATA = "ENSG00000235249\t607413\tAlzheimer disease neuronal thread protein\t\t\t\t\t\nENSG00000186092\t612367\tAlkaline phosphatase, plasma level of, QTL 2\tlinkage with rs1780324\tAlkaline phosphatase, plasma level of, QTL 2\t612367\t2\t"
 
 
 class UpdateOmimTest(TestCase):
@@ -127,28 +83,6 @@ class UpdateOmimTest(TestCase):
         data_url = 'https://data.omim.org/downloads/test_key/genemap2.txt'
         responses.add(responses.HEAD, data_url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, data_url, body=''.join(OMIM_DATA))
-        omim_api_url = 'https://api.omim.org/api/entry?apiKey=test_key&include=geneMap&format=json&mimNumber=605462,606788,612367'
-        # Test omim api response error
-        responses.add(responses.GET, omim_api_url,
-                      json={'error': 'not found'}, status=400)
-        # Test omim api responses with bad data
-        responses.add(responses.GET, omim_api_url,
-                      json={"omim": {"entryList": []}}, status=200)
-        # Normal omim api responses
-        responses.add(responses.GET, omim_api_url,
-                      json=OMIM_ENTRIES, status=200)
-
-        # Omim api response error test
-        call_command('update_omim', '--omim-key=test_key')
-        mock_utils_logger.error.assert_called_with('Request failed with 400: Bad Request', extra={'traceback': mock.ANY})
-
-        # Bad omim api response test
-        mock_utils_logger.reset_mock()
-        call_command('update_omim', '--omim-key=test_key')
-        mock_utils_logger.error.assert_called_with('Expected 3 omim entries but recieved 0', extra={'traceback': mock.ANY})
-
-        # No records get deleted on error
-        self.assertEqual(Omim.objects.all().count(), 3)
 
         # Test without a file_path parameter
         mock_utils_logger.reset_mock()
@@ -162,12 +96,6 @@ class UpdateOmimTest(TestCase):
             mock.call('Loaded 4 Omim records from {}. Skipped 0 records with unrecognized genes.'.format(tmp_file)),
         ]
         mock_utils_logger.info.assert_has_calls(calls)
-        calls = [
-            mock.call('Adding phenotypic series information'),
-            mock.call('Found 1 records with phenotypic series')
-        ]
-        mock_omim_logger.info.assert_has_calls(calls)
-        mock_omim_logger.debug.assert_called_with('Fetching entries 0-20')
         mock_os.system.assert_not_called()
 
         # test with a file_path parameter
@@ -184,12 +112,9 @@ class UpdateOmimTest(TestCase):
         ]
         mock_utils_logger.info.assert_has_calls(calls)
         calls = [
-            mock.call('Adding phenotypic series information'),
-            mock.call('Found 1 records with phenotypic series'),
             mock.call('gsutil mv parsed_omim_records.txt gs://seqr-reference-data/omim/'),
         ]
         mock_omim_logger.info.assert_has_calls(calls)
-        mock_omim_logger.debug.assert_called_with('Fetching entries 0-20')
 
         mock_os.system.assert_called_with('gsutil mv parsed_omim_records.txt gs://seqr-reference-data/omim/')
         with open('parsed_omim_records.txt', 'r') as f:
@@ -207,7 +132,6 @@ class UpdateOmimTest(TestCase):
         self.assertEqual(record.phenotype_inheritance, None)
         self.assertEqual(record.phenotype_map_method, '2')
         self.assertEqual(record.phenotype_mim_number, 612367)
-        self.assertEqual(record.phenotypic_series_number, 'PS300755')
         self.assertEqual(record.chrom, '1')
         self.assertEqual(record.start, 1)
         self.assertEqual(record.end, 27600000)
