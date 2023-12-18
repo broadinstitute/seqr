@@ -15,7 +15,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import get_airtable_samples
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, \
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, METADATA_FAMILY_VALUES, \
     ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
     SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
@@ -973,6 +973,7 @@ def _get_family_structure(num_individuals, num_known_individuals):
 @analyst_required
 def variant_metadata(request, project_guid):
     projects = _get_metadata_projects(project_guid, request.user)
+
     variants_by_family = _get_gregor_discovery_variant_by_family(projects)
 
     individuals = Individual.objects.filter(family_id__in=variants_by_family)
@@ -983,11 +984,21 @@ def variant_metadata(request, project_guid):
     for family_id, guid, individual_id in individuals.values_list('family_id', 'guid', 'individual_id'):
         family_individuals[family_id][guid] = individual_id
 
+    family_data_by_id = {
+        f['id']: f for f in Family.objects.filter(
+            id__in=variants_by_family).values('id', 'family_id', 'project__name', **METADATA_FAMILY_VALUES)
+    }
+
     variant_rows = []
     for individual in probands:
         family_id = individual.family_id
+        family_data = family_data_by_id[family_id]
+        family_variants = [
+            {**variant, **family_data, 'project_id': family_data['project__name']}
+            for variant in variants_by_family[family_id]
+        ]
         variant_rows += _get_gregor_genetic_findings_rows(
-            variants_by_family[family_id], individual, participant_id=individual.individual_id, experiment_id=None,
+            family_variants, individual, participant_id=individual.individual_id, experiment_id=None,
             individual_data_types=individual.data_types, family_individuals=family_individuals[family_id],
         )
 
