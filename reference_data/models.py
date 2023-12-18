@@ -187,7 +187,6 @@ class Omim(models.Model):
     phenotype_mim_number = models.IntegerField(null=True, blank=True)  # Example: 616331
     phenotype_description = models.TextField(null=True, blank=True)  # Example: "Robinow syndrome, autosomal dominant 2"
     phenotype_map_method = models.CharField(max_length=1, choices=MAP_METHOD_CHOICES, null=True, blank=True)  # Example: 2
-    phenotypic_series_number = models.TextField(null=True, blank=True)
 
     class Meta:
         # ('mim_number', 'phenotype_mim_number') is not unique - for example ('124020', '609535')
