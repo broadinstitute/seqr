@@ -50,16 +50,16 @@ def family_page_data(request, family_guid):
     family_response = response['familiesByGuid'][family_guid]
 
     discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY).values(
-        'saved_variant_json__transcripts', 'xpos', 'xpos_end',
+        'saved_variant_json__transcripts', 'saved_variant_json__svType', 'xpos', 'xpos_end',
     )
     gene_ids = {
         gene_id for variant in discovery_variants
         for gene_id in (variant['saved_variant_json__transcripts'] or {}).keys()
     }
-    discovery_variant_intervals = [
-        dict(zip(['chrom', 'start', 'end_chrom', 'end'], [*get_chrom_pos(v['xpos']), *get_chrom_pos(v['xpos_end'])]))
-        for v in discovery_variants
-    ]
+    discovery_variant_intervals = [dict(zip(
+        ['chrom', 'start', 'end_chrom', 'end', 'svType'],
+        [*get_chrom_pos(v['xpos']), *get_chrom_pos(v['xpos_end']), v['saved_variant_json__svType']]
+    )) for v in discovery_variants]
     omims = Omim.objects.filter(
         Q(phenotype_mim_number__in=family_response['postDiscoveryOmimNumbers']) | Q(gene__gene_id__in=gene_ids) |
         get_omim_intervals_query(discovery_variant_intervals)

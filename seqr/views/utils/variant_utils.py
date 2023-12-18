@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 MAX_VARIANTS_FETCH = 1000
 DISCOVERY_CATEGORY = 'CMG Discovery Tags'
+OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
 
 
 def update_project_saved_variant_json(project, family_id=None, user=None):
@@ -132,7 +133,7 @@ def _saved_variant_genes_transcripts(variants):
 
 
 def get_omim_intervals_query(variants):
-    chroms = {v['chrom'] for v in variants}
+    chroms = {v['chrom'] for v in variants if v.get('svType')}
     return Q(phenotype_mim_number__isnull=False, gene__isnull=True, chrom__in=chroms)
 
 
@@ -249,7 +250,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         _add_discovery_tags(variants, discovery_tags)
     response['genesById'] = genes
 
-    if any(p.genome_version == GENOME_VERSION_GRCh38 for p in projects):
+    if any(p.genome_version == OMIM_GENOME_VERSION for p in projects):
         response['omimIntervals'] = _get_omim_intervals(variants)
 
     mme_submission_genes = MatchmakerSubmissionGenes.objects.filter(
