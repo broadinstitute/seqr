@@ -12,8 +12,7 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
-from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, \
-    update_variant_inheritance, get_sv_name
+from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family
 
 SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
     'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
@@ -122,7 +121,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
             sample_ids.add(sample.sample_id)
 
     individual_data_by_family = {
-        family_id: parse_family_individual_affected_data(family_individuals)
+        family_id: _parse_family_individual_affected_data(family_individuals)
         for family_id, family_individuals in individuals_by_family_id.items()
     }
 
@@ -208,7 +207,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
                 add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 
-def parse_family_individual_affected_data(family_individuals):
+def _parse_family_individual_affected_data(family_individuals):
     indiv_id_map = {individual.id: individual.guid for individual in family_individuals}
     return (
         {individual.guid for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED},
@@ -222,7 +221,11 @@ def parse_family_individual_affected_data(family_individuals):
 
 
 def _get_nested_variant_name(variant):
-    return get_sv_name(variant) if variant.get('svType') else variant['variantId']
+    return _get_sv_name(variant) if variant.get('svType') else variant['variantId']
+
+
+def _get_sv_name(variant_json):
+    return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
 
 
 def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date):
@@ -260,9 +263,7 @@ def _process_saved_variants(saved_variants_by_family, individual_data_by_family)
                 gene_ids.add(variant['main_transcript']['geneId'])
 
             if family_id in individual_data_by_family:
-                update_variant_inheritance(
-                    variant, individual_data_by_family[family_id],
-                    lambda gene_id: potential_com_het_gene_variants[gene_id].append(variant))
+                _update_variant_inheritance(variant, individual_data_by_family[family_id], potential_com_het_gene_variants)
             for guid in variant['discovery_tag_guids_by_name'].values():
                 potential_mnvs[guid].append(variant)
 
@@ -272,6 +273,80 @@ def _process_saved_variants(saved_variants_by_family, individual_data_by_family)
         )
 
     return compound_het_gene_id_by_family, gene_ids
+
+
+def _update_variant_inheritance(
+        variant_json: dict, family_individual_data: tuple[set[str], set[str], set[str], dict[str: list[str]]],
+        potential_com_het_gene_variants: dict[str: list[str]]) -> None:
+    """Compute the inheritance mode for the given variant and family"""
+
+    affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
+    is_x_linked = 'X' in variant_json.get('chrom', '')
+
+    genotype_zygosity = {
+        sample_guid: _get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
+        for sample_guid, genotype in variant_json.get('genotypes', {}).items()
+    }
+    inheritance_model, possible_comp_het = _get_inheritance_model(
+        genotype_zygosity, affected_individual_guids, unaffected_individual_guids, parent_guid_map, is_x_linked)
+
+    if possible_comp_het:
+        for gene_id in variant_json.get('transcripts', {}).keys():
+            potential_com_het_gene_variants[gene_id].append(variant_json)
+
+    variant_json.update({
+        'inheritance': inheritance_model,
+        'genotype_zygosity': genotype_zygosity,
+    })
+
+
+HET = 'Heterozygous'
+HOM_ALT = 'Homozygous'
+HEMI = 'Hemizygous'
+
+X_LINKED = 'X - linked'
+RECESSIVE = 'Autosomal recessive (homozygous)'
+DE_NOVO = 'de novo'
+DOMINANT = 'Autosomal dominant'
+
+
+def _get_inheritance_model(
+        genotype_zygosity: dict[str, str], affected_individual_guids: set[str], unaffected_individual_guids: set[str],
+        parent_guid_map: dict[str: list[str]], is_x_linked: bool) -> tuple[str, bool]:
+
+    affected_zygosities = {genotype_zygosity[g] for g in affected_individual_guids if g in genotype_zygosity}
+    unaffected_zygosities = {genotype_zygosity[g] for g in unaffected_individual_guids if g in genotype_zygosity}
+
+    inheritance_model = ''
+    possible_comp_het = False
+    if any(zygosity in unaffected_zygosities for zygosity in {HOM_ALT, HEMI}):
+        # No valid inheritance modes for hom alt unaffected individuals
+        inheritance_model = ''
+    elif any(zygosity in affected_zygosities for zygosity in {HOM_ALT, HEMI}):
+        inheritance_model = X_LINKED if is_x_linked else RECESSIVE
+    elif HET in affected_zygosities:
+        if HET not in unaffected_zygosities:
+            inherited = (not unaffected_individual_guids) or any(
+                guid for guid in affected_individual_guids
+                if genotype_zygosity.get(guid) == HET and
+                any(genotype_zygosity.get(parent_guid) == HET for parent_guid in parent_guid_map[guid])
+            )
+            inheritance_model = DOMINANT if inherited else DE_NOVO
+
+        if len(unaffected_individual_guids) < 2 or HET in unaffected_zygosities:
+            possible_comp_het = True
+
+    return inheritance_model, possible_comp_het
+
+
+def _get_genotype_zygosity(genotype, is_hemi_variant):
+    num_alt = genotype.get('numAlt')
+    cn = genotype.get('cn')
+    if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
+        return HOM_ALT
+    if num_alt == 1 or cn == 1 or cn == 3:
+        return HEMI if is_hemi_variant else HET
+    return None
 
 
 def _process_mnvs(potential_mnvs, saved_variants):
@@ -338,7 +413,7 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
 
     if variant.get('svType'):
         parsed_variant.update({
-            'sv_name': get_sv_name(variant),
+            'sv_name': _get_sv_name(variant),
             'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType']),
         })
     else:
