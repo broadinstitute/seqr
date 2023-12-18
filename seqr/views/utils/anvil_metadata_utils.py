@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from django.db.models import F, Q, Value, CharField
 from django.db.models.functions import Replace, JSONObject
 from django.contrib.postgres.aggregates import ArrayAgg
+import json
 
 from reference_data.models import Omim
 from seqr.models import Family, Individual
@@ -12,7 +13,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, \
-    get_variant_inheritance_models, get_sv_name
+    update_variant_inheritance, get_sv_name
 
 SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
     'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
@@ -45,14 +46,6 @@ ANCESTRY_DETAIL_MAP = {
   'FIN': 'Finnish',
   MIDDLE_EASTERN: 'Middle Eastern',
   'SAS': 'South Asian',
-}
-
-INHERITANCE_MODE_MAP = {
-    'X-linked': 'X - linked',
-    'AR-homozygote': 'Autosomal recessive (homozygous)',
-    'AR-comphet': 'Autosomal recessive (compound heterozygous)',
-    'de novo': 'de novo',
-    'AD': 'Autosomal dominant',
 }
 
 SV_TYPE_MAP = {
@@ -104,11 +97,11 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
         family_data_by_id[family_id] = f
 
     samples_by_family_id = defaultdict(list)
-    individual_id_map = {}
+    individual_ids_map = {}
     sample_ids = set()
     for individual, sample in individual_samples.items():
         samples_by_family_id[individual.family_id].append(sample)
-        individual_id_map[individual.id] = individual.individual_id
+        individual_ids_map[individual.id] = (individual.individual_id, individual.guid)
         sample_ids.add(sample.sample_id)
 
     individual_data_by_family = {
@@ -174,7 +167,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
                 has_dbgap_submission = sample.sample_type in dbgap_submission
 
             subject_row = _get_subject_row(
-                individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map)
+                individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_ids_map)
             subject_row.update(family_subject_row)
             add_row(subject_row, family_id, SUBJECT_ROW_TYPE)
 
@@ -226,14 +219,9 @@ def _process_saved_variants(saved_variants_by_family, individual_data_by_family)
             if variant['main_transcript']:
                 gene_ids.add(variant['main_transcript']['geneId'])
 
-            inheritance_models, potential_compound_het_gene_ids, genotype_zygosity = get_variant_inheritance_models(
-                variant, individual_data_by_family[family_id])
-            variant.update({
-                'inheritance_models': inheritance_models,
-                'genotype_zygosity': genotype_zygosity,
-            })
-            for gene_id in potential_compound_het_gene_ids:
-                potential_com_het_gene_variants[gene_id].append(variant)
+            update_variant_inheritance(
+                variant, individual_data_by_family[family_id],
+                lambda gene_id: potential_com_het_gene_variants[gene_id].append(variant))
             for guid in variant['discovery_tag_guids_by_name'].values():
                 potential_mnvs[guid].append(variant)
 
@@ -274,7 +262,7 @@ def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv
         if len(comp_het_variants) > 1:
             main_gene_ids = set()
             for variant in comp_het_variants:
-                variant['inheritance_models'] = {'AR-comphet'}
+                variant['inheritance'] = 'Autosomal recessive (compound heterozygous)'
                 if variant['main_transcript']:
                     main_gene_ids.add(variant['main_transcript']['geneId'])
                 else:
@@ -290,14 +278,9 @@ def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv
 
 def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id,
                                       get_additional_variant_fields, allow_missing_discovery_genes):
-    if variant['inheritance_models']:
-        inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
-    else:
-        inheritance_mode = 'Unknown / Other'
-
     parsed_variant = {
         'Gene_Class': 'Known',
-        'inheritance_description': inheritance_mode,
+        'inheritance_description': variant['inheritance'] or 'Unknown / Other',
         'discovery_notes': variant.get('discovery_notes', ''),
         'Chrom': variant.get('chrom', ''),
         'Pos': str(variant.get('pos', '')),
@@ -328,6 +311,7 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
             raise ErrorsWarningsException([f'Discovery variant {variant["variantId"]} in family {family} has no associated gene'])
         parsed_variant.update({
             'Gene': gene,
+            'gene_id': gene_id,
             'Ref': variant['ref'],
             'Alt': variant['alt'],
             'hgvsc': (variant['main_transcript'].get('hgvsc') or '').split(':')[-1],
@@ -336,7 +320,7 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
         })
     return variant['genotype_zygosity'], parsed_variant
 
-def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map):
+def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_ids_map):
     features_present = [feature['id'] for feature in individual.features or []]
     features_absent = [feature['id'] for feature in individual.absent_features or []]
     onset = individual.onset_age
@@ -346,8 +330,11 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
         all_tier_2 = all(variant[1]['Gene_Class'] == 'Tier 2 - Candidate' for variant in parsed_variants)
         solve_state = 'Tier 2' if all_tier_2 else 'Tier 1'
 
+    paternal_ids = individual_ids_map.get(individual.father_id, ('', ''))
+    maternal_ids = individual_ids_map.get(individual.mother_id, ('', ''))
     subject_row = {
         'subject_id': individual.individual_id,
+        'individual_guid': individual.guid,
         'sex': Individual.SEX_LOOKUP[individual.sex],
         'ancestry': ANCESTRY_MAP.get(individual.population, ''),
         'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
@@ -355,10 +342,14 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
         'congenital_status': Individual.ONSET_AGE_LOOKUP[onset] if onset else 'Unknown',
         'hpo_present': '|'.join(features_present),
         'hpo_absent': '|'.join(features_absent),
+        'disorders': individual.disorders,
+        'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
         'solve_state': solve_state,
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
-        'paternal_id': individual_id_map.get(individual.father_id, ''),
-        'maternal_id': individual_id_map.get(individual.mother_id, ''),
+        'paternal_id': paternal_ids[0],
+        'paternal_guid': paternal_ids[1],
+        'maternal_id': maternal_ids[0],
+        'maternal_guid': maternal_ids[1],
     }
     if airtable_metadata is not None:
         sequencing = airtable_metadata.get('SequencingProduct') or set()

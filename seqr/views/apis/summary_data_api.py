@@ -359,7 +359,7 @@ def sample_metadata_export(request, project_guid):
             for i, discovery_row in enumerate(row):
                 parsed_row = {
                     '{}-{}'.format(k, i + 1): discovery_row[k] for k in
-                    SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS + ['novel_mendelian_gene', 'phenotype_class'] if discovery_row.get(k)
+                    SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS + ['gene_id', 'novel_mendelian_gene', 'phenotype_class'] if discovery_row.get(k)
                 }
                 parsed_row['num_saved_variants'] = len(row)
                 rows_by_subject_family_id[(discovery_row['subject_id'], family_id)].update(parsed_row)
@@ -385,8 +385,10 @@ def sample_metadata_export(request, project_guid):
             'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
         }, family_values={
-            'family_guid': F('guid'),
-            'project_guid': F('project__guid'),
+            'familyGuid': F('guid'),
+            'projectGuid': F('project__guid'),
+            'analysisStatus': F('analysis_status'),
+            'displayName': F('family_id'),
             'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
         },
     )

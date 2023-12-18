@@ -16,9 +16,9 @@ from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, SEQR_SLACK_LOADING_N
 LOAD_SAMPLE_DATA = [
     ["Family ID", "Individual ID", "Previous Individual ID", "Paternal ID", "Maternal ID", "Sex", "Affected Status",
      "Notes", "familyNotes"],
-    ["1", "NA19675", "NA19675_1", "NA19678", "", "Female", "Affected", "A affected individual, test1-zsf", ""],
+    ["1", " NA19675 ", "NA19675_1 ", "NA19678 ", "", "Female", "Affected", "A affected individual, test1-zsf", ""],
     ["1", "NA19678", "", "", "", "Male", "Unaffected", "a individual note", ""],
-    ["21", "HG00735", "", "", "", "Unknown", "Unknown", "", "a new family"]]
+    ["21", " HG00735", "", "", "", "Unknown", "Unknown", "", "a new family"]]
 
 BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "A affected individual, test1-zsf", ""]]
 
@@ -118,6 +118,7 @@ INFO_META = [
 BAD_FORMAT_META = [
     b'##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
     b'##FORMAT=<ID=GQ,Number=1,Type=String,Description="Genotype Quality">\n',
+    b'##reference=file:///references/grch37/reference.bin\n',
 ]
 
 FORMAT_META = [
@@ -125,6 +126,10 @@ FORMAT_META = [
     b'##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
     b'##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
     b'##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+]
+
+REFERENCE_META = [
+    b'##reference=file:///gpfs/internal/sweng/production/Resources/GRCh38_1000genomes/GRCh38_full_analysis_set_plus_decoy_hla.fa\n'
 ]
 
 BAD_HEADER_LINE = [b'#CHROM\tID\tREF\tALT\tQUAL\n']
@@ -276,7 +281,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         # Test missing required fields in the request body
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'dataPath is required')
+        self.assertEqual(response.reason_phrase, 'Field(s) "genomeVersion, dataPath" are required')
         self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE,
                                                          TEST_NO_PROJECT_WORKSPACE_NAME,
                                                          meta_fields=['workspace.bucketName'])
@@ -359,13 +364,14 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Missing required FORMAT field(s) GT',
-            'Incorrect meta Type for FORMAT.GQ - expected "Integer", got "String"'
+            'Incorrect meta Type for FORMAT.GQ - expected "Integer", got "String"',
+            'Mismatched genome version - VCF metadata indicates GRCh37, GRCH38 provided',
         ])
 
         # Test valid operations
         mock_subprocess.reset_mock()
         mock_file_logger.reset_mock()
-        mock_subprocess.return_value.stdout = BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES
+        mock_subprocess.return_value.stdout = BASIC_META + INFO_META + FORMAT_META + REFERENCE_META + HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(VALIDATE_VCF_BODY))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), VALIDATE_VFC_RESPONSE)
@@ -659,7 +665,7 @@ class LoadAnvilDataAPITest(object):
             '\n'.join(self._expected_upload_data(test_add_data))
         )
         self.mock_mv_file.assert_called_with(
-            f'{TEMP_PATH}/*', f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base',
+            f'{TEMP_PATH}/*', f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base/',
             self.manager_user
         )
 
@@ -683,7 +689,7 @@ class LoadAnvilDataAPITest(object):
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
 
-        {file_type} file has been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base
+        {file_type} file has been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/
 
         DAG {dag_id} is triggered with following:
         ```{dag}```

@@ -15,7 +15,7 @@ from django.shortcuts import redirect
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project, CAN_EDIT, Sample
 from seqr.views.react_app import render_app_html
-from seqr.views.utils.airtable_utils import AirtableSession
+from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
 from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.airflow_utils import trigger_data_loading
@@ -122,18 +122,20 @@ def get_anvil_vcf_list(request, namespace, name, workspace_meta):
 
 @anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
 def validate_anvil_vcf(request, namespace, name, workspace_meta):
-    path = json.loads(request.body).get('dataPath')
-    if not path:
-        error = 'dataPath is required'
+    body = json.loads(request.body)
+    missing_fields = [field for field in ['genomeVersion', 'dataPath'] if not body.get(field)]
+    if missing_fields:
+        error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Validate the data path
+    path = body['dataPath']
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=path.lstrip('/'))
     file_to_check = validate_vcf_exists(data_path, request.user, path_name=path)
 
     # Validate the VCF to see if it contains all the required samples
-    samples = validate_vcf_and_get_samples(file_to_check)
+    samples = validate_vcf_and_get_samples(file_to_check, body['genomeVersion'])
 
     return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
 
@@ -265,7 +267,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
         genome_version=project.genome_version,
     )
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
-        'AnVIL Seqr Loading Requests Tracking', {
+        ANVIL_REQUEST_TRACKING_TABLE, {
             'Requester Name': user.get_full_name(),
             'Requester Email': user.email,
             'AnVIL Project URL': _get_seqr_project_url(project),

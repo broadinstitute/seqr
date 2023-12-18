@@ -1185,16 +1185,34 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], f'No gs://seqr-datasets/v02 project directory found for {PROJECT_GUID}')
-        mock_subprocess.assert_has_calls(
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_External/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_External/base/projects/R0001_1kg')
-        )
+
+        project_directory_paths = [
+            'gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/',
+            'gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg/',
+            'gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_External/base/projects/R0001_1kg/',
+            'gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_External/base/projects/R0001_1kg/',
+            'gs://seqr-datasets/v02/GRCh37/AnVIL_WGS/R0001_1kg/base/',
+            'gs://seqr-datasets/v02/GRCh37/AnVIL_WES/R0001_1kg/base/',
+        ]
+        expected_calls = []
+        for path in project_directory_paths:
+            expected_calls += self._ls_subprocess_calls(path)
+        mock_subprocess.assert_has_calls(expected_calls)
 
         # Test success
+        self._test_write_success(
+            'gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg/',
+            url, mock_subprocess, mock_open, project_directory_paths,
+        )
+        self._test_write_success(
+            'gs://seqr-datasets/v02/GRCh37/AnVIL_WES/R0001_1kg/base/',
+            url, mock_subprocess, mock_open, project_directory_paths,
+        )
+
+    def _test_write_success(self, success_path, url, mock_subprocess, mock_open, project_directory_paths):
+        success_index = project_directory_paths.index(success_path)
         mock_subprocess.reset_mock()
-        mock_subprocess.return_value.wait.side_effect = [1, 0, 0]
+        mock_subprocess.return_value.wait.side_effect = [1 for _ in range(success_index)] + [0, 0]
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
@@ -1205,14 +1223,14 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(len(file), 15)
         self.assertListEqual(file[:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS)
 
-        mock_subprocess.assert_has_calls(
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls(
-                'gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg', is_error=False,
-            ) + [
-            mock.call('gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg', stdout=-1, stderr=-2, shell=True),
+        expected_calls = []
+        for path in project_directory_paths[:success_index]:
+            expected_calls += self._ls_subprocess_calls(path)
+        expected_calls += self._ls_subprocess_calls(success_path, is_error=False) + [
+            mock.call('gsutil mv /mock/tmp/* ' + success_path, stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
-        ])
+        ]
+        mock_subprocess.assert_has_calls(expected_calls)
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1387,9 +1405,9 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
     HAS_DAG_ID_PREFIX = False
     SUCCESS_SLACK_DETAIL = """
 
-        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg
+        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/
 
-        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project
+        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project/
 
         DAG v03_pipeline-MITO is triggered with following:
         ```{
@@ -1455,7 +1473,7 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
 
         mock_subprocess.assert_has_calls([
             mock.call(
-                f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}',
+                f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/',
                 stdout=-1, stderr=-2, shell=True,  # nosec
             ) for project in self.PROJECTS
         ], any_order=True)
