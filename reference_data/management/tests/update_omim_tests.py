@@ -23,7 +23,7 @@ OMIM_DATA = [
     'chr1	1	567800000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	{Basal cell carcinoma, susceptibility to, 1}, 605462 (2)	\n',
 ]
 
-CACHED_OMIM_DATA = "ENSG00000235249\t607413\tAlzheimer disease neuronal thread protein\t\t\t\t\t\nENSG00000186092\t612367\tAlkaline phosphatase, plasma level of, QTL 2\tlinkage with rs1780324\tAlkaline phosphatase, plasma level of, QTL 2\t612367\t2\t"
+CACHED_OMIM_DATA = "ENSG00000235249\t607413\tAlzheimer disease neuronal thread protein\t\t\t\t\t\t1\t1\t27600000\nENSG00000186092\t612367\tAlkaline phosphatase, plasma level of, QTL 2\tlinkage with rs1780324\tAlkaline phosphatase, plasma level of, QTL 2\t612367\t2\t\t1\t1\t27600000\n\t606788\tAnorexia nervosa, susceptibility to, 1\t\tAnorexia nervosa, susceptibility to, 1\t606788\t2\t\t1\t1\t123400000\n\t605462\tBasal cell carcinoma, susceptibility to, 1\tassociated with rs7538876\tBasal cell carcinoma, susceptibility to, 1\t605462\t2\t\t1\t1\t567800000"
 
 
 class UpdateOmimTest(TestCase):
@@ -144,7 +144,6 @@ class UpdateOmimTest(TestCase):
         self.assertEqual(no_gene_record.phenotype_description, 'Basal cell carcinoma, susceptibility to, 1')
         self.assertEqual(no_gene_record.phenotype_inheritance, None)
         self.assertEqual(no_gene_record.phenotype_map_method, '2')
-        self.assertEqual(no_gene_record.phenotypic_series_number, None)
         self.assertEqual(no_gene_record.chrom, '1')
         self.assertEqual(no_gene_record.start, 1)
         self.assertEqual(no_gene_record.end, 567800000)
