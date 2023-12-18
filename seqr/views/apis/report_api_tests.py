@@ -1058,7 +1058,7 @@ class ReportAPITest(AirtableTest):
             'individual_count': 2,
             'family_structure': 'other',
             'family_history': 'Yes',
-            'genes': 'DEL:chr12:49045487-49045898; OR4G11P',
+            'genes': 'DEL:chr1:249045487-249045898; OR4G11P',
             'pmid_id': None,
             'phenotype_description': None,
             'phenotype_group': '',
