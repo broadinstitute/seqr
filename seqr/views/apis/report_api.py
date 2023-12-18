@@ -357,13 +357,9 @@ def gregor_export(request):
     family_individuals = defaultdict(dict)
     for i in individuals:
         grouped_data_type_individuals[i.individual_id].update({data_type: i for data_type in individual_data_types[i.id]})
-        family_individuals[i.family_id][i.guid] = i
+        family_individuals[i.family_id][i.guid] = _get_participant_id(i)
 
-    saved_variants_by_family = get_saved_discovery_variants_by_family(
-        variant_filter={'family__project__in': projects, 'alt__isnull': False},
-        format_variants=_parse_variant_genetic_findings,
-        get_family_id=lambda v: v['family_id'],
-    )
+    saved_variants_by_family = _get_gregor_discovery_variant_by_family(projects, variant_filter={'alt__isnull': False})
 
     airtable_sample_records, airtable_metadata_by_participant = _get_gregor_airtable_data(
         grouped_data_type_individuals.keys(), request.user)
@@ -469,6 +465,14 @@ def gregor_export(request):
         'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families'],
         'warnings': warnings,
     })
+
+
+def _get_gregor_discovery_variant_by_family(projects, variant_filter=None):
+    return get_saved_discovery_variants_by_family(
+        variant_filter={'family__project__in': projects, **(variant_filter or {})},
+        format_variants=_parse_variant_genetic_findings,
+        get_family_id=lambda v: v['family_id'],
+    )
 
 
 def _get_gregor_airtable_data(individual_ids, user):
@@ -640,7 +644,7 @@ def _get_gregor_genetic_findings_rows(rows, individual, participant_id, experime
                 'allele_balance_or_heteroplasmy_percentage': heteroplasmy,
                 'variant_inheritance': _get_variant_inheritance(individual, genotypes),
                 'additional_family_members_with_variant': '|'.join([
-                    f'Broad_{_get_participant_id(family_individuals[guid])}' for guid, g in genotypes.items()
+                    family_individuals[guid] for guid, g in genotypes.items()
                     if guid != individual.guid and guid in family_individuals and g['numAlt'] > 0
                 ]),
                 'method_of_discovery': '|'.join([
@@ -894,10 +898,7 @@ def _get_row_id(row):
 
 @analyst_required
 def family_metadata(request, project_guid):
-    if project_guid == 'all':
-        projects = get_internal_projects()
-    else:
-        projects = [get_project_and_check_permissions(project_guid, request.user)]
+    projects = _get_metadata_projects(project_guid, request.user)
 
     families_by_id = {}
     family_individuals = defaultdict(dict)
@@ -948,6 +949,12 @@ def family_metadata(request, project_guid):
     return create_json_response({'rows': list(families_by_id.values())})
 
 
+def _get_metadata_projects(project_guid, user):
+    if project_guid == 'all':
+        return get_internal_projects()
+    return [get_project_and_check_permissions(project_guid, user)]
+
+
 FAMILY_STRUCTURES = {
     1: 'singleton',
     2: 'duo',
@@ -961,3 +968,27 @@ def _get_family_structure(num_individuals, num_known_individuals):
             num_known_individuals in {0, 3} and num_individuals == num_known_individuals + 1):
         return FAMILY_STRUCTURES[num_individuals]
     return 'other'
+
+
+@analyst_required
+def variant_metadata(request, project_guid):
+    projects = _get_metadata_projects(project_guid, request.user)
+    variants_by_family = _get_gregor_discovery_variant_by_family(projects)
+
+    individuals = Individual.objects.filter(family_id__in=variants_by_family)
+    probands = individuals.filter(proband_relationship=Individual.SELF_RELATIONSHIP).annotate(
+        data_types=ArrayAgg('sample__sample_type', distinct=True, filter=Q(sample__isnull=False))
+    )
+    family_individuals = defaultdict(dict)
+    for family_id, guid, individual_id in individuals.values_list('family_id', 'guid', 'individual_id'):
+        family_individuals[family_id][guid] = individual_id
+
+    variant_rows = []
+    for individual in probands:
+        family_id = individual.family_id
+        variant_rows += _get_gregor_genetic_findings_rows(
+            variants_by_family[family_id], individual, participant_id=individual.individual_id, experiment_id=None,
+            individual_data_types=individual.data_types, family_individuals=family_individuals[family_id],
+        )
+
+    return create_json_response({'rows': variant_rows})

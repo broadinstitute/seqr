@@ -971,7 +971,7 @@ class ReportAPITest(AirtableTest):
         self.assertIn([
             'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh37', '1',
             '248367227', 'TC', 'T', '', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
-            'MONDO:0044970', '', 'Full', '', 'Broad_Broad_HG00732', 'SR-ES', '',
+            'MONDO:0044970', '', 'Full', '', 'Broad_HG00732', 'SR-ES', '',
         ], genetic_findings_file)
         if has_second_project:
             self.assertIn([
