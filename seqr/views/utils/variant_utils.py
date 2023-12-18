@@ -322,3 +322,9 @@ def get_saved_discovery_variants_by_family(variant_filter, format_variants, get_
         saved_variants_by_family[family_id].append(saved_variant)
 
     return saved_variants_by_family
+
+
+def get_sv_name(variant_json):
+    if variant_json.get('svType'):
+        return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
+    return None

@@ -12,7 +12,7 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
-from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family
+from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, get_sv_name
 
 SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
     'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
@@ -221,11 +221,7 @@ def _parse_family_individual_affected_data(family_individuals):
 
 
 def _get_nested_variant_name(variant):
-    return _get_sv_name(variant) if variant.get('svType') else variant['variantId']
-
-
-def _get_sv_name(variant_json):
-    return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
+    return get_sv_name(variant) or variant['variantId']
 
 
 def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date):
@@ -413,7 +409,7 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
 
     if variant.get('svType'):
         parsed_variant.update({
-            'sv_name': _get_sv_name(variant),
+            'sv_name': get_sv_name(variant),
             'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType']),
         })
     else:

@@ -23,7 +23,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
     get_project_guids_user_can_view, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
-from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family
+from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, get_sv_name
 
 from seqr.models import Project, Family, Sample, Individual
 from reference_data.models import Omim, HumanPhenotypeOntology, GENOME_VERSION_LOOKUP
@@ -359,7 +359,11 @@ def gregor_export(request):
         grouped_data_type_individuals[i.individual_id].update({data_type: i for data_type in individual_data_types[i.id]})
         family_individuals[i.family_id][i.guid] = _get_participant_id(i)
 
-    saved_variants_by_family = _get_gregor_discovery_variant_by_family(projects, variant_filter={'alt__isnull': False})
+    saved_variants_by_family = get_saved_discovery_variants_by_family(
+        variant_filter={'family__project__in': projects, 'alt__isnull': False},
+        format_variants=_parse_variant_genetic_findings,
+        get_family_id=lambda v: v['family_id'],
+    )
 
     airtable_sample_records, airtable_metadata_by_participant = _get_gregor_airtable_data(
         grouped_data_type_individuals.keys(), request.user)
@@ -467,14 +471,6 @@ def gregor_export(request):
     })
 
 
-def _get_gregor_discovery_variant_by_family(projects, variant_filter=None):
-    return get_saved_discovery_variants_by_family(
-        variant_filter={'family__project__in': projects, **(variant_filter or {})},
-        format_variants=_parse_variant_genetic_findings,
-        get_family_id=lambda v: v['family_id'],
-    )
-
-
 def _get_gregor_airtable_data(individual_ids, user):
     sample_records, session = get_airtable_samples(
         individual_ids, user, fields=[SMID_FIELD, PARTICIPANT_ID_FIELD, 'Recontactable'],
@@ -548,11 +544,12 @@ def _get_phenotype_row(feature):
     }
 
 
-def _parse_variant_genetic_findings(variant_models, *args):
+def _parse_variant_genetic_findings(variant_models, *args, variant_json_fields=None):
     variant_models = variant_models.annotate(
         omim_numbers=F('family__post_discovery_omim_numbers'),
         mondo_id=F('family__mondo_id'),
     )
+    variant_json_fields = ['genotypes'] + (variant_json_fields or [])
     variants = []
     gene_ids = set()
     mim_numbers = set()
@@ -582,15 +579,16 @@ def _parse_variant_genetic_findings(variant_models, *args):
             'ref': variant.ref,
             'alt': variant.alt,
             'variant_type': 'SNV/INDEL',
-            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant.saved_variant_json['genomeVersion']],
-            'genotypes': variant.saved_variant_json['genotypes'],
+            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
             'gene_id': gene_id,
             'transcript': main_transcript.get('transcriptId'),
             'hgvsc': (main_transcript.get('hgvsc') or '').split(':')[-1],
             'hgvsp': (main_transcript.get('hgvsp') or '').split(':')[-1],
+            'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
             'gene_known_for_phenotype': 'Known' if condition_id else 'Candidate',
             'condition_id': condition_id,
             'phenotype_contribution': 'Full',
+            **{k: variant_json.get(k) for k in variant_json_fields},
         })
 
     genes_by_id = get_genes(gene_ids)
@@ -974,7 +972,32 @@ def _get_family_structure(num_individuals, num_known_individuals):
 def variant_metadata(request, project_guid):
     projects = _get_metadata_projects(project_guid, request.user)
 
-    variants_by_family = _get_gregor_discovery_variant_by_family(projects)
+    family_data_by_id = {
+        f['id']: f for f in Family.objects.filter(
+            project__in=projects).values('id', 'family_id', 'project__name', **METADATA_FAMILY_VALUES)
+    }
+
+    def _format_variants(variant_models, *args):
+        variants = _parse_variant_genetic_findings(
+            variant_models, *args, variant_json_fields=['clinvar', 'svType', 'svName', 'end'],
+        )
+        for variant in variants:
+            family_id = variant.pop('family_id')
+            family_data = family_data_by_id[family_id]
+            # TODO MME, notes
+            variant.update({
+                'family_db_id': family_id,
+                'project_id': family_data['project__name'],
+                'sv_name': get_sv_name(variant),
+                **family_data,
+            })
+        return variants
+
+    variants_by_family = get_saved_discovery_variants_by_family(
+        variant_filter={'family_id__in': family_data_by_id},
+        format_variants=_format_variants,
+        get_family_id=lambda v: v['family_db_id'],
+    )
 
     individuals = Individual.objects.filter(family_id__in=variants_by_family)
     probands = individuals.filter(proband_relationship=Individual.SELF_RELATIONSHIP).annotate(
@@ -984,21 +1007,11 @@ def variant_metadata(request, project_guid):
     for family_id, guid, individual_id in individuals.values_list('family_id', 'guid', 'individual_id'):
         family_individuals[family_id][guid] = individual_id
 
-    family_data_by_id = {
-        f['id']: f for f in Family.objects.filter(
-            id__in=variants_by_family).values('id', 'family_id', 'project__name', **METADATA_FAMILY_VALUES)
-    }
-
     variant_rows = []
     for individual in probands:
         family_id = individual.family_id
-        family_data = family_data_by_id[family_id]
-        family_variants = [
-            {**variant, **family_data, 'project_id': family_data['project__name']}
-            for variant in variants_by_family[family_id]
-        ]
         variant_rows += _get_gregor_genetic_findings_rows(
-            family_variants, individual, participant_id=individual.individual_id, experiment_id=None,
+            variants_by_family[family_id], individual, participant_id=individual.individual_id, experiment_id=None,
             individual_data_types=individual.data_types, family_individuals=family_individuals[family_id],
         )
 
