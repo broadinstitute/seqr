@@ -3,7 +3,7 @@ from datetime import datetime
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.models import User
-from django.db.models import CharField, F, Value, Case, When
+from django.db.models import CharField, F, Value
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
 from random import randint
@@ -27,8 +27,7 @@ from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst
     login_and_policies_required, get_project_and_check_permissions, get_internal_projects
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, \
     FAMILY_ROW_TYPE, DISCOVERY_ROW_TYPE
-from seqr.views.utils.variant_utils import get_variants_response, get_discovery_phenotype_class, parse_saved_variant_json, \
-    DISCOVERY_CATEGORY
+from seqr.views.utils.variant_utils import get_variants_response, parse_saved_variant_json, DISCOVERY_CATEGORY
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 MAX_SAVED_VARIANTS = 10000
@@ -377,19 +376,11 @@ def sample_metadata_export(request, project_guid):
 
     parse_anvil_metadata(
         projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'), request.user, _add_row,
-        allow_missing_discovery_genes=True,
+        include_metadata=True,
         omit_airtable=not include_airtable,
         get_additional_variant_fields=_get_additional_variant_fields,
         get_additional_sample_fields=lambda sample, airtable_metadata: {
-            'data_type': sample.sample_type,
-            'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
-        }, family_values={
-            'familyGuid': F('guid'),
-            'projectGuid': F('project__guid'),
-            'analysisStatus': F('analysis_status'),
-            'displayName': F('family_id'),
-            'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
         },
     )
 
@@ -416,8 +407,23 @@ def _get_additional_variant_fields(variant, *args):
     is_novel = 'Y' if any('Novel gene' in name for name in discovery_tag_names) else 'N'
     return {
         'novel_mendelian_gene': is_novel,
-        'phenotype_class': get_discovery_phenotype_class(discovery_tag_names),
+        'phenotype_class': _get_discovery_phenotype_class(discovery_tag_names),
     }
+
+
+DISCOVERY_PHENOTYPE_CLASSES = {
+    'NEW': ['Tier 1 - Known gene, new phenotype', 'Tier 2 - Known gene, new phenotype'],
+    'EXPAN': ['Tier 1 - Phenotype expansion', 'Tier 1 - Novel mode of inheritance', 'Tier 2 - Phenotype expansion'],
+    'UE': ['Tier 1 - Phenotype not delineated', 'Tier 2 - Phenotype not delineated'],
+    'KNOWN': ['Known gene for phenotype'],
+}
+
+
+def _get_discovery_phenotype_class(variant_tag_names):
+    for phenotype_class, class_tag_names in DISCOVERY_PHENOTYPE_CLASSES.items():
+        if any(tag in variant_tag_names for tag in class_tag_names):
+            return phenotype_class
+    return None
 
 
 def _get_airtable_collaborator_names(user, collaborator_ids):
