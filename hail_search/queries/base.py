@@ -752,7 +752,10 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.annotate(v2=ch_ht.v2.items().filter(
             lambda x: ~ch_ht.v2.contains(v1_key) | ~ch_ht.v1_set.contains(x[0]) | (x[0] > v1_key)
         ))
-        ch_ht = ch_ht.group_by('v1').aggregate(v2_items=hl.agg.collect(ch_ht.v2).flatmap(lambda x: x))
+        ch_ht = ch_ht.group_by('v1').aggregate(
+            comp_het_gene_ids=hl.agg.collect_as_set(ch_ht.gene_ids),
+            v2_items=hl.agg.collect(ch_ht.v2).flatmap(lambda x: x),
+        )
         ch_ht = ch_ht.annotate(v2=hl.dict(ch_ht.v2_items).values())
         ch_ht = ch_ht.explode(ch_ht.v2)._key_by_assert_sorted()
 
@@ -775,7 +778,7 @@ class BaseHailTableQuery(object):
     def _annotated_comp_het_variant(ch_ht, field):
         variant = ch_ht[field]
         return variant.annotate(
-            #gene_id=ch_ht.gene_ids, TODO store gene id
+            comp_het_gene_ids=ch_ht.comp_het_gene_ids,
             family_entries=hl.enumerate(ch_ht.valid_families).filter(
                 lambda x: x[1]).map(lambda x: variant.comp_het_family_entries[x[0]]),
         )
