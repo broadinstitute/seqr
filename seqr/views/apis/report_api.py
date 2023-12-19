@@ -439,7 +439,8 @@ def gregor_export(request):
             genetic_findings_rows += _get_gregor_genetic_findings_rows(
                 saved_variants_by_family.get(family.id), individual, participant_id,
                 data_type_individuals.keys(), family_individuals[family.id],
-                post_process_variant=_post_process_gregor_variant, experiment_id=experiment_id,
+                post_process_variant=_post_process_gregor_variant, experiment_id=experiment_id, variant_type='SNV/INDEL',
+
             )
 
     file_data = [
@@ -585,7 +586,6 @@ def _parse_variant_genetic_findings(variant_models, *args, variant_json_fields=N
             'pos': pos,
             'ref': variant.ref,
             'alt': variant.alt,
-            'variant_type': 'SNV/INDEL',
             'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
             'gene_id': gene_id,
             'transcript': main_transcript.get('transcriptId'),
@@ -986,7 +986,7 @@ def variant_metadata(request, project_guid):
     projects = _get_metadata_projects(project_guid, request.user)
 
     family_data_by_id = {
-        f['id']: {'project_id': f.pop('project__name'), **f} for f in Family.objects.filter(
+        f.pop('id'): {'project_id': f.pop('project__name'), **f} for f in Family.objects.filter(
             project__in=projects).values('id', 'family_id', 'project__name', **METADATA_FAMILY_VALUES)
     }
 
