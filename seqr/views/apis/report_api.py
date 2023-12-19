@@ -16,7 +16,7 @@ from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import get_airtable_samples
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, get_genotype_zygosity, get_discovery_notes, get_family_solve_state, \
-    get_family_metadata, ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
+    get_family_metadata, ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
     SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION, HET, HOM_ALT
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
@@ -98,10 +98,11 @@ FAMILY_TABLE_COLUMNS = [
     'entity:family_id', 'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_image', 'pedigree_detail',
     'family_history', 'family_onset',
 ]
-DISCOVERY_TABLE_CORE_COLUMNS = ['subject_id', 'sample_id']
-DISCOVERY_TABLE_VARIANT_COLUMNS = list(SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS)
-DISCOVERY_TABLE_VARIANT_COLUMNS.insert(4, 'variant_genome_build')
-DISCOVERY_TABLE_VARIANT_COLUMNS.insert(14, 'significance')
+DISCOVERY_TABLE_COLUMNS = [
+    'entity:discovery_id', 'subject_id', 'sample_id', 'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity',
+    'variant_genome_build', 'Chrom', 'Pos', 'Ref', 'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type',
+    'significance', 'discovery_notes',
+]
 
 GENOME_BUILD_MAP = {
     '37': 'GRCh37',
@@ -157,7 +158,7 @@ def anvil_export(request, project_guid):
         ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, parsed_rows[SUBJECT_ROW_TYPE]],
         ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, parsed_rows[SAMPLE_ROW_TYPE]],
         ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, parsed_rows[FAMILY_ROW_TYPE]],
-        ['{}_PI_Discovery'.format(project.name), ['entity:discovery_id'] + DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, parsed_rows[DISCOVERY_ROW_TYPE]],
+        ['{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_COLUMNS, parsed_rows[DISCOVERY_ROW_TYPE]],
     ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
 
 

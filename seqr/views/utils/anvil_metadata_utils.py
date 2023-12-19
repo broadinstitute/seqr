@@ -15,11 +15,6 @@ from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, get_sv_name
 
-SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [  # TODO
-    'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
-    'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'discovery_notes',
-]
-
 HISPANIC = 'AMR'
 MIDDLE_EASTERN = 'MDE'
 OTHER_POPULATION = 'OTH'
@@ -107,7 +102,6 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
             Value('\t'), Value(' '),
         ),
-        'genome_version': F('project__genome_version'),
         'analysisStatus': METADATA_FAMILY_VALUES['analysisStatus'],
     }
     format_fields = {
@@ -141,11 +135,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
 
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(list(sample_ids), user)
 
-    # TODO
-    # saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(family_data_by_id.keys()))
-    # compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
-    #     saved_variants_by_family, individual_data_by_family)
-    # genes_by_id = get_genes(gene_ids)
+    # TODO move to helpers in file
     from seqr.views.apis.report_api import _get_gregor_discovery_variants_by_family, _get_gregor_genetic_findings_rows
     saved_variants_by_family = _get_gregor_discovery_variants_by_family(projects, variant_json_fields=['svType', 'svName', 'end'])
 
@@ -164,7 +154,6 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
         saved_variants = saved_variants_by_family[family_id]
 
         family_individuals = individuals_by_family_id[family_id]
-        genome_version = family_subject_row.pop('genome_version')
 
         mim_numbers = family_subject_row.pop('post_discovery_omim_numbers')
         if mim_numbers:
@@ -178,14 +167,6 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
 
         family_consanguinity = any(individual.consanguinity is True for individual in family_individuals)
 
-        # TODO
-        # parsed_variants = [
-        #     _parse_anvil_family_saved_variant(
-        #         variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id,
-        #         get_additional_variant_fields, allow_missing_discovery_genes=include_metadata,
-        #     )
-        #     for variant in saved_variants]
-
         family_row = {
             'family_id': family_subject_row['family_id'],
             'consanguinity': 'Present' if family_consanguinity else 'None suspected',
@@ -196,8 +177,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
         add_row(family_row, family_id, FAMILY_ROW_TYPE)
 
         if no_variant_zygosity:
-            # TODO
-            #add_row([v for _, v in parsed_variants], family_id, DISCOVERY_ROW_TYPE)
+            # TODO confirm family_metadata still working
             add_row(saved_variants, family_id, DISCOVERY_ROW_TYPE)
 
         for individual in family_individuals:
@@ -223,8 +203,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                 add_row(sample_row, family_id, SAMPLE_ROW_TYPE)
 
             if not no_variant_zygosity:
-                # TODO
-                #discovery_row = _get_discovery_rows(individual, sample, parsed_variants)
+                # TODO clean up call
                 discovery_row = _get_gregor_genetic_findings_rows(
                     saved_variants, individual, participant_id=subject_row['subject_id'], individual_data_types=[], family_individuals={}, post_process_variant=lambda *args: {})
                 add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
@@ -269,6 +248,7 @@ def _get_sorted_search_samples(projects):
     return get_search_samples(projects, active_only=False).order_by('-loaded_date')
 
 
+# TODO remove
 def _process_saved_variants(saved_variants_by_family, individual_data_by_family):
     gene_ids = set()
     compound_het_gene_id_by_family = {}
@@ -415,6 +395,7 @@ def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv
     return compound_het_gene_id_by_family
 
 
+# TODO remove
 def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id,
                                       get_additional_variant_fields, allow_missing_discovery_genes):
     parsed_variant = {
@@ -513,6 +494,7 @@ def _get_sample_row(sample, subject_id, has_dbgap_submission, airtable_metadata,
     return sample_row
 
 
+# TODO remove
 def _get_discovery_rows(individual, sample, parsed_variants):
     discovery_row = {
         'subject_id': individual.individual_id,
@@ -555,6 +537,7 @@ def _format_variants(project_saved_variants, *args):
     return variants
 
 
+# TODO remove
 def _get_parsed_saved_discovery_variants_by_family(families):
     return get_saved_discovery_variants_by_family(
         {'family__id__in': families}, _format_variants, lambda saved_variant: saved_variant.pop('familyId'),
