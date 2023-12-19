@@ -1085,7 +1085,6 @@ class ReportAPITest(AirtableTest):
             'analysisStatus': 'Q',
             'analysis_groups': '',
             'consanguinity': 'None suspected',
-            'notes': '',
         })
 
         # Test all projects
@@ -1118,7 +1117,6 @@ class ReportAPITest(AirtableTest):
             'analysisStatus': 'Q',
             'analysis_groups': 'Accepted; Test Group 1',
             'consanguinity': 'None suspected',
-            'notes': '',
         })
 
         # Test empty project

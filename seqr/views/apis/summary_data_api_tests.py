@@ -87,7 +87,6 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "proband_relationship": "Self",
     "consanguinity": "None suspected",
     'analysis_groups': '',
-    'notes': '',
 }
 EXPECTED_SAMPLE_METADATA_ROW = {
     "dbgap_submission": "No",
@@ -138,7 +137,6 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'Ref-1': 'TC',
     'Zygosity-1': 'Heterozygous',
     'analysis_groups': '',
-    'notes': '',
 }
 
 AIRTABLE_SAMPLE_RECORDS = {

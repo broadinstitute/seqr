@@ -79,7 +79,6 @@ METADATA_FAMILY_VALUES = {
     'displayName': F('family_id'),
     # TODO 'analysisStatus': F('analysis_status'),
     'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
-    'notes': ArrayAgg('familynote__note', distinct=True, filter=Q(familynote__note_type='A')),
 }
 
 
@@ -117,7 +116,8 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             'solve_state': get_family_solve_state(f['analysisStatus']),
         })
         if include_metadata:
-            f.update({k: '; '.join(f[k]) for k in ['analysis_groups', 'notes']})
+            # TODO?
+            f.update({k: '; '.join(f[k]) for k in ['analysis_groups']})
         family_data_by_id[family_id] = f
 
     individuals_by_family_id = defaultdict(list)

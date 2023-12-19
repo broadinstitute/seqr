@@ -55,7 +55,6 @@ const CORE_COLUMNS = [
   { name: 'date_data_generation', secondaryExportColumn: 'filter_flags' },
   { name: 'consanguinity' },
   { name: 'family_history' },
-  { name: 'notes' },
 ]
 
 const AIRTABLE_DBGAP_SUBMISSION_FIELD = 'dbgap_submission'
