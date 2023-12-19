@@ -279,7 +279,7 @@ def _update_variant_inheritance(
     is_x_linked = 'X' in variant_json.get('chrom', '')
 
     genotype_zygosity = {
-        sample_guid: _get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
+        sample_guid: get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
         for sample_guid, genotype in variant_json.get('genotypes', {}).items()
     }
     inheritance_model, possible_comp_het = _get_inheritance_model(
@@ -334,7 +334,7 @@ def _get_inheritance_model(
     return inheritance_model, possible_comp_het
 
 
-def _get_genotype_zygosity(genotype, is_hemi_variant):
+def get_genotype_zygosity(genotype, is_hemi_variant=False):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
     if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
@@ -350,19 +350,22 @@ def _process_mnvs(potential_mnvs, saved_variants):
         if len(mnvs) <= 2:
             continue
         parent_mnv = next((v for v in mnvs if not v.get('populations')), mnvs[0])
-        nested_mnvs = [v for v in mnvs if v['variantId'] != parent_mnv['variantId']]
-        mnv_genes |= {gene_id for variant in nested_mnvs for gene_id in variant['transcripts'].keys()}
+        mnv_genes |= {gene_id for variant in mnvs for gene_id in variant['transcripts'].keys()}
         parent_transcript = parent_mnv.get('main_transcript') or {}
-        parent_details = [parent_transcript[key] for key in ['hgvsc', 'hgvsp'] if parent_transcript.get(key)]
-        parent_name = _get_nested_variant_name(parent_mnv)
-        discovery_notes = 'The following variants are part of the {variant_type} variant {parent}: {nested}'.format(
-            variant_type='complex structural' if parent_mnv.get('svType') else 'multinucleotide',
-            parent='{} ({})'.format(parent_name, ', '.join(parent_details)) if parent_details else parent_name,
-            nested=', '.join(sorted([_get_nested_variant_name(v) for v in nested_mnvs])))
-        for variant in nested_mnvs:
+        discovery_notes = get_discovery_notes({**parent_transcript, **parent_mnv}, mnvs, id_field='variantId')
+        for variant in mnvs:
             variant['discovery_notes'] = discovery_notes
         saved_variants.remove(parent_mnv)
     return mnv_genes
+
+
+def get_discovery_notes(parent_mnv, mnvs, id_field):
+    variant_type = 'complex structural' if parent_mnv.get('svType') else 'multinucleotide'
+    parent_name = _get_nested_variant_name(parent_mnv)
+    parent_details = [parent_mnv[key] for key in ['hgvsc', 'hgvsp'] if parent_mnv.get(key)]
+    parent = f'{parent_name} ({", ".join(parent_details)})' if parent_details else parent_name
+    nested_mnvs = sorted([_get_nested_variant_name(v) for v in mnvs if v[id_field] != parent_mnv[id_field]])
+    return f'The following variants are part of the {variant_type} variant {parent}: {", ".join(nested_mnvs)}'
 
 
 def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv_genes):
