@@ -76,24 +76,40 @@ DISCOVERY_ROW_TYPE = 'discovery'
 METADATA_FAMILY_VALUES = {
     'familyGuid': F('guid'),
     'projectGuid': F('project__guid'),
+    'analysisStatus': F('analysis_status'),
     'displayName': F('family_id'),
-    # TODO 'analysisStatus': F('analysis_status'),
-    'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
 }
+
+
+def get_family_metadata(projects, additional_fields=None, additional_values=None, format_fields=None, include_metadata=False):
+    values = {
+        **(METADATA_FAMILY_VALUES if include_metadata else {}),
+        **(additional_values or {}),
+    }
+    family_data = Family.objects.filter(project__in=projects).distinct().values(
+        'id', 'family_id', 'project__name', *(additional_fields or []), **values,
+    )
+
+    family_data_by_id = {}
+    for f in family_data:
+        family_id = f.pop('id')
+        f.update({
+            'project_id': f.pop('project__name'),
+            **{k: format(f) for k, format in (format_fields or {}).items()},
+        })
+        family_data_by_id[family_id] = f
+
+    return family_data_by_id
 
 
 def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False,
                           get_additional_sample_fields=None, get_additional_variant_fields=None, no_variant_zygosity=False):
     if max_loaded_date:
         individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
-        family_filter = {'individual__in': individual_samples}
     else:
-        family_filter = {'project__in': projects}
         individual_samples = _get_all_project_individual_samples(projects)
 
-    family_data = Family.objects.filter(**family_filter).distinct().values(
-        'id', 'family_id', 'post_discovery_omim_numbers', 'project__name',
-        analysisStatus=F('analysis_status'),
+    family_values = dict(
         pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
         phenotype_description=Replace(
             Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
@@ -104,21 +120,20 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             'project__projectcategory__name', distinct=True,
             filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
         ),
-        **(METADATA_FAMILY_VALUES if include_metadata else {}),
+        analysisStatus=METADATA_FAMILY_VALUES['analysisStatus'],
     )
+    format_fields = {
+        'phenotype_group': lambda f: '|'.join(f.pop('phenotype_groups')),
+        'solve_state': lambda f: get_family_solve_state(f['analysisStatus']),
+    }
+    if include_metadata:
+        family_values['analysis_groups'] = ArrayAgg(
+            'analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False))
+        format_fields['analysis_groups'] = lambda f: '; '.join(f['analysis_groups'])
 
-    family_data_by_id = {}
-    for f in family_data:
-        family_id = f.pop('id')
-        f.update({
-            'project_id': f.pop('project__name'),
-            'phenotype_group': '|'.join(f.pop('phenotype_groups')),
-            'solve_state': get_family_solve_state(f['analysisStatus']),
-        })
-        if include_metadata:
-            # TODO?
-            f.update({k: '; '.join(f[k]) for k in ['analysis_groups']})
-        family_data_by_id[family_id] = f
+    family_data_by_id = get_family_metadata(
+        projects, additional_fields=['post_discovery_omim_numbers'], additional_values=family_values,
+        format_fields=format_fields, include_metadata=include_metadata)
 
     individuals_by_family_id = defaultdict(list)
     individual_ids_map = {}
@@ -142,7 +157,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
     genes_by_id = get_genes(gene_ids)
 
     mim_numbers = set()
-    for family in family_data:
+    for family in family_data_by_id.values():
         mim_numbers.update(family['post_discovery_omim_numbers'])
     mim_decription_map = {
         o.phenotype_mim_number: o.phenotype_description

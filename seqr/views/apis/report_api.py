@@ -16,8 +16,8 @@ from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import get_airtable_samples
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, get_genotype_zygosity, get_discovery_notes, get_family_solve_state, \
-    ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
-    SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION, METADATA_FAMILY_VALUES, HET, HOM_ALT
+    get_family_metadata, ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
+    SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION, HET, HOM_ALT
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
@@ -975,10 +975,7 @@ def _get_family_structure(num_individuals, num_known_individuals):
 def variant_metadata(request, project_guid):
     projects = _get_metadata_projects(project_guid, request.user)
 
-    family_data_by_id = {
-        f.pop('id'): {'project_id': f.pop('project__name'), **f} for f in Family.objects.filter(
-            project__in=projects).values('id', 'family_id', 'project__name', **METADATA_FAMILY_VALUES)
-    }
+    family_data_by_id = get_family_metadata(projects, include_metadata=True)
 
     variants_by_family = _get_gregor_discovery_variants_by_family(
         projects, variant_json_fields=['clinvar', 'svType', 'svName', 'end'], variant_model_annotations={
