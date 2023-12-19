@@ -219,8 +219,8 @@ def _parse_family_individual_affected_data(family_individuals):
     )
 
 
-def _get_nested_variant_name(variant):
-    return get_sv_name(variant) or variant['variantId']
+def _get_nested_variant_name(variant, get_variant_id):
+    return get_sv_name(variant) or get_variant_id(variant)
 
 
 def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date):
@@ -352,19 +352,21 @@ def _process_mnvs(potential_mnvs, saved_variants):
         parent_mnv = next((v for v in mnvs if not v.get('populations')), mnvs[0])
         mnv_genes |= {gene_id for variant in mnvs for gene_id in variant['transcripts'].keys()}
         parent_transcript = parent_mnv.get('main_transcript') or {}
-        discovery_notes = get_discovery_notes({**parent_transcript, **parent_mnv}, mnvs, id_field='variantId')
+        discovery_notes = get_discovery_notes(
+            {**parent_transcript, **parent_mnv}, mnvs, get_variant_id=lambda v: v['variantId'])
         for variant in mnvs:
             variant['discovery_notes'] = discovery_notes
         saved_variants.remove(parent_mnv)
     return mnv_genes
 
 
-def get_discovery_notes(parent_mnv, mnvs, id_field):
+def get_discovery_notes(parent_mnv, mnvs, get_variant_id):
     variant_type = 'complex structural' if parent_mnv.get('svType') else 'multinucleotide'
-    parent_name = _get_nested_variant_name(parent_mnv)
+    parent_name = _get_nested_variant_name(parent_mnv, get_variant_id)
     parent_details = [parent_mnv[key] for key in ['hgvsc', 'hgvsp'] if parent_mnv.get(key)]
     parent = f'{parent_name} ({", ".join(parent_details)})' if parent_details else parent_name
-    nested_mnvs = sorted([_get_nested_variant_name(v) for v in mnvs if v[id_field] != parent_mnv[id_field]])
+    mnv_names = [_get_nested_variant_name(v, get_variant_id) for v in mnvs]
+    nested_mnvs = sorted([v for v in mnv_names if v != parent_name])
     return f'The following variants are part of the {variant_type} variant {parent}: {", ".join(nested_mnvs)}'
 
 

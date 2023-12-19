@@ -900,7 +900,7 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
 
 
 def _get_row_id(row):
-    id_col = next(col for col in ['participant_id', 'experiment_sample_id', 'family_id'] if col in row)
+    id_col = next(col for col in ['genetic_findings_id', 'participant_id', 'experiment_sample_id', 'family_id'] if col in row)
     return row[id_col]
 
 
@@ -1008,7 +1008,8 @@ def variant_metadata(request, project_guid):
             discovery_notes = None
             if len(gene_variants) > 2:
                 parent_mnv = next((v for v in gene_variants if len(v['individual_genotype'])), gene_variants[0])
-                discovery_notes = get_discovery_notes(parent_mnv, gene_variants, id_field='genetic_findings_id')
+                discovery_notes = get_discovery_notes(
+                    parent_mnv, gene_variants, get_variant_id=lambda v: f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}")
             return {
                 'MME': v.pop('matchmaker_individual') == individual.guid,
                 'sv_name': get_sv_name(v),
