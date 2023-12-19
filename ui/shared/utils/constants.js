@@ -1749,6 +1749,27 @@ export const ACMG_RULE_SPECIFICATION_COMP_HET = [
   ],
 ]
 
+export const VARIANT_METADATA_COLUMNS = [
+  { name: 'genetic_findings_id' },
+  { name: 'variant_reference_assembly' },
+  { name: 'chrom' },
+  { name: 'pos' },
+  { name: 'ref' },
+  { name: 'alt' },
+  { name: 'gene' },
+  { name: 'seqr_chosen_consequence' },
+  { name: 'transcript' },
+  { name: 'hgvsc' },
+  { name: 'hgvsp' },
+  { name: 'zygosity' },
+  { name: 'sv_name' },
+  { name: 'svType', content: 'sv_type' },
+  { name: 'variant_inheritance' },
+  { name: 'gene_known_for_phenotype' },
+  { name: 'Submitted to MME', format: ({ MME }) => (MME ? 'Yes' : 'No') },
+  { name: 'notes' },
+]
+
 // RNAseq sample tissue type mapping
 export const TISSUE_DISPLAY = {
   WB: 'Whole Blood',

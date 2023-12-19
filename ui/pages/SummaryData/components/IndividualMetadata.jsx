@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import { getUser } from 'redux/selectors'
 import { BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
 import LoadReportTable from 'shared/components/table/LoadReportTable'
-import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
+import { FAMILY_ANALYSIS_STATUS_LOOKUP, VARIANT_METADATA_COLUMNS } from 'shared/utils/constants'
 
 const ALL_PROJECTS_PATH = 'all'
 const GREGOR_PROJECT_PATH = 'gregor'
@@ -67,27 +67,6 @@ const AIRTABLE_COLUMNS = [
   { name: 'sample_provider' },
 ]
 
-// TODO update to match sheet
-const GENE_COL = 'Gene'
-const VARIANT_COLUMNS = [
-  GENE_COL,
-  'Gene_Class',
-  'novel_mendelian_gene',
-  'phenotype_class',
-  'inheritance_description',
-  'Zygosity',
-  'Chrom',
-  'Pos',
-  'Ref',
-  'Alt',
-  'hgvsc',
-  'hgvsp',
-  'Transcript',
-  'sv_name',
-  'sv_type',
-  'discovery_notes',
-]
-
 const ANALYST_VIEW_ALL_PAGES = [
   { name: 'GREGoR', downloadName: 'All_GREGoR_Projects', path: GREGOR_PROJECT_PATH },
   { name: 'Broad', downloadName: 'All_AnVIL_Projects', path: ALL_PROJECTS_PATH },
@@ -98,8 +77,8 @@ const getColumns = (data) => {
   const maxSavedVariants = Math.max(1, ...(data || []).map(row => row.num_saved_variants))
   const hasAirtable = data && data[0] && data[0][AIRTABLE_DBGAP_SUBMISSION_FIELD]
   return [...CORE_COLUMNS, ...(hasAirtable ? AIRTABLE_COLUMNS : [])].concat(
-    ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_COLUMNS.map(
-      col => ({ name: `${col}-${i + 1}`, secondaryExportColumn: col === GENE_COL ? `gene_id-${i + 1}` : null }),
+    ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_METADATA_COLUMNS.map(
+      ({ name, ...col }) => ({ name: `${name}-${i + 1}`, secondaryExportColumn: col === 'gene' ? `gene_id-${i + 1}` : null, ...col }),
     )),
   )
 }

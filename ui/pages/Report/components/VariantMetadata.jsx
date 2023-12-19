@@ -1,39 +1,24 @@
 import React from 'react'
 
 import LoadReportTable from 'shared/components/table/LoadReportTable'
+import { VARIANT_METADATA_COLUMNS } from 'shared/utils/constants'
 
 const VIEW_ALL_PAGES = [{ name: 'Broad', downloadName: 'All', path: 'all' }]
 
 const COLUMNS = [
   { name: 'participant_id' },
-  { name: 'genetic_findings_id' },
-  { name: 'variant_reference_assembly' },
-  { name: 'chrom' },
-  { name: 'pos' },
-  { name: 'ref' },
-  { name: 'alt' },
-  { name: 'gene' },
-  { name: 'seqr_chosen_consequence' },
-  { name: 'transcript' },
-  { name: 'hgvsc' },
-  { name: 'hgvsp' },
+  ...VARIANT_METADATA_COLUMNS.slice(0, -1),
   { name: 'allele_balance_or_heteroplasmy_percentage' },
-  { name: 'zygosity' },
-  { name: 'sv_name' },
-  { name: 'svType', content: 'sv_type' },
-  { name: 'variant_inheritance' },
   { name: 'ClinGen allele ID', format: ({ clinvar }) => clinvar?.alleleId },
   { name: 'ClinVar Clinical Significance', format: ({ clinvar }) => clinvar?.clinicalSignificance },
   { name: 'ClinVar gold star', format: ({ clinvar }) => clinvar?.goldStars },
-  { name: 'Submitted to MME', format: ({ MME }) => (MME ? 'Yes' : 'No') },
-  { name: 'gene_known_for_phenotype' },
   { name: 'known_condition_name' },
   { name: 'condition_id' },
   { name: 'condition_inheritance' },
   { name: 'phenotype_contribution' },
   { name: 'additional_family_members_with_variant' },
   { name: 'method_of_discovery' },
-  { name: 'notes' },
+  ...VARIANT_METADATA_COLUMNS.slice(-1),
 ]
 
 const FamilyMetadata = props => (
