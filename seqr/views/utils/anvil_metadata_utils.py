@@ -74,31 +74,11 @@ METADATA_FAMILY_VALUES = {
 }
 
 
-def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, include_metadata=False, family_values=None,
-                          get_additional_sample_fields=None, get_additional_variant_fields=None,
-                         include_no_individual_families=False, no_variant_zygosity=False):
-    if include_no_individual_families:
-        family_filter = {'project__in': projects}
-        individual_samples = _get_all_project_individual_samples(projects)
-    else:
-        individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
-        family_filter = {'individual__in': individual_samples}
-
-    family_filter = {'project__in': projects} if include_no_individual_families else {'individual__in': individual_samples}
-    family_data = Family.objects.filter(**family_filter).distinct().values(
-        'id', 'family_id', 'post_discovery_omim_numbers', 'project__name',
-        pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
-        phenotype_description=Replace(
-            Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
-            Value('\t'), Value(' '),
-        ),
-        genome_version=F('project__genome_version'),
-        phenotype_groups=ArrayAgg(
-            'project__projectcategory__name', distinct=True,
-            filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
-        ),
+def get_family_metadata(projects, additional_fields=None, additional_values=None, array_values=None, include_metadata=False):
+    family_data = Family.objects.filter(project__in=projects).distinct().values(
+        'id', 'family_id', 'project__name', *(additional_fields or []),
         **(METADATA_FAMILY_VALUES if include_metadata else {}),
-        **(family_values or {}),
+        **(additional_values or {}),
     )
 
     family_data_by_id = {}
@@ -106,9 +86,35 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
         family_id = f.pop('id')
         f.update({
             'project_id': f.pop('project__name'),
-            'phenotype_group': '|'.join(f.pop('phenotype_groups')),
+            **{k.rstrip('s'): delimiter.join(f.pop(k)) for k, delimiter in (array_values or {}).items()},
         })
         family_data_by_id[family_id] = f
+
+    return family_data_by_id
+
+
+def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, include_metadata=False, family_values=None,
+                          get_additional_sample_fields=None, get_additional_variant_fields=None,
+                         include_no_individual_families=False, no_variant_zygosity=False):
+    if include_no_individual_families:
+        individual_samples = _get_all_project_individual_samples(projects)
+    else:
+        individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
+
+    family_data_by_id = get_family_metadata(
+        projects, additional_fields=['post_discovery_omim_numbers'], additional_values=dict(
+            pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
+            phenotype_description=Replace(
+                Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
+                Value('\t'), Value(' '),
+            ),
+            genome_version=F('project__genome_version'),
+            phenotype_groups=ArrayAgg(
+                'project__projectcategory__name', distinct=True,
+                filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
+            ),
+            **(family_values or {}),
+        ), array_values={'phenotype_groups': '|'}, include_metadata=include_metadata)
 
     individuals_by_family_id = defaultdict(list)
     individual_ids_map = {}
@@ -132,7 +138,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
     genes_by_id = get_genes(gene_ids)
 
     mim_numbers = set()
-    for family in family_data:
+    for family in family_data_by_id.values():
         mim_numbers.update(family['post_discovery_omim_numbers'])
     mim_decription_map = {
         o.phenotype_mim_number: o.phenotype_description
