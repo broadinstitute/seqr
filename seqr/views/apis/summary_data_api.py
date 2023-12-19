@@ -3,7 +3,7 @@ from datetime import datetime
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.models import User
-from django.db.models import CharField, F, Value
+from django.db.models import CharField, F, Value, Case, When
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
 from random import randint
@@ -382,6 +382,7 @@ def sample_metadata_export(request, project_guid):
         get_additional_sample_fields=lambda sample, airtable_metadata: {
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
         },
+        family_values={'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y'))},
     )
 
     if collaborator_map:

@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
-from django.db.models import F, Q, Value, CharField, Case, When
+from django.db.models import F, Q, Value, CharField
 from django.db.models.functions import Replace, JSONObject
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
@@ -71,7 +71,6 @@ METADATA_FAMILY_VALUES = {
     'projectGuid': F('project__guid'),
     'analysisStatus': F('analysis_status'),
     'displayName': F('family_id'),
-    'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
 }
 
 

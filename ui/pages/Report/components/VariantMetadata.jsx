@@ -25,7 +25,7 @@ const COLUMNS = [
   { name: 'ClinGen allele ID', format: ({ clinvar }) => clinvar?.alleleId },
   { name: 'ClinVar Clinical Significance', format: ({ clinvar }) => clinvar?.clinicalSignificance },
   { name: 'ClinVar gold star', format: ({ clinvar }) => clinvar?.goldStars },
-  { name: 'MME', content: 'Submitted to MME' },
+  { name: 'Submitted to MME', format: ({ MME }) => (MME ? 'Yes' : 'No') },
   { name: 'gene_known_for_phenotype' },
   { name: 'known_condition_name' },
   { name: 'condition_id' },
