@@ -382,7 +382,6 @@ def individual_metadata(request, project_guid):
         get_additional_sample_fields=lambda sample, airtable_metadata: {
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
         },
-        family_values={'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y'))},
     )
 
     if collaborator_map:

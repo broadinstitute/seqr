@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from django.db.models import F, Q, Value, CharField
 from django.db.models.functions import Replace, JSONObject
-from django.contrib.postgres.aggregates import ArrayAgg, StringAgg
+from django.contrib.postgres.aggregates import ArrayAgg
 import json
 
 from matchmaker.models import MatchmakerSubmission
@@ -83,7 +83,7 @@ METADATA_FAMILY_VALUES = {
 }
 
 
-def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_values=None,
+def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False,
                           get_additional_sample_fields=None, get_additional_variant_fields=None, no_variant_zygosity=False):
     if max_loaded_date:
         individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
@@ -106,7 +106,6 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
         ),
         **(METADATA_FAMILY_VALUES if include_metadata else {}),
-        **(family_values or {}),
     )
 
     family_data_by_id = {}
