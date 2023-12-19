@@ -98,20 +98,18 @@ def get_family_metadata(projects, additional_fields=None, additional_values=None
 
 def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_fields=None,
                           get_additional_sample_fields=None, get_additional_variant_fields=None, no_variant_zygosity=False):
-    if max_loaded_date:
-        individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
-    else:
-        individual_samples = _get_all_project_individual_samples(projects)
+    individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
+        if max_loaded_date else _get_all_project_individual_samples(projects)
 
-    family_values = dict(
-        pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
-        phenotype_description=Replace(
+    family_values = {
+        'pmid_id': Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
+        'phenotype_description': Replace(
             Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
             Value('\t'), Value(' '),
         ),
-        genome_version=F('project__genome_version'),
-        analysisStatus=METADATA_FAMILY_VALUES['analysisStatus'],
-    )
+        'genome_version': F('project__genome_version'),
+        'analysisStatus': METADATA_FAMILY_VALUES['analysisStatus'],
+    }
     format_fields = {
         'solve_state': lambda f: get_family_solve_state(f['analysisStatus']),
     }
