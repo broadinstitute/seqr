@@ -15,7 +15,7 @@ from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, get_sv_name
 
-SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
+SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [  # TODO
     'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
     'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'discovery_notes',
 ]
