@@ -108,6 +108,12 @@ GENOME_BUILD_MAP = {
     '38': 'GRCh38.p12',
 }
 
+PHENOTYPE_PROJECT_CATEGORIES = [
+    'Muscle', 'Eye', 'Renal', 'Neuromuscular', 'IBD', 'Epilepsy', 'Orphan', 'Hematologic',
+    'Disorders of Sex Development', 'Delayed Puberty', 'Neurodevelopmental', 'Stillbirth', 'ROHHAD', 'Microtia',
+    'Diabetes', 'Mitochondrial', 'Cardiovascular',
+]
+
 
 @analyst_required
 def anvil_export(request, project_guid):
@@ -138,6 +144,13 @@ def anvil_export(request, project_guid):
             'entity:sample_id': sample.individual.individual_id,
             'sequencing_center': 'Broad',
         },
+        family_fields={'phenotype_group': {
+            'value': ArrayAgg(
+                'project__projectcategory__name', distinct=True,
+                filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
+            ),
+            'format': lambda f: '|'.join(f.pop('phenotype_group')),
+        }},
     )
 
     return export_multiple_files([

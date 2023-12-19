@@ -20,12 +20,6 @@ SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
     'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'discovery_notes',
 ]
 
-PHENOTYPE_PROJECT_CATEGORIES = [
-    'Muscle', 'Eye', 'Renal', 'Neuromuscular', 'IBD', 'Epilepsy', 'Orphan', 'Hematologic',
-    'Disorders of Sex Development', 'Delayed Puberty', 'Neurodevelopmental', 'Stillbirth', 'ROHHAD', 'Microtia',
-    'Diabetes', 'Mitochondrial', 'Cardiovascular',
-]
-
 HISPANIC = 'AMR'
 MIDDLE_EASTERN = 'MDE'
 OTHER_POPULATION = 'OTH'
@@ -102,7 +96,7 @@ def get_family_metadata(projects, additional_fields=None, additional_values=None
     return family_data_by_id
 
 
-def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False,
+def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_fields=None,
                           get_additional_sample_fields=None, get_additional_variant_fields=None, no_variant_zygosity=False):
     if max_loaded_date:
         individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
@@ -116,20 +110,18 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             Value('\t'), Value(' '),
         ),
         genome_version=F('project__genome_version'),
-        phenotype_groups=ArrayAgg(
-            'project__projectcategory__name', distinct=True,
-            filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
-        ),
         analysisStatus=METADATA_FAMILY_VALUES['analysisStatus'],
     )
     format_fields = {
-        'phenotype_group': lambda f: '|'.join(f.pop('phenotype_groups')),
         'solve_state': lambda f: get_family_solve_state(f['analysisStatus']),
     }
     if include_metadata:
         family_values['analysis_groups'] = ArrayAgg(
             'analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False))
         format_fields['analysis_groups'] = lambda f: '; '.join(f['analysis_groups'])
+    if family_fields:
+        family_values.update({k: v['value'] for k, v in family_fields.items()})
+        format_fields.update({k: v['format'] for k, v in family_fields.items()})
 
     family_data_by_id = get_family_metadata(
         projects, additional_fields=['post_discovery_omim_numbers'], additional_values=family_values,
