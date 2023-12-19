@@ -632,12 +632,12 @@ def _get_gregor_genetic_findings_rows(rows, individual, participant_id, individu
     parsed_rows = []
     variants_by_gene = defaultdict(list)
     for row in (rows or []):
-        genotypes = row.pop('genotypes')
-        individual_genotype = genotypes.get(individual.guid)
-        if individual_genotype and (individual_genotype.get('cn') is not None or individual_genotype['numAlt'] > 0):
+        genotypes = row['genotypes']
+        individual_genotype = genotypes.get(individual.guid) or {}
+        zygosity = get_genotype_zygosity(individual_genotype)
+        if zygosity:
             heteroplasmy = individual_genotype.get('hl')
             findings_id = f'{participant_id}_{row["chrom"]}_{row["pos"]}'
-            zygosity = get_genotype_zygosity(individual_genotype)
             parsed_row = {
                 'genetic_findings_id': findings_id,
                 'participant_id': participant_id,
