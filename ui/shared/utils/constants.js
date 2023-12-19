@@ -785,6 +785,13 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001630',
   },
   {
+    description: 'A sequence variant that causes a change at the 5th base pair after the start of the intron in the orientation of the transcript',
+    text: 'Splice donor 5th base',
+    value: 'splice_donor_5th_base_variant',
+    group: VEP_GROUP_EXTENDED_SPLICE_SITE,
+    so: 'SO:0001787',
+  },
+  {
     description: 'A sequence variant where at least one base of the final codon of an incompletely annotated transcript is changed',
     text: 'Incomplete terminal codon variant',
     value: 'incomplete_terminal_codon_variant',
