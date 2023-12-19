@@ -597,8 +597,8 @@ def _parse_variant_genetic_findings(variant_models, *args, variant_json_fields=N
             'hgvsp': (main_transcript.get('hgvsp') or '').split(':')[-1],
             'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
             'gene_known_for_phenotype': 'Known' if condition_id else 'Candidate',
-            'condition_id': condition_id,
-            'phenotype_contribution': 'Full',
+            'condition_id': condition_id,  # TODO
+            'phenotype_contribution': 'Full',  # TODO
             **{k: variant_json.get(k) for k in variant_json_fields},
             **{k: getattr(variant, k) for k in variant_model_annotations or {}},
         })
@@ -617,7 +617,7 @@ def _parse_variant_genetic_findings(variant_models, *args, variant_json_fields=N
     conditions_by_id.update({mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids})
     for row in variants:
         row['gene'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
-        row.update(conditions_by_id.get(row['condition_id'], {}))
+        row.update(conditions_by_id.get(row['condition_id'], {}))  # TODO
     return variants
 
 
@@ -640,7 +640,7 @@ def _get_gregor_genetic_findings_rows(rows, individual, participant_id, individu
     parsed_rows = []
     variants_by_gene = defaultdict(list)
     for row in (rows or []):
-        genotypes = row['genotypes']
+        genotypes = row['genotypes']  # TODO pop later? pop now?
         individual_genotype = genotypes.get(individual.guid) or {}
         zygosity = get_genotype_zygosity(individual_genotype)
         if zygosity:
@@ -650,13 +650,13 @@ def _get_gregor_genetic_findings_rows(rows, individual, participant_id, individu
                 'genetic_findings_id': findings_id,
                 'participant_id': participant_id,
                 'zygosity': zygosity if heteroplasmy is None else MITO_ZYGOSITY_MAP[zygosity],
-                'allele_balance_or_heteroplasmy_percentage': heteroplasmy,
+                'allele_balance_or_heteroplasmy_percentage': heteroplasmy,  # TODO
                 'variant_inheritance': _get_variant_inheritance(individual, genotypes),
-                'additional_family_members_with_variant': '|'.join([
+                'additional_family_members_with_variant': '|'.join([  # TODO
                     family_individuals[guid] for guid, g in genotypes.items()
                     if guid != individual.guid and guid in family_individuals and get_genotype_zygosity(g)
                 ]),
-                'method_of_discovery': '|'.join([
+                'method_of_discovery': '|'.join([  # TODO
                     METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type != Sample.SAMPLE_TYPE_RNA
                 ]),
                 **row,

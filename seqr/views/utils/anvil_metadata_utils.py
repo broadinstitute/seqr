@@ -141,10 +141,13 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
 
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(list(sample_ids), user)
 
-    saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(family_data_by_id.keys()))
-    compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
-        saved_variants_by_family, individual_data_by_family)
-    genes_by_id = get_genes(gene_ids)
+    # TODO
+    # saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(family_data_by_id.keys()))
+    # compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
+    #     saved_variants_by_family, individual_data_by_family)
+    # genes_by_id = get_genes(gene_ids)
+    from seqr.views.apis.report_api import _get_gregor_discovery_variants_by_family, _get_gregor_genetic_findings_rows
+    saved_variants_by_family = _get_gregor_discovery_variants_by_family(projects, variant_json_fields=['svType', 'svName', 'end'])
 
     mim_numbers = set()
     for family in family_data_by_id.values():
@@ -175,12 +178,13 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
 
         family_consanguinity = any(individual.consanguinity is True for individual in family_individuals)
 
-        parsed_variants = [
-            _parse_anvil_family_saved_variant(
-                variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id,
-                get_additional_variant_fields, allow_missing_discovery_genes=include_metadata,
-            )
-            for variant in saved_variants]
+        # TODO
+        # parsed_variants = [
+        #     _parse_anvil_family_saved_variant(
+        #         variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id,
+        #         get_additional_variant_fields, allow_missing_discovery_genes=include_metadata,
+        #     )
+        #     for variant in saved_variants]
 
         family_row = {
             'family_id': family_subject_row['family_id'],
@@ -192,7 +196,9 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
         add_row(family_row, family_id, FAMILY_ROW_TYPE)
 
         if no_variant_zygosity:
-            add_row([v for _, v in parsed_variants], family_id, DISCOVERY_ROW_TYPE)
+            # TODO
+            #add_row([v for _, v in parsed_variants], family_id, DISCOVERY_ROW_TYPE)
+            add_row(saved_variants, family_id, DISCOVERY_ROW_TYPE)
 
         for individual in family_individuals:
             sample = individual_samples[individual]
@@ -217,7 +223,10 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                 add_row(sample_row, family_id, SAMPLE_ROW_TYPE)
 
             if not no_variant_zygosity:
-                discovery_row = _get_discovery_rows(individual, sample, parsed_variants)
+                # TODO
+                #discovery_row = _get_discovery_rows(individual, sample, parsed_variants)
+                discovery_row = _get_gregor_genetic_findings_rows(
+                    saved_variants, individual, participant_id=subject_row['subject_id'], individual_data_types=[], family_individuals={}, post_process_variant=lambda *args: {})
                 add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 
