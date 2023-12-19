@@ -306,7 +306,7 @@ def get_variant_main_transcript(variant):
     return {}
 
 
-def get_saved_discovery_variants_by_family(variant_filter, format_variants, get_family_id):
+def get_saved_discovery_variants_by_family(variant_filter, format_variants, get_family_id, **kwargs):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
     project_saved_variants = SavedVariant.objects.filter(
@@ -314,7 +314,7 @@ def get_saved_discovery_variants_by_family(variant_filter, format_variants, get_
         **variant_filter,
     ).order_by('created_date').distinct()
 
-    project_saved_variants = format_variants(project_saved_variants, tag_types)
+    project_saved_variants = format_variants(project_saved_variants, tag_types, **kwargs)
 
     saved_variants_by_family = defaultdict(list)
     for saved_variant in project_saved_variants:

@@ -359,11 +359,7 @@ def gregor_export(request):
         grouped_data_type_individuals[i.individual_id].update({data_type: i for data_type in individual_data_types[i.id]})
         family_individuals[i.family_id][i.guid] = _get_participant_id(i)
 
-    saved_variants_by_family = get_saved_discovery_variants_by_family(
-        variant_filter={'family__project__in': projects, 'alt__isnull': False},
-        format_variants=_parse_variant_genetic_findings,
-        get_family_id=lambda v: v['family_id'],
-    )
+    saved_variants_by_family = _get_gregor_discovery_variants_by_family(projects, variant_filter={'alt__isnull': False})
 
     airtable_sample_records, airtable_metadata_by_participant = _get_gregor_airtable_data(
         grouped_data_type_individuals.keys(), request.user)
@@ -470,6 +466,15 @@ def gregor_export(request):
         'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families'],
         'warnings': warnings,
     })
+
+
+def _get_gregor_discovery_variants_by_family(projects, variant_filter=None, **kwargs):
+    return get_saved_discovery_variants_by_family(
+        variant_filter={'family__project__in': projects, **(variant_filter or {})},
+        format_variants=_parse_variant_genetic_findings,
+        get_family_id=lambda v: v['family_id'],
+        **kwargs,
+    )
 
 
 def _get_gregor_airtable_data(individual_ids, user):
@@ -631,7 +636,7 @@ def _get_gregor_genetic_findings_rows(rows, individual, participant_id, individu
     parsed_rows = []
     findings_by_gene = defaultdict(list)
     for row in (rows or []):
-        genotypes = row['genotypes']
+        genotypes = row.pop('genotypes')
         individual_genotype = genotypes.get(individual.guid)
         if individual_genotype and individual_genotype['numAlt'] > 0:
             heteroplasmy = individual_genotype.get('hl')
@@ -985,27 +990,10 @@ def variant_metadata(request, project_guid):
             project__in=projects).values('id', 'family_id', 'project__name', **METADATA_FAMILY_VALUES)
     }
 
-    def _format_variants(variant_models, *args):
-        variants = _parse_variant_genetic_findings(
-            variant_models, *args, variant_json_fields=['clinvar', 'svType', 'svName', 'end'],
-            variant_model_annotations={'matchmaker_individual': F('matchmakersubmissiongenes__matchmaker_submission__individual__guid')}
-        )
-        for variant in variants:
-            family_id = variant.pop('family_id')
-            family_data = family_data_by_id[family_id]
-            # TODO MME, notes
-            variant.update({
-                'family_db_id': family_id,
-                'sv_name': get_sv_name(variant),
-                **family_data,
-            })
-        return variants
-
-    variants_by_family = get_saved_discovery_variants_by_family(
-        variant_filter={'family_id__in': family_data_by_id},
-        format_variants=_format_variants,
-        get_family_id=lambda v: v['family_db_id'],
-    )
+    variants_by_family = _get_gregor_discovery_variants_by_family(
+        projects, variant_json_fields=['clinvar', 'svType', 'svName', 'end'], variant_model_annotations={
+            'matchmaker_individual': F('matchmakersubmissiongenes__matchmaker_submission__individual__guid'),
+        })
 
     individuals = Individual.objects.filter(family_id__in=variants_by_family)
     probands = individuals.filter(proband_relationship=Individual.SELF_RELATIONSHIP).annotate(
@@ -1018,11 +1006,15 @@ def variant_metadata(request, project_guid):
     variant_rows = []
     for individual in probands:
         family_id = individual.family_id
-        post_process_variant = lambda v, **kwargs: {'MME': v.pop('matchmaker_individual') == individual.guid}
+        # TODO notes
+        post_process_variant = lambda v, **kwargs: {
+            'MME': v.pop('matchmaker_individual') == individual.guid,
+            'sv_name': get_sv_name(v),
+        }
         variant_rows += _get_gregor_genetic_findings_rows(
             variants_by_family[family_id], individual, participant_id=individual.individual_id,
             individual_data_types=individual.data_types, family_individuals=family_individuals[family_id],
-            post_process_variant=post_process_variant,
+            post_process_variant=post_process_variant, **family_data_by_id[family_id],
         )
 
     return create_json_response({'rows': variant_rows})
