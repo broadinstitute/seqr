@@ -124,8 +124,23 @@ def anvil_export(request, project_guid):
 
     def _add_row(row, family_id, row_type):
         if row_type == DISCOVERY_ROW_TYPE:
+            missing_gene_rows = [
+                '{chrom}-{pos}-{ref}-{alt}'.format(**discovery_row) for discovery_row in row
+                if not (discovery_row.get('gene_id') or discovery_row.get('svType'))]
+            if missing_gene_rows:
+                raise ErrorsWarningsException(
+                    [f'Discovery variant(s) {", ".join(missing_gene_rows)} in family {family_id} have no associated gene'])
             parsed_rows[row_type] += [{
-                'entity:discovery_id': f'{discovery_row["Chrom"]}_{discovery_row["Pos"]}_{discovery_row["subject_id"]}',
+                'entity:discovery_id': f'{discovery_row["chrom"]}_{discovery_row["pos"]}_{discovery_row["participant_id"]}',
+                **{k: str(discovery_row.get(k.lower()) or '') for k in ['Gene', 'Zygosity', 'Chrom', 'Pos', 'Ref', 'Alt', 'Transcript']},
+                **{k: discovery_row[field] for k, field in {
+                    'subject_id': 'participant_id',
+                    'Gene_Class': 'gene_known_for_phenotype',
+                    'inheritance_description': 'variant_inheritance',
+                    'variant_genome_build': 'variant_reference_assembly',
+                    'sv_type': 'svType',
+                    'discovery_notes': 'notes',
+                }.items()},
                 **discovery_row,
             } for discovery_row in row]
         else:
@@ -137,10 +152,7 @@ def anvil_export(request, project_guid):
 
     max_loaded_date = request.GET.get('loadedBefore') or (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
     parse_anvil_metadata(
-        [project], request.user, _add_row, max_loaded_date=max_loaded_date,
-        get_additional_variant_fields=lambda variant, genome_version: {
-            'variant_genome_build': GENOME_BUILD_MAP.get(variant.get('genomeVersion') or genome_version) or '',
-        },
+        [project], request.user, _add_row, max_loaded_date=max_loaded_date, include_discovery_sample_id=True,
         get_additional_sample_fields=lambda sample, *args: {
             'entity:sample_id': sample.individual.individual_id,
             'sequencing_center': 'Broad',
@@ -1049,7 +1061,7 @@ def variant_metadata(request, project_guid):
 def post_process_variant_metadata(v, gene_variants):
     discovery_notes = None
     if len(gene_variants) > 2:
-        parent_mnv = next((v for v in gene_variants if len(v['individual_genotype'])), gene_variants[0])
+        parent_mnv = next((v for v in gene_variants if len(v['individual_genotype']) == 1), gene_variants[0])
         discovery_notes = get_discovery_notes(
             parent_mnv, gene_variants, get_variant_id=lambda v: f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}")
     return {

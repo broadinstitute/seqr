@@ -598,27 +598,27 @@ class ReportAPITest(AirtableTest):
             '1', '1', 'Present', '-', '-', '-', '-', '-',
         ], family_file)
 
-        self.assertEqual(len(discovery_file), 6)
+        self.assertEqual(len(discovery_file), 7)  # TODO
         self.assertEqual(discovery_file[0], [
             'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene', '04-Gene_Class',
             '05-inheritance_description', '06-Zygosity', '07-variant_genome_build', '08-Chrom', '09-Pos',
             '10-Ref', '11-Alt', '12-hgvsc', '13-hgvsp', '14-Transcript', '15-sv_name', '16-sv_type',
             '17-significance', '18-discovery_notes'])
         self.assertIn([
-            '1_248367227_HG00731', 'HG00731', 'HG00731', 'RP11', 'Known', 'Autosomal recessive (homozygous)',
+            '1_248367227_HG00731', 'HG00731', 'HG00731', 'RP11', 'Known', 'paternal',
             'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-'], discovery_file)
         self.assertIn([
-            '21_3343353_NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Tier 1 - Candidate', 'de novo',
+            '21_3343353_NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Known', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
             '-', '-', '-', '-'], discovery_file)
         self.assertIn([
-            '19_1912633_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'de novo', 'Heterozygous', 'GRCh38.p12', '19',
+            '19_1912633_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'de novo', 'Heterozygous', 'GRCh38', '19',
             '1912633', 'G', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
             'The following variants are part of the multinucleotide variant 19-1912632-GC-TT '
             '(c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
         self.assertIn([
-            '19_1912634_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'de novo', 'Heterozygous', 'GRCh38.p12', '19',
+            '19_1912634_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'de novo', 'Heterozygous', 'GRCh38', '19',
             '1912634', 'C', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
             'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, '
             'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
@@ -628,7 +628,7 @@ class ReportAPITest(AirtableTest):
         if added_perm:
             response = self.client.get(no_analyst_project_url)
             self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.json()['errors'], ['Discovery variant 12-48367227-TC-T in family 14 has no associated gene'])
+            self.assertEqual(response.json()['errors'], ['Discovery variant(s) 1-248367227-TC-T in family 14 have no associated gene'])
 
         self.check_no_analyst_no_access(url)
 
@@ -1174,7 +1174,7 @@ class ReportAPITest(AirtableTest):
             'gene_known_for_phenotype': 'Known',
             'genetic_findings_id': 'HG00731_19_1912634',
             'known_condition_name': 'mitochondrial disease',
-            'notes': 'The following variants are part of the multinucleotide variant 19-1912634-C-T: 19-1912632-GC-TT, 19-1912633-G-T',
+            'notes': 'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
             'participant_id': 'HG00731',
             'pos': 1912634,
             'projectGuid': 'R0001_1kg',

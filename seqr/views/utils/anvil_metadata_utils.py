@@ -93,7 +93,7 @@ def get_family_metadata(projects, additional_fields=None, additional_values=None
 
 # TODO clean up signature
 def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_fields=None,
-                          get_additional_sample_fields=None, get_additional_variant_fields=None):
+                          get_additional_sample_fields=None, get_additional_variant_fields=None, include_discovery_sample_id=False):
     individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
         if max_loaded_date else _get_all_project_individual_samples(projects)
 
@@ -192,16 +192,19 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             subject_row.update(family_subject_row)
             add_row(subject_row, family_id, SUBJECT_ROW_TYPE)
 
+            discovery_kwargs = {}
             if sample:
                 subject_id = subject_row['subject_id']
                 sample_row = _get_sample_row(sample, subject_id, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields)
                 add_row(sample_row, family_id, SAMPLE_ROW_TYPE)
+                if include_discovery_sample_id:
+                    discovery_kwargs['sample_id'] = sample.sample_id
 
             # TODO move to helpers in file
             from seqr.views.apis.report_api import _get_gregor_genetic_findings_rows, post_process_variant_metadata
             discovery_row = _get_gregor_genetic_findings_rows(
                 saved_variants, individual, participant_id=subject_row['subject_id'],
-                post_process_variant=post_process_variant_metadata)
+                post_process_variant=post_process_variant_metadata, **discovery_kwargs)
             add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 

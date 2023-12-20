@@ -396,7 +396,7 @@ def individual_metadata(request, project_guid):
 
     return create_json_response({'rows': list(rows_by_subject_family_id.values())})
 
-
+# TODO cleanup
 def _get_additional_variant_fields(variant, *args):
     if 'discovery_tag_guids_by_name' not in variant:
         return {}
