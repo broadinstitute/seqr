@@ -599,6 +599,8 @@ class ReportAPITest(AirtableTest):
         ], family_file)
 
         self.assertEqual(len(discovery_file), 7)  # TODO
+        # ['entity:discovery_id', '21_3343353_NA19675_1', '1_248367227_HG00732', '1_248367227_HG00731', '19_1912634_HG00731', '19_1912633_HG00731', '19_1912632_HG00731']
+        # ['entity:discovery_id', '21_3343353_NA19675_1', '1_248367227_HG00732', '1_248367227_HG00731', '19_1912634_HG00731', '19_1912633_HG00731']
         import pdb; pdb.set_trace()
         self.assertEqual(discovery_file[0], [
             'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene', '04-Gene_Class',
