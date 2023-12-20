@@ -247,10 +247,12 @@ def _get_genotype_zygosity(genotype):
     return None
 
 
-def post_process_variant_metadata(v, gene_variants):
+def post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
     discovery_notes = None
     if len(gene_variants) > 2:
         parent_mnv = next((v for v in gene_variants if len(v['individual_genotype']) == 1), gene_variants[0])
+        if parent_mnv['genetic_findings_id'] == v['genetic_findings_id'] and not include_parent_mnvs:
+            return None
         variant_type = 'complex structural' if parent_mnv.get('svType') else 'multinucleotide'
         parent_name = _get_nested_variant_name(parent_mnv)
         parent_details = [parent_mnv[key] for key in ['hgvsc', 'hgvsp'] if parent_mnv.get(key)]
@@ -410,12 +412,17 @@ def get_genetic_findings_rows(rows: list[dict], individual: Individual, particip
             parsed_rows.append(parsed_row)
             variants_by_gene[row['gene']].append({**parsed_row, 'individual_genotype': individual_genotype})
 
+    to_remove = []
     for row in parsed_rows:
         del row['genotypes']
         if post_process_variant:
-            row.update(post_process_variant(row, variants_by_gene[row['gene']]))
+            update = post_process_variant(row, variants_by_gene[row['gene']])
+            if update:
+                row.update(update)
+            else:
+                to_remove.append(row)
 
-    return parsed_rows
+    return [row for row in parsed_rows if row not in to_remove]
 
 
 def _get_variant_inheritance(individual, genotypes):

@@ -938,7 +938,7 @@ def variant_metadata(request, project_guid):
         def _post_process_variant_metadata(v, gene_variants):
             return {
                 'MME': v.pop('matchmaker_individual') == individual.guid,
-                **post_process_variant_metadata(v, gene_variants),
+                **post_process_variant_metadata(v, gene_variants, include_parent_mnvs=True),
             }
 
         variant_rows += get_genetic_findings_rows(
