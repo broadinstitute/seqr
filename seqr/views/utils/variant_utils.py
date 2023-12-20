@@ -289,24 +289,6 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     return response
 
 
-# TODO move, only used once
-def get_variant_main_transcript(variant):
-    main_transcript_id = variant.get('selectedMainTranscriptId') or variant.get('mainTranscriptId')
-    if main_transcript_id:
-        for gene_id, transcripts in variant.get('transcripts', {}).items():
-            main_transcript = next((t for t in transcripts if t['transcriptId'] == main_transcript_id), None)
-            if main_transcript:
-                if 'geneId' not in main_transcript:
-                    main_transcript['geneId'] = gene_id
-                return main_transcript
-    elif len(variant.get('transcripts', {})) == 1:
-        gene_id = next(k for k in variant['transcripts'].keys())
-        #  Handle manually created SNPs
-        if variant['transcripts'][gene_id] == []:
-            return {'geneId': gene_id}
-    return {}
-
-
 def get_saved_discovery_variants_by_family(variant_filter, format_variants, get_family_id, **kwargs):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
@@ -323,10 +305,3 @@ def get_saved_discovery_variants_by_family(variant_filter, format_variants, get_
         saved_variants_by_family[family_id].append(saved_variant)
 
     return saved_variants_by_family
-
-
-# TODO move
-def get_sv_name(variant_json):
-    if variant_json.get('svType'):
-        return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
-    return None

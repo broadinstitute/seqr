@@ -14,7 +14,7 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
 from seqr.utils.xpos_utils import get_chrom_pos
-from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, get_sv_name
+from seqr.views.utils.variant_utils import get_saved_discovery_variants_by_family
 
 HISPANIC = 'AMR'
 MIDDLE_EASTERN = 'MDE'
@@ -129,11 +129,6 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
         if sample:
             sample_ids.add(sample.sample_id)
 
-    individual_data_by_family = {
-        family_id: _parse_family_individual_affected_data(family_individuals)
-        for family_id, family_individuals in individuals_by_family_id.items()
-    }
-
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(list(sample_ids), user)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(family_data_by_id.keys()))
@@ -162,7 +157,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                     mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
             })
 
-        affected_individual_guids = individual_data_by_family[family_id][0] if family_id in individual_data_by_family else []
+        affected_individuals = [individual for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED]
 
         family_consanguinity = any(individual.consanguinity is True for individual in family_individuals)
 
@@ -171,7 +166,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             'consanguinity': 'Present' if family_consanguinity else 'None suspected',
             **family_subject_row,
         }
-        if len(affected_individual_guids) > 1:
+        if len(affected_individuals) > 1:
             family_row['family_history'] = 'Yes'
         add_row(family_row, family_id, FAMILY_ROW_TYPE)
 
@@ -210,22 +205,14 @@ def get_family_solve_state(analysis_status):
     return SOLVE_STATUS_LOOKUP.get(analysis_status, 'No')
 
 
-# TODO simplify
-def _parse_family_individual_affected_data(family_individuals):
-    indiv_id_map = {individual.id: individual.guid for individual in family_individuals}
-    return (
-        {individual.guid for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED},
-        {individual.guid for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_UNAFFECTED},
-        {individual.guid for individual in family_individuals if individual.sex == Individual.SEX_MALE},
-        {individual.guid: [
-            indiv_id_map[parent_id] for parent_id in [individual.mother_id, individual.father_id]
-            if parent_id in indiv_id_map
-        ] for individual in family_individuals},
-    )
-
-
 def _get_nested_variant_name(variant, get_variant_id):
-    return get_sv_name(variant) or get_variant_id(variant)
+    return _get_sv_name(variant) or get_variant_id(variant)
+
+
+def _get_sv_name(variant_json):
+    if variant_json.get('svType'):
+        return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
+    return None
 
 
 def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date):
@@ -280,7 +267,7 @@ def post_process_variant_metadata(v, gene_variants):
         discovery_notes = get_discovery_notes(
             parent_mnv, gene_variants, get_variant_id=lambda v: f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}")
     return {
-        'sv_name': get_sv_name(v),
+        'sv_name': _get_sv_name(v),
         'notes': discovery_notes,
     }
 
@@ -297,7 +284,7 @@ def parse_variant_genetic_findings(variant_models: Iterable[SavedVariant], *args
 
         variant_json = variant.saved_variant_json
         variant_json['selectedMainTranscriptId'] = variant.selected_main_transcript_id
-        main_transcript = get_variant_main_transcript(variant_json)
+        main_transcript = _get_variant_main_transcript(variant)
         gene_id = main_transcript.get('geneId')
         gene_ids.add(gene_id)
 
@@ -321,6 +308,24 @@ def parse_variant_genetic_findings(variant_models: Iterable[SavedVariant], *args
     for row in variants:
         row['gene'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
     return variants
+
+
+def _get_variant_main_transcript(variant_model):
+    variant = variant_model.saved_variant_json
+    main_transcript_id = variant_model.selected_main_transcript_id or variant.get('mainTranscriptId')
+    if main_transcript_id:
+        for gene_id, transcripts in variant.get('transcripts', {}).items():
+            main_transcript = next((t for t in transcripts if t['transcriptId'] == main_transcript_id), None)
+            if main_transcript:
+                if 'geneId' not in main_transcript:
+                    main_transcript['geneId'] = gene_id
+                return main_transcript
+    elif len(variant.get('transcripts', {})) == 1:
+        gene_id = next(k for k in variant['transcripts'].keys())
+        #  Handle manually created SNPs
+        if variant['transcripts'][gene_id] == []:
+            return {'geneId': gene_id}
+    return {}
 
 
 def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map):
