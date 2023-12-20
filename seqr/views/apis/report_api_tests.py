@@ -1190,13 +1190,13 @@ class ReportAPITest(AirtableTest):
         }
         self.assertDictEqual(response_json['rows'][2], expected_mnv)
 
-        # Test all projects
-        all_projects_url = reverse(variant_metadata, args=['all'])
-        response = self.client.get(all_projects_url)
+        # Test gregor projects
+        gregor_projects_url = reverse(variant_metadata, args=['gregor'])
+        response = self.client.get(gregor_projects_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        row_ids += ['NA20889_1_248367227', 'NA20889_1_249045487'] + self.ADDITIONAL_FINDINGS
+        row_ids += ['NA20889_1_248367227', 'NA20889_1_249045487']
         self.assertListEqual([r['genetic_findings_id'] for r in response_json['rows']], row_ids)
         self.assertDictEqual(response_json['rows'][1], expected_row)
         self.assertDictEqual(response_json['rows'][2], expected_mnv)
@@ -1251,6 +1251,17 @@ class ReportAPITest(AirtableTest):
             'variant_reference_assembly': 'GRCh37',
             'zygosity': 'Heterozygous',
         })
+
+        # Test all projects
+        all_projects_url = reverse(variant_metadata, args=['all'])
+        response = self.client.get(all_projects_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        row_ids += self.ADDITIONAL_FINDINGS
+        self.assertListEqual([r['genetic_findings_id'] for r in response_json['rows']], row_ids)
+        self.assertDictEqual(response_json['rows'][1], expected_row)
+        self.assertDictEqual(response_json['rows'][2], expected_mnv)
 
         # Test empty project
         empty_project_url = reverse(family_metadata, args=['R0002_empty'])

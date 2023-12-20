@@ -149,6 +149,7 @@ def anvil_export(request, project_guid):
 
 # GREGoR metadata
 
+GREGOR_CATEGORY = 'GREGoR'
 GREGOR_DATA_TYPES = ['wgs', 'wes', 'rna']
 SMID_FIELD = 'SMID'
 PARTICIPANT_ID_FIELD = 'CollaboratorParticipantID'
@@ -340,7 +341,7 @@ def gregor_export(request):
     projects = get_internal_projects().filter(
         guid__in=get_project_guids_user_can_view(request.user),
         consent_code=consent_code[0],
-        projectcategory__name='GREGoR',
+        projectcategory__name=GREGOR_CATEGORY,
     )
     sample_types = Sample.objects.filter(individual__family__project__in=projects).values_list('individual_id', 'sample_type')
     individual_data_types = defaultdict(set)
@@ -960,6 +961,8 @@ def family_metadata(request, project_guid):
 def _get_metadata_projects(project_guid, user):
     if project_guid == 'all':
         return get_internal_projects()
+    if project_guid == GREGOR_CATEGORY.lower():
+        return Project.objects.filter(projectcategory__name=GREGOR_CATEGORY)
     return [get_project_and_check_permissions(project_guid, user)]
 
 

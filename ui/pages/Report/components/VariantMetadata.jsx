@@ -2,7 +2,10 @@ import React from 'react'
 
 import LoadReportTable from 'shared/components/table/LoadReportTable'
 
-const VIEW_ALL_PAGES = [{ name: 'Broad', downloadName: 'All', path: 'all' }]
+const VIEW_ALL_PAGES = [
+  { name: 'GREGoR', downloadName: 'GREGoR', path: 'gregor'},
+  { name: 'Broad', downloadName: 'All', path: 'all' },
+]
 
 const COLUMNS = [
   { name: 'participant_id' },
