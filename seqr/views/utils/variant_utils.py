@@ -289,6 +289,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     return response
 
 
+# TODO move, only used once
 def get_variant_main_transcript(variant):
     main_transcript_id = variant.get('selectedMainTranscriptId') or variant.get('mainTranscriptId')
     if main_transcript_id:

@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
 from django.db.models import F, Q, Value, CharField, Case, When
-from django.db.models.functions import Replace, JSONObject
+from django.db.models.functions import Replace
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
 
@@ -12,7 +12,6 @@ from seqr.views.utils.airtable_utils import get_airtable_samples
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
-from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, get_sv_name
 
 HISPANIC = 'AMR'
@@ -35,11 +34,6 @@ ANCESTRY_DETAIL_MAP = {
   'FIN': 'Finnish',
   MIDDLE_EASTERN: 'Middle Eastern',
   'SAS': 'South Asian',
-}
-
-SV_TYPE_MAP = {
-    'DUP': 'Duplication',
-    'DEL': 'Deletion',
 }
 
 MULTIPLE_DATASET_PRODUCTS = {
@@ -247,95 +241,12 @@ def _get_sorted_search_samples(projects):
     return get_search_samples(projects, active_only=False).order_by('-loaded_date')
 
 
-# TODO remove
-def _process_saved_variants(saved_variants_by_family, individual_data_by_family):
-    gene_ids = set()
-    compound_het_gene_id_by_family = {}
-    for family_id, saved_variants in saved_variants_by_family.items():
-        potential_com_het_gene_variants = defaultdict(list)
-        potential_mnvs = defaultdict(list)
-        for variant in saved_variants:
-            variant['main_transcript'] = get_variant_main_transcript(variant)
-            if variant['main_transcript']:
-                gene_ids.add(variant['main_transcript']['geneId'])
-
-            if family_id in individual_data_by_family:
-                _update_variant_inheritance(variant, individual_data_by_family[family_id], potential_com_het_gene_variants)
-            for guid in variant['discovery_tag_guids_by_name'].values():
-                potential_mnvs[guid].append(variant)
-
-        mnv_genes = _process_mnvs(potential_mnvs, saved_variants)
-        compound_het_gene_id_by_family.update(
-            _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv_genes)
-        )
-
-    return compound_het_gene_id_by_family, gene_ids
-
-
-def _update_variant_inheritance(
-        variant_json: dict, family_individual_data: tuple[set[str], set[str], set[str], dict[str: list[str]]],
-        potential_com_het_gene_variants: dict[str: list[str]]) -> None:
-    """Compute the inheritance mode for the given variant and family"""
-
-    affected_individual_guids, unaffected_individual_guids, male_individual_guids, parent_guid_map = family_individual_data
-    is_x_linked = 'X' in variant_json.get('chrom', '')
-
-    genotype_zygosity = {
-        sample_guid: get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
-        for sample_guid, genotype in variant_json.get('genotypes', {}).items()
-    }
-    inheritance_model, possible_comp_het = _get_inheritance_model(
-        genotype_zygosity, affected_individual_guids, unaffected_individual_guids, parent_guid_map, is_x_linked)
-
-    if possible_comp_het:
-        for gene_id in variant_json.get('transcripts', {}).keys():
-            potential_com_het_gene_variants[gene_id].append(variant_json)
-
-    variant_json.update({
-        'inheritance': inheritance_model,
-        'genotype_zygosity': genotype_zygosity,
-    })
-
-
 HET = 'Heterozygous'
 HOM_ALT = 'Homozygous'
 HEMI = 'Hemizygous'
 
-X_LINKED = 'X - linked'
-RECESSIVE = 'Autosomal recessive (homozygous)'
-DE_NOVO = 'de novo'
-DOMINANT = 'Autosomal dominant'
 
-
-def _get_inheritance_model(
-        genotype_zygosity: dict[str, str], affected_individual_guids: set[str], unaffected_individual_guids: set[str],
-        parent_guid_map: dict[str: list[str]], is_x_linked: bool) -> tuple[str, bool]:
-
-    affected_zygosities = {genotype_zygosity[g] for g in affected_individual_guids if g in genotype_zygosity}
-    unaffected_zygosities = {genotype_zygosity[g] for g in unaffected_individual_guids if g in genotype_zygosity}
-
-    inheritance_model = ''
-    possible_comp_het = False
-    if any(zygosity in unaffected_zygosities for zygosity in {HOM_ALT, HEMI}):
-        # No valid inheritance modes for hom alt unaffected individuals
-        inheritance_model = ''
-    elif any(zygosity in affected_zygosities for zygosity in {HOM_ALT, HEMI}):
-        inheritance_model = X_LINKED if is_x_linked else RECESSIVE
-    elif HET in affected_zygosities:
-        if HET not in unaffected_zygosities:
-            inherited = (not unaffected_individual_guids) or any(
-                guid for guid in affected_individual_guids
-                if genotype_zygosity.get(guid) == HET and
-                any(genotype_zygosity.get(parent_guid) == HET for parent_guid in parent_guid_map[guid])
-            )
-            inheritance_model = DOMINANT if inherited else DE_NOVO
-
-        if len(unaffected_individual_guids) < 2 or HET in unaffected_zygosities:
-            possible_comp_het = True
-
-    return inheritance_model, possible_comp_het
-
-
+# TODO make private
 def get_genotype_zygosity(genotype, is_hemi_variant=False):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
@@ -346,22 +257,7 @@ def get_genotype_zygosity(genotype, is_hemi_variant=False):
     return None
 
 
-def _process_mnvs(potential_mnvs, saved_variants):
-    mnv_genes = set()
-    for mnvs in potential_mnvs.values():
-        if len(mnvs) <= 2:
-            continue
-        parent_mnv = next((v for v in mnvs if not v.get('populations')), mnvs[0])
-        mnv_genes |= {gene_id for variant in mnvs for gene_id in variant['transcripts'].keys()}
-        parent_transcript = parent_mnv.get('main_transcript') or {}
-        discovery_notes = get_discovery_notes(
-            {**parent_transcript, **parent_mnv}, mnvs, get_variant_id=lambda v: v['variantId'])
-        for variant in mnvs:
-            variant['discovery_notes'] = discovery_notes
-        saved_variants.remove(parent_mnv)
-    return mnv_genes
-
-
+# TODO move/ make private
 def get_discovery_notes(parent_mnv, mnvs, get_variant_id):
     variant_type = 'complex structural' if parent_mnv.get('svType') else 'multinucleotide'
     parent_name = _get_nested_variant_name(parent_mnv, get_variant_id)
@@ -371,73 +267,6 @@ def get_discovery_notes(parent_mnv, mnvs, get_variant_id):
     nested_mnvs = sorted([v for v in mnv_names if v != parent_name])
     return f'The following variants are part of the {variant_type} variant {parent}: {", ".join(nested_mnvs)}'
 
-
-def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv_genes):
-    compound_het_gene_id_by_family = {}
-    for gene_id, comp_het_variants in potential_com_het_gene_variants.items():
-        if gene_id in mnv_genes:
-            continue
-        if len(comp_het_variants) > 1:
-            main_gene_ids = set()
-            for variant in comp_het_variants:
-                variant['inheritance'] = 'Autosomal recessive (compound heterozygous)'
-                if variant['main_transcript']:
-                    main_gene_ids.add(variant['main_transcript']['geneId'])
-                else:
-                    main_gene_ids.update(list(variant['transcripts'].keys()))
-            if len(main_gene_ids) > 1:
-                # This occurs in compound hets where some hits have a primary transcripts in different genes
-                for gene_id in sorted(main_gene_ids):
-                    if all(gene_id in variant['transcripts'] for variant in comp_het_variants):
-                        compound_het_gene_id_by_family[family_id] = gene_id
-                        gene_ids.add(gene_id)
-    return compound_het_gene_id_by_family
-
-
-# TODO remove
-def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id,
-                                      get_additional_variant_fields, allow_missing_discovery_genes):
-    parsed_variant = {
-        'Gene_Class': 'Known',
-        'inheritance_description': variant.get('inheritance') or 'Unknown / Other',
-        'discovery_notes': variant.get('discovery_notes', ''),
-        'Chrom': variant.get('chrom', ''),
-        'Pos': str(variant.get('pos', '')),
-    }
-    if get_additional_variant_fields:
-        parsed_variant.update(get_additional_variant_fields(variant, genome_version))
-
-    if 'discovery_tag_guids_by_name' in variant:
-        discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
-        if any('Tier 1' in name for name in discovery_tag_names):
-            parsed_variant['Gene_Class'] = 'Tier 1 - Candidate'
-        elif any('Tier 2' in name for name in discovery_tag_names):
-            parsed_variant['Gene_Class'] = 'Tier 2 - Candidate'
-
-    if variant.get('svType'):
-        parsed_variant.update({
-            'sv_name': get_sv_name(variant),
-            'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType']),
-        })
-    else:
-        gene_id = compound_het_gene_id_by_family.get(family_id) or variant['main_transcript'].get('geneId')
-        if gene_id:
-            gene = genes_by_id[gene_id]['geneSymbol']
-        elif allow_missing_discovery_genes:
-            gene = None
-        else:
-            family = Family.objects.get(id=family_id).family_id
-            raise ErrorsWarningsException([f'Discovery variant {variant["variantId"]} in family {family} has no associated gene'])
-        parsed_variant.update({
-            'Gene': gene,
-            'gene_id': gene_id,
-            'Ref': variant['ref'],
-            'Alt': variant['alt'],
-            'hgvsc': (variant['main_transcript'].get('hgvsc') or '').split(':')[-1],
-            'hgvsp': (variant['main_transcript'].get('hgvsp') or '').split(':')[-1],
-            'Transcript': variant['main_transcript'].get('transcriptId'),
-        })
-    return variant.get('genotype_zygosity'), parsed_variant
 
 def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map):
     features_present = [feature['id'] for feature in individual.features or []]
@@ -493,25 +322,6 @@ def _get_sample_row(sample, subject_id, has_dbgap_submission, airtable_metadata,
     return sample_row
 
 
-# TODO remove
-def _get_discovery_rows(individual, sample, parsed_variants):
-    discovery_row = {
-        'subject_id': individual.individual_id,
-        'sample_id': sample.sample_id if sample else None,
-    }
-    discovery_rows = []
-    for genotypes_zygosity, parsed_variant in parsed_variants:
-        zygosity = genotypes_zygosity.get(individual.guid)
-        if zygosity:
-            variant_discovery_row = {
-                'Zygosity': zygosity,
-            }
-            variant_discovery_row.update(parsed_variant)
-            variant_discovery_row.update(discovery_row)
-            discovery_rows.append(variant_discovery_row)
-    return discovery_rows
-
-
 SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'dbgap_sample_id']
 LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
@@ -521,19 +331,6 @@ def _get_sample_airtable_metadata(sample_ids, user):
         sample_ids, user, fields=SINGLE_SAMPLE_FIELDS, list_fields=LIST_SAMPLE_FIELDS,
     )
     return sample_records
-
-
-def _format_variants(project_saved_variants, *args):
-    variants = get_json_for_saved_variants(
-        project_saved_variants, add_details=True, additional_model_fields=['family_id'], additional_values={
-            'discovery_tags': ArrayAgg(JSONObject(
-                name='varianttag__variant_tag_type__name',
-                guid='varianttag__guid',
-            )),
-        })
-    for saved_variant in variants:
-        saved_variant['discovery_tag_guids_by_name'] = {vt['name']: vt['guid'] for vt in saved_variant.pop('discovery_tags')}
-    return variants
 
 
 def _get_parsed_saved_discovery_variants_by_family(families):
@@ -549,6 +346,4 @@ def _get_parsed_saved_discovery_variants_by_family(families):
                 Q(family__post_discovery_omim_numbers__len=0, family__mondo_id__isnull=True),
                 then=Value('Candidate')), default=Value('Known')),
         },
-        # TODO remove
-        #_format_variants, lambda saved_variant: saved_variant.pop('familyId'),
     )
