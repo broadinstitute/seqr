@@ -599,6 +599,7 @@ class ReportAPITest(AirtableTest):
         ], family_file)
 
         self.assertEqual(len(discovery_file), 7)  # TODO
+        import pdb; pdb.set_trace()
         self.assertEqual(discovery_file[0], [
             'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene', '04-Gene_Class',
             '05-inheritance_description', '06-Zygosity', '07-variant_genome_build', '08-Chrom', '09-Pos',
