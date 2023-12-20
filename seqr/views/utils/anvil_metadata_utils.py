@@ -4,14 +4,16 @@ from django.db.models import F, Q, Value, CharField, Case, When
 from django.db.models.functions import Replace
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
+from typing import Callable, Iterable
 
 from matchmaker.models import MatchmakerSubmission
-from reference_data.models import Omim
-from seqr.models import Family, Individual
+from reference_data.models import Omim, GENOME_VERSION_LOOKUP
+from seqr.models import Family, Individual, Sample, SavedVariant
 from seqr.views.utils.airtable_utils import get_airtable_samples
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
+from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, get_sv_name
 
 HISPANIC = 'AMR'
@@ -61,6 +63,11 @@ METADATA_FAMILY_VALUES = {
     'projectGuid': F('project__guid'),
     'analysisStatus': F('analysis_status'),
     'displayName': F('family_id'),
+}
+
+METHOD_MAP = {
+    Sample.SAMPLE_TYPE_WES: 'SR-ES',
+    Sample.SAMPLE_TYPE_WGS: 'SR-GS',
 }
 
 
@@ -193,9 +200,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                 if include_discovery_sample_id:
                     discovery_kwargs['sample_id'] = sample.sample_id
 
-            # TODO move to helpers in file
-            from seqr.views.apis.report_api import _get_gregor_genetic_findings_rows, post_process_variant_metadata
-            discovery_row = _get_gregor_genetic_findings_rows(
+            discovery_row = get_genetic_findings_rows(
                 saved_variants, individual, participant_id=subject_row['subject_id'],
                 post_process_variant=post_process_variant_metadata, **discovery_kwargs)
             add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
@@ -205,6 +210,7 @@ def get_family_solve_state(analysis_status):
     return SOLVE_STATUS_LOOKUP.get(analysis_status, 'No')
 
 
+# TODO simplify
 def _parse_family_individual_affected_data(family_individuals):
     indiv_id_map = {individual.id: individual.guid for individual in family_individuals}
     return (
@@ -267,6 +273,56 @@ def get_discovery_notes(parent_mnv, mnvs, get_variant_id):
     return f'The following variants are part of the {variant_type} variant {parent}: {", ".join(nested_mnvs)}'
 
 
+def post_process_variant_metadata(v, gene_variants):
+    discovery_notes = None
+    if len(gene_variants) > 2:
+        parent_mnv = next((v for v in gene_variants if len(v['individual_genotype']) == 1), gene_variants[0])
+        discovery_notes = get_discovery_notes(
+            parent_mnv, gene_variants, get_variant_id=lambda v: f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}")
+    return {
+        'sv_name': get_sv_name(v),
+        'notes': discovery_notes,
+    }
+
+
+def parse_variant_genetic_findings(variant_models: Iterable[SavedVariant], *args,
+                                   variant_json_fields: list[str] = None, variant_model_annotations: dict = None):
+    if variant_model_annotations:
+        variant_models = variant_models.annotate(**variant_model_annotations)
+    variant_json_fields = ['genotypes'] + (variant_json_fields or [])
+    variants = []
+    gene_ids = set()
+    for variant in variant_models:
+        chrom, pos = get_chrom_pos(variant.xpos)
+
+        variant_json = variant.saved_variant_json
+        variant_json['selectedMainTranscriptId'] = variant.selected_main_transcript_id
+        main_transcript = get_variant_main_transcript(variant_json)
+        gene_id = main_transcript.get('geneId')
+        gene_ids.add(gene_id)
+
+        variants.append({
+            'family_id': variant.family_id,
+            'chrom': chrom,
+            'pos': pos,
+            'ref': variant.ref,
+            'alt': variant.alt,
+            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
+            'gene_id': gene_id,
+            'transcript': main_transcript.get('transcriptId'),
+            'hgvsc': (main_transcript.get('hgvsc') or '').split(':')[-1],
+            'hgvsp': (main_transcript.get('hgvsp') or '').split(':')[-1],
+            'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
+            **{k: variant_json.get(k) for k in variant_json_fields},
+            **{k: getattr(variant, k) for k in variant_model_annotations or {}},
+        })
+
+    genes_by_id = get_genes(gene_ids)
+    for row in variants:
+        row['gene'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
+    return variants
+
+
 def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map):
     features_present = [feature['id'] for feature in individual.features or []]
     features_absent = [feature['id'] for feature in individual.absent_features or []]
@@ -321,6 +377,68 @@ def _get_sample_row(sample, subject_id, has_dbgap_submission, airtable_metadata,
     return sample_row
 
 
+def get_genetic_findings_rows(rows: list[dict], individual: Individual, participant_id: str,
+                              individual_data_types: Iterable[str] = None, family_individuals: dict[str, str] = None,
+                              post_process_variant: Callable[[dict, list[dict]], dict] = None, **kwargs) -> list[dict]:
+    parsed_rows = []
+    variants_by_gene = defaultdict(list)
+    for row in (rows or []):
+        genotypes = row['genotypes']
+        individual_genotype = genotypes.get(individual.guid) or {}
+        zygosity = get_genotype_zygosity(individual_genotype)
+        if zygosity:
+            heteroplasmy = individual_genotype.get('hl')
+            findings_id = f'{participant_id}_{row["chrom"]}_{row["pos"]}'
+            parsed_row = {
+                'genetic_findings_id': findings_id,
+                'participant_id': participant_id,
+                'zygosity': zygosity if heteroplasmy is None else {
+                    HET: 'Heteroplasmy',
+                    HOM_ALT: 'Homoplasmy',
+                }[zygosity],
+                'allele_balance_or_heteroplasmy_percentage': heteroplasmy,
+                'variant_inheritance': _get_variant_inheritance(individual, genotypes),
+                **row,
+                **kwargs,
+            }
+            if family_individuals is not None:
+                parsed_row['additional_family_members_with_variant'] = '|'.join([
+                    family_individuals[guid] for guid, g in genotypes.items()
+                    if guid != individual.guid and guid in family_individuals and get_genotype_zygosity(g)
+                ])
+            if individual_data_types is not None:
+                parsed_row['method_of_discovery'] = '|'.join([
+                    METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type != Sample.SAMPLE_TYPE_RNA
+                ])
+            parsed_rows.append(parsed_row)
+            variants_by_gene[row['gene']].append({**parsed_row, 'individual_genotype': individual_genotype})
+
+    for row in parsed_rows:
+        del row['genotypes']
+        if post_process_variant:
+            row.update(post_process_variant(row, variants_by_gene[row['gene']]))
+
+    return parsed_rows
+
+
+def _get_variant_inheritance(individual, genotypes):
+    parental_inheritance = tuple(
+        None if parent is None else genotypes.get(parent.guid, {}).get('numAlt', -1) > 0
+        for parent in [individual.mother, individual.father]
+    )
+    return {
+        (True, True): 'biparental',
+        (True, False): 'maternal',
+        (True, None): 'maternal',
+        (False, True): 'paternal',
+        (False, False): 'de novo',
+        (False, None): 'nonmaternal',
+        (None, True): 'paternal',
+        (None, False): 'nonpaternal',
+        (None, None): 'unknown',
+    }[parental_inheritance]
+
+
 SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'dbgap_sample_id']
 LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
@@ -333,11 +451,9 @@ def _get_sample_airtable_metadata(sample_ids, user):
 
 
 def _get_parsed_saved_discovery_variants_by_family(families):
-    # TODO move to helpers in file
-    from seqr.views.apis.report_api import _base_parse_variant_genetic_findings
     return get_saved_discovery_variants_by_family(
         {'family__id__in': families},
-        format_variants=_base_parse_variant_genetic_findings,
+        format_variants=parse_variant_genetic_findings,
         get_family_id=lambda v: v.pop('family_id'),
         variant_json_fields=['svType', 'svName', 'end'],
         variant_model_annotations={

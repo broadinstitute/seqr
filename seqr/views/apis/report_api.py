@@ -9,24 +9,23 @@ import re
 import requests
 
 from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist
-from seqr.utils.gene_utils import get_genes
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import get_airtable_samples
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, get_genotype_zygosity, get_discovery_notes, get_family_solve_state, \
-    get_family_metadata, ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
-    SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION, HET, HOM_ALT
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, get_genetic_findings_rows, post_process_variant_metadata, \
+    get_family_metadata, get_family_solve_state, parse_variant_genetic_findings, \
+    ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
+    SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
     get_project_guids_user_can_view, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
-from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, get_sv_name
+from seqr.views.utils.variant_utils import get_saved_discovery_variants_by_family
 
 from seqr.models import Project, Family, Sample, Individual
-from reference_data.models import Omim, HumanPhenotypeOntology, GENOME_VERSION_LOOKUP
+from reference_data.models import Omim, HumanPhenotypeOntology
 from settings import GREGOR_DATA_MODEL_URL
 
 
@@ -103,11 +102,6 @@ DISCOVERY_TABLE_COLUMNS = [
     'variant_genome_build', 'Chrom', 'Pos', 'Ref', 'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type',
     'significance', 'discovery_notes',
 ]
-
-GENOME_BUILD_MAP = {
-    '37': 'GRCh37',
-    '38': 'GRCh38.p12',
-}
 
 PHENOTYPE_PROJECT_CATEGORIES = [
     'Muscle', 'Eye', 'Renal', 'Neuromuscular', 'IBD', 'Epilepsy', 'Orphan', 'Hematologic',
@@ -293,14 +287,6 @@ MIM_INHERITANCE_MAP = {
 MIM_INHERITANCE_MAP.update({inheritance: 'Other' for inheritance in [
     'Isolated cases', 'Multifactorial', 'Pseudoautosomal dominant', 'Pseudoautosomal recessive', 'Somatic mutation'
 ]})
-MITO_ZYGOSITY_MAP = {
-    HET: 'Heteroplasmy',
-    HOM_ALT: 'Homoplasmy',
-}
-METHOD_MAP = {
-    Sample.SAMPLE_TYPE_WES: 'SR-ES',
-    Sample.SAMPLE_TYPE_WGS: 'SR-GS',
-}
 
 HPO_QUALIFIERS = {
     'age_of_onset': {
@@ -454,7 +440,7 @@ def gregor_export(request):
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
         if participant['proband_relationship'] == 'Self':
-            genetic_findings_rows += _get_gregor_genetic_findings_rows(
+            genetic_findings_rows += get_genetic_findings_rows(
                 saved_variants_by_family.get(family.id), individual, participant_id,
                 data_type_individuals.keys(), family_individuals[family.id],
                 post_process_variant=_post_process_gregor_variant, experiment_id=experiment_id, variant_type='SNV/INDEL',
@@ -568,50 +554,13 @@ def _get_phenotype_row(feature):
     }
 
 
-def _base_parse_variant_genetic_findings(variant_models, *args, variant_json_fields=None, variant_model_annotations=None):
-    if variant_model_annotations:
-        variant_models = variant_models.annotate(**variant_model_annotations)
-    variant_json_fields = ['genotypes'] + (variant_json_fields or [])
-    variants = []
-    gene_ids = set()
-    for variant in variant_models:
-        chrom, pos = get_chrom_pos(variant.xpos)
-
-        variant_json = variant.saved_variant_json
-        variant_json['selectedMainTranscriptId'] = variant.selected_main_transcript_id
-        main_transcript = get_variant_main_transcript(variant_json)
-        gene_id = main_transcript.get('geneId')
-        gene_ids.add(gene_id)
-
-        variants.append({
-            'family_id': variant.family_id,
-            'chrom': chrom,
-            'pos': pos,
-            'ref': variant.ref,
-            'alt': variant.alt,
-            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
-            'gene_id': gene_id,
-            'transcript': main_transcript.get('transcriptId'),
-            'hgvsc': (main_transcript.get('hgvsc') or '').split(':')[-1],
-            'hgvsp': (main_transcript.get('hgvsp') or '').split(':')[-1],
-            'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
-            **{k: variant_json.get(k) for k in variant_json_fields},
-            **{k: getattr(variant, k) for k in variant_model_annotations or {}},
-        })
-
-    genes_by_id = get_genes(gene_ids)
-    for row in variants:
-        row['gene'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
-    return variants
-
-
 def _parse_variant_genetic_findings(*args, variant_model_annotations=None, **kwargs):
     annotations = {
         'discovery_omim_numbers': F('family__post_discovery_omim_numbers'),
         'discovery_mondo_id': F('family__mondo_id'),
         **(variant_model_annotations or {})
     }
-    variants = _base_parse_variant_genetic_findings(*args, variant_model_annotations=annotations, **kwargs)
+    variants = parse_variant_genetic_findings(*args, variant_model_annotations=annotations, **kwargs)
     mim_numbers = set()
     mondo_ids = set()
     for variant in variants:
@@ -663,67 +612,10 @@ def _get_mondo_condition_data(mondo_id):
         return {}
 
 
-def _get_gregor_genetic_findings_rows(rows, individual, participant_id, individual_data_types=None, family_individuals=None, post_process_variant=None, **kwargs):
-    parsed_rows = []
-    variants_by_gene = defaultdict(list)
-    for row in (rows or []):
-        genotypes = row['genotypes']
-        individual_genotype = genotypes.get(individual.guid) or {}
-        zygosity = get_genotype_zygosity(individual_genotype)
-        if zygosity:
-            heteroplasmy = individual_genotype.get('hl')
-            findings_id = f'{participant_id}_{row["chrom"]}_{row["pos"]}'
-            parsed_row = {
-                'genetic_findings_id': findings_id,
-                'participant_id': participant_id,
-                'zygosity': zygosity if heteroplasmy is None else MITO_ZYGOSITY_MAP[zygosity],
-                'allele_balance_or_heteroplasmy_percentage': heteroplasmy,
-                'variant_inheritance': _get_variant_inheritance(individual, genotypes),
-                **row,
-                **kwargs,
-            }
-            if family_individuals is not None:
-                parsed_row['additional_family_members_with_variant'] = '|'.join([
-                    family_individuals[guid] for guid, g in genotypes.items()
-                    if guid != individual.guid and guid in family_individuals and get_genotype_zygosity(g)
-                ])
-            if individual_data_types is not None:
-                parsed_row['method_of_discovery'] = '|'.join([
-                    METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type != Sample.SAMPLE_TYPE_RNA
-                ])
-            parsed_rows.append(parsed_row)
-            variants_by_gene[row['gene']].append({**parsed_row, 'individual_genotype': individual_genotype})
-
-    for row in parsed_rows:
-        del row['genotypes']
-        if post_process_variant:
-            row.update(post_process_variant(row, variants_by_gene[row['gene']]))
-
-    return parsed_rows
-
-
 def _post_process_gregor_variant(row, gene_variants):
     return {'linked_variant': next(
         v['genetic_findings_id'] for v in gene_variants if v['genetic_findings_id'] != row['genetic_findings_id']
     ) if len(gene_variants) > 1 else None}
-
-
-def _get_variant_inheritance(individual, genotypes):
-    parental_inheritance = tuple(
-        None if parent is None else genotypes.get(parent.guid, {}).get('numAlt', -1) > 0
-        for parent in [individual.mother, individual.father]
-    )
-    return {
-        (True, True): 'biparental',
-        (True, False): 'maternal',
-        (True, None): 'maternal',
-        (False, True): 'paternal',
-        (False, False): 'de novo',
-        (False, None): 'nonmaternal',
-        (None, True): 'paternal',
-        (None, False): 'nonpaternal',
-        (None, None): 'unknown',
-    }[parental_inheritance]
 
 
 def _get_analyte_row(individual):
@@ -1049,22 +941,10 @@ def variant_metadata(request, project_guid):
                 **post_process_variant_metadata(v, gene_variants),
             }
 
-        variant_rows += _get_gregor_genetic_findings_rows(
+        variant_rows += get_genetic_findings_rows(
             variants_by_family[family_id], individual, participant_id=individual.individual_id,
             individual_data_types=individual.data_types, family_individuals=family_individuals[family_id],
             post_process_variant=_post_process_variant_metadata, **family_data_by_id[family_id],
         )
 
     return create_json_response({'rows': variant_rows})
-
-
-def post_process_variant_metadata(v, gene_variants):
-    discovery_notes = None
-    if len(gene_variants) > 2:
-        parent_mnv = next((v for v in gene_variants if len(v['individual_genotype']) == 1), gene_variants[0])
-        discovery_notes = get_discovery_notes(
-            parent_mnv, gene_variants, get_variant_id=lambda v: f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}")
-    return {
-        'sv_name': get_sv_name(v),
-        'notes': discovery_notes,
-    }

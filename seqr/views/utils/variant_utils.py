@@ -325,6 +325,7 @@ def get_saved_discovery_variants_by_family(variant_filter, format_variants, get_
     return saved_variants_by_family
 
 
+# TODO move
 def get_sv_name(variant_json):
     if variant_json.get('svType'):
         return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
