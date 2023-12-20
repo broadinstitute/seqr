@@ -946,13 +946,14 @@ def family_metadata(request, project_guid):
         elif row_type == SAMPLE_ROW_TYPE:
             family_individuals[family_id][row['subject_id']].update(row)
         elif row_type == DISCOVERY_ROW_TYPE:
-            families_by_id[family_id].update({
-                'genes': '; '.join(sorted({v.get('Gene', v.get('sv_name')) or v.get('gene_id') or '' for v in row})),
-                'inheritance_model': '; '.join({v['inheritance_description'] for v in row}),
-            })
+            family = families_by_id[family_id]
+            if 'inheritance_models' not in family:
+                family.update({'genes': set(), 'inheritance_models': set()})
+            family['genes'].update({v.get('gene') or v.get('sv_name') or v.get('gene_id') or '' for v in row})
+            family['inheritance_models'].update({v['variant_inheritance'] for v in row})
 
     parse_anvil_metadata(
-        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_metadata=True, no_variant_zygosity=True)
+        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_metadata=True)
 
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]
@@ -971,12 +972,16 @@ def family_metadata(request, project_guid):
         sorted_samples = sorted(individuals_by_id.values(), key=lambda x: x.get('date_data_generation', ''))
         earliest_sample = next((s for s in [proband or {}] + sorted_samples if s.get('date_data_generation')), {})
 
+        inheritance_models = f.pop('inheritance_models', [])
         f.update({
             'individual_count': len(individuals_by_id),
             'other_individual_ids':  '; '.join(sorted(individuals_ids)),
             'family_structure': _get_family_structure(len(individuals_by_id), sum(1 for id in known_ids.values() if id)),
             'data_type': earliest_sample.get('data_type'),
             'date_data_generation': earliest_sample.get('date_data_generation'),
+            'genes': '; '.join(sorted(f.get('genes', []))),
+            'actual_inheritance': 'unknown' if inheritance_models == {'unknown'} else ';'.join(
+                sorted([i for i in inheritance_models if i != 'unknown'])),
         })
 
     return create_json_response({'rows': list(families_by_id.values())})

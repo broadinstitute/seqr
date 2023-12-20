@@ -17,7 +17,7 @@ const COLUMNS = [
   },
   { name: 'solve_state' },
   { name: 'genes' },
-  { name: 'inheritance_model' },
+  { name: 'actual_inheritance' },
   { name: 'disease_id' },
   { name: 'disease_description' },
   { name: 'individual_count', content: '# individuals' },

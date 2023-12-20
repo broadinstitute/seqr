@@ -91,8 +91,9 @@ def get_family_metadata(projects, additional_fields=None, additional_values=None
     return family_data_by_id
 
 
+# TODO clean up signature
 def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_fields=None,
-                          get_additional_sample_fields=None, get_additional_variant_fields=None, no_variant_zygosity=False):
+                          get_additional_sample_fields=None, get_additional_variant_fields=None):
     individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
         if max_loaded_date else _get_all_project_individual_samples(projects)
 
@@ -174,10 +175,6 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             family_row['family_history'] = 'Yes'
         add_row(family_row, family_id, FAMILY_ROW_TYPE)
 
-        if no_variant_zygosity:
-            # TODO confirm family_metadata still working
-            add_row(saved_variants, family_id, DISCOVERY_ROW_TYPE)
-
         for individual in family_individuals:
             sample = individual_samples[individual]
 
@@ -200,13 +197,12 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                 sample_row = _get_sample_row(sample, subject_id, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields)
                 add_row(sample_row, family_id, SAMPLE_ROW_TYPE)
 
-            if not no_variant_zygosity:
-                # TODO move to helpers in file
-                from seqr.views.apis.report_api import _get_gregor_genetic_findings_rows, post_process_variant_metadata
-                discovery_row = _get_gregor_genetic_findings_rows(
-                    saved_variants, individual, participant_id=subject_row['subject_id'],
-                    post_process_variant=post_process_variant_metadata)
-                add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
+            # TODO move to helpers in file
+            from seqr.views.apis.report_api import _get_gregor_genetic_findings_rows, post_process_variant_metadata
+            discovery_row = _get_gregor_genetic_findings_rows(
+                saved_variants, individual, participant_id=subject_row['subject_id'],
+                post_process_variant=post_process_variant_metadata)
+            add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 
 def get_family_solve_state(analysis_status):
