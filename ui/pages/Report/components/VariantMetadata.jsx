@@ -18,6 +18,7 @@ const COLUMNS = [
   { name: 'phenotype_contribution' },
   { name: 'additional_family_members_with_variant' },
   { name: 'method_of_discovery' },
+  { name: 'Submitted to MME', format: ({ MME }) => (MME ? 'Yes' : 'No') },
   ...VARIANT_METADATA_COLUMNS.slice(-1),
 ]
 

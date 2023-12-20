@@ -77,18 +77,17 @@ test('IndividualMetadata render and export', () => {
     'filter_flags', 'consanguinity', 'family_history', 'genetic_findings_id-1', 'variant_reference_assembly-1',
     'chrom-1', 'pos-1', 'ref-1', 'alt-1', 'gene-1', 'gene_id-1', 'seqr_chosen_consequence-1', 'transcript-1',
     'hgvsc-1', 'hgvsp-1', 'zygosity-1', 'sv_name-1', 'sv_type-1', 'variant_inheritance-1', 'gene_known_for_phenotype-1',
-    'Submitted to MME-1', 'notes-1', 'genetic_findings_id-2', 'variant_reference_assembly-2', 'chrom-2', 'pos-2',
+    'notes-1', 'genetic_findings_id-2', 'variant_reference_assembly-2', 'chrom-2', 'pos-2',
     'ref-2', 'alt-2', 'gene-2', 'gene_id-2', 'seqr_chosen_consequence-2', 'transcript-2', 'hgvsc-2', 'hgvsp-2',
-    'zygosity-2', 'sv_name-2', 'sv_type-2', 'variant_inheritance-2', 'gene_known_for_phenotype-2', 'Submitted to MME-2',
-    'notes-2'])
+    'zygosity-2', 'sv_name-2', 'sv_type-2', 'variant_inheritance-2', 'gene_known_for_phenotype-2', 'notes-2'])
   expect(exportConfig.processRow(DATA[0])).toEqual([
     'Test Reprocessed Project', 'R0003_test', '12', 'F000012_12', 'NA20889', 'I000017_na20889', null, '', '', '', '',
     'Self', 'Female', 'Ashkenazi Jewish', undefined, undefined, null, 'Affected',
     'HP:0011675 (Arrhythmia)|HP:0001509 ()', '', null, undefined, 'Waiting for data', 'Tier 1', 'Y', 'WES', '2017-02-05', '',
     undefined, 'Yes', 'NA20889_1_248367227', undefined, '1', 248367227, 'TC', 'T', 'OR4G11P', 'ENSG00000240361',
     'intron_variant', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', undefined, undefined,
-    'unknown', 'Candidate', 'No', undefined, 'NA20889_1_249045487', undefined, '12', '49045487', undefined,
+    'unknown', 'Candidate', undefined, 'NA20889_1_249045487', undefined, '12', '49045487', undefined,
     undefined, undefined, undefined, undefined,
     undefined, undefined, undefined, 'Heterozygous', 'DEL:chr12:49045487-49045898', 'Deletion',
-    'unknown', 'Candidate', 'No', undefined])
+    'unknown', 'Candidate', undefined])
 })
