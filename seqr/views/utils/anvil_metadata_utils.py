@@ -202,10 +202,10 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
 
             if not no_variant_zygosity:
                 # TODO move to helpers in file
-                from seqr.views.apis.report_api import _get_gregor_genetic_findings_rows
-                # TODO clean up call
+                from seqr.views.apis.report_api import _get_gregor_genetic_findings_rows, post_process_variant_metadata
                 discovery_row = _get_gregor_genetic_findings_rows(
-                    saved_variants, individual, participant_id=subject_row['subject_id'])
+                    saved_variants, individual, participant_id=subject_row['subject_id'],
+                    post_process_variant=post_process_variant_metadata)
                 add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 
@@ -543,7 +543,7 @@ def _get_parsed_saved_discovery_variants_by_family(families):
     return get_saved_discovery_variants_by_family(
         {'family__id__in': families},
         format_variants=_base_parse_variant_genetic_findings,
-        get_family_id=lambda v: v['family_id'],
+        get_family_id=lambda v: v.pop('family_id'),
         variant_json_fields=['svType', 'svName', 'end'],
         variant_model_annotations={
             'gene_known_for_phenotype': Case(When(

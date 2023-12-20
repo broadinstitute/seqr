@@ -1763,7 +1763,7 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'hgvsp' },
   { name: 'zygosity' },
   { name: 'sv_name' },
-  { name: 'svType', content: 'sv_type' },
+  { name: 'svType', content: 'sv_type' },  // TODO format
   { name: 'variant_inheritance' },
   { name: 'gene_known_for_phenotype' },
   { name: 'Submitted to MME', format: ({ MME }) => (MME ? 'Yes' : 'No') },

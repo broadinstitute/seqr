@@ -1027,15 +1027,9 @@ def variant_metadata(request, project_guid):
         family_id = individual.family_id
 
         def _post_process_variant_metadata(v, gene_variants):
-            discovery_notes = None
-            if len(gene_variants) > 2:
-                parent_mnv = next((v for v in gene_variants if len(v['individual_genotype'])), gene_variants[0])
-                discovery_notes = get_discovery_notes(
-                    parent_mnv, gene_variants, get_variant_id=lambda v: f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}")
             return {
                 'MME': v.pop('matchmaker_individual') == individual.guid,
-                'sv_name': get_sv_name(v),
-                'notes': discovery_notes,
+                **post_process_variant_metadata(v, gene_variants),
             }
 
         variant_rows += _get_gregor_genetic_findings_rows(
@@ -1045,3 +1039,15 @@ def variant_metadata(request, project_guid):
         )
 
     return create_json_response({'rows': variant_rows})
+
+
+def post_process_variant_metadata(v, gene_variants):
+    discovery_notes = None
+    if len(gene_variants) > 2:
+        parent_mnv = next((v for v in gene_variants if len(v['individual_genotype'])), gene_variants[0])
+        discovery_notes = get_discovery_notes(
+            parent_mnv, gene_variants, get_variant_id=lambda v: f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}")
+    return {
+        'sv_name': get_sv_name(v),
+        'notes': discovery_notes,
+    }

@@ -492,7 +492,6 @@ BASE_VARIANT_METADATA_ROW = {
     'analysisStatus': 'Q',
     'clinvar': None,
     'end': None,
-    'genotypes': mock.ANY,
     'hgvsc': '',
     'hgvsp': '',
     'method_of_discovery': 'SR-ES',
