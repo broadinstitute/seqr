@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
-from django.db.models import F, Q, Value, CharField
+from django.db.models import F, Q, Value, CharField, Case, When
 from django.db.models.functions import Replace, JSONObject
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
@@ -135,9 +135,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
 
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(list(sample_ids), user)
 
-    # TODO move to helpers in file
-    from seqr.views.apis.report_api import _get_gregor_discovery_variants_by_family, _get_gregor_genetic_findings_rows
-    saved_variants_by_family = _get_gregor_discovery_variants_by_family(projects, variant_json_fields=['svType', 'svName', 'end'])
+    saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(family_data_by_id.keys()))
 
     mim_numbers = set()
     for family in family_data_by_id.values():
@@ -203,6 +201,8 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                 add_row(sample_row, family_id, SAMPLE_ROW_TYPE)
 
             if not no_variant_zygosity:
+                # TODO move to helpers in file
+                from seqr.views.apis.report_api import _get_gregor_genetic_findings_rows
                 # TODO clean up call
                 discovery_row = _get_gregor_genetic_findings_rows(
                     saved_variants, individual, participant_id=subject_row['subject_id'])
@@ -537,8 +537,19 @@ def _format_variants(project_saved_variants, *args):
     return variants
 
 
-# TODO remove
 def _get_parsed_saved_discovery_variants_by_family(families):
+    # TODO move to helpers in file
+    from seqr.views.apis.report_api import _base_parse_variant_genetic_findings
     return get_saved_discovery_variants_by_family(
-        {'family__id__in': families}, _format_variants, lambda saved_variant: saved_variant.pop('familyId'),
+        {'family__id__in': families},
+        format_variants=_base_parse_variant_genetic_findings,
+        get_family_id=lambda v: v['family_id'],
+        variant_json_fields=['svType', 'svName', 'end'],
+        variant_model_annotations={
+            'gene_known_for_phenotype': Case(When(
+                Q(family__post_discovery_omim_numbers__len=0, family__mondo_id__isnull=True),
+                then=Value('Candidate')), default=Value('Known')),
+        },
+        # TODO remove
+        #_format_variants, lambda saved_variant: saved_variant.pop('familyId'),
     )

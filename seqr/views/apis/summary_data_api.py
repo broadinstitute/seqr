@@ -3,7 +3,7 @@ from datetime import datetime
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.models import User
-from django.db.models import CharField, F, Value, Case, When
+from django.db.models import CharField, F, Value
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
 from random import randint

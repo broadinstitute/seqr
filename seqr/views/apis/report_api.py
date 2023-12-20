@@ -556,17 +556,12 @@ def _get_phenotype_row(feature):
     }
 
 
-def _parse_variant_genetic_findings(variant_models, *args, variant_json_fields=None, variant_model_annotations=None):
-    variant_models = variant_models.annotate(
-        omim_numbers=F('family__post_discovery_omim_numbers'),
-        mondo_id=F('family__mondo_id'),
-        **(variant_model_annotations or {}),
-    )
+def _base_parse_variant_genetic_findings(variant_models, *args, variant_json_fields=None, variant_model_annotations=None):
+    if variant_model_annotations:
+        variant_models = variant_models.annotate(**variant_model_annotations)
     variant_json_fields = ['genotypes'] + (variant_json_fields or [])
     variants = []
     gene_ids = set()
-    mim_numbers = set()
-    mondo_ids = set()
     for variant in variant_models:
         chrom, pos = get_chrom_pos(variant.xpos)
 
@@ -575,15 +570,6 @@ def _parse_variant_genetic_findings(variant_models, *args, variant_json_fields=N
         main_transcript = get_variant_main_transcript(variant_json)
         gene_id = main_transcript.get('geneId')
         gene_ids.add(gene_id)
-
-        condition_id = ''
-        if variant.omim_numbers:
-            mim_number = variant.omim_numbers[0]
-            mim_numbers.add(mim_number)
-            condition_id = f'OMIM:{mim_number}'
-        elif variant.mondo_id:
-            condition_id = f"MONDO:{variant.mondo_id.replace('MONDO:', '')}"
-            mondo_ids.add(condition_id)
 
         variants.append({
             'family_id': variant.family_id,
@@ -597,14 +583,43 @@ def _parse_variant_genetic_findings(variant_models, *args, variant_json_fields=N
             'hgvsc': (main_transcript.get('hgvsc') or '').split(':')[-1],
             'hgvsp': (main_transcript.get('hgvsp') or '').split(':')[-1],
             'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
-            'gene_known_for_phenotype': 'Known' if condition_id else 'Candidate',
-            'condition_id': condition_id,  # TODO
-            'phenotype_contribution': 'Full',  # TODO
             **{k: variant_json.get(k) for k in variant_json_fields},
             **{k: getattr(variant, k) for k in variant_model_annotations or {}},
         })
 
     genes_by_id = get_genes(gene_ids)
+    for row in variants:
+        row['gene'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
+    return variants
+
+
+def _parse_variant_genetic_findings(*args, variant_model_annotations=None, **kwargs):
+    annotations = {
+        'discovery_omim_numbers': F('family__post_discovery_omim_numbers'),
+        'discovery_mondo_id': F('family__mondo_id'),
+        **(variant_model_annotations or {})
+    }
+    variants = _base_parse_variant_genetic_findings(*args, variant_model_annotations=annotations, **kwargs)
+    mim_numbers = set()
+    mondo_ids = set()
+    for variant in variants:
+        condition_id = ''
+        omim_numbers = variant.pop('discovery_omim_numbers')
+        mondo_id = variant.pop('discovery_mondo_id')
+        if omim_numbers:
+            mim_number = omim_numbers[0]
+            mim_numbers.add(mim_number)
+            condition_id = f'OMIM:{mim_number}'
+        elif mondo_id:
+            condition_id = f"MONDO:{mondo_id.replace('MONDO:', '')}"
+            mondo_ids.add(condition_id)
+
+        variant.update({
+            'condition_id': condition_id,
+            'gene_known_for_phenotype': 'Known' if condition_id else 'Candidate',
+            'phenotype_contribution': 'Full',
+        })
+
     conditions_by_id = {
         f'OMIM:{number}':  {
             'known_condition_name': description,
@@ -617,8 +632,7 @@ def _parse_variant_genetic_findings(variant_models, *args, variant_json_fields=N
     }
     conditions_by_id.update({mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids})
     for row in variants:
-        row['gene'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
-        row.update(conditions_by_id.get(row['condition_id'], {}))  # TODO
+        row.update(conditions_by_id.get(row['condition_id'], {}))
     return variants
 
 
