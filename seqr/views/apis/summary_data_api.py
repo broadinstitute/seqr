@@ -375,7 +375,6 @@ def individual_metadata(request, project_guid):
         projects, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
         include_metadata=True,
         omit_airtable=not include_airtable,
-        get_additional_variant_fields=_get_additional_variant_fields,
         get_additional_sample_fields=lambda sample, airtable_metadata: {
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
         },
@@ -395,32 +394,6 @@ def individual_metadata(request, project_guid):
                 row[hpo_key] = '|'.join(['{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')) for feature_id in row[hpo_key].split('|')])
 
     return create_json_response({'rows': list(rows_by_subject_family_id.values())})
-
-# TODO cleanup
-def _get_additional_variant_fields(variant, *args):
-    if 'discovery_tag_guids_by_name' not in variant:
-        return {}
-    discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
-    is_novel = 'Y' if any('Novel gene' in name for name in discovery_tag_names) else 'N'
-    return {
-        'novel_mendelian_gene': is_novel,
-        'phenotype_class': _get_discovery_phenotype_class(discovery_tag_names),
-    }
-
-
-DISCOVERY_PHENOTYPE_CLASSES = {
-    'NEW': ['Tier 1 - Known gene, new phenotype', 'Tier 2 - Known gene, new phenotype'],
-    'EXPAN': ['Tier 1 - Phenotype expansion', 'Tier 1 - Novel mode of inheritance', 'Tier 2 - Phenotype expansion'],
-    'UE': ['Tier 1 - Phenotype not delineated', 'Tier 2 - Phenotype not delineated'],
-    'KNOWN': ['Known gene for phenotype'],
-}
-
-
-def _get_discovery_phenotype_class(variant_tag_names):
-    for phenotype_class, class_tag_names in DISCOVERY_PHENOTYPE_CLASSES.items():
-        if any(tag in variant_tag_names for tag in class_tag_names):
-            return phenotype_class
-    return None
 
 
 def _get_airtable_collaborator_names(user, collaborator_ids):

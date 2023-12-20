@@ -85,9 +85,8 @@ def get_family_metadata(projects, additional_fields=None, additional_values=None
     return family_data_by_id
 
 
-# TODO clean up signature
 def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_fields=None,
-                          get_additional_sample_fields=None, get_additional_variant_fields=None, include_discovery_sample_id=False):
+                          get_additional_sample_fields=None, include_discovery_sample_id=False):
     individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
         if max_loaded_date else _get_all_project_individual_samples(projects)
 
