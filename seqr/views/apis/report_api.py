@@ -637,11 +637,11 @@ def _get_mondo_condition_data(mondo_id):
         return {}
 
 
-def _get_gregor_genetic_findings_rows(rows, individual, participant_id, individual_data_types, family_individuals, post_process_variant, **kwargs):
+def _get_gregor_genetic_findings_rows(rows, individual, participant_id, individual_data_types=None, family_individuals=None, post_process_variant=None, **kwargs):
     parsed_rows = []
     variants_by_gene = defaultdict(list)
     for row in (rows or []):
-        genotypes = row['genotypes']  # TODO pop later? pop now?
+        genotypes = row['genotypes']
         individual_genotype = genotypes.get(individual.guid) or {}
         zygosity = get_genotype_zygosity(individual_genotype)
         if zygosity:
@@ -651,23 +651,27 @@ def _get_gregor_genetic_findings_rows(rows, individual, participant_id, individu
                 'genetic_findings_id': findings_id,
                 'participant_id': participant_id,
                 'zygosity': zygosity if heteroplasmy is None else MITO_ZYGOSITY_MAP[zygosity],
-                'allele_balance_or_heteroplasmy_percentage': heteroplasmy,  # TODO
+                'allele_balance_or_heteroplasmy_percentage': heteroplasmy,
                 'variant_inheritance': _get_variant_inheritance(individual, genotypes),
-                'additional_family_members_with_variant': '|'.join([  # TODO
-                    family_individuals[guid] for guid, g in genotypes.items()
-                    if guid != individual.guid and guid in family_individuals and get_genotype_zygosity(g)
-                ]),
-                'method_of_discovery': '|'.join([  # TODO
-                    METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type != Sample.SAMPLE_TYPE_RNA
-                ]),
                 **row,
                 **kwargs,
             }
+            if family_individuals is not None:
+                parsed_row['additional_family_members_with_variant'] = '|'.join([
+                    family_individuals[guid] for guid, g in genotypes.items()
+                    if guid != individual.guid and guid in family_individuals and get_genotype_zygosity(g)
+                ])
+            if individual_data_types is not None:
+                parsed_row['method_of_discovery'] = '|'.join([
+                    METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type != Sample.SAMPLE_TYPE_RNA
+                ])
             parsed_rows.append(parsed_row)
             variants_by_gene[row['gene']].append({**parsed_row, 'individual_genotype': individual_genotype})
 
     for row in parsed_rows:
-        row.update(post_process_variant(row, variants_by_gene[row['gene']]))
+        del row['genotypes']
+        if post_process_variant:
+            row.update(post_process_variant(row, variants_by_gene[row['gene']]))
 
     return parsed_rows
 

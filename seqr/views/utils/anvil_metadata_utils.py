@@ -205,7 +205,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             if not no_variant_zygosity:
                 # TODO clean up call
                 discovery_row = _get_gregor_genetic_findings_rows(
-                    saved_variants, individual, participant_id=subject_row['subject_id'], individual_data_types=[], family_individuals={}, post_process_variant=lambda *args: {})
+                    saved_variants, individual, participant_id=subject_row['subject_id'])
                 add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 
