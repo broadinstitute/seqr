@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from django.db.models import F, Q, Value, CharField, Case, When
 from django.db.models.functions import Replace
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -205,8 +205,8 @@ def get_family_solve_state(analysis_status):
     return SOLVE_STATUS_LOOKUP.get(analysis_status, 'No')
 
 
-def _get_nested_variant_name(variant, get_variant_id):
-    return _get_sv_name(variant) or get_variant_id(variant)
+def _get_nested_variant_name(v):
+    return _get_sv_name(v) or f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}"
 
 
 def _get_sv_name(variant_json):
@@ -235,37 +235,29 @@ def _get_sorted_search_samples(projects):
 
 HET = 'Heterozygous'
 HOM_ALT = 'Homozygous'
-HEMI = 'Hemizygous'
 
 
-# TODO make private
-def get_genotype_zygosity(genotype, is_hemi_variant=False):
+def _get_genotype_zygosity(genotype):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
     if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
         return HOM_ALT
     if num_alt == 1 or cn == 1 or cn == 3:
-        return HEMI if is_hemi_variant else HET
+        return HET
     return None
-
-
-# TODO move/ make private
-def get_discovery_notes(parent_mnv, mnvs, get_variant_id):
-    variant_type = 'complex structural' if parent_mnv.get('svType') else 'multinucleotide'
-    parent_name = _get_nested_variant_name(parent_mnv, get_variant_id)
-    parent_details = [parent_mnv[key] for key in ['hgvsc', 'hgvsp'] if parent_mnv.get(key)]
-    parent = f'{parent_name} ({", ".join(parent_details)})' if parent_details else parent_name
-    mnv_names = [_get_nested_variant_name(v, get_variant_id) for v in mnvs]
-    nested_mnvs = sorted([v for v in mnv_names if v != parent_name])
-    return f'The following variants are part of the {variant_type} variant {parent}: {", ".join(nested_mnvs)}'
 
 
 def post_process_variant_metadata(v, gene_variants):
     discovery_notes = None
     if len(gene_variants) > 2:
         parent_mnv = next((v for v in gene_variants if len(v['individual_genotype']) == 1), gene_variants[0])
-        discovery_notes = get_discovery_notes(
-            parent_mnv, gene_variants, get_variant_id=lambda v: f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}")
+        variant_type = 'complex structural' if parent_mnv.get('svType') else 'multinucleotide'
+        parent_name = _get_nested_variant_name(parent_mnv)
+        parent_details = [parent_mnv[key] for key in ['hgvsc', 'hgvsp'] if parent_mnv.get(key)]
+        parent = f'{parent_name} ({", ".join(parent_details)})' if parent_details else parent_name
+        mnv_names = [_get_nested_variant_name(v) for v in gene_variants]
+        nested_mnvs = sorted([v for v in mnv_names if v != parent_name])
+        discovery_notes = f'The following variants are part of the {variant_type} variant {parent}: {", ".join(nested_mnvs)}'
     return {
         'sv_name': _get_sv_name(v),
         'notes': discovery_notes,
@@ -390,7 +382,7 @@ def get_genetic_findings_rows(rows: list[dict], individual: Individual, particip
     for row in (rows or []):
         genotypes = row['genotypes']
         individual_genotype = genotypes.get(individual.guid) or {}
-        zygosity = get_genotype_zygosity(individual_genotype)
+        zygosity = _get_genotype_zygosity(individual_genotype)
         if zygosity:
             heteroplasmy = individual_genotype.get('hl')
             findings_id = f'{participant_id}_{row["chrom"]}_{row["pos"]}'
@@ -409,7 +401,7 @@ def get_genetic_findings_rows(rows: list[dict], individual: Individual, particip
             if family_individuals is not None:
                 parsed_row['additional_family_members_with_variant'] = '|'.join([
                     family_individuals[guid] for guid, g in genotypes.items()
-                    if guid != individual.guid and guid in family_individuals and get_genotype_zygosity(g)
+                    if guid != individual.guid and guid in family_individuals and _get_genotype_zygosity(g)
                 ])
             if individual_data_types is not None:
                 parsed_row['method_of_discovery'] = '|'.join([
