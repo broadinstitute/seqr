@@ -741,8 +741,7 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
 
         # Compute all distinct variant pairs
-        """
-        Assume a table with the following data
+        """ Assume a table with the following data
          gene_ids | v1     | v2
          A        | [1, 2] | [1, 2, 3]
          B        | [2]    | [2, 3]
@@ -753,8 +752,7 @@ class BaseHailTableQuery(object):
             v2=ch_ht.v2.group_by(key_expr).map_values(lambda x: x[0]),
         )
         ch_ht = ch_ht.explode(ch_ht.v1)
-        """
-        After annotating and exploding by v1:
+        """ After annotating and exploding by v1:
          gene_ids | v1 | v2                          | v1_set 
          A        | 1  | {id_1: 1, id_2: 2, id_3: 3} | {id_1, id_2}
          A        | 2  | {id_2: 2, id_3: 3}          | {id_1, id_2}
@@ -765,8 +763,7 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.annotate(v2=ch_ht.v2.items().filter(
             lambda x: ~ch_ht.v2.contains(v1_key) | ~ch_ht.v1_set.contains(x[0]) | (x[0] > v1_key)
         ))
-        """
-        After filtering v2:
+        """ After filtering v2:
          gene_ids | v1 | v2                     | v1_set 
          A        | 1  | [(id_2, 2), (id_3, 3)] | {id_1, id_2}
          A        | 2  | [(id_3, 3)]            | {id_1, id_2}
@@ -778,16 +775,14 @@ class BaseHailTableQuery(object):
             v2_items=hl.agg.collect(ch_ht.v2).flatmap(lambda x: x),
         )
         ch_ht = ch_ht.annotate(v2=hl.dict(ch_ht.v2_items).values())
-        """
-        After grouping by v1:
+        """ After grouping by v1:
          v1 | v2     | comp_het_gene_ids
          1  | [2, 3] | {A}
          2  | [3]    | {A, B}             
         """
 
         ch_ht = ch_ht.explode(ch_ht.v2)._key_by_assert_sorted()
-        """
-        After exploding by v2:
+        """ After exploding by v2:
          v1 | v2 | comp_het_gene_ids
          1  | 2  | {A}
          1  | 3  | {A}
