@@ -705,6 +705,7 @@ class BaseHailTableQuery(object):
         return annotation_filters
 
     def _filter_compound_hets(self):
+        # pylint: disable=pointless-string-statement
         ch_ht = self._ht
         if self._is_recessive_search:
             ch_ht = ch_ht.filter(ch_ht.comp_het_family_entries.any(hl.is_defined))
