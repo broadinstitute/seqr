@@ -28,7 +28,6 @@ const COLUMNS = [
   { name: 'other_individual_ids' },
   { name: 'analysis_groups' },
   { name: 'pmid_id' },
-  { name: 'notes' },
 ]
 
 const FamilyMetadata = props => (

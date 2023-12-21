@@ -1054,8 +1054,8 @@ class ReportAPITest(AirtableTest):
             'proband_id': 'NA20889',
             'maternal_id': '',
             'paternal_id': '',
-            'other_individual_ids': 'NA20888',
-            'individual_count': 2,
+            'other_individual_ids': 'NA20870; NA20888',
+            'individual_count': 3,
             'family_structure': 'other',
             'family_history': 'Yes',
             'genes': 'DEL:chr1:249045487-249045898; OR4G11P',
@@ -1066,7 +1066,6 @@ class ReportAPITest(AirtableTest):
             'analysis_groups': [],
             'MME': 'Y',
             'consanguinity': 'None suspected',
-            'notes': None,
         })
 
         # Test all projects
@@ -1100,7 +1099,6 @@ class ReportAPITest(AirtableTest):
             'analysis_groups': ['Accepted', 'Test Group 1'],
             'MME': 'N',
             'consanguinity': 'None suspected',
-            'notes': None,
         })
 
         # Test empty project

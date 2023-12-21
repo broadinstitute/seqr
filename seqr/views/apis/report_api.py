@@ -25,7 +25,7 @@ from seqr.views.utils.permissions_utils import analyst_required, get_project_and
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family
 
-from seqr.models import Project, Family, Sample, Individual, FamilyNote
+from seqr.models import Project, Family, Sample, Individual
 from reference_data.models import Omim, HumanPhenotypeOntology, GENOME_VERSION_LOOKUP
 from settings import GREGOR_DATA_MODEL_URL
 
@@ -916,17 +916,15 @@ def family_metadata(request, project_guid):
             })
 
     parse_anvil_metadata(
-        projects, max_loaded_date=datetime.now().strftime('%Y-%m-%d'), user=request.user, add_row=_add_row,
+        projects, max_loaded_date=None, user=request.user, add_row=_add_row,
         omit_airtable=True, include_metadata=True, include_no_individual_families=True, no_variant_zygosity=True,
         family_values={'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False))})
 
-    analysis_notes_by_family = _get_analysis_notes_by_family(projects)
-
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]
-        family_structure = 'singleton' if len(individuals_by_id) == 1 else 'other'
         proband = next((i for i in individuals_by_id.values() if i['proband_relationship'] == 'Self'), None)
         individuals_ids = set(individuals_by_id.keys())
+        known_ids = {}
         if proband:
             known_ids = {
                 'proband_id': proband['subject_id'],
@@ -935,10 +933,6 @@ def family_metadata(request, project_guid):
             }
             f.update(known_ids)
             individuals_ids -= set(known_ids.values())
-            if proband['paternal_id'] and proband['maternal_id'] and len(individuals_ids) < 2:
-                family_structure = 'quad' if individuals_ids else 'trio'
-            elif (not individuals_ids) and (proband['paternal_id'] or proband['maternal_id']):
-                family_structure = 'duo'
 
         sorted_samples = sorted(individuals_by_id.values(), key=lambda x: x.get('date_data_generation', ''))
         earliest_sample = next((s for s in [proband or {}] + sorted_samples if s.get('date_data_generation')), {})
@@ -946,21 +940,24 @@ def family_metadata(request, project_guid):
         f.update({
             'individual_count': len(individuals_by_id),
             'other_individual_ids':  '; '.join(sorted(individuals_ids)),
-            'family_structure': family_structure,
+            'family_structure': _get_family_structure(len(individuals_by_id), sum(1 for id in known_ids.values() if id)),
             'data_type': earliest_sample.get('data_type'),
             'date_data_generation': earliest_sample.get('date_data_generation'),
-            'notes': analysis_notes_by_family.get(f['familyGuid']),
         })
 
     return create_json_response({'rows': list(families_by_id.values())})
 
 
-def _get_analysis_notes_by_family(projects):
-    notes = FamilyNote.objects.filter(
-        family__project__in=projects, note_type='A').select_related('family').order_by('last_modified_date')
+FAMILY_STRUCTURES = {
+    1: 'singleton',
+    2: 'duo',
+    3: 'trio',
+    4: 'quad',
+}
 
-    analysis_notes_by_family = defaultdict(list)
-    for note in notes:
-        analysis_notes_by_family[note.family.guid].append(note.note)
 
-    return {k: '; '.join(v) for k, v in analysis_notes_by_family.items()}
+def _get_family_structure(num_individuals, num_known_individuals):
+    if (num_individuals and num_known_individuals == num_individuals) or (
+            num_known_individuals in {0, 3} and num_individuals == num_known_individuals + 1):
+        return FAMILY_STRUCTURES[num_individuals]
+    return 'other'
