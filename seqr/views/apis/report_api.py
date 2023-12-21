@@ -15,7 +15,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import get_airtable_samples
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, \
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, get_omim_conditions_by_id_gene, variant_omim_conditions, \
     ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
     SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
@@ -26,7 +26,7 @@ from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family
 
 from seqr.models import Project, Family, Sample, Individual
-from reference_data.models import Omim, HumanPhenotypeOntology, GENOME_VERSION_LOOKUP
+from reference_data.models import HumanPhenotypeOntology, GENOME_VERSION_LOOKUP
 from settings import GREGOR_DATA_MODEL_URL
 
 
@@ -590,27 +590,21 @@ def _parse_variant_genetic_findings(variant_models, *args):
         })
 
     genes_by_id = get_genes(gene_ids)
-    omim_conditions_by_id = defaultdict(lambda: defaultdict(list))
-    for omim in Omim.objects.filter(phenotype_mim_number__in=mim_numbers).values(
-        'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance', 'chrom', 'start', 'end', 'gene__gene_id'):
-        omim_conditions_by_id[f'OMIM:{omim["phenotype_mim_number"]}'][omim['gene__gene_id']].append(omim)
+    omim_conditions = get_omim_conditions_by_id_gene(mim_numbers)
     mondo_conditions_by_id = {mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids}
     for row in variants:
         row['gene'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
-        omim_condition = omim_conditions_by_id.get(row['condition_id'])
-        if omim_condition:
-            conditions = omim_condition[row['gene_id']]
-            conditions += [
-                c for c in omim_condition[None]
-                if c['chrom'] == row['chrom'] and c['start'] <= row['pos'] <= c['end']
-            ]
-            omim_condition = {
+        condition = mondo_conditions_by_id.get(row['condition_id'], {})
+        if row['condition_id'] and row['condition_id'].startswith('OMIM:'):
+            conditions = variant_omim_conditions(
+                omim_conditions[int(row['condition_id'].replace('OMIM:', ''))], [row], lambda v: [v['gene_id']])
+            condition = {
                 'known_condition_name': '|'.join(sorted({o['phenotype_description'] for o in conditions})),
                 'condition_inheritance': '|'.join(sorted({
                     MIM_INHERITANCE_MAP.get(i, i) for o in conditions for i in (o['phenotype_inheritance'] or '').split(', ')
                 }))
-            } if conditions else None
-        row.update(omim_condition or mondo_conditions_by_id.get(row['condition_id'], {}))
+            } if conditions else {}
+        row.update(condition)
     return variants
 
 

@@ -135,11 +135,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
     mim_numbers = set()
     for family in family_data:
         mim_numbers.update(family['post_discovery_omim_numbers'])
-    # TODO
-    mim_decription_map = {
-        o.phenotype_mim_number: o.phenotype_description
-        for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers)
-    }
+    omim_conditions = get_omim_conditions_by_id_gene(mim_numbers)
 
     for family_id, family_subject_row in family_data_by_id.items():
         saved_variants = saved_variants_by_family[family_id]
@@ -149,10 +145,19 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
 
         mim_numbers = family_subject_row.pop('post_discovery_omim_numbers')
         if mim_numbers:
+            family_omims = []
+            for mim_number in mim_numbers:
+                conditions_by_gene = omim_conditions[mim_number]
+                # Preferentially include phenotypes for discovery genes/regions for each mim number, but fall back to
+                family_omims += variant_omim_conditions(
+                    conditions_by_gene, saved_variants,
+                    lambda v: [v['main_transcript'].get('geneId', '')] if v['main_transcript'] else v.get('transcripts', {}).keys()
+                ) or [c for conditions in conditions_by_gene.values() for c in conditions] or [
+                    {'phenotype_mim_number': mim_number}]
             family_subject_row.update({
-                'disease_id': ';'.join(['OMIM:{}'.format(mim_number) for mim_number in mim_numbers]),
+                'disease_id': ';'.join(['OMIM:{}'.format(omim['phenotype_mim_number']) for omim in family_omims]),
                 'disease_description': ';'.join([
-                    mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
+                    omim.get('phenotype_description', '') for omim in family_omims]).replace(',', ';'),
             })
 
         affected_individual_guids = individual_data_by_family[family_id][0] if family_id in individual_data_by_family else []
@@ -537,3 +542,28 @@ def _get_parsed_saved_discovery_variants_by_family(families):
     return get_saved_discovery_variants_by_family(
         {'family__id__in': families}, _format_variants, lambda saved_variant: saved_variant.pop('familyId'),
     )
+
+
+def get_omim_conditions_by_id_gene(mim_numbers):
+    omim_conditions_by_id_gene = defaultdict(lambda: defaultdict(list))
+    for omim in Omim.objects.filter(phenotype_mim_number__in=mim_numbers).values(
+        'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance', 'chrom', 'start', 'end', 'gene__gene_id',
+    ):
+        omim_conditions_by_id_gene[omim['phenotype_mim_number']][omim['gene__gene_id']].append(omim)
+    return omim_conditions_by_id_gene
+
+
+def variant_omim_conditions(conditions_by_gene, variants, get_variant_genes):
+    gene_ids = set()
+    positions = set()
+    for variant in variants:
+        gene_ids.update(get_variant_genes(variant))
+        positions.add((variant['chrom'], variant['pos']))
+    
+    conditions = [
+        c for c in conditions_by_gene[None]
+        if any(c['chrom'] == chrom and c['start'] <= pos <= c['end'] for chrom, pos in positions)
+    ]
+    for gene_id in gene_ids:
+        conditions += conditions_by_gene[gene_id]
+    return conditions
