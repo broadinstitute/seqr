@@ -559,7 +559,7 @@ def variant_omim_conditions(conditions_by_gene, variants, get_variant_genes):
     for variant in variants:
         gene_ids.update(get_variant_genes(variant))
         positions.add((variant['chrom'], variant['pos']))
-    
+
     conditions = [
         c for c in conditions_by_gene[None]
         if any(c['chrom'] == chrom and c['start'] <= pos <= c['end'] for chrom, pos in positions)
