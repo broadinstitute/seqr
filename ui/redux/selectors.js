@@ -374,6 +374,11 @@ const groupDataNestedByChrom = (initialData, groupedData, nestedKey) => groupedD
   }, initialData,
 )
 
+export const getOmimIntervalsByChrom = createSelector(
+  state => state.omimIntervals,
+  omimIntervals => groupDataNestedByChrom({}, Object.values(omimIntervals || {}), 'omim'),
+)
+
 export const getLocusListIntervalsByChromProject = createSelector(
   getProjectsByGuid,
   getLocusListsByGuid,

@@ -117,10 +117,17 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     component: OptionFieldView,
     multiple: true,
     tagOptionLookupField: 'postDiscoveryOmimOptions',
+    tagOptionSortField: 'category',
     formatTagOption: ({ phenotypeMimNumber, phenotypes }) => ({
       value: phenotypeMimNumber,
-      description: (phenotypes || []).map(({ geneSymbol, phenotypeDescription }) => `${geneSymbol}: ${phenotypeDescription}`).join('; '),
+      category: (phenotypes || []).some(({ geneSymbol }) => geneSymbol) ? 'Gene-Related Conditions' : 'Genomic Region Conditions',
+      description: (phenotypes || []).map((
+        { geneSymbol, phenotypeDescription, chrom, start, end },
+      ) => `${geneSymbol || `${chrom}:${start}-${end}`}: ${phenotypeDescription}`).join('; '),
     }),
+    formFieldProps: {
+      includeCategories: true,
+    },
     tagAnnotation: ({ phenotypeMimNumber, phenotypes }) => (
       <span>
         <a target="_blank" rel="noreferrer" href={`https://www.omim.org/entry/${phenotypeMimNumber}`}>

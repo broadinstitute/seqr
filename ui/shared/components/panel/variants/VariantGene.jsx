@@ -61,7 +61,7 @@ const BaseGeneLabelContent = styled(({ color, customColor, label, maxWidth, disp
     }
   }
 `
-const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
+export const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
 
 const GeneLinks = styled.div`
   font-size: .9em;
@@ -189,7 +189,7 @@ const BaseLocusListLabels = React.memo(({
       paLocusList,
       geneSymbol,
     }) : {
-      description: label,
+      description: locusListDescription,
       initials: false,
       customColor: false,
     }
@@ -228,7 +228,7 @@ const mapLocusListStateToProps = state => ({
   locusListsByGuid: getLocusListsByGuid(state),
 })
 
-export const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
+const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
 
 const ClinGenRow = ({ value, label, href }) => (
   <Table.Row>
@@ -268,6 +268,25 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
+export const omimPhenotypesDetail = (phenotypes, showCoordinates) => (
+  <List>
+    {phenotypes.map(phenotype => (
+      <ListItemLink
+        key={phenotype.phenotypeDescription}
+        content={(
+          <span>
+            {phenotype.phenotypeDescription}
+            {phenotype.phenotypeInheritance && <i>{` (${phenotype.phenotypeInheritance})`}</i>}
+            {showCoordinates && ` ${phenotype.chrom}:${phenotype.start}-${phenotype.end}`}
+          </span>
+        )}
+        target="_blank"
+        href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
+      />
+    ))}
+  </List>
+)
+
 const GENE_DISEASE_DETAIL_SECTIONS = [
   {
     color: 'violet',
@@ -298,23 +317,7 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
     compactLabel: 'OMIM Disease Phenotypes',
     expandedDisplay: true,
     showDetails: gene => gene.omimPhenotypes.length > 0,
-    detailsDisplay: gene => (
-      <List>
-        {gene.omimPhenotypes.map(phenotype => (
-          <ListItemLink
-            key={phenotype.phenotypeDescription}
-            content={phenotype.phenotypeInheritance ? (
-              <span>
-                {phenotype.phenotypeDescription}
-                <i>{` (${phenotype.phenotypeInheritance})`}</i>
-              </span>
-            ) : phenotype.phenotypeDescription}
-            target="_blank"
-            href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
-          />
-        ))}
-      </List>
-    ),
+    detailsDisplay: gene => omimPhenotypesDetail(gene.omimPhenotypes),
   },
 ]
 

@@ -28,6 +28,7 @@ GENE_GUID_2 = 'ENSG00000197530'
 SAVED_VARIANT_RESPONSE_KEYS = {
     'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'familiesByGuid',
     'genesById', 'locusListsByGuid', 'rnaSeqData', 'mmeSubmissionsByGuid', 'transcriptsById', 'phenotypeGeneScores',
+    'omimIntervals',
 }
 
 COMPOUND_HET_3_JSON = {
@@ -119,6 +120,7 @@ INVALID_CREATE_VARIANT_REQUEST_BODY['variant']['chrom'] = '27'
 
 class SavedVariantAPITest(object):
 
+    @mock.patch('seqr.views.utils.variant_utils.OMIM_GENOME_VERSION', '37')
     def test_saved_variant_data(self):
         url = reverse(saved_variant_data, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
@@ -179,6 +181,8 @@ class SavedVariantAPITest(object):
         }})
 
         self.assertDictEqual(response_json['familiesByGuid'], {'F000001_1': {'tpmGenes': ['ENSG00000135953']}})
+
+        self.assertDictEqual(response_json['omimIntervals'], {})
 
         # include project tag types
         response = self.client.get('{}?loadProjectTagTypes=true'.format(url))
@@ -256,6 +260,28 @@ class SavedVariantAPITest(object):
         # filter by invalid variant guid
         response = self.client.get('{}foo'.format(url))
         self.assertEqual(response.status_code, 404)
+
+        # Test with discovery SVs
+        response = self.client.get(url.replace(PROJECT_GUID, 'R0003_test'))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        response_keys = {*SAVED_VARIANT_RESPONSE_KEYS}
+        response_keys.remove('familiesByGuid')
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+
+        self.assertSetEqual(
+            set(response_json['savedVariantsByGuid'].keys()),
+            {'SV0000006_1248367227_r0003_tes', 'SV0000007_prefix_19107_DEL_r00'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000223972', 'ENSG00000240361'})
+        self.assertDictEqual(response_json['omimIntervals'], {'615593': {
+            'chrom': '1',
+            'start': 249044482,
+            'end': 249055991,
+            'mimNumber': 600315,
+            'phenotypeDescription': '?Immunodeficiency 16', 'phenotypeInheritance': 'Autosomal recessive',
+            'phenotypeMimNumber': 615593,
+        }})
+        self.assertDictEqual(response_json['rnaSeqData'], {})
 
         # Test cross-project discovery for analyst users
         self.login_analyst_user()
@@ -966,9 +992,9 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
         self.mock_list_workspaces.assert_called_with(self.analyst_user)
         self.mock_get_ws_access_level.assert_called_with(
             mock.ANY, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 14)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 15)
         self.mock_get_groups.assert_has_calls([mock.call(self.collaborator_user), mock.call(self.analyst_user)])
-        self.assertEqual(self.mock_get_groups.call_count, 10)
+        self.assertEqual(self.mock_get_groups.call_count, 11)
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_group_members.assert_not_called()
 

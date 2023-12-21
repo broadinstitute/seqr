@@ -2044,8 +2044,8 @@
         "variant_id": "prefix_19107_DEL",
         "saved_variant_json": {
             "liftedOverGenomeVersion": null,
-            "pos": 49045487,
-            "end": 49045898,
+            "pos": 249045487,
+            "end": 249045898,
             "xpos": 1249045487,
             "predictions": {"strvctvre": 0.374},
             "alt": null,
@@ -2059,7 +2059,7 @@
             "liftedOverChrom": null,
             "svType": "DEL",
             "variantId": "prefix_19107_DEL",
-            "chrom": "12",
+            "chrom": "1",
             "genomeVersion": "37",
             "transcripts": {"ENSG00000240361": [], "ENSG00000135953": [], "ENSG00000223972":  []}
         },
