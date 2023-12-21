@@ -61,17 +61,14 @@ def family_page_data(request, family_guid):
         [*get_chrom_pos(v['xpos']), *get_chrom_pos(v['xpos_end']), v['saved_variant_json__svType']]
     )) for v in discovery_variants]
     omims = Omim.objects.filter(
-        Q(phenotype_mim_number__in=family_response['postDiscoveryOmimNumbers']) | Q(gene__gene_id__in=gene_ids) |
-        get_omim_intervals_query(discovery_variant_intervals)
-    ).exclude(phenotype_mim_number__isnull=True).distinct()
+        get_omim_intervals_query(discovery_variant_intervals) | Q(gene__gene_id__in=gene_ids)
+    ).exclude(phenotype_mim_number__isnull=True).order_by('id').distinct()
     omim_map = {}
-    for o in get_json_for_queryset(omims, nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}]):
-        if not (o['geneSymbol'] or any(_intervals_overlap(o, variant) for variant in discovery_variant_intervals)):
-            continue
-        mim_number = o['phenotypeMimNumber']
-        if mim_number not in omim_map:
-            omim_map[mim_number] = {'phenotypeMimNumber': mim_number, 'phenotypes': []}
-        omim_map[mim_number]['phenotypes'].append(o)
+    _add_parsed_omims(omims, omim_map, intervals=discovery_variant_intervals)
+    # Prioritize mim number phenotypes in discovery genes/regions, but if any aren't then include all phenotypes
+    missing_discovery_omims = set(family_response['postDiscoveryOmimNumbers']) - set(omim_map.keys())
+    if missing_discovery_omims:
+        _add_parsed_omims(Omim.objects.filter(phenotype_mim_number__in=missing_discovery_omims), omim_map)
 
     family_response.update({
         'detailsLoaded': True,
@@ -104,6 +101,15 @@ def _intervals_overlap(interval1, interval2):
             (interval1['start'] <= interval2['start'] <= interval1['end']) or
             (interval1['start'] <= interval2['end'] <= interval1['end']))
 
+
+def _add_parsed_omims(omims, omim_map, intervals=None):
+    for o in get_json_for_queryset(omims, nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}]):
+        if intervals is not None and (not (o['geneSymbol'] or any(_intervals_overlap(o, variant) for variant in intervals))):
+            continue
+        mim_number = o['phenotypeMimNumber']
+        if mim_number not in omim_map:
+            omim_map[mim_number] = {'phenotypeMimNumber': mim_number, 'phenotypes': []}
+        omim_map[mim_number]['phenotypes'].append(o)
 
 
 @login_and_policies_required

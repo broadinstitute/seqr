@@ -590,6 +590,7 @@ def _parse_variant_genetic_findings(variant_models, *args):
         })
 
     genes_by_id = get_genes(gene_ids)
+    # TODO
     conditions_by_id = {
         f'OMIM:{number}':  {
             'known_condition_name': description,

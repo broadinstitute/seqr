@@ -139,7 +139,7 @@ def get_omim_intervals_query(variants):
 
 def _get_omim_intervals(variants):
     omims = Omim.objects.filter(get_omim_intervals_query(variants))
-    return {o['phenotypeMimNumber']: o for o in get_json_for_queryset(omims)}
+    return {o.pop('id'): o for o in get_json_for_queryset(omims, additional_model_fields=['id'])}
 
 
 def _add_locus_lists(projects, genes, add_list_detail=False, user=None):

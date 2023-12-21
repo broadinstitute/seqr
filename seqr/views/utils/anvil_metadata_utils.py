@@ -135,6 +135,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
     mim_numbers = set()
     for family in family_data:
         mim_numbers.update(family['post_discovery_omim_numbers'])
+    # TODO
     mim_decription_map = {
         o.phenotype_mim_number: o.phenotype_description
         for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers)
