@@ -71,12 +71,15 @@ METHOD_MAP = {
 }
 
 
-def get_family_metadata(projects, additional_fields=None, additional_values=None, format_fields=None, include_metadata=False):
+def get_family_metadata(projects, additional_fields=None, additional_values=None, format_fields=None, include_metadata=False, family_filter=None):
     values = {
         **(METADATA_FAMILY_VALUES if include_metadata else {}),
         **(additional_values or {}),
     }
-    family_data = Family.objects.filter(project__in=projects).distinct().values(
+    families = Family.objects.filter(project__in=projects)
+    if family_filter:
+        families = families.filter(**family_filter)
+    family_data = families.distinct().values(
         'id', 'family_id', 'project__name', *(additional_fields or []), **values,
     )
 
@@ -93,8 +96,9 @@ def get_family_metadata(projects, additional_fields=None, additional_values=None
 
 
 def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_fields=None,
-                          get_additional_sample_fields=None, include_discovery_sample_id=False):
-    individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
+                          get_additional_sample_fields=None, include_discovery_sample_id=False,
+                         individual_samples=None, include_no_individual_families=False):
+    individual_samples = individual_samples or _get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
         if max_loaded_date else _get_all_project_individual_samples(projects)
 
     family_values = {
@@ -118,7 +122,8 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
 
     family_data_by_id = get_family_metadata(
         projects, additional_fields=['post_discovery_omim_numbers'], additional_values=family_values,
-        format_fields=format_fields, include_metadata=include_metadata)
+        format_fields=format_fields, include_metadata=include_metadata,
+        family_filter=None if include_no_individual_families else {'individual__in': individual_samples})
 
     individuals_by_family_id = defaultdict(list)
     individual_ids_map = {}

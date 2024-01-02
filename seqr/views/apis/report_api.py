@@ -858,7 +858,7 @@ def family_metadata(request, project_guid):
             family['inheritance_models'].update({v['variant_inheritance'] for v in row})
 
     parse_anvil_metadata(
-        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_metadata=True)
+        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_metadata=True, include_no_individual_families=True)
 
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]
