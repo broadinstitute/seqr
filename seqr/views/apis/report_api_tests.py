@@ -578,7 +578,7 @@ class ReportAPITest(AirtableTest):
             '24-hpo_absent', '25-phenotype_description', '26-solve_state'])
         self.assertIn([
             'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '34415322', 'dbgap_stady_id_1',
-            'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', 'Other', 'Middle Eastern', '-',
+            'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', 'Middle Eastern or North African', '-', '-',
             '-', 'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
             'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508',
             'myopathy', 'No'], subject_file)
@@ -683,6 +683,7 @@ class ReportAPITest(AirtableTest):
 
         mock_google_authenticated.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Unable to load data model: 404 Client Error: Not Found for url: http://raw.githubusercontent.com/gregor_data_model.json',
@@ -826,7 +827,7 @@ class ReportAPITest(AirtableTest):
         ])
         self.assertIn(['Broad_1', 'Present', ''], family_file)
         fam_8_row = ['Broad_8', 'Unknown', '']
-        fam_11_row = ['Broad_11', 'None suspected', '']
+        fam_11_row = ['Broad_11', 'Unknown', '']
         if has_second_project:
             self.assertIn(fam_11_row, family_file)
             self.assertNotIn(fam_8_row, family_file)
@@ -1082,7 +1083,7 @@ class ReportAPITest(AirtableTest):
             'phenotype_description': None,
             'analysisStatus': 'Q',
             'analysis_groups': '',
-            'consanguinity': 'None suspected',
+            'consanguinity': 'Unknown',
         })
 
         # Test all projects
@@ -1113,7 +1114,7 @@ class ReportAPITest(AirtableTest):
             'phenotype_description': None,
             'analysisStatus': 'Q',
             'analysis_groups': 'Accepted; Test Group 1',
-            'consanguinity': 'None suspected',
+            'consanguinity': 'Unknown',
         })
 
         # Test empty project

@@ -267,18 +267,6 @@ WARN_MISSING_CONDITIONAL_COLUMNS = {
     'known_condition_name': lambda row: row['condition_id'],
 }
 
-GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
-GREGOR_ANCESTRY_DETAIL_MAP.pop(MIDDLE_EASTERN)
-GREGOR_ANCESTRY_DETAIL_MAP.update({
-    HISPANIC: 'Other',
-    OTHER_POPULATION: 'Other',
-})
-GREGOR_ANCESTRY_MAP = deepcopy(ANCESTRY_MAP)
-GREGOR_ANCESTRY_MAP.update({
-    MIDDLE_EASTERN: 'Middle Eastern or North African',
-    HISPANIC: None,
-    OTHER_POPULATION: None,
-})
 MIM_INHERITANCE_MAP = {
     'Digenic dominant': 'Digenic',
     'Digenic recessive': 'Digenic',
@@ -364,54 +352,92 @@ def gregor_export(request):
         grouped_data_type_individuals[i.individual_id].update({data_type: i for data_type in individual_data_types[i.id]})
         family_individuals[i.family_id][i.guid] = _get_participant_id(i)
 
+    # If multiple individual records, prefer WGS
+    individual_lookup = {
+        next(data_type_individuals[data_type.upper()] for data_type in GREGOR_DATA_TYPES
+             if data_type_individuals.get(data_type.upper())): None
+        for data_type_individuals in grouped_data_type_individuals.values()
+    }
+
     saved_variants_by_family = _get_gregor_discovery_variants_by_family(projects, variant_filter={'alt__isnull': False})
 
     airtable_sample_records, airtable_metadata_by_participant = _get_gregor_airtable_data(
         grouped_data_type_individuals.keys(), request.user)
 
+    phen_map = defaultdict(list)
+    phenotype_rows = []
     participant_rows = []
     family_map = {}
-    phenotype_rows = []
+    genetic_findings_rows = []
+
+    def _add_row(row, family_id, row_type):
+        # TODO move formatting into base where possible
+        if row_type == FAMILY_ROW_TYPE:
+            family_map[family_id] = {
+                **row,
+                'family_id': f'Broad_{row["family_id"]}',
+            }
+        elif row_type == SUBJECT_ROW_TYPE:
+            participant = {
+                **row,
+                'family_id': f'Broad_{row["family_id"]}',
+                'internal_project_id': f'Broad_{row["project_id"]}',
+                'solve_status': row.pop('solve_state'),
+                'paternal_id': f'Broad_{row["paternal_id"]}' if row['paternal_id'] else '0',
+                'maternal_id': f'Broad_{row["maternal_id"]}' if row['maternal_id'] else '0',
+                'reported_race': row['ancestry'],
+            }
+            if row['ancestry'] == ANCESTRY_MAP[HISPANIC]:
+                row.update({
+                    'reported_race': None,
+                    'ancestry_detail': 'Other',
+                    'reported_ethnicity': row['ancestry'],
+                })
+            participant_rows.append(participant)
+
+            base_phenotype_row = {'participant_id': row['participant_id'], 'presence': 'Present', 'ontology': 'HPO'}
+            phen_map[None] += [
+                dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in row['features'] or []
+            ]
+            base_phenotype_row['presence'] = 'Absent'
+            phen_map[None] += [
+                dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in
+                row['absent_features'] or []
+            ]
+        # TODO
+        # elif row_type == DISCOVERY_ROW_TYPE:
+        #     family = families_by_id[family_id]
+        #     if 'inheritance_models' not in family:
+        #         family.update({'genes': set(), 'inheritance_models': set()})
+        #     family['genes'].update({v.get('gene') or v.get('sv_name') or v.get('gene_id') or '' for v in row})
+        #     family['inheritance_models'].update({v['variant_inheritance'] for v in row})
+
+    # TODO fetch airtable metadata in helper
+    parse_anvil_metadata(
+        projects, user=request.user, add_row=_add_row, omit_airtable=True, individual_samples=individual_lookup,
+        get_additional_individual_fields=lambda individual, airtable_sample: {
+            'age_at_last_observation': str(datetime.now().year - individual.birth_year) if individual.birth_year and individual.birth_year > 0 else None,
+            'age_at_enrollment': str(individual.created_date.year - individual.birth_year) if individual.birth_year and individual.birth_year > 0 else None,
+            'consent_code': consent_code,
+            'gregor_center': 'BROAD',
+            'missing_variant_case': 'No',
+            'participant_id': _get_participant_id(individual),
+            'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),
+            'recontactable': (airtable_sample or {}).get('Recontactable'),
+            'features': individual.features,
+            'absent_features': individual.absent_features,
+        },
+    )
+
+    phenotype_rows = phen_map[None]
     analyte_rows = []
     airtable_rows = []
     airtable_rna_rows = []
     experiment_lookup_rows = []
-    genetic_findings_rows = []
-    for data_type_individuals in grouped_data_type_individuals.values():
-        # If multiple individual records, prefer WGS
-        individual = next(
-            data_type_individuals[data_type.upper()] for data_type in GREGOR_DATA_TYPES
-            if data_type_individuals.get(data_type.upper())
-        )
-
-        # family table
-        family = individual.family
-        if family not in family_map:
-            family_map[family] = _get_gregor_family_row(family)
-
-        if individual.consanguinity is not None and family_map[family]['consanguinity'] == 'Unknown':
-            family_map[family]['consanguinity'] = 'Present' if individual.consanguinity else 'None suspected'
-
-        # participant table
-        airtable_sample = airtable_sample_records.get(individual.individual_id, {})
+    for individual_id, data_type_individuals in grouped_data_type_individuals.items():
+        airtable_sample = airtable_sample_records.get(individual_id, {})
+        individual = next(i for i in data_type_individuals.values() if i in individual_lookup)
         participant_id = _get_participant_id(individual)
-        participant = _get_participant_row(individual, airtable_sample)
-        participant.update(family_map[family])
-        participant.update({
-            'participant_id': participant_id,
-            'consent_code': consent_code,
-        })
-        participant_rows.append(participant)
-
-        # phenotype table
-        base_phenotype_row = {'participant_id': participant_id, 'presence': 'Present', 'ontology': 'HPO'}
-        phenotype_rows += [
-            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.features or []
-        ]
-        base_phenotype_row['presence'] = 'Absent'
-        phenotype_rows += [
-            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.absent_features or []
-        ]
 
         analyte_ids = set()
         experiment_id = None
@@ -440,12 +466,13 @@ def gregor_export(request):
         for analyte_id in analyte_ids:
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
-        if participant['proband_relationship'] == 'Self':
-            genetic_findings_rows += get_genetic_findings_rows(
-                saved_variants_by_family.get(family.id), individual, participant_id,
-                data_type_individuals.keys(), family_individuals[family.id],
-                post_process_variant=_post_process_gregor_variant, experiment_id=experiment_id, variant_type='SNV/INDEL',
-            )
+        # TODO
+        # if participant['proband_relationship'] == 'Self':
+        #     genetic_findings_rows += get_genetic_findings_rows(
+        #         saved_variants_by_family.get(family.id), individual, participant_id,
+        #         data_type_individuals.keys(), family_individuals[family.id],
+        #         post_process_variant=_post_process_gregor_variant, experiment_id=experiment_id, variant_type='SNV/INDEL',
+        #     )
 
     file_data = [
         ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),

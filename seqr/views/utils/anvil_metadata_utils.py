@@ -25,16 +25,15 @@ ANCESTRY_MAP = {
   'ASJ': 'White',
   'EAS': 'Asian',
   'FIN': 'White',
-  MIDDLE_EASTERN: 'Other',
+  MIDDLE_EASTERN: 'Middle Eastern or North African',
   'NFE': 'White',
-  OTHER_POPULATION: 'Other',
   'SAS': 'Asian',
 }
 ANCESTRY_DETAIL_MAP = {
   'ASJ': 'Ashkenazi Jewish',
   'EAS': 'East Asian',
   'FIN': 'Finnish',
-  MIDDLE_EASTERN: 'Middle Eastern',
+  OTHER_POPULATION: 'Other',
   'SAS': 'South Asian',
 }
 
@@ -96,7 +95,7 @@ def get_family_metadata(projects, additional_fields=None, additional_values=None
 
 
 def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_fields=None,
-                          get_additional_sample_fields=None, include_discovery_sample_id=False,
+                          get_additional_sample_fields=None, get_additional_individual_fields=None, include_discovery_sample_id=False,
                          individual_samples=None, include_no_individual_families=False):
     individual_samples = individual_samples or _get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
         if max_loaded_date else _get_all_project_individual_samples(projects)
@@ -164,11 +163,12 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
 
         affected_individuals = [individual for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED]
 
-        family_consanguinity = any(individual.consanguinity is True for individual in family_individuals)
-
         family_row = {
             'family_id': family_subject_row['family_id'],
-            'consanguinity': 'Present' if family_consanguinity else 'None suspected',
+            'consanguinity': next((
+                'Present' if individual.consanguinity else 'None suspected'
+                for individual in family_individuals if individual.consanguinity is not None
+            ), 'Unknown'),
             **family_subject_row,
         }
         if len(affected_individuals) > 1:
@@ -186,7 +186,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                 has_dbgap_submission = sample.sample_type in dbgap_submission
 
             subject_row = _get_subject_row(
-                individual, has_dbgap_submission, airtable_metadata, individual_ids_map)
+                individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields)
             if individual.id in matchmaker_individuals:
                 subject_row['MME'] = 'Yes'
             subject_row.update(family_subject_row)
@@ -327,7 +327,7 @@ def _get_variant_main_transcript(variant_model):
     return {}
 
 
-def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map):
+def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields):
     features_present = [feature['id'] for feature in individual.features or []]
     features_absent = [feature['id'] for feature in individual.absent_features or []]
     onset = individual.onset_age
@@ -361,6 +361,8 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, indivi
             'multiple_datasets': 'Yes' if len(sequencing) > 1 or (
             len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS) else 'No',
         })
+    if get_additional_individual_fields:
+        subject_row.update(get_additional_individual_fields(individual, airtable_metadata))
     return subject_row
 
 
