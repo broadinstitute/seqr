@@ -102,10 +102,11 @@ def _get_family_metadata(family_filter, family_fields, include_metadata, include
     return family_data_by_id
 
 
+# TODO clean up args
 def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_fields=None,
                           get_additional_sample_fields=None, get_additional_individual_fields=None, include_discovery_sample_id=False,
                          include_mondo=False, individual_samples=None, individual_data_types=None, include_no_individual_families=False,
-                         format_id=lambda s: s, airtable_fields=None, mme_values=None,
+                         format_id=lambda s: s, airtable_fields=None, mme_values=None, include_parent_mnvs=False,
                          variant_filter=None, variant_json_fields=None,  post_process_variant=None, proband_only_variants=False):
 
     individual_samples = individual_samples or (_get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
@@ -212,7 +213,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                 continue
             discovery_row = _get_genetic_findings_rows(
                 saved_variants, individual, participant_id=subject_id, format_id=format_id,
-                individual_data_types=(individual_data_types or {}).get(subject_id),
+                include_parent_mnvs=include_parent_mnvs, individual_data_types=(individual_data_types or {}).get(subject_id),
                 family_individuals=family_individuals if proband_only_variants else None,
                 sample=sample if include_discovery_sample_id else None,
                 post_process_variant=post_process_variant,
@@ -262,7 +263,7 @@ def _get_genotype_zygosity(genotype):
     return None
 
 
-def post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
+def _post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
     discovery_notes = None
     if len(gene_variants) > 2:
         parent_mnv = next((v for v in gene_variants if len(v['individual_genotype']) == 1), gene_variants[0])
@@ -355,7 +356,8 @@ def _get_sample_row(sample, subject_id, has_dbgap_submission, airtable_metadata,
     return sample_row
 
 
-def _get_genetic_findings_rows(rows: list[dict], individual: Individual, participant_id: str, format_id: Callable[[str], str],
+def _get_genetic_findings_rows(rows: list[dict], individual: Individual, participant_id: str,
+                               format_id: Callable[[str], str], include_parent_mnvs: bool,
                               individual_data_types: Iterable[str], family_individuals: dict[str, str],
                               post_process_variant: Callable[[dict, list[dict]], dict], sample: Sample) -> list[dict]:
     parsed_rows = []
@@ -395,7 +397,8 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, partici
     to_remove = []
     for row in parsed_rows:
         del row['genotypes']
-        update = (post_process_variant or post_process_variant_metadata)(row, variants_by_gene[row['gene']])
+        process_func = post_process_variant or _post_process_variant_metadata
+        update = process_func(row, variants_by_gene[row['gene']], include_parent_mnvs=include_parent_mnvs)
         if update:
             row.update(update)
         else:

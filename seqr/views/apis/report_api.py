@@ -13,7 +13,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 
 from seqr.views.utils.airtable_utils import AirtableSession
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, post_process_variant_metadata, \
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, \
     ANCESTRY_MAP, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
@@ -538,7 +538,7 @@ def _get_phenotype_row(feature):
     }
 
 
-def _post_process_gregor_variant(row, gene_variants):
+def _post_process_gregor_variant(row, gene_variants, **kwargs):
     return {'linked_variant': next(
         v['genetic_findings_id'] for v in gene_variants if v['genetic_findings_id'] != row['genetic_findings_id']
     ) if len(gene_variants) > 1 else None}
@@ -862,8 +862,7 @@ def variant_metadata(request, project_guid):
 
     parse_anvil_metadata(
         projects, user=request.user, add_row=_add_row, include_metadata=True,  include_mondo=True, omit_airtable=True,
-        proband_only_variants=True, variant_json_fields=['clinvar', 'variantId'],
-        post_process_variant=lambda *args: post_process_variant_metadata(*args, include_parent_mnvs=True),
+        proband_only_variants=True, variant_json_fields=['clinvar', 'variantId'], include_parent_mnvs=True,
         mme_values={'variant_ids': ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId')},
         individual_samples={i: None for i in individuals},
         individual_data_types={i.individual_id: i.data_types for i in individuals},
