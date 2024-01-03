@@ -99,7 +99,7 @@ def get_family_metadata(projects, additional_fields=None, additional_values=None
 def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_fields=None,
                           get_additional_sample_fields=None, get_additional_individual_fields=None, include_discovery_sample_id=False,
                          include_mondo=False, individual_samples=None, individual_data_types=None, include_no_individual_families=False,
-                         id_prefix='', variant_filter=None, post_process_variant=None, proband_only_variants=False):
+                         id_prefix='', airtable_fields=None, variant_filter=None, post_process_variant=None, proband_only_variants=False):
     individual_samples = individual_samples or _get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
         if max_loaded_date else _get_all_project_individual_samples(projects)
 
@@ -142,7 +142,8 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
         if sample:
             sample_ids.add(sample.sample_id)
 
-    sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(list(sample_ids), user)
+    sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
+        list(sample_ids) or [i[0] for i in individual_ids_map.values()], user, airtable_fields)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(family_data_by_id.keys()), variant_filter=variant_filter)
 
@@ -481,9 +482,9 @@ SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'd
 LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
 
-def _get_sample_airtable_metadata(sample_ids, user):
+def _get_sample_airtable_metadata(sample_ids, user, fields):
     sample_records, _ = get_airtable_samples(
-        sample_ids, user, fields=SINGLE_SAMPLE_FIELDS, list_fields=LIST_SAMPLE_FIELDS,
+        sample_ids, user, fields=fields or SINGLE_SAMPLE_FIELDS, list_fields=None if fields else LIST_SAMPLE_FIELDS,
     )
     return sample_records
 

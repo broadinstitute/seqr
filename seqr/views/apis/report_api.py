@@ -12,7 +12,7 @@ from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 
-from seqr.views.utils.airtable_utils import get_airtable_samples
+from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, get_genetic_findings_rows, post_process_variant_metadata, \
     get_family_metadata, get_family_solve_state, parse_variant_genetic_findings, \
     ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
@@ -359,9 +359,6 @@ def gregor_export(request):
         for data_type_individuals in grouped_data_type_individuals.values()
     }
 
-    airtable_sample_records, airtable_metadata_by_participant = _get_gregor_airtable_data(
-        grouped_data_type_individuals.keys(), request.user)
-
     phen_map = defaultdict(list)
     phenotype_rows = []
     participant_rows_by_id = {}
@@ -406,7 +403,6 @@ def gregor_export(request):
             inheritance = _parse_family_disease_field(family, 'disease_inheritance')
             base_variant = {
                 'participant_id': participant['participant_id'],
-                'experiment_id': None,  # TODO
                 'condition_id': _parse_family_disease_field(family, 'disease_id'),
                 'known_condition_name': _parse_family_disease_field(family, 'disease_description'),
                 'condition_inheritance': '|'.join([
@@ -418,64 +414,74 @@ def gregor_export(request):
             for variant in row:
                 genetic_findings_rows.append({**variant, **base_variant})
 
-    # TODO fetch airtable metadata in helper
     parse_anvil_metadata(
-        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_mondo=True, id_prefix='Broad_',
+        projects, user=request.user, add_row=_add_row, include_mondo=True, id_prefix='Broad_',
         variant_filter={'alt__isnull': False}, post_process_variant=_post_process_gregor_variant, proband_only_variants=True,
+        airtable_fields=[SMID_FIELD, PARTICIPANT_ID_FIELD, 'Recontactable'],
         individual_samples=individual_lookup, individual_data_types=grouped_data_type_individuals,
         get_additional_individual_fields=lambda individual, airtable_sample: {
             'age_at_last_observation': str(datetime.now().year - individual.birth_year) if individual.birth_year and individual.birth_year > 0 else None,
             'age_at_enrollment': str(individual.created_date.year - individual.birth_year) if individual.birth_year and individual.birth_year > 0 else None,
+            'analyte_type': individual.get_analyte_type_display(),
             'consent_code': consent_code,
             'gregor_center': 'BROAD',
             'missing_variant_case': 'No',
             'participant_id': _get_participant_id(individual),
+            'primary_biosample': individual.get_primary_biosample_display(),
             'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),
+            'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
+            'analyte_id': _get_analyte_id(airtable_sample or {}),
             'recontactable': (airtable_sample or {}).get('Recontactable'),
+            PARTICIPANT_ID_FIELD: (airtable_sample or {}).get(PARTICIPANT_ID_FIELD),
             'features': individual.features,
             'absent_features': individual.absent_features,
         },
     )
 
     phenotype_rows = phen_map[None]
+    participant_rows = participant_rows_by_id.values()
+
+    airtable_metadata_by_participant = _get_gregor_airtable_data(participant_rows, request.user)
+
     analyte_rows = []
     airtable_rows = []
     airtable_rna_rows = []
     experiment_lookup_rows = []
-    for individual_id, data_type_individuals in grouped_data_type_individuals.items():
-        airtable_sample = airtable_sample_records.get(individual_id, {})
-        individual = next(i for i in data_type_individuals.values() if i in individual_lookup)
-        participant_id = _get_participant_id(individual)
+    experiment_ids_by_participant = {}
+    for participant in participant_rows:
+        if not participant[PARTICIPANT_ID_FIELD]:
+            continue
+
+        airtable_metadata = airtable_metadata_by_participant.get(participant[PARTICIPANT_ID_FIELD]) or {}
 
         analyte_ids = set()
-        experiment_id = None
-        # airtable data
-        if airtable_sample:
-            airtable_metadata = airtable_metadata_by_participant.get(airtable_sample[PARTICIPANT_ID_FIELD]) or {}
-            for data_type in data_type_individuals:
-                if data_type not in airtable_metadata:
-                    continue
-                row = _get_airtable_row(data_type, airtable_metadata)
-                analyte_ids.add(row['analyte_id'])
-                is_rna = data_type == 'RNA'
-                if not is_rna:
-                    row['alignment_software'] = row['alignment_software_dna']
-                    experiment_id = row['experiment_dna_short_read_id']
-                (airtable_rna_rows if is_rna else airtable_rows).append(row)
-                experiment_lookup_rows.append(
-                    {'participant_id': participant_id, **_get_experiment_lookup_row(is_rna, row)}
-                )
+        # experiment tables
+        for data_type in grouped_data_type_individuals[participant['subject_id']]:
+            if data_type not in airtable_metadata:
+                continue
+            row = _get_airtable_row(data_type, airtable_metadata)
+            analyte_ids.add(row['analyte_id'])
+            is_rna = data_type == 'RNA'
+            if not is_rna:
+                row['alignment_software'] = row['alignment_software_dna']
+                experiment_ids_by_participant[participant['participant_id']] = row['experiment_dna_short_read_id']
+            (airtable_rna_rows if is_rna else airtable_rows).append(row)
+            experiment_lookup_rows.append(
+                {'participant_id': participant['participant_id'], **_get_experiment_lookup_row(is_rna, row)}
+            )
 
         # analyte table
-        if not analyte_ids:
-            analyte_id = _get_analyte_id(airtable_sample)
-            if analyte_id:
-                analyte_ids.add(analyte_id)
+        if participant['analyte_id'] and not analyte_ids:
+            analyte_ids.add(participant['analyte_id'])
         for analyte_id in analyte_ids:
-            analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
+            analyte_rows.append({**participant, 'analyte_id': analyte_id})
+
+    # Add experiment IDs
+    for variant in genetic_findings_rows:
+        variant['experiment_id'] = experiment_ids_by_participant.get(variant['participant_id'])
 
     file_data = [
-        ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows_by_id.values()),
+        ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),
         ('family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())),
         ('phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows),
         ('analyte', ANALYTE_TABLE_COLUMNS, analyte_rows),
@@ -514,15 +520,13 @@ def _get_gregor_discovery_variants_by_family(projects, variant_filter=None, **kw
     )
 
 
-def _get_gregor_airtable_data(individual_ids, user):
-    sample_records, session = get_airtable_samples(
-        individual_ids, user, fields=[SMID_FIELD, PARTICIPANT_ID_FIELD, 'Recontactable'],
-    )
+def _get_gregor_airtable_data(participants, user):
+    session = AirtableSession(user)
 
     airtable_metadata = session.fetch_records(
         'GREGoR Data Model',
         fields=[PARTICIPANT_ID_FIELD] + sorted(AIRTABLE_QUERY_COLUMNS),
-        or_filters={f'{PARTICIPANT_ID_FIELD}': {r[PARTICIPANT_ID_FIELD] for r in sample_records.values()}},
+        or_filters={f'{PARTICIPANT_ID_FIELD}': {r[PARTICIPANT_ID_FIELD] for r in participants if r[PARTICIPANT_ID_FIELD]}},
     )
 
     airtable_metadata_by_participant = {r[PARTICIPANT_ID_FIELD]: r for r in airtable_metadata.values()}
@@ -532,7 +536,7 @@ def _get_gregor_airtable_data(individual_ids, user):
             if data_type_fields:
                 r[data_type.upper()] = {f.replace(f'_{data_type}', ''): r.pop(f) for f in data_type_fields}
 
-    return sample_records, airtable_metadata_by_participant
+    return airtable_metadata_by_participant
 
 
 def _get_gregor_family_row(family):
