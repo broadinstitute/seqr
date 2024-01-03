@@ -7,7 +7,7 @@ import json
 from typing import Callable, Iterable
 
 from matchmaker.models import MatchmakerSubmission
-from reference_data.models import Omim, GENOME_VERSION_LOOKUP
+from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Family, Individual, Sample, SavedVariant
 from seqr.views.utils.airtable_utils import get_airtable_samples
 from seqr.utils.gene_utils import get_genes
@@ -15,6 +15,8 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.variant_utils import get_saved_discovery_variants_by_family
+
+MONDO_BASE_URL = 'https://monarchinitiative.org/v3/api/entity'
 
 HISPANIC = 'AMR'
 MIDDLE_EASTERN = 'MDE'
@@ -96,7 +98,8 @@ def get_family_metadata(projects, additional_fields=None, additional_values=None
 
 def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_fields=None,
                           get_additional_sample_fields=None, get_additional_individual_fields=None, include_discovery_sample_id=False,
-                         individual_samples=None, include_no_individual_families=False):
+                         include_mondo=False, individual_samples=None, individual_data_types=None, include_no_individual_families=False,
+                         id_prefix='', variant_filter=None, post_process_variant=None, proband_only_variants=False):
     individual_samples = individual_samples or _get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
         if max_loaded_date else _get_all_project_individual_samples(projects)
 
@@ -118,9 +121,15 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
     if family_fields:
         family_values.update({k: v['value'] for k, v in family_fields.items()})
         format_fields.update({k: v['format'] for k, v in family_fields.items()})
+    if id_prefix:
+        format_fields['family_id'] = lambda f: f'{id_prefix}{f["family_id"]}'
+
+    additional_fields = ['post_discovery_omim_numbers']
+    if include_mondo:
+        additional_fields.append('mondo_id')
 
     family_data_by_id = get_family_metadata(
-        projects, additional_fields=['post_discovery_omim_numbers'], additional_values=family_values,
+        projects, additional_fields=additional_fields, additional_values=family_values,
         format_fields=format_fields, include_metadata=include_metadata,
         family_filter=None if include_no_individual_families else {'individual__in': individual_samples})
 
@@ -135,15 +144,21 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
 
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(list(sample_ids), user)
 
-    saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(family_data_by_id.keys()))
+    saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(family_data_by_id.keys()), variant_filter=variant_filter)
 
     mim_numbers = set()
+    mondo_ids = set()
     for family in family_data_by_id.values():
         mim_numbers.update(family['post_discovery_omim_numbers'])
-    mim_decription_map = {
-        o.phenotype_mim_number: o.phenotype_description
-        for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers)
+        if family.get('mondo_id'):
+            family['mondo_id'] = f"MONDO:{family['mondo_id'].replace('MONDO:', '')}"
+            mondo_ids.add(family['mondo_id'])
+    mim_map = {
+        o['phenotype_mim_number']: o for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers).values(
+            'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
+        )
     }
+    mondo_map = {mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids}
 
     matchmaker_individuals = set(MatchmakerSubmission.objects.filter(
         individual__in=individual_samples).values_list('individual_id', flat=True)) if include_metadata else set()
@@ -155,10 +170,16 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
 
         mim_numbers = family_subject_row.pop('post_discovery_omim_numbers')
         if mim_numbers:
+            mim_conditions = [mim_map.get(mim_number, {}) for mim_number in mim_numbers]
             family_subject_row.update({
                 'disease_id': ';'.join(['OMIM:{}'.format(mim_number) for mim_number in mim_numbers]),
-                'disease_description': ';'.join([
-                    mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
+                'disease_description': ';'.join([o.get('phenotype_description', '') for o in mim_conditions]).replace(',', ';'),
+                'disease_inheritance': ';'.join([o.get('phenotype_inheritance', '') for o in mim_conditions]),
+            })
+        elif family_subject_row.get('mondo_id'):
+            family_subject_row.update({
+                'disease_id': family_subject_row['mondo_id'],
+                **mondo_map[family_subject_row['mondo_id']],
             })
 
         affected_individuals = [individual for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED]
@@ -186,7 +207,9 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                 has_dbgap_submission = sample.sample_type in dbgap_submission
 
             subject_row = _get_subject_row(
-                individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields)
+                individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields,
+                id_prefix,
+            )
             if individual.id in matchmaker_individuals:
                 subject_row['MME'] = 'Yes'
             subject_row.update(family_subject_row)
@@ -200,9 +223,13 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                 if include_discovery_sample_id:
                     discovery_kwargs['sample_id'] = sample.sample_id
 
+            if proband_only_variants and individual.proband_relationship != Individual.SELF_RELATIONSHIP:
+                continue
             discovery_row = get_genetic_findings_rows(
                 saved_variants, individual, participant_id=subject_row['subject_id'],
-                post_process_variant=post_process_variant_metadata, **discovery_kwargs)
+                individual_data_types=(individual_data_types or {}).get(individual.individual_id),
+                family_individuals=family_individuals if proband_only_variants else None, id_prefix=id_prefix,
+                post_process_variant=post_process_variant or post_process_variant_metadata, **discovery_kwargs)
             add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 
@@ -327,7 +354,7 @@ def _get_variant_main_transcript(variant_model):
     return {}
 
 
-def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields):
+def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields, id_prefix):
     features_present = [feature['id'] for feature in individual.features or []]
     features_absent = [feature['id'] for feature in individual.absent_features or []]
     onset = individual.onset_age
@@ -347,9 +374,9 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, indivi
         'disorders': individual.disorders,
         'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
-        'paternal_id': paternal_ids[0],
+        'paternal_id': f'{id_prefix}{paternal_ids[0]}',
         'paternal_guid': paternal_ids[1],
-        'maternal_id': maternal_ids[0],
+        'maternal_id': f'{id_prefix}{maternal_ids[0]}',
         'maternal_guid': maternal_ids[1],
     }
     if airtable_metadata is not None:
@@ -383,7 +410,7 @@ def _get_sample_row(sample, subject_id, has_dbgap_submission, airtable_metadata,
     return sample_row
 
 
-def get_genetic_findings_rows(rows: list[dict], individual: Individual, participant_id: str,
+def get_genetic_findings_rows(rows: list[dict], individual: Individual, participant_id: str, id_prefix: str = '',
                               individual_data_types: Iterable[str] = None, family_individuals: dict[str, str] = None,
                               post_process_variant: Callable[[dict, list[dict]], dict] = None, **kwargs) -> list[dict]:
     parsed_rows = []
@@ -409,8 +436,8 @@ def get_genetic_findings_rows(rows: list[dict], individual: Individual, particip
             }
             if family_individuals is not None:
                 parsed_row['additional_family_members_with_variant'] = '|'.join([
-                    family_individuals[guid] for guid, g in genotypes.items()
-                    if guid != individual.guid and guid in family_individuals and _get_genotype_zygosity(g)
+                    f'{id_prefix}{i.individual_id}' for i in family_individuals
+                    if i.guid != individual.guid and genotypes.get(i.guid) and _get_genotype_zygosity(genotypes[i.guid])
                 ])
             if individual_data_types is not None:
                 parsed_row['method_of_discovery'] = '|'.join([
@@ -461,9 +488,9 @@ def _get_sample_airtable_metadata(sample_ids, user):
     return sample_records
 
 
-def _get_parsed_saved_discovery_variants_by_family(families):
+def _get_parsed_saved_discovery_variants_by_family(families, variant_filter):
     return get_saved_discovery_variants_by_family(
-        {'family__id__in': families},
+        {'family__id__in': families, **(variant_filter or {})},
         format_variants=parse_variant_genetic_findings,
         get_family_id=lambda v: v.pop('family_id'),
         variant_json_fields=['svType', 'svName', 'end'],
@@ -473,3 +500,18 @@ def _get_parsed_saved_discovery_variants_by_family(families):
                 then=Value('Candidate')), default=Value('Known')),
         },
     )
+
+
+def _get_mondo_condition_data(mondo_id):
+    try:
+        response = requests.get(f'{MONDO_BASE_URL}/{mondo_id}', timeout=10)
+        data = response.json()
+        inheritance = data['inheritance']
+        if inheritance:
+            inheritance = HumanPhenotypeOntology.objects.get(hpo_id=inheritance['id']).name.replace(' inheritance', '')
+        return {
+            'disease_description': data['name'],
+            'disease_inheritance': inheritance,
+        }
+    except Exception:
+        return {}

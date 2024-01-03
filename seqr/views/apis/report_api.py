@@ -359,32 +359,26 @@ def gregor_export(request):
         for data_type_individuals in grouped_data_type_individuals.values()
     }
 
-    saved_variants_by_family = _get_gregor_discovery_variants_by_family(projects, variant_filter={'alt__isnull': False})
-
     airtable_sample_records, airtable_metadata_by_participant = _get_gregor_airtable_data(
         grouped_data_type_individuals.keys(), request.user)
 
     phen_map = defaultdict(list)
     phenotype_rows = []
-    participant_rows = []
+    participant_rows_by_id = {}
     family_map = {}
     genetic_findings_rows = []
 
     def _add_row(row, family_id, row_type):
         # TODO move formatting into base where possible
         if row_type == FAMILY_ROW_TYPE:
-            family_map[family_id] = {
-                **row,
-                'family_id': f'Broad_{row["family_id"]}',
-            }
+            family_map[family_id] = row
         elif row_type == SUBJECT_ROW_TYPE:
             participant = {
                 **row,
-                'family_id': f'Broad_{row["family_id"]}',
                 'internal_project_id': f'Broad_{row["project_id"]}',
                 'solve_status': row.pop('solve_state'),
-                'paternal_id': f'Broad_{row["paternal_id"]}' if row['paternal_id'] else '0',
-                'maternal_id': f'Broad_{row["maternal_id"]}' if row['maternal_id'] else '0',
+                'paternal_id': row['paternal_id'] or '0',
+                'maternal_id': row['maternal_id'] or '0',
                 'reported_race': row['ancestry'],
             }
             if row['ancestry'] == ANCESTRY_MAP[HISPANIC]:
@@ -393,7 +387,7 @@ def gregor_export(request):
                     'ancestry_detail': 'Other',
                     'reported_ethnicity': row['ancestry'],
                 })
-            participant_rows.append(participant)
+            participant_rows_by_id[row['subject_id']] = participant
 
             base_phenotype_row = {'participant_id': row['participant_id'], 'presence': 'Present', 'ontology': 'HPO'}
             phen_map[None] += [
@@ -404,17 +398,31 @@ def gregor_export(request):
                 dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in
                 row['absent_features'] or []
             ]
-        # TODO
-        # elif row_type == DISCOVERY_ROW_TYPE:
-        #     family = families_by_id[family_id]
-        #     if 'inheritance_models' not in family:
-        #         family.update({'genes': set(), 'inheritance_models': set()})
-        #     family['genes'].update({v.get('gene') or v.get('sv_name') or v.get('gene_id') or '' for v in row})
-        #     family['inheritance_models'].update({v['variant_inheritance'] for v in row})
+        elif row_type == DISCOVERY_ROW_TYPE and row:
+            participant = participant_rows_by_id[row[0]['participant_id']]
+            if participant['proband_relationship'] != 'Self':
+                return
+            family = family_map[family_id]
+            inheritance = _parse_family_disease_field(family, 'disease_inheritance')
+            base_variant = {
+                'participant_id': participant['participant_id'],
+                'experiment_id': None,  # TODO
+                'condition_id': _parse_family_disease_field(family, 'disease_id'),
+                'known_condition_name': _parse_family_disease_field(family, 'disease_description'),
+                'condition_inheritance': '|'.join([
+                    MIM_INHERITANCE_MAP.get(i, i) for i in (inheritance or '').split(', ')
+                ]),
+                'phenotype_contribution': 'Full',
+                'variant_type': 'SNV/INDEL',
+            }
+            for variant in row:
+                genetic_findings_rows.append({**variant, **base_variant})
 
     # TODO fetch airtable metadata in helper
     parse_anvil_metadata(
-        projects, user=request.user, add_row=_add_row, omit_airtable=True, individual_samples=individual_lookup,
+        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_mondo=True, id_prefix='Broad_',
+        variant_filter={'alt__isnull': False}, post_process_variant=_post_process_gregor_variant, proband_only_variants=True,
+        individual_samples=individual_lookup, individual_data_types=grouped_data_type_individuals,
         get_additional_individual_fields=lambda individual, airtable_sample: {
             'age_at_last_observation': str(datetime.now().year - individual.birth_year) if individual.birth_year and individual.birth_year > 0 else None,
             'age_at_enrollment': str(individual.created_date.year - individual.birth_year) if individual.birth_year and individual.birth_year > 0 else None,
@@ -466,16 +474,8 @@ def gregor_export(request):
         for analyte_id in analyte_ids:
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
-        # TODO
-        # if participant['proband_relationship'] == 'Self':
-        #     genetic_findings_rows += get_genetic_findings_rows(
-        #         saved_variants_by_family.get(family.id), individual, participant_id,
-        #         data_type_individuals.keys(), family_individuals[family.id],
-        #         post_process_variant=_post_process_gregor_variant, experiment_id=experiment_id, variant_type='SNV/INDEL',
-        #     )
-
     file_data = [
-        ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),
+        ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows_by_id.values()),
         ('family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())),
         ('phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows),
         ('analyte', ANALYTE_TABLE_COLUMNS, analyte_rows),
@@ -500,7 +500,12 @@ def gregor_export(request):
     })
 
 
+def _parse_family_disease_field(family, field):
+    return family[field].split(';')[0] if family.get(field) else None
+
+
 def _get_gregor_discovery_variants_by_family(projects, variant_filter=None, **kwargs):
+    # TODO clean up variant_metadata and remove
     return get_saved_discovery_variants_by_family(
         variant_filter={'family__project__in': projects, **(variant_filter or {})},
         format_variants=_parse_variant_genetic_findings,
@@ -957,9 +962,9 @@ def variant_metadata(request, project_guid):
     probands = individuals.filter(proband_relationship=Individual.SELF_RELATIONSHIP).annotate(
         data_types=ArrayAgg('sample__sample_type', distinct=True, filter=Q(sample__isnull=False))
     )
-    family_individuals = defaultdict(dict)
-    for family_id, guid, individual_id in individuals.values_list('family_id', 'guid', 'individual_id'):
-        family_individuals[family_id][guid] = individual_id
+    family_individuals = defaultdict(list)
+    for i in individuals:
+        family_individuals[i.family_id].append(i)
 
     variant_rows = []
     for individual in probands:
