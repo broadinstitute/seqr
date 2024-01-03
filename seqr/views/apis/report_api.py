@@ -349,8 +349,9 @@ def gregor_export(request):
     grouped_data_type_individuals = defaultdict(dict)
     family_individuals = defaultdict(dict)
     for i in individuals:
-        grouped_data_type_individuals[_get_participant_id(i)].update({data_type: i for data_type in individual_data_types[i.id]})
-        family_individuals[i.family_id][i.guid] = _get_participant_id(i)
+        participant_id = _format_id(i.individual_id)
+        grouped_data_type_individuals[participant_id].update({data_type: i for data_type in individual_data_types[i.id]})
+        family_individuals[i.family_id][i.guid] = participant_id
 
     # If multiple individual records, prefer WGS
     individual_lookup = {
@@ -359,9 +360,8 @@ def gregor_export(request):
         for data_type_individuals in grouped_data_type_individuals.values()
     }
 
-    phen_map = defaultdict(list)
-    phenotype_rows = []
     participant_rows = []
+    phenotype_rows = []
     family_map = {}
     genetic_findings_rows = []
 
@@ -386,14 +386,11 @@ def gregor_export(request):
             participant_rows.append(participant)
 
             base_phenotype_row = {'participant_id': row['subject_id'], 'presence': 'Present', 'ontology': 'HPO'}
-            phen_map[None] += [
-                dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in row['features'] or []
-            ]
+            for feature in row['features'] or []:
+                phenotype_rows.append(dict(**base_phenotype_row, **_get_phenotype_row(feature)))
             base_phenotype_row['presence'] = 'Absent'
-            phen_map[None] += [
-                dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in
-                row['absent_features'] or []
-            ]
+            for feature in row['absent_features'] or []:
+                phenotype_rows.append(dict(**base_phenotype_row, **_get_phenotype_row(feature)))
         elif row_type == DISCOVERY_ROW_TYPE and row:
             family = family_map[family_id]
             base_variant = _parse_variant_family_metadata(family)
@@ -401,7 +398,7 @@ def gregor_export(request):
                 genetic_findings_rows.append({**variant, **base_variant, 'variant_type': 'SNV/INDEL'})
 
     parse_anvil_metadata(
-        projects, user=request.user, add_row=_add_row, include_mondo=True, format_id=lambda s: f'Broad_{s}' if s else '0',
+        projects, user=request.user, add_row=_add_row, include_mondo=True, format_id=_format_id,
         variant_filter={'alt__isnull': False}, post_process_variant=_post_process_gregor_variant, proband_only_variants=True,
         airtable_fields=[SMID_FIELD, PARTICIPANT_ID_FIELD, 'Recontactable'],
         individual_samples=individual_lookup, individual_data_types=grouped_data_type_individuals,
@@ -422,8 +419,6 @@ def gregor_export(request):
             'absent_features': individual.absent_features,
         },
     )
-
-    phenotype_rows = phen_map[None]
 
     airtable_metadata_by_participant = _get_gregor_airtable_data(participant_rows, request.user)
 
@@ -507,16 +502,6 @@ def _parse_variant_family_metadata(family):
     }
 
 
-def _get_gregor_discovery_variants_by_family(projects, variant_filter=None, **kwargs):
-    # TODO clean up variant_metadata and remove
-    return get_saved_discovery_variants_by_family(
-        variant_filter={'family__project__in': projects, **(variant_filter or {})},
-        format_variants=_parse_variant_genetic_findings,
-        get_family_id=lambda v: v['family_id'],
-        **kwargs,
-    )
-
-
 def _get_gregor_airtable_data(participants, user):
     session = AirtableSession(user)
 
@@ -536,42 +521,8 @@ def _get_gregor_airtable_data(participants, user):
     return airtable_metadata_by_participant
 
 
-def _get_gregor_family_row(family):
-    return {
-        'family_id':  f'Broad_{family.family_id}',
-        'internal_project_id': f'Broad_{family.project.name}',
-        'consanguinity': 'Unknown',
-        'pmid_id': '|'.join(family.pubmed_ids or []),
-        'phenotype_description': family.coded_phenotype,
-        'solve_status': get_family_solve_state(family.analysis_status),
-    }
-
-
-def _get_participant_id(individual):
-    return f'Broad_{individual.individual_id}'
-
-
-def _get_participant_row(individual, airtable_sample):
-    participant = {
-        'gregor_center': 'BROAD',
-        'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else '0',
-        'maternal_id': f'Broad_{individual.mother.individual_id}' if individual.mother else '0',
-        'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),
-        'proband_relationship': individual.get_proband_relationship_display(),
-        'sex': individual.get_sex_display(),
-        'affected_status': individual.get_affected_display(),
-        'reported_race': GREGOR_ANCESTRY_MAP.get(individual.population),
-        'ancestry_detail': GREGOR_ANCESTRY_DETAIL_MAP.get(individual.population),
-        'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else None,
-        'recontactable': airtable_sample.get('Recontactable'),
-        'missing_variant_case': 'No',
-    }
-    if individual.birth_year and individual.birth_year > 0:
-        participant.update({
-            'age_at_last_observation': str(datetime.now().year - individual.birth_year),
-            'age_at_enrollment': str(individual.created_date.year - individual.birth_year),
-        })
-    return participant
+def _format_id(id_string):
+    return f'Broad_{id_string}' if id_string else '0'
 
 
 def _get_phenotype_row(feature):
@@ -588,76 +539,10 @@ def _get_phenotype_row(feature):
     }
 
 
-def _parse_variant_genetic_findings(*args, variant_model_annotations=None, **kwargs):
-    annotations = {
-        'discovery_omim_numbers': F('family__post_discovery_omim_numbers'),
-        'discovery_mondo_id': F('family__mondo_id'),
-        **(variant_model_annotations or {})
-    }
-    variants = parse_variant_genetic_findings(*args, variant_model_annotations=annotations, **kwargs)
-    mim_numbers = set()
-    mondo_ids = set()
-    for variant in variants:
-        condition_id = ''
-        omim_numbers = variant.pop('discovery_omim_numbers')
-        mondo_id = variant.pop('discovery_mondo_id')
-        if omim_numbers:
-            mim_number = omim_numbers[0]
-            mim_numbers.add(mim_number)
-            condition_id = f'OMIM:{mim_number}'
-        elif mondo_id:
-            condition_id = f"MONDO:{mondo_id.replace('MONDO:', '')}"
-            mondo_ids.add(condition_id)
-
-        variant.update({
-            'condition_id': condition_id,
-            'gene_known_for_phenotype': 'Known' if condition_id else 'Candidate',
-            'phenotype_contribution': 'Full',
-        })
-
-    conditions_by_id = {
-        f'OMIM:{number}':  {
-            'known_condition_name': description,
-            'condition_inheritance': '|'.join([
-                MIM_INHERITANCE_MAP.get(i, i) for i in (inheritance or '').split(', ')
-            ]),
-        } for number, description, inheritance in Omim.objects.filter(phenotype_mim_number__in=mim_numbers).values_list(
-            'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
-        )
-    }
-    conditions_by_id.update({mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids})
-    for row in variants:
-        row.update(conditions_by_id.get(row['condition_id'], {}))
-    return variants
-
-
-def _get_mondo_condition_data(mondo_id):
-    try:
-        response = requests.get(f'{MONDO_BASE_URL}/{mondo_id}', timeout=10)
-        data = response.json()
-        inheritance = data['inheritance']
-        if inheritance:
-            inheritance = HumanPhenotypeOntology.objects.get(hpo_id=inheritance['id']).name.replace(' inheritance', '')
-        return {
-            'known_condition_name': data['name'],
-            'condition_inheritance': inheritance,
-        }
-    except Exception:
-        return {}
-
-
 def _post_process_gregor_variant(row, gene_variants):
     return {'linked_variant': next(
         v['genetic_findings_id'] for v in gene_variants if v['genetic_findings_id'] != row['genetic_findings_id']
     ) if len(gene_variants) > 1 else None}
-
-
-def _get_analyte_row(individual):
-    return {
-        'analyte_type': individual.get_analyte_type_display(),
-        'primary_biosample': individual.get_primary_biosample_display(),
-        'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
-    }
 
 
 def _get_airtable_row(data_type, airtable_metadata):
