@@ -801,7 +801,7 @@ class ReportAPITest(AirtableTest):
         row = next(r for r in participant_file if r[0] == 'Broad_NA19675_1')
         self.assertListEqual([
             'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
-            '34415322|33665635', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
+            '34415322', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
             'Middle Eastern or North African', '', '', '21', 'Affected', 'myopathy', '18', 'No', 'No',
         ], row)
         hispanic_row = next(r for r in participant_file if r[0] == 'Broad_HG00731')

@@ -349,7 +349,7 @@ def gregor_export(request):
     grouped_data_type_individuals = defaultdict(dict)
     family_individuals = defaultdict(dict)
     for i in individuals:
-        grouped_data_type_individuals[i.individual_id].update({data_type: i for data_type in individual_data_types[i.id]})
+        grouped_data_type_individuals[_get_participant_id(i)].update({data_type: i for data_type in individual_data_types[i.id]})
         family_individuals[i.family_id][i.guid] = _get_participant_id(i)
 
     # If multiple individual records, prefer WGS
@@ -372,21 +372,20 @@ def gregor_export(request):
         elif row_type == SUBJECT_ROW_TYPE:
             participant = {
                 **row,
+                'participant_id': row['subject_id'],
                 'internal_project_id': f'Broad_{row["project_id"]}',
                 'solve_status': row.pop('solve_state'),
-                'paternal_id': row['paternal_id'] or '0',
-                'maternal_id': row['maternal_id'] or '0',
                 'reported_race': row['ancestry'],
             }
             if row['ancestry'] == ANCESTRY_MAP[HISPANIC]:
-                row.update({
+                participant.update({
                     'reported_race': None,
                     'ancestry_detail': 'Other',
                     'reported_ethnicity': row['ancestry'],
                 })
             participant_rows_by_id[row['subject_id']] = participant
 
-            base_phenotype_row = {'participant_id': row['participant_id'], 'presence': 'Present', 'ontology': 'HPO'}
+            base_phenotype_row = {'participant_id': row['subject_id'], 'presence': 'Present', 'ontology': 'HPO'}
             phen_map[None] += [
                 dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in row['features'] or []
             ]
@@ -402,7 +401,6 @@ def gregor_export(request):
             family = family_map[family_id]
             inheritance = _parse_family_disease_field(family, 'disease_inheritance')
             base_variant = {
-                'participant_id': participant['participant_id'],
                 'condition_id': _parse_family_disease_field(family, 'disease_id'),
                 'known_condition_name': _parse_family_disease_field(family, 'disease_description'),
                 'condition_inheritance': '|'.join([
@@ -415,7 +413,7 @@ def gregor_export(request):
                 genetic_findings_rows.append({**variant, **base_variant})
 
     parse_anvil_metadata(
-        projects, user=request.user, add_row=_add_row, include_mondo=True, id_prefix='Broad_',
+        projects, user=request.user, add_row=_add_row, include_mondo=True, format_id=lambda s: f'Broad_{s}' if s else '0',
         variant_filter={'alt__isnull': False}, post_process_variant=_post_process_gregor_variant, proband_only_variants=True,
         airtable_fields=[SMID_FIELD, PARTICIPANT_ID_FIELD, 'Recontactable'],
         individual_samples=individual_lookup, individual_data_types=grouped_data_type_individuals,
@@ -426,7 +424,6 @@ def gregor_export(request):
             'consent_code': consent_code,
             'gregor_center': 'BROAD',
             'missing_variant_case': 'No',
-            'participant_id': _get_participant_id(individual),
             'primary_biosample': individual.get_primary_biosample_display(),
             'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),
             'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
@@ -981,7 +978,7 @@ def variant_metadata(request, project_guid):
             }
 
         variant_rows += get_genetic_findings_rows(
-            variants_by_family[family_id], individual, participant_id=individual.individual_id,
+            variants_by_family[family_id], individual, participant_id=individual.individual_id, format_id=lambda s: s,
             individual_data_types=individual.data_types, family_individuals=family_individuals[family_id],
             post_process_variant=_post_process_variant_metadata, **family_data_by_id[family_id],
         )
