@@ -100,8 +100,8 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                           get_additional_sample_fields=None, get_additional_individual_fields=None, include_discovery_sample_id=False,
                          include_mondo=False, individual_samples=None, individual_data_types=None, include_no_individual_families=False,
                          id_prefix='', airtable_fields=None, variant_filter=None, post_process_variant=None, proband_only_variants=False):
-    individual_samples = individual_samples or _get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
-        if max_loaded_date else _get_all_project_individual_samples(projects)
+    individual_samples = individual_samples or (_get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
+        if max_loaded_date else _get_all_project_individual_samples(projects))
 
     family_values = {
         'pmid_id': Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
@@ -202,10 +202,13 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
 
             airtable_metadata = None
             has_dbgap_submission = None
-            if sample and sample_airtable_metadata is not None:
-                airtable_metadata = sample_airtable_metadata.get(sample.sample_id, {})
-                dbgap_submission = airtable_metadata.get('dbgap_submission') or set()
-                has_dbgap_submission = sample.sample_type in dbgap_submission
+            if sample_airtable_metadata is not None:
+                if sample:
+                    airtable_metadata = sample_airtable_metadata.get(sample.sample_id, {})
+                    dbgap_submission = airtable_metadata.get('dbgap_submission') or set()
+                    has_dbgap_submission = sample.sample_type in dbgap_submission
+                elif not sample_ids:
+                    airtable_metadata = sample_airtable_metadata.get(individual.individual_id, {})
 
             subject_row = _get_subject_row(
                 individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields,
