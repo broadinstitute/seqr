@@ -56,7 +56,7 @@ class GeneAPITest(AuthenticationTestCase):
             'mgiMarkerId': None,
             'mimNumber': 147571,
             'notes': [],
-            'omimPhenotypes': [{'mimNumber': 147571, 'phenotypeDescription': 'Immunodeficiency 38', 'phenotypeInheritance': 'Autosomal recessive', 'phenotypeMimNumber': 616126}],
+            'omimPhenotypes': [{'mimNumber': 147571, 'phenotypeDescription': 'Immunodeficiency 38', 'phenotypeInheritance': 'Autosomal recessive', 'phenotypeMimNumber': 616126, 'chrom': '1', 'start': 11869, 'end': 14409}],
             'primateAi': {'percentile25': 0.587214291096, 'percentile75': 0.821286439896},
             'sHet': {'postMean': 0.90576},
             'startGrch37': 11869,

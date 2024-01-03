@@ -454,7 +454,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [MITO_VARIANT3], quality_filter={'min_gq': 60, 'min_hl': 5}, sample_data=FAMILY_2_MITO_SAMPLE_DATA,
+            [MITO_VARIANT1, MITO_VARIANT3], quality_filter={'min_gq': 60, 'min_hl': 5}, sample_data=FAMILY_2_MITO_SAMPLE_DATA,
         )
 
         gcnv_quality_filter = {'min_gq': 40, 'min_qs': 20}

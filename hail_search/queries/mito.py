@@ -19,7 +19,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
     TRANSCRIPT_CONSEQUENCE_FIELD = 'consequence_term'
     GENOTYPE_FIELDS = {
         'dp': 'DP',
-        'gq': 'GQ',
         'hl': 'HL',
         'mitoCn': 'mito_cn',
         'contamination': 'contamination',
@@ -102,14 +101,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
-        gene_id = getattr(ht, 'gene_id', None)
-        if gene_id is not None:
-            gene_transcripts = ht.sorted_transcript_consequences.filter(lambda t: t.gene_id == ht.gene_id)
+        comp_het_gene_ids = getattr(ht, 'comp_het_gene_ids', None)
+        if comp_het_gene_ids is not None:
+            gene_transcripts = ht.sorted_transcript_consequences.filter(lambda t: comp_het_gene_ids.contains(t.gene_id))
         else:
             gene_transcripts = getattr(ht, 'gene_transcripts', None)
 
         allowed_transcripts = getattr(ht, ALLOWED_TRANSCRIPTS, None)
-        if gene_id is not None and hasattr(ht, ALLOWED_SECONDARY_TRANSCRIPTS):
+        if comp_het_gene_ids is not None and hasattr(ht, ALLOWED_SECONDARY_TRANSCRIPTS):
             allowed_transcripts = hl.if_else(
                 allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht[ALLOWED_SECONDARY_TRANSCRIPTS],
             ) if allowed_transcripts is not None else ht[ALLOWED_SECONDARY_TRANSCRIPTS]
