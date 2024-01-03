@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
-from django.db.models import F, Q, Value, CharField, Case, When
+from django.db.models import F, Q, Value, CharField
 from django.db.models.functions import Replace, JSONObject
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
@@ -12,7 +12,7 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
-from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family
+from seqr.views.utils.variant_utils import get_variant_main_transcript, get_saved_discovery_variants_by_family, get_sv_name
 
 SHARED_DISCOVERY_TABLE_VARIANT_COLUMNS = [
     'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
@@ -71,35 +71,14 @@ METADATA_FAMILY_VALUES = {
     'projectGuid': F('project__guid'),
     'analysisStatus': F('analysis_status'),
     'displayName': F('family_id'),
-    'MME': Case(When(individual__matchmakersubmission__isnull=True, then=Value('N')), default=Value('Y')),
 }
 
 
-def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, include_metadata=False, family_values=None,
-                          get_additional_sample_fields=None, get_additional_variant_fields=None,
-                         include_no_individual_families=False, no_variant_zygosity=False):
-    if include_no_individual_families:
-        family_filter = {'project__in': projects}
-        individual_samples = _get_all_project_individual_samples(projects)
-    else:
-        individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
-        family_filter = {'individual__in': individual_samples}
-
-    family_filter = {'project__in': projects} if include_no_individual_families else {'individual__in': individual_samples}
-    family_data = Family.objects.filter(**family_filter).distinct().values(
-        'id', 'family_id', 'post_discovery_omim_numbers', 'project__name',
-        pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
-        phenotype_description=Replace(
-            Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
-            Value('\t'), Value(' '),
-        ),
-        genome_version=F('project__genome_version'),
-        phenotype_groups=ArrayAgg(
-            'project__projectcategory__name', distinct=True,
-            filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
-        ),
+def get_family_metadata(projects, additional_fields=None, additional_values=None, array_values=None, include_metadata=False):
+    family_data = Family.objects.filter(project__in=projects).distinct().values(
+        'id', 'family_id', 'project__name', *(additional_fields or []),
         **(METADATA_FAMILY_VALUES if include_metadata else {}),
-        **(family_values or {}),
+        **(additional_values or {}),
     )
 
     family_data_by_id = {}
@@ -107,9 +86,35 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
         family_id = f.pop('id')
         f.update({
             'project_id': f.pop('project__name'),
-            'phenotype_group': '|'.join(f.pop('phenotype_groups')),
+            **{k.rstrip('s'): delimiter.join(f.pop(k)) for k, delimiter in (array_values or {}).items()},
         })
         family_data_by_id[family_id] = f
+
+    return family_data_by_id
+
+
+def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable=False, include_metadata=False, family_values=None,
+                          get_additional_sample_fields=None, get_additional_variant_fields=None,
+                         include_no_individual_families=False, no_variant_zygosity=False):
+    if include_no_individual_families:
+        individual_samples = _get_all_project_individual_samples(projects)
+    else:
+        individual_samples = _get_loaded_before_date_project_individual_samples(projects, max_loaded_date)
+
+    family_data_by_id = get_family_metadata(
+        projects, additional_fields=['post_discovery_omim_numbers'], additional_values=dict(
+            pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
+            phenotype_description=Replace(
+                Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
+                Value('\t'), Value(' '),
+            ),
+            genome_version=F('project__genome_version'),
+            phenotype_groups=ArrayAgg(
+                'project__projectcategory__name', distinct=True,
+                filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
+            ),
+            **(family_values or {}),
+        ), array_values={'phenotype_groups': '|'}, include_metadata=include_metadata)
 
     individuals_by_family_id = defaultdict(list)
     individual_ids_map = {}
@@ -133,7 +138,7 @@ def parse_anvil_metadata(projects, max_loaded_date, user, add_row, omit_airtable
     genes_by_id = get_genes(gene_ids)
 
     mim_numbers = set()
-    for family in family_data:
+    for family in family_data_by_id.values():
         mim_numbers.update(family['post_discovery_omim_numbers'])
     mim_decription_map = {
         o.phenotype_mim_number: o.phenotype_description
@@ -220,12 +225,8 @@ def _parse_family_individual_affected_data(family_individuals):
     )
 
 
-def _get_nested_variant_name(variant):
-    return _get_sv_name(variant) if variant.get('svType') else variant['variantId']
-
-
-def _get_sv_name(variant_json):
-    return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
+def _get_nested_variant_name(variant, get_variant_id):
+    return get_sv_name(variant) or get_variant_id(variant)
 
 
 def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date):
@@ -284,7 +285,7 @@ def _update_variant_inheritance(
     is_x_linked = 'X' in variant_json.get('chrom', '')
 
     genotype_zygosity = {
-        sample_guid: _get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
+        sample_guid: get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
         for sample_guid, genotype in variant_json.get('genotypes', {}).items()
     }
     inheritance_model, possible_comp_het = _get_inheritance_model(
@@ -339,7 +340,7 @@ def _get_inheritance_model(
     return inheritance_model, possible_comp_het
 
 
-def _get_genotype_zygosity(genotype, is_hemi_variant):
+def get_genotype_zygosity(genotype, is_hemi_variant=False):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
     if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
@@ -355,19 +356,24 @@ def _process_mnvs(potential_mnvs, saved_variants):
         if len(mnvs) <= 2:
             continue
         parent_mnv = next((v for v in mnvs if not v.get('populations')), mnvs[0])
-        nested_mnvs = [v for v in mnvs if v['variantId'] != parent_mnv['variantId']]
-        mnv_genes |= {gene_id for variant in nested_mnvs for gene_id in variant['transcripts'].keys()}
+        mnv_genes |= {gene_id for variant in mnvs for gene_id in variant['transcripts'].keys()}
         parent_transcript = parent_mnv.get('main_transcript') or {}
-        parent_details = [parent_transcript[key] for key in ['hgvsc', 'hgvsp'] if parent_transcript.get(key)]
-        parent_name = _get_nested_variant_name(parent_mnv)
-        discovery_notes = 'The following variants are part of the {variant_type} variant {parent}: {nested}'.format(
-            variant_type='complex structural' if parent_mnv.get('svType') else 'multinucleotide',
-            parent='{} ({})'.format(parent_name, ', '.join(parent_details)) if parent_details else parent_name,
-            nested=', '.join(sorted([_get_nested_variant_name(v) for v in nested_mnvs])))
-        for variant in nested_mnvs:
+        discovery_notes = get_discovery_notes(
+            {**parent_transcript, **parent_mnv}, mnvs, get_variant_id=lambda v: v['variantId'])
+        for variant in mnvs:
             variant['discovery_notes'] = discovery_notes
         saved_variants.remove(parent_mnv)
     return mnv_genes
+
+
+def get_discovery_notes(parent_mnv, mnvs, get_variant_id):
+    variant_type = 'complex structural' if parent_mnv.get('svType') else 'multinucleotide'
+    parent_name = _get_nested_variant_name(parent_mnv, get_variant_id)
+    parent_details = [parent_mnv[key] for key in ['hgvsc', 'hgvsp'] if parent_mnv.get(key)]
+    parent = f'{parent_name} ({", ".join(parent_details)})' if parent_details else parent_name
+    mnv_names = [_get_nested_variant_name(v, get_variant_id) for v in mnvs]
+    nested_mnvs = sorted([v for v in mnv_names if v != parent_name])
+    return f'The following variants are part of the {variant_type} variant {parent}: {", ".join(nested_mnvs)}'
 
 
 def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv_genes):
@@ -413,7 +419,7 @@ def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compou
 
     if variant.get('svType'):
         parsed_variant.update({
-            'sv_name': _get_sv_name(variant),
+            'sv_name': get_sv_name(variant),
             'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType']),
         })
     else:

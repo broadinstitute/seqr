@@ -124,6 +124,7 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
 from seqr.views.apis.report_api import \
     anvil_export, \
     family_metadata, \
+    variant_metadata, \
     gregor_export, \
     seqr_stats
 from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, hpo_summary_data, \
@@ -309,6 +310,7 @@ api_endpoints = {
 
     'report/anvil/(?P<project_guid>[^/]+)': anvil_export,
     'report/family_metadata/(?P<project_guid>[^/]+)': family_metadata,
+    'report/variant_metadata/(?P<project_guid>[^/]+)': variant_metadata,
     'report/gregor': gregor_export,
     'report/seqr_stats': seqr_stats,
 
