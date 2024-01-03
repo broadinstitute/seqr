@@ -145,6 +145,10 @@ def anvil_export(request, project_guid):
     max_loaded_date = request.GET.get('loadedBefore') or (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
     parse_anvil_metadata(
         [project], request.user, _add_row, max_loaded_date=max_loaded_date, include_discovery_sample_id=True,
+        get_additional_individual_fields=lambda individual, *args: {
+            'hpo_present': '|'.join([feature['id'] for feature in individual.features or []]),
+            'hpo_absent': '|'.join([feature['id'] for feature in individual.absent_features or []]),
+        },
         get_additional_sample_fields=lambda sample, *args: {
             'entity:sample_id': sample.individual.individual_id,
             'sequencing_center': 'Broad',
@@ -413,9 +417,6 @@ def gregor_export(request):
             'analyte_id': _get_analyte_id(airtable_sample or {}),
             'recontactable': (airtable_sample or {}).get('Recontactable'),
             PARTICIPANT_ID_FIELD: (airtable_sample or {}).get(PARTICIPANT_ID_FIELD),
-            # TODO better condition/shared logic for hpo formatting
-            'features': individual.features,
-            'absent_features': individual.absent_features,
         },
     )
 

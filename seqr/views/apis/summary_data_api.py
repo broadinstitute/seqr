@@ -366,9 +366,13 @@ def individual_metadata(request, project_guid):
                 collaborator_map[row_key] = collaborator
             if 'ancestry_detail' in row:
                 row['ancestry'] = row.pop('ancestry_detail')
-            if 'hpo_present' in row:
-                all_features.update(row['hpo_present'].split('|'))
-                all_features.update(row['hpo_absent'].split('|'))
+            if 'features' in row:
+                row.update({
+                    'hpo_present': [feature['id'] for feature in row.pop('features') or []],
+                    'hpo_absent': [feature['id'] for feature in row.pop('absent_features') or []],
+                })
+                all_features.update(row['hpo_present'])
+                all_features.update(row['hpo_absent'])
             rows_by_subject_family_id[row_key].update(row)
 
     parse_anvil_metadata(
@@ -390,8 +394,9 @@ def individual_metadata(request, project_guid):
         row.update(family_rows_by_id[row_key[1]])
         row['num_saved_variants'] = row.get('num_saved_variants', 0)
         for hpo_key in ['hpo_present', 'hpo_absent']:
-            if row[hpo_key]:
-                row[hpo_key] = '|'.join(['{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')) for feature_id in row[hpo_key].split('|')])
+            features = row.pop(hpo_key)
+            if features:
+                row[hpo_key] = '|'.join(['{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')) for feature_id in features])
 
     return create_json_response({'rows': list(rows_by_subject_family_id.values())})
 

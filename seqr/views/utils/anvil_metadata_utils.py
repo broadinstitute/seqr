@@ -301,8 +301,6 @@ def _get_variant_main_transcript(variant_model):
 
 
 def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields, format_id):
-    features_present = [feature['id'] for feature in individual.features or []]
-    features_absent = [feature['id'] for feature in individual.absent_features or []]
     onset = individual.onset_age
 
     paternal_ids = individual_ids_map.get(individual.father_id, ('', ''))
@@ -315,8 +313,8 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, indivi
         'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
         'affected_status': Individual.AFFECTED_STATUS_LOOKUP[individual.affected],
         'congenital_status': Individual.ONSET_AGE_LOOKUP[onset] if onset else 'Unknown',
-        'hpo_present': '|'.join(features_present),
-        'hpo_absent': '|'.join(features_absent),
+        'features': individual.features,
+        'absent_features': individual.absent_features,
         'disorders': individual.disorders,
         'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
