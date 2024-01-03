@@ -56,6 +56,16 @@ SOLVE_STATUS_LOOKUP = {
     Family.ANALYSIS_STATUS_PARTIAL_SOLVE: 'Partial',
 }
 
+MIM_INHERITANCE_MAP = {
+    'Digenic dominant': 'Digenic',
+    'Digenic recessive': 'Digenic',
+    'X-linked dominant': 'X-linked',
+    'X-linked recessive': 'X-linked',
+}
+MIM_INHERITANCE_MAP.update({inheritance: 'Other' for inheritance in [
+    'Isolated cases', 'Multifactorial', 'Pseudoautosomal dominant', 'Pseudoautosomal recessive', 'Somatic mutation'
+]})
+
 FAMILY_ROW_TYPE = 'family'
 SUBJECT_ROW_TYPE = 'subject'
 SAMPLE_ROW_TYPE = 'sample'
@@ -158,17 +168,21 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
         family_individuals = individuals_by_family_id[family_id]
 
         mim_numbers = family_subject_row.pop('post_discovery_omim_numbers')
+        mondo_id = family_subject_row.pop('mondo_id', None)
         if mim_numbers:
-            mim_conditions = [mim_map.get(mim_number, {}) for mim_number in mim_numbers]
+            mim_number = next((mim_number for mim_number in mim_numbers if mim_map.get(mim_number)), mim_numbers[0])
+            mim_condition = mim_map.get(mim_number, {})
             family_subject_row.update({
-                'disease_id': ';'.join(['OMIM:{}'.format(mim_number) for mim_number in mim_numbers]),
-                'disease_description': ';'.join([o.get('phenotype_description', '') for o in mim_conditions]),
-                'disease_inheritance': ';'.join([o.get('phenotype_inheritance', '') for o in mim_conditions]),
+                'condition_id': f'OMIM:{mim_number}',
+                'known_condition_name': mim_condition.get('phenotype_description', ''),
+                'condition_inheritance': '|'.join([
+                    MIM_INHERITANCE_MAP.get(i, i) for i in (mim_condition.get('phenotype_inheritance') or '').split(', ')
+                ]),
             })
-        elif family_subject_row.get('mondo_id'):
+        elif mondo_id:
             family_subject_row.update({
-                'disease_id': family_subject_row['mondo_id'],
-                **mondo_map[family_subject_row['mondo_id']],
+                'condition_id': mondo_id,
+                **mondo_map[mondo_id],
             })
 
         affected_individuals = [individual for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED]
@@ -487,8 +501,8 @@ def _get_mondo_condition_data(mondo_id):
         if inheritance:
             inheritance = HumanPhenotypeOntology.objects.get(hpo_id=inheritance['id']).name.replace(' inheritance', '')
         return {
-            'disease_description': data['name'],
-            'disease_inheritance': inheritance,
+            'known_condition_name': data['name'],
+            'condition_inheritance': inheritance,
         }
     except Exception:
         return {}

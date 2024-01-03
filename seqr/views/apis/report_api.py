@@ -146,6 +146,8 @@ def anvil_export(request, project_guid):
                 row.update({
                     'project_id': row.pop('internal_project_id'),
                     'solve_state': row.pop('solve_status'),
+                    'disease_id': row.get('condition_id'),
+                    'disease_description': row.get('known_condition_name'),
                     'hpo_present': '|'.join([feature['id'] for feature in row.get('features') or []]),
                     'hpo_absent': '|'.join([feature['id'] for feature in row.get('absent_features') or []]),
                     'ancestry': row['reported_ethnicity'] or row['reported_race'],
@@ -278,16 +280,6 @@ WARN_MISSING_CONDITIONAL_COLUMNS = {
     'known_condition_name': lambda row: row['condition_id'],
 }
 
-MIM_INHERITANCE_MAP = {
-    'Digenic dominant': 'Digenic',
-    'Digenic recessive': 'Digenic',
-    'X-linked dominant': 'X-linked',
-    'X-linked recessive': 'X-linked',
-}
-MIM_INHERITANCE_MAP.update({inheritance: 'Other' for inheritance in [
-    'Isolated cases', 'Multifactorial', 'Pseudoautosomal dominant', 'Pseudoautosomal recessive', 'Somatic mutation'
-]})
-
 HPO_QUALIFIERS = {
     'age_of_onset': {
         'Adult onset': 'HP:0003581',
@@ -389,10 +381,10 @@ def gregor_export(request):
             for feature in row['absent_features'] or []:
                 phenotype_rows.append(dict(**base_phenotype_row, **_get_phenotype_row(feature)))
         elif row_type == DISCOVERY_ROW_TYPE and row:
-            family = family_map[family_id]
-            base_variant = _parse_variant_family_metadata(family)
             for variant in row:
-                genetic_findings_rows.append({**variant, **base_variant, 'variant_type': 'SNV/INDEL'})
+                genetic_findings_rows.append({
+                    **variant, **family_map[family_id], 'phenotype_contribution': 'Full', 'variant_type': 'SNV/INDEL',
+                })
 
     parse_anvil_metadata(
         projects, user=request.user, add_row=_add_row, include_mondo=True, format_id=_format_id,
@@ -478,23 +470,6 @@ def gregor_export(request):
         'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families'],
         'warnings': warnings,
     })
-
-
-def _parse_family_disease_field(family, field):
-    return family[field].split(';')[0] if family.get(field) else None
-
-
-def _parse_variant_family_metadata(family):
-    # TODO move into shared utility
-    inheritance = _parse_family_disease_field(family, 'disease_inheritance')
-    return {
-        'condition_id': _parse_family_disease_field(family, 'disease_id'),
-        'known_condition_name': _parse_family_disease_field(family, 'disease_description'),
-        'condition_inheritance': '|'.join([
-            MIM_INHERITANCE_MAP.get(i, i) for i in (inheritance or '').split(', ')
-        ]),
-        'phenotype_contribution': 'Full',
-    }
 
 
 def _get_gregor_airtable_data(participants, user):
@@ -850,9 +825,8 @@ def variant_metadata(request, project_guid):
             for variant in row:
                 variant_rows.append({
                     'MME': variant.pop('variantId') in participant_mme[variant['participant_id']].get('variant_ids', []),
-                    **_parse_variant_family_metadata(family),
-                    **{k: family[k] for k in
-                       {'familyGuid', 'projectGuid', 'displayName', 'analysisStatus', 'family_id', 'internal_project_id'}},
+                    'phenotype_contribution': 'Full',
+                    **family,
                     **variant,
                 })
 
