@@ -9,13 +9,13 @@ from typing import Callable, Iterable
 
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
-from seqr.models import Family, Individual, Sample, SavedVariant
+from seqr.models import Family, Individual, Sample, SavedVariant, VariantTagType
 from seqr.views.utils.airtable_utils import get_airtable_samples
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
 from seqr.utils.xpos_utils import get_chrom_pos
-from seqr.views.utils.variant_utils import get_saved_discovery_variants_by_family
+from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
 MONDO_BASE_URL = 'https://monarchinitiative.org/v3/api/entity'
 
@@ -496,10 +496,16 @@ def _get_sample_airtable_metadata(sample_ids, user, fields):
 
 
 def _get_parsed_saved_discovery_variants_by_family(families, variant_filter, variant_json_fields):
-    return get_saved_discovery_variants_by_family(
-        {'family__id__in': families, **(variant_filter or {})},
-        format_variants=parse_variant_genetic_findings,
-        get_family_id=lambda v: v.pop('family_id'),
+    tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
+
+    project_saved_variants = SavedVariant.objects.filter(
+        varianttag__variant_tag_type__in=tag_types, family__id__in=families,
+        **(variant_filter or {}),
+    ).order_by('created_date').distinct()
+
+    # TODO clean up parse_variant_genetic_findings?
+    project_saved_variants = parse_variant_genetic_findings(
+        project_saved_variants, tag_types,
         variant_json_fields=['svType', 'svName', 'end'] + (variant_json_fields or []),
         variant_model_annotations={
             'gene_known_for_phenotype': Case(When(
@@ -507,6 +513,13 @@ def _get_parsed_saved_discovery_variants_by_family(families, variant_filter, var
                 then=Value('Candidate')), default=Value('Known')),
         },
     )
+
+    saved_variants_by_family = defaultdict(list)
+    for saved_variant in project_saved_variants:
+        family_id = saved_variant.pop('family_id')
+        saved_variants_by_family[family_id].append(saved_variant)
+
+    return saved_variants_by_family
 
 
 def _get_mondo_condition_data(mondo_id):

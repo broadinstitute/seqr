@@ -1258,7 +1258,7 @@ class ReportAPITest(AirtableTest):
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
         if self.ADDITIONAL_FINDING:
-            row_ids.insert(-2, self.ADDITIONAL_FINDING)
+            row_ids.append(self.ADDITIONAL_FINDING)
         self.assertListEqual([r['genetic_findings_id'] for r in response_json['rows']], row_ids)
         self.assertDictEqual(response_json['rows'][1], expected_row)
         self.assertDictEqual(response_json['rows'][2], expected_mnv)
