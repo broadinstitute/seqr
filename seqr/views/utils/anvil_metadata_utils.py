@@ -20,15 +20,13 @@ from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 MONDO_BASE_URL = 'https://monarchinitiative.org/v3/api/entity'
 
 HISPANIC = 'AMR'
-MIDDLE_EASTERN = 'MDE'
-OTHER_POPULATION = 'OTH'
 ANCESTRY_MAP = {
   'AFR': 'Black or African American',
   HISPANIC: 'Hispanic or Latino',
   'ASJ': 'White',
   'EAS': 'Asian',
   'FIN': 'White',
-  MIDDLE_EASTERN: 'Middle Eastern or North African',
+  'MDE': 'Middle Eastern or North African',
   'NFE': 'White',
   'SAS': 'Asian',
 }
@@ -36,7 +34,7 @@ ANCESTRY_DETAIL_MAP = {
   'ASJ': 'Ashkenazi Jewish',
   'EAS': 'East Asian',
   'FIN': 'Finnish',
-  OTHER_POPULATION: 'Other',
+  'OTH': 'Other',
   'SAS': 'South Asian',
 }
 
@@ -63,8 +61,8 @@ DISCOVERY_ROW_TYPE = 'discovery'
 METADATA_FAMILY_VALUES = {
     'familyGuid': F('guid'),
     'projectGuid': F('project__guid'),
-    'analysisStatus': F('analysis_status'),
     'displayName': F('family_id'),
+    'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
 }
 
 METHOD_MAP = {
@@ -73,16 +71,18 @@ METHOD_MAP = {
 }
 
 
-def get_family_metadata(projects, additional_fields=None, additional_values=None, format_fields=None, include_metadata=False, family_filter=None):
-    values = {
+def _get_family_metadata(family_filter, family_fields, include_metadata, include_mondo, format_id):
+    family_data = Family.objects.filter(**family_filter).distinct().order_by('id').values(
+        'id', 'family_id', 'project__name', 'post_discovery_omim_numbers',
+        *(['mondo_id'] if include_mondo else []),
+        pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
+        phenotype_description=Replace(
+            Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
+            Value('\t'), Value(' '),
+        ),
+        analysisStatus=F('analysis_status'),
         **(METADATA_FAMILY_VALUES if include_metadata else {}),
-        **(additional_values or {}),
-    }
-    families = Family.objects.filter(project__in=projects)
-    if family_filter:
-        families = families.filter(**family_filter)
-    family_data = families.distinct().values(
-        'id', 'family_id', 'project__name', *(additional_fields or []), **values,
+        **{k: v['value'] for k, v in (family_fields or {}).items()}
     )
 
     family_data_by_id = {}
@@ -90,8 +90,13 @@ def get_family_metadata(projects, additional_fields=None, additional_values=None
         family_id = f.pop('id')
         f.update({
             'project_id': f.pop('project__name'),
-            **{k: format(f) for k, format in (format_fields or {}).items()},
+            'solve_state': SOLVE_STATUS_LOOKUP.get(f['analysisStatus'], 'No'),
+            **{k: v['format'](f) for k, v in (family_fields or {}).items()},
         })
+        if format_id:
+            f.update({k: format_id(f[k]) for k in ['family_id', 'project_id']})
+        if include_metadata:
+            f['analysis_groups'] = '; '.join(f['analysis_groups'])
         family_data_by_id[family_id] = f
 
     return family_data_by_id
@@ -102,38 +107,14 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                          include_mondo=False, individual_samples=None, individual_data_types=None, include_no_individual_families=False,
                          format_id=lambda s: s, airtable_fields=None, mme_values=None,
                          variant_filter=None, variant_json_fields=None,  post_process_variant=None, proband_only_variants=False):
+
     individual_samples = individual_samples or (_get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
         if max_loaded_date else _get_all_project_individual_samples(projects))
 
-    family_values = {
-        'pmid_id': Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
-        'phenotype_description': Replace(
-            Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
-            Value('\t'), Value(' '),
-        ),
-        'analysisStatus': METADATA_FAMILY_VALUES['analysisStatus'],
-    }
-    format_fields = {
-        'solve_state': lambda f: get_family_solve_state(f['analysisStatus']),
-    }
-    if include_metadata:
-        family_values['analysis_groups'] = ArrayAgg(
-            'analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False))
-        format_fields['analysis_groups'] = lambda f: '; '.join(f['analysis_groups'])
-    if family_fields:
-        family_values.update({k: v['value'] for k, v in family_fields.items()})
-        format_fields.update({k: v['format'] for k, v in family_fields.items()})
-    if format_id:
-        format_fields['family_id'] = lambda f: format_id(f['family_id'])
-
-    additional_fields = ['post_discovery_omim_numbers']
-    if include_mondo:
-        additional_fields.append('mondo_id')
-
-    family_data_by_id = get_family_metadata(
-        projects, additional_fields=additional_fields, additional_values=family_values,
-        format_fields=format_fields, include_metadata=include_metadata,
-        family_filter=None if include_no_individual_families else {'individual__in': individual_samples})
+    family_data_by_id = _get_family_metadata(
+        {'project__in': projects} if include_no_individual_families else {'individual__in': individual_samples},
+        family_fields, include_metadata, include_mondo, format_id
+    )
 
     individuals_by_family_id = defaultdict(list)
     individual_ids_map = {}
@@ -240,10 +221,6 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             add_row(discovery_row, family_id, DISCOVERY_ROW_TYPE)
 
 
-def get_family_solve_state(analysis_status):
-    return SOLVE_STATUS_LOOKUP.get(analysis_status, 'No')
-
-
 def _get_nested_variant_name(v):
     return _get_sv_name(v) or f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}"
 
@@ -305,6 +282,7 @@ def post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
     }
 
 
+# TODO not shared
 def parse_variant_genetic_findings(variant_models: Iterable[SavedVariant], *args,
                                    variant_json_fields: list[str] = None, variant_model_annotations: dict = None):
     if variant_model_annotations:
@@ -417,6 +395,7 @@ def _get_sample_row(sample, subject_id, has_dbgap_submission, airtable_metadata,
     return sample_row
 
 
+# TODO not shared
 def get_genetic_findings_rows(rows: list[dict], individual: Individual, participant_id: str, format_id: Callable[[str], str] = '',
                               individual_data_types: Iterable[str] = None, family_individuals: dict[str, str] = None,
                               post_process_variant: Callable[[dict, list[dict]], dict] = None, **kwargs) -> list[dict]:

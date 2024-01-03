@@ -14,7 +14,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, post_process_variant_metadata, \
-    ANCESTRY_MAP, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, METADATA_FAMILY_VALUES
+    ANCESTRY_MAP, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
@@ -371,7 +371,7 @@ def gregor_export(request):
             participant = {
                 **row,
                 'participant_id': row['subject_id'],
-                'internal_project_id': f'Broad_{row["project_id"]}',
+                'internal_project_id': row['project_id'],
                 'solve_status': row.pop('solve_state'),
                 'reported_race': row['ancestry'],
             }
@@ -413,6 +413,7 @@ def gregor_export(request):
             'analyte_id': _get_analyte_id(airtable_sample or {}),
             'recontactable': (airtable_sample or {}).get('Recontactable'),
             PARTICIPANT_ID_FIELD: (airtable_sample or {}).get(PARTICIPANT_ID_FIELD),
+            # TODO better condition/shared logic for hpo formatting
             'features': individual.features,
             'absent_features': individual.absent_features,
         },
@@ -841,7 +842,7 @@ def variant_metadata(request, project_guid):
 
     families_by_id = {}
     participant_mme = {}
-    variant_rows_by_family = defaultdict(list)
+    variant_rows = []
 
     def _add_row(row, family_id, row_type):
         if row_type == FAMILY_ROW_TYPE:
@@ -849,7 +850,15 @@ def variant_metadata(request, project_guid):
         elif row_type == SUBJECT_ROW_TYPE:
             participant_mme[row['subject_id']] = row.get('MME', {})
         elif row_type == DISCOVERY_ROW_TYPE:
-            variant_rows_by_family[family_id] += row
+            family = families_by_id[family_id]
+            for variant in row:
+                variant_rows.append({
+                    'MME': variant.pop('variantId') in participant_mme[variant['participant_id']].get('variant_ids', []),
+                    **_parse_variant_family_metadata(family),
+                    **{k: family[k] for k in
+                       {'familyGuid', 'projectGuid', 'displayName', 'analysisStatus', 'family_id', 'project_id'}},
+                    **variant,
+                })
 
     parse_anvil_metadata(
         projects, user=request.user, add_row=_add_row, include_metadata=True,  include_mondo=True, omit_airtable=True,
@@ -859,15 +868,5 @@ def variant_metadata(request, project_guid):
         individual_samples={i: None for i in individuals},
         individual_data_types={i.individual_id: i.data_types for i in individuals},
     )
-
-    variant_rows = []
-    for family_id, rows in variant_rows_by_family.items():
-        family = families_by_id[family_id]
-        variant_rows += [{
-            'MME': row.pop('variantId') in participant_mme[row['participant_id']].get('variant_ids', []),
-            **_parse_variant_family_metadata(family),
-            **{k: v for k, v in family.items() if k in {*METADATA_FAMILY_VALUES, 'family_id', 'project_id'}},
-            **row,
-        } for row in rows]
 
     return create_json_response({'rows': variant_rows})
