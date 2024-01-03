@@ -491,9 +491,12 @@ BASE_VARIANT_METADATA_ROW = {
     'allele_balance_or_heteroplasmy_percentage': None,
     'analysisStatus': 'Q',
     'clinvar': None,
+    'condition_id': None,
+    'condition_inheritance': '',
     'end': None,
     'hgvsc': '',
     'hgvsp': '',
+    'known_condition_name': None,
     'method_of_discovery': 'SR-ES',
     'notes': None,
     'phenotype_contribution': 'Full',
@@ -1140,7 +1143,6 @@ class ReportAPITest(AirtableTest):
             'chrom': '1',
             'clinvar': {'alleleId': None, 'clinicalSignificance': '', 'goldStars': None, 'variationId': None},
             'condition_id': 'MONDO:0044970',
-            'condition_inheritance': None,
             'displayName': '2',
             'familyGuid': 'F000002_2',
             'family_id': '2',
@@ -1165,7 +1167,6 @@ class ReportAPITest(AirtableTest):
             'alt': 'T',
             'chrom': '19',
             'condition_id': 'MONDO:0044970',
-            'condition_inheritance': None,
             'displayName': '2',
             'end': 1912634,
             'familyGuid': 'F000002_2',
@@ -1256,7 +1257,8 @@ class ReportAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        row_ids += self.ADDITIONAL_FINDINGS
+        if self.ADDITIONAL_FINDING:
+            row_ids.insert(-2, self.ADDITIONAL_FINDING)
         self.assertListEqual([r['genetic_findings_id'] for r in response_json['rows']], row_ids)
         self.assertDictEqual(response_json['rows'][1], expected_row)
         self.assertDictEqual(response_json['rows'][2], expected_mnv)
@@ -1271,7 +1273,7 @@ class ReportAPITest(AirtableTest):
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
     ADDITIONAL_FAMILIES = ['F000014_14']
-    ADDITIONAL_FINDINGS = ['NA21234_1_248367227']
+    ADDITIONAL_FINDING = 'NA21234_1_248367227'
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
         'familiesCount': {'non_demo': 12, 'demo': 2},
@@ -1289,7 +1291,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
     ADDITIONAL_FAMILIES = []
-    ADDITIONAL_FINDINGS = []
+    ADDITIONAL_FINDING = None
     STATS_DATA = {
         'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},

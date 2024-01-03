@@ -100,7 +100,8 @@ def get_family_metadata(projects, additional_fields=None, additional_values=None
 def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_fields=None,
                           get_additional_sample_fields=None, get_additional_individual_fields=None, include_discovery_sample_id=False,
                          include_mondo=False, individual_samples=None, individual_data_types=None, include_no_individual_families=False,
-                         format_id=lambda s: s, airtable_fields=None, variant_filter=None, post_process_variant=None, proband_only_variants=False):
+                         format_id=lambda s: s, airtable_fields=None, mme_values=None,
+                         variant_filter=None, variant_json_fields=None,  post_process_variant=None, proband_only_variants=False):
     individual_samples = individual_samples or (_get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
         if max_loaded_date else _get_all_project_individual_samples(projects))
 
@@ -143,7 +144,8 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
         if sample:
             sample_ids.add(sample.sample_id)
 
-    saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(family_data_by_id.keys()), variant_filter=variant_filter)
+    saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(
+        list(family_data_by_id.keys()), variant_filter=variant_filter, variant_json_fields=variant_json_fields)
 
     mim_numbers = set()
     mondo_ids = set()
@@ -159,8 +161,8 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
     }
     mondo_map = {mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids}
 
-    matchmaker_individuals = set(MatchmakerSubmission.objects.filter(
-        individual__in=individual_samples).values_list('individual_id', flat=True)) if include_metadata else set()
+    matchmaker_individuals = {m['individual_id']: m for m in MatchmakerSubmission.objects.filter(
+        individual__in=individual_samples).values('individual_id', **(mme_values or {}))} if include_metadata else {}
 
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
         list(sample_ids) or [i[0] for i in individual_ids_map.values()], user, airtable_fields)
@@ -216,7 +218,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
                 format_id,
             )
             if individual.id in matchmaker_individuals:
-                subject_row['MME'] = 'Yes'
+                subject_row['MME'] = matchmaker_individuals[individual.id] if mme_values else 'Yes'
             subject_row.update(family_subject_row)
             add_row(subject_row, family_id, SUBJECT_ROW_TYPE)
 
@@ -493,12 +495,12 @@ def _get_sample_airtable_metadata(sample_ids, user, fields):
     return sample_records
 
 
-def _get_parsed_saved_discovery_variants_by_family(families, variant_filter):
+def _get_parsed_saved_discovery_variants_by_family(families, variant_filter, variant_json_fields):
     return get_saved_discovery_variants_by_family(
         {'family__id__in': families, **(variant_filter or {})},
         format_variants=parse_variant_genetic_findings,
         get_family_id=lambda v: v.pop('family_id'),
-        variant_json_fields=['svType', 'svName', 'end'],
+        variant_json_fields=['svType', 'svName', 'end'] + (variant_json_fields or []),
         variant_model_annotations={
             'gene_known_for_phenotype': Case(When(
                 Q(family__post_discovery_omim_numbers__len=0, family__mondo_id__isnull=True),
