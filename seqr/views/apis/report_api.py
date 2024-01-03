@@ -13,16 +13,14 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 
 from seqr.views.utils.airtable_utils import AirtableSession
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, get_genetic_findings_rows, post_process_variant_metadata, \
-    get_family_metadata, get_family_solve_state, parse_variant_genetic_findings, \
-    ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
-    SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION, METADATA_FAMILY_VALUES
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, post_process_variant_metadata, \
+    ANCESTRY_MAP, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, METADATA_FAMILY_VALUES
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
     get_project_guids_user_can_view, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
-from seqr.views.utils.variant_utils import get_saved_discovery_variants_by_family, DISCOVERY_CATEGORY
+from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
 from seqr.models import Project, Family, Sample, Individual
 from reference_data.models import Omim, HumanPhenotypeOntology
