@@ -49,7 +49,7 @@ const CORE_COLUMNS = [
     content: 'analysis_status',
     format: ({ analysisStatus }) => FAMILY_ANALYSIS_STATUS_LOOKUP[analysisStatus]?.name,
   },
-  { name: 'solve_state' },
+  { name: 'solve_status' },
   { name: 'MME' },
   { name: 'data_type' },
   { name: 'date_data_generation', secondaryExportColumn: 'filter_flags' },

@@ -379,8 +379,11 @@ def individual_metadata(request, project_guid):
         projects, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
         include_metadata=True,
         omit_airtable=not include_airtable,
-        get_additional_sample_fields=lambda sample, airtable_metadata: {
+        get_additional_individual_fields=lambda individual, airtable_metadata: {
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
+            'individual_guid': individual.guid,
+            'disorders': individual.disorders,
+            'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
         },
     )
 

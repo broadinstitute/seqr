@@ -15,7 +15,7 @@ const COLUMNS = [
     content: 'analysis_status',
     format: ({ analysisStatus }) => FAMILY_ANALYSIS_STATUS_LOOKUP[analysisStatus]?.name,
   },
-  { name: 'solve_state' },
+  { name: 'solve_status' },
   { name: 'genes' },
   { name: 'actual_inheritance' },
   { name: 'disease_id' },

@@ -140,14 +140,20 @@ def anvil_export(request, project_guid):
             entity_id_field = f'entity:{id_field}'
             if id_field in row and entity_id_field not in row:
                 row[entity_id_field] = row[id_field]
+            if row_type == SUBJECT_ROW_TYPE:
+                row.update({
+                    'project_id': row.pop('internal_project_id'),
+                    'solve_state': row.pop('solve_status'),
+                    'hpo_present': '|'.join([feature['id'] for feature in row.get('features') or []]),
+                    'hpo_absent': '|'.join([feature['id'] for feature in row.get('absent_features') or []]),
+                })
             parsed_rows[row_type].append(row)
 
     max_loaded_date = request.GET.get('loadedBefore') or (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
     parse_anvil_metadata(
         [project], request.user, _add_row, max_loaded_date=max_loaded_date, include_discovery_sample_id=True,
         get_additional_individual_fields=lambda individual, *args: {
-            'hpo_present': '|'.join([feature['id'] for feature in individual.features or []]),
-            'hpo_absent': '|'.join([feature['id'] for feature in individual.absent_features or []]),
+            'congenital_status': Individual.ONSET_AGE_LOOKUP[individual.onset_age] if individual.onset_age else 'Unknown',
         },
         get_additional_sample_fields=lambda sample, *args: {
             'entity:sample_id': sample.individual.individual_id,
@@ -375,8 +381,6 @@ def gregor_export(request):
             participant = {
                 **row,
                 'participant_id': row['subject_id'],
-                'internal_project_id': row['project_id'],
-                'solve_status': row.pop('solve_state'),
                 'reported_race': row['ancestry'],
             }
             if row['ancestry'] == ANCESTRY_MAP[HISPANIC]:
@@ -857,7 +861,7 @@ def variant_metadata(request, project_guid):
                     'MME': variant.pop('variantId') in participant_mme[variant['participant_id']].get('variant_ids', []),
                     **_parse_variant_family_metadata(family),
                     **{k: family[k] for k in
-                       {'familyGuid', 'projectGuid', 'displayName', 'analysisStatus', 'family_id', 'project_id'}},
+                       {'familyGuid', 'projectGuid', 'displayName', 'analysisStatus', 'family_id', 'internal_project_id'}},
                     **variant,
                 })
 

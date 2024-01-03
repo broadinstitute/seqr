@@ -73,8 +73,9 @@ METHOD_MAP = {
 
 def _get_family_metadata(family_filter, family_fields, include_metadata, include_mondo, format_id):
     family_data = Family.objects.filter(**family_filter).distinct().order_by('id').values(
-        'id', 'family_id', 'project__name', 'post_discovery_omim_numbers',
+        'id', 'family_id', 'post_discovery_omim_numbers',
         *(['mondo_id'] if include_mondo else []),
+        internal_project_id=F('project__name'),
         pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
         phenotype_description=Replace(
             Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
@@ -89,12 +90,11 @@ def _get_family_metadata(family_filter, family_fields, include_metadata, include
     for f in family_data:
         family_id = f.pop('id')
         f.update({
-            'project_id': f.pop('project__name'),
-            'solve_state': SOLVE_STATUS_LOOKUP.get(f['analysisStatus'], 'No'),
+            'solve_status': SOLVE_STATUS_LOOKUP.get(f['analysisStatus'], 'No'),
             **{k: v['format'](f) for k, v in (family_fields or {}).items()},
         })
         if format_id:
-            f.update({k: format_id(f[k]) for k in ['family_id', 'project_id']})
+            f.update({k: format_id(f[k]) for k in ['family_id', 'internal_project_id']})
         if include_metadata:
             f['analysis_groups'] = '; '.join(f['analysis_groups'])
         family_data_by_id[family_id] = f
@@ -301,22 +301,16 @@ def _get_variant_main_transcript(variant_model):
 
 
 def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields, format_id):
-    onset = individual.onset_age
-
     paternal_ids = individual_ids_map.get(individual.father_id, ('', ''))
     maternal_ids = individual_ids_map.get(individual.mother_id, ('', ''))
     subject_row = {
         'subject_id': format_id(individual.individual_id),
-        'individual_guid': individual.guid,
         'sex': Individual.SEX_LOOKUP[individual.sex],
         'ancestry': ANCESTRY_MAP.get(individual.population, ''),
         'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
         'affected_status': Individual.AFFECTED_STATUS_LOOKUP[individual.affected],
-        'congenital_status': Individual.ONSET_AGE_LOOKUP[onset] if onset else 'Unknown',
         'features': individual.features,
         'absent_features': individual.absent_features,
-        'disorders': individual.disorders,
-        'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
         'paternal_id': format_id(paternal_ids[0]),
         'paternal_guid': paternal_ids[1],
