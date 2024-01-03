@@ -207,16 +207,16 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             subject_row.update(family_subject_row)
             add_row(subject_row, family_id, SUBJECT_ROW_TYPE)
 
-            subject_id = subject_row['subject_id']
+            participant_id = subject_row['participant_id']
             if sample:
-                sample_row = _get_sample_row(sample, subject_id, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields)
+                sample_row = _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields)
                 add_row(sample_row, family_id, SAMPLE_ROW_TYPE)
 
             if proband_only_variants and individual.proband_relationship != Individual.SELF_RELATIONSHIP:
                 continue
             discovery_row = _get_genetic_findings_rows(
-                saved_variants, individual, participant_id=subject_id, format_id=format_id,
-                include_parent_mnvs=include_parent_mnvs, individual_data_types=(individual_data_types or {}).get(subject_id),
+                saved_variants, individual, participant_id=participant_id, format_id=format_id,
+                include_parent_mnvs=include_parent_mnvs, individual_data_types=(individual_data_types or {}).get(participant_id),
                 family_individuals=family_individuals if proband_only_variants else None,
                 sample=sample if include_discovery_sample_id else None,
                 post_process_variant=post_process_variant,
@@ -307,7 +307,7 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, indivi
     paternal_ids = individual_ids_map.get(individual.father_id, ('', ''))
     maternal_ids = individual_ids_map.get(individual.mother_id, ('', ''))
     subject_row = {
-        'subject_id': format_id(individual.individual_id),
+        'participant_id': format_id(individual.individual_id),
         'sex': Individual.SEX_LOOKUP[individual.sex],
         'reported_race': ANCESTRY_MAP.get(individual.population, ''),
         'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
@@ -335,9 +335,9 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, indivi
     return subject_row
 
 
-def _get_sample_row(sample, subject_id, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields=None):
+def _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields=None):
     sample_row = {
-        'subject_id': subject_id,
+        'participant_id': participant_id,
         'sample_id': sample.sample_id,
     }
     if has_dbgap_submission:

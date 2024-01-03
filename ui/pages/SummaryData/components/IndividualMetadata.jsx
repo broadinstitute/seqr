@@ -30,7 +30,7 @@ const AIRTABLE_FIELDS = [
 ]
 
 const CORE_COLUMNS = [
-  { name: 'subject_id', content: 'participant_id', secondaryExportColumn: 'individual_guid' },
+  { name: 'participant_id', secondaryExportColumn: 'individual_guid' },
   { name: 'pmid_id' },
   { name: 'paternal_id', secondaryExportColumn: 'paternal_guid' },
   { name: 'maternal_id', secondaryExportColumn: 'maternal_guid' },
@@ -95,7 +95,7 @@ const mapStateToProps = (state, ownProps) => {
     queryFields: (user.isAnalyst && ownProps.match.params.projectGuid !== ALL_PROJECTS_PATH) ? AIRTABLE_FIELDS : FIELDS,
     viewAllPages: (user.isAnalyst ? ANALYST_VIEW_ALL_PAGES : VIEW_ALL_PAGES),
     urlBase: 'summary_data/individual_metadata',
-    idField: 'subject_id',
+    idField: 'participant_id',
     fileName: 'Metadata',
   }
 }

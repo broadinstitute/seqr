@@ -355,12 +355,12 @@ def individual_metadata(request, project_guid):
             family_rows_by_id[family_id] = row
         elif row_type == DISCOVERY_ROW_TYPE:
             for i, discovery_row in enumerate(row):
-                subject_id = discovery_row.pop('participant_id')
+                participant_id = discovery_row.pop('participant_id')
                 parsed_row = {'{}-{}'.format(k, i + 1): v for k, v in discovery_row.items()}
                 parsed_row['num_saved_variants'] = len(row)
-                rows_by_subject_family_id[(subject_id, family_id)].update(parsed_row)
+                rows_by_subject_family_id[(participant_id, family_id)].update(parsed_row)
         else:
-            row_key = (row['subject_id'], family_id)
+            row_key = (row['participant_id'], family_id)
             collaborator = row.pop('Collaborator', None)
             if collaborator:
                 collaborator_map[row_key] = collaborator

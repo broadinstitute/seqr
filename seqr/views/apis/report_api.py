@@ -136,6 +136,8 @@ def anvil_export(request, project_guid):
                 **discovery_row,
             } for discovery_row in row]
         else:
+            if 'participant_id' in row:
+                row['subject_id'] = row['participant_id']
             id_field = f'{row_type}_id'
             entity_id_field = f'entity:{id_field}'
             if id_field in row and entity_id_field not in row:
@@ -378,14 +380,9 @@ def gregor_export(request):
         if row_type == FAMILY_ROW_TYPE:
             family_map[family_id] = row
         elif row_type == SUBJECT_ROW_TYPE:
-            # TODO move formatting into base
-            participant = {
-                **row,
-                'participant_id': row['subject_id'],
-            }
-            participant_rows.append(participant)
+            participant_rows.append(row)
 
-            base_phenotype_row = {'participant_id': row['subject_id'], 'presence': 'Present', 'ontology': 'HPO'}
+            base_phenotype_row = {'participant_id': row['participant_id'], 'presence': 'Present', 'ontology': 'HPO'}
             for feature in row['features'] or []:
                 phenotype_rows.append(dict(**base_phenotype_row, **_get_phenotype_row(feature)))
             base_phenotype_row['presence'] = 'Absent'
@@ -433,7 +430,7 @@ def gregor_export(request):
 
         analyte_ids = set()
         # experiment tables
-        for data_type in grouped_data_type_individuals[participant['subject_id']]:
+        for data_type in grouped_data_type_individuals[participant['participant_id']]:
             if data_type not in airtable_metadata:
                 continue
             row = _get_airtable_row(data_type, airtable_metadata)
@@ -763,9 +760,9 @@ def family_metadata(request, project_guid):
         if row_type == FAMILY_ROW_TYPE:
             families_by_id[family_id] = row
         elif row_type == SUBJECT_ROW_TYPE:
-            family_individuals[family_id][row['subject_id']] = row
+            family_individuals[family_id][row['participant_id']] = row
         elif row_type == SAMPLE_ROW_TYPE:
-            family_individuals[family_id][row['subject_id']].update(row)
+            family_individuals[family_id][row['participant_id']].update(row)
         elif row_type == DISCOVERY_ROW_TYPE:
             family = families_by_id[family_id]
             if 'inheritance_models' not in family:
@@ -783,7 +780,7 @@ def family_metadata(request, project_guid):
         known_ids = {}
         if proband:
             known_ids = {
-                'proband_id': proband['subject_id'],
+                'proband_id': proband['participant_id'],
                 'paternal_id': proband['paternal_id'],
                 'maternal_id': proband['maternal_id'],
             }
@@ -847,7 +844,7 @@ def variant_metadata(request, project_guid):
         if row_type == FAMILY_ROW_TYPE:
             families_by_id[family_id] = row
         elif row_type == SUBJECT_ROW_TYPE:
-            participant_mme[row['subject_id']] = row.get('MME', {})
+            participant_mme[row['participant_id']] = row.get('MME', {})
         elif row_type == DISCOVERY_ROW_TYPE:
             family = families_by_id[family_id]
             for variant in row:
