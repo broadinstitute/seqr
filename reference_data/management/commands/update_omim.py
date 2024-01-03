@@ -40,6 +40,7 @@ CACHED_RECORDS_FILENAME = 'parsed_omim_records.txt'
 CACHED_RECORDS_HEADER = [
     'gene_id', 'mim_number', 'gene_description', 'comments', 'phenotype_description',
     'phenotype_mim_number', 'phenotype_map_method', 'phenotype_inheritance',
+    'chrom', 'start', 'end',
 ]
 
 class CachedOmimReferenceDataHandler(ReferenceDataHandler):
@@ -47,6 +48,7 @@ class CachedOmimReferenceDataHandler(ReferenceDataHandler):
     model_cls = Omim
     url = 'https://storage.googleapis.com/{bucket}{filename}'.format(
         filename=CACHED_RECORDS_FILENAME, bucket=CACHED_RECORDS_BUCKET)
+    allow_missing_gene = True
 
     @staticmethod
     def get_file_header(f):
@@ -61,6 +63,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = Omim
     url = "https://data.omim.org/downloads/{omim_key}/genemap2.txt"
+    allow_missing_gene = True
 
     def __init__(self, omim_key=None, skip_cache_parsed_records=False, **kwargs):
         """Init OMIM handler."""
@@ -97,12 +100,16 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
 
         else:
             # rename some of the fields
-            output_record = {}
-            output_record['gene_id'] = record['ensembl_gene_id']
-            output_record['mim_number'] = int(record['mim_number'])
-            output_record['gene_symbol'] = record['approved_gene_symbol'].strip() or record['gene/locus_and_other_related_symbols'].split(",")[0]
-            output_record['gene_description'] = record['gene_name']
-            output_record['comments'] = record['comments']
+            output_record = {
+                'gene_id': record['ensembl_gene_id'],
+                'mim_number': int(record['mim_number']),
+                'chrom': record['#_chromosome'].replace('chr', ''),
+                'start': int(record['genomic_position_start']),
+                'end': int(record['genomic_position_end']),
+                'gene_symbol': record['approved_gene_symbol'].strip() or record['gene/locus_and_other_related_symbols'].split(",")[0],
+                'gene_description': record['gene_name'],
+                'comments': record['comments'],
+            }
 
             phenotype_field = record['phenotypes'].strip()
 
@@ -134,7 +141,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     def _cache_records(models):
         with open(CACHED_RECORDS_FILENAME, 'w') as f:
             f.write('\n'.join([
-                '\t'.join([model.gene.gene_id] + [str(getattr(model, field) or '') for field in CACHED_RECORDS_HEADER[1:]])
+                '\t'.join([model.gene.gene_id if model.gene else ''] + [str(getattr(model, field) or '') for field in CACHED_RECORDS_HEADER[1:]])
                 for model in models]))
 
         command = 'gsutil mv {filename} gs://{bucket}'.format(filename=CACHED_RECORDS_FILENAME, bucket=CACHED_RECORDS_BUCKET)
