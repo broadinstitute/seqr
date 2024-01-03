@@ -4,6 +4,7 @@ from django.db.models import F, Q, Value, CharField, Case, When
 from django.db.models.functions import Replace
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
+import requests
 from typing import Callable, Iterable
 
 from matchmaker.models import MatchmakerSubmission
@@ -142,9 +143,6 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
         if sample:
             sample_ids.add(sample.sample_id)
 
-    sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
-        list(sample_ids) or [i[0] for i in individual_ids_map.values()], user, airtable_fields)
-
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(family_data_by_id.keys()), variant_filter=variant_filter)
 
     mim_numbers = set()
@@ -164,6 +162,9 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
     matchmaker_individuals = set(MatchmakerSubmission.objects.filter(
         individual__in=individual_samples).values_list('individual_id', flat=True)) if include_metadata else set()
 
+    sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
+        list(sample_ids) or [i[0] for i in individual_ids_map.values()], user, airtable_fields)
+
     for family_id, family_subject_row in family_data_by_id.items():
         saved_variants = saved_variants_by_family[family_id]
 
@@ -174,7 +175,7 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             mim_conditions = [mim_map.get(mim_number, {}) for mim_number in mim_numbers]
             family_subject_row.update({
                 'disease_id': ';'.join(['OMIM:{}'.format(mim_number) for mim_number in mim_numbers]),
-                'disease_description': ';'.join([o.get('phenotype_description', '') for o in mim_conditions]).replace(',', ';'),
+                'disease_description': ';'.join([o.get('phenotype_description', '') for o in mim_conditions]),
                 'disease_inheritance': ';'.join([o.get('phenotype_inheritance', '') for o in mim_conditions]),
             })
         elif family_subject_row.get('mondo_id'):
