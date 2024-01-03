@@ -14,7 +14,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, \
-    ANCESTRY_MAP, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC
+    FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
@@ -146,6 +146,7 @@ def anvil_export(request, project_guid):
                     'solve_state': row.pop('solve_status'),
                     'hpo_present': '|'.join([feature['id'] for feature in row.get('features') or []]),
                     'hpo_absent': '|'.join([feature['id'] for feature in row.get('absent_features') or []]),
+                    'ancestry': row['reported_ethnicity'] or row['reported_race'],
                 })
             parsed_rows[row_type].append(row)
 
@@ -374,21 +375,14 @@ def gregor_export(request):
     genetic_findings_rows = []
 
     def _add_row(row, family_id, row_type):
-        # TODO move formatting into base where possible
         if row_type == FAMILY_ROW_TYPE:
             family_map[family_id] = row
         elif row_type == SUBJECT_ROW_TYPE:
+            # TODO move formatting into base
             participant = {
                 **row,
                 'participant_id': row['subject_id'],
-                'reported_race': row['ancestry'],
             }
-            if row['ancestry'] == ANCESTRY_MAP[HISPANIC]:
-                participant.update({
-                    'reported_race': None,
-                    'ancestry_detail': 'Other',
-                    'reported_ethnicity': row['ancestry'],
-                })
             participant_rows.append(participant)
 
             base_phenotype_row = {'participant_id': row['subject_id'], 'presence': 'Present', 'ontology': 'HPO'}

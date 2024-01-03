@@ -22,7 +22,6 @@ MONDO_BASE_URL = 'https://monarchinitiative.org/v3/api/entity'
 HISPANIC = 'AMR'
 ANCESTRY_MAP = {
   'AFR': 'Black or African American',
-  HISPANIC: 'Hispanic or Latino',
   'ASJ': 'White',
   'EAS': 'Asian',
   'FIN': 'White',
@@ -35,7 +34,11 @@ ANCESTRY_DETAIL_MAP = {
   'EAS': 'East Asian',
   'FIN': 'Finnish',
   'OTH': 'Other',
+  HISPANIC: 'Other',
   'SAS': 'South Asian',
+}
+ETHNICITY_MAP = {
+    HISPANIC: 'Hispanic or Latino',
 }
 
 MULTIPLE_DATASET_PRODUCTS = {
@@ -306,8 +309,9 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, indivi
     subject_row = {
         'subject_id': format_id(individual.individual_id),
         'sex': Individual.SEX_LOOKUP[individual.sex],
-        'ancestry': ANCESTRY_MAP.get(individual.population, ''),
+        'reported_race': ANCESTRY_MAP.get(individual.population, ''),
         'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
+        'reported_ethnicity': ETHNICITY_MAP.get(individual.population, ''),
         'affected_status': Individual.AFFECTED_STATUS_LOOKUP[individual.affected],
         'features': individual.features,
         'absent_features': individual.absent_features,

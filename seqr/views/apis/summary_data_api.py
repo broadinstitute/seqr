@@ -25,7 +25,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissio
     add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR, AIP_TAG_TYPE
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required, get_project_and_check_permissions, get_internal_projects
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, FAMILY_ROW_TYPE, DISCOVERY_ROW_TYPE
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.variant_utils import get_variants_response, parse_saved_variant_json, DISCOVERY_CATEGORY
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
@@ -364,8 +364,11 @@ def individual_metadata(request, project_guid):
             collaborator = row.pop('Collaborator', None)
             if collaborator:
                 collaborator_map[row_key] = collaborator
-            if 'ancestry_detail' in row:
-                row['ancestry'] = row.pop('ancestry_detail')
+            if row_type == SUBJECT_ROW_TYPE:
+                race = row.pop('reported_race')
+                ancestry_detail = row.pop('ancestry_detail')
+                ethnicity = row.pop('reported_ethnicity')
+                row['ancestry'] = ethnicity or ancestry_detail or race
             if 'features' in row:
                 row.update({
                     'hpo_present': [feature['id'] for feature in row.pop('features') or []],
