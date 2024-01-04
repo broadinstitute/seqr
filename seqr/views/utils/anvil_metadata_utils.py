@@ -4,7 +4,6 @@ from django.db.models import F, Q, Value, CharField, Case, When
 from django.db.models.functions import Replace
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
-import json
 import requests
 from typing import Callable, Iterable
 

@@ -1,8 +1,7 @@
 from collections import defaultdict
-from copy import deepcopy
 
 from datetime import datetime, timedelta
-from django.db.models import Count, Q, F
+from django.db.models import Count, Q
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
 import re
@@ -23,7 +22,6 @@ from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
 from seqr.models import Project, Family, Sample, Individual
-from reference_data.models import Omim, HumanPhenotypeOntology
 from settings import GREGOR_DATA_MODEL_URL
 
 

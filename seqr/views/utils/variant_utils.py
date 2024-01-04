@@ -7,7 +7,7 @@ import redis
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqTpm, PhenotypePrioritization, Project, Sample, VariantTagType
+    RnaSeqTpm, PhenotypePrioritization, Project, Sample
 from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.utils.xpos_utils import get_xpos
