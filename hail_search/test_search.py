@@ -841,7 +841,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
     async def test_in_silico_filter(self):
-        in_silico = {'eigen': '5.5', 'sift': 'D'}
+        in_silico = {'eigen': '5.5', 'mut_taster': 'N'}
         await self._assert_expected_search(
             [VARIANT1, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], in_silico=in_silico,
             sample_data=FAMILY_2_ALL_SAMPLE_DATA,

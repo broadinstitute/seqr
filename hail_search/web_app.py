@@ -52,7 +52,7 @@ async def status(request: web.Request) -> web.Response:
 
 
 async def init_web_app():
-    hl.init(idempotent=True)
+    hl.init(idempotent=True, backend='local')
     load_globals()
     app = web.Application(middlewares=[error_middleware], client_max_size=(1024**2)*10)
     app.add_routes([
