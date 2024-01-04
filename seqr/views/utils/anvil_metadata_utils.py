@@ -300,6 +300,7 @@ def _post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
     }
 
 
+# TODO docstring
 def _get_parsed_saved_discovery_variants_by_family(families, variant_filter, variant_json_fields):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 

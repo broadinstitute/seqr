@@ -352,7 +352,7 @@ def gregor_export(request):
     grouped_data_type_individuals = defaultdict(dict)
     family_individuals = defaultdict(dict)
     for i in individuals:
-        participant_id = _format_id(i.individual_id)
+        participant_id = _format_gregor_id(i.individual_id)
         grouped_data_type_individuals[participant_id].update({data_type: i for data_type in individual_data_types[i.id]})
         family_individuals[i.family_id][i.guid] = participant_id
 
@@ -384,7 +384,7 @@ def gregor_export(request):
         individual_samples=individual_lookup,
         individual_data_types=grouped_data_type_individuals,
         add_row=_add_row,
-        format_id=_format_id,
+        format_id=_format_gregor_id,
         get_additional_individual_fields=_get_participant_row,
         post_process_variant=_post_process_gregor_variant,
         variant_filter={'alt__isnull': False},
@@ -545,12 +545,12 @@ def _get_airtable_row(data_type, airtable_metadata):
     }
 
 
-def _format_id(id_string, default='0'):
+def _format_gregor_id(id_string, default='0'):
     return f'Broad_{id_string}' if id_string else '0'
 
 
 def _get_analyte_id(airtable_metadata):
-    return _format_id(airtable_metadata.get(SMID_FIELD), default=None)
+    return _format_gregor_id(airtable_metadata.get(SMID_FIELD), default=None)
 
 
 def _get_experiment_lookup_row(is_rna, row_data):

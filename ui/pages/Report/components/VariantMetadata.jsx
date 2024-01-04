@@ -4,7 +4,7 @@ import LoadReportTable from 'shared/components/table/LoadReportTable'
 import { VARIANT_METADATA_COLUMNS } from 'shared/utils/constants'
 
 const VIEW_ALL_PAGES = [
-  { name: 'GREGoR', downloadName: 'GREGoR', path: 'gregor'},
+  { name: 'GREGoR', downloadName: 'GREGoR', path: 'gregor' },
   { name: 'Broad', downloadName: 'All', path: 'all' },
 ]
 
