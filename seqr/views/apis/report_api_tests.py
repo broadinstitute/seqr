@@ -689,7 +689,6 @@ class ReportAPITest(AirtableTest):
 
         mock_google_authenticated.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Unable to load data model: 404 Client Error: Not Found for url: http://raw.githubusercontent.com/gregor_data_model.json',
@@ -1264,8 +1263,7 @@ class ReportAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        if self.ADDITIONAL_FINDING:
-            row_ids.append(self.ADDITIONAL_FINDING)
+        row_ids += self.ADDITIONAL_FINDINGS
         self.assertListEqual([r['genetic_findings_id'] for r in response_json['rows']], row_ids)
         self.assertDictEqual(response_json['rows'][1], expected_row)
         self.assertDictEqual(response_json['rows'][2], expected_mnv)
@@ -1280,7 +1278,7 @@ class ReportAPITest(AirtableTest):
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
     ADDITIONAL_FAMILIES = ['F000014_14']
-    ADDITIONAL_FINDING = 'NA21234_1_248367227'
+    ADDITIONAL_FINDINGS = ['NA21234_1_248367227']
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
         'familiesCount': {'non_demo': 12, 'demo': 2},
@@ -1298,7 +1296,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
     ADDITIONAL_FAMILIES = []
-    ADDITIONAL_FINDING = None
+    ADDITIONAL_FINDINGS = []
     STATS_DATA = {
         'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},

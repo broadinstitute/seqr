@@ -364,7 +364,6 @@ def gregor_export(request):
     }
 
     participant_rows = []
-    phenotype_rows = []
     family_map = {}
     genetic_findings_rows = []
 
@@ -372,14 +371,7 @@ def gregor_export(request):
         if row_type == FAMILY_ROW_TYPE:
             family_map[family_id] = row
         elif row_type == SUBJECT_ROW_TYPE:
-            participant_rows.append(row)
-
-            base_phenotype_row = {'participant_id': row['participant_id'], 'presence': 'Present', 'ontology': 'HPO'}
-            for feature in row['features'] or []:
-                phenotype_rows.append(dict(**base_phenotype_row, **_get_phenotype_row(feature)))
-            base_phenotype_row['presence'] = 'Absent'
-            for feature in row['absent_features'] or []:
-                phenotype_rows.append(dict(**base_phenotype_row, **_get_phenotype_row(feature)))
+            participant_rows.append({**row, 'consent_code': consent_code})
         elif row_type == DISCOVERY_ROW_TYPE and row:
             for variant in row:
                 genetic_findings_rows.append({
@@ -387,41 +379,46 @@ def gregor_export(request):
                 })
 
     parse_anvil_metadata(
-        projects, user=request.user, add_row=_add_row, include_mondo=True, format_id=_format_id,
-        variant_filter={'alt__isnull': False}, post_process_variant=_post_process_gregor_variant, proband_only_variants=True,
+        projects,
+        user=request.user,
+        individual_samples=individual_lookup,
+        individual_data_types=grouped_data_type_individuals,
+        add_row=_add_row,
+        format_id=_format_id,
+        get_additional_individual_fields=_get_participant_row,
+        post_process_variant=_post_process_gregor_variant,
+        variant_filter={'alt__isnull': False},
         airtable_fields=[SMID_FIELD, PARTICIPANT_ID_FIELD, 'Recontactable'],
-        individual_samples=individual_lookup, individual_data_types=grouped_data_type_individuals,
-        get_additional_individual_fields=lambda individual, airtable_sample: {
-            'age_at_last_observation': str(datetime.now().year - individual.birth_year) if individual.birth_year and individual.birth_year > 0 else None,
-            'age_at_enrollment': str(individual.created_date.year - individual.birth_year) if individual.birth_year and individual.birth_year > 0 else None,
-            'analyte_type': individual.get_analyte_type_display(),
-            'consent_code': consent_code,
-            'gregor_center': 'BROAD',
-            'missing_variant_case': 'No',
-            'primary_biosample': individual.get_primary_biosample_display(),
-            'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),
-            'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
-            'analyte_id': _get_analyte_id(airtable_sample or {}),
-            'recontactable': (airtable_sample or {}).get('Recontactable'),
-            PARTICIPANT_ID_FIELD: (airtable_sample or {}).get(PARTICIPANT_ID_FIELD),
-        },
+        include_mondo=True,
+        proband_only_variants=True,
     )
 
     airtable_metadata_by_participant = _get_gregor_airtable_data(participant_rows, request.user)
 
+    phenotype_rows = []
     analyte_rows = []
     airtable_rows = []
     airtable_rna_rows = []
     experiment_lookup_rows = []
     experiment_ids_by_participant = {}
     for participant in participant_rows:
+        # phenotype table
+        base_phenotype_row = {'participant_id': participant['participant_id'], 'presence': 'Present', 'ontology': 'HPO'}
+        phenotype_rows += [
+            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in participant['features'] or []
+        ]
+        base_phenotype_row['presence'] = 'Absent'
+        phenotype_rows += [
+            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in participant['absent_features'] or []
+        ]
+
         if not participant[PARTICIPANT_ID_FIELD]:
             continue
 
         airtable_metadata = airtable_metadata_by_participant.get(participant[PARTICIPANT_ID_FIELD]) or {}
 
         analyte_ids = set()
-        # experiment tables
+        # airtable data
         for data_type in grouped_data_type_individuals[participant['participant_id']]:
             if data_type not in airtable_metadata:
                 continue
@@ -491,8 +488,24 @@ def _get_gregor_airtable_data(participants, user):
     return airtable_metadata_by_participant
 
 
-def _format_id(id_string):
-    return f'Broad_{id_string}' if id_string else '0'
+def _get_participant_row(individual, airtable_sample):
+    participant = {
+        'gregor_center': 'BROAD',
+        'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),
+        'recontactable': (airtable_sample or {}).get('Recontactable'),
+        'missing_variant_case': 'No',
+        PARTICIPANT_ID_FIELD: (airtable_sample or {}).get(PARTICIPANT_ID_FIELD),
+        'analyte_id': _get_analyte_id(airtable_sample or {}),
+        'analyte_type': individual.get_analyte_type_display(),
+        'primary_biosample': individual.get_primary_biosample_display(),
+        'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
+    }
+    if individual.birth_year and individual.birth_year > 0:
+        participant.update({
+            'age_at_last_observation': str(datetime.now().year - individual.birth_year),
+            'age_at_enrollment': str(individual.created_date.year - individual.birth_year),
+        })
+    return participant
 
 
 def _get_phenotype_row(feature):
@@ -532,9 +545,12 @@ def _get_airtable_row(data_type, airtable_metadata):
     }
 
 
+def _format_id(id_string, default='0'):
+    return f'Broad_{id_string}' if id_string else '0'
+
+
 def _get_analyte_id(airtable_metadata):
-    sm_id = airtable_metadata.get(SMID_FIELD)
-    return f'Broad_{sm_id}' if sm_id else None
+    return _format_id(airtable_metadata.get(SMID_FIELD), default=None)
 
 
 def _get_experiment_lookup_row(is_rna, row_data):
@@ -809,7 +825,9 @@ def variant_metadata(request, project_guid):
 
     individuals = Individual.objects.filter(
         family__project__in=projects, family__savedvariant__varianttag__variant_tag_type__category=DISCOVERY_CATEGORY,
-    ).distinct().annotate(data_types=ArrayAgg('sample__sample_type', distinct=True, filter=Q(sample__isnull=False)))
+    ).distinct().annotate(
+        data_types=ArrayAgg('sample__sample_type', distinct=True, filter=Q(sample__isnull=False))
+    )
 
     families_by_id = {}
     participant_mme = {}
@@ -831,11 +849,18 @@ def variant_metadata(request, project_guid):
                 })
 
     parse_anvil_metadata(
-        projects, user=request.user, add_row=_add_row, include_metadata=True,  include_mondo=True, omit_airtable=True,
-        proband_only_variants=True, variant_json_fields=['clinvar', 'variantId'], include_parent_mnvs=True,
-        mme_values={'variant_ids': ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId')},
+        projects,
+        user=request.user,
         individual_samples={i: None for i in individuals},
         individual_data_types={i.individual_id: i.data_types for i in individuals},
+        add_row=_add_row,
+        variant_json_fields=['clinvar', 'variantId'],
+        mme_values={'variant_ids': ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId')},
+        include_metadata=True,
+        include_mondo=True,
+        omit_airtable=True,
+        proband_only_variants=True,
+        include_parent_mnvs=True,
     )
 
     return create_json_response({'rows': variant_rows})

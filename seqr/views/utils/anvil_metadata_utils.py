@@ -156,11 +156,11 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
     }
     mondo_map = {mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids}
 
-    matchmaker_individuals = {m['individual_id']: m for m in MatchmakerSubmission.objects.filter(
-        individual__in=individual_samples).values('individual_id', **(mme_values or {}))} if include_metadata else {}
-
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
         list(sample_ids) or [i[0] for i in individual_ids_map.values()], user, airtable_fields)
+
+    matchmaker_individuals = {m['individual_id']: m for m in MatchmakerSubmission.objects.filter(
+        individual__in=individual_samples).values('individual_id', **(mme_values or {}))} if include_metadata else {}
 
     for family_id, family_subject_row in family_data_by_id.items():
         saved_variants = saved_variants_by_family[family_id]
@@ -229,8 +229,9 @@ def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_air
             if proband_only_variants and individual.proband_relationship != Individual.SELF_RELATIONSHIP:
                 continue
             discovery_row = _get_genetic_findings_rows(
-                saved_variants, individual, participant_id=participant_id, format_id=format_id,
-                include_parent_mnvs=include_parent_mnvs, individual_data_types=(individual_data_types or {}).get(participant_id),
+                saved_variants, individual, participant_id=participant_id,
+                format_id=format_id, include_parent_mnvs=include_parent_mnvs,
+                individual_data_types=(individual_data_types or {}).get(participant_id),
                 family_individuals=family_individuals if proband_only_variants else None,
                 sample=sample if include_discovery_sample_id else None,
                 post_process_variant=post_process_variant,
@@ -297,6 +298,53 @@ def _post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
         'sv_name': _get_sv_name(v),
         'notes': discovery_notes,
     }
+
+
+def _get_parsed_saved_discovery_variants_by_family(families, variant_filter, variant_json_fields):
+    tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
+
+    project_saved_variants = SavedVariant.objects.filter(
+        varianttag__variant_tag_type__in=tag_types, family__id__in=families,
+        **(variant_filter or {}),
+    ).order_by('created_date').distinct().annotate(
+        gene_known_for_phenotype=Case(When(
+            Q(family__post_discovery_omim_numbers__len=0, family__mondo_id__isnull=True),
+            then=Value('Candidate')), default=Value('Known')
+        ),
+    )
+
+    variants = []
+    gene_ids = set()
+    for variant in project_saved_variants:
+        chrom, pos = get_chrom_pos(variant.xpos)
+
+        variant_json = variant.saved_variant_json
+        main_transcript = _get_variant_main_transcript(variant)
+        gene_id = main_transcript.get('geneId')
+        gene_ids.add(gene_id)
+
+        variants.append({
+            'chrom': chrom,
+            'pos': pos,
+            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
+            'gene_id': gene_id,
+            'transcript': main_transcript.get('transcriptId'),
+            'hgvsc': (main_transcript.get('hgvsc') or '').split(':')[-1],
+            'hgvsp': (main_transcript.get('hgvsp') or '').split(':')[-1],
+            'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
+            **{k: variant_json.get(k) for k in ['genotypes', 'svType', 'svName', 'end'] + (variant_json_fields or [])},
+            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt', 'gene_known_for_phenotype']},
+        })
+
+    genes_by_id = get_genes(gene_ids)
+
+    saved_variants_by_family = defaultdict(list)
+    for row in variants:
+        row['gene'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
+        family_id = row.pop('family_id')
+        saved_variants_by_family[family_id].append(row)
+
+    return saved_variants_by_family
 
 
 def _get_variant_main_transcript(variant_model):
@@ -367,9 +415,9 @@ def _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metad
 
 
 def _get_genetic_findings_rows(rows: list[dict], individual: Individual, participant_id: str,
-                               format_id: Callable[[str], str], include_parent_mnvs: bool,
                               individual_data_types: Iterable[str], family_individuals: dict[str, str],
-                              post_process_variant: Callable[[dict, list[dict]], dict], sample: Sample) -> list[dict]:
+                              post_process_variant: Callable[[dict, list[dict]], dict],
+                              format_id: Callable[[str], str], include_parent_mnvs: bool, sample: Sample) -> list[dict]:
     parsed_rows = []
     variants_by_gene = defaultdict(list)
     for row in (rows or []):
@@ -444,53 +492,6 @@ def _get_sample_airtable_metadata(sample_ids, user, fields):
         sample_ids, user, fields=fields or SINGLE_SAMPLE_FIELDS, list_fields=None if fields else LIST_SAMPLE_FIELDS,
     )
     return sample_records
-
-
-def _get_parsed_saved_discovery_variants_by_family(families, variant_filter, variant_json_fields):
-    tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
-
-    project_saved_variants = SavedVariant.objects.filter(
-        varianttag__variant_tag_type__in=tag_types, family__id__in=families,
-        **(variant_filter or {}),
-    ).order_by('created_date').distinct().annotate(
-        gene_known_for_phenotype=Case(When(
-            Q(family__post_discovery_omim_numbers__len=0, family__mondo_id__isnull=True),
-            then=Value('Candidate')), default=Value('Known')
-        ),
-    )
-
-    variants = []
-    gene_ids = set()
-    for variant in project_saved_variants:
-        chrom, pos = get_chrom_pos(variant.xpos)
-
-        variant_json = variant.saved_variant_json
-        main_transcript = _get_variant_main_transcript(variant)
-        gene_id = main_transcript.get('geneId')
-        gene_ids.add(gene_id)
-
-        variants.append({
-            'chrom': chrom,
-            'pos': pos,
-            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
-            'gene_id': gene_id,
-            'transcript': main_transcript.get('transcriptId'),
-            'hgvsc': (main_transcript.get('hgvsc') or '').split(':')[-1],
-            'hgvsp': (main_transcript.get('hgvsp') or '').split(':')[-1],
-            'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
-            **{k: variant_json.get(k) for k in ['genotypes', 'svType', 'svName', 'end'] + (variant_json_fields or [])},
-            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt', 'gene_known_for_phenotype']},
-        })
-
-    genes_by_id = get_genes(gene_ids)
-
-    saved_variants_by_family = defaultdict(list)
-    for row in variants:
-        row['gene'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
-        family_id = row.pop('family_id')
-        saved_variants_by_family[family_id].append(row)
-
-    return saved_variants_by_family
 
 
 def _get_mondo_condition_data(mondo_id):
