@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import datetime
 from django.db.models import F, Q, Value, CharField, Case, When
 from django.db.models.functions import Replace
+from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
 import requests
@@ -9,7 +10,7 @@ from typing import Callable, Iterable
 
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
-from seqr.models import Family, Individual, Sample, SavedVariant, VariantTagType
+from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTagType
 from seqr.views.utils.airtable_utils import get_airtable_samples
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
@@ -116,11 +117,17 @@ def _get_family_metadata(family_filter, family_fields, include_metadata, include
 
 
 # TODO clean up args
-def parse_anvil_metadata(projects, user, add_row, max_loaded_date=None, omit_airtable=False, include_metadata=False, family_fields=None,
-                          get_additional_sample_fields=None, get_additional_individual_fields=None, include_discovery_sample_id=False,
-                         include_mondo=False, individual_samples=None, individual_data_types=None, include_no_individual_families=False,
-                         format_id=lambda s: s, airtable_fields=None, mme_values=None, include_parent_mnvs=False,
-                         variant_filter=None, variant_json_fields=None,  post_process_variant=None, proband_only_variants=False):
+def parse_anvil_metadata(
+        projects: Iterable[Project], user: User, add_row: Callable[[dict, str, str], None],
+        max_loaded_date: str = None, family_fields: dict = None, format_id: Callable[[str], str] = lambda s: s,
+        get_additional_sample_fields: Callable[[Sample, dict], dict] = None,
+        get_additional_individual_fields: Callable[[Individual, dict], dict] = None,
+        individual_samples: dict[Individual, Sample] = None, individual_data_types: dict[str, Iterable[str]] = None,
+        airtable_fields: Iterable[str] = None, mme_values: dict = None, variant_filter: dict = None,
+        variant_json_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
+        include_no_individual_families: bool = False, omit_airtable: bool = False, include_metadata: bool = False,
+        include_discovery_sample_id: bool = False, include_mondo: bool = False, include_parent_mnvs: bool = False,
+        proband_only_variants: bool = False):
 
     individual_samples = individual_samples or (_get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
         if max_loaded_date else _get_all_project_individual_samples(projects))
@@ -300,8 +307,9 @@ def _post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
     }
 
 
-# TODO docstring
-def _get_parsed_saved_discovery_variants_by_family(families, variant_filter, variant_json_fields):
+def _get_parsed_saved_discovery_variants_by_family(
+        families: Iterable[Family], variant_filter: dict, variant_json_fields: list[str],
+):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
     project_saved_variants = SavedVariant.objects.filter(
