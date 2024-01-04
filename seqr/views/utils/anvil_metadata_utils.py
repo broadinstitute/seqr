@@ -148,19 +148,7 @@ def parse_anvil_metadata(
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(
         list(family_data_by_id.keys()), variant_filter=variant_filter, variant_json_fields=variant_json_fields)
 
-    mim_numbers = set()
-    mondo_ids = set()
-    for family in family_data_by_id.values():
-        mim_numbers.update(family['post_discovery_omim_numbers'])
-        if family.get('mondo_id'):
-            family['mondo_id'] = f"MONDO:{family['mondo_id'].replace('MONDO:', '')}"
-            mondo_ids.add(family['mondo_id'])
-    mim_map = {
-        o['phenotype_mim_number']: o for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers).values(
-            'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
-        )
-    }
-    mondo_map = {mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids}
+    condition_map = _get_condition_map(family_data_by_id.values())
 
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
         list(sample_ids) or [i[0] for i in individual_ids_map.values()], user, airtable_fields)
@@ -173,23 +161,7 @@ def parse_anvil_metadata(
 
         family_individuals = individuals_by_family_id[family_id]
 
-        mim_numbers = family_subject_row.pop('post_discovery_omim_numbers')
-        mondo_id = family_subject_row.pop('mondo_id', None)
-        if mim_numbers:
-            mim_number = next((mim_number for mim_number in mim_numbers if mim_map.get(mim_number)), mim_numbers[0])
-            mim_condition = mim_map.get(mim_number, {})
-            family_subject_row.update({
-                'condition_id': f'OMIM:{mim_number}',
-                'known_condition_name': mim_condition.get('phenotype_description', ''),
-                'condition_inheritance': '|'.join([
-                    MIM_INHERITANCE_MAP.get(i, i) for i in (mim_condition.get('phenotype_inheritance') or '').split(', ')
-                ]),
-            })
-        elif mondo_id:
-            family_subject_row.update({
-                'condition_id': mondo_id,
-                **mondo_map[mondo_id],
-            })
+        _update_family_condition(family_subject_row, condition_map)
 
         affected_individuals = [individual for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED]
 
@@ -502,6 +474,28 @@ def _get_sample_airtable_metadata(sample_ids, user, fields):
     return sample_records
 
 
+def _get_condition_map(families):
+    mim_numbers = set()
+    mondo_ids = set()
+    for family in families:
+        mim_numbers.update(family['post_discovery_omim_numbers'])
+        if family.get('mondo_id'):
+            family['mondo_id'] = f"MONDO:{family['mondo_id'].replace('MONDO:', '')}"
+            mondo_ids.add(family['mondo_id'])
+
+    condition_map = {
+        f'OMIM:{pmn}': {
+            'known_condition_name': description,
+            'condition_inheritance': '|'.join([MIM_INHERITANCE_MAP.get(i, i) for i in (inheritance or '').split(', ')]),
+        } for pmn, description, inheritance, in Omim.objects.filter(phenotype_mim_number__in=mim_numbers).values_list(
+            'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
+        )
+    }
+    condition_map.update({mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids})
+
+    return condition_map
+
+
 def _get_mondo_condition_data(mondo_id):
     try:
         response = requests.get(f'{MONDO_BASE_URL}/{mondo_id}', timeout=10)
@@ -515,3 +509,17 @@ def _get_mondo_condition_data(mondo_id):
         }
     except Exception:
         return {}
+
+
+def _update_family_condition(family_subject_row, condition_map):
+    condition_id = family_subject_row.pop('mondo_id', None)
+    mim_numbers = family_subject_row.pop('post_discovery_omim_numbers')
+    if mim_numbers:
+        mim_number = next((mim_number for mim_number in mim_numbers if condition_map.get(mim_number)), mim_numbers[0])
+        condition_id = f'OMIM:{mim_number}'
+
+    if condition_id:
+        family_subject_row.update({
+            'condition_id': condition_id,
+            **condition_map.get(condition_id, {}),
+        })
