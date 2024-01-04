@@ -342,7 +342,7 @@ PREDICTION_FIELDS_CONFIG = {
         'response_key': 'vest',
         'format_value': lambda x: x and next((v for v in x.split(';') if v != '.'), None),
     },
-    'dbnsfp_MutPred_score': {'response_key': 'mut_pred'},
+    'dbnsfp_MutPred_score': {'response_key': 'mut_pred', 'format_value': lambda x: None if x == '-' else x},
     'mpc_MPC': {},
     'dbnsfp_MutationTaster_pred': {'response_key': 'mut_taster'},
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
