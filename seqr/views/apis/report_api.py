@@ -91,7 +91,7 @@ SAMPLE_TABLE_COLUMNS = [
 ]
 FAMILY_TABLE_COLUMNS = [
     'entity:family_id', 'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_image', 'pedigree_detail',
- 'family_history', 'family_onset',
+    'family_history', 'family_onset',
 ]
 DISCOVERY_TABLE_COLUMNS = [
     'entity:discovery_id', 'subject_id', 'sample_id', 'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity',

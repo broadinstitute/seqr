@@ -355,6 +355,7 @@ def individual_metadata(request, project_guid):
             family_rows_by_id[family_id] = row
         elif row_type == DISCOVERY_ROW_TYPE:
             for i, discovery_row in enumerate(row):
+                del discovery_row['gene_ids']
                 participant_id = discovery_row.pop('participant_id')
                 parsed_row = {'{}-{}'.format(k, i + 1): v for k, v in discovery_row.items()}
                 parsed_row['num_saved_variants'] = len(row)
