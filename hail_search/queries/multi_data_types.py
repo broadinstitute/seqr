@@ -62,6 +62,9 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         sv_ch_ht = self._family_filtered_ch_ht(sv_ht, overlapped_families, sv_families, 'v2')
 
         ch_ht = variant_ch_ht.join(sv_ch_ht)
+        ch_ht = ch_ht.explode(ch_ht.v1)
+        ch_ht = ch_ht.explode(ch_ht.v2)
+        ch_ht = ch_ht.annotate(comp_het_gene_ids=hl.set({ch_ht.gene_ids}))
         return self._filter_grouped_compound_hets(ch_ht)
 
     @staticmethod

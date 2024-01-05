@@ -11,11 +11,13 @@ import CustomSearch from './components/CustomSearch'
 import FamilyMetadata from './components/FamilyMetadata'
 import Gregor from './components/Gregor'
 import SeqrStats from './components/SeqrStats'
+import VariantMetadata from './components/VariantMetadata'
 
 export const REPORT_PAGES = [
   { path: 'anvil', component: Anvil },
   { path: 'custom_search', params: '/:searchHash?', component: CustomSearch },
   { path: 'family_metadata', params: '/:projectGuid?', component: FamilyMetadata },
+  { path: 'variant_metadata', params: '/:projectGuid?', component: VariantMetadata },
   { path: 'gregor', component: Gregor },
   { path: 'seqr_stats', component: SeqrStats },
 ]
