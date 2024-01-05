@@ -516,7 +516,6 @@ def _get_mondo_condition_data(mondo_id):
 def _update_family_condition(family_subject_row, variants, omim_conditions, mondo_conditions, set_conditions_for_variants):
     mondo_id = family_subject_row.pop('mondo_id', None)
     mim_numbers = family_subject_row.pop('post_discovery_omim_numbers')
-    conditions_by_variant = defaultdict(list)
     if mim_numbers:
         family_conditions = []
         for mim_number in mim_numbers:
@@ -559,7 +558,7 @@ def _update_family_condition(family_subject_row, variants, omim_conditions, mond
 
 def _format_omim_conditions(conditions):
     return {
-        'condition_id': '|'.join(sorted({o['phenotype_mim_number'] for o in conditions}))
+        'condition_id': '|'.join(sorted({o['phenotype_mim_number'] for o in conditions})),
         'known_condition_name': '|'.join(sorted({o['phenotype_description'] for o in conditions})),
         'condition_inheritance': '|'.join(sorted({
             MIM_INHERITANCE_MAP.get(i, i) for o in conditions for i in (o['phenotype_inheritance'] or '').split(', ')
