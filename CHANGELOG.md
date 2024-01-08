@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 1/8/24
 * Support OMIM entries with no associated gene and remove phenotypic_series_number (REQUIRES DB MIGRATION)
 
 ## 11/21/23
