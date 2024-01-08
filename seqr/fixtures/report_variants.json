@@ -112,7 +112,7 @@
             "xpos": 19001912632,
             "genomeVersion": "38", "genotypeFilters": [],
             "genotypes": {
-                "I000004_hg00731": {"sampleId": "HG00731", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
+                "I000004_hg00731": {"numAlt": 1}
             },
             "variantId": "19-1912632-GC-TT",
             "chrom": "19",
