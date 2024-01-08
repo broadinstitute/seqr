@@ -1081,7 +1081,7 @@
     "model": "reference_data.omim",
     "pk": 2,
     "fields": {
-        "gene": 3,
+        "gene": 48,
         "mim_number": 103320,
         "chrom": "1",
         "start": 29554,
@@ -1106,7 +1106,7 @@
         "gene_description": "Tumor necrosis factor receptor superfamily, member 4",
         "comments": "mutation identified in 1 IMD16 family",
         "phenotype_inheritance": "Autosomal recessive",
-        "phenotype_mim_number": 615593,
+        "phenotype_mim_number": 615120,
         "phenotype_description": "?Immunodeficiency 16",
         "phenotype_map_method": "3"
     }

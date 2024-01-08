@@ -273,13 +273,13 @@ class SavedVariantAPITest(object):
             set(response_json['savedVariantsByGuid'].keys()),
             {'SV0000006_1248367227_r0003_tes', 'SV0000007_prefix_19107_DEL_r00'})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000223972', 'ENSG00000240361'})
-        self.assertDictEqual(response_json['omimIntervals'], {'615593': {
+        self.assertDictEqual(response_json['omimIntervals'], {'3': {
             'chrom': '1',
             'start': 249044482,
             'end': 249055991,
             'mimNumber': 600315,
             'phenotypeDescription': '?Immunodeficiency 16', 'phenotypeInheritance': 'Autosomal recessive',
-            'phenotypeMimNumber': 615593,
+            'phenotypeMimNumber': 615120,
         }})
         self.assertDictEqual(response_json['rnaSeqData'], {})
 

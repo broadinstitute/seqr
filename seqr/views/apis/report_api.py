@@ -144,8 +144,8 @@ def anvil_export(request, project_guid):
                 row.update({
                     'project_id': row.pop('internal_project_id'),
                     'solve_state': row.pop('solve_status'),
-                    'disease_id': row.get('condition_id'),
-                    'disease_description': row.get('known_condition_name'),
+                    'disease_id': row.get('condition_id', '').replace('|', ';'),
+                    'disease_description': row.get('known_condition_name', '').replace('|', ';'),
                     'hpo_present': '|'.join([feature['id'] for feature in row.get('features') or []]),
                     'hpo_absent': '|'.join([feature['id'] for feature in row.get('absent_features') or []]),
                     'ancestry': row['reported_ethnicity'] or row['reported_race'],
@@ -275,7 +275,7 @@ WARN_MISSING_TABLE_COLUMNS = {
 WARN_MISSING_CONDITIONAL_COLUMNS = {
     'reported_race': lambda row: not row['ancestry_detail'],
     'age_at_enrollment': lambda row: row['affected_status'] == 'Affected',
-    'known_condition_name': lambda row: row['condition_id'],
+    'known_condition_name': lambda row: row.get('condition_id'),
 }
 
 HPO_QUALIFIERS = {
@@ -373,7 +373,7 @@ def gregor_export(request):
         elif row_type == DISCOVERY_ROW_TYPE and row:
             for variant in row:
                 genetic_findings_rows.append({
-                    **variant, **family_map[family_id], 'phenotype_contribution': 'Full', 'variant_type': 'SNV/INDEL',
+                    **variant, 'phenotype_contribution': 'Full', 'variant_type': 'SNV/INDEL',
                 })
 
     parse_anvil_metadata(
@@ -839,6 +839,7 @@ def variant_metadata(request, project_guid):
         elif row_type == DISCOVERY_ROW_TYPE:
             family = families_by_id[family_id]
             for variant in row:
+                del variant['gene_ids']
                 variant_rows.append({
                     'MME': variant.pop('variantId') in participant_mme[variant['participant_id']].get('variant_ids', []),
                     'phenotype_contribution': 'Full',
