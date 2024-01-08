@@ -24,7 +24,8 @@ from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample
     PhenotypePrioritization, Project
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
-from seqr.views.utils.variant_utils import get_phenotype_prioritization, DISCOVERY_CATEGORY
+from seqr.views.utils.variant_utils import get_phenotype_prioritization, get_omim_intervals_query, DISCOVERY_CATEGORY
+from seqr.utils.xpos_utils import get_chrom_pos
 
 
 FAMILY_ID_FIELD = 'familyId'
@@ -48,20 +49,26 @@ def family_page_data(request, family_guid):
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
     family_response = response['familiesByGuid'][family_guid]
 
-    discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY)
+    discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY).values(
+        'saved_variant_json__transcripts', 'saved_variant_json__svType', 'xpos', 'xpos_end',
+    )
     gene_ids = {
-        gene_id for transcripts in discovery_variants.values_list('saved_variant_json__transcripts', flat=True)
-        for gene_id in (transcripts or {}).keys()
+        gene_id for variant in discovery_variants
+        for gene_id in (variant['saved_variant_json__transcripts'] or {}).keys()
     }
+    discovery_variant_intervals = [dict(zip(
+        ['chrom', 'start', 'end_chrom', 'end', 'svType'],
+        [*get_chrom_pos(v['xpos']), *get_chrom_pos(v['xpos_end']), v['saved_variant_json__svType']]
+    )) for v in discovery_variants]
     omims = Omim.objects.filter(
-        Q(phenotype_mim_number__in=family_response['postDiscoveryOmimNumbers']) | Q(gene__gene_id__in=gene_ids)
-    ).exclude(phenotype_mim_number__isnull=True).distinct()
+        get_omim_intervals_query(discovery_variant_intervals) | Q(gene__gene_id__in=gene_ids)
+    ).exclude(phenotype_mim_number__isnull=True).order_by('id').distinct()
     omim_map = {}
-    for o in get_json_for_queryset(omims, nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}]):
-        mim_number = o['phenotypeMimNumber']
-        if mim_number not in omim_map:
-            omim_map[mim_number] = {'phenotypeMimNumber': mim_number, 'phenotypes': []}
-        omim_map[mim_number]['phenotypes'].append(o)
+    _add_parsed_omims(omims, omim_map, intervals=discovery_variant_intervals)
+    # Prioritize mim number phenotypes in discovery genes/regions, but if any aren't then include all phenotypes
+    missing_discovery_omims = set(family_response['postDiscoveryOmimNumbers']) - set(omim_map.keys())
+    if missing_discovery_omims:
+        _add_parsed_omims(Omim.objects.filter(phenotype_mim_number__in=missing_discovery_omims), omim_map)
 
     family_response.update({
         'detailsLoaded': True,
@@ -85,6 +92,25 @@ def family_page_data(request, family_guid):
     response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
     return create_json_response(response)
+
+
+def _intervals_overlap(interval1, interval2):
+    return interval1['chrom'] == interval2['chrom'] and (
+            (interval2['start'] <= interval1['start'] <= interval2['end']) or
+            (interval2['start'] <= interval1['end'] <= interval2['end']) or
+            (interval1['start'] <= interval2['start'] <= interval1['end']) or
+            (interval1['start'] <= interval2['end'] <= interval1['end']))
+
+
+def _add_parsed_omims(omims, omim_map, intervals=None):
+    for o in get_json_for_queryset(omims, nested_fields=[{'key': 'geneSymbol', 'fields': ['gene', 'gene_symbol']}]):
+        if intervals is not None and (not (o['geneSymbol'] or any(_intervals_overlap(o, variant) for variant in intervals))):
+            continue
+        mim_number = o['phenotypeMimNumber']
+        if mim_number not in omim_map:
+            omim_map[mim_number] = {'phenotypeMimNumber': mim_number, 'phenotypes': []}
+        omim_map[mim_number]['phenotypes'].append(o)
+
 
 @login_and_policies_required
 def family_variant_tag_summary(request, family_guid):

@@ -87,6 +87,8 @@ export const getOverlappedIntervals = (variant, intervals, getIntervalGroup, pad
   ), [])
 }
 
+export const SPLICE_OUTLIER_OVERLAP_ARGS = [fGuid => fGuid, RNASEQ_JUNCTION_PADDING]
+
 export const getOverlappedSpliceOutliers = (variant, spliceOutliersByFamily) => (
-  getOverlappedIntervals(variant, spliceOutliersByFamily, fGuid => fGuid, RNASEQ_JUNCTION_PADDING)
+  getOverlappedIntervals(variant, spliceOutliersByFamily, ...SPLICE_OUTLIER_OVERLAP_ARGS)
 )

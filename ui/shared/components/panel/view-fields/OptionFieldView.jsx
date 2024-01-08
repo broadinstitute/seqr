@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { Select } from '../../form/Inputs'
+import { compareObjects } from '../../../utils/sortUtils'
 import BaseFieldView from './BaseFieldView'
 
 class OptionFieldView extends React.PureComponent {
@@ -13,6 +14,7 @@ class OptionFieldView extends React.PureComponent {
     tagAnnotation: PropTypes.func,
     tagOptionLookup: PropTypes.object,
     tagOptionLookupField: PropTypes.string,
+    tagOptionSortField: PropTypes.string,
     formatTagOption: PropTypes.func,
     additionalEditFields: PropTypes.arrayOf(PropTypes.object),
     formFieldProps: PropTypes.object,
@@ -58,11 +60,12 @@ class OptionFieldView extends React.PureComponent {
   }
 
   tagSelectOptions = () => {
-    const { tagOptions, formatTagOption } = this.props
+    const { tagOptions, formatTagOption, tagOptionSortField } = this.props
     if (tagOptions) {
       return tagOptions.map(({ name, ...tag }) => ({ value: name, text: name, ...tag }))
     }
-    return Object.values(this.tagOptionLookup()).map(formatTagOption)
+    const options = Object.values(this.tagOptionLookup()).map(formatTagOption)
+    return tagOptionSortField ? options.sort(compareObjects(tagOptionSortField)) : options
   }
 
   render() {

@@ -182,7 +182,7 @@ SORT_FIELDS = {
             'script': {
                 'params': {
                     'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.filter(
-                        phenotype_mim_number__isnull=False).only('gene__gene_id')]
+                        phenotype_mim_number__isnull=False, gene__isnull=False).only('gene__gene_id')]
                 },
                 'source': "(doc.containsKey('mainTranscript_gene_id') && !doc['mainTranscript_gene_id'].empty && params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value)) ? 0 : 1",
             }
@@ -342,7 +342,7 @@ PREDICTION_FIELDS_CONFIG = {
         'response_key': 'vest',
         'format_value': lambda x: x and next((v for v in x.split(';') if v != '.'), None),
     },
-    'dbnsfp_MutPred_score': {'response_key': 'mut_pred'},
+    'dbnsfp_MutPred_score': {'response_key': 'mut_pred', 'format_value': lambda x: None if x == '-' else x},
     'mpc_MPC': {},
     'dbnsfp_MutationTaster_pred': {'response_key': 'mut_taster'},
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},

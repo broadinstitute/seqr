@@ -178,7 +178,11 @@ class Omim(models.Model):
         ('4', 'a contiguous gene deletion or duplication syndrome, multiple genes are deleted or duplicated causing the phenotype.'),
     )
 
-    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE, null=True, blank=True)
+
+    chrom = models.CharField(max_length=2)
+    start = models.IntegerField()
+    end = models.IntegerField()
 
     mim_number = models.IntegerField()  # Example: 601365
     gene_description = models.TextField(null=True, blank=True)  # Example: "Dishevelled 1 (homologous to Drosophila dsh)"
@@ -187,13 +191,13 @@ class Omim(models.Model):
     phenotype_mim_number = models.IntegerField(null=True, blank=True)  # Example: 616331
     phenotype_description = models.TextField(null=True, blank=True)  # Example: "Robinow syndrome, autosomal dominant 2"
     phenotype_map_method = models.CharField(max_length=1, choices=MAP_METHOD_CHOICES, null=True, blank=True)  # Example: 2
-    phenotypic_series_number = models.TextField(null=True, blank=True)
 
     class Meta:
         # ('mim_number', 'phenotype_mim_number') is not unique - for example ('124020', '609535')
         unique_together = ('mim_number', 'phenotype_mim_number', 'phenotype_description')
 
-        json_fields = ['mim_number', 'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance']
+        json_fields = ['mim_number', 'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
+                       'chrom', 'start', 'end',]
 
 
 # based on dbNSFPv3.5a_gene fields

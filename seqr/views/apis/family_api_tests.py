@@ -62,9 +62,9 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertListEqual(family['postDiscoveryOmimNumbers'], [615120, 615123])
         self.assertDictEqual(family['postDiscoveryOmimOptions'], {
             '615120': {'phenotypeMimNumber': 615120, 'phenotypes': [{
-                'geneSymbol': 'MIR1302-2HG', 'mimNumber': 103320, 'phenotypeMimNumber': 615120,
+                'geneSymbol': 'RP11', 'mimNumber': 103320, 'phenotypeMimNumber': 615120,
                 'phenotypeDescription': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
-                'phenotypeInheritance': 'Autosomal recessive, X-linked recessive',
+                'phenotypeInheritance': 'Autosomal recessive, X-linked recessive', 'chrom': '1', 'start': 29554, 'end': 31109,
             }]}})
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
@@ -118,11 +118,32 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertListEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimNumbers'], [])
         self.assertDictEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimOptions'], {'616126': {
             'phenotypeMimNumber': 616126, 'phenotypes': [{
+                'chrom': '1',
+                'start': 11869,
+                'end': 14409,
                 'geneSymbol': 'DDX11L1',
                 'mimNumber': 147571,
                 'phenotypeMimNumber': 616126,
                 'phenotypeDescription': 'Immunodeficiency 38',
                 'phenotypeInheritance': 'Autosomal recessive',
+            }]}, '615120': {
+            'phenotypeMimNumber': 615120, 'phenotypes': [{
+                'chrom': '1',
+                'start': 29554,
+                'end': 31109,
+                'geneSymbol': 'RP11',
+                'mimNumber': 103320,
+                'phenotypeDescription': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
+                'phenotypeInheritance': 'Autosomal recessive, X-linked recessive',
+                'phenotypeMimNumber': 615120,
+            }, {
+                'chrom': '1',
+                'start': 249044482,
+                'end': 249055991,
+                'geneSymbol': None,
+                'mimNumber': 600315,
+                'phenotypeDescription': '?Immunodeficiency 16', 'phenotypeInheritance': 'Autosomal recessive',
+                'phenotypeMimNumber': 615120,
             }]}})
 
         # Test analyst users have internal fields returned

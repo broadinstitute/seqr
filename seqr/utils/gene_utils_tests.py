@@ -43,7 +43,7 @@ class GeneUtilsTest(TestCase):
         self.assertSetEqual(set(gene['cnSensitivity'].keys()), {'phi', 'pts'})
         self.assertSetEqual(
             set(gene['omimPhenotypes'][0].keys()),
-            {'mimNumber', 'phenotypeMimNumber', 'phenotypeDescription', 'phenotypeInheritance'})
+            {'mimNumber', 'phenotypeMimNumber', 'phenotypeDescription', 'phenotypeInheritance', 'chrom', 'start', 'end'})
         self.assertSetEqual(set(gene['genCc'].keys()), {'hgncId', 'classifications'})
         self.assertSetEqual(set(gene['clinGen'].keys()), {'haploinsufficiency', 'triplosensitivity', 'href'})
 
