@@ -30,15 +30,15 @@ const AIRTABLE_FIELDS = [
 ]
 
 const CORE_COLUMNS = [
-  { name: 'subject_id', content: 'participant_id', secondaryExportColumn: 'individual_guid' },
+  { name: 'participant_id', secondaryExportColumn: 'individual_guid' },
   { name: 'pmid_id' },
   { name: 'paternal_id', secondaryExportColumn: 'paternal_guid' },
   { name: 'maternal_id', secondaryExportColumn: 'maternal_guid' },
   { name: 'proband_relationship' },
   { name: 'sex' },
   { name: 'ancestry' },
-  { name: 'disease_id' },
-  { name: 'disease_description', secondaryExportColumn: 'disorders' },
+  { name: 'condition_id' },
+  { name: 'known_condition_name', secondaryExportColumn: 'disorders' },
   { name: 'affected_status' },
   { name: 'hpo_present', style: { minWidth: '400px' } },
   { name: 'hpo_absent', style: { minWidth: '400px' } },
@@ -49,7 +49,7 @@ const CORE_COLUMNS = [
     content: 'analysis_status',
     format: ({ analysisStatus }) => FAMILY_ANALYSIS_STATUS_LOOKUP[analysisStatus]?.name,
   },
-  { name: 'solve_state' },
+  { name: 'solve_status' },
   { name: 'MME' },
   { name: 'data_type' },
   { name: 'date_data_generation', secondaryExportColumn: 'filter_flags' },
@@ -95,7 +95,7 @@ const mapStateToProps = (state, ownProps) => {
     queryFields: (user.isAnalyst && ownProps.match.params.projectGuid !== ALL_PROJECTS_PATH) ? AIRTABLE_FIELDS : FIELDS,
     viewAllPages: (user.isAnalyst ? ANALYST_VIEW_ALL_PAGES : VIEW_ALL_PAGES),
     urlBase: 'summary_data/individual_metadata',
-    idField: 'subject_id',
+    idField: 'participant_id',
     fileName: 'Metadata',
   }
 }

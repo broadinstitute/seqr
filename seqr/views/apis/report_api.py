@@ -1,8 +1,7 @@
 from collections import defaultdict
-from copy import deepcopy
 
 from datetime import datetime, timedelta
-from django.db.models import Count, Q, F
+from django.db.models import Count, Q
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
 import re
@@ -12,20 +11,17 @@ from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 
-from seqr.views.utils.airtable_utils import get_airtable_samples
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, get_genetic_findings_rows, post_process_variant_metadata, \
-    get_family_metadata, get_family_solve_state, parse_variant_genetic_findings, \
-    ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, \
-    SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, HISPANIC, MIDDLE_EASTERN, OTHER_POPULATION
+from seqr.views.utils.airtable_utils import AirtableSession
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, \
+    FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
     get_project_guids_user_can_view, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
-from seqr.views.utils.variant_utils import get_saved_discovery_variants_by_family
+from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
 from seqr.models import Project, Family, Sample, Individual
-from reference_data.models import Omim, HumanPhenotypeOntology
 from settings import GREGOR_DATA_MODEL_URL
 
 
@@ -138,15 +134,30 @@ def anvil_export(request, project_guid):
                 **discovery_row,
             } for discovery_row in row]
         else:
+            if 'participant_id' in row:
+                row['subject_id'] = row['participant_id']
             id_field = f'{row_type}_id'
             entity_id_field = f'entity:{id_field}'
             if id_field in row and entity_id_field not in row:
                 row[entity_id_field] = row[id_field]
+            if row_type == SUBJECT_ROW_TYPE:
+                row.update({
+                    'project_id': row.pop('internal_project_id'),
+                    'solve_state': row.pop('solve_status'),
+                    'disease_id': row.get('condition_id'),
+                    'disease_description': row.get('known_condition_name'),
+                    'hpo_present': '|'.join([feature['id'] for feature in row.get('features') or []]),
+                    'hpo_absent': '|'.join([feature['id'] for feature in row.get('absent_features') or []]),
+                    'ancestry': row['reported_ethnicity'] or row['reported_race'],
+                })
             parsed_rows[row_type].append(row)
 
     max_loaded_date = request.GET.get('loadedBefore') or (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
     parse_anvil_metadata(
         [project], request.user, _add_row, max_loaded_date=max_loaded_date, include_discovery_sample_id=True,
+        get_additional_individual_fields=lambda individual, *args: {
+            'congenital_status': Individual.ONSET_AGE_LOOKUP[individual.onset_age] if individual.onset_age else 'Unknown',
+        },
         get_additional_sample_fields=lambda sample, *args: {
             'entity:sample_id': sample.individual.individual_id,
             'sequencing_center': 'Broad',
@@ -267,28 +278,6 @@ WARN_MISSING_CONDITIONAL_COLUMNS = {
     'known_condition_name': lambda row: row['condition_id'],
 }
 
-GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
-GREGOR_ANCESTRY_DETAIL_MAP.pop(MIDDLE_EASTERN)
-GREGOR_ANCESTRY_DETAIL_MAP.update({
-    HISPANIC: 'Other',
-    OTHER_POPULATION: 'Other',
-})
-GREGOR_ANCESTRY_MAP = deepcopy(ANCESTRY_MAP)
-GREGOR_ANCESTRY_MAP.update({
-    MIDDLE_EASTERN: 'Middle Eastern or North African',
-    HISPANIC: None,
-    OTHER_POPULATION: None,
-})
-MIM_INHERITANCE_MAP = {
-    'Digenic dominant': 'Digenic',
-    'Digenic recessive': 'Digenic',
-    'X-linked dominant': 'X-linked',
-    'X-linked recessive': 'X-linked',
-}
-MIM_INHERITANCE_MAP.update({inheritance: 'Other' for inheritance in [
-    'Isolated cases', 'Multifactorial', 'Pseudoautosomal dominant', 'Pseudoautosomal recessive', 'Somatic mutation'
-]})
-
 HPO_QUALIFIERS = {
     'age_of_onset': {
         'Adult onset': 'HP:0003581',
@@ -361,91 +350,96 @@ def gregor_export(request):
     grouped_data_type_individuals = defaultdict(dict)
     family_individuals = defaultdict(dict)
     for i in individuals:
-        grouped_data_type_individuals[i.individual_id].update({data_type: i for data_type in individual_data_types[i.id]})
-        family_individuals[i.family_id][i.guid] = _get_participant_id(i)
+        participant_id = _format_gregor_id(i.individual_id)
+        grouped_data_type_individuals[participant_id].update({data_type: i for data_type in individual_data_types[i.id]})
+        family_individuals[i.family_id][i.guid] = participant_id
 
-    saved_variants_by_family = _get_gregor_discovery_variants_by_family(projects, variant_filter={'alt__isnull': False})
-
-    airtable_sample_records, airtable_metadata_by_participant = _get_gregor_airtable_data(
-        grouped_data_type_individuals.keys(), request.user)
+    # If multiple individual records, prefer WGS
+    individual_lookup = {
+        next(data_type_individuals[data_type.upper()] for data_type in GREGOR_DATA_TYPES
+             if data_type_individuals.get(data_type.upper())): None
+        for data_type_individuals in grouped_data_type_individuals.values()
+    }
 
     participant_rows = []
     family_map = {}
+    genetic_findings_rows = []
+
+    def _add_row(row, family_id, row_type):
+        if row_type == FAMILY_ROW_TYPE:
+            family_map[family_id] = row
+        elif row_type == SUBJECT_ROW_TYPE:
+            participant_rows.append({**row, 'consent_code': consent_code})
+        elif row_type == DISCOVERY_ROW_TYPE and row:
+            for variant in row:
+                genetic_findings_rows.append({
+                    **variant, **family_map[family_id], 'phenotype_contribution': 'Full', 'variant_type': 'SNV/INDEL',
+                })
+
+    parse_anvil_metadata(
+        projects,
+        user=request.user,
+        individual_samples=individual_lookup,
+        individual_data_types=grouped_data_type_individuals,
+        add_row=_add_row,
+        format_id=_format_gregor_id,
+        get_additional_individual_fields=_get_participant_row,
+        post_process_variant=_post_process_gregor_variant,
+        variant_filter={'alt__isnull': False},
+        airtable_fields=[SMID_FIELD, PARTICIPANT_ID_FIELD, 'Recontactable'],
+        include_mondo=True,
+        proband_only_variants=True,
+    )
+
+    airtable_metadata_by_participant = _get_gregor_airtable_data(participant_rows, request.user)
+
     phenotype_rows = []
     analyte_rows = []
     airtable_rows = []
     airtable_rna_rows = []
     experiment_lookup_rows = []
-    genetic_findings_rows = []
-    for data_type_individuals in grouped_data_type_individuals.values():
-        # If multiple individual records, prefer WGS
-        individual = next(
-            data_type_individuals[data_type.upper()] for data_type in GREGOR_DATA_TYPES
-            if data_type_individuals.get(data_type.upper())
-        )
-
-        # family table
-        family = individual.family
-        if family not in family_map:
-            family_map[family] = _get_gregor_family_row(family)
-
-        if individual.consanguinity is not None and family_map[family]['consanguinity'] == 'Unknown':
-            family_map[family]['consanguinity'] = 'Present' if individual.consanguinity else 'None suspected'
-
-        # participant table
-        airtable_sample = airtable_sample_records.get(individual.individual_id, {})
-        participant_id = _get_participant_id(individual)
-        participant = _get_participant_row(individual, airtable_sample)
-        participant.update(family_map[family])
-        participant.update({
-            'participant_id': participant_id,
-            'consent_code': consent_code,
-        })
-        participant_rows.append(participant)
-
+    experiment_ids_by_participant = {}
+    for participant in participant_rows:
         # phenotype table
-        base_phenotype_row = {'participant_id': participant_id, 'presence': 'Present', 'ontology': 'HPO'}
+        base_phenotype_row = {'participant_id': participant['participant_id'], 'presence': 'Present', 'ontology': 'HPO'}
         phenotype_rows += [
-            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.features or []
+            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in participant['features'] or []
         ]
         base_phenotype_row['presence'] = 'Absent'
         phenotype_rows += [
-            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.absent_features or []
+            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in participant['absent_features'] or []
         ]
 
+        if not participant[PARTICIPANT_ID_FIELD]:
+            continue
+
+        airtable_metadata = airtable_metadata_by_participant.get(participant[PARTICIPANT_ID_FIELD]) or {}
+
         analyte_ids = set()
-        experiment_id = None
         # airtable data
-        if airtable_sample:
-            airtable_metadata = airtable_metadata_by_participant.get(airtable_sample[PARTICIPANT_ID_FIELD]) or {}
-            for data_type in data_type_individuals:
-                if data_type not in airtable_metadata:
-                    continue
-                row = _get_airtable_row(data_type, airtable_metadata)
-                analyte_ids.add(row['analyte_id'])
-                is_rna = data_type == 'RNA'
-                if not is_rna:
-                    row['alignment_software'] = row['alignment_software_dna']
-                    experiment_id = row['experiment_dna_short_read_id']
-                (airtable_rna_rows if is_rna else airtable_rows).append(row)
-                experiment_lookup_rows.append(
-                    {'participant_id': participant_id, **_get_experiment_lookup_row(is_rna, row)}
-                )
+        for data_type in grouped_data_type_individuals[participant['participant_id']]:
+            if data_type not in airtable_metadata:
+                continue
+            row = _get_airtable_row(data_type, airtable_metadata)
+            analyte_ids.add(row['analyte_id'])
+            is_rna = data_type == 'RNA'
+            if not is_rna:
+                row['alignment_software'] = row['alignment_software_dna']
+                experiment_ids_by_participant[participant['participant_id']] = row['experiment_dna_short_read_id']
+            (airtable_rna_rows if is_rna else airtable_rows).append(row)
+            experiment_lookup_rows.append(
+                {'participant_id': participant['participant_id'], **_get_experiment_lookup_row(is_rna, row)}
+            )
 
         # analyte table
-        if not analyte_ids:
-            analyte_id = _get_analyte_id(airtable_sample)
-            if analyte_id:
-                analyte_ids.add(analyte_id)
+        if participant['analyte_id'] and not analyte_ids:
+            analyte_ids.add(participant['analyte_id'])
         for analyte_id in analyte_ids:
-            analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
+            analyte_rows.append({**participant, 'analyte_id': analyte_id})
 
-        if participant['proband_relationship'] == 'Self':
-            genetic_findings_rows += get_genetic_findings_rows(
-                saved_variants_by_family.get(family.id), individual, participant_id,
-                data_type_individuals.keys(), family_individuals[family.id],
-                post_process_variant=_post_process_gregor_variant, experiment_id=experiment_id, variant_type='SNV/INDEL',
-            )
+    # Add experiment IDs
+    for variant in genetic_findings_rows:
+        variant['experiment_id'] = experiment_ids_by_participant.get(variant['participant_id'])
 
     file_data = [
         ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),
@@ -473,24 +467,13 @@ def gregor_export(request):
     })
 
 
-def _get_gregor_discovery_variants_by_family(projects, variant_filter=None, **kwargs):
-    return get_saved_discovery_variants_by_family(
-        variant_filter={'family__project__in': projects, **(variant_filter or {})},
-        format_variants=_parse_variant_genetic_findings,
-        get_family_id=lambda v: v['family_id'],
-        **kwargs,
-    )
-
-
-def _get_gregor_airtable_data(individual_ids, user):
-    sample_records, session = get_airtable_samples(
-        individual_ids, user, fields=[SMID_FIELD, PARTICIPANT_ID_FIELD, 'Recontactable'],
-    )
+def _get_gregor_airtable_data(participants, user):
+    session = AirtableSession(user)
 
     airtable_metadata = session.fetch_records(
         'GREGoR Data Model',
         fields=[PARTICIPANT_ID_FIELD] + sorted(AIRTABLE_QUERY_COLUMNS),
-        or_filters={f'{PARTICIPANT_ID_FIELD}': {r[PARTICIPANT_ID_FIELD] for r in sample_records.values()}},
+        or_filters={f'{PARTICIPANT_ID_FIELD}': {r[PARTICIPANT_ID_FIELD] for r in participants if r[PARTICIPANT_ID_FIELD]}},
     )
 
     airtable_metadata_by_participant = {r[PARTICIPANT_ID_FIELD]: r for r in airtable_metadata.values()}
@@ -500,38 +483,20 @@ def _get_gregor_airtable_data(individual_ids, user):
             if data_type_fields:
                 r[data_type.upper()] = {f.replace(f'_{data_type}', ''): r.pop(f) for f in data_type_fields}
 
-    return sample_records, airtable_metadata_by_participant
-
-
-def _get_gregor_family_row(family):
-    return {
-        'family_id':  f'Broad_{family.family_id}',
-        'internal_project_id': f'Broad_{family.project.name}',
-        'consanguinity': 'Unknown',
-        'pmid_id': '|'.join(family.pubmed_ids or []),
-        'phenotype_description': family.coded_phenotype,
-        'solve_status': get_family_solve_state(family.analysis_status),
-    }
-
-
-def _get_participant_id(individual):
-    return f'Broad_{individual.individual_id}'
+    return airtable_metadata_by_participant
 
 
 def _get_participant_row(individual, airtable_sample):
     participant = {
         'gregor_center': 'BROAD',
-        'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else '0',
-        'maternal_id': f'Broad_{individual.mother.individual_id}' if individual.mother else '0',
         'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),
-        'proband_relationship': individual.get_proband_relationship_display(),
-        'sex': individual.get_sex_display(),
-        'affected_status': individual.get_affected_display(),
-        'reported_race': GREGOR_ANCESTRY_MAP.get(individual.population),
-        'ancestry_detail': GREGOR_ANCESTRY_DETAIL_MAP.get(individual.population),
-        'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else None,
-        'recontactable': airtable_sample.get('Recontactable'),
+        'recontactable': (airtable_sample or {}).get('Recontactable'),
         'missing_variant_case': 'No',
+        PARTICIPANT_ID_FIELD: (airtable_sample or {}).get(PARTICIPANT_ID_FIELD),
+        'analyte_id': _get_analyte_id(airtable_sample or {}),
+        'analyte_type': individual.get_analyte_type_display(),
+        'primary_biosample': individual.get_primary_biosample_display(),
+        'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
     }
     if individual.birth_year and individual.birth_year > 0:
         participant.update({
@@ -555,76 +520,10 @@ def _get_phenotype_row(feature):
     }
 
 
-def _parse_variant_genetic_findings(*args, variant_model_annotations=None, **kwargs):
-    annotations = {
-        'discovery_omim_numbers': F('family__post_discovery_omim_numbers'),
-        'discovery_mondo_id': F('family__mondo_id'),
-        **(variant_model_annotations or {})
-    }
-    variants = parse_variant_genetic_findings(*args, variant_model_annotations=annotations, **kwargs)
-    mim_numbers = set()
-    mondo_ids = set()
-    for variant in variants:
-        condition_id = ''
-        omim_numbers = variant.pop('discovery_omim_numbers')
-        mondo_id = variant.pop('discovery_mondo_id')
-        if omim_numbers:
-            mim_number = omim_numbers[0]
-            mim_numbers.add(mim_number)
-            condition_id = f'OMIM:{mim_number}'
-        elif mondo_id:
-            condition_id = f"MONDO:{mondo_id.replace('MONDO:', '')}"
-            mondo_ids.add(condition_id)
-
-        variant.update({
-            'condition_id': condition_id,
-            'gene_known_for_phenotype': 'Known' if condition_id else 'Candidate',
-            'phenotype_contribution': 'Full',
-        })
-
-    conditions_by_id = {
-        f'OMIM:{number}':  {
-            'known_condition_name': description,
-            'condition_inheritance': '|'.join([
-                MIM_INHERITANCE_MAP.get(i, i) for i in (inheritance or '').split(', ')
-            ]),
-        } for number, description, inheritance in Omim.objects.filter(phenotype_mim_number__in=mim_numbers).values_list(
-            'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance',
-        )
-    }
-    conditions_by_id.update({mondo_id: _get_mondo_condition_data(mondo_id) for mondo_id in mondo_ids})
-    for row in variants:
-        row.update(conditions_by_id.get(row['condition_id'], {}))
-    return variants
-
-
-def _get_mondo_condition_data(mondo_id):
-    try:
-        response = requests.get(f'{MONDO_BASE_URL}/{mondo_id}', timeout=10)
-        data = response.json()
-        inheritance = data['inheritance']
-        if inheritance:
-            inheritance = HumanPhenotypeOntology.objects.get(hpo_id=inheritance['id']).name.replace(' inheritance', '')
-        return {
-            'known_condition_name': data['name'],
-            'condition_inheritance': inheritance,
-        }
-    except Exception:
-        return {}
-
-
-def _post_process_gregor_variant(row, gene_variants):
+def _post_process_gregor_variant(row, gene_variants, **kwargs):
     return {'linked_variant': next(
         v['genetic_findings_id'] for v in gene_variants if v['genetic_findings_id'] != row['genetic_findings_id']
     ) if len(gene_variants) > 1 else None}
-
-
-def _get_analyte_row(individual):
-    return {
-        'analyte_type': individual.get_analyte_type_display(),
-        'primary_biosample': individual.get_primary_biosample_display(),
-        'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
-    }
 
 
 def _get_airtable_row(data_type, airtable_metadata):
@@ -644,9 +543,12 @@ def _get_airtable_row(data_type, airtable_metadata):
     }
 
 
+def _format_gregor_id(id_string, default='0'):
+    return f'Broad_{id_string}' if id_string else '0'
+
+
 def _get_analyte_id(airtable_metadata):
-    sm_id = airtable_metadata.get(SMID_FIELD)
-    return f'Broad_{sm_id}' if sm_id else None
+    return _format_gregor_id(airtable_metadata.get(SMID_FIELD), default=None)
 
 
 def _get_experiment_lookup_row(is_rna, row_data):
@@ -847,9 +749,9 @@ def family_metadata(request, project_guid):
         if row_type == FAMILY_ROW_TYPE:
             families_by_id[family_id] = row
         elif row_type == SUBJECT_ROW_TYPE:
-            family_individuals[family_id][row['subject_id']] = row
+            family_individuals[family_id][row['participant_id']] = row
         elif row_type == SAMPLE_ROW_TYPE:
-            family_individuals[family_id][row['subject_id']].update(row)
+            family_individuals[family_id][row['participant_id']].update(row)
         elif row_type == DISCOVERY_ROW_TYPE:
             family = families_by_id[family_id]
             if 'inheritance_models' not in family:
@@ -858,7 +760,7 @@ def family_metadata(request, project_guid):
             family['inheritance_models'].update({v['variant_inheritance'] for v in row})
 
     parse_anvil_metadata(
-        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_metadata=True)
+        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_metadata=True, include_no_individual_families=True)
 
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]
@@ -867,7 +769,7 @@ def family_metadata(request, project_guid):
         known_ids = {}
         if proband:
             known_ids = {
-                'proband_id': proband['subject_id'],
+                'proband_id': proband['participant_id'],
                 'paternal_id': proband['paternal_id'],
                 'maternal_id': proband['maternal_id'],
             }
@@ -919,35 +821,44 @@ def _get_family_structure(num_individuals, num_known_individuals):
 def variant_metadata(request, project_guid):
     projects = _get_metadata_projects(project_guid, request.user)
 
-    family_data_by_id = get_family_metadata(projects, include_metadata=True)
-
-    variants_by_family = _get_gregor_discovery_variants_by_family(
-        projects, variant_json_fields=['clinvar', 'svType', 'svName', 'end'], variant_model_annotations={
-            'matchmaker_individual': F('matchmakersubmissiongenes__matchmaker_submission__individual__guid'),
-        })
-
-    individuals = Individual.objects.filter(family_id__in=variants_by_family)
-    probands = individuals.filter(proband_relationship=Individual.SELF_RELATIONSHIP).annotate(
+    individuals = Individual.objects.filter(
+        family__project__in=projects, family__savedvariant__varianttag__variant_tag_type__category=DISCOVERY_CATEGORY,
+    ).distinct().annotate(
         data_types=ArrayAgg('sample__sample_type', distinct=True, filter=Q(sample__isnull=False))
     )
-    family_individuals = defaultdict(dict)
-    for family_id, guid, individual_id in individuals.values_list('family_id', 'guid', 'individual_id'):
-        family_individuals[family_id][guid] = individual_id
 
+    families_by_id = {}
+    participant_mme = {}
     variant_rows = []
-    for individual in probands:
-        family_id = individual.family_id
 
-        def _post_process_variant_metadata(v, gene_variants):
-            return {
-                'MME': v.pop('matchmaker_individual') == individual.guid,
-                **post_process_variant_metadata(v, gene_variants, include_parent_mnvs=True),
-            }
+    def _add_row(row, family_id, row_type):
+        if row_type == FAMILY_ROW_TYPE:
+            families_by_id[family_id] = row
+        elif row_type == SUBJECT_ROW_TYPE:
+            participant_mme[row['participant_id']] = row.get('MME', {})
+        elif row_type == DISCOVERY_ROW_TYPE:
+            family = families_by_id[family_id]
+            for variant in row:
+                variant_rows.append({
+                    'MME': variant.pop('variantId') in participant_mme[variant['participant_id']].get('variant_ids', []),
+                    'phenotype_contribution': 'Full',
+                    **family,
+                    **variant,
+                })
 
-        variant_rows += get_genetic_findings_rows(
-            variants_by_family[family_id], individual, participant_id=individual.individual_id,
-            individual_data_types=individual.data_types, family_individuals=family_individuals[family_id],
-            post_process_variant=_post_process_variant_metadata, **family_data_by_id[family_id],
-        )
+    parse_anvil_metadata(
+        projects,
+        user=request.user,
+        individual_samples={i: None for i in individuals},
+        individual_data_types={i.individual_id: i.data_types for i in individuals},
+        add_row=_add_row,
+        variant_json_fields=['clinvar', 'variantId'],
+        mme_values={'variant_ids': ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId')},
+        include_metadata=True,
+        include_mondo=True,
+        omit_airtable=True,
+        proband_only_variants=True,
+        include_parent_mnvs=True,
+    )
 
     return create_json_response({'rows': variant_rows})

@@ -490,14 +490,20 @@ BASE_VARIANT_METADATA_ROW = {
     'additional_family_members_with_variant': '',
     'allele_balance_or_heteroplasmy_percentage': None,
     'analysisStatus': 'Q',
+    'analysis_groups': '',
     'clinvar': None,
+    'condition_id': None,
+    'consanguinity': 'Unknown',
     'end': None,
     'hgvsc': '',
     'hgvsp': '',
     'method_of_discovery': 'SR-ES',
     'notes': None,
     'phenotype_contribution': 'Full',
+    'phenotype_description': None,
+    'pmid_id': None,
     'seqr_chosen_consequence': None,
+    'solve_status': 'No',
     'svName': None,
     'svType': None,
     'sv_name': None,
@@ -578,8 +584,8 @@ class ReportAPITest(AirtableTest):
             '24-hpo_absent', '25-phenotype_description', '26-solve_state'])
         self.assertIn([
             'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '34415322', 'dbgap_stady_id_1',
-            'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', 'Other', 'Middle Eastern', '-',
-            '-', 'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
+            'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', 'Middle Eastern or North African', '-', '-',
+            '-', 'OMIM:615120', 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
             'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508',
             'myopathy', 'No'], subject_file)
 
@@ -800,7 +806,7 @@ class ReportAPITest(AirtableTest):
         row = next(r for r in participant_file if r[0] == 'Broad_NA19675_1')
         self.assertListEqual([
             'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
-            '34415322|33665635', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
+            '34415322', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
             'Middle Eastern or North African', '', '', '21', 'Affected', 'myopathy', '18', 'No', 'No',
         ], row)
         hispanic_row = next(r for r in participant_file if r[0] == 'Broad_HG00731')
@@ -1062,11 +1068,11 @@ class ReportAPITest(AirtableTest):
         test_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000012_12')
         self.assertDictEqual(test_row, {
             'projectGuid': 'R0003_test',
-            'project_id': 'Test Reprocessed Project',
+            'internal_project_id': 'Test Reprocessed Project',
             'familyGuid': 'F000012_12',
             'family_id': '12',
             'displayName': '12',
-            'solve_state': 'No',
+            'solve_status': 'No',
             'actual_inheritance': 'unknown',
             'date_data_generation': '2017-02-05',
             'data_type': 'WES',
@@ -1082,7 +1088,7 @@ class ReportAPITest(AirtableTest):
             'phenotype_description': None,
             'analysisStatus': 'Q',
             'analysis_groups': '',
-            'consanguinity': 'None suspected',
+            'consanguinity': 'Unknown',
         })
 
         # Test all projects
@@ -1097,11 +1103,11 @@ class ReportAPITest(AirtableTest):
         test_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000003_3')
         self.assertDictEqual(test_row, {
             'projectGuid': 'R0001_1kg',
-            'project_id': '1kg project nåme with uniçøde',
+            'internal_project_id': '1kg project nåme with uniçøde',
             'familyGuid': 'F000003_3',
             'family_id': '3',
             'displayName': '3',
-            'solve_state': 'No',
+            'solve_status': 'No',
             'actual_inheritance': '',
             'date_data_generation': '2017-02-05',
             'data_type': 'WES',
@@ -1113,7 +1119,7 @@ class ReportAPITest(AirtableTest):
             'phenotype_description': None,
             'analysisStatus': 'Q',
             'analysis_groups': 'Accepted; Test Group 1',
-            'consanguinity': 'None suspected',
+            'consanguinity': 'Unknown',
         })
 
         # Test empty project
@@ -1152,7 +1158,7 @@ class ReportAPITest(AirtableTest):
             'phenotype_contribution': 'Full',
             'pos': 248367227,
             'projectGuid': 'R0001_1kg',
-            'project_id': '1kg project nåme with uniçøde',
+            'internal_project_id': '1kg project nåme with uniçøde',
             'ref': 'TC',
             'variant_inheritance': 'paternal',
             'variant_reference_assembly': 'GRCh37',
@@ -1178,7 +1184,7 @@ class ReportAPITest(AirtableTest):
             'participant_id': 'HG00731',
             'pos': 1912634,
             'projectGuid': 'R0001_1kg',
-            'project_id': '1kg project nåme with uniçøde',
+            'internal_project_id': '1kg project nåme with uniçøde',
             'ref': 'C',
             'transcript': 'ENST00000371839',
             'variant_inheritance': 'de novo',
@@ -1207,6 +1213,7 @@ class ReportAPITest(AirtableTest):
             'displayName': '12',
             'familyGuid': 'F000012_12',
             'family_id': '12',
+            'family_history': 'Yes',
             'gene': 'OR4G11P',
             'gene_id': 'ENSG00000240361',
             'gene_known_for_phenotype': 'Known',
@@ -1216,7 +1223,7 @@ class ReportAPITest(AirtableTest):
             'participant_id': 'NA20889',
             'pos': 248367227,
             'projectGuid': 'R0003_test',
-            'project_id': 'Test Reprocessed Project',
+            'internal_project_id': 'Test Reprocessed Project',
             'ref': 'TC',
             'seqr_chosen_consequence': 'intron_variant',
             'transcript': 'ENST00000505820',
@@ -1233,6 +1240,7 @@ class ReportAPITest(AirtableTest):
             'end': 249045898,
             'familyGuid': 'F000012_12',
             'family_id': '12',
+            'family_history': 'Yes',
             'gene': None,
             'gene_id': None,
             'gene_known_for_phenotype': 'Known',
@@ -1240,7 +1248,7 @@ class ReportAPITest(AirtableTest):
             'participant_id': 'NA20889',
             'pos': 249045487,
             'projectGuid': 'R0003_test',
-            'project_id': 'Test Reprocessed Project',
+            'internal_project_id': 'Test Reprocessed Project',
             'ref': None,
             'svType': 'DEL',
             'sv_name': 'DEL:chr1:249045487-249045898',

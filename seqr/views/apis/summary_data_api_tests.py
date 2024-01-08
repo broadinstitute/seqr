@@ -35,13 +35,12 @@ SAVED_VARIANT_RESPONSE_KEYS = {
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "projectGuid": "R0003_test",
     "num_saved_variants": 2,
-    "solve_state": "No",
+    "solve_status": "No",
     "sample_id": "NA20889",
     "gene_known_for_phenotype-1": "Known",
     "gene_known_for_phenotype-2": "Known",
     "variant_inheritance-1": "unknown",
     "variant_inheritance-2": "unknown",
-    "hpo_absent": "",
     'genetic_findings_id-1': 'NA20889_1_248367227',
     'genetic_findings_id-2': 'NA20889_1_249045487',
     "hgvsc-1": "c.3955G>A",
@@ -59,11 +58,10 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "maternal_guid": "",
     "paternal_guid": "",
     "hgvsp-1": "c.1586-17C>G",
-    "project_id": "Test Reprocessed Project",
+    "internal_project_id": "Test Reprocessed Project",
     "pos-1": 248367227,
     "data_type": "WES",
     "familyGuid": "F000012_12",
-    "congenital_status": "Unknown",
     "family_history": "Yes",
     "hpo_present": "HP:0011675 (Arrhythmia)|HP:0001509 ()",
     "transcript-1": "ENST00000505820",
@@ -85,10 +83,10 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "family_id": "12",
     "displayName": "12",
     "MME": "Yes",
-    "subject_id": "NA20889",
+    "participant_id": "NA20889",
     "individual_guid": "I000017_na20889",
     "proband_relationship": "Self",
-    "consanguinity": "None suspected",
+    "consanguinity": "Unknown",
     'analysis_groups': '',
     'alt-2': None,
     'ref-2': None,
@@ -116,25 +114,22 @@ EXPECTED_SAMPLE_METADATA_ROW = {
 }
 EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
 EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
-    'subject_id': 'NA21234',
+    'participant_id': 'NA21234',
     'sample_id': 'NA21234',
     'familyGuid': 'F000014_14',
     'family_id': '14',
     'displayName': '14',
     'projectGuid': 'R0004_non_analyst_project',
-    'project_id': 'Non-Analyst Project',
+    'internal_project_id': 'Non-Analyst Project',
     'affected_status': 'Affected',
     'analysisStatus': 'Rncc',
     'ancestry': '',
-    'congenital_status': 'Unknown',
-    'consanguinity': 'None suspected',
+    'consanguinity': 'Unknown',
     'data_type': 'WGS',
     'date_data_generation': '2018-02-05',
     'disorders': None,
     'filter_flags': '',
     'individual_guid': 'I000018_na21234',
-    'hpo_absent': '',
-    'hpo_present': '',
     'variant_inheritance-1': 'unknown',
     'maternal_guid': '',
     'maternal_id': '',
@@ -148,7 +143,7 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'pmid_id': None,
     'proband_relationship': 'Self',
     'sex': 'Female',
-    'solve_state': 'No',
+    'solve_status': 'No',
     'alt-1': 'T',
     'chrom-1': '1',
     'gene_known_for_phenotype-1': 'Candidate',
@@ -549,14 +544,14 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertSetEqual({r['subject_id'] for r in response_json['rows']}, expected_individuals)
+        self.assertSetEqual({r['participant_id'] for r in response_json['rows']}, expected_individuals)
         self.assertEqual(len(response_json['rows']), len(expected_individuals) + (2 if has_duplicate else 0))
-        test_row = next(r for r in response_json['rows'] if r['subject_id'] == 'NA20889')
+        test_row = next(r for r in response_json['rows'] if r['participant_id'] == 'NA20889')
         self.assertDictEqual(
             EXPECTED_SAMPLE_METADATA_ROW if has_airtable else EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row
         )
         if has_duplicate:
-            self.assertEqual(len([r['subject_id'] for r in response_json['rows'] if r['subject_id'] == 'NA20888']), 2)
+            self.assertEqual(len([r['participant_id'] for r in response_json['rows'] if r['participant_id'] == 'NA20888']), 2)
 
     @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 2)
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
@@ -605,7 +600,7 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         rows = response.json()['rows']
         self.assertEqual(len(rows), 2)
-        test_row = next(r for r in rows if r['subject_id'] == 'NA21234')
+        test_row = next(r for r in rows if r['participant_id'] == 'NA21234')
         self.assertDictEqual(test_row, EXPECTED_NO_GENE_SAMPLE_METADATA_ROW)
 
         # Test analyst access

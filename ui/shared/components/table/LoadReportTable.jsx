@@ -13,11 +13,12 @@ const SEARCH_CATEGORIES = ['projects']
 
 const getResultHref = urlBase => result => `/${urlBase}/${result.key}`
 
-const PROJECT_ID_FIELD = 'project_id'
+const PROJECT_ID_FIELD = 'internal_project_id'
 
 const getTableColumns = columns => ([
   {
     name: PROJECT_ID_FIELD,
+    content: 'project_id',
     format:
       row => <Link to={`/project/${row.projectGuid}/project_page`} target="_blank">{row[PROJECT_ID_FIELD]}</Link>,
     secondaryExportColumn: 'projectGuid',
