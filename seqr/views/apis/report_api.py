@@ -244,7 +244,8 @@ GENETIC_FINDINGS_TABLE_COLUMNS = {
     'variant_inheritance', 'linked_variant', 'additional_family_members_with_variant', 'method_of_discovery',
 }
 
-RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS + ['reference_assembly_uri']
+RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS + [
+    'reference_assembly_uri', 'tissue_affected_status', 'Primary_Biosample']
 DATA_TYPE_OMIT = {
     'wgs': ['targeted_regions_method'] + RNA_ONLY, 'wes': RNA_ONLY, 'rna': [
         'targeted_regions_method', 'target_insert_size', 'mean_coverage', 'aligned_dna_short_read_file',
@@ -277,6 +278,20 @@ WARN_MISSING_CONDITIONAL_COLUMNS = {
     'age_at_enrollment': lambda row: row['affected_status'] == 'Affected',
     'known_condition_name': lambda row: row.get('condition_id'),
 }
+
+INDIVIDUAL_BIOSAMPLE_LOOKUP = dict(Individual.BIOSAMPLE_CHOICES)
+BIOSAMPLE_LOOKUP = {k: INDIVIDUAL_BIOSAMPLE_LOOKUP[v] for k, v in {
+    'Tissue': 'T',
+    'Saliva': 'S',
+    'Skin': 'SE',
+    'Skin Epidermis': 'SE',
+    'Brain Tissue': 'NT',
+    'Muscle': 'MT',
+    'Blood': 'WB',
+    'Buccal': 'BM',
+    'Nasal Epithelium': 'NE',
+}.items()}
+BIOSAMPLE_LOOKUP['Fibroblast'] = 'CL: 0000057'
 
 HPO_QUALIFIERS = {
     'age_of_onset': {
@@ -415,27 +430,23 @@ def gregor_export(request):
 
         airtable_metadata = airtable_metadata_by_participant.get(participant[PARTICIPANT_ID_FIELD]) or {}
 
-        analyte_ids = set()
+        has_analyte = False
         # airtable data
         for data_type in grouped_data_type_individuals[participant['participant_id']]:
             if data_type not in airtable_metadata:
                 continue
-            row = _get_airtable_row(data_type, airtable_metadata)
-            analyte_ids.add(row['analyte_id'])
-            is_rna = data_type == 'RNA'
+            is_rna, row = _get_airtable_row(data_type, airtable_metadata)
+            has_analyte = True
+            analyte_rows.append({**participant, **row})
             if not is_rna:
-                row['alignment_software'] = row['alignment_software_dna']
                 experiment_ids_by_participant[participant['participant_id']] = row['experiment_dna_short_read_id']
             (airtable_rna_rows if is_rna else airtable_rows).append(row)
             experiment_lookup_rows.append(
                 {'participant_id': participant['participant_id'], **_get_experiment_lookup_row(is_rna, row)}
             )
 
-        # analyte table
-        if participant['analyte_id'] and not analyte_ids:
-            analyte_ids.add(participant['analyte_id'])
-        for analyte_id in analyte_ids:
-            analyte_rows.append({**participant, 'analyte_id': analyte_id})
+        if participant['analyte_id'] and not has_analyte:
+            analyte_rows.append(participant)
 
     # Add experiment IDs
     for variant in genetic_findings_rows:
@@ -531,7 +542,7 @@ def _get_airtable_row(data_type, airtable_metadata):
     collaborator_sample_id = data_type_metadata[COLLABORATOR_SAMPLE_ID_FIELD]
     experiment_short_read_id = f'Broad_{data_type_metadata.get("experiment_type", "NA")}_{collaborator_sample_id}'
     aligned_short_read_id = f'{experiment_short_read_id}_1'
-    return {
+    row = {
         'analyte_id': _get_analyte_id(data_type_metadata),
         'experiment_dna_short_read_id': experiment_short_read_id,
         'experiment_rna_short_read_id': experiment_short_read_id,
@@ -541,6 +552,16 @@ def _get_airtable_row(data_type, airtable_metadata):
         **airtable_metadata,
         **data_type_metadata,
     }
+    is_rna = data_type == 'RNA'
+    if is_rna:
+        biosamples = row.get('Primary_Biosample') or [None]
+        row.update({
+            'analyte_type': 'RNA',
+            'primary_biosample': next((BIOSAMPLE_LOOKUP[b] for b in biosamples if b in BIOSAMPLE_LOOKUP), biosamples[0]),
+        })
+    else:
+        row['alignment_software'] = row['alignment_software_dna']
+    return is_rna, row
 
 
 def _format_gregor_id(id_string, default='0'):
