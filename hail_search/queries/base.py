@@ -10,6 +10,7 @@ from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVE
     UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
+SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 
 logger = logging.getLogger(__name__)
 
@@ -250,14 +251,14 @@ class BaseHailTableQuery(object):
                 self._ht = None
 
     @classmethod
-    def _get_generic_table_path(cls, genome_version, path):
-        return f'{DATASETS_DIR}/{genome_version}/{cls.DATA_TYPE}/{path}'
+    def _get_generic_table_path(cls, genome_version, path, use_ssd_dir=False):
+        return f'{SSD_DATASETS_DIR if use_ssd_dir else DATASETS_DIR}/{genome_version}/{cls.DATA_TYPE}/{path}'
 
-    def _get_table_path(self, path):
-        return self._get_generic_table_path(self._genome_version, path)
+    def _get_table_path(self, path, use_ssd_dir=False):
+        return self._get_generic_table_path(self._genome_version, path, use_ssd_dir=use_ssd_dir)
 
-    def _read_table(self, path, drop_globals=None):
-        table_path = self._get_table_path(path)
+    def _read_table(self, path, drop_globals=None, use_ssd_dir=False):
+        table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
             ht_globals = hl.read_table(table_path).globals
@@ -281,7 +282,7 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
-            family_ht = self._read_table(f'families/{family_guid}.ht')
+            family_ht = self._read_table(f'families/{family_guid}.ht', use_ssd_dir=True)
             families_ht, _ = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = []
