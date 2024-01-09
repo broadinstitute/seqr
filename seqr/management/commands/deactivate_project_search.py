@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from seqr.models import Project, Sample
-from seqr.utils.search.utils import backend_specific_call
 
 import logging
 logger = logging.getLogger(__name__)
