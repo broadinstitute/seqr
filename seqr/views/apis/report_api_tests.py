@@ -164,7 +164,9 @@ AIRTABLE_GREGOR_RECORDS = {
         'percent_unaligned_rna': '1.71',
         'percent_mRNA': '80.2',
         'percent_rRNA': '5.9',
+        'Primary_Biosample_rna': ['Liver', 'Fibroblast'],
         'RIN_rna': '8.9818',
+        'tissue_affected_status_rna': 'Yes',
         'total_reads_rna': '106,842,386',
         'within_site_batch_name_rna': 'LCSET-26942',
         'estimated_library_size_rna': '19,480,858',
@@ -862,6 +864,8 @@ class ReportAPITest(AirtableTest):
             ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No'],
             row)
         self.assertIn(
+            ['Broad_SM-N1P91', 'Broad_NA19679', 'RNA', '', 'CL: 0000057', '', '', 'Yes'], analyte_file)
+        self.assertIn(
             ['Broad_SM-L5QMP', 'Broad_NA20888', '', '', '', '', '', 'No'], analyte_file)
         self.assertEqual(
             ['Broad_SM-L5QMWP', 'Broad_NA20888', '', '', '', '', '', 'No'] in analyte_file,
@@ -1033,8 +1037,8 @@ class ReportAPITest(AirtableTest):
         self.assert_expected_airtable_call(len(mondo_ids) + 1, f"OR({secondary_sample_filter})", sample_fields)
         metadata_fields = [
             'CollaboratorParticipantID', '5prime3prime_bias_rna', 'CollaboratorSampleID_rna', 'CollaboratorSampleID_wes',
-            'CollaboratorSampleID_wgs', 'RIN_rna', 'SMID_rna', 'SMID_wes', 'SMID_wgs', 'aligned_dna_short_read_file_wes',
-            'aligned_dna_short_read_file_wgs', 'aligned_dna_short_read_index_file_wes',
+            'CollaboratorSampleID_wgs', 'Primary_Biosample_rna', 'RIN_rna', 'SMID_rna', 'SMID_wes', 'SMID_wgs',
+            'aligned_dna_short_read_file_wes', 'aligned_dna_short_read_file_wgs', 'aligned_dna_short_read_index_file_wes',
             'aligned_dna_short_read_index_file_wgs', 'aligned_dna_short_read_set_id',
             'aligned_rna_short_read_file', 'aligned_rna_short_read_index_file', 'alignment_log_file_rna',
             'alignment_software_dna', 'alignment_software_rna', 'analysis_details', 'called_variants_dna_file',
@@ -1046,8 +1050,8 @@ class ReportAPITest(AirtableTest):
             'read_length_wgs', 'reference_assembly', 'reference_assembly_uri_rna', 'seq_library_prep_kit_method_rna',
             'seq_library_prep_kit_method_wes', 'seq_library_prep_kit_method_wgs', 'sequencing_platform_rna',
             'sequencing_platform_wes', 'sequencing_platform_wgs', 'single_or_paired_ends_rna', 'target_insert_size_wes',
-            'target_insert_size_wgs', 'targeted_region_bed_file', 'targeted_regions_method_wes', 'total_reads_rna',
-            'variant_types', 'within_site_batch_name_rna',
+            'target_insert_size_wgs', 'targeted_region_bed_file', 'targeted_regions_method_wes', 'tissue_affected_status_rna',
+            'total_reads_rna', 'variant_types', 'within_site_batch_name_rna',
         ]
         self.assert_expected_airtable_call(
             len(mondo_ids) + 2, "OR(CollaboratorParticipantID='NA19675',CollaboratorParticipantID='NA19679',CollaboratorParticipantID='NA20888',CollaboratorParticipantID='VCGS_FAM203_621')",
