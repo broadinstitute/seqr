@@ -70,16 +70,18 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 'F000014_14': ['NA21234'],
             },
         }
-        mock_subprocess.return_value.wait.return_value = 0
+        mock_subprocess.return_value.wait.return_value = 1
         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
 
         with self.assertRaises(CommandError) as ce:
-            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
+            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08', '--allow-failed')
         self.assertEqual(
             str(ce.exception), 'Invalid families in run metadata GRCh38/SNV_INDEL: auto__2023-08-08 - F0000123_ABC')
+        mock_logger.warning.assert_called_with('Loading for failed run GRCh38/SNV_INDEL: auto__2023-08-08')
 
         metadata['families']['F000011_11'] = metadata['families'].pop('F0000123_ABC')
         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
+        mock_subprocess.return_value.wait.return_value = 0
         with self.assertRaises(CommandError) as ce:
             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
         self.assertEqual(
@@ -98,6 +100,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
 
         # Test success
+        mock_logger.reset_mock()
         mock_subprocess.reset_mock()
         call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
 
@@ -111,6 +114,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             mock.call('Loading 4 WES SNV_INDEL samples in 2 projects'),
             mock.call('DONE'),
         ])
+        mock_logger.warining.assert_not_called()
 
         mock_redis.return_value.delete.assert_called_with('search_results__*')
         mock_utils_logger.info.assert_called_with('Reset 1 cached results')
