@@ -1120,6 +1120,9 @@ class ReportAPITest(AirtableTest):
             'analysisStatus': 'Q',
             'analysis_groups': 'Accepted; Test Group 1',
             'consanguinity': 'Unknown',
+            'condition_id': 'OMIM:615123',
+            'known_condition_name': '',
+            'condition_inheritance': '',
         })
 
         # Test empty project
