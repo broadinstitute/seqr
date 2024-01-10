@@ -288,7 +288,7 @@ class BaseHailTableQuery(object):
             filtered_project_hts = []
             exception_messages = set()
             for project_guid, project_sample_data in project_samples.items():
-                project_ht = self._read_table(f'projects/{project_guid}.ht')
+                project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True)
                 try:
                     filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
                 except HTTPBadRequest as e:
