@@ -21,6 +21,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('path')
         parser.add_argument('version')
+        parser.add_argument('--allow-failed', action='store_true')
 
     def handle(self, *args, **options):
         path = options['path']
@@ -34,7 +35,10 @@ class Command(BaseCommand):
         logger.info(f'Loading new samples from {path}: {version}')
         gs_path = GS_PATH_TEMPLATE.format(path=path, version=version)
         if not does_file_exist(gs_path + '_SUCCESS'):
-            raise CommandError(f'Run failed for {path}: {version}, unable to load data')
+            if options['allow_failed']:
+                logger.warning(f'Loading for failed run {path}: {version}')
+            else:
+                raise CommandError(f'Run failed for {path}: {version}, unable to load data')
 
         metadata = json.loads(next(line for line in file_iter(gs_path + 'metadata.json')))
         families = Family.objects.filter(guid__in=metadata['families'].keys())
