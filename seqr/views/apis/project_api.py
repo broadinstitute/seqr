@@ -7,7 +7,7 @@ from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Max, Q, Case, When, Value
-from django.db.models.functions import JSONObject
+from django.db.models.functions import JSONObject, TruncDate
 from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
@@ -211,11 +211,24 @@ def project_overview(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     sample_models = Sample.objects.filter(individual__family__project=project)
+
+    active_samples = sample_models.filter(is_active=True)
+    first_loaded_samples = sample_models.order_by('individual__family', 'loaded_date').distinct('individual__family')
+    samples_by_guid = {}
+    for samples in [active_samples, first_loaded_samples]:
+        samples_by_guid.update({s['sampleGuid']: s for s in get_json_for_samples(samples, project_guid=project_guid)})
+
+    sample_load_counts = sample_models.values(
+        'sample_type', 'dataset_type', loadedDate=TruncDate('loaded_date'),
+    ).order_by('loadedDate').annotate(familyCounts=ArrayAgg('individual__family__guid'))
+    grouped_sample_counts = defaultdict(list)
+    for s in sample_load_counts:
+        s['familyCounts'] = {f: s['familyCounts'].count(f) for f in s['familyCounts']}
+        grouped_sample_counts[f'{s.pop("sample_type")}__{s.pop("dataset_type")}'].append(s)
+
     response = {
-        'projectsByGuid': {project_guid: {'projectGuid': project_guid}},
-        'samplesByGuid': {
-            s['sampleGuid']: s for s in get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
-        },
+        'projectsByGuid': {project_guid: {'projectGuid': project_guid, 'sampleCounts': grouped_sample_counts}},
+        'samplesByGuid': samples_by_guid,
     }
 
     add_project_tag_types(response['projectsByGuid'])
