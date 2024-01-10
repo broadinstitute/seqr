@@ -13,6 +13,7 @@ import {
   getSpliceOutliersByChromFamily,
 } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
+import CopyToClipboardButton from '../../buttons/CopyToClipboardButton'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
@@ -106,7 +107,7 @@ const DividedLink = styled.a.attrs({ target: '_blank', rel: 'noreferrer' })`
 
 const DividedButtonLink = DividedLink.withComponent(ButtonLink)
 
-const UcscBrowserLink = ({ genomeVersion, chrom, pos, refLength, endOffset }) => {
+const UcscBrowserLink = ({ genomeVersion, chrom, pos, refLength, endOffset, copyPosition }) => {
   const posInt = parseInt(pos, 10)
   const ucscGenomeVersion = genomeVersion === GENOME_VERSION_37 ? '19' : genomeVersion
 
@@ -115,11 +116,14 @@ const UcscBrowserLink = ({ genomeVersion, chrom, pos, refLength, endOffset }) =>
 
   const position = getLocus(chrom, posInt, 10, endOffset || 0)
 
-  return (
+  const positionSummary = `${chrom}:${posInt}${endOffset ? `-${posInt + endOffset}` : ''}`
+  const positionLink = (
     <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${ucscGenomeVersion}&${highlightQ}position=${position}`} target="_blank" rel="noreferrer">
-      {`${chrom}:${posInt}${endOffset ? `-${posInt + endOffset}` : ''}`}
+      {positionSummary}
     </a>
   )
+  return copyPosition ?
+    <CopyToClipboardButton text={positionSummary}>{positionLink}</CopyToClipboardButton> : positionLink
 }
 
 UcscBrowserLink.propTypes = {
@@ -128,6 +132,7 @@ UcscBrowserLink.propTypes = {
   pos: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   refLength: PropTypes.number,
   endOffset: PropTypes.number,
+  copyPosition: PropTypes.bool,
 }
 
 const VariantPosition = ({ variant, svType, useLiftover }) => {
@@ -158,6 +163,7 @@ const VariantPosition = ({ variant, svType, useLiftover }) => {
         pos={pos}
         refLength={ref && ref.length}
         endOffset={endOffset}
+        copyPosition={!useLiftover}
       />
       {end && showEndLocation && (
         <span>
