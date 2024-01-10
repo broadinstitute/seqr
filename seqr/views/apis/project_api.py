@@ -11,7 +11,7 @@ from django.db.models.functions import JSONObject
 from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, SavedVariant, \
+from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, \
     FamilyNote, CAN_EDIT
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.individual_utils import delete_individuals
@@ -306,6 +306,9 @@ def project_mme_submisssions(request, project_guid):
 
 
 def _add_tag_type_counts(project, project_variant_tags):
+    project_tags = VariantTag.objects.filter(saved_variants__family__project=project)
+    project_notes = VariantNote.objects.filter(saved_variants__family__project=project)
+
     family_tag_type_counts = defaultdict(dict)
     note_tag_type = {
         'variantTagTypeGuid': 'notes',
@@ -314,15 +317,13 @@ def _add_tag_type_counts(project, project_variant_tags):
         'description': '',
         'color': 'grey',
         'order': 100,
-        'numTags': SavedVariant.objects.filter(family__project=project, variantnote__isnull=False).distinct().count(),
+        'numTags': project_notes.aggregate(count=Count('saved_variants__guid', distinct=True))['count'],
     }
 
-    project_variants = VariantTag.objects.filter(saved_variants__family__project=project)
-
-    mme_counts_by_family = project_variants.filter(saved_variants__matchmakersubmissiongenes__isnull=False) \
+    mme_counts_by_family = project_tags.filter(saved_variants__matchmakersubmissiongenes__isnull=False) \
         .values('saved_variants__family__guid').annotate(count=Count('saved_variants__guid', distinct=True))
 
-    tag_counts_by_type_and_family = project_variants.values(
+    tag_counts_by_type_and_family = project_tags.values(
         'saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))
     for tag_type in project_variant_tags:
         current_tag_type_counts = mme_counts_by_family if tag_type['name'] == MME_TAG_NAME else [
