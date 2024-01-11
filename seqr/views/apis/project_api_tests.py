@@ -257,7 +257,7 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
         project_fields = {
-            'variantTagTypes', 'variantFunctionalTagTypes',
+            'variantTagTypes', 'variantFunctionalTagTypes', 'sampleCounts',
             'projectGuid', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
         }
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
@@ -285,9 +285,22 @@ class ProjectAPITest(object):
             'order': 99,
             'numTags': 1,
         })
+        self.assertDictEqual(project_response['sampleCounts'], {
+            'WES__SNV_INDEL': [{
+                'familyCounts': {
+                    'F000001_1': 3, 'F000002_2': 3, 'F000003_3': 1, 'F000004_4': 1, 'F000005_5': 1, 'F000006_6': 1,
+                    'F000007_7': 1, 'F000008_8': 1, 'F000010_10': 1,
+                },
+                'loadedDate': '2017-02-05',
+            }],
+            'WES__SV': [{'familyCounts': {'F000002_2': 3}, 'loadedDate': '2018-02-05'}],
+            'WGS__MITO': [{'familyCounts': {'F000002_2': 1}, 'loadedDate': '2022-02-05'}],
+            'RNA__SNV_INDEL': [{'familyCounts': {'F000001_1': 3}, 'loadedDate': '2017-02-05'}],
+        })
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
+        self.assertEqual(len(response_json['samplesByGuid']), 19)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
