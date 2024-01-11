@@ -552,7 +552,6 @@ const getIndividualsExportData = createSelector(
     }))], []),
 )
 
-// TODO - fetch samples for export
 const getSamplesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getIndividualsByGuid,

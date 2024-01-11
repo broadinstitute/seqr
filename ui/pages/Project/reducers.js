@@ -55,8 +55,11 @@ export const loadMmeSubmissions = () => loadCurrentProjectChildEntities('mme sub
 
 const loadFamilyNotes = () => loadCurrentProjectChildEntities('family notes', REQUEST_FAMILIES, RECEIVE_FAMILIES)
 
+const loadSamples = () => loadCurrentProjectChildEntities('samples', REQUEST_INDIVIDUALS)
+
 export const loadProjectExportData = () => (dispatch, getState) => Promise.all([
   loadIndividuals()(dispatch, getState),
+  loadSamples()(dispatch, getState),
   loadFamilyNotes()(dispatch, getState),
 ])
 
