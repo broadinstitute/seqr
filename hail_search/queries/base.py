@@ -7,7 +7,7 @@ import os
 from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
-    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
+    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, UNKNOWN_AFFECTED, UNKNOWN_AFFECTED_ID
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
@@ -363,7 +363,7 @@ class BaseHailTableQuery(object):
                 reason=f'The following samples are available in seqr but missing the loaded data: {", ".join(sorted(missing_samples))}'
             )
 
-        affected_id_map = {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID}
+        affected_id_map = {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID, UNKNOWN_AFFECTED: UNKNOWN_AFFECTED_ID}
         sample_index_affected_status = hl.dict({
             sample_id_index_map[s['sample_id']]: affected_id_map.get(s['affected']) for s in sample_data
         })
@@ -495,7 +495,7 @@ class BaseHailTableQuery(object):
             if field_config.override:
                 is_valid |= field_config.override(gt)
             if affected_only:
-                is_valid |= gt.affected_id == UNAFFECTED_ID
+                is_valid |= gt.affected_id != AFFECTED_ID
             return is_valid
 
         return passes_quality_field
