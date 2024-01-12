@@ -867,13 +867,13 @@ class HailSearchTestCase(AioHTTPTestCase):
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
             reason = resp.reason
-        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
+        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675_1, NA19678')
 
         search_body = get_hail_search_body(sample_data=MULTI_PROJECT_MISSING_SAMPLE_DATA)
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
             reason = resp.reason
-        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
+        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675_1, NA19678')
 
         search_body = get_hail_search_body(
             intervals=LOCATION_SEARCH['intervals'] + ['1:1-99999999999'], omit_sample_type='SV_WES',
