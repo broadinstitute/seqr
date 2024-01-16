@@ -138,7 +138,8 @@ from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, 
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
-    project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists
+    project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists, \
+    project_samples
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     grant_workspace_access, validate_anvil_vcf, add_workspace_data, get_anvil_vcf_list
@@ -202,6 +203,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
     'project/(?P<project_guid>[^/]+)/get_families': project_families,
     'project/(?P<project_guid>[^/]+)/get_individuals': project_individuals,
+    'project/(?P<project_guid>[^/]+)/get_samples': project_samples,
     'project/(?P<project_guid>[^/]+)/get_family_notes': project_family_notes,
     'project/(?P<project_guid>[^/]+)/get_mme_submissions': project_mme_submisssions,
     'project/(?P<project_guid>[^/]+)/get_analysis_groups': project_analysis_groups,

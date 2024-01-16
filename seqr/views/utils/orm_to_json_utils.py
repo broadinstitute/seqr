@@ -328,15 +328,7 @@ def add_individual_hpo_details(parsed_individuals):
                 feature.update({'category': hpo.category_id, 'label': hpo.name})
 
 
-def get_json_for_samples(samples, project_guid=None, family_guid=None, individual_guid=None, skip_nested=False, **kwargs):
-    """Returns a JSON representation of the given list of Samples.
-
-    Args:
-        samples (array): array of django models for the Samples.
-    Returns:
-        array: array of json objects
-    """
-
+def _get_sample_json_kwargs(project_guid=None, family_guid=None, individual_guid=None, skip_nested=False, **kwargs):
     if project_guid or not skip_nested:
         additional_kwargs = {'nested_fields': [
             {'fields': ('individual', 'guid'), 'value': individual_guid},
@@ -345,8 +337,19 @@ def get_json_for_samples(samples, project_guid=None, family_guid=None, individua
         ]}
     else:
         additional_kwargs = {'additional_model_fields': ['individual_id']}
+    return {'guid_key': 'sampleGuid', **additional_kwargs, **kwargs}
 
-    return _get_json_for_models(samples, guid_key='sampleGuid', **additional_kwargs, **kwargs)
+
+def get_json_for_samples(samples, **kwargs):
+    """Returns a JSON representation of the given list of Samples.
+
+    Args:
+        samples (array): array of django models for the Samples.
+    Returns:
+        array: array of json objects
+    """
+
+    return get_json_for_queryset(samples, **_get_sample_json_kwargs(**kwargs))
 
 
 def get_json_for_sample(sample, **kwargs):
@@ -358,7 +361,7 @@ def get_json_for_sample(sample, **kwargs):
         dict: json object
     """
 
-    return _get_json_for_model(sample, get_json_for_models=get_json_for_samples, **kwargs)
+    return _get_json_for_model(sample, **_get_sample_json_kwargs(**kwargs))
 
 
 def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False, **kwargs):
