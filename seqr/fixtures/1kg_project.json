@@ -121,7 +121,7 @@
         "family_id": "1",
         "display_name": "",
         "description": "test descripti\u00f8n",
-        "post_discovery_omim_numbers": [615120, 615123],
+        "post_discovery_omim_numbers": [615123, 615120],
         "pedigree_image": "ped_1.png",
         "analysis_status": "Q",
         "coded_phenotype": "myopathy",
@@ -164,6 +164,7 @@
         "pedigree_image": "ped_3.png",
         "analysis_status": "Q",
         "case_review_notes": "",
+        "post_discovery_omim_numbers": [615123],
         "case_review_summary": "internal_case_review_summary"
     }
 },

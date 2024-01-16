@@ -257,7 +257,7 @@ MatchmakerOverview.propTypes = {
 class DatasetSection extends React.PureComponent {
 
   static propTypes = {
-    loadedSampleCounts: PropTypes.object.isRequired,
+    loadedSampleCounts: PropTypes.arrayOf(PropTypes.object).isRequired,
   }
 
   state = { showAll: false }
@@ -269,9 +269,9 @@ class DatasetSection extends React.PureComponent {
   render() {
     const { loadedSampleCounts } = this.props
     const { showAll } = this.state
-    const allLoads = Object.keys(loadedSampleCounts).sort().map(loadedDate => (
+    const allLoads = loadedSampleCounts.map(({ loadedDate, count }) => (
       <div key={loadedDate}>
-        {`${new Date(loadedDate).toLocaleDateString()} - ${loadedSampleCounts[loadedDate]} samples`}
+        {`${new Date(loadedDate).toLocaleDateString()} - ${count} samples`}
       </div>
     ))
 
@@ -290,7 +290,7 @@ class DatasetSection extends React.PureComponent {
 }
 
 const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, user, elasticsearchEnabled }) => {
-  const datasetSections = Object.entries(samplesByType).map(([sampleTypeKey, loadedSampleCounts]) => {
+  const datasetSections = samplesByType.map(([sampleTypeKey, loadedSampleCounts]) => {
     const [sampleType, datasetType] = sampleTypeKey.split('__')
     return {
       key: sampleTypeKey,

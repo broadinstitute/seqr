@@ -841,7 +841,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
     async def test_in_silico_filter(self):
-        in_silico = {'eigen': '5.5', 'sift': 'D'}
+        in_silico = {'eigen': '5.5', 'mut_taster': 'N'}
         await self._assert_expected_search(
             [VARIANT1, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], in_silico=in_silico,
             sample_data=FAMILY_2_ALL_SAMPLE_DATA,
@@ -867,13 +867,13 @@ class HailSearchTestCase(AioHTTPTestCase):
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
             reason = resp.reason
-        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
+        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675_1, NA19678')
 
         search_body = get_hail_search_body(sample_data=MULTI_PROJECT_MISSING_SAMPLE_DATA)
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
             reason = resp.reason
-        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675, NA19678')
+        self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675_1, NA19678')
 
         search_body = get_hail_search_body(
             intervals=LOCATION_SEARCH['intervals'] + ['1:1-99999999999'], omit_sample_type='SV_WES',

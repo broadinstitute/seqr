@@ -7,9 +7,10 @@ import os
 from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
-    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
+    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, UNKNOWN_AFFECTED, UNKNOWN_AFFECTED_ID
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
+SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 
 logger = logging.getLogger(__name__)
 
@@ -250,14 +251,14 @@ class BaseHailTableQuery(object):
                 self._ht = None
 
     @classmethod
-    def _get_generic_table_path(cls, genome_version, path):
-        return f'{DATASETS_DIR}/{genome_version}/{cls.DATA_TYPE}/{path}'
+    def _get_generic_table_path(cls, genome_version, path, use_ssd_dir=False):
+        return f'{SSD_DATASETS_DIR if use_ssd_dir else DATASETS_DIR}/{genome_version}/{cls.DATA_TYPE}/{path}'
 
-    def _get_table_path(self, path):
-        return self._get_generic_table_path(self._genome_version, path)
+    def _get_table_path(self, path, use_ssd_dir=False):
+        return self._get_generic_table_path(self._genome_version, path, use_ssd_dir=use_ssd_dir)
 
-    def _read_table(self, path, drop_globals=None):
-        table_path = self._get_table_path(path)
+    def _read_table(self, path, drop_globals=None, use_ssd_dir=False):
+        table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
             ht_globals = hl.read_table(table_path).globals
@@ -281,13 +282,13 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
-            family_ht = self._read_table(f'families/{family_guid}.ht')
+            family_ht = self._read_table(f'families/{family_guid}.ht', use_ssd_dir=True)
             families_ht, _ = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = []
             exception_messages = set()
             for project_guid, project_sample_data in project_samples.items():
-                project_ht = self._read_table(f'projects/{project_guid}.ht')
+                project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True)
                 try:
                     filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
                 except HTTPBadRequest as e:
@@ -362,7 +363,7 @@ class BaseHailTableQuery(object):
                 reason=f'The following samples are available in seqr but missing the loaded data: {", ".join(sorted(missing_samples))}'
             )
 
-        affected_id_map = {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID}
+        affected_id_map = {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID, UNKNOWN_AFFECTED: UNKNOWN_AFFECTED_ID}
         sample_index_affected_status = hl.dict({
             sample_id_index_map[s['sample_id']]: affected_id_map.get(s['affected']) for s in sample_data
         })
@@ -494,7 +495,7 @@ class BaseHailTableQuery(object):
             if field_config.override:
                 is_valid |= field_config.override(gt)
             if affected_only:
-                is_valid |= gt.affected_id == UNAFFECTED_ID
+                is_valid |= gt.affected_id != AFFECTED_ID
             return is_valid
 
         return passes_quality_field

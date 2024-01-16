@@ -28,7 +28,7 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
     PREDICTION_FIELDS_CONFIG = {
         'cadd': PredictionPath('cadd', 'PHRED'),
         'eigen': PredictionPath('eigen', 'Eigen_phred'),
-        'fathmm': PredictionPath('dbnsfp', 'fathmm_MKL_coding_pred'),
+        'fathmm': PredictionPath('dbnsfp', 'fathmm_MKL_coding_score'),
         'gnomad_noncoding': PredictionPath('gnomad_non_coding_constraint', 'z_score'),
         'mpc': PredictionPath('mpc', 'MPC'),
         'mut_pred': PredictionPath('dbnsfp', 'MutPred_score'),
@@ -37,9 +37,9 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         'splice_ai_consequence': PredictionPath(SPLICE_AI_FIELD, 'splice_consequence'),
         'vest': PredictionPath('dbnsfp', 'VEST4_score'),
         'mut_taster': PredictionPath('dbnsfp', 'MutationTaster_pred'),
-        'polyphen': PredictionPath('dbnsfp', 'Polyphen2_HVAR_pred'),
+        'polyphen': PredictionPath('dbnsfp', 'Polyphen2_HVAR_score'),
         'revel': PredictionPath('dbnsfp', 'REVEL_score'),
-        'sift': PredictionPath('dbnsfp', 'SIFT_pred'),
+        'sift': PredictionPath('dbnsfp', 'SIFT_score'),
     }
     PATHOGENICITY_FILTERS = {
         **MitoHailTableQuery.PATHOGENICITY_FILTERS,
