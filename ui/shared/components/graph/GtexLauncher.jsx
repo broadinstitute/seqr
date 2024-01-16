@@ -4,7 +4,7 @@ import { Segment } from 'semantic-ui-react'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
-export const GTEX_HOST = 'https://gtexportal.org/rest/v1/'
+export const GTEX_HOST = 'https://gtexportal.org/api/v2/'
 
 class GtexLauncher extends React.PureComponent {
 
@@ -18,11 +18,11 @@ class GtexLauncher extends React.PureComponent {
     const { geneId, launchGtex } = this.props
     new HttpRequestHelper(`${GTEX_HOST}reference/gene`,
       (responseJson) => {
-        launchGtex(responseJson.gene[0].gencodeId)
+        launchGtex(responseJson.data[0].gencodeId)
       },
       () => {
         launchGtex(geneId)
-      }).get({ format: 'json', geneId })
+      }).get({ format: 'json', geneId }, {}, false)
   }
 
   render() {

@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
-import { launch } from 'gtex-d3/src/GeneExpressionViolinPlot'
+import { launchBulkTissueViolinPlot } from 'gtex-d3/src/GeneExpressionViolinPlot'
 import 'gtex-d3/css/violin.css'
 
 import GtexLauncher, { GTEX_HOST } from './GtexLauncher'
@@ -104,13 +104,13 @@ const DIMENSIONS = {
 
 const URLS = {
   geneExp: `${GTEX_HOST}expression/geneExpression?gencodeId=`,
-  tissue: `${GTEX_HOST}dataset/tissueInfo?format=json`,
+  tissue: `${GTEX_HOST}dataset/tissueSiteDetail`,
 }
 
 const GTEX_CONTAINER_ID = 'gene-expression-plot'
 
-const launchGtex = (geneId) => {
-  launch(GTEX_CONTAINER_ID, `${GTEX_CONTAINER_ID}-tooltip`, geneId, '', URLS, MARGINS, DIMENSIONS)
+const launchGtex = (gencodeId) => {
+  launchBulkTissueViolinPlot(GTEX_CONTAINER_ID, `${GTEX_CONTAINER_ID}-tooltip`, gencodeId, '', URLS, MARGINS, DIMENSIONS)
 }
 
 export default props => (

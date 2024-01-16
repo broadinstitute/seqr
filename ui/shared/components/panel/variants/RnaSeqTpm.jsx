@@ -48,11 +48,11 @@ const launchGtex = (geneId, familyGuid) => (gencodeId) => {
 
       new HttpRequestHelper(`${GTEX_HOST}expression/geneExpression`,
         (gtexJson) => {
-          boxplotData.push(...gtexJson.geneExpression.map(({ data, tissueSiteDetailId }) => (
+          boxplotData.push(...gtexJson.data.map(({ data, tissueSiteDetailId }) => (
             { data, label: `*GTEx - ${TISSUE_DISPLAY[GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]}`, color: 'efefef' }
           )))
         },
-        () => {}).get({ tissueSiteDetailId: gtexTissuesId, gencodeId }).then(() => {
+        () => {}).get({ tissueSiteDetailId: gtexTissuesId, gencodeId }, {}, false).then(() => {
         const boxplot = new Boxplot(boxplotData, false)
         boxplot.render(GTEX_CONTAINER_ID, { ...PLOT_OPTIONS, marginRight })
       })
