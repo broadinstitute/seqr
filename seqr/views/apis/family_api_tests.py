@@ -28,6 +28,9 @@ PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 INDIVIDUAL_GUID = 'I000001_na19675'
 INDIVIDUAL2_GUID = 'I000002_na19678'
+INDIVIDUAL3_GUID = 'I000003_na19679'
+
+INDIVIDUAL_GUIDS = [INDIVIDUAL_GUID, INDIVIDUAL2_GUID, INDIVIDUAL3_GUID]
 
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -48,7 +51,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['familiesByGuid']), 1)
         family = response_json['familiesByGuid'][FAMILY_GUID]
-        family_fields = {'individualGuids', 'detailsLoaded'}
+        family_fields = {'individualGuids', 'detailsLoaded', 'postDiscoveryOmimOptions'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(family.keys()), family_fields)
         self.assertEqual(family['projectGuid'], PROJECT_GUID)
@@ -56,6 +59,13 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertListEqual(family['analysedBy'], [
             {'createdBy': 'Test No Access User', 'dataType': 'SNP', 'lastModifiedDate': '2022-07-22T19:27:08.563+00:00'},
         ])
+        self.assertListEqual(family['postDiscoveryOmimNumbers'], [615120, 615123])
+        self.assertDictEqual(family['postDiscoveryOmimOptions'], {
+            '615120': {'phenotypeMimNumber': 615120, 'phenotypes': [{
+                'geneSymbol': 'RP11', 'mimNumber': 103320, 'phenotypeMimNumber': 615120,
+                'phenotypeDescription': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
+                'phenotypeInheritance': 'Autosomal recessive, X-linked recessive', 'chrom': '1', 'start': 29554, 'end': 31109,
+            }]}})
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
@@ -63,8 +73,14 @@ class FamilyAPITest(AuthenticationTestCase):
                              'hasPhenotypeGeneScores'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
-        self.assertTrue(response_json['individualsByGuid'][INDIVIDUAL_GUID]['hasPhenotypeGeneScores'])
-        self.assertTrue(response_json['individualsByGuid'][INDIVIDUAL2_GUID]['hasPhenotypeGeneScores'])
+        self.assertListEqual(
+            [True, True, False],
+            [response_json['individualsByGuid'][guid].get('hasPhenotypeGeneScores', False) for guid in INDIVIDUAL_GUIDS]
+        )
+        self.assertListEqual(
+            [True, False, True],
+            [response_json['individualsByGuid'][guid].get('hasRnaOutlierData', False) for guid in INDIVIDUAL_GUIDS]
+        )
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
 
@@ -72,7 +88,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['samplesByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['samplesByGuid'].values()})
-        self.assertEqual(len(individual['sampleGuids']), 4)
+        self.assertEqual(len(individual['sampleGuids']), 3)
         self.assertTrue(set(individual['sampleGuids']).issubset(set(response_json['samplesByGuid'].keys())))
 
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
@@ -91,6 +107,44 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(len(response_json['familyNotesByGuid']), 3)
         self.assertSetEqual(set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS)
         self.assertSetEqual({FAMILY_GUID}, {f['familyGuid'] for f in response_json['familyNotesByGuid'].values()})
+
+        # Test discovery omim options
+        discovery_omim_url = reverse(family_page_data, args=['F000012_12'])
+        response = self.client.get(discovery_omim_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000012_12'})
+        self.assertListEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimNumbers'], [])
+        self.assertDictEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimOptions'], {'616126': {
+            'phenotypeMimNumber': 616126, 'phenotypes': [{
+                'chrom': '1',
+                'start': 11869,
+                'end': 14409,
+                'geneSymbol': 'DDX11L1',
+                'mimNumber': 147571,
+                'phenotypeMimNumber': 616126,
+                'phenotypeDescription': 'Immunodeficiency 38',
+                'phenotypeInheritance': 'Autosomal recessive',
+            }]}, '615120': {
+            'phenotypeMimNumber': 615120, 'phenotypes': [{
+                'chrom': '1',
+                'start': 29554,
+                'end': 31109,
+                'geneSymbol': 'RP11',
+                'mimNumber': 103320,
+                'phenotypeDescription': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
+                'phenotypeInheritance': 'Autosomal recessive, X-linked recessive',
+                'phenotypeMimNumber': 615120,
+            }, {
+                'chrom': '1',
+                'start': 249044482,
+                'end': 249055991,
+                'geneSymbol': None,
+                'mimNumber': 600315,
+                'phenotypeDescription': '?Immunodeficiency 16', 'phenotypeInheritance': 'Autosomal recessive',
+                'phenotypeMimNumber': 615120,
+            }]}})
 
         # Test analyst users have internal fields returned
         self.login_analyst_user()
@@ -193,6 +247,7 @@ class FamilyAPITest(AuthenticationTestCase):
             'families': [{'familyGuid': 'F000012_12'}]}))
         self.assertEqual(response.status_code, 200)
 
+    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_families_handler(self, mock_pm_group):
         url = reverse(delete_families_handler, args=[PROJECT_GUID])
@@ -211,6 +266,14 @@ class FamilyAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA19675_1'])
+
+        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
+            response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Unable to delete individuals with active MME submission: NA19675_1',
+            'Unable to delete individuals with active search sample: HG00731, HG00732, HG00733, NA19675_1, NA19678, NA19679',
+        ])
 
         # Test success
         MatchmakerSubmission.objects.update(deleted_date=datetime.now())
@@ -503,7 +566,7 @@ class FamilyAPITest(AuthenticationTestCase):
                 'ENSG00000268903': {
                     'chromGrch37': '1', 'chromGrch38': '1', 'clinGen': None, 'cnSensitivity': {},
                     'codingRegionSizeGrch37': 0, 'codingRegionSizeGrch38': 0, 'constraints': {},
-                    'endGrch37': 135895, 'endGrch38': 135895, 'genCc': {},
+                    'endGrch37': 135895, 'endGrch38': 135895, 'genCc': {}, 'sHet': {},
                     'gencodeGeneType': 'processed_pseudogene', 'geneId': 'ENSG00000268903',
                     'geneSymbol': 'AL627309.7', 'mimNumber': None, 'omimPhenotypes': [],
                     'startGrch37': 135141, 'startGrch38': 135141

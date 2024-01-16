@@ -3,7 +3,7 @@
 ![Unit Tests](https://github.com/populationgenomics/seqr/workflows/Unit%20Tests/badge.svg?branch=main) | ![Local Install Tests](https://github.com/populationgenomics/seqr/workflows/local%20install%20tests/badge.svg?branch=main)
 
 seqr is a web-based tool for rare disease genomics.
-This repository contains code that underlies the [Broad seqr instance](http://seqr.broadinstitute.org) and other seqr deployments. To check for any active incidents occuring on the Broad seqr instance, check [here](/INCIDENTS.md)
+This repository contains code that underlies the [Broad seqr instance](http://seqr.broadinstitute.org) and other seqr deployments. To check for any active incidents occurring on the Broad seqr instance, check [here](/INCIDENTS.md)
 
 ## Technical Overview
 

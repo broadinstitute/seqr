@@ -6,6 +6,7 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 import { getVersion } from 'redux/selectors'
+import { FAQ_PATH, PRIVACY_PATH, TOS_PATH } from 'shared/utils/constants'
 import { ButtonLink } from '../StyledComponents'
 
 const TableHeaderCell = styled(Table.HeaderCell)`
@@ -17,7 +18,13 @@ const TableHeaderCell = styled(Table.HeaderCell)`
   }
 `
 
-const SEQR_PAPER_URL = 'https://doi.org/10.1002/humu.24366'
+const FOOTER_LINKS = [
+  { to: FAQ_PATH, content: 'FAQ' },
+  { to: PRIVACY_PATH, content: 'Privacy Policy' },
+  { to: TOS_PATH, content: 'Terms of Service' },
+]
+
+const SEQR_PAPER_URL = 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9903206'
 export const SeqrPaperLink =
   ({ content }) => <a target="_blank" rel="noreferrer" href={SEQR_PAPER_URL}>{content || SEQR_PAPER_URL}</a>
 
@@ -49,8 +56,9 @@ const Footer = React.memo(({ version }) => (
             }
           />
         </TableHeaderCell>
-        <TableHeaderCell collapsing><Link to="/privacy_policy">Privacy Policy</Link></TableHeaderCell>
-        <TableHeaderCell collapsing><Link to="/terms_of_service">Terms of Service</Link></TableHeaderCell>
+        {FOOTER_LINKS.map(({ content, ...props }) => (
+          <TableHeaderCell key={content} collapsing><Link {...props}>{content}</Link></TableHeaderCell>
+        ))}
         <TableHeaderCell>
           For bug reports or feature requests please submit  &nbsp;
           <a href="https://github.com/populationgenomics/seqr/issues">Github Issues</a>

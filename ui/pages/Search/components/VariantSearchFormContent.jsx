@@ -5,6 +5,7 @@ import { FormSpy } from 'react-final-form'
 import styled from 'styled-components'
 import { Header, List, Grid } from 'semantic-ui-react'
 
+import { getElasticsearchEnabled } from 'redux/selectors'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField } from 'shared/components/form/FormHelpers'
 import { Select } from 'shared/components/form/Inputs'
@@ -19,7 +20,7 @@ import {
   MITO_FREQUENCIES, MITO_QUALITY_FILTER_FIELDS, SV_FREQUENCIES, SV_QUALITY_FILTER_FIELDS, CODING_IMPACT_GROUPS_SCREEN,
 } from 'shared/components/panel/search/constants'
 import {
-  ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, NO_SV_IN_SILICO_GROUPS, VEP_GROUP_SV_NEW,
+  ALL_INHERITANCE_FILTER, DATASET_TYPE_SNV_INDEL_CALLS, DATASET_TYPE_SV_CALLS, NO_SV_IN_SILICO_GROUPS, VEP_GROUP_SV_NEW,
   DATASET_TYPE_MITO_CALLS,
 } from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
@@ -124,9 +125,9 @@ const LOCATION_PANEL_WITH_GENE_LIST = {
   },
 }
 
-const ALL_DATASET_TYPE = `${DATASET_TYPE_MITO_CALLS},${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_VARIANT_CALLS}`
-const DATASET_TYPE_VARIANT_MITO = `${DATASET_TYPE_MITO_CALLS},${DATASET_TYPE_VARIANT_CALLS}`
-const DATASET_TYPE_VARIANT_SV = `${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_VARIANT_CALLS}`
+const ALL_DATASET_TYPE = `${DATASET_TYPE_MITO_CALLS},${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_SNV_INDEL_CALLS}`
+const DATASET_TYPE_VARIANT_MITO = `${DATASET_TYPE_MITO_CALLS},${DATASET_TYPE_SNV_INDEL_CALLS}`
+const DATASET_TYPE_VARIANT_SV = `${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_SNV_INDEL_CALLS}`
 
 const NO_HGMD_PANEL_PROPS = {
   headerProps: {
@@ -168,7 +169,7 @@ const PANELS = [
 ]
 
 const DATASET_TYPE_PANEL_PROPS = {
-  [DATASET_TYPE_VARIANT_CALLS]: {
+  [DATASET_TYPE_SNV_INDEL_CALLS]: {
     [ANNOTATION_PANEL.name]: {
       fieldLayout: annotationFieldLayout(
         [HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS_SCREEN],
@@ -198,7 +199,7 @@ const DATASET_TYPE_PANEL_PROPS = {
 }
 
 DATASET_TYPE_PANEL_PROPS[DATASET_TYPE_VARIANT_MITO] = {
-  ...DATASET_TYPE_PANEL_PROPS[DATASET_TYPE_VARIANT_CALLS],
+  ...DATASET_TYPE_PANEL_PROPS[DATASET_TYPE_SNV_INDEL_CALLS],
   [FREQUENCY_PANEL.name]: {
     fields: SNP_FREQUENCIES.concat(MITO_FREQUENCIES),
   },
@@ -213,7 +214,7 @@ const HAS_ANN_SECONDARY = true
 const NO_ANN_SECONDARY = false
 
 const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_MITO, DATASET_TYPE_VARIANT_SV,
-  DATASET_TYPE_VARIANT_CALLS].reduce((typeAcc, type) => {
+  DATASET_TYPE_SNV_INDEL_CALLS].reduce((typeAcc, type) => {
   const typePanelProps = DATASET_TYPE_PANEL_PROPS[type] || {}
   const typePanels = PANELS.map(panel => ({ ...panel, ...(typePanelProps[panel.name] || {}) }))
   return {
@@ -240,7 +241,9 @@ const getPanels = (hasHgmdPermission, inheritance, datasetTypes) => (
   (PANEL_MAP[datasetTypes] || PANEL_MAP[ALL_DATASET_TYPE])[hasHgmdPermission][hasSecondaryAnnotation(inheritance)]
 )
 
-const VariantSearchFormContent = React.memo(({ hasHgmdPermission, inheritance, datasetTypes, noEditProjects }) => (
+const VariantSearchFormContent = React.memo((
+  { hasHgmdPermission, inheritance, datasetTypes, noEditProjects, esEnabled },
+) => (
   <div>
     {!noEditProjects && <ProjectFamiliesField />}
     <Header size="huge" block>
@@ -254,7 +257,7 @@ const VariantSearchFormContent = React.memo(({ hasHgmdPermission, inheritance, d
       </Grid>
     </Header>
     <Header content="Customize Search:" />
-    <VariantSearchFormPanels panels={getPanels(hasHgmdPermission, inheritance, datasetTypes)} />
+    <VariantSearchFormPanels esEnabled={esEnabled} panels={getPanels(hasHgmdPermission, inheritance, datasetTypes)} />
   </div>
 ))
 
@@ -263,11 +266,13 @@ VariantSearchFormContent.propTypes = {
   inheritance: PropTypes.object,
   datasetTypes: PropTypes.string,
   noEditProjects: PropTypes.bool,
+  esEnabled: PropTypes.bool,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   hasHgmdPermission: getHasHgmdPermission(state, ownProps),
   datasetTypes: getDatasetTypes(state, ownProps),
+  esEnabled: getElasticsearchEnabled(state),
 })
 
 const ConnectedVariantSearchFormContent = connect(mapStateToProps)(VariantSearchFormContent)

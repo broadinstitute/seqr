@@ -1,10 +1,9 @@
 from django.db import connections
 import logging
 import redis
-from urllib3.connectionpool import connection_from_url
 
-from settings import SEQR_VERSION, KIBANA_SERVER, REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT, DATABASES
-from seqr.utils.search.utils import ping_search_backend
+from settings import SEQR_VERSION, REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT, DATABASES
+from seqr.utils.search.utils import ping_search_backend, ping_search_backend_admin
 from seqr.views.utils.json_utils import create_json_response
 
 logger = logging.getLogger(__name__)
@@ -37,14 +36,12 @@ def status_view(request):
         dependent_services_ok = False
         logger.error('Search backend connection error: {}'.format(str(e)))
 
-    # Test kibana connection
+    # Test search admin view connection
     try:
-        resp = connection_from_url('http://{}'.format(KIBANA_SERVER)).urlopen('HEAD', '/status', timeout=3, retries=3)
-        if resp.status >= 400:
-            raise ValueError('Error {}: {}'.format(resp.status, resp.reason))
+        ping_search_backend_admin()
     except Exception as e:
         secondary_services_ok = False
-        logger.error('Kibana connection error: {}'.format(str(e)))
+        logger.error('Search Admin connection error: {}'.format(str(e)))
 
 
     return create_json_response(

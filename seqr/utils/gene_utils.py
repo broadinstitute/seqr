@@ -4,7 +4,7 @@ from django.db.models import Q, prefetch_related_objects, Prefetch
 from django.db.models.functions import Length
 
 from reference_data.models import GeneInfo, GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, GeneCopyNumberSensitivity, \
-    GenCC, ClinGen
+    GenCC, ClinGen, GeneShet
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_models, _get_empty_json_for_model, \
     get_json_for_gene_notes_by_gene_id
@@ -90,6 +90,7 @@ def _add_mgi(gene):
 OMIM = 'omim'
 CONSTRAINT = 'constraint'
 CN_SENSITIVITY = 'cn_sensitivity'
+SHET = 'shet'
 DBNSFP = 'dbnsfp'
 GENCC = 'gencc'
 PRIMATE_AI = 'primate_ai'
@@ -100,6 +101,7 @@ VARIANT_GENE_DISPLAY_FIELDS = {
     OMIM: (Omim, _add_omim),
     CONSTRAINT: (GeneConstraint, None),
     CN_SENSITIVITY: (GeneCopyNumberSensitivity, _add_gene_model('genecopynumbersensitivity', 'cnSensitivity', dict)),
+    SHET: (GeneShet, _add_gene_model('geneshet', 'sHet', dict)),
     GENCC: (GenCC, _add_gene_model('gencc', 'genCc', dict)),
     CLINGEN: (ClinGen, _add_gene_model('clingen', 'clinGen', lambda: None)),
 }

@@ -12,6 +12,7 @@ import {
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HAS_DATA_FIELD,
   MME_TAG_NAME,
+  TISSUE_DISPLAY,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -21,6 +22,7 @@ import {
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchableSampleByFamily, getSelectableTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
   getSamplesGroupedByProjectGuid, getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual,
+  getRnaSeqDataByIndividual,
 } from 'redux/selectors'
 
 import {
@@ -61,7 +63,8 @@ export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isL
 export const getSamplesLoading = state => state.samplesLoading.isLoading
 export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
 export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
-export const getFamiliesTableFilters = state => state.familyTableFilterState
+export const getSavedVariantTableState = state => state.savedVariantTableState
+const getFamiliesTableFiltersByProject = state => state.familyTableFilterState
 
 export const getCurrentProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
@@ -430,6 +433,12 @@ const analysedByFilters = (filter, analysedByOptions) => {
   return filterGroups
 }
 
+export const getFamiliesTableFilters = createSelector(
+  getFamiliesTableFiltersByProject,
+  getProjectGuid,
+  (familyTableFiltersByProject, projectGuid) => (familyTableFiltersByProject || {})[projectGuid],
+)
+
 const getFamiliesFilterFunc = createSelector(
   (state, ownProps) => ownProps?.tableName === CASE_REVIEW_TABLE_NAME,
   state => state.caseReviewTableState.familiesFilter,
@@ -753,10 +762,11 @@ export const getPageHeaderAnalysisGroup = createSelector(
 export const getPageHeaderBreadcrumbIdSections = createSelector(
   getCurrentProject,
   getPageHeaderFamily,
+  getIndividualsByGuid,
   getPageHeaderAnalysisGroup,
   (state, props) => props.breadcrumb || props.match.params.breadcrumb,
   (state, props) => props.match,
-  (project, family, analysisGroup, breadcrumb, match) => {
+  (project, family, individualsByGuid, analysisGroup, breadcrumb, match) => {
     if (!project) {
       return null
     }
@@ -769,8 +779,14 @@ export const getPageHeaderBreadcrumbIdSections = createSelector(
         content: `Family: ${family.displayName || ''}`,
         link: `/project/${project.projectGuid}/family_page/${family.familyGuid}`,
       }]
-      if (match.params.breadcrumbIdSection) {
-        breadcrumbIdSections.push({ content: snakecaseToTitlecase(match.params.breadcrumbIdSection), link: match.url })
+      const { breadcrumbIdSection, breadcrumbIdSubsection } = match.params
+      if (breadcrumbIdSection) {
+        if (breadcrumbIdSection === 'rnaseq_results') {
+          const individualId = individualsByGuid[breadcrumbIdSubsection]?.individualId || ''
+          breadcrumbIdSections.push({ content: `RNAseq: ${individualId}` })
+        } else {
+          breadcrumbIdSections.push({ content: snakecaseToTitlecase(breadcrumbIdSection), link: match.url })
+        }
       }
       return breadcrumbIdSections
     }
@@ -872,5 +888,37 @@ export const getIndividualPhenotypeGeneScores = createSelector(
         ]), []),
       ]), []),
     }), {})
+  ),
+)
+
+export const getTissueOptionsByIndividualGuid = createSelector(
+  getRnaSeqDataByIndividual,
+  (rnaSeqDataByIndividualGuid) => {
+    const tissueTypesByIndividualGuid = Object.entries(rnaSeqDataByIndividualGuid || {}).map(
+      ([individualGuid, rnaSeqData]) => ([
+        individualGuid,
+        [...new Set(Object.values(rnaSeqData || {}).map(Object.values).flat(2).map(({ tissueType }) => tissueType))],
+      ]),
+    )
+    return tissueTypesByIndividualGuid.reduce((acc, [individualGuid, tissueTypes]) => (
+      tissueTypes.length > 0 ? {
+        ...acc,
+        [individualGuid]: tissueTypes.map(tissueType => (
+          { key: tissueType, text: TISSUE_DISPLAY[tissueType] || 'Unknown Tissue', value: tissueType }
+        )),
+      } : acc
+    ), {})
+  },
+)
+
+export const getRnaSeqOutliersByIndividual = createSelector(
+  getRnaSeqDataByIndividual,
+  rnaSeqDataByIndividual => Object.entries(rnaSeqDataByIndividual).reduce(
+    (acc, [individualGuid, rnaSeqData]) => ({
+      ...acc,
+      [individualGuid]: Object.entries(rnaSeqData).reduce((acc2, [key, data]) => ({
+        ...acc2, [key]: Object.values(data).flat(),
+      }), {}),
+    }), {},
   ),
 )

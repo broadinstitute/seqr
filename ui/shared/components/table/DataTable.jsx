@@ -41,8 +41,15 @@ const StyledDataTable = styled(Table)`
 const ASCENDING = 'ascending'
 const DESCENDING = 'descending'
 
-const getRowColumnContent = (row, isExport) => col => (
-  (col.format && !(isExport && col.noFormatExport)) ? col.format(row, isExport) : row[col.name])
+const getRowColumnContent = (row, col, isExport, formatProps) => {
+  if (isExport && col.secondaryExportColumn) {
+    return [row[col.name], row[col.secondaryExportColumn]]
+  }
+  if (col.format && !(isExport && col.noFormatExport)) {
+    return col.format(row, isExport, formatProps)
+  }
+  return row[col.name]
+}
 
 class DataTable extends React.PureComponent {
 
@@ -68,6 +75,8 @@ class DataTable extends React.PureComponent {
     downloadAlign: PropTypes.string,
     loadingProps: PropTypes.object,
     filterContainer: PropTypes.object,
+    // eslint-disable-next-line react/forbid-prop-types
+    formatProps: PropTypes.any,
   }
 
   static defaultProps = {
@@ -152,8 +161,15 @@ class DataTable extends React.PureComponent {
         name: downloadTableType || 'All Data',
         filename: downloadFileName,
         rawData: sortedData,
-        headers: columns.map(config => config.downloadColumn || config.content),
-        processRow: row => columns.map(getRowColumnContent(row, true)),
+        headers: columns.reduce((acc, config) => [
+          ...acc,
+          config.downloadColumn || config.content,
+          ...(config.secondaryExportColumn ? [config.secondaryExportColumn] : []),
+        ], []),
+        processRow: row => columns.reduce((acc, col) => {
+          const value = getRowColumnContent(row, col, true)
+          return [...acc, ...(col.secondaryExportColumn ? value : [value])]
+        }, []),
       },
     ]
   }
@@ -162,7 +178,8 @@ class DataTable extends React.PureComponent {
     const {
       data = [], defaultSortColumn, defaultSortDescending, idField, columns, selectRows, selectedRows = {},
       loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, downloadAlign,
-      fixedWidth, includeSelectedRowData, filterContainer, getRowFilterVal, loadingProps = {}, maxHeight, ...tableProps
+      fixedWidth, includeSelectedRowData, filterContainer, getRowFilterVal, loadingProps = {}, maxHeight,
+      formatProps, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
     const sortedDirection = direction || (defaultSortDescending ? DESCENDING : ASCENDING)
@@ -184,7 +201,9 @@ class DataTable extends React.PureComponent {
       sortedData = sortedData.slice((activePage - 1) * rowsPerPage, activePage * rowsPerPage)
     }
 
-    const processedColumns = columns.map(({ formFieldProps, downloadColumn, ...columnProps }) => (
+    const processedColumns = columns.map((
+      { formFieldProps, downloadColumn, secondaryExportColumn, ...columnProps },
+    ) => (
       formFieldProps ?
         {
           ...columnProps,
@@ -204,7 +223,7 @@ class DataTable extends React.PureComponent {
           {processedColumns.map(({ name, format, textAlign, verticalAlign }) => (
             <Table.Cell
               key={name}
-              content={getRowColumnContent(row)({ format, name })}
+              content={getRowColumnContent(row, { format, name }, false, formatProps)}
               textAlign={textAlign}
               verticalAlign={verticalAlign}
             />

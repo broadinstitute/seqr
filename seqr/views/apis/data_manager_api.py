@@ -1,8 +1,7 @@
 import base64
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from datetime import datetime
 import gzip
-import itertools
 import json
 import os
 import re
@@ -10,26 +9,26 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max, Value, F
+from django.db.models import Max, F, Q
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
-from seqr.utils.search.constants import SEQR_DATSETS_GS_PATH
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.vcf_utils import validate_vcf_exists
 
+from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
 from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file, \
     load_rna_seq_splice_outlier
-from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.permissions_utils import data_manager_required, get_internal_projects
+from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 
 from seqr.models import Sample, Individual, Project, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, RnaSeqSpliceOutlier
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
+from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
 
@@ -288,14 +287,14 @@ def update_rna_seq(request):
     # Save sample data for loading
     file_name = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}.json.gz'
     with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'wt') as f:
-        for sample, sample_data in samples_to_load.items():
-            f.write(f'{sample.guid}\t\t{json.dumps(sample_data)}\n')
+        for sample_guid, sample_data in samples_to_load.items():
+            f.write(f'{sample_guid}\t\t{json.dumps(sample_data)}\n')
 
     return create_json_response({
         'info': info,
         'warnings': warnings,
         'fileName': file_name,
-        'sampleGuids': [s.guid for s in samples_to_load.keys()],
+        'sampleGuids': list(samples_to_load.keys()),
     })
 
 
@@ -386,25 +385,57 @@ def load_phenotype_prioritization_data(request):
 @data_manager_required
 def write_pedigree(request, project_guid):
     project = Project.objects.get(guid=project_guid)
+    try:
+        write_data_loading_pedigree(project, request.user)
+    except ValueError as e:
+        return create_json_response({'error': str(e)}, status=400)
 
-    possible_file_paths = [
-        f'{SEQR_DATSETS_GS_PATH}/{project.get_genome_version_display()}/RDG_{sample_type}_Broad_{callset}/base/projects/{project.guid}'
-        for callset, sample_type in itertools.product(['Internal', 'External'], ['WGS', 'WES'])
-    ]
-    file_path = next((path for path in possible_file_paths if does_file_exist(path)), None)
-    if not file_path:
-        return create_json_response(
-            {'error': f'No {SEQR_DATSETS_GS_PATH} project directory found for {project.guid}'}, status=400,
-        )
+    return create_json_response({'success': True})
 
-    annotations = OrderedDict({
-        'Project_GUID': Value(project.guid), 'Family_ID': F('family__family_id'), 'Individual_ID': F('individual_id'),
-        'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
-    })
-    data = Individual.objects.filter(family__project=project).order_by('family_id', 'individual_id').values(**dict(annotations))
-    write_multiple_files_to_gs(
-        [(f'{project.guid}_pedigree', annotations.keys(), data)],
-        file_path, request.user, file_format='tsv')
+
+DATA_TYPE_FILE_EXTS = {
+    Sample.DATASET_TYPE_MITO_CALLS: ('.mt',),
+    Sample.DATASET_TYPE_SV_CALLS: ('.bed',),
+}
+
+
+@pm_or_data_manager_required
+def validate_callset(request):
+    request_json = json.loads(request.body)
+    validate_vcf_exists(
+        request_json['filePath'], request.user, allowed_exts=DATA_TYPE_FILE_EXTS.get(request_json['datasetType'])
+    )
+    return create_json_response({'success': True})
+
+
+@pm_or_data_manager_required
+def get_loaded_projects(request, sample_type, dataset_type):
+    projects = get_internal_projects().filter(
+        family__individual__sample__sample_type=sample_type, is_demo=False,
+    ).distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
+        'family__individual__sample__loaded_date', filter=Q(family__individual__sample__dataset_type=dataset_type),
+    ))
+    return create_json_response({'projects': list(projects)})
+
+
+@pm_or_data_manager_required
+def load_data(request):
+    request_json = json.loads(request.body)
+    sample_type = request_json['sampleType']
+    dataset_type = request_json['datasetType']
+    projects = request_json['projects']
+
+    project_models = Project.objects.filter(guid__in=projects)
+    if len(project_models) < len(projects):
+        missing = sorted(set(projects) - {p.guid for p in project_models})
+        return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
+
+    success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
+    trigger_data_loading(
+        project_models, sample_type, dataset_type, request_json['filePath'], request.user, success_message,
+        SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
+        is_internal=True,
+    )
 
     return create_json_response({'success': True})
 

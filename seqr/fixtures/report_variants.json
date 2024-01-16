@@ -4,7 +4,7 @@
     "pk": 9,
     "fields": {
         "guid": "SV0027166_191912634_r0384_rare",
-        "created_date": "2018-05-15T14:51:56.943Z",
+        "created_date": "2018-05-15T14:53:56.943Z",
         "created_by": null,
         "last_modified_date": "2018-05-31T16:36:02.805Z",
         "xpos": 19001912634,
@@ -21,7 +21,7 @@
             "alt": "T",
             "genomeVersion": "38", "genotypeFilters": [],
             "genotypes": {
-                "I000006_hg00733": {"sampleId": "HG00733", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
+                "I000004_hg00731": {"sampleId": "HG00731", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
             },
             "populations": {
                 "g1k": {
@@ -51,7 +51,7 @@
     "pk": 10,
     "fields": {
         "guid": "SV0027167_191912633_r0384_rare",
-        "created_date": "2018-05-15T14:51:56.943Z",
+        "created_date": "2018-05-15T14:54:56.943Z",
         "created_by": null,
         "last_modified_date": "2018-05-31T16:36:02.805Z",
         "xpos": 19001912633,
@@ -68,7 +68,7 @@
             "alt": "T",
             "genomeVersion": "38", "genotypeFilters": [],
             "genotypes": {
-                "I000006_hg00733": {"sampleId": "HG00733", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
+                "I000004_hg00731": {"sampleId": "HG00731", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
             },
             "populations": {
                 "g1k": {
@@ -98,7 +98,7 @@
     "pk": 11,
     "fields": {
         "guid": "SV0027168_191912632_r0384_rare",
-        "created_date": "2018-05-15T14:51:56.943Z",
+        "created_date": "2018-05-15T14:55:56.943Z",
         "created_by": null,
         "last_modified_date": "2018-05-31T16:36:02.805Z",
         "xpos": 19001912632,
@@ -112,7 +112,7 @@
             "xpos": 19001912632,
             "genomeVersion": "38", "genotypeFilters": [],
             "genotypes": {
-                "I000006_hg00733": {"sampleId": "HG00733", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
+                "I000004_hg00731": {"numAlt": 1}
             },
             "variantId": "19-1912632-GC-TT",
             "chrom": "19",

@@ -61,15 +61,9 @@ export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid
 export const getMultiProjectFamilies = createSelector(
   (state, props) => props.match.params,
   params => ({
-    projectFamilies: Object.entries(params.families.split(',').map(f => f.split(':')).reduce(
-      (acc, [familyGuid, projectGuid]) => {
-        if (!acc[projectGuid]) {
-          acc[projectGuid] = []
-        }
-        acc[projectGuid].push(familyGuid)
-        return acc
-      }, {},
-    )).map(([projectGuid, familyGuids]) => ({ projectGuid, familyGuids })),
+    projectFamilies: params.families.split(':').map(f => f.split(';')).map(
+      ([projectGuid, familyGuids]) => ({ projectGuid, familyGuids: familyGuids.split(',') }),
+    ),
   }),
 )
 

@@ -9,6 +9,7 @@
       "experimentalObjectRestSpread": true
     }
   },
+  // TODO: https://github.com/broadinstitute/seqr/issues/2931 update linting after complete migration of the project into typescript.
   "env": {
     "mocha": true,
     "es6": true,
@@ -31,101 +32,42 @@
       }
     ],
     "jsx-a11y/label-has-associated-control": "off",
-    "max-len": [
-      "error",
-      120,
-      2,
-      {
-        "ignoreUrls": true,
-        "ignoreComments": false,
-        "ignoreRegExpLiterals": true,
-        "ignoreStrings": true,
-        "ignoreTemplateLiterals": true,
-      }
-    ],
-    "object-curly-newline": [
-      "error",
-      {
-        "ObjectExpression": {
-          "multiline": true,
-          "consistent": true
-        },
-        "ObjectPattern": {
-          "multiline": true,
-          "consistent": true
-        },
-        "ImportDeclaration": {
-          "multiline": true,
-          "consistent": true
-        },
-        "ExportDeclaration": {
-          "multiline": true,
-          "consistent": true
-        }
-      }
-    ],
-    "operator-linebreak": [
-      "error",
-      "after"
-    ],
-    "padded-blocks": [
-      "error",
-      {
-        "blocks": "never",
-        "classes": "always",
-        "switches": "never"
-      }
-    ],
-    "semi": [
-      "error",
-      "never"
-    ],
-    "react/forbid-prop-types": [
-      "error",
-      {
-        "forbid": [
-          "any",
-          "array"
-        ]
-      }
-    ],
-    "react/jsx-filename-extension": [
-      "error",
-      {
-        "extensions": [
-          ".js",
-          ".jsx"
-        ]
-      }
-    ],
-    "react/jsx-props-no-spreading": [
-      "error",
-      {
-        "html": "enforce",
-        "custom": "ignore",
-      }
-    ],
-    "react/jsx-wrap-multilines": [
-      "error",
-      {
-        "declaration": "parens-new-line",
-        "assignment": "parens-new-line",
-        "return": "parens-new-line",
-        "arrow": "parens-new-line",
-        "condition": "parens-new-line",
-        "logical": "parens-new-line",
-        "prop": "ignore"
-      }
-    ],
+    "max-len": ["error", 120, 2, {
+      "ignoreUrls": true,
+      "ignoreComments": false,
+      "ignoreRegExpLiterals": true,
+      "ignoreStrings": true,
+      "ignoreTemplateLiterals": true,
+    }],
+    "object-curly-newline": ["error", {
+      "ObjectExpression": { "multiline": true, "consistent": true },
+      "ObjectPattern": { "multiline": true, "consistent": true },
+      "ImportDeclaration": { "multiline": true, "consistent": true },
+      "ExportDeclaration": { "multiline": true, "consistent": true }
+    }],
+    "operator-linebreak": ["error", "after"],
+    "padded-blocks": ["error", { "blocks": "never", "classes": "always", "switches": "never" }],
+    "semi": ["error", "never"],
+
+    "react/forbid-prop-types": ["error", { "forbid": ["any", "array"] }],
+    "react/jsx-filename-extension": ["error", { "extensions": [".js", ".jsx", ".ts", ".tsx"]} ],
+    "react/jsx-props-no-spreading": ["error", {
+      "html": "enforce",
+      "custom": "ignore",
+    }],
+    "react/jsx-wrap-multilines": ["error", {
+      "declaration": "parens-new-line",
+      "assignment": "parens-new-line",
+      "return": "parens-new-line",
+      "arrow": "parens-new-line",
+      "condition": "parens-new-line",
+      "logical": "parens-new-line",
+      "prop": "ignore"
+    }],
     "react/require-default-props": "off",
     "react/require-optimization": "error",
-    "react/state-in-constructor": [
-      "error",
-      "never"
-    ],
-    "react/static-property-placement": [
-      "error",
-      "static public field"
-    ],
+    "react/state-in-constructor": ["error", "never"],
+    "react/static-property-placement": ["error", "static public field"],
+    "import/extensions": "off"
   }
 }

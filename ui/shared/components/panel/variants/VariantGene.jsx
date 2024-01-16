@@ -9,17 +9,21 @@ import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/sele
 import DataTable from 'shared/components/table/DataTable'
 import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
-  MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
+  MISSENSE_THRESHHOLD,
+  LOF_THRESHHOLD,
+  PANEL_APP_CONFIDENCE_LEVEL_COLORS,
+  PANEL_APP_CONFIDENCE_DESCRIPTION,
+  getDecipherGeneLink,
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { BehindModalPopup } from '../../PopupWithModal'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../StyledComponents'
-import { GeneSearchLink } from '../../buttons/SearchResultsLink'
+import { PermissiveGeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
-import { GenCC, ClingenLabel, HI_THRESHOLD, TS_THRESHOLD } from '../genes/GeneDetail'
+import { GenCC, ClingenLabel, HI_THRESHOLD, TS_THRESHOLD, SHET_THRESHOLD } from '../genes/GeneDetail'
 import { getIndividualGeneDataByFamilyGene } from './selectors'
 
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
@@ -57,7 +61,7 @@ const BaseGeneLabelContent = styled(({ color, customColor, label, maxWidth, disp
     }
   }
 `
-const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
+export const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
 
 const GeneLinks = styled.div`
   font-size: .9em;
@@ -185,7 +189,7 @@ const BaseLocusListLabels = React.memo(({
       paLocusList,
       geneSymbol,
     }) : {
-      description: label,
+      description: locusListDescription,
       initials: false,
       customColor: false,
     }
@@ -224,7 +228,7 @@ const mapLocusListStateToProps = state => ({
   locusListsByGuid: getLocusListsByGuid(state),
 })
 
-export const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
+const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
 
 const ClinGenRow = ({ value, label, href }) => (
   <Table.Row>
@@ -264,6 +268,25 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
+export const omimPhenotypesDetail = (phenotypes, showCoordinates) => (
+  <List>
+    {phenotypes.map(phenotype => (
+      <ListItemLink
+        key={phenotype.phenotypeDescription}
+        content={(
+          <span>
+            {phenotype.phenotypeDescription}
+            {phenotype.phenotypeInheritance && <i>{` (${phenotype.phenotypeInheritance})`}</i>}
+            {showCoordinates && ` ${phenotype.chrom}:${phenotype.start}-${phenotype.end}`}
+          </span>
+        )}
+        target="_blank"
+        href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
+      />
+    ))}
+  </List>
+)
+
 const GENE_DISEASE_DETAIL_SECTIONS = [
   {
     color: 'violet',
@@ -294,23 +317,7 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
     compactLabel: 'OMIM Disease Phenotypes',
     expandedDisplay: true,
     showDetails: gene => gene.omimPhenotypes.length > 0,
-    detailsDisplay: gene => (
-      <List>
-        {gene.omimPhenotypes.map(phenotype => (
-          <ListItemLink
-            key={phenotype.phenotypeDescription}
-            content={phenotype.phenotypeInheritance ? (
-              <span>
-                {phenotype.phenotypeDescription}
-                <i>{` (${phenotype.phenotypeInheritance})`}</i>
-              </span>
-            ) : phenotype.phenotypeDescription}
-            target="_blank"
-            href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
-          />
-        ))}
-      </List>
-    ),
+    detailsDisplay: gene => omimPhenotypesDetail(gene.omimPhenotypes),
   },
 ]
 
@@ -375,24 +382,40 @@ const GENE_DETAIL_SECTIONS = [
     color: 'red',
     description: 'Loss of Function Constraint',
     label: 'LOF CONSTR',
-    showDetails: gene => gene.constraints.louef < LOF_THRESHHOLD,
+    showDetails: gene => (gene.constraints.louef < LOF_THRESHHOLD) ||
+      (gene.cnSensitivity.phi && gene.cnSensitivity.phi > HI_THRESHOLD) ||
+      (gene.sHet.postMean && gene.sHet.postMean > SHET_THRESHOLD),
     detailsDisplay: gene => (
-      `This gene ranks as ${gene.constraints.louefRank} most intolerant of LoF mutations out of
-       ${gene.constraints.totalGenes} genes under study (louef:
-       ${gene.constraints.louef.toPrecision(4)}${gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}).
-       LOEUF is the observed to expected upper bound fraction for loss-of-function variants based on the variation
-       observed in the gnomad data. Both LOEUF and pLi are measures of how likely the gene is to be intolerant of
-       loss-of-function mutations`),
-  },
-  {
-    color: 'red',
-    description: 'HaploInsufficient',
-    label: 'HI',
-    showDetails: gene => gene.cnSensitivity.phi && gene.cnSensitivity.phi > HI_THRESHOLD,
-    detailsDisplay: gene => (
-      `These are a score developed by the Talkowski lab that predict whether a gene is haploinsufficient based 
-      on large chromosomal microarray data set analysis. Scores >${HI_THRESHOLD} are considered to have high likelihood to be 
-      haploinsufficient. This gene has a score of ${gene.cnSensitivity.phi.toPrecision(4)}.`),
+      <List bulleted>
+        {gene.constraints.louef < LOF_THRESHHOLD && (
+          <List.Item>
+            This gene ranks as &nbsp;
+            {gene.constraints.louefRank}
+            &nbsp;most intolerant of LoF mutations out of &nbsp;
+            {gene.constraints.totalGenes}
+            &nbsp;genes under study (louef: &nbsp;
+            {gene.constraints.louef.toPrecision(4)}
+            {gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}
+            )
+            <a href="https://pubmed.ncbi.nlm.nih.gov/32461654/" target="_blank" rel="noreferrer"> Karczewski (2020)</a>
+          </List.Item>
+        )}
+        {gene.sHet.postMean > SHET_THRESHOLD && (
+          <List.Item>
+            This gene has a Shet score of &nbsp;
+            {gene.sHet.postMean.toPrecision(4)}
+            <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10245655" target="_blank" rel="noreferrer"> Zeng (2023)</a>
+          </List.Item>
+        )}
+        {gene.cnSensitivity.phi > HI_THRESHOLD && (
+          <List.Item>
+            This gene has a haploinsufficiency (HI) score of &nbsp;
+            {gene.cnSensitivity.phi.toPrecision(4)}
+            <a href="https://pubmed.ncbi.nlm.nih.gov/35917817" target="_blank" rel="noreferrer"> Collins (2022)</a>
+          </List.Item>
+        )}
+      </List>
+    ),
   },
   {
     color: 'red',
@@ -406,8 +429,8 @@ const GENE_DETAIL_SECTIONS = [
   },
   {
     color: 'pink',
-    description: 'RNA-Seq Outlier',
-    label: 'RNA-Seq',
+    description: 'RNA-Seq Expression Outlier',
+    label: 'RNA expression',
     showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqData && indivGeneData.rnaSeqData[gene.geneId],
     detailsDisplay: (gene, indivGeneData) => (
       <div>
@@ -537,9 +560,9 @@ GeneDetails.propTypes = {
 const GeneSearchLinkWithPopup = props => (
   <Popup
     trigger={
-      <GeneSearchLink {...props} />
+      <PermissiveGeneSearchLink {...props} />
     }
-    content="Search for all variants with AF < 10% in this gene present in any affected individual"
+    content="Search for all variants with AF < 3% in this gene present in any affected individual"
     size="tiny"
   />
 )
@@ -589,7 +612,7 @@ export const BaseVariantGene = React.memo(({
   } else {
     summaryDetail = (
       <GeneLinks>
-        <a href={`https://decipher.sanger.ac.uk/gene/${gene.geneId}/overview/protein-genomic-info`} target="_blank" rel="noreferrer">
+        <a href={getDecipherGeneLink(gene)} target="_blank" rel="noreferrer">
           Decipher
         </a>
         &nbsp; | &nbsp;

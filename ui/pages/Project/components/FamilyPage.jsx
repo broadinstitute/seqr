@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Link } from 'react-router-dom'
+import { Link, Route, Switch } from 'react-router-dom'
 import { Popup, Icon } from 'semantic-ui-react'
 
 import { loadFamilyDetails } from 'redux/rootReducer'
@@ -13,6 +13,7 @@ import {
   getHasActiveSearchableSampleByFamily,
 } from 'redux/selectors'
 import { FAMILY_DETAIL_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
+import { Error404 } from 'shared/components/page/Errors'
 import Family from 'shared/components/panel/family/Family'
 import FamilyReads from 'shared/components/panel/family/FamilyReads'
 import DataLoader from 'shared/components/DataLoader'
@@ -26,8 +27,7 @@ import {
 import IndividualRow from './FamilyTable/IndividualRow'
 import CreateVariantButton from './CreateVariantButton'
 import VariantTagTypeBar from './VariantTagTypeBar'
-
-const READ_BUTTON_PROPS = { padding: '0.5em 0 1.5em 0' }
+import RnaSeqResultPage from './RnaSeqResultPage'
 
 const SearchLink = React.memo(({ family, disabled, children }) => (
   <ButtonLink as={Link} to={`/variant_search/family/${family.familyGuid}`} disabled={disabled}>{children}</ButtonLink>
@@ -138,7 +138,7 @@ FamilyReadsLayout.propTypes = {
 const BaseExpandedFamily = React.memo(({ familyDetail, familyGuid, family, individuals, tableName, loading, load }) => (
   <DataLoader load={load} contentId={familyGuid} content={family && family.detailsLoaded} loading={loading}>
     {familyDetail}
-    <FamilyReads layout={FamilyReadsLayout} familyGuid={familyGuid} buttonProps={READ_BUTTON_PROPS} />
+    <FamilyReads layout={FamilyReadsLayout} familyGuid={familyGuid} />
     {individuals && individuals.map(individual => (
       <IndividualRow
         key={individual.individualGuid}
@@ -201,16 +201,44 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const FamilyDetail = connect(mapStateToProps)(BaseFamilyDetail)
 
-const FamilyPage = ({ match }) => (
+const FamilyPage = ({ familyGuid }) => (
   <FamilyDetail
-    familyGuid={match.params.familyGuid}
+    familyGuid={familyGuid}
     showVariantDetails
     fields={FAMILY_DETAIL_FIELDS}
   />
 )
 
 FamilyPage.propTypes = {
-  match: PropTypes.object,
+  familyGuid: PropTypes.string,
 }
 
-export default FamilyPage
+const renderFamilyPage = familyGuid => () => <FamilyPage familyGuid={familyGuid} />
+
+const FamilyPageRouter = React.memo(({ family, match, load, loading }) => (
+  <DataLoader contentId={match.params.familyGuid} content={family} load={load} loading={loading}>
+    <Switch>
+      <Route path={`${match.url}/rnaseq_results/:individualGuid`} component={RnaSeqResultPage} />
+      <Route exact path={match.url} render={renderFamilyPage(match.params.familyGuid)} />
+      <Route component={Error404} />
+    </Switch>
+  </DataLoader>
+))
+
+FamilyPageRouter.propTypes = {
+  family: PropTypes.object,
+  match: PropTypes.object,
+  load: PropTypes.func,
+  loading: PropTypes.bool.isRequired,
+}
+
+const mapFamilyStateToProps = (state, ownProps) => ({
+  family: getFamiliesByGuid(state)[ownProps.match.params.familyGuid],
+  loading: !!getFamilyDetailsLoading(state)[ownProps.match.params.familyGuid],
+})
+
+const mapFamilyDispatchToProps = {
+  load: loadFamilyDetails,
+}
+
+export default connect(mapFamilyStateToProps, mapFamilyDispatchToProps)(FamilyPageRouter)

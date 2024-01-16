@@ -31,7 +31,7 @@ class Command(BaseCommand):
             individual__family__project__name__in=args
         ) if args else IgvSample.objects.all()).filter(
             file_path__startswith='gs://'
-        ).prefetch_related('individual', 'individual__family__project')
+        ).order_by('id').prefetch_related('individual', 'individual__family__project')
 
         missing_counter = collections.defaultdict(int)
         guids_of_samples_with_missing_file = set()
@@ -47,7 +47,7 @@ class Command(BaseCommand):
                     guids_of_samples_with_missing_file.add(sample.guid)
 
         if len(guids_of_samples_with_missing_file) > 0:
-            IgvSample.bulk_update(user=None, update_json={'file_path': ''}, guid__in=guids_of_samples_with_missing_file)
+            IgvSample.bulk_delete(user=None, guid__in=guids_of_samples_with_missing_file)
 
         logger.info('---- DONE ----')
         logger.info('Checked {} samples'.format(len(samples)))
@@ -58,7 +58,7 @@ class Command(BaseCommand):
 
             # post to slack
             if not options.get('dry_run'):
-                slack_message = 'Found {} broken bam/cram path(s)\n'.format(sum(missing_counter.values()))
+                slack_message = 'Found and removed {} broken bam/cram path(s)\n'.format(sum(missing_counter.values()))
                 for project_name, missing_paths_list in project_name_to_missing_paths.items():
                     slack_message += "\nIn project {}:\n".format(project_name)
                     slack_message += "\n".join([

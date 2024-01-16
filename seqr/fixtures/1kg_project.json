@@ -76,6 +76,7 @@
 	    "can_view_group": 2,
 	    "last_accessed_date": "2017-09-15T18:15:50.827Z",
         "consent_code": "H",
+        "genome_version": "38",
     "workspace_name": "anvil-non-analyst-project 1000 Genomes Demo",
     "workspace_namespace": "ext-data"
     }
@@ -120,7 +121,7 @@
         "family_id": "1",
         "display_name": "",
         "description": "test descripti\u00f8n",
-        "post_discovery_omim_number": "615120,615123",
+        "post_discovery_omim_numbers": [615120, 615123],
         "pedigree_image": "ped_1.png",
         "analysis_status": "Q",
         "coded_phenotype": "myopathy",
@@ -143,6 +144,7 @@
         "description": "",
         "pedigree_image": "ped_2.png",
         "analysis_status": "Q",
+        "mondo_id": "MONDO:0044970",
         "case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
         "case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
     }
@@ -325,6 +327,7 @@
         "analysis_status": "Q",
         "success_story": "Published with Gleeson and Reza (PMID 31668703)",
         "success_story_types": ["C", "D"],
+        "mondo_id": "0008788",
         "case_review_notes": "<div><span style=\"text-decoration: underline;\"><span style=\"font-family: 'book antiqua', palatino, serif;\">case review notes for family 12</span></span></div>\n<ul>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note1</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 2</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 3</span></li>\n</ul>",
         "case_review_summary": "<div><span style=\"font-family: 'courier new', courier, monospace;\"><strong>summary for family 12</strong></span></div>"
     }
@@ -359,6 +362,7 @@
         "last_modified_date": "2017-03-12T22:37:17.555Z",
         "project": 4,
         "family_id": "14",
+        "analysis_status": "Rncc",
         "success_story": "Differential treatement",
         "success_story_types": ["A", "D"]
     }
@@ -520,12 +524,14 @@
         "father_id": 5,
         "sex": "F",
         "affected": "A",
+        "proband_relationship": "S",
         "display_name": "HG00731_a",
 	"notes": "",
         "case_review_status": "3",
         "case_review_status_last_modified_date": "2017-03-12T22:34:59.093Z",
         "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
+        "population": "AMR",
         "features": [{"id": "HP:0002011"}, {"id": "HP:0011675"}],
         "absent_features": [{"id": "HP:0002017"}]
     }
@@ -693,10 +699,10 @@
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.158Z",
         "family": 8,
-        "individual_id": "NA20877",
+        "individual_id": "NA20888",
         "mother_id": null,
         "father_id": null,
-        "sex": "M",
+        "sex": "F",
         "affected": "A",
         "display_name": "",
 	"notes": "",
@@ -813,6 +819,7 @@
         "father_id": null,
         "sex": "F",
         "affected": "A",
+        "proband_relationship": "S",
         "display_name": ""
     }
 },
@@ -828,6 +835,7 @@
         "individual_id": "NA21234",
         "mother_id": null,
         "father_id": null,
+        "proband_relationship": "S",
         "sex": "F",
         "affected": "A"
     }
@@ -878,7 +886,8 @@
 
         "individual": 1,
         "sample_type": "WES",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "sample_id": "NA19675",
         "is_active": true,
         "elasticsearch_index": "test_index",
@@ -896,10 +905,30 @@
 
         "individual": 2,
         "sample_type": "WES",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "sample_id": "NA19678",
         "is_active": true,
         "elasticsearch_index": "test_index_old",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
+    }
+},
+{
+    "model": "seqr.sample",
+    "pk": 153,
+    "fields": {
+        "guid": "S000153_na19679",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 3,
+        "sample_type": "RNA",
+        "dataset_type": "SNV_INDEL",
+        "sample_id": "NA19679_S",
+        "is_active": true,
+        "elasticsearch_index":null,
+        "tissue_type": "F",
+        "data_source": "fibs_samples.tsv.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -916,8 +945,9 @@
         "sample_type": "WES",
         "is_active": false,
         "elasticsearch_index": "test_index",
+        "tissue_type": "X",
         "individual": 3,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -934,7 +964,8 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 4,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -951,7 +982,8 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 5,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -968,7 +1000,8 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 6,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -985,7 +1018,8 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 7,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1002,8 +1036,9 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 8,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1020,7 +1055,8 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 9,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1037,8 +1073,9 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 10,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1055,8 +1092,9 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 11,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1073,8 +1111,9 @@
         "sample_type": "WES",
         "is_active": false,
     	"individual": 12,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1091,8 +1130,9 @@
         "sample_type": "WES",
         "is_active": false,
     	"individual": 14,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1109,7 +1149,8 @@
         "sample_type": "WES",
         "is_active": true,
         "individual": 15,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
+        "tissue_type": "X",
         "loaded_date": "2020-02-05T06:42:55.397Z"
     }
 },
@@ -1123,11 +1164,12 @@
         "last_modified_date": "2017-03-13T09:07:50.277Z",
 
         "sample_id": "NA20888",
-        "sample_type": "WES",
+        "sample_type": "WGS",
         "is_active": false,
         "individual": 16,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1144,8 +1186,10 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 17,
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
+        "data_source": "auto__2023-08-08",
+        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
@@ -1163,6 +1207,7 @@
         "is_active": true,
         "individual": 4,
         "dataset_type": "SV",
+        "tissue_type": "X",
         "loaded_date": "2018-02-05T06:42:55.397Z"
     }
 },
@@ -1180,6 +1225,7 @@
         "is_active": true,
         "individual": 5,
         "dataset_type": "SV",
+        "tissue_type": "X",
         "loaded_date": "2018-02-05T06:42:55.397Z"
     }
 },
@@ -1236,24 +1282,6 @@
 },
 {
     "model": "seqr.sample",
-    "pk": 150,
-    "fields": {
-        "guid": "S000150_na19675_d2",
-        "created_date": "2017-02-05T06:42:55.397Z",
-        "created_by": null,
-        "last_modified_date": "2017-03-13T09:07:49.744Z",
-        "individual": 1,
-        "sample_type": "RNA",
-        "dataset_type": "VARIANTS",
-        "sample_id": "NA19675_D2",
-        "is_active": true,
-        "elasticsearch_index":null,
-        "data_source": "muscle_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
-    }
-},
-{
-    "model": "seqr.sample",
     "pk": 151,
     "fields": {
         "guid": "S000151_na19675_1",
@@ -1262,7 +1290,7 @@
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 1,
         "sample_type": "RNA",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "sample_id": "NA19675_1",
         "is_active": true,
         "elasticsearch_index":null,
@@ -1281,7 +1309,7 @@
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 1,
         "sample_type": "RNA",
-        "dataset_type": "VARIANTS",
+        "dataset_type": "SNV_INDEL",
         "sample_id": "NA19675_D2",
         "is_active": true,
         "elasticsearch_index":null,
@@ -1294,7 +1322,7 @@
     "model": "seqr.rnaseqoutlier",
     "pk": 1,
     "fields": {
-        "sample": 150,
+        "sample": 152,
         "gene_id": "ENSG00000135953",
         "z_score": 7.31,
         "p_value": 0.00000000000948,
@@ -1305,7 +1333,7 @@
     "model": "seqr.rnaseqoutlier",
     "pk": 2,
     "fields": {
-        "sample": 150,
+        "sample": 152,
         "gene_id": "ENSG00000240361",
         "z_score": -4.08,
         "p_value": 5.88,
@@ -1316,7 +1344,7 @@
     "model": "seqr.rnaseqoutlier",
     "pk": 3,
     "fields": {
-        "sample": 150,
+        "sample": 152,
         "gene_id": "ENSG00000268903",
         "z_score": 7.08,
         "p_value": 0.000000000588,
@@ -1344,9 +1372,17 @@
     "model": "seqr.rnaseqtpm",
     "pk": 5,
     "fields": {
-        "sample": 150,
+        "sample": 152,
         "gene_id": "ENSG00000227232",
         "tpm": 9.1
+    }
+}, {
+    "model": "seqr.rnaseqtpm",
+    "pk": 6,
+    "fields": {
+        "sample": 152,
+        "gene_id": "ENSG00000233653",
+        "tpm": 1.03
     }
 },
 {
@@ -1354,12 +1390,133 @@
     "pk": 1,
     "fields": {
         "sample": 151,
-        "gene_id": "ENSG00000106554",
+        "rank": 0,
+        "gene_id": "ENSG00000268903",
         "p_value": 1.08E-56,
         "z_score": 12.34,
         "chrom": "7",
         "start": 132885746,
         "end": 132886973,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.85,
+        "read_count": 1297,
+        "rare_disease_samples_with_junction": 1,
+        "rare_disease_samples_total": 20
+    }
+},
+{
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 2,
+    "fields": {
+        "sample": 153,
+        "rank": 0,
+        "gene_id": "ENSG00000268903",
+        "p_value": 1.08E-56,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 132885754,
+        "end": 132886934,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.65,
+        "read_count": 234,
+        "rare_disease_samples_with_junction": 2,
+        "rare_disease_samples_total": 23
+    }
+},
+{
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 3,
+    "fields": {
+        "sample": 151,
+        "rank": 3,
+        "gene_id": "ENSG00000268903",
+        "p_value": 0.1,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 1001,
+        "end": 2001,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.85,
+        "read_count": 1297,
+        "rare_disease_samples_with_junction": 1,
+        "rare_disease_samples_total": 20
+    }
+},
+{
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 4,
+    "fields": {
+        "sample": 151,
+        "rank": 1,
+        "gene_id": "ENSG00000268903",
+        "p_value": 0.0001,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 3000,
+        "end": 4000,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.85,
+        "read_count": 1297,
+        "rare_disease_samples_with_junction": 1,
+        "rare_disease_samples_total": 20
+    }
+},
+{
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 5,
+    "fields": {
+        "sample": 151,
+        "rank": 2,
+        "gene_id": "ENSG00000268903",
+        "p_value": 0.0001,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 5000,
+        "end": 6000,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.85,
+        "read_count": 1297,
+        "rare_disease_samples_with_junction": 1,
+        "rare_disease_samples_total": 20
+    }
+},
+{
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 6,
+    "fields": {
+        "sample": 152,
+        "gene_id": "ENSG00000268903",
+        "rank": 0,
+        "p_value": 0.001,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 7000,
+        "end": 8000,
+        "strand": "*",
+        "type": "psi5",
+        "delta_psi": 0.85,
+        "read_count": 1297,
+        "rare_disease_samples_with_junction": 1,
+        "rare_disease_samples_total": 20
+    }
+},
+{
+    "model": "seqr.rnaseqspliceoutlier",
+    "pk": 7,
+    "fields": {
+        "sample": 152,
+        "rank": 1,
+        "gene_id": "ENSG00000268903",
+        "p_value": 0.2,
+        "z_score": 12.34,
+        "chrom": "7",
+        "start": 9000,
+        "end": 9100,
         "strand": "*",
         "type": "psi5",
         "delta_psi": 0.85,
@@ -1448,6 +1605,32 @@
     }
 },
 {
+    "model": "seqr.igvsample",
+    "pk": 146,
+    "fields": {
+        "guid": "S000146_na20870",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 7,
+        "sample_type": "alignment",
+        "file_path": "gs://readviz/NA20870.cram"
+    }
+},
+{
+    "model": "seqr.igvsample",
+    "pk": 147,
+    "fields": {
+        "guid": "S000147_na20870",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 7,
+        "sample_type": "gcnv",
+        "file_path": "gs://datasets-gcnv/NA20870.bed.gz"
+    }
+},
+{
     "model": "seqr.varianttagtype",
     "pk": 1,
     "fields": {
@@ -1511,6 +1694,22 @@
     }
 },
 {
+    "model": "seqr.varianttagtype",
+    "pk": 5,
+    "fields": {
+        "guid": "VTT_aip",
+        "created_date": "2021-11-14T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "AIP",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#E09AE2",
+        "order": 17.5
+    }
+},
+{
     "model": "seqr.savedvariant",
     "pk": 1,
     "fields": {
@@ -1557,7 +1756,7 @@
     "pk": 2,
     "fields": {
         "guid": "SV0000002_1248367227_r0390_100",
-        "created_date": "2018-05-15T14:51:56.943Z",
+        "created_date": "2018-05-15T14:52:56.943Z",
         "created_by": null,
         "last_modified_date": "2018-05-31T16:36:02.805Z",
         "xpos": 1248367227,
@@ -1649,21 +1848,9 @@
             "chrom": "1",
             "genotypes": {
                 "I000004_hg00731": {
-                    "sampleId": "HG00731",
-                    "ab": 0.0,
-                    "ad": "71,0",
-                    "gq": 99.0,
-                    "dp": "71",
-                    "pl": "0,213,1918",
                     "numAlt": 2
                 },
                 "I000005_hg00732": {
-                    "sampleId": "HG00732",
-                    "ab": 0.0,
-                    "ad": "77,0",
-                    "gq": 99.0,
-                    "dp": "77",
-                    "pl": "0,232,3036",
                     "numAlt": 1
                 }
             }
@@ -1837,6 +2024,7 @@
                         "aminoAcids": "V/M", "cdnaPosition": "3955"}
                 ]
             }, "chrom": "1", "genotypes": {
+                "I000002_na19675": {"sampleId": "NA19675", "ab": 0.5555556, "ad": null, "gq": 99, "dp": 9, "pl": null, "numAlt": 1},
                 "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}}},
         "family": 12
     }
@@ -1856,8 +2044,8 @@
         "variant_id": "prefix_19107_DEL",
         "saved_variant_json": {
             "liftedOverGenomeVersion": null,
-            "pos": 49045487,
-            "end": 49045898,
+            "pos": 249045487,
+            "end": 249045898,
             "xpos": 1249045487,
             "predictions": {"strvctvre": 0.374},
             "alt": null,
@@ -1871,7 +2059,8 @@
             "liftedOverChrom": null,
             "svType": "DEL",
             "variantId": "prefix_19107_DEL",
-            "chrom": "12",
+            "chrom": "1",
+            "genomeVersion": "37",
             "transcripts": {"ENSG00000240361": [], "ENSG00000135953": [], "ENSG00000223972":  []}
         },
         "family": 12
@@ -1892,18 +2081,7 @@
         "variant_id": "12-48367227-TC-T",
         "saved_variant_json": {
             "liftedOverGenomeVersion": "38",  "liftedOverPos": "", "genomeVersion": "37", "pos": 248367227,
-            "mainTranscriptId": "ENST00000505820", "transcripts": {
-                "ENSG00000135953": [
-                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000228198"}
-                ],
-                "ENSG00000240361": [
-                    {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding",
-                        "geneSymbol": "MIB2", "majorConsequence": "intron_variant", "canonical": 1,
-                        "hgvsp": "ENST00000505820.2:c.1586-17C>G", "lof": "", "lofFlags": "", "codons": "Gtg/Atg",
-                        "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000240361",
-                        "aminoAcids": "V/M", "cdnaPosition": "3955"}
-                ]
-            }, "chrom": "1", "genotypes": {
+            "transcripts": {}, "chrom": "1", "genotypes": {
                 "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}}},
         "family": 14
     }
@@ -2012,6 +2190,20 @@
         "saved_variants": [8],
         "variant_tag_type": 1,
         "search_hash": null
+    }
+},
+{
+    "model": "seqr.varianttag",
+    "pk": 1726985,
+    "fields": {
+        "guid": "VT1726985_2103343353_r0390_100",
+        "created_date": "2023-11-15T21:01:33.193Z",
+        "created_by": null,
+        "last_modified_date": "2023-11-15T21:01:33.193Z",
+        "saved_variants": [2],
+        "variant_tag_type": 5,
+        "metadata": "{\"4\": {\"date\": \"2023-11-15\", \"name\": \"de Novo\"}, \"support\": {\"date\": \"2023-11-15\", \"name\": \"High in Silico Scores\"}}"
+
     }
 },
 {

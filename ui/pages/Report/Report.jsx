@@ -8,17 +8,17 @@ import { Error404, Error401 } from 'shared/components/page/Errors'
 
 import Anvil from './components/Anvil'
 import CustomSearch from './components/CustomSearch'
-import DiscoverySheet from './components/DiscoverySheet'
+import FamilyMetadata from './components/FamilyMetadata'
 import Gregor from './components/Gregor'
-import SampleMetadata from './components/SampleMetadata'
 import SeqrStats from './components/SeqrStats'
+import VariantMetadata from './components/VariantMetadata'
 
 export const REPORT_PAGES = [
   { path: 'anvil', component: Anvil },
   { path: 'custom_search', params: '/:searchHash?', component: CustomSearch },
-  { path: 'discovery_sheet', params: '/:projectGuid?', component: DiscoverySheet },
+  { path: 'family_metadata', params: '/:projectGuid?', component: FamilyMetadata },
+  { path: 'variant_metadata', params: '/:projectGuid?', component: VariantMetadata },
   { path: 'gregor', component: Gregor },
-  { path: 'sample_metadata', params: '/:projectGuid?', component: SampleMetadata },
   { path: 'seqr_stats', component: SeqrStats },
 ]
 

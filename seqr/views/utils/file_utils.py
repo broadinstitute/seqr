@@ -27,7 +27,8 @@ def save_temp_file(request):
     if request.GET.get('parsedData'):
         response['parsedData'] = json_records
     else:
-        response['info'] = ['Parsed {num_rows} rows from {filename}'.format(num_rows=len(json_records), filename=filename)]
+        row_summary = 'json' if filename.endswith('.json') else f'{len(json_records)} rows'
+        response['info'] = [f'Parsed {row_summary} from {filename}']
 
     return create_json_response(response)
 
@@ -109,7 +110,5 @@ def load_uploaded_file(upload_file_id):
     serialized_file_path = _compute_serialized_file_path(upload_file_id)
     with gzip.open(serialized_file_path, "rt") as f:
         json_records = json.load(f)
-
-    os.remove(serialized_file_path)
 
     return json_records

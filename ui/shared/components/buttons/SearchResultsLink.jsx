@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import { VEP_GROUP_SV, ANY_AFFECTED } from 'shared/utils/constants'
-import { FREQUENCIES, THIS_CALLSET_FREQUENCY, SV_CALLSET_FREQUENCY } from '../panel/search/constants'
+import { FREQUENCIES, TOPMED_FREQUENCY } from '../panel/search/constants'
 import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({
@@ -48,15 +48,23 @@ const ConnectedSearchResultsLink = connect(null, mapDispatchToProps)(SearchResul
 
 export default ConnectedSearchResultsLink
 
-const getGeneSearchProps = af => ({
-  inheritance: { mode: ANY_AFFECTED },
-  freqs: FREQUENCIES.filter(({ name }) => name !== THIS_CALLSET_FREQUENCY && name !== SV_CALLSET_FREQUENCY).reduce(
-    (acc, { name }) => ({ ...acc, [name]: { af } }), {},
-  ),
-})
-
-const INITIAL_GENE_SEARCH = getGeneSearchProps(0.1)
-const RARE_GENE_SEARCH = getGeneSearchProps(0.01)
+const INITIAL_GENE_SEARCH = {
+  inheritance: { mode: ANY_AFFECTED, filter: {} },
+  freqs: {
+    ...FREQUENCIES.filter(({ name }) => name !== TOPMED_FREQUENCY).reduce(
+      (acc, { name }) => ({ ...acc, [name]: { af: 0.03 } }), {},
+    ),
+  },
+  qualityFilter: { min_gq: 40, min_ab: 10 },
+}
 
 export const GeneSearchLink = props => <ConnectedSearchResultsLink initialSearch={INITIAL_GENE_SEARCH} {...props} />
-export const RareGeneSearchLink = props => <ConnectedSearchResultsLink initialSearch={RARE_GENE_SEARCH} {...props} />
+
+const PERMISSIVE_INITIAL_GENE_SEARCH = {
+  ...INITIAL_GENE_SEARCH,
+  qualityFilter: { ...INITIAL_GENE_SEARCH.qualityFilter, min_gq: 20 },
+}
+
+export const PermissiveGeneSearchLink = props => (
+  <ConnectedSearchResultsLink initialSearch={PERMISSIVE_INITIAL_GENE_SEARCH} {...props} />
+)

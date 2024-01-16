@@ -20,7 +20,7 @@ import FormWrapper from '../../form/FormWrapper'
 import { BooleanCheckbox, InlineToggle, RadioGroup, YearSelector } from '../../form/Inputs'
 import Modal from '../../modal/Modal'
 import { NoBorderTable, FontAwesomeIconsContainer, ButtonLink } from '../../StyledComponents'
-import { EditPedigreeImageButton, DeletePedigreeImageButton, SavePedigreeDatasetButton } from './PedigreeImageButtons'
+import { EditPedigreeImageButton, DeletePedigreeImageButton, SavePedigreeDatasetButton, ResetPedigreeDatasetButton } from './PedigreeImageButtons'
 
 const PedigreeImg = styled.img.attrs({ alt: 'pedigree' })`
   max-height: ${props => props.maxHeight}px;
@@ -275,6 +275,11 @@ class BasePedigreeImage extends React.PureComponent {
                   getPedigreeDataset={this.getPedigreeDataset}
                 />
               </Table.Cell>
+              {family.pedigreeDataset && (
+                <Table.Cell collapsing>
+                  <ResetPedigreeDatasetButton familyGuid={family.familyGuid} />
+                </Table.Cell>
+              )}
             </Table.Row>
           </Table.Body>
         </NoBorderTable>

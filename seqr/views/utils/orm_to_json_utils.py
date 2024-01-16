@@ -8,11 +8,12 @@ from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharF
 from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JSONObject
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
+import json
 
 from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
-    get_audit_field_names
+    get_audit_field_names, RnaSeqOutlier, RnaSeqSpliceOutlier
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
@@ -433,6 +434,14 @@ def _format_functional_tags(tags):
     return tags
 
 
+AIP_TAG_TYPE = 'AIP'
+def _format_variant_tags(tags):
+    for tag in tags:
+        if tag['name'] == AIP_TAG_TYPE and tag['metadata']:
+            tag['aipMetadata'] = json.loads(tag.pop('metadata'))
+    return tags
+
+
 def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, tag_filter=None):
     variant_tag_id_map = defaultdict(list)
     for savedvariant_id, tag_id in tag_cls.saved_variants.through.objects.filter(
@@ -456,6 +465,8 @@ def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, ta
         tag_models, guid_key=guid_key, nested_fields=nested_fields, additional_model_fields=['id'])
     if tag_cls == VariantFunctionalData:
         _format_functional_tags(tags)
+    elif tag_cls == VariantTag:
+        _format_variant_tags(tags)
 
     variant_tag_map = defaultdict(list)
     for tag in tags:
@@ -757,10 +768,31 @@ def get_json_for_matchmaker_submission(submission):
         additional_model_fields=['contact_name', 'contact_href', 'submission_id'])
 
 
-def get_json_for_rna_seq_outliers(models, **kwargs):
-    additional_values = {
-        'isSignificant': Case(
-            When(p_adjust__lt=models.model.SIGNIFICANCE_THRESHOLD, then=Value(True)), default=Value(False)
-        ),
-    }
-    return get_json_for_queryset(models, additional_values=additional_values, **kwargs)
+EXPRESSION_OUTLIERS = 'outliers'
+SPLICE_OUTLIERS = 'spliceOutliers'
+
+
+def get_json_for_rna_seq_outliers(filters, significant_only=True, individual_guid=None):
+    filters = {'sample__is_active': True, **filters}
+
+    data_by_individual_gene = defaultdict(lambda: {EXPRESSION_OUTLIERS: defaultdict(list), SPLICE_OUTLIERS: defaultdict(list)})
+
+    for model, outlier_type in [(RnaSeqOutlier, EXPRESSION_OUTLIERS), (RnaSeqSpliceOutlier, SPLICE_OUTLIERS)]:
+        significant_filter = {f'{model.SIGNIFICANCE_FIELD}__lt': model.SIGNIFICANCE_THRESHOLD}
+        if hasattr(model, 'MAX_SIGNIFICANT_OUTLIER_NUM'):
+            significant_filter['rank__lt'] = model.MAX_SIGNIFICANT_OUTLIER_NUM
+
+        outliers = get_json_for_queryset(
+            model.objects.filter(**filters, **(significant_filter if significant_only else {})),
+            nested_fields=[
+                {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'},
+                {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid', 'value': individual_guid},
+            ],
+            additional_values={'isSignificant': Value(True)} if significant_only else {
+                'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))},
+        )
+
+        for data in outliers:
+            data_by_individual_gene[data.pop('individualGuid')][outlier_type][data['geneId']].append(data)
+
+    return data_by_individual_gene

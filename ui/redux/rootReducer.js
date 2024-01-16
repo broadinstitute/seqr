@@ -328,6 +328,7 @@ const rootReducer = combineReducers({
   mmeSubmissionsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeSubmissionsByGuid'),
   mmeResultsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeResultsByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),
+  omimIntervals: createObjectsByIdReducer(RECEIVE_DATA, 'omimIntervals'),
   rnaSeqDataByIndividual: createObjectsByIdReducer(RECEIVE_DATA, 'rnaSeqData'),
   phenotypeGeneScoresByIndividual: createObjectsByIdReducer(RECEIVE_DATA, 'phenotypeGeneScores'),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_DATA),

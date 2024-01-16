@@ -1,0 +1,26 @@
+#!/bin/bash
+
+###
+# Waits for network endpoints.  Intended usage is within Kubernetes CronJobs to wait for sidecar availability.
+# Usage: ./wait_for_routes https://www.google.com/ https://www.broadinstitute.org https://www.broadins.org
+###
+
+RETRY_COUNT=10
+SLEEP_S=2
+
+for route in "$@"
+do
+    retries=0
+    until [ "$retries" -ge 10 ]
+    do
+        curl -s $route -o /dev/null && echo "Successful ping of $route" && break
+        retries=$((retries+1))
+        if [ "$retries" -eq 10 ]; then
+            echo "Route ${route} wasn't available after ${RETRY_COUNT} connection attempts"
+            exit 1
+        else
+            echo "Unable to connect to ${route}, retrying. Attempt ${retries}/${RETRY_COUNT}"
+            sleep $SLEEP_S
+        fi
+    done
+done

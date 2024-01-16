@@ -26,8 +26,9 @@ COMPOUND_HET_2_GUID = 'SV0059957_11562437_f019313_1'
 GENE_GUID_2 = 'ENSG00000197530'
 
 SAVED_VARIANT_RESPONSE_KEYS = {
-    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
+    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'familiesByGuid',
     'genesById', 'locusListsByGuid', 'rnaSeqData', 'mmeSubmissionsByGuid', 'transcriptsById', 'phenotypeGeneScores',
+    'omimIntervals',
 }
 
 COMPOUND_HET_3_JSON = {
@@ -119,6 +120,7 @@ INVALID_CREATE_VARIANT_REQUEST_BODY['variant']['chrom'] = '27'
 
 class SavedVariantAPITest(object):
 
+    @mock.patch('seqr.views.utils.variant_utils.OMIM_GENOME_VERSION', '37')
     def test_saved_variant_data(self):
         url = reverse(saved_variant_data, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
@@ -170,11 +172,17 @@ class SavedVariantAPITest(object):
 
         self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {
             'outliers': {
-                'ENSG00000135953': {
+                'ENSG00000135953': [{
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
-                    'isSignificant': True,
-            }},
+                    'tissueType': 'M', 'isSignificant': True,
+                }]
+            },
+            'spliceOutliers': {},
         }})
+
+        self.assertDictEqual(response_json['familiesByGuid'], {'F000001_1': {'tpmGenes': ['ENSG00000135953']}})
+
+        self.assertDictEqual(response_json['omimIntervals'], {})
 
         # include project tag types
         response = self.client.get('{}?loadProjectTagTypes=true'.format(url))
@@ -205,7 +213,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         family_context_response_keys = {
-            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'igvSamplesByGuid', 'projectsByGuid'
+            'individualsByGuid', 'familyNotesByGuid', 'igvSamplesByGuid', 'projectsByGuid'
         }
         family_context_response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json.keys()), family_context_response_keys)
@@ -253,14 +261,34 @@ class SavedVariantAPITest(object):
         response = self.client.get('{}foo'.format(url))
         self.assertEqual(response.status_code, 404)
 
+        # Test with discovery SVs
+        response = self.client.get(url.replace(PROJECT_GUID, 'R0003_test'))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        response_keys = {*SAVED_VARIANT_RESPONSE_KEYS}
+        response_keys.remove('familiesByGuid')
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+
+        self.assertSetEqual(
+            set(response_json['savedVariantsByGuid'].keys()),
+            {'SV0000006_1248367227_r0003_tes', 'SV0000007_prefix_19107_DEL_r00'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000223972', 'ENSG00000240361'})
+        self.assertDictEqual(response_json['omimIntervals'], {'3': {
+            'chrom': '1',
+            'start': 249044482,
+            'end': 249055991,
+            'mimNumber': 600315,
+            'phenotypeDescription': '?Immunodeficiency 16', 'phenotypeInheritance': 'Autosomal recessive',
+            'phenotypeMimNumber': 615120,
+        }})
+        self.assertDictEqual(response_json['rnaSeqData'], {})
+
         # Test cross-project discovery for analyst users
         self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        response_keys = {'familiesByGuid'}
-        response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
-        self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
         variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(
             set(variants.keys()),
@@ -283,7 +311,9 @@ class SavedVariantAPITest(object):
         }]
         self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['discoveryTags'], discovery_tags)
         self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['familyGuids'], ['F000002_2'])
-        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000012_12'})
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000012_12'})
+        self.assertSetEqual(set(response_json['familiesByGuid']['F000012_12'].keys()), FAMILY_FIELDS)
+        self.assertDictEqual(response_json['familiesByGuid']['F000001_1'], {'tpmGenes': ['ENSG00000135953']})
 
         # Test discovery tags with family context
         response = self.client.get(load_family_context_url)

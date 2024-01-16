@@ -5,12 +5,12 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from seqr.models import Sample, RnaSeqOutlier
-from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers
 
 RNA_FILE_ID = 'tmp_-_2021-03-01T00:00:00_-_test_data_manager_-_new_muscle_samples.tsv.gz'
-EXISTING_SAMPLE_GUID = 'S000150_na19675_d2'
+EXISTING_SAMPLE_GUID = 'S000152_na19675_d2'
 
 class LoadRnaSeqTest(TestCase):
+    databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
 
     @mock.patch('seqr.management.commands.load_rna_seq_outlier.logger.info')
@@ -22,15 +22,15 @@ class LoadRnaSeqTest(TestCase):
 
         with self.assertRaises(ValueError) as e:
             call_command('load_rna_seq_outlier', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Invalid file: missing column(s): geneID, pValue, padjust, project, sampleID, zScore')
+        self.assertEqual(str(e.exception), 'Invalid file: missing column(s): geneID, pValue, padjust, project, sampleID, tissue, zScore')
 
         mock_gzip_file.__iter__.return_value = [
-            'sampleID\tproject\tgeneID\tdetail\tpValue\tpadjust\tzScore\n',
-            'NA19675_D2\t1kg project nåme with uniçøde\tENSG00000240361\tdetail1\t0.01\t0.13\t-3.1\n',
-            'NA19675_D2\t1kg project nåme with uniçøde\tENSG00000240361\tdetail2\t0.01\t0.13\t-3.1\n',
-            'NA19675_D2\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',
-            'NA19675_D3\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',
-            'NA19675_D4\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',
+            'sampleID\tproject\tgeneID\tdetail\tpValue\tpadjust\tzScore\ttissue\n',
+            'NA19675_D2\t1kg project nåme with uniçøde\tENSG00000240361\tdetail1\t0.01\t0.13\t-3.1\tmuscle\n',
+            'NA19675_D2\t1kg project nåme with uniçøde\tENSG00000240361\tdetail2\t0.01\t0.13\t-3.1\tmuscle\n',
+            'NA19675_D2\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\tmuscle\n',
+            'NA19675_D3\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\tmuscle\n',
+            'NA19675_D4\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\tmuscle\n',
         ]
         mock_open.return_value.__enter__.return_value.__iter__.return_value = ['NA19675_D4\tNA19678']
 
@@ -45,20 +45,18 @@ class LoadRnaSeqTest(TestCase):
         call_command('load_rna_seq_outlier', RNA_FILE_ID, '--ignore-extra-samples')
 
         rna_samples = Sample.objects.filter(individual_id=1, sample_id='NA19675_D2', sample_type='RNA')
-        self.assertEqual(len(rna_samples), 2)
+        self.assertEqual(len(rna_samples), 1)
         sample = rna_samples.first()
         self.assertEqual(sample.guid, EXISTING_SAMPLE_GUID)
         self.assertTrue(sample.is_active)
         self.assertIsNone(sample.elasticsearch_index)
         self.assertEqual(sample.data_source, 'new_muscle_samples.tsv.gz')
+        self.assertEqual(sample.tissue_type, 'M')
 
         models = RnaSeqOutlier.objects.all()
         self.assertEqual(models.count(), 2)
         self.assertSetEqual({model.sample for model in models}, {sample})
-        self.assertListEqual(list(get_json_for_rna_seq_outliers(models)), [
-            {'geneId': 'ENSG00000240361', 'pAdjust': 0.13, 'pValue': 0.01, 'zScore': -3.1, 'isSignificant': False},
-            {'geneId': 'ENSG00000233750', 'pAdjust': 0.0000057, 'pValue': 0.064, 'zScore': 7.8, 'isSignificant': True},
+        self.assertListEqual(list(models.values_list('gene_id', 'p_adjust', 'p_value', 'z_score')), [
+            ('ENSG00000240361', 0.13, 0.01, -3.1), ('ENSG00000233750', 0.0000057, 0.064, 7.8),
         ])
         mock_logger.assert_called_with('create 2 RnaSeqOutliers for NA19675_D2')
-
-

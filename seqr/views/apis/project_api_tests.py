@@ -4,6 +4,7 @@ from copy import deepcopy
 from datetime import datetime
 from django.contrib.auth.models import Group
 from django.urls.base import reverse
+import responses
 
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
@@ -14,7 +15,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
     PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
     SAMPLE_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
     CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
-    TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2
+    EXT_WORKSPACE_NAMESPACE, EXT_WORKSPACE_NAME
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
@@ -26,19 +27,30 @@ BASE_CREATE_PROJECT_JSON = {
     'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38', 'isDemo': True,
     'disableMme': True, 'consentCode': 'H',
 }
-WORKSPACE_JSON = {'workspaceName': TEST_NO_PROJECT_WORKSPACE_NAME2, 'workspaceNamespace': TEST_WORKSPACE_NAMESPACE}
+WORKSPACE_JSON = {'workspaceName': EXT_WORKSPACE_NAME, 'workspaceNamespace': EXT_WORKSPACE_NAMESPACE}
 WORKSPACE_CREATE_PROJECT_JSON = deepcopy(WORKSPACE_JSON)
 WORKSPACE_CREATE_PROJECT_JSON.update(BASE_CREATE_PROJECT_JSON)
 
 MOCK_GROUP_UUID = '123abd'
 
+MOCK_AIRTABLE_URL = 'http://testairtable'
+MOCK_RECORDS = {'records': [
+    {'id': 'recH4SEO1CeoIlOiE', 'fields': {'Status': 'Loading'}},
+    {'id': 'recSgwrXNkmlIB5eM', 'fields': {'Status': 'Available in Seqr'}},
+]}
+
+
 class ProjectAPITest(object):
     CREATE_PROJECT_JSON = WORKSPACE_CREATE_PROJECT_JSON
     REQUIRED_FIELDS = ['name', 'genomeVersion', 'workspaceNamespace', 'workspaceName']
+    AIRTABLE_TRACKING_URL = f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking'
 
+    @mock.patch('seqr.views.utils.airtable_utils.logger')
+    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', MOCK_AIRTABLE_URL)
     @mock.patch('seqr.models.uuid.uuid4', lambda: MOCK_GROUP_UUID)
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-    def test_create_and_delete_project(self):
+    @responses.activate
+    def test_create_and_delete_project(self, mock_airtable_logger):
         create_project_url = reverse(create_project_handler)
         self.check_pm_login(create_project_url)
 
@@ -76,6 +88,12 @@ class ProjectAPITest(object):
         self.assertTrue(response.json()['projectsByGuid'][project_guid]['userIsCreator'])
 
         # delete the project
+        responses.add(
+            responses.GET,
+            f"{self.AIRTABLE_TRACKING_URL}?fields[]=Status&pageSize=100&filterByFormula=AND({{AnVIL Project URL}}='/project/{project_guid}/project_page',OR(Status='Available in Seqr',Status='Loading',Status='Loading Requested'))",
+            json=MOCK_RECORDS)
+        responses.add(responses.PATCH, f'{self.AIRTABLE_TRACKING_URL}/recH4SEO1CeoIlOiE', status=400)
+        responses.add(responses.PATCH, f'{self.AIRTABLE_TRACKING_URL}/recSgwrXNkmlIB5eM')
         delete_project_url = reverse(delete_project_handler, args=[project_guid])
         response = self.client.post(delete_project_url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
@@ -86,6 +104,8 @@ class ProjectAPITest(object):
         self.assertEqual(
             Group.objects.filter(name__in=['new_project_can_edit_123abd', 'new_project_can_view_123abd']).count(), 0,
         )
+
+        self._assert_expected_airtable_requests(mock_airtable_logger)
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_update_project(self):
@@ -167,14 +187,14 @@ class ProjectAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), PROJECT_FIELDS)
 
-        self.assertEqual(response_json['workspaceName'], TEST_NO_PROJECT_WORKSPACE_NAME2)
-        self.assertEqual(response_json['workspaceNamespace'], TEST_WORKSPACE_NAMESPACE)
+        self.assertEqual(response_json['workspaceName'], EXT_WORKSPACE_NAME)
+        self.assertEqual(response_json['workspaceNamespace'], EXT_WORKSPACE_NAMESPACE)
         self.assertEqual(response_json['genomeVersion'], '37')
         self.assertNotEqual(response_json['description'], 'updated project description')
 
         project = Project.objects.get(guid=PROJECT_GUID)
-        self.assertEqual(project.workspace_name, TEST_NO_PROJECT_WORKSPACE_NAME2)
-        self.assertEqual(project.workspace_namespace, TEST_WORKSPACE_NAMESPACE)
+        self.assertEqual(project.workspace_name, EXT_WORKSPACE_NAME)
+        self.assertEqual(project.workspace_namespace, EXT_WORKSPACE_NAMESPACE)
 
     def test_project_page_data(self):
         url = reverse(project_page_data, args=[PROJECT_GUID])
@@ -272,7 +292,7 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
-            'F000002_2': {'Excluded': 1, 'Known gene for phenotype': 1},
+            'F000002_2': {'AIP': 1, 'Excluded': 1, 'Known gene for phenotype': 1},
         })
 
         # Test compound het counts
@@ -530,6 +550,9 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
         self.login_pm_user()
         response = self.client.post(url, content_type='application/json', data=json.dumps(WORKSPACE_JSON))
         self.assertEqual(response.status_code, 403)
+
+    def _assert_expected_airtable_requests(self, *args, **kwargs):
+        self.assertEqual(len(responses.calls), 0)
 
 
 # Test for permissions from AnVIL only

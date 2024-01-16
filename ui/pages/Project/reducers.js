@@ -86,7 +86,7 @@ export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatc
   // Do not load if already loaded
   let expectedFamilyGuids
   if (variantGuid) {
-    if (state.savedVariantsByGuid[variantGuid]) {
+    if (variantGuid.split(',').every(g => state.savedVariantsByGuid[g])) {
       return
     }
     url = `${url}/${variantGuid}`
@@ -190,14 +190,14 @@ export const addVariantsDataset = values => (dispatch, getState) => new HttpRequ
   },
 ).post(values)
 
-export const addIGVDataset = ({ mappingFile, ...values }) => (dispatch, getState) => {
+export const addIGVDataset = ({ mappingFile, ...values }) => (dispatch) => {
   const errors = []
 
   return Promise.all(mappingFile.updates.map(
-    ({ individualGuid, ...update }) => new HttpRequestHelper(
+    ({ individualGuid, individualId, ...update }) => new HttpRequestHelper(
       `/api/individual/${individualGuid}/update_igv_sample`,
       responseJson => dispatch({ type: RECEIVE_DATA, updatesById: responseJson }),
-      e => errors.push(`Error updating ${getState().individualsByGuid[individualGuid].individualId}: ${e.body && e.body.error ? e.body.error : e.message}`),
+      e => errors.push(`Error updating ${individualId}: ${e.body && e.body.error ? e.body.error : e.message}`),
     ).post({ ...update, ...values }),
   )).then(() => {
     if (errors.length) {
@@ -301,9 +301,11 @@ export const searchMmeMatches = submissionGuid => (dispatch) => {
 }
 
 export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
-  const data = getState().rnaSeqDataByIndividual[individualGuid]
-  // If variants were loaded for the individual, the significant gene data will be loaded but not all the needed data
-  if (!data?.outliers || Object.values(data.outliers).every(({ isSignificant }) => isSignificant)) {
+  const { outliers, spliceOutliers } = getState().rnaSeqDataByIndividual[individualGuid] || {}
+  // If variants were loaded for the individual, the significant data were loaded but not the non-significant ones
+  if (!outliers || !spliceOutliers || (Object.values(outliers).flat().every(({ isSignificant }) => isSignificant) &&
+    Object.values(spliceOutliers).flat().every(({ isSignificant }) => isSignificant))
+  ) {
     dispatch({ type: REQUEST_RNA_SEQ_DATA })
     new HttpRequestHelper(`/api/individual/${individualGuid}/rna_seq_data`,
       (responseJson) => {
@@ -368,7 +370,10 @@ export const updateFamiliesTable = (updates, tableName) => (
   { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }
 )
 
-export const updateFamiliesTableFilters = updates => ({ type: UPDATE_FAMILY_TABLE_FILTER_STATE, updates })
+export const updateFamiliesTableFilters = updates => (dispatch, getState) => {
+  const { currentProjectGuid } = getState()
+  dispatch({ type: UPDATE_FAMILY_TABLE_FILTER_STATE, updatesById: { [currentProjectGuid]: updates } })
+}
 
 export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
 
@@ -394,7 +399,7 @@ export const reducers = {
     familiesSortOrder: SORT_BY_FAMILY_NAME,
     familiesSortDirection: 1,
   }, false),
-  familyTableFilterState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_FILTER_STATE),
+  familyTableFilterState: createObjectsByIdReducer(UPDATE_FAMILY_TABLE_FILTER_STATE),
   caseReviewTableState: createSingleObjectReducer(UPDATE_CASE_REVIEW_TABLE_STATE, {
     familiesFilter: SHOW_IN_REVIEW,
     familiesSortOrder: SORT_BY_FAMILY_ADDED_DATE,
