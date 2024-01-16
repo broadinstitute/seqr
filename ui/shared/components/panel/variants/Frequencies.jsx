@@ -177,6 +177,7 @@ const POPULATIONS = [
     fieldTitle: 'gnomAD v2 exomes',
     titleContainer: gnomadLink,
     urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org' },
+    queryParams: { [GENOME_VERSION_37]: 'dataset=gnomad_r2_1' },
   },
   {
     field: 'gnomad_genomes',
