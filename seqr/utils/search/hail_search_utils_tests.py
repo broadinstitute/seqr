@@ -33,10 +33,6 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         executed_request = responses.calls[-1].request
         self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')
-        act = json.loads(executed_request.body)
-        if act != expected_search:
-            diff_k = {ky for ky, val in act.items() if val != expected_search.get(ky)}
-            import pdb; pdb.set_trace()
         self.assertDictEqual(json.loads(executed_request.body), expected_search)
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
@@ -160,10 +156,6 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         del self.search_model.search['annotations']
         self.search_model.search['locus'] = {'rawItems': raw_locus}
         query_variants(self.results_model, user=self.user)
-        sv_sample_data = {
-            'SV_WES': FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL'],
-            'SV_WGS': [{'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234'}],
-        }
         self._test_expected_search_call(**LOCATION_SEARCH, sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data})
 
         self.results_model.families.set(Family.objects.filter(project_id=1))
