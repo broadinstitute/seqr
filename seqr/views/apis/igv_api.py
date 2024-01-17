@@ -35,77 +35,56 @@ def _process_alignment_records(rows, num_id_cols=1, **kwargs):
     return parsed_records
 
 
-def _process_igv_table_handler(parse_uploaded_file, get_valid_matched_individuals):
-    info = []
+def _post_process_igv_records(individual_dataset_mapping, get_valid_matched_individuals, filename):
+    matched_individuals = get_valid_matched_individuals(individual_dataset_mapping)
 
+    message = f'Parsed {sum([len(rows) for rows in individual_dataset_mapping.values()])} rows in {len(matched_individuals)} individuals'
+    if filename:
+        message += f' from {filename}'
+    info.append(message)
+
+    existing_sample_files = defaultdict(set)
+    for sample in IgvSample.objects.select_related('individual').filter(individual__in=matched_individuals.keys()):
+        existing_sample_files[sample.individual].add(sample.file_path)
+
+    num_unchanged_rows = 0
+    all_updates = []
+    for individual, updates in matched_individuals.items():
+        changed_updates = [
+            dict(individualGuid=individual.guid, individualId=individual.individual_id, **update)
+            for update in updates
+            if update['filePath'] not in existing_sample_files[individual]
+        ]
+        all_updates += changed_updates
+        num_unchanged_rows += len(updates) - len(changed_updates)
+
+    if num_unchanged_rows:
+        info.append('No change detected for {} rows'.format(num_unchanged_rows))
+
+    return info, all_updates
+
+
+def _process_igv_table_handler(parse_uploaded_file, get_valid_matched_individuals):
     try:
         uploaded_file_id, filename, individual_dataset_mapping = parse_uploaded_file()
 
-        matched_individuals = get_valid_matched_individuals(individual_dataset_mapping)
+        info, all_updates = _post_process_igv_records(
+            individual_dataset_mapping=individual_dataset_mapping,
+            get_valid_matched_individuals=get_valid_matched_individuals,
+            filename=filename,
+        )
 
-        message = f'Parsed {sum([len(rows) for rows in individual_dataset_mapping.values()])} rows in {len(matched_individuals)} individuals'
-        if filename:
-            message += f' from {filename}'
-        info.append(message)
-
-        existing_sample_files = defaultdict(set)
-        for sample in IgvSample.objects.select_related('individual').filter(individual__in=matched_individuals.keys()):
-            existing_sample_files[sample.individual].add(sample.file_path)
-
-        num_unchanged_rows = 0
-        all_updates = []
-        for individual, updates in matched_individuals.items():
-            changed_updates = [
-                dict(individualGuid=individual.guid, individualId=individual.individual_id, **update)
-                for update in updates
-                if update['filePath'] not in existing_sample_files[individual]
-            ]
-            all_updates += changed_updates
-            num_unchanged_rows += len(updates) - len(changed_updates)
-
-        if num_unchanged_rows:
-            info.append('No change detected for {} rows'.format(num_unchanged_rows))
+        response = {
+            'updates': all_updates,
+            'uploadedFileId': uploaded_file_id,
+            'errors': [],
+            'warnings': [],
+            'info': info,
+        }
+        return create_json_response(response)
 
     except Exception as e:
         return create_json_response({'errors': [str(e)]}, status=400)
-
-    response = {
-        'updates': all_updates,
-        'uploadedFileId': uploaded_file_id,
-        'errors': [],
-        'warnings': [],
-        'info': info,
-    }
-    return create_json_response(response)
-
-@pm_or_data_manager_required
-def receive_igv_table_handler(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
-
-    def _process_alignment_records(rows, **kwargs):
-        invalid_row = next((row for row in rows if not 2 <= len(row) <= 3), None)
-        if invalid_row:
-            raise ValueError("Must contain 2 or 3 columns: " + ', '.join(invalid_row))
-        parsed_records = defaultdict(list)
-        for row in rows:
-            parsed_records[row[0]].append({'filePath': row[1], 'sampleId': row[2] if len(row)> 2 else None})
-        return parsed_records
-
-    try:
-        uploaded_file_id, filename, individual_dataset_mapping = save_uploaded_file(request, process_records=_process_alignment_records)
-
-        info, all_updates = _post_process_igv_records(project, individual_dataset_mapping, filename)
-    except Exception as e:
-        return create_json_response({'errors': [str(e)]}, status=400)
-
-    response = {
-        'updates': all_updates,
-        'uploadedFileId': uploaded_file_id,
-        'errors': [],
-        'warnings': [],
-        'info': info,
-    }
-    return create_json_response(response)
 
 
 @pm_or_data_manager_required
@@ -306,8 +285,20 @@ def sa_get_igv_updates_required(request, project_guid):
     json_body = json.loads(request.body)
     json_records = json_body.get('mapping')
 
+    def _get_valid_matched_individuals(individual_dataset_mapping):
+        matched_individuals = Individual.objects.filter(
+            family__project=project, individual_id__in=individual_dataset_mapping.keys()
+        )
+        unmatched_individuals = set(individual_dataset_mapping.keys()) - {i.individual_id for i in matched_individuals}
+        if len(unmatched_individuals) > 0:
+            raise Exception('The following Individual IDs do not exist: {}'.format(", ".join(unmatched_individuals)))
+
+        return {i: individual_dataset_mapping[i.individual_id] for i in matched_individuals}
+
     info, all_updates = _post_process_igv_records(
-        project, json_records, '<body>'
+        individual_dataset_mapping=json_records,
+        get_valid_matched_individuals=_get_valid_matched_individuals,
+        filename='<body>'
     )
 
     # I was initially looking to completely merge this in, except the call is slow
@@ -322,3 +313,7 @@ def sa_get_igv_updates_required(request, project_guid):
 @service_account_access
 def sa_update_igv_individual(request, individual_guid):
     return update_individual_igv_sample_base(request, individual_guid)
+
+# @service_account_access
+# def sa_update_igv_bulk(request, individual_guid):
+#     return update_individual_igv_sample_base(request, individual_guid)

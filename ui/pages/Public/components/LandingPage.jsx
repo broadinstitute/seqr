@@ -19,7 +19,7 @@ const LOGIN_BUTTON_PROPS = {
   label: 'Already a seqr user?', content: 'Sign In', primary: true, size: 'big', labelPosition: 'left',
 }
 
-export const SeqrAvailability = ({ hasFootnote }) => (
+export const SeqrAvailability = () => (
   <List ordered>
     <List.Item>
       This instance is available for collaborators of the &nbsp;
@@ -50,10 +50,6 @@ export const SeqrAvailability = ({ hasFootnote }) => (
     </List.Item>
   </List>
 )
-
-SeqrAvailability.propTypes = {
-  hasFootnote: PropTypes.bool,
-}
 
 const LandingPage = () => (
   <Segment.Group>

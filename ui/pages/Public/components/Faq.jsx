@@ -182,7 +182,7 @@ const FAQS = [
       content: (
         <div>
           There are 3 mechanisms through which you can load and analyze your data in seqr:
-          <SeqrAvailability hasFootnote />
+          <SeqrAvailability />
 
           *AnVIL is a controlled-access NIH-designated data repository supported on the Terra platform. Users are
           expected
