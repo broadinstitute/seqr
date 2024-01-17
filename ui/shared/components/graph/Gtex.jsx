@@ -1,10 +1,9 @@
 import React from 'react'
-import { extent, max, median, min, quantile } from 'd3-array'
+import { deviation, extent, max, mean, median, min, quantile } from 'd3-array'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { randomNormal } from 'd3-random'
 import { scaleBand, scaleLinear } from 'd3-scale'
 import { area } from 'd3-shape'
-import { kernelDensityEstimator, kernel, kernelBandwidth } from 'gtex-d3/src/modules/kde' // TODO move into repo
 
 import { compareObjects } from 'shared/utils/sortUtils'
 import GtexLauncher, { queryGtex } from './GtexLauncher'
@@ -23,17 +22,21 @@ const DIMENSIONS = {
 // Code adapted from https://github.com/broadinstitute/gtex-viz/blob/8d65862fbe7e5ab9b4d5be419568754e0d17bb07/src/GeneExpressionViolinPlot.js
 
 const drawViolin = (svg, scale, tooltip) => (entry) => {
-  const kde = kernelDensityEstimator(
-    kernel.gaussian,
-    scale.y.ticks(100), // use up to 100 vertices along the Y axis (to create the violin path)
-    kernelBandwidth.nrd(entry.values), // estimate the bandwidth based on the data
-  )
-  const eDomain = extent(entry.values) // get the max and min in entry.values
-  // filter the vertices that aren't in the entry.values
-  const vertices = kde(entry.values).filter(d => d[0] >= eDomain[0] && d[0] <= eDomain[1])
-
   const violinG = svg.append('g')
     .datum(entry)
+
+  // get the vertices
+  const eDomain = extent(entry.values) // get the max and min in entry.values
+  const rangeDeviation = (quantile(entry.values, 0.75) - quantile(entry.values, 0.25)) / 1.34
+  const kernelBandwidth = 1.06 * Math.min(deviation(entry.values), rangeDeviation) * (entry.values.length ** -0.2)
+  // use up to 100 vertices along the Y axis (to create the violin path)
+  const vertices = scale.y.ticks(100).map(x => [x, mean(entry.values, (v) => {
+    const u = (x - v) / kernelBandwidth
+    return (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * u * u)
+  }) / kernelBandwidth]).filter(
+    // filter the vertices that aren't in the entry.values
+    d => d[0] >= eDomain[0] && d[0] <= eDomain[1],
+  )
 
   if (vertices.length < 1 || vertices.some(Number.isNaN)) {
     return
@@ -43,7 +46,7 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   const zMax = max(vertices, d => Math.abs(d[1]))
   scale.z
     .domain([-zMax, zMax])
-    .range([scale.x(entry.group), scale.x(entry.group) + scale.x.bandwidth()])
+    .range([scale.x(entry.label), scale.x(entry.label) + scale.x.bandwidth()])
 
   // visual rendering
   const violin = area()
@@ -100,7 +103,7 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   violinG.on('mouseover', () => {
     vPath.style('opacity', 1)
     tooltip.html(
-      `${entry.group}<br/>Sample size: ${entry.values.length}<br/>Median TPM: ${entry.median.toPrecision(4)}<br/>`,
+      `${entry.label}<br/>Sample size: ${entry.values.length}<br/>Median TPM: ${entry.median.toPrecision(4)}<br/>`,
     ).style('display', 'inline')
       .style('left', `${x + 70}px`)
       .style('top', `${medianY < 40 ? 10 : medianY - 40}px`)
@@ -120,10 +123,10 @@ const renderGtex = (expressionData, tissueData, containerElement) => {
   const violinPlotData = expressionData.data.map(({ tissueSiteDetailId, data }) => ({
     values: data.sort(),
     median: median(data),
-    group: tissueLookup[tissueSiteDetailId]?.tissueSiteDetail,
+    label: tissueLookup[tissueSiteDetailId]?.tissueSiteDetail,
     color: `#${tissueLookup[tissueSiteDetailId]?.colorHex}`,
   }))
-  violinPlotData.sort(compareObjects('group'))
+  violinPlotData.sort(compareObjects('label'))
 
   const svg = containerElement.append('svg')
     .attr('width', DIMENSIONS.w + MARGINS.left + MARGINS.right)
@@ -142,7 +145,7 @@ const renderGtex = (expressionData, tissueData, containerElement) => {
     .style('border-radius', '5px')
     .style('z-index', '4000')
 
-  const xDomain = violinPlotData.map(({ group }) => group)
+  const xDomain = violinPlotData.map(({ label }) => label)
   const yDomain = extent(violinPlotData.reduce((acc, { values }) => ([...acc, ...values]), []))
 
   const scale = {
