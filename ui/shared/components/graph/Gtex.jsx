@@ -1,9 +1,13 @@
 import React from 'react'
 import styled from 'styled-components'
-import { launch } from 'gtex-d3/src/GeneExpressionViolinPlot'
+import { median } from 'd3-array'
+import GroupedViolin from 'gtex-d3/src/modules/GroupedViolin' // TODO move into repo
 import 'gtex-d3/css/violin.css'
 
-import GtexLauncher, { GTEX_HOST } from './GtexLauncher'
+import { compareObjects } from 'shared/utils/sortUtils'
+import GtexLauncher, { queryGtex } from './GtexLauncher'
+
+// TODO add attibution for open source code
 
 const GtexContainer = styled.div`
   #gene-expression-plot-toolbar {
@@ -102,19 +106,66 @@ const DIMENSIONS = {
   h: 400,
 }
 
-const URLS = {
-  geneExp: `${GTEX_HOST}expression/geneExpression?gencodeId=`,
-  tissue: `${GTEX_HOST}dataset/tissueInfo?format=json`,
+// const launchGtexOld = (geneId) => {
+//   launch(GTEX_CONTAINER_ID, `${GTEX_CONTAINER_ID}-tooltip`, geneId, '', URLS, MARGINS, DIMENSIONS)
+// }
+
+const renderGtex = (expressionData, tissueData, containerElement) => {
+  if ((expressionData?.data || []).length < 1) {
+    return
+  }
+  const tissueLookup = tissueData.data.reduce(
+    (acc, { tissueSiteDetailId, ...data }) => ({ ...acc, [tissueSiteDetailId]: data }), {},
+  )
+  const violinPlotData = expressionData.data.map(({ tissueSiteDetailId, data }) => ({
+    values: data,
+    // TODO sort values needed?
+    median: median(data),
+    group: tissueLookup[tissueSiteDetailId]?.tissueSiteDetail,
+    color: tissueLookup[tissueSiteDetailId]?.colorHex,
+  }))
+  const violinPlot = new GroupedViolin(violinPlotData)
+
+  violinPlot.createTooltip('')
+
+  violinPlot.unit = ` ${expressionData.data[0].unit}`
+
+  violinPlotData.sort(compareObjects('group'))
+  const xDomain = violinPlotData.map(({ group }) => group)
+
+  const svg = containerElement.append('svg')
+    .attr('width', DIMENSIONS.w + MARGINS.left + MARGINS.right)
+    .attr('height', DIMENSIONS.h + MARGINS.top + MARGINS.bottom)
+    .append('g')
+    .attr('transform', `translate(${MARGINS.left}, ${MARGINS.top})`)
+
+  violinPlot.render(
+    svg, DIMENSIONS.w, DIMENSIONS.h, 0.2, xDomain, [], 'TPM', true, 35,
+    false, 0, false, false, true, false, true, true,
+  )
+
+  // update outlier display - TODO needed?
+  svg.selectAll('path.violin').classed('outlined', false)
+  svg.selectAll('.violin-outliers').toggle(true)
+
+  svg.select('#violinLegend').remove()
+  const xAxis = svg.select('.violin-x-axis')
+  xAxis.attr('transform', `${xAxis.attr('transform')} translate(0, 3)`)
+  const xAxisText = xAxis.selectAll('text')
+  xAxisText.attr('transform', `translate(0, 8) ${xAxisText.attr('transform')}`)
+
+  svg.selectAll('.violin-g').on('mouseover', (d, i, nodes) => {
+    svg.select(nodes[i]).select('path').classed('highlighted', true)
+    violinPlot.tooltip.show(
+      `${d.group}<br/>Sample size: ${d.values.length})<br/>Median TPM: ${d.median.toPrecision(4)}<br/>`,
+    )
+  })
 }
 
-const GTEX_CONTAINER_ID = 'gene-expression-plot'
-
-const launchGtex = (geneId) => {
-  launch(GTEX_CONTAINER_ID, `${GTEX_CONTAINER_ID}-tooltip`, geneId, '', URLS, MARGINS, DIMENSIONS)
-}
+const loadTissueData = onSuccess => queryGtex('dataset/tissueSiteDetail', {}, onSuccess)
 
 export default props => (
   <GtexContainer>
-    <GtexLauncher containerId={GTEX_CONTAINER_ID} launchGtex={launchGtex} {...props} />
+    <GtexLauncher renderGtex={renderGtex} fetchAdditionalData={loadTissueData} {...props} />
   </GtexContainer>
 )
