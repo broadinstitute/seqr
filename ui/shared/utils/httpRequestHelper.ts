@@ -54,14 +54,14 @@ export class HttpRequestHelper {
    * @param urlParams A dictionary of key-value pairs {gene: 'ENSG00012345', chrom: '1'} to encode
    *   and append to the url as HTTP GET params (e.g. "?gene=ENSG00012345&chrom=1")
    * @param fetchParams An object containing any custom settings that you want to apply to the fetch request.
-   * @param includeCredentials A boolean indicating whether to include credentials in the fetch request. Defaults to true.
+   * @param omitCredentials A boolean indicating whether to omit credentials in the fetch request. Defaults to false.
    */
-  get = (urlParams: Record<string, string> = {}, fetchParams: Record<string, string> = {}, includeCredentials: boolean = true) => {
+  get = (urlParams: Record<string, string> = {}, fetchParams: Record<string, string> = {}, omitCredentials: boolean = false) => {
     const urlQueryString = getUrlQueryString(urlParams)
 
     const p = fetch(`${this.url}?${urlQueryString}`, {
       method: 'GET',
-      credentials: includeCredentials ? 'include' : 'omit',
+      credentials: omitCredentials ? 'omit' : 'include',
       ...fetchParams,
     })
 

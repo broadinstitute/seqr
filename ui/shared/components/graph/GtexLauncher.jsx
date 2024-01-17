@@ -22,7 +22,7 @@ class GtexLauncher extends React.PureComponent {
       },
       () => {
         launchGtex(geneId)
-      }).get({ format: 'json', geneId }, {}, false)
+      }).get({ format: 'json', geneId }, {}, true)
   }
 
   render() {

@@ -52,7 +52,7 @@ const launchGtex = (geneId, familyGuid) => (gencodeId) => {
             { data, label: `*GTEx - ${TISSUE_DISPLAY[GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]}`, color: 'efefef' }
           )))
         },
-        () => {}).get({ tissueSiteDetailId: gtexTissuesId, gencodeId }, {}, false).then(() => {
+        () => {}).get({ tissueSiteDetailId: gtexTissuesId, gencodeId }, {}, true).then(() => {
         const boxplot = new Boxplot(boxplotData, false)
         boxplot.render(GTEX_CONTAINER_ID, { ...PLOT_OPTIONS, marginRight })
       })
