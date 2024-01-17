@@ -5,14 +5,14 @@ import mock
 from requests import HTTPError
 import responses
 
-from seqr.models import Family
+from seqr.models import Family, Project
 from seqr.utils.search.utils import get_variant_query_gene_counts, query_variants, get_single_variant, \
     get_variants_for_variant_ids, variant_lookup, InvalidSearchException
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
     FAMILY_2_ALL_SAMPLE_DATA, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
     LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS, FAMILY_2_VARIANT_SAMPLE_DATA, \
-    FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT
+    FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, MULTI_PROJECT_SAMPLE_DATA
 MOCK_HOST = 'http://test-hail-host'
 
 
@@ -22,6 +22,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
     def setUp(self):
+        Project.objects.update(genome_version='37')
         super(HailSearchUtilsTests, self).set_up()
         responses.add(responses.POST, f'{MOCK_HOST}:5000/search', status=200, json={
             'results': HAIL_BACKEND_VARIANTS, 'total': 5,
@@ -59,6 +60,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         self._test_minimal_search_call(**expected_search, **kwargs)
 
+    @mock.patch('seqr.utils.search.hail_search_utils.MAX_FAMILY_COUNTS', {'WES': 2, 'WGS': 1})
     @responses.activate
     def test_query_variants(self):
         variants, total = query_variants(self.results_model, user=self.user)
@@ -87,7 +89,8 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             sort='constraint', sort_metadata={'ENSG00000223972': 2}, **RSID_SEARCH,
         )
 
-        self.search_model.search['locus']['rawItems'] = 'CDC7, chr2:1234-5678, chr7:100-10100%10, ENSG00000177000'
+        raw_locus = 'CDC7, chr2:1234-5678, chr7:100-10100%10, ENSG00000177000'
+        self.search_model.search['locus']['rawItems'] = raw_locus
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(**LOCATION_SEARCH)
 
@@ -135,6 +138,37 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             search_fields=['annotations', 'annotations_secondary'], sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX,
             omit_sample_type='SV_WES',
         )
+
+        self.results_model.families.set(Family.objects.filter(id__in=[2, 11, 14]))
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'Location must be specified to search across multiple projects')
+
+        self.search_model.search = {'inheritance': {'mode': 'de_novo'}, 'annotations': {'structural_consequence': ['LOF']}}
+        query_variants(self.results_model, user=self.user)
+        sv_sample_data = {
+            'SV_WES': FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL'],
+            'SV_WGS': [{'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14',
+                        'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234'}],
+        }
+        self._test_expected_search_call(search_fields=['annotations'], dataset_type='SV', sample_data=sv_sample_data)
+
+        del self.search_model.search['annotations']
+        self.search_model.search['locus'] = {'rawItems': raw_locus}
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(**LOCATION_SEARCH, sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data})
+
+        self.results_model.families.set(Family.objects.filter(project_id=1))
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(**LOCATION_SEARCH, sample_data={
+            'SNV_INDEL': FAMILY_1_SAMPLE_DATA['SNV_INDEL'] + EXPECTED_SAMPLE_DATA['SNV_INDEL'],
+            'SV_WES': sv_sample_data['SV_WES'],
+        })
+
+        del self.search_model.search['locus']
+        with self.assertRaises(InvalidSearchException) as cm:
+            query_variants(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'Location must be specified to search across multiple families in large projects')
 
         quality_filter = {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'}
         freq_filter = {'callset': {'af': 0.1}, 'gnomad_genomes': {'af': 0.01, 'ac': 3, 'hh': 3}}
