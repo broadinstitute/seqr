@@ -4,13 +4,10 @@ import { axisBottom, axisLeft } from 'd3-axis'
 import { randomNormal } from 'd3-random'
 import { scaleBand, scaleLinear } from 'd3-scale'
 import { area } from 'd3-shape'
-import Tooltip from 'gtex-d3/src/modules/Tooltip' // TODO move into repo
 import { kernelDensityEstimator, kernel, kernelBandwidth } from 'gtex-d3/src/modules/kde' // TODO move into repo
 
 import { compareObjects } from 'shared/utils/sortUtils'
 import GtexLauncher, { queryGtex } from './GtexLauncher'
-
-// TODO add attibution for open source code 'gtex-d3/src/GeneExpressionViolinPlot'
 
 const MARGINS = {
   top: 10,
@@ -23,7 +20,7 @@ const DIMENSIONS = {
   h: 400,
 }
 
-const TOOLTIP_ID = 'gtex-tooltip'
+// Code adapted from https://github.com/broadinstitute/gtex-viz/blob/8d65862fbe7e5ab9b4d5be419568754e0d17bb07/src/GeneExpressionViolinPlot.js
 
 const drawViolin = (svg, scale, tooltip) => (entry) => {
   const kde = kernelDensityEstimator(
@@ -64,21 +61,23 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   const q1 = quantile(entry.values, 0.25)
   const q3 = quantile(entry.values, 0.75)
   const z = scale.z.domain()[1] / 3
+  const x = scale.z(-z)
 
   // interquartile range
   violinG.append('rect')
-    .attr('x', scale.z(-z))
+    .attr('x', x)
     .attr('y', scale.y(q3))
-    .attr('width', Math.abs(scale.z(-z) - scale.z(z)))
+    .attr('width', Math.abs(x - scale.z(z)))
     .attr('height', Math.abs(scale.y(q3) - scale.y(q1)))
     .style('fill', '#555f66')
 
   // the median line
+  const medianY = scale.y(entry.median)
   violinG.append('line')
-    .attr('x1', scale.z(-z))
+    .attr('x1', x)
     .attr('x2', scale.z(z))
-    .attr('y1', scale.y(entry.median))
-    .attr('y2', scale.y(entry.median))
+    .attr('y1', medianY)
+    .attr('y2', medianY)
     .style('stroke', '#fff')
     .style('stroke-width', '2px')
 
@@ -100,9 +99,11 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   // mouse events
   violinG.on('mouseover', () => {
     vPath.style('opacity', 1)
-    tooltip.show(
+    tooltip.html(
       `${entry.group}<br/>Sample size: ${entry.values.length}<br/>Median TPM: ${entry.median.toPrecision(4)}<br/>`,
-    )
+    ).style('display', 'inline')
+      .style('left', `${x + 70}px`)
+      .style('top', `${medianY < 40 ? 10 : medianY - 40}px`)
   })
   violinG.on('mouseout', () => {
     vPath.style('opacity', 0.6)
@@ -130,23 +131,16 @@ const renderGtex = (expressionData, tissueData, containerElement) => {
     .append('g')
     .attr('transform', `translate(${MARGINS.left}, ${MARGINS.top})`)
 
-  containerElement.append('div')
-    .attr('id', TOOLTIP_ID)
-    .classed('violin-tooltip', true)
-    // TODO
-  // div.violin-tooltip {
-  //    min-width: 50px;
-  //    display: none;
-  //    background-color : rgba(32, 53, 73, 0.95);
-  //    padding: 10px;
-  //    text-align:left;
-  //    color: #ffffff;
-  //    position:absolute;
-  //    font-size:12px;
-  //    z-index:4000;
-  //    border-radius:5px;
-  // }
-  const tooltip = new Tooltip(TOOLTIP_ID)
+  const tooltip = containerElement.append('div')
+    .style('display', 'none')
+    .style('position', 'absolute')
+    .style('background-color', 'rgba(32, 53, 73, 0.95)')
+    .style('color', '#ffffff')
+    .style('padding', '10px')
+    .style('min-width', '50px')
+    .style('font-size', '12px')
+    .style('border-radius', '5px')
+    .style('z-index', '4000')
 
   const xDomain = violinPlotData.map(({ group }) => group)
   const yDomain = extent(violinPlotData.reduce((acc, { values }) => ([...acc, ...values]), []))
@@ -187,7 +181,7 @@ const renderGtex = (expressionData, tissueData, containerElement) => {
 
   // plot mouse events
   svg.on('mouseout', () => {
-    tooltip.hide()
+    tooltip.style('display', 'none')
   })
 }
 
