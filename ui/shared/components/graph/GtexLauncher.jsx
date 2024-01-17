@@ -5,6 +5,7 @@ import { Segment } from 'semantic-ui-react'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { select } from 'd3-selection'
 
+const CONTAINER_ID = 'gtex-container'
 export const GTEX_HOST = 'https://gtexportal.org/api/v2/'
 
 export const queryGtex = (path, params, onSuccess, onError) => new HttpRequestHelper(
@@ -32,16 +33,12 @@ class GtexLauncher extends React.PureComponent {
 
   loadGeneExpression = (gencodeId, additionalData) => {
     const { renderGtex } = this.props
-    queryGtex('expression/geneExpression', { gencodeId }, expressionData => renderGtex(expressionData, additionalData, select(this.container)))
-  }
-
-  setElement = (element) => {
-    this.container = element
+    queryGtex('expression/geneExpression', { gencodeId }, expressionData => renderGtex(expressionData, additionalData, select(`#${CONTAINER_ID}`)))
   }
 
   render() {
     // TODO use data loader? add loading handling?
-    return <Segment ref={this.setElement} />
+    return <Segment id={CONTAINER_ID} />
   }
 
 }
