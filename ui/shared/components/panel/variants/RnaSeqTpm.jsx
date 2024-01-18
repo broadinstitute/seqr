@@ -8,7 +8,6 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { TISSUE_DISPLAY } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
 import GtexLauncher from '../../graph/GtexLauncher'
-import 'gtex-d3/css/boxplot.css' // TODO remove
 
 const PLOT_WIDTH = 600
 const PLOT_HEIGHT = 450
@@ -43,12 +42,10 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
 
   //  createTooltip(tooltipId) // TODO
 
-  const svg = containerElement.append('svg')
+  const dom = containerElement.append('svg')
     .attr('width', PLOT_WIDTH)
     .attr('height', 450)
-
-  const dom = svg.append('g')
-    .attr('id', 'gtex-viz-boxplot') // TODO remove unneccessary ids/ classes
+    .append('g')
 
   const yDomain = extent(boxplotData.reduce((acc, { data }) => ([...acc, ...data]), []))
   const scales = {
@@ -66,23 +63,15 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
 
   // render x-axis
   dom.append('g')
-    .attr('class', 'boxplot-x-axis')
     .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth() / 2}, ${PLOT_HEIGHT - MARGINS.bottom})`)
     .call(xAxis)
     .attr('text-anchor', 'start')
     .selectAll('text')
     .attr('transform', 'translate(5,1) rotate(45)')
     .attr('font-size', 12)
-  // x-axis label
-  dom.append('text')
-    .attr('transform', `translate(${MARGINS.left + PLOT_WIDTH / 2 + scales.x.bandwidth() / 2}, ${PLOT_HEIGHT - AXIS_FONT_SIZE / 2})`)
-    .attr('text-anchor', 'middle')
-    .style('font-size', AXIS_FONT_SIZE)
-    .text('') // TODO axis needed at all?
 
   // render y-axis
   dom.append('g')
-    .attr('class', 'boxplot-y-axis')
     .attr('transform', `translate(${MARGINS.left}, ${MARGINS.top})`)
     .call(yAxis)
     .attr('font-size', AXIS_FONT_SIZE)
@@ -95,7 +84,6 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
 
   // render IQR box
   dom.append('g')
-    .attr('class', 'boxplot-iqr')
     .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, ${MARGINS.top})`)
     .selectAll('rect')
     .data(boxplotData)
@@ -118,7 +106,6 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
 
   // render median
   dom.append('g')
-    .attr('class', 'boxplot-median')
     .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, ${MARGINS.top})`)
     .selectAll('line')
     .data(boxplotData)
@@ -132,7 +119,6 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
     .attr('stroke-width', 2)
 
   const whiskers = dom.append('g')
-    .attr('class', 'boxplot-whisker')
   // render high whisker
   whiskers.append('g')
     .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, ${MARGINS.top})`)
@@ -183,7 +169,6 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
 
   // render outliers
   const outliers = dom.append('g')
-    .attr('class', 'boxplot-outliers')
     .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, ${MARGINS.top})`)
     .selectAll('g')
     .data(boxplotData)
