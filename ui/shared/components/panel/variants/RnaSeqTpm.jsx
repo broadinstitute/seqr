@@ -9,18 +9,18 @@ import { TISSUE_DISPLAY } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
 import GtexLauncher from '../../graph/GtexLauncher'
 
-const PLOT_WIDTH = 600
-const PLOT_HEIGHT = 450
+const BOX_WIDTH = 100
+const PLOT_HEIGHT = 350
 const AXIS_FONT_SIZE = 11
 const MARGINS = {
-  top: 0,
-  bottom: 100,
   left: 40,
+  right: 20,
 }
+const MAX_PLOT_WIDTH = 610 - MARGINS.left - MARGINS.right
 
 // Code adapted from https://github.com/broadinstitute/gtex-viz/blob/8d65862fbe7e5ab9b4d5be419568754e0d17bb07/src/modules/Boxplot.js
 
-const renderBoxplot = (allData, containerElement, marginRight) => {
+const renderBoxplot = (allData, containerElement) => {
   const boxplotData = allData.sort(compareObjects('label')).map(({ data, color, label }) => {
     const q1 = quantile(data, 0.25)
     const q3 = quantile(data, 0.75)
@@ -42,28 +42,31 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
 
   //  createTooltip(tooltipId) // TODO
 
-  const dom = containerElement.append('svg')
-    .attr('width', PLOT_WIDTH)
-    .attr('height', 450)
-    .append('g')
-
+  const width = Math.min(BOX_WIDTH * boxplotData.length, MAX_PLOT_WIDTH)
   const yDomain = extent(boxplotData.reduce((acc, { data }) => ([...acc, ...data]), []))
   const scales = {
     x: scaleBand()
       .domain(boxplotData.map(d => d.label))
-      .range([0, PLOT_WIDTH - (MARGINS.left + marginRight)])
-      .paddingInner(0.35),
+      .range([0, width])
+      .paddingInner(0.2),
     y: scaleLinear()
       .domain(yDomain)
-      .range([PLOT_HEIGHT - (MARGINS.top + MARGINS.bottom), 0]),
+      .range([PLOT_HEIGHT, 0]),
   }
+
+  const xOffset = MARGINS.left + scales.x.bandwidth() / 2
+
+  const dom = containerElement.append('svg')
+    .attr('width', width + xOffset + MARGINS.right)
+    .attr('height', 450)
+    .append('g')
 
   const xAxis = axisBottom(scales.x)
   const yAxis = axisLeft(scales.y)
 
   // render x-axis
   dom.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth() / 2}, ${PLOT_HEIGHT - MARGINS.bottom})`)
+    .attr('transform', `translate(${xOffset}, ${PLOT_HEIGHT})`)
     .call(xAxis)
     .attr('text-anchor', 'start')
     .selectAll('text')
@@ -72,19 +75,19 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
 
   // render y-axis
   dom.append('g')
-    .attr('transform', `translate(${MARGINS.left}, ${MARGINS.top})`)
+    .attr('transform', `translate(${MARGINS.left}, 0)`)
     .call(yAxis)
     .attr('font-size', AXIS_FONT_SIZE)
   // y-axis label
   dom.append('text')
-    .attr('transform', `translate(${AXIS_FONT_SIZE}, ${(PLOT_HEIGHT - MARGINS.bottom) / 2}) rotate(270)`)
+    .attr('transform', `translate(${AXIS_FONT_SIZE}, ${PLOT_HEIGHT / 2}) rotate(270)`)
     .attr('text-anchor', 'middle')
     .style('font-size', AXIS_FONT_SIZE)
     .text('TPM')
 
   // render IQR box
   dom.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, ${MARGINS.top})`)
+    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
     .selectAll('rect')
     .data(boxplotData)
     .enter()
@@ -106,7 +109,7 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
 
   // render median
   dom.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, ${MARGINS.top})`)
+    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
     .selectAll('line')
     .data(boxplotData)
     .enter()
@@ -121,7 +124,7 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
   const whiskers = dom.append('g')
   // render high whisker
   whiskers.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, ${MARGINS.top})`)
+    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
     .selectAll('line')
     .data(boxplotData)
     .enter()
@@ -132,7 +135,7 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
     .attr('y2', d => scales.y(d.upperBound))
     .attr('stroke', '#aaa')
   whiskers.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, ${MARGINS.top})`)
+    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
     .selectAll('line')
     .data(boxplotData)
     .enter()
@@ -145,7 +148,7 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
 
   // render low whisker
   whiskers.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, ${MARGINS.top})`)
+    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
     .selectAll('line')
     .data(boxplotData)
     .enter()
@@ -156,7 +159,7 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
     .attr('y2', d => scales.y(d.lowerBound))
     .attr('stroke', '#aaa')
   whiskers.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, ${MARGINS.top})`)
+    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
     .selectAll('line')
     .data(boxplotData)
     .enter()
@@ -169,7 +172,7 @@ const renderBoxplot = (allData, containerElement, marginRight) => {
 
   // render outliers
   const outliers = dom.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, ${MARGINS.top})`)
+    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
     .selectAll('g')
     .data(boxplotData)
     .enter()
@@ -212,13 +215,10 @@ const renderGtex = (gtexExpressionData, familyExpressionData, containerElement) 
   ]), [])
 
   // TODO clean up
-  const tissues = Object.keys(familyExpressionData)
-  const numEntries = (tissues.length * 2) + boxplotData.length
-  const marginRight = PLOT_WIDTH - MARGINS.left - (numEntries * 80)
   boxplotData.push(...gtexExpressionData.data.map(({ data, tissueSiteDetailId }) => (
     { data, label: `*GTEx - ${TISSUE_DISPLAY[GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]}`, color: 'efefef' }
   )))
-  renderBoxplot(boxplotData, containerElement, marginRight)
+  renderBoxplot(boxplotData, containerElement)
 }
 
 const RnaSeqTpm = ({ geneId, familyGuid }) => (

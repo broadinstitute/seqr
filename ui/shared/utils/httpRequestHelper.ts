@@ -6,7 +6,7 @@ const encodeURIParam = (key: string, value: string) => [key, value].map(encodeUR
 export const getUrlQueryString = (urlParams: Record<string, string | string[]>): string => Object.entries(urlParams)
   .reduce((acc, [key, value]) => ([
     ...acc,
-    Array.isArray(value) ? value.map(v => encodeURIParam(key, v)) : encodeURIParam(key, value),
+    ...(Array.isArray(value) ? value.map(v => encodeURIParam(key, v)) : [encodeURIParam(key, value)]),
   ]), []).join('&')
 
 /**
