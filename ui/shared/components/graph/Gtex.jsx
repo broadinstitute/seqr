@@ -190,6 +190,8 @@ const renderGtex = (expressionData, tissueData, containerElement) => {
   })
 }
 
+// seqr-specific code
+
 const loadTissueData = onSuccess => queryGtex('dataset/tissueSiteDetail', {}, onSuccess)
 
 export default props => (
