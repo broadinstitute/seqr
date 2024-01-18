@@ -207,8 +207,7 @@ const parseGtexTissue = familyExpressionData => ({
 })
 
 const renderGtex = (gtexExpressionData, familyExpressionData, containerElement) => {
-  // TODO render when GTEX fails
-  const gtexByTissue = gtexExpressionData.data.reduce((acc, { data, tissueSiteDetailId }) => ({
+  const gtexByTissue = ((gtexExpressionData || {}).data || []).reduce((acc, { data, tissueSiteDetailId }) => ({
     ...acc, [GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]: data,
   }), {})
   const boxplotData = Object.entries(familyExpressionData).reduce((acc, [tissue, { rdgData, individualData }]) => ([
@@ -228,6 +227,7 @@ const RnaSeqTpm = ({ geneId, familyGuid }) => (
     renderGtex={renderGtex}
     fetchAdditionalData={loadFamilyRnaSeq(geneId, familyGuid)}
     getAdditionalExpressionParams={parseGtexTissue}
+    renderOnError
   />
 )
 

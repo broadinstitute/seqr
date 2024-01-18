@@ -19,6 +19,7 @@ class GtexLauncher extends React.PureComponent {
     renderGtex: PropTypes.func.isRequired,
     fetchAdditionalData: PropTypes.func.isRequired,
     getAdditionalExpressionParams: PropTypes.func,
+    renderOnError: PropTypes.bool,
   }
 
   componentDidMount() {
@@ -33,12 +34,13 @@ class GtexLauncher extends React.PureComponent {
   }
 
   loadGeneExpression = (gencodeId, additionalData) => {
-    const { renderGtex, getAdditionalExpressionParams } = this.props
+    const { renderGtex, getAdditionalExpressionParams, renderOnError } = this.props
     const params = getAdditionalExpressionParams ? getAdditionalExpressionParams(additionalData) : {}
     queryGtex(
       'expression/geneExpression',
       { gencodeId, ...params },
       expressionData => renderGtex(expressionData, additionalData, select(`#${CONTAINER_ID}`)),
+      renderOnError ? () => renderGtex(null, additionalData, select(`#${CONTAINER_ID}`)) : null,
     )
   }
 
