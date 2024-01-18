@@ -25,9 +25,12 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   const violinG = svg.append('g')
     .datum(entry)
 
-  // get the vertices
   const eDomain = extent(entry.values) // get the max and min in entry.values
-  const rangeDeviation = (quantile(entry.values, 0.75) - quantile(entry.values, 0.25)) / 1.34
+  const q1 = quantile(entry.values, 0.25)
+  const q3 = quantile(entry.values, 0.75)
+
+  // get the vertices
+  const rangeDeviation = (q3 - q1) / 1.34
   const kernelBandwidth = 1.06 * Math.min(deviation(entry.values), rangeDeviation) * (entry.values.length ** -0.2)
   // use up to 100 vertices along the Y axis (to create the violin path)
   const vertices = scale.y.ticks(100).map(x => [x, mean(entry.values, (v) => {
@@ -61,8 +64,6 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
     .style('opacity', 0.6)
 
   // boxplot
-  const q1 = quantile(entry.values, 0.25)
-  const q3 = quantile(entry.values, 0.75)
   const z = scale.z.domain()[1] / 3
   const x = scale.z(-z)
 
@@ -97,7 +98,7 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
     .attr('cx', () => scale.z(jitter()))
     .attr('cy', d => scale.y(d))
     .attr('fill', entry.color)
-    .attr('r', 2)
+    .attr('r', 1)
 
   // mouse events
   violinG.on('mouseover', () => {
