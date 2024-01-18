@@ -6,7 +6,6 @@ import { scaleBand, scaleLinear } from 'd3-scale'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { TISSUE_DISPLAY } from 'shared/utils/constants'
-import { compareObjects } from 'shared/utils/sortUtils'
 import GtexLauncher from '../../graph/GtexLauncher'
 
 const BOX_WIDTH = 100
@@ -21,20 +20,20 @@ const MAX_PLOT_WIDTH = 610 - MARGINS.left - MARGINS.right
 // Code adapted from https://github.com/broadinstitute/gtex-viz/blob/8d65862fbe7e5ab9b4d5be419568754e0d17bb07/src/modules/Boxplot.js
 
 const renderBoxplot = (allData, containerElement) => {
-  const boxplotData = allData.sort(compareObjects('label')).map(({ data, color, label }) => {
+  const boxplotData = allData.map(({ data, ...d }) => {
     const q1 = quantile(data, 0.25)
     const q3 = quantile(data, 0.75)
     const iqr = q3 - q1
     const upperBound = max(data.filter(x => x <= q3 + (1.5 * iqr)))
     const lowerBound = min(data.filter(x => x >= q1 - (1.5 * iqr)))
     return {
-      color,
-      label,
+      ...d,
       q1,
       q3,
       upperBound,
       lowerBound,
       data: data.sort(),
+      color: 'efefef',
       median: median(data),
       outliers: data.filter(x => x < lowerBound || x > upperBound),
     }
@@ -118,7 +117,7 @@ const renderBoxplot = (allData, containerElement) => {
     .attr('y1', d => scales.y(d.median))
     .attr('x2', d => scales.x(d.label) + scales.x.bandwidth() / 2)
     .attr('y2', d => scales.y(d.median))
-    .attr('stroke', '#000')
+    .attr('stroke', d => d.medianColor || '#000')
     .attr('stroke-width', 2)
 
   const whiskers = dom.append('g')
@@ -208,16 +207,18 @@ const parseGtexTissue = familyExpressionData => ({
 })
 
 const renderGtex = (gtexExpressionData, familyExpressionData, containerElement) => {
+  // TODO render when GTEX fails
+  const gtexByTissue = gtexExpressionData.data.reduce((acc, { data, tissueSiteDetailId }) => ({
+    ...acc, [GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]: data,
+  }), {})
   const boxplotData = Object.entries(familyExpressionData).reduce((acc, [tissue, { rdgData, individualData }]) => ([
     ...acc,
-    { label: `*RDG - ${TISSUE_DISPLAY[tissue]}`, color: 'efefef', data: rdgData },
-    ...Object.entries(individualData).map(([individual, tpm]) => ({ label: individual, data: [tpm] })),
+    ...[
+      { data: gtexByTissue[tissue], label: 'GTEx' },
+      { data: rdgData, label: 'RDG' },
+      ...Object.entries(individualData).map(([individual, tpm]) => ({ data: [tpm], label: individual, medianColor: '#000080' })),
+    ].filter(({ data }) => data).map(({ label, ...d }) => ({ label: `${label} - ${TISSUE_DISPLAY[tissue]}`, ...d })),
   ]), [])
-
-  // TODO clean up
-  boxplotData.push(...gtexExpressionData.data.map(({ data, tissueSiteDetailId }) => (
-    { data, label: `*GTEx - ${TISSUE_DISPLAY[GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]}`, color: 'efefef' }
-  )))
   renderBoxplot(boxplotData, containerElement)
 }
 

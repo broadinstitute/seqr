@@ -115,21 +115,7 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   })
 }
 
-const renderGtex = (expressionData, tissueData, containerElement) => {
-  if ((expressionData?.data || []).length < 1) {
-    return
-  }
-  const tissueLookup = tissueData.data.reduce(
-    (acc, { tissueSiteDetailId, ...data }) => ({ ...acc, [tissueSiteDetailId]: data }), {},
-  )
-  const violinPlotData = expressionData.data.map(({ tissueSiteDetailId, data }) => ({
-    values: data.sort(),
-    median: median(data),
-    label: tissueLookup[tissueSiteDetailId]?.tissueSiteDetail,
-    color: `#${tissueLookup[tissueSiteDetailId]?.colorHex}`,
-  }))
-  violinPlotData.sort(compareObjects('label'))
-
+const renderViolinPlot = (violinPlotData, containerElement) => {
   const svg = containerElement.append('svg')
     .attr('width', DIMENSIONS.w + MARGINS.left + MARGINS.right)
     .attr('height', DIMENSIONS.h + MARGINS.top + MARGINS.bottom)
@@ -193,6 +179,23 @@ const renderGtex = (expressionData, tissueData, containerElement) => {
 // seqr-specific code
 
 const loadTissueData = onSuccess => queryGtex('dataset/tissueSiteDetail', {}, onSuccess)
+
+const renderGtex = (expressionData, tissueData, containerElement) => {
+  if ((expressionData?.data || []).length < 1) {
+    return
+  }
+  const tissueLookup = tissueData.data.reduce(
+    (acc, { tissueSiteDetailId, ...data }) => ({ ...acc, [tissueSiteDetailId]: data }), {},
+  )
+  const violinPlotData = expressionData.data.map(({ tissueSiteDetailId, data }) => ({
+    values: data.sort(),
+    median: median(data),
+    label: tissueLookup[tissueSiteDetailId]?.tissueSiteDetail,
+    color: `#${tissueLookup[tissueSiteDetailId]?.colorHex}`,
+  }))
+  violinPlotData.sort(compareObjects('label'))
+  renderViolinPlot(violinPlotData, containerElement)
+}
 
 export default props => (
   <GtexLauncher renderGtex={renderGtex} fetchAdditionalData={loadTissueData} {...props} />
