@@ -6,7 +6,7 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { select } from 'd3-selection'
 
 const CONTAINER_ID = 'gtex-container'
-export const GTEX_HOST = 'https://gtexportal.org/api/v2/'
+const GTEX_HOST = 'https://gtexportal.org/api/v2/'
 
 export const queryGtex = (path, params, onSuccess, onError) => new HttpRequestHelper(
   `${GTEX_HOST}${path}`, onSuccess, onError,
@@ -18,6 +18,7 @@ class GtexLauncher extends React.PureComponent {
     geneId: PropTypes.string.isRequired,
     renderGtex: PropTypes.func.isRequired,
     fetchAdditionalData: PropTypes.func.isRequired,
+    getAdditionalExpressionParams: PropTypes.func,
   }
 
   componentDidMount() {
@@ -32,8 +33,13 @@ class GtexLauncher extends React.PureComponent {
   }
 
   loadGeneExpression = (gencodeId, additionalData) => {
-    const { renderGtex } = this.props
-    queryGtex('expression/geneExpression', { gencodeId }, expressionData => renderGtex(expressionData, additionalData, select(`#${CONTAINER_ID}`)))
+    const { renderGtex, getAdditionalExpressionParams } = this.props
+    const params = getAdditionalExpressionParams ? getAdditionalExpressionParams(additionalData) : {}
+    queryGtex(
+      'expression/geneExpression',
+      { gencodeId, ...params },
+      expressionData => renderGtex(expressionData, additionalData, select(`#${CONTAINER_ID}`)),
+    )
   }
 
   render() {

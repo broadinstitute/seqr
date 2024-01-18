@@ -68,6 +68,7 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   const x = scale.z(-z)
 
   // interquartile range
+  // TODO not displaying properly
   violinG.append('rect')
     .attr('x', x)
     .attr('y', scale.y(q3))
