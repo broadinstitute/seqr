@@ -1,12 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { extent, max, median, min, quantile } from 'd3-array'
-import { axisBottom, axisLeft } from 'd3-axis'
 import { scaleBand, scaleLinear } from 'd3-scale'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { TISSUE_DISPLAY } from 'shared/utils/constants'
-import { Tooltip } from '../../graph/d3Utils'
+import { initializeD3, Tooltip } from '../../graph/d3Utils'
 import GtexLauncher from '../../graph/GtexLauncher'
 
 const BOX_WIDTH = 100
@@ -14,6 +13,8 @@ const PLOT_HEIGHT = 350
 const MARGINS = {
   left: 40,
   right: 20,
+  top: 0,
+  bottom: 100,
 }
 const MAX_PLOT_WIDTH = 610 - MARGINS.left - MARGINS.right
 
@@ -40,6 +41,7 @@ const renderBoxplot = (allData, containerElement) => {
   })
 
   const width = Math.min(BOX_WIDTH * boxplotData.length, MAX_PLOT_WIDTH)
+
   const yDomain = extent(boxplotData.reduce((acc, { data }) => ([...acc, ...data]), []))
   const scales = {
     x: scaleBand()
@@ -50,47 +52,27 @@ const renderBoxplot = (allData, containerElement) => {
       .domain(yDomain)
       .range([PLOT_HEIGHT, 0]),
   }
+  const bandwidth = scales.x.bandwidth()
 
-  const xOffset = MARGINS.left + scales.x.bandwidth() / 2
-
-  const dom = containerElement.append('svg')
-    .attr('width', width + xOffset + MARGINS.right)
-    .attr('height', 450)
-    .append('g')
-
-  const xAxis = axisBottom(scales.x)
-  const yAxis = axisLeft(scales.y)
-
-  // render x-axis
-  dom.append('g')
-    .attr('transform', `translate(${xOffset}, ${PLOT_HEIGHT})`)
-    .call(xAxis)
-    .attr('text-anchor', 'start')
-    .selectAll('text')
-    .attr('transform', 'translate(5,1) rotate(45)')
-    .attr('font-size', 12)
-
-  // render y-axis
-  dom.append('g')
-    .attr('transform', `translate(${MARGINS.left}, 0)`)
-    .call(yAxis)
-  // y-axis label
-  dom.append('text')
-    .attr('transform', `translate(12, ${PLOT_HEIGHT / 2}) rotate(270)`)
-    .attr('text-anchor', 'middle')
-    .text('TPM')
+  const svg = initializeD3(
+    containerElement,
+    { width: width + bandwidth / 2, height: PLOT_HEIGHT },
+    MARGINS,
+    scales,
+    { x: { offset: bandwidth / 2 }, y: { text: 'TPM' } },
+  )
 
   // render IQR box
   const tooltip = new Tooltip(containerElement)
-  const box = dom.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
+  const box = svg.append('g')
+    .attr('transform', `translate(${bandwidth}, 0)`)
     .selectAll('rect')
     .data(boxplotData)
     .enter()
     .append('rect')
-    .attr('x', d => scales.x(d.label) - scales.x.bandwidth() / 2)
+    .attr('x', d => scales.x(d.label) - bandwidth / 2)
     .attr('y', d => scales.y(d.q3))
-    .attr('width', () => scales.x.bandwidth())
+    .attr('width', () => bandwidth)
     .attr('height', d => Math.abs(scales.y(d.q1) - scales.y(d.q3))) // TODO not displaying properly, needed to add Math.abs, probs related to violin issue
     .attr('fill', d => `#${d.color}`)
     .attr('stroke', '#aaa')
@@ -105,23 +87,23 @@ const renderBoxplot = (allData, containerElement) => {
   })
 
   // render median
-  dom.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
+  svg.append('g')
+    .attr('transform', `translate(${bandwidth}, 0)`)
     .selectAll('line')
     .data(boxplotData)
     .enter()
     .append('line')
-    .attr('x1', d => scales.x(d.label) - scales.x.bandwidth() / 2)
+    .attr('x1', d => scales.x(d.label) - bandwidth / 2)
     .attr('y1', d => scales.y(d.median))
-    .attr('x2', d => scales.x(d.label) + scales.x.bandwidth() / 2)
+    .attr('x2', d => scales.x(d.label) + bandwidth / 2)
     .attr('y2', d => scales.y(d.median))
     .attr('stroke', d => d.medianColor || '#000')
     .attr('stroke-width', 2)
 
-  const whiskers = dom.append('g')
+  const whiskers = svg.append('g')
   // render high whisker
   whiskers.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
+    .attr('transform', `translate(${bandwidth}, 0)`)
     .selectAll('line')
     .data(boxplotData)
     .enter()
@@ -132,20 +114,20 @@ const renderBoxplot = (allData, containerElement) => {
     .attr('y2', d => scales.y(d.upperBound))
     .attr('stroke', '#aaa')
   whiskers.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
+    .attr('transform', `translate(${bandwidth}, 0)`)
     .selectAll('line')
     .data(boxplotData)
     .enter()
     .append('line')
-    .attr('x1', d => scales.x(d.label) - scales.x.bandwidth() / 4)
+    .attr('x1', d => scales.x(d.label) - bandwidth / 4)
     .attr('y1', d => scales.y(d.upperBound))
-    .attr('x2', d => scales.x(d.label) + scales.x.bandwidth() / 4)
+    .attr('x2', d => scales.x(d.label) + bandwidth / 4)
     .attr('y2', d => scales.y(d.upperBound))
     .attr('stroke', '#aaa')
 
   // render low whisker
   whiskers.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
+    .attr('transform', `translate(${bandwidth}, 0)`)
     .selectAll('line')
     .data(boxplotData)
     .enter()
@@ -156,20 +138,20 @@ const renderBoxplot = (allData, containerElement) => {
     .attr('y2', d => scales.y(d.lowerBound))
     .attr('stroke', '#aaa')
   whiskers.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
+    .attr('transform', `translate(${bandwidth}, 0)`)
     .selectAll('line')
     .data(boxplotData)
     .enter()
     .append('line')
-    .attr('x1', d => scales.x(d.label) - scales.x.bandwidth() / 4)
+    .attr('x1', d => scales.x(d.label) - bandwidth / 4)
     .attr('y1', d => scales.y(d.lowerBound))
-    .attr('x2', d => scales.x(d.label) + scales.x.bandwidth() / 4)
+    .attr('x2', d => scales.x(d.label) + bandwidth / 4)
     .attr('y2', d => scales.y(d.lowerBound))
     .attr('stroke', '#aaa')
 
   // render outliers
-  const outliers = dom.append('g')
-    .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
+  const outliers = svg.append('g')
+    .attr('transform', `translate(${bandwidth}, 0)`)
     .selectAll('g')
     .data(boxplotData)
     .enter()

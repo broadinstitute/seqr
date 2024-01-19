@@ -13,7 +13,7 @@ export const initializeD3 = (containerElement, dimensions, margins, scales, axis
     xAxis = axis.x.transform(xAxis)
   }
   svg.append('g')
-    .attr('transform', `translate(0, ${dimensions.height}) translate(0, 3)`)
+    .attr('transform', `translate(${axis.x?.offset || 0}, ${dimensions.height}) translate(0, 3)`)
     .call(xAxis)
     .selectAll('text')
     .attr('text-anchor', 'start')
