@@ -21,7 +21,7 @@ export const initializeD3 = (containerElement, dimensions, margins, scales, axis
     svg.append('text')
       .attr('text-anchor', 'end')
       .attr('transform', `translate(${dimensions.width / 2}, ${dimensions.height + margins.bottom + buffer})`)
-      .text('Z-score')
+      .text(axis.x.text)
   } else {
     xAxisElement.selectAll('text')
       .attr('text-anchor', 'start')
