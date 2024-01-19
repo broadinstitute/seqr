@@ -379,17 +379,17 @@ def individual_metadata(request, project_guid):
                 all_features.update(row['hpo_absent'])
             rows_by_subject_family_id[row_key].update(row)
 
-    parse_anvil_metadata(
-        projects, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
-        include_metadata=True,
-        omit_airtable=not include_airtable,
-        get_additional_individual_fields=lambda individual, airtable_metadata: {
-            'Collaborator': (airtable_metadata or {}).get('Collaborator'),
-            'individual_guid': individual.guid,
-            'disorders': individual.disorders,
-            'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
-        },
-    )
+    # parse_anvil_metadata(
+    #     projects, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
+    #     include_metadata=True,
+    #     omit_airtable=not include_airtable,
+    #     get_additional_individual_fields=lambda individual, airtable_metadata: {
+    #         'Collaborator': (airtable_metadata or {}).get('Collaborator'),
+    #         'individual_guid': individual.guid,
+    #         'disorders': individual.disorders,
+    #         'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
+    #     },
+    # )
 
     if collaborator_map:
         collaborator_name_map = _get_airtable_collaborator_names(request.user, collaborator_map.values())

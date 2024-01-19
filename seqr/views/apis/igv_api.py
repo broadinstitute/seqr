@@ -36,6 +36,9 @@ def _process_alignment_records(rows, num_id_cols=1, **kwargs):
 
 
 def _post_process_igv_records(individual_dataset_mapping, get_valid_matched_individuals, filename):
+    info = []
+    all_updates = []
+
     matched_individuals = get_valid_matched_individuals(individual_dataset_mapping)
 
     message = f'Parsed {sum([len(rows) for rows in individual_dataset_mapping.values()])} rows in {len(matched_individuals)} individuals'
@@ -48,7 +51,6 @@ def _post_process_igv_records(individual_dataset_mapping, get_valid_matched_indi
         existing_sample_files[sample.individual].add(sample.file_path)
 
     num_unchanged_rows = 0
-    all_updates = []
     for individual, updates in matched_individuals.items():
         changed_updates = [
             dict(individualGuid=individual.guid, individualId=individual.individual_id, **update)

@@ -31,7 +31,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         expected_search = expected_search_body or get_hail_search_body(genome_version='GRCh37', **kwargs)
 
         executed_request = responses.calls[-1].request
-        self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')
+        self.assertEqual(executed_request.headers.get('From'), 'seqr+test_user@populationgenomics.org.au')
         self.assertDictEqual(json.loads(executed_request.body), expected_search)
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
