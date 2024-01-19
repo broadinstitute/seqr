@@ -3,35 +3,43 @@ import { axisBottom, axisLeft } from 'd3-axis'
 export const initializeD3 = (containerElement, dimensions, margins, scales, axis) => {
   const svg = containerElement.append('svg')
     .attr('width', dimensions.width + margins.left + margins.right)
-    .attr('height', dimensions.height + margins.top + margins.bottom)
+    .attr('height', dimensions.height + margins.top + margins.bottom + (axis.x?.text ? 20 : 0))
     .append('g')
     .attr('transform', `translate(${margins.left}, ${margins.top})`)
 
   // render x-axis
+  const buffer = 10
   let xAxis = axisBottom(scales.x)
   if (axis.x?.transform) {
     xAxis = axis.x.transform(xAxis)
   }
-  svg.append('g')
+  const xAxisElement = svg.append('g')
     .attr('transform', `translate(${axis.x?.offset || 0}, ${dimensions.height}) translate(0, 3)`)
     .call(xAxis)
-    .selectAll('text')
-    .attr('text-anchor', 'start')
-    .attr('transform', 'translate(0, 8) rotate(35, -10, 10)')
+  // x-axis label
+  if (axis.x?.text) {
+    svg.append('text')
+      .attr('text-anchor', 'end')
+      .attr('transform', `translate(${dimensions.width / 2}, ${dimensions.height + margins.bottom + buffer})`)
+      .text('Z-score')
+  } else {
+    xAxisElement.selectAll('text')
+      .attr('text-anchor', 'start')
+      .attr('transform', 'translate(0, 8) rotate(35, -10, 10)')
+  }
 
   // render y-axis
   let yAxis = axisLeft(scales.y)
   if (axis.y.transform) {
     yAxis = axis.y.transform(yAxis)
   }
-  const buffer = 5
   svg.append('g')
-    .attr('transform', `translate(-${buffer}, 0)`)
+    .attr('transform', `translate(-${buffer / 2}, 0)`)
     .call(yAxis)
   // y-axis label
   svg.append('text')
     .attr('text-anchor', 'middle')
-    .attr('transform', `translate(${buffer * 2 - margins.left}, ${dimensions.height / 2}) rotate(-90)`)
+    .attr('transform', `translate(${buffer - margins.left}, ${dimensions.height / 2}) rotate(-90)`)
     .text(axis.y.text)
 
   return svg
