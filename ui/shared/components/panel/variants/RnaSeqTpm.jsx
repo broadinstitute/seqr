@@ -9,14 +9,13 @@ import { initializeD3, Tooltip } from '../../graph/d3Utils'
 import GtexLauncher from '../../graph/GtexLauncher'
 
 const BOX_WIDTH = 100
+const PLOT_WIDTH = 550
 const PLOT_HEIGHT = 350
 const MARGINS = {
   left: 40,
-  right: 20,
   top: 0,
   bottom: 100,
 }
-const MAX_PLOT_WIDTH = 610 - MARGINS.left - MARGINS.right
 
 // Code adapted from https://github.com/broadinstitute/gtex-viz/blob/8d65862fbe7e5ab9b4d5be419568754e0d17bb07/src/modules/Boxplot.js
 
@@ -40,7 +39,7 @@ const renderBoxplot = (allData, containerElement) => {
     }
   })
 
-  const width = Math.min(BOX_WIDTH * boxplotData.length, MAX_PLOT_WIDTH)
+  const width = Math.min(BOX_WIDTH * boxplotData.length, PLOT_WIDTH)
 
   const yDomain = extent(boxplotData.reduce((acc, { data }) => ([...acc, ...data]), []))
   const scales = {
@@ -56,8 +55,8 @@ const renderBoxplot = (allData, containerElement) => {
 
   const svg = initializeD3(
     containerElement,
-    { width: width + bandwidth / 2, height: PLOT_HEIGHT },
-    MARGINS,
+    { width: PLOT_WIDTH, height: PLOT_HEIGHT },
+    { ...MARGINS, right: bandwidth / 2 + 10 },
     scales,
     { x: { offset: bandwidth / 2 }, y: { text: 'TPM' } },
   )
