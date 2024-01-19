@@ -6,6 +6,7 @@ import { scaleBand, scaleLinear } from 'd3-scale'
 import { area } from 'd3-shape'
 
 import { compareObjects } from 'shared/utils/sortUtils'
+import { Tooltip } from './d3Utils'
 import GtexLauncher, { queryGtex } from './GtexLauncher'
 
 const MARGINS = {
@@ -104,11 +105,11 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
   // mouse events
   violinG.on('mouseover', () => {
     vPath.style('opacity', 1)
-    tooltip.html(
+    tooltip.show(
       `${entry.label}<br/>Sample size: ${entry.values.length}<br/>Median TPM: ${entry.median.toPrecision(4)}<br/>`,
-    ).style('display', 'inline')
-      .style('left', `${x + 70}px`)
-      .style('top', `${medianY < 40 ? 10 : medianY - 40}px`)
+      x + 70,
+      medianY < 40 ? 10 : medianY - 40,
+    )
   })
   violinG.on('mouseout', () => {
     vPath.style('opacity', 0.6)
@@ -121,17 +122,6 @@ const renderViolinPlot = (violinPlotData, containerElement) => {
     .attr('height', DIMENSIONS.h + MARGINS.top + MARGINS.bottom)
     .append('g')
     .attr('transform', `translate(${MARGINS.left}, ${MARGINS.top})`)
-
-  const tooltip = containerElement.append('div')
-    .style('display', 'none')
-    .style('position', 'absolute')
-    .style('background-color', 'rgba(32, 53, 73, 0.95)')
-    .style('color', '#ffffff')
-    .style('padding', '10px')
-    .style('min-width', '50px')
-    .style('font-size', '12px')
-    .style('border-radius', '5px')
-    .style('z-index', '4000')
 
   const xDomain = violinPlotData.map(({ label }) => label)
   const yDomain = extent(violinPlotData.reduce((acc, { values }) => ([...acc, ...values]), []))
@@ -147,6 +137,7 @@ const renderViolinPlot = (violinPlotData, containerElement) => {
     z: scaleLinear(), // the violin width, domain and range are determined later individually for each violin
   }
 
+  const tooltip = new Tooltip(containerElement)
   violinPlotData.forEach(drawViolin(svg, scale, tooltip))
 
   // renders the x axis
@@ -169,11 +160,6 @@ const renderViolinPlot = (violinPlotData, containerElement) => {
     .attr('text-anchor', 'middle')
     .attr('transform', `translate(-${buffer * 2 + yAxis.node().getBBox().width}, ${yRange[0] + (yRange[1] - yRange[0]) / 2}) rotate(-90)`)
     .text('TPM')
-
-  // plot mouse events
-  svg.on('mouseout', () => {
-    tooltip.style('display', 'none')
-  })
 }
 
 // seqr-specific code

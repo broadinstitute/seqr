@@ -6,6 +6,7 @@ import { scaleBand, scaleLinear } from 'd3-scale'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { TISSUE_DISPLAY } from 'shared/utils/constants'
+import { Tooltip } from '../../graph/d3Utils'
 import GtexLauncher from '../../graph/GtexLauncher'
 
 const BOX_WIDTH = 100
@@ -38,8 +39,6 @@ const renderBoxplot = (allData, containerElement) => {
       outliers: data.filter(x => x < lowerBound || x > upperBound),
     }
   })
-
-  //  createTooltip(tooltipId) // TODO
 
   const width = Math.min(BOX_WIDTH * boxplotData.length, MAX_PLOT_WIDTH)
   const yDomain = extent(boxplotData.reduce((acc, { data }) => ([...acc, ...data]), []))
@@ -85,7 +84,8 @@ const renderBoxplot = (allData, containerElement) => {
     .text('TPM')
 
   // render IQR box
-  dom.append('g')
+  const tooltip = new Tooltip(containerElement)
+  const box = dom.append('g')
     .attr('transform', `translate(${MARGINS.left + scales.x.bandwidth()}, 0)`)
     .selectAll('rect')
     .data(boxplotData)
@@ -97,14 +97,15 @@ const renderBoxplot = (allData, containerElement) => {
     .attr('height', d => Math.abs(scales.y(d.q1) - scales.y(d.q3))) // TODO not displaying properly, needed to add Math.abs, probs related to violin issue
     .attr('fill', d => `#${d.color}`)
     .attr('stroke', '#aaa')
-    // .on('mouseover', (d, i, nodes) => {
-    //     let selectedDom = select(nodes[i]);
-    //     this.boxplotMouseover(d, selectedDom);
-    // })
-    // .on('mouseout', (d, i, nodes) => {
-    //     let selectedDom = select(nodes[i]);
-    //     this.boxplotMouseout(d, selectedDom);
-    // })  // TODO
+  box.on('mouseover', (d) => {
+    tooltip.show(
+      `${d.label}<br/>Sample size: ${d.data.length}<br/>Median TPM: ${d.median.toPrecision(3)}<br/>`,
+      scales.x(d.label),
+      scales.y(d.median),
+    )
+  }).on('mouseout', () => {
+    tooltip.hide()
+  })
 
   // render median
   dom.append('g')
