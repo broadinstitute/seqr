@@ -72,7 +72,7 @@ const renderBoxplot = (allData, containerElement) => {
     .attr('x', d => scales.x(d.label) - bandwidth / 2)
     .attr('y', d => scales.y(d.q3))
     .attr('width', () => bandwidth)
-    .attr('height', d => Math.abs(scales.y(d.q1) - scales.y(d.q3))) // TODO not displaying properly, needed to add Math.abs, probs related to violin issue
+    .attr('height', d => Math.abs(scales.y(d.q1) - scales.y(d.q3)))
     .attr('fill', d => `#${d.color}`)
     .attr('stroke', '#aaa')
   box.on('mouseover', (d) => {
