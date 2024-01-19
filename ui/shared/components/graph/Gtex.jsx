@@ -1,12 +1,11 @@
 import React from 'react'
 import { deviation, extent, max, mean, median, min, quantile } from 'd3-array'
-import { axisBottom, axisLeft } from 'd3-axis'
 import { randomNormal } from 'd3-random'
 import { scaleBand, scaleLinear } from 'd3-scale'
 import { area } from 'd3-shape'
 
 import { compareObjects } from 'shared/utils/sortUtils'
-import { Tooltip } from './d3Utils'
+import { initializeD3, Tooltip } from './d3Utils'
 import GtexLauncher, { queryGtex } from './GtexLauncher'
 
 const MARGINS = {
@@ -16,8 +15,8 @@ const MARGINS = {
   left: 50,
 }
 const DIMENSIONS = {
-  w: window.innerWidth * 0.8,
-  h: 400,
+  width: window.innerWidth * 0.8,
+  height: 400,
 }
 
 // Code adapted from https://github.com/broadinstitute/gtex-viz/blob/8d65862fbe7e5ab9b4d5be419568754e0d17bb07/src/GeneExpressionViolinPlot.js
@@ -117,49 +116,29 @@ const drawViolin = (svg, scale, tooltip) => (entry) => {
 }
 
 const renderViolinPlot = (violinPlotData, containerElement) => {
-  const svg = containerElement.append('svg')
-    .attr('width', DIMENSIONS.w + MARGINS.left + MARGINS.right)
-    .attr('height', DIMENSIONS.h + MARGINS.top + MARGINS.bottom)
-    .append('g')
-    .attr('transform', `translate(${MARGINS.left}, ${MARGINS.top})`)
-
   const xDomain = violinPlotData.map(({ label }) => label)
   const yDomain = extent(violinPlotData.reduce((acc, { values }) => ([...acc, ...values]), []))
 
   const scale = {
     x: scaleBand()
-      .rangeRound([0, DIMENSIONS.w])
+      .rangeRound([0, DIMENSIONS.width])
       .domain(xDomain)
       .paddingInner(0.2),
     y: scaleLinear()
-      .rangeRound([DIMENSIONS.h, 0])
+      .rangeRound([DIMENSIONS.height, 0])
       .domain(yDomain),
     z: scaleLinear(), // the violin width, domain and range are determined later individually for each violin
   }
 
+  const svg = initializeD3(containerElement, DIMENSIONS, MARGINS, scale, {
+    y: {
+      text: 'TPM',
+      transform: yAxis => yAxis.tickValues(scale.y.ticks(5)),
+    },
+  })
+
   const tooltip = new Tooltip(containerElement)
   violinPlotData.forEach(drawViolin(svg, scale, tooltip))
-
-  // renders the x axis
-  svg.append('g')
-    .attr('transform', `translate(0, ${DIMENSIONS.h}) translate(0, 3)`)
-    .call(axisBottom(scale.x))
-    .selectAll('text')
-    .attr('text-anchor', 'start')
-    .attr('transform', 'translate(0, 8) rotate(35, -10, 10)')
-
-  // adds the y Axis
-  const buffer = 5
-  const yAxis = svg.append('g')
-    .attr('transform', `translate(-${buffer}, 0)`)
-    .call(axisLeft(scale.y).tickValues(scale.y.ticks(5)))
-
-  // adds the text label for the y axis
-  const yRange = scale.y.range()
-  svg.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('transform', `translate(-${buffer * 2 + yAxis.node().getBBox().width}, ${yRange[0] + (yRange[1] - yRange[0]) / 2}) rotate(-90)`)
-    .text('TPM')
 }
 
 // seqr-specific code

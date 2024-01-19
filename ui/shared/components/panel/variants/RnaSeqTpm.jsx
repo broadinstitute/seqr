@@ -11,7 +11,6 @@ import GtexLauncher from '../../graph/GtexLauncher'
 
 const BOX_WIDTH = 100
 const PLOT_HEIGHT = 350
-const AXIS_FONT_SIZE = 11
 const MARGINS = {
   left: 40,
   right: 20,
@@ -75,12 +74,10 @@ const renderBoxplot = (allData, containerElement) => {
   dom.append('g')
     .attr('transform', `translate(${MARGINS.left}, 0)`)
     .call(yAxis)
-    .attr('font-size', AXIS_FONT_SIZE)
   // y-axis label
   dom.append('text')
-    .attr('transform', `translate(${AXIS_FONT_SIZE}, ${PLOT_HEIGHT / 2}) rotate(270)`)
+    .attr('transform', `translate(12, ${PLOT_HEIGHT / 2}) rotate(270)`)
     .attr('text-anchor', 'middle')
-    .style('font-size', AXIS_FONT_SIZE)
     .text('TPM')
 
   // render IQR box

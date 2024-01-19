@@ -61,8 +61,8 @@ class RnaSeqOutliersGraph extends React.PureComponent {
 
     // y-axis label
     svg.append('text')
-      .attr('text-anchor', 'end')
-      .attr('transform', 'rotate(-90)')
+      .attr('text-anchor', 'middle')
+      .attr('transform', 'rotate(270)')
       .attr('y', 10 - GRAPH_MARGIN.left)
       .attr('x', GRAPH_MARGIN.bottom - (GRAPH_HEIGHT / 2))
       .text('-log(P-value)')
