@@ -5,8 +5,8 @@ import { scaleBand, scaleLinear } from 'd3-scale'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { TISSUE_DISPLAY } from 'shared/utils/constants'
-import { initializeD3, Tooltip } from '../../graph/d3Utils'
-import GtexLauncher from '../../graph/GtexLauncher'
+import { initializeD3, Tooltip } from 'shared/components/graph/d3Utils'
+import GtexLauncher from 'shared/components/graph/GtexLauncher'
 
 const BOX_WIDTH = 100
 const PLOT_WIDTH = 550
