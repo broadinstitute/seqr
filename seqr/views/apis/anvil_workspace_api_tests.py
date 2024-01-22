@@ -722,15 +722,15 @@ class LoadAnvilDataAPITest(object):
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
 
-        Pedigree{additional_file_type} file(s) have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/
+        {additional_file_type}Pedigree file(s) have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/
 
         DAG {dag_id} is triggered with following:
         ```{dag}```
     """.format(guid=project.guid, version=genome_version, workspace_name=project.workspace_name,
                    project_name=project.name, sample_summary=sample_summary,
-               dag_id=dag_id, additional_file_type=' and Id' if self.UPLOAD_ID_FILE else '',
-               dag=json.dumps(self._get_project_dag_variables(project.guid, genome_version), indent=4),
-               ) for dag_id in self.get_dag_ids()]
+               dag_id=self._get_dag_id(dag_name), additional_file_type='Ids and ' if self.UPLOAD_ID_FILE else '',
+               dag=json.dumps(self._get_project_dag_variables(dag_name, project.guid, genome_version), indent=4),
+               ) for dag_name in self.DAG_NAMES]
         self.mock_slack.assert_has_calls(
             [mock.call(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message) for message in slack_messages],
         )
@@ -773,13 +773,14 @@ class LoadAnvilDataAPITest(object):
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(**workspace)
 
-        additional_file_type = ' and Id' if self.UPLOAD_ID_FILE else ''
+        additional_file_type = 'Ids and ' if self.UPLOAD_ID_FILE else ''
         self.mock_airflow_logger.error.assert_called_with(
-            f'Uploading Pedigree{additional_file_type} to Google Storage failed. Errors: Something wrong while moving the file.',
+            f'Uploading {additional_file_type}Pedigree to Google Storage failed. Errors: Something wrong while moving the file.',
             self.manager_user, detail=self._format_error_detail(sample_data))
         self.mock_api_logger.error.assert_not_called()
         self.mock_airflow_logger.warning.assert_has_calls(
-            [mock.call(f'{dag_id} is running and cannot be triggered again.', self.manager_user) for dag_id in self.get_dag_ids()])
+            [mock.call(f'{self._get_dag_id(dag_name)} is running and cannot be triggered again.', self.manager_user)
+             for dag_name in self.DAG_NAMES])
         self.mock_airtable_logger.error.assert_called_with(
             f'Airtable create "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: '
             f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', self.manager_user)
@@ -790,9 +791,9 @@ class LoadAnvilDataAPITest(object):
         ```{dag}```
         """.format(
             guid=project.guid,
-            dag_id=dag_id,
-            dag=json.dumps(self._get_project_dag_variables(project.guid, genome_version), indent=4),
-        ) for dag_id in self.get_dag_ids()]
+            dag_id=self._get_dag_id(dag_name),
+            dag=json.dumps(self._get_project_dag_variables(dag_name, project.guid, genome_version), indent=4),
+        ) for dag_name in self.DAG_NAMES]
         self.mock_slack.assert_has_calls(
             [mock.call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message) for message in slack_messages_on_failure],
             any_order=True
@@ -801,7 +802,7 @@ class LoadAnvilDataAPITest(object):
         self.assert_airflow_calls(trigger_error=True)
 
         # Airtable record created with correct status
-        self.assertDictEqual(json.loads(responses.calls[1].request.body), {'records': [{'fields': {
+        self.assertDictEqual(json.loads(responses.calls[-1].request.body), {'records': [{'fields': {
             'Requester Name': 'Test Manager User',
             'Requester Email': 'test_user_manager@test.com',
             'AnVIL Project URL': f'http://testserver/project/{project.guid}/project_page',
@@ -865,10 +866,42 @@ class LoadAnvilDataAPITest(object):
             'AnVIL loading delay email error: Unable to send email', self.manager_user)
 
 
+class LoadAnvilHailDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    DAG_NAMES = ['v03_pipeline-SNV_INDEL']
+    ES_HOST = ''
+    UPLOAD_ID_FILE = False
+    ADDITIONAL_REQUEST_COUNT = 1
+
+    def setUp(self):
+        super().setup_patchers()
+        super().setUp()
+
+    def _get_expected_dag_variables(self, *args, **kwargs):
+        return self._get_project_dag_variables(*args, *self._expected_dag_params(**kwargs))
+
+    @classmethod
+    def _get_project_dag_variables(cls, dag_name, project, genome_version):
+        return {
+            'projects_to_run': [project],
+            'callset_paths': ['gs://test_bucket/test_path.vcf'],
+            'sample_source': 'AnVIL',
+            'sample_type': 'WES',
+            'reference_genome': genome_version,
+        }
+
+    @staticmethod
+    def _format_error_detail(sample_data):
+        return sample_data
+
+
 class LoadAnvilEsDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    DAG_NAMES = ['AnVIL_WES', 'v03_pipeline-SNV_INDEL']
+    V2_DAG_NAME = 'AnVIL_WES'
+    ID_PREFIX_DAGS = [V2_DAG_NAME]
+    DAG_NAMES = LoadAnvilHailDataAPITest.DAG_NAMES + ID_PREFIX_DAGS
     ADDITIONAL_REQUEST_COUNT = 1
     ES_HOST = 'testhost'
     UPLOAD_ID_FILE = True
@@ -877,11 +910,14 @@ class LoadAnvilEsDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
         super().setup_patchers()
         super().setUp()
 
-    def _get_expected_dag_variables(self, **kwargs):
-        return self._get_project_dag_variables(*self._expected_dag_params(**kwargs))
+    def _get_expected_dag_variables(self, *args, **kwargs):
+        return self._get_project_dag_variables(*args, *self._expected_dag_params(**kwargs))
 
-    @staticmethod
-    def _get_project_dag_variables(project, genome_version):
+    @classmethod
+    def _get_project_dag_variables(cls, dag_name, project, genome_version):
+        # TODO better shared behavior with data manager tests
+        if dag_name != cls.V2_DAG_NAME:
+            return LoadAnvilHailDataAPITest._get_project_dag_variables(dag_name, project, genome_version)
         return {
             'active_projects': [project],
             'projects_to_run': [project],
@@ -898,38 +934,7 @@ class LoadAnvilEsDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
 
     @staticmethod
     def _format_error_detail(sample_data):
-        return [{'s': sample['Individual_ID']} for sample in sample_data]
-
-
-class LoadAnvilHailDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
-
-    DAG_NAMES = ['v03_pipeline-SNV_INDEL']
-    HAS_DAG_ID_PREFIX = False
-    ES_HOST = ''
-    UPLOAD_ID_FILE = False
-    ADDITIONAL_REQUEST_COUNT = 1
-
-    def setUp(self):
-        super().setup_patchers()
-        super().setUp()
-
-    def _get_expected_dag_variables(self, **kwargs):
-        return self._get_project_dag_variables(*self._expected_dag_params(**kwargs))
-
-    @staticmethod
-    def _get_project_dag_variables(project, genome_version):
-        return {
-            'projects_to_run': [project],
-            'callset_paths': ['gs://test_bucket/test_path.vcf'],
-            'sample_source': 'AnVIL',
-            'sample_type': 'WES',
-            'reference_genome': genome_version,
-        }
-
-    @staticmethod
-    def _format_error_detail(sample_data):
-        return sample_data
+        return [{'s': sample['Individual_ID'], **sample} for sample in sample_data]
 
 
 class NoGoogleAnvilWorkspaceAPITest(AuthenticationTestCase):

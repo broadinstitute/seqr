@@ -561,7 +561,7 @@ PROJECT_GUID = 'R0001_1kg'
 
 class AirflowTestCase(AnvilAuthenticationTestCase):
     ADDITIONAL_REQUEST_COUNT = 0
-    HAS_DAG_ID_PREFIX = True
+    ID_PREFIX_DAGS = []
 
     def setUp(self):
         self.dag_urls = {
@@ -650,7 +650,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.assertEqual(len(responses.calls), (call_count * len(self.DAG_NAMES)) + self.ADDITIONAL_REQUEST_COUNT)
 
         for i, (main_dag_name, dag_url) in enumerate(self.dag_urls.items()):
-            dag_variables = self._get_expected_dag_variables(additional_tasks_check=additional_tasks_check)
+            dag_variables = self._get_expected_dag_variables(main_dag_name, additional_tasks_check=additional_tasks_check)
             self._assert_airflow_calls(
                 main_dag_name, dag_url, dag_variables, call_count, offset=i*call_count, override_dag_name=dag_name,
             )
@@ -698,13 +698,10 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_not_called()
 
-    def get_dag_ids(self):
-        return [self._get_dag_id(dag_name) for dag_name in self.DAG_NAMES]
-
     def _get_dag_id(self, dag_name):
-        return f'seqr_vcf_to_es_{dag_name}_v0.0.1' if self.HAS_DAG_ID_PREFIX else dag_name
+        return f'seqr_vcf_to_es_{dag_name}_v0.0.1' if dag_name in self.ID_PREFIX_DAGS else dag_name
 
-    def _get_expected_dag_variables(self, **kwargs):
+    def _get_expected_dag_variables(self, *args, **kwargs):
         raise NotImplementedError
 
 
