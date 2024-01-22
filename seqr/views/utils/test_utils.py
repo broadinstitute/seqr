@@ -702,8 +702,11 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_not_called()
 
-    def _get_dag_id(self, dag_name):
-        return f'seqr_vcf_to_es_{dag_name}_v0.0.1' if dag_name == self.V2_DAG_NAME else dag_name
+    def _get_dag_id(self, dag_name, name_map=None):
+        is_v2 = dag_name == self.V2_DAG_NAME
+        if name_map:
+            dag_name = name_map[dag_name]
+        return f'seqr_vcf_to_es_{dag_name}_v0.0.1' if is_v2 else dag_name
 
     def _get_v3_dag_variables(self, *args, **kwargs):
         raise NotImplementedError
