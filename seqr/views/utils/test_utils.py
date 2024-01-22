@@ -639,7 +639,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
                 'state': 'running'}
             ]})
 
-    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dag_name=None):
+    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, secondary_dag_names=None):
         self.mock_airflow_logger.info.assert_not_called()
 
         # Test triggering anvil dags
@@ -651,17 +651,17 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.assertEqual(len(responses.calls), (call_count * len(self.dag_url_map)) + self.ADDITIONAL_REQUEST_COUNT)
 
         dag_variables = self._get_v3_dag_variables(additional_tasks_check=additional_tasks_check)
-        self._assert_airflow_calls(self.V3_DAG_NAME, dag_variables, call_count, dag_name)
+        self._assert_airflow_calls(self.V3_DAG_NAME, dag_variables, call_count, secondary_dag_names)
 
         if self.V2_DAG_NAME:
             dag_variables = self._get_v2_dag_variables(additional_tasks_check=additional_tasks_check)
-            self._assert_airflow_calls(self.V2_DAG_NAME, dag_variables, call_count, dag_name, offset=call_count)
+            self._assert_airflow_calls(self.V2_DAG_NAME, dag_variables, call_count, secondary_dag_names, offset=call_count)
 
-    def _assert_airflow_calls(self, dag_name, dag_variables, call_count, override_dag_name, offset=0):
+    def _assert_airflow_calls(self, dag_name, dag_variables, call_count, secondary_dag_names, offset=0):
         dag_url = self.dag_url_map[dag_name]
 
         # check dag running state
-        dag_url = dag_url.replace(dag_name, override_dag_name) if override_dag_name else dag_url
+        dag_url = dag_url.replace(dag_name, secondary_dag_names[dag_name]) if secondary_dag_names else dag_url
         self.assertEqual(responses.calls[offset].request.url, f'{dag_url}/dagRuns')
         self.assertEqual(responses.calls[offset].request.method, "GET")
         self.assertEqual(responses.calls[offset].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))

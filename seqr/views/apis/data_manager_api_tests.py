@@ -1347,7 +1347,7 @@ class LoadDataAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
-        self.assert_airflow_calls(trigger_error=True, dag_name=self.SECOND_DAG_NAME)
+        self.assert_airflow_calls(trigger_error=True, secondary_dag_names=self.SECOND_DAG_NAMES)
         self._has_expected_gs_calls(mock_subprocess, mock_open, is_second_dag=True, sample_type='WES')
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
@@ -1363,7 +1363,7 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
 
     V2_DAG_NAME = None
     V3_DAG_NAME = 'v03_pipeline-MITO'
-    SECOND_DAG_NAME = 'v03_pipeline-GCNV'
+    SECOND_DAG_NAMES = {V3_DAG_NAME: 'v03_pipeline-GCNV'}
     INITIAL_DAG_RUNS = []
     ES_HOST = ''
     V3_DAG_JSON = """{
@@ -1436,7 +1436,7 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
 
 class LoadEsDataAPITest(LoadHailDataAPITest):
     V2_DAG_NAME = 'RDG_WGS_Broad_Internal_MITO'
-    SECOND_DAG_NAME = 'RDG_WES_Broad_Internal_GCNV'
+    SECOND_DAG_NAMES = {V2_DAG_NAME: 'RDG_WES_Broad_Internal_GCNV', **LoadHailDataAPITest.SECOND_DAG_NAMES}
     ES_HOST = 'testhost'
     V2_DAG_JSON = """{
     "active_projects": [
@@ -1478,6 +1478,6 @@ class LoadEsDataAPITest(LoadHailDataAPITest):
     def _has_expected_gs_calls(self, mock_subprocess, mock_open, is_second_dag=False, **kwargs):
         super()._has_expected_gs_calls(mock_subprocess, mock_open, **kwargs)
 
-        dag_name = self.SECOND_DAG_NAME if is_second_dag else self.V2_DAG_NAME
+        dag_name = self.SECOND_DAG_NAMES[self.V2_DAG_NAME] if is_second_dag else self.V2_DAG_NAME
         mock_subprocess.assert_called_with(
             f'gsutil ls gs://seqr-datasets/v02/GRCh38/{dag_name}', stdout=-1, stderr=-1, shell=True)  # nosec
