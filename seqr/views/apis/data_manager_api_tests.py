@@ -1343,66 +1343,10 @@ class LoadDataAPITest(object):
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
 
-class LoadEsDataAPITest(AirflowTestCase, LoadDataAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
-    DAG_NAME = 'RDG_WGS_Broad_Internal_MITO'
-    SECOND_DAG_NAME = 'RDG_WES_Broad_Internal_GCNV'
-    SUCCESS_SLACK_DETAIL = """
-
-        DAG seqr_vcf_to_es_RDG_WGS_Broad_Internal_MITO_v0.0.1 is triggered with following:
-        ```{
-    "active_projects": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "projects_to_run": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "vcf_path": "gs://test_bucket/mito_callset.mt",
-    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01"
-}```
-    """
-    ERROR_SLACK_DETAIL = """
-        
-        DAG seqr_vcf_to_es_RDG_WES_Broad_Internal_GCNV_v0.0.1 should be triggered with following: 
-        ```{
-    "active_projects": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "projects_to_run": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "vcf_path": "gs://test_bucket/sv_callset.vcf",
-    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_GCNV/v03"
-}```
-        """
-
-    def setUp(self):
-        self.patch_es('testhost')
-        super().setUp()
-
-    def _get_expected_dag_variables(self, **kwargs):
-        return {
-            'active_projects': self.PROJECTS,
-            'projects_to_run': self.PROJECTS,
-            'vcf_path': 'gs://test_bucket/mito_callset.mt',
-            'version_path': 'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01',
-        }
-
-    def _has_expected_gs_calls(self, mock_subprocess, mock_open, dag_name=DAG_NAME, **kwargs):
-        mock_open.assert_not_called()
-        mock_subprocess.assert_called_with(
-            f'gsutil ls gs://seqr-datasets/v02/GRCh38/{dag_name}', stdout=-1, stderr=-1, shell=True)  # nosec
-
-
 class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
-    DAG_NAME = 'v03_pipeline-MITO'
+    V3_DAG_NAME = 'v03_pipeline-MITO'
     SECOND_DAG_NAME = 'v03_pipeline-GCNV'
-    HAS_DAG_ID_PREFIX = False
     SUCCESS_SLACK_DETAIL = """
 
         Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/
@@ -1424,7 +1368,7 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
 }```
     """
     ERROR_SLACK_DETAIL = """
-        
+
         DAG v03_pipeline-GCNV should be triggered with following: 
         ```{
     "projects_to_run": [
@@ -1477,3 +1421,57 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
                 stdout=-1, stderr=-2, shell=True,  # nosec
             ) for project in self.PROJECTS
         ], any_order=True)
+
+
+class LoadEsDataAPITest(LoadHailDataAPITest):
+    V2_DAG_NAME = 'RDG_WGS_Broad_Internal_MITO'
+    SECOND_DAG_NAME = 'RDG_WES_Broad_Internal_GCNV'
+    SUCCESS_SLACK_DETAIL = """
+
+        DAG seqr_vcf_to_es_RDG_WGS_Broad_Internal_MITO_v0.0.1 is triggered with following:
+        ```{
+    "active_projects": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "vcf_path": "gs://test_bucket/mito_callset.mt",
+    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01"
+}```
+    """
+    ERROR_SLACK_DETAIL = """
+        
+        DAG seqr_vcf_to_es_RDG_WES_Broad_Internal_GCNV_v0.0.1 should be triggered with following: 
+        ```{
+    "active_projects": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "vcf_path": "gs://test_bucket/sv_callset.vcf",
+    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_GCNV/v03"
+}```
+        """
+
+    def setUp(self):
+        self.patch_es('testhost')
+        super().setUp()
+
+    def _get_expected_dag_variables(self, **kwargs):
+        return {
+            'active_projects': self.PROJECTS,
+            'projects_to_run': self.PROJECTS,
+            'vcf_path': 'gs://test_bucket/mito_callset.mt',
+            'version_path': 'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01',
+        }
+
+    def _has_expected_gs_calls(self, mock_subprocess, mock_open, dag_name=DAG_NAME, **kwargs):
+        mock_open.assert_not_called()
+        mock_subprocess.assert_called_with(
+            f'gsutil ls gs://seqr-datasets/v02/GRCh38/{dag_name}', stdout=-1, stderr=-1, shell=True)  # nosec
