@@ -75,7 +75,8 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.assertListEqual(variants, HAIL_BACKEND_VARIANTS[1:])
         self._test_expected_search_call(sort='cadd', num_results=2)
 
-        self.search_model.search['locus'] = {'rawVariantItems': '1-10439-AC-A,1-91511686-TCA-G'}
+        raw_variant_locus = '1-10439-AC-A,1-91511686-TCA-G'
+        self.search_model.search['locus'] = {'rawVariantItems': raw_variant_locus}
         query_variants(self.results_model, user=self.user, sort='in_omim')
         self._test_expected_search_call(
             num_results=2,  dataset_type='SNV_INDEL', omit_sample_type='SV_WES',
@@ -154,6 +155,10 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self._test_expected_search_call(search_fields=['annotations'], dataset_type='SV', sample_data=sv_sample_data)
 
         del self.search_model.search['annotations']
+        self.search_model.search['locus'] = {'rawVariantItems': raw_variant_locus}
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(**VARIANT_ID_SEARCH, num_results=2,  dataset_type='SNV_INDEL', sample_data=MULTI_PROJECT_SAMPLE_DATA)
+
         self.search_model.search['locus'] = {'rawItems': raw_locus}
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(**LOCATION_SEARCH, sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data})

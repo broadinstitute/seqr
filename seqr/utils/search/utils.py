@@ -390,7 +390,7 @@ def _parse_inheritance(search, samples):
 
 def _validate_search(search, samples, previous_search_results):
     has_comp_het_search = search.get('inheritance_mode') in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
-    has_location_filter = bool(search['parsedLocus']['genes'] or search['parsedLocus']['intervals'])
+    has_location_filter = any(search['parsedLocus'][field] for field in ['genes', 'intervals', 'parsed_variant_ids'])
     if has_comp_het_search:
         if not search.get('annotations'):
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
