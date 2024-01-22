@@ -530,7 +530,7 @@ class IndividualAPITest(object):
 
         def _send_request_data(data):
             return self.client.post(receive_url, {'f': SimpleUploadedFile(
-                'sample_manifest.tsv', '\n'.join(['\t'.join(row) for row in data]).encode('utf-8')),
+                'sample_manifest.tsv', '\n'.join(['\t'.join([str(c) for c in row]) for row in data]).encode('utf-8')),
             })
 
         header_2 = [
@@ -580,7 +580,7 @@ class IndividualAPITest(object):
         data[2] = header_3
         data += [
             ['SK-3QVD', 'A02', 'SM-IRW6C', 'PED073', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', '', '', 'male',
-             'unaffected', 'UBERON:0000479 (tissue)', 'blood plasma', '', 'Unknown', '20', '94.8', 'probably dad', '',
+             'unaffected', 'UBERON:0000479 (tissue)', 'blood plasma', '', 'Unknown', '20', 94.8, 'probably dad', '',
              '', 'GMB', '1234'],
             ['SK-3QVD', 'A03', 'SM-IRW69', 'PED073', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1',
              'SCO_PED073B_GA0339_1', 'SCO_PED073A_GA0338_1', 'female', 'affected', 'UBERON:0002371 (bone marrow)',
@@ -667,7 +667,7 @@ class IndividualAPITest(object):
         # Test original file copy is correct
         original_wb = load_workbook(BytesIO(mock_email.call_args.kwargs['attachments'][1][1]))
         original_ws = original_wb.active
-        self.assertListEqual([[cell.value or '' for cell in row] for row in original_ws], data)
+        self.assertListEqual([[cell.value or '' for cell in row] for row in original_ws], [[str(c) for c in row] for row in data])
 
         url = reverse(save_individuals_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
         response = self.client.post(url)
