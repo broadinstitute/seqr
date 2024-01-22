@@ -740,8 +740,8 @@ def _get_record_updates(record, individual, invalid_values, allowed_assigned_ana
                 ):
                     parsed_val = None
 
-            if isinstance(parsed_val, bool) or parsed_val:
-                update_record[k] = parsed_val
+                if isinstance(parsed_val, bool) or parsed_val:
+                    update_record[k] = parsed_val
         except (KeyError, ValueError):
             invalid_values[k][v].append(individual.individual_id)
     return update_record
