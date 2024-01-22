@@ -607,7 +607,12 @@ class IndividualAPITest(object):
             missing_columns_error, 'Consent code in manifest "GMB" does not match project consent code "HMB"',
         ]})
 
-        data[3][12] = 'No'
+        data[3][12] = 'Maybe'
+        response = _send_request_data(data)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'warnings': None, 'errors': ['Invalid value "Maybe" for Tissue Affected Status in row #1']})
+
+        data[3][12] = 'Unknown'
         data[3][17] = 'microcephaly'
         data[3][18] = 'MONDO:0001149'
         data[3][-2] = ''
@@ -691,7 +696,7 @@ class IndividualAPITest(object):
         indiv_1 = next(i for i in response_json['individualsByGuid'].values() if i['individualId'] == 'SCO_PED073B_GA0339_1')
         self.assertDictEqual({k: v for k, v in indiv_1.items() if k in test_keys}, {
             'affected': 'N', 'notes': 'probably dad', 'sex': 'M', 'maternalId': None, 'paternalId': None,
-            'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': False,
+            'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': None,
             'probandRelationship': 'F',
         })
         indiv_2 = next(i for i in response_json['individualsByGuid'].values() if i['individualId'] == 'SCO_PED073C_GA0341_1')

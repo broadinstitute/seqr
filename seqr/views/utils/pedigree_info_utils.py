@@ -187,7 +187,7 @@ def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
 
             try:
                 value = _format_value(value, column)
-            except ValueError:
+            except (KeyError, ValueError):
                 errors.append(f'Invalid value "{value}" for {_to_title_case(_to_snake_case(column))} in row #{i + 1}')
                 continue
 
@@ -227,7 +227,7 @@ def _format_value(value, column):
     if format_func:
         if (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
             value = format_func(value)
-            if value is None and column not in JsonConstants.JSON_COLUMNS:
+            if value is None and column not in JsonConstants.NULLABLE_COLUMNS:
                 raise ValueError()
     elif value == '':
         value = None
@@ -784,6 +784,8 @@ class JsonConstants:
     TISSUE_AFFECTED_STATUS = 'tissueAffectedStatus'
 
     JSON_COLUMNS = {MATERNAL_ETHNICITY, PATERNAL_ETHNICITY, BIRTH_YEAR, DEATH_YEAR, ONSET_AGE, AFFECTED_RELATIVES}
+    NULLABLE_COLUMNS = {TISSUE_AFFECTED_STATUS}
+    NULLABLE_COLUMNS.update(JSON_COLUMNS)
 
     FORMAT_COLUMNS = {
         SEX_COLUMN: _parse_sex,
@@ -794,7 +796,7 @@ class JsonConstants:
         PRIMARY_BIOSAMPLE: lambda value: next(
             (code for code, uberon_code in Individual.BIOSAMPLE_CHOICES if value.startswith(uberon_code)), None),
         ANALYTE_TYPE: Individual.ANALYTE_REVERSE_LOOKUP.get,
-        TISSUE_AFFECTED_STATUS: {'Yes': True, 'No': False}.get,
+        TISSUE_AFFECTED_STATUS: lambda value: {'Yes': True, 'No': False, 'Unknown': None}[value],
     }
     FORMAT_COLUMNS.update({col: json.loads for col in JSON_COLUMNS})
 
