@@ -263,7 +263,7 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Invalid parental guid I000020_na65432',
-            'NA21234 is recorded as Female and also as the father of NA21987',
+            'NA21234 sex is recorded as Female and also as the father of NA21987',
         ])
 
         update_json = deepcopy(EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA)
@@ -441,8 +441,8 @@ class IndividualAPITest(object):
             'errors': [
                 'Invalid proband relationship "Father" for NA19675_1 with given gender Female',
                 'NA19675_1 is recorded as their own father',
-                'NA19675_1 is recorded as Female and also as the father of NA19675_1',
-                'NA19675_1 is recorded as Female and also as the father of NA19675_2',
+                'NA19675_1 sex is recorded as Female and also as the father of NA19675_1',
+                'NA19675_1 sex is recorded as Female and also as the father of NA19675_2',
                 'NA19675_1 is recorded as the father of NA19675_2 but they have different family ids: 1 and 2',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
             ],
