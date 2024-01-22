@@ -1284,6 +1284,16 @@ class LoadDataAPITest(object):
     LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
     PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
 
+    SUCCESS_SLACK_TEMPLATE_DETAIL = """*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
+
+        Pedigree file(s) have been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/
+
+        Pedigree file(s) have been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project/
+
+        DAG {dag_name} is triggered with following:
+        ```{dag}```
+    """
+
     def patch_es(self, es_host):
         patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', es_host)
         patcher.start()
@@ -1315,9 +1325,15 @@ class LoadDataAPITest(object):
 
         self.assert_airflow_calls()
         self._has_expected_gs_calls(mock_subprocess, mock_open)
-        slack_message = f'*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects{self.SUCCESS_SLACK_DETAIL}'
 
-        self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message)
+        slack_message_data = [{'dag_name': self.V3_DAG_NAME, 'dag': self.V3_DAG_JSON}]
+        if self.V2_DAG_NAME:
+            slack_message_data.append({'dag_name': self._get_dag_id(self.V2_DAG_NAME), 'dag': self.V2_DAG_JSON})
+        self.assertEqual(self.mock_slack.call_count, len(slack_message_data))
+        self.mock_slack.assert_has_calls(
+            [mock.call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, self.SUCCESS_SLACK_TEMPLATE_DETAIL.format(**data))
+             for data in slack_message_data],
+        )
 
         # Test loading trigger error
         self.mock_slack.reset_mock()
@@ -1350,14 +1366,7 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
     SECOND_DAG_NAME = 'v03_pipeline-GCNV'
     INITIAL_DAG_RUNS = []
     ES_HOST = ''
-    SUCCESS_SLACK_DETAIL = """
-
-        Pedigree file(s) have been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/
-
-        Pedigree file(s) have been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project/
-
-        DAG v03_pipeline-MITO is triggered with following:
-        ```{
+    V3_DAG_JSON = """{
     "projects_to_run": [
         "R0001_1kg",
         "R0004_non_analyst_project"
@@ -1368,8 +1377,7 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
     "sample_source": "Broad_Internal",
     "sample_type": "WGS",
     "reference_genome": "GRCh38"
-}```
-    """
+}"""
     ERROR_SLACK_DETAIL = """
         
         DAG v03_pipeline-GCNV should be triggered with following: 
@@ -1430,10 +1438,7 @@ class LoadEsDataAPITest(LoadHailDataAPITest):
     V2_DAG_NAME = 'RDG_WGS_Broad_Internal_MITO'
     SECOND_DAG_NAME = 'RDG_WES_Broad_Internal_GCNV'
     ES_HOST = 'testhost'
-    SUCCESS_SLACK_DETAIL = """
-
-        DAG seqr_vcf_to_es_RDG_WGS_Broad_Internal_MITO_v0.0.1 is triggered with following:
-        ```{
+    V2_DAG_JSON = """{
     "active_projects": [
         "R0001_1kg",
         "R0004_non_analyst_project"
@@ -1444,8 +1449,7 @@ class LoadEsDataAPITest(LoadHailDataAPITest):
     ],
     "vcf_path": "gs://test_bucket/mito_callset.mt",
     "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01"
-}```
-    """
+}"""
     ERROR_SLACK_DETAIL = """
         
         DAG seqr_vcf_to_es_RDG_WES_Broad_Internal_GCNV_v0.0.1 should be triggered with following: 
@@ -1472,7 +1476,8 @@ class LoadEsDataAPITest(LoadHailDataAPITest):
         }
 
     def _has_expected_gs_calls(self, mock_subprocess, mock_open, is_second_dag=False, **kwargs):
-        dag_name = self.SECOND_DAG_NAME if is_second_dag else self.V3_DAG_NAME
-        mock_open.assert_not_called()
+        super()._has_expected_gs_calls(mock_subprocess, mock_open, **kwargs)
+
+        dag_name = self.SECOND_DAG_NAME if is_second_dag else self.V2_DAG_NAME
         mock_subprocess.assert_called_with(
             f'gsutil ls gs://seqr-datasets/v02/GRCh38/{dag_name}', stdout=-1, stderr=-1, shell=True)  # nosec
