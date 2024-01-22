@@ -463,7 +463,9 @@ class LoadAnvilDataAPITest(object):
     LOADING_PROJECT_GUID = f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
 
     @staticmethod
-    def _expected_dag_params(additional_tasks_check=False):
+    def _expected_dag_params(project=None, genome_version=None, additional_tasks_check=False):
+        if project:
+            return project, genome_version
         return (PROJECT1_GUID, 'GRCh37') if additional_tasks_check else (LoadAnvilDataAPITest.LOADING_PROJECT_GUID, 'GRCh38')
 
     def setup_patchers(self):
@@ -693,8 +695,12 @@ class LoadAnvilDataAPITest(object):
         )
         if self.UPLOAD_ID_FILE:
             self.mock_temp_open.assert_any_call(f'{TEMP_PATH}/{project.guid}_ids.txt', 'w')
+            additional_rows = [
+                'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20870', 'NA20872', 'NA20874', 'NA20875', 'NA20876',
+                'NA20888', 'NA20878', 'NA20881',
+            ] if test_add_data else []
             self.mock_temp_open.return_value.__enter__.return_value.write.assert_any_call(
-                '\n'.join(self._expected_upload_data(test_add_data))
+                '\n'.join(['s', 'NA19675', 'NA19678'] + additional_rows + ['HG00735'])
             )
 
         self.mock_mv_file.assert_called_with(
@@ -729,8 +735,8 @@ class LoadAnvilDataAPITest(object):
     """.format(guid=project.guid, version=genome_version, workspace_name=project.workspace_name,
                    project_name=project.name, sample_summary=sample_summary,
                dag_id=self._get_dag_id(dag_name), additional_file_type='Ids and ' if self.UPLOAD_ID_FILE else '',
-               dag=json.dumps(self._get_project_dag_variables(dag_name, project.guid, genome_version), indent=4),
-               ) for dag_name in self.DAG_NAMES]
+               dag=json.dumps(dag_variables, indent=4),
+               ) for dag_name, dag_variables in self._get_all_project_dag_variables(project.guid, genome_version)]
         self.mock_slack.assert_has_calls(
             [mock.call(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message) for message in slack_messages],
         )
@@ -780,7 +786,7 @@ class LoadAnvilDataAPITest(object):
         self.mock_api_logger.error.assert_not_called()
         self.mock_airflow_logger.warning.assert_has_calls(
             [mock.call(f'{self._get_dag_id(dag_name)} is running and cannot be triggered again.', self.manager_user)
-             for dag_name in self.DAG_NAMES])
+             for dag_name in self.dag_url_map])
         self.mock_airtable_logger.error.assert_called_with(
             f'Airtable create "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: '
             f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', self.manager_user)
@@ -792,8 +798,8 @@ class LoadAnvilDataAPITest(object):
         """.format(
             guid=project.guid,
             dag_id=self._get_dag_id(dag_name),
-            dag=json.dumps(self._get_project_dag_variables(dag_name, project.guid, genome_version), indent=4),
-        ) for dag_name in self.DAG_NAMES]
+            dag=json.dumps(dag_variables, indent=4),
+        ) for dag_name, dag_variables in self._get_all_project_dag_variables(project.guid, genome_version)]
         self.mock_slack.assert_has_calls(
             [mock.call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message) for message in slack_messages_on_failure],
             any_order=True
@@ -866,10 +872,11 @@ class LoadAnvilDataAPITest(object):
             'AnVIL loading delay email error: Unable to send email', self.manager_user)
 
 
-class LoadAnvilHailDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
+class LoadAnvilHailDataAPITest(LoadAnvilDataAPITest, AirflowTestCase):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    DAG_NAMES = ['v03_pipeline-SNV_INDEL']
+    V2_DAG_NAME = None
+    V3_DAG_NAME = 'v03_pipeline-SNV_INDEL'
     ES_HOST = ''
     UPLOAD_ID_FILE = False
     ADDITIONAL_REQUEST_COUNT = 1
@@ -878,11 +885,8 @@ class LoadAnvilHailDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
         super().setup_patchers()
         super().setUp()
 
-    def _get_expected_dag_variables(self, *args, **kwargs):
-        return self._get_project_dag_variables(*args, *self._expected_dag_params(**kwargs))
-
-    @classmethod
-    def _get_project_dag_variables(cls, dag_name, project, genome_version):
+    def _get_v3_dag_variables(self, **kwargs):
+        project, genome_version = self._expected_dag_params(**kwargs)
         return {
             'projects_to_run': [project],
             'callset_paths': ['gs://test_bucket/test_path.vcf'],
@@ -891,33 +895,22 @@ class LoadAnvilHailDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
             'reference_genome': genome_version,
         }
 
+    def _get_all_project_dag_variables(self, project, genome_version):
+        return [(self.V3_DAG_NAME, self._get_v3_dag_variables(project=project, genome_version=genome_version))]
+
     @staticmethod
     def _format_error_detail(sample_data):
         return sample_data
 
 
-class LoadAnvilEsDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
+class LoadAnvilEsDataAPITest(LoadAnvilHailDataAPITest):
 
     V2_DAG_NAME = 'AnVIL_WES'
-    ID_PREFIX_DAGS = [V2_DAG_NAME]
-    DAG_NAMES = LoadAnvilHailDataAPITest.DAG_NAMES + ID_PREFIX_DAGS
-    ADDITIONAL_REQUEST_COUNT = 1
     ES_HOST = 'testhost'
     UPLOAD_ID_FILE = True
 
-    def setUp(self):
-        super().setup_patchers()
-        super().setUp()
-
-    def _get_expected_dag_variables(self, *args, **kwargs):
-        return self._get_project_dag_variables(*args, *self._expected_dag_params(**kwargs))
-
-    @classmethod
-    def _get_project_dag_variables(cls, dag_name, project, genome_version):
-        # TODO better shared behavior with data manager tests
-        if dag_name != cls.V2_DAG_NAME:
-            return LoadAnvilHailDataAPITest._get_project_dag_variables(dag_name, project, genome_version)
+    def _get_v2_dag_variables(self, **kwargs):
+        project, genome_version = self._expected_dag_params(**kwargs)
         return {
             'active_projects': [project],
             'projects_to_run': [project],
@@ -925,12 +918,11 @@ class LoadAnvilEsDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
             'project_path': f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project}/v20210301',
         }
 
-    def _expected_upload_data(self, test_add_data):
-        if test_add_data:
-            rows = ['NA19675', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20870', 'NA20872', 'NA20874', 'NA20875', 'NA20876', 'NA20888', 'NA20878', 'NA20881', 'HG00735']
-        else:
-            rows = ['NA19675', 'NA19678', 'HG00735']
-        return ['s'] + rows
+    def _get_all_project_dag_variables(self, project, genome_version):
+        return [
+            *super()._get_all_project_dag_variables(project, genome_version),
+            (self.V2_DAG_NAME, self._get_v2_dag_variables(project=project, genome_version=genome_version)),
+        ]
 
     @staticmethod
     def _format_error_detail(sample_data):

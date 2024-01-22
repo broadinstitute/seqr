@@ -561,17 +561,17 @@ PROJECT_GUID = 'R0001_1kg'
 
 class AirflowTestCase(AnvilAuthenticationTestCase):
     ADDITIONAL_REQUEST_COUNT = 0
-    ID_PREFIX_DAGS = []
 
     def setUp(self):
-        self.dag_urls = {
-            dag_name: f'{MOCK_AIRFLOW_URL}/api/v1/dags/{self._get_dag_id(dag_name)}' for dag_name in self.DAG_NAMES
+        self.dag_url_map = {
+            dag_name: f'{MOCK_AIRFLOW_URL}/api/v1/dags/{self._get_dag_id(dag_name)}'
+            for dag_name in [self.V3_DAG_NAME, self.V2_DAG_NAME] if dag_name
         }
         self.auth_header = f'Bearer {MOCK_TOKEN}'
         headers = {'Authorization': self.auth_header}
 
         # check dag running state
-        for dag_url in self.dag_urls.values():
+        for dag_url in self.dag_url_map.values():
             responses.add(responses.GET, f'{dag_url}/dagRuns', headers=headers, json={
                 'dag_runs': [{
                     'conf': {},
@@ -584,7 +584,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             # trigger dag
             responses.add(responses.POST, f'{dag_url}/dagRuns', headers=headers, json={})
         # update variables
-        for dag_name in self.DAG_NAMES:
+        for dag_name in self.dag_url_map:
             responses.add(
                 responses.PATCH, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{dag_name}', headers=headers,
                 json={'key': dag_name, 'value': 'updated variables'},
@@ -617,18 +617,18 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             tasks += [
                 {'task_id': 'create_dataproc_cluster'},
                 {'task_id': f'pyspark_compute_project_{project}'},
-                *[{'task_id': f'pyspark_compute_variants_{dag_name}'} for dag_name in self.DAG_NAMES],
+                *[{'task_id': f'pyspark_compute_variants_{dag_name}'} for dag_name in self.dag_url_map],
                 {'task_id': f'pyspark_export_project_{project}'},
                 {'task_id': 'scale_dataproc_cluster'},
                 {'task_id': f'skip_compute_project_subset_{project}'}
             ]
-        for dag_url in self.dag_urls.values():
+        for dag_url in self.dag_url_map.values():
             responses.add(responses.GET, f'{dag_url}/tasks', headers={'Authorization': self.auth_header}, json={
                 'tasks': tasks, 'total_entries': len(tasks),
             })
 
     def set_dag_trigger_error_response(self):
-        for dag_name, dag_url in self.dag_urls.items():
+        for dag_name, dag_url in self.dag_url_map.items():
             responses.replace(responses.GET, f'{dag_url}/dagRuns', json={'dag_runs': [{
                 'conf': {},
                 'dag_id': self._get_dag_id(dag_name),
@@ -647,15 +647,18 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             call_count = 6
         if trigger_error:
             call_count = 1
-        self.assertEqual(len(responses.calls), (call_count * len(self.DAG_NAMES)) + self.ADDITIONAL_REQUEST_COUNT)
+        self.assertEqual(len(responses.calls), (call_count * len(self.dag_url_map)) + self.ADDITIONAL_REQUEST_COUNT)
 
-        for i, (main_dag_name, dag_url) in enumerate(self.dag_urls.items()):
-            dag_variables = self._get_expected_dag_variables(main_dag_name, additional_tasks_check=additional_tasks_check)
-            self._assert_airflow_calls(
-                main_dag_name, dag_url, dag_variables, call_count, offset=i*call_count, override_dag_name=dag_name,
-            )
+        dag_variables = self._get_v3_dag_variables(additional_tasks_check=additional_tasks_check)
+        self._assert_airflow_calls(self.V3_DAG_NAME, dag_variables, call_count, dag_name)
 
-    def _assert_airflow_calls(self, dag_name, dag_url, dag_variables, call_count, offset, override_dag_name):
+        if self.V2_DAG_NAME:
+            dag_variables = self._get_v2_dag_variables(additional_tasks_check=additional_tasks_check)
+            self._assert_airflow_calls(self.V2_DAG_NAME, dag_variables, call_count, dag_name, offset=call_count)
+
+    def _assert_airflow_calls(self, dag_name, dag_variables, call_count, override_dag_name, offset=0):
+        dag_url = self.dag_url_map[dag_name]
+
         # check dag running state
         dag_url = dag_url.replace(dag_name, override_dag_name) if override_dag_name else dag_url
         self.assertEqual(responses.calls[offset].request.url, f'{dag_url}/dagRuns')
@@ -699,9 +702,9 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.mock_airflow_logger.error.assert_not_called()
 
     def _get_dag_id(self, dag_name):
-        return f'seqr_vcf_to_es_{dag_name}_v0.0.1' if dag_name in self.ID_PREFIX_DAGS else dag_name
+        return f'seqr_vcf_to_es_{dag_name}_v0.0.1' if dag_name == self.V2_DAG_NAME else dag_name
 
-    def _get_expected_dag_variables(self, *args, **kwargs):
+    def _get_v3_dag_variables(self, *args, **kwargs):
         raise NotImplementedError
 
 
