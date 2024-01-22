@@ -561,6 +561,7 @@ PROJECT_GUID = 'R0001_1kg'
 
 class AirflowTestCase(AnvilAuthenticationTestCase):
     ADDITIONAL_REQUEST_COUNT = 0
+    INITIAL_DAG_RUNS = []
 
     def setUp(self):
         self.dag_url_map = {
@@ -573,7 +574,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         # check dag running state
         for dag_url in self.dag_url_map.values():
             responses.add(responses.GET, f'{dag_url}/dagRuns', headers=headers, json={
-                'dag_runs': [{
+                'dag_runs': self.INITIAL_DAG_RUNS or [{
                     'conf': {},
                     'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1',
                     'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
