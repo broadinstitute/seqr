@@ -299,7 +299,7 @@ def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
                 actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
                 if actual_sex != expected_sex:
                     actual_sex_label = dict(Individual.SEX_CHOICES)[actual_sex]
-                    errors.append("%(parent_id)s sex is recorded as %(actual_sex_label)s and also as the %(parent_id_type)s of %(individual_id)s" % locals())
+                    errors.append("%(parent_id)s is recorded as %(actual_sex_label)s sex and also as the %(parent_id_type)s of %(individual_id)s" % locals())
 
             # is the parent in the same family?
             parent = records_by_id[parent_id]
