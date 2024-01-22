@@ -885,7 +885,7 @@ class LoadAnvilHailDataAPITest(LoadAnvilDataAPITest, AirflowTestCase):
         super().setup_patchers()
         super().setUp()
 
-    def _get_v3_dag_variables(self, **kwargs):
+    def _get_v3_dag_variables(self, *args, **kwargs):
         project, genome_version = self._expected_dag_params(**kwargs)
         return {
             'projects_to_run': [project],

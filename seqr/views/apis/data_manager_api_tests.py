@@ -1398,7 +1398,7 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
         self.patch_es(self.ES_HOST)
         super().setUp()
 
-    def _get_v3_dag_variables(self, **kwargs):
+    def _get_v3_dag_variables(self, *args, **kwargs):
         return {
             'projects_to_run': self.PROJECTS,
             'callset_paths': ['gs://test_bucket/mito_callset.mt'],
