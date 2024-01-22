@@ -718,7 +718,7 @@ class LoadAnvilDataAPITest(object):
         sample_summary = '3 new'
         if test_add_data:
             sample_summary += ' and 7 re-loaded'
-        slack_message = """
+        slack_messages = ["""
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
 
@@ -728,10 +728,12 @@ class LoadAnvilDataAPITest(object):
         ```{dag}```
     """.format(guid=project.guid, version=genome_version, workspace_name=project.workspace_name,
                    project_name=project.name, sample_summary=sample_summary,
-               dag_id=self._get_dag_id(), additional_file_type=' and Id' if self.UPLOAD_ID_FILE else '',
+               dag_id=dag_id, additional_file_type=' and Id' if self.UPLOAD_ID_FILE else '',
                dag=json.dumps(self._get_project_dag_variables(project.guid, genome_version), indent=4),
-               )
-        self.mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
+               ) for dag_id in self.get_dag_ids()]
+        self.mock_slack.assert_has_calls(
+            [mock.call(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message) for message in slack_messages],
+        )
         self.mock_send_email.assert_not_called()
 
         # test database models
@@ -776,22 +778,25 @@ class LoadAnvilDataAPITest(object):
             f'Uploading Pedigree{additional_file_type} to Google Storage failed. Errors: Something wrong while moving the file.',
             self.manager_user, detail=self._format_error_detail(sample_data))
         self.mock_api_logger.error.assert_not_called()
-        self.mock_airflow_logger.warning.assert_called_with(
-            f'{self._get_dag_id()} is running and cannot be triggered again.', self.manager_user)
+        self.mock_airflow_logger.warning.assert_has_calls(
+            [mock.call(f'{dag_id} is running and cannot be triggered again.', self.manager_user) for dag_id in self.get_dag_ids()])
         self.mock_airtable_logger.error.assert_called_with(
             f'Airtable create "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: '
             f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', self.manager_user)
 
-        slack_message_on_failure = """ERROR triggering AnVIL loading for project {guid}: {dag_id} is running and cannot be triggered again.
+        slack_messages_on_failure = ["""ERROR triggering AnVIL loading for project {guid}: {dag_id} is running and cannot be triggered again.
         
         DAG {dag_id} should be triggered with following: 
         ```{dag}```
         """.format(
             guid=project.guid,
-            dag_id=self._get_dag_id(),
+            dag_id=dag_id,
             dag=json.dumps(self._get_project_dag_variables(project.guid, genome_version), indent=4),
+        ) for dag_id in self.get_dag_ids()]
+        self.mock_slack.assert_has_calls(
+            [mock.call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message) for message in slack_messages_on_failure],
+            any_order=True
         )
-        self.mock_slack.assert_any_call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message_on_failure)
         self.mock_send_email.assert_not_called()
         self.assert_airflow_calls(trigger_error=True)
 
@@ -863,10 +868,10 @@ class LoadAnvilDataAPITest(object):
 class LoadAnvilEsDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    DAG_NAME = 'AnVIL_WES'
+    DAG_NAMES = ['AnVIL_WES', 'v03_pipeline-SNV_INDEL']
+    ADDITIONAL_REQUEST_COUNT = 1
     ES_HOST = 'testhost'
     UPLOAD_ID_FILE = True
-    ADDITIONAL_REQUEST_COUNT = 1
 
     def setUp(self):
         super().setup_patchers()
@@ -899,7 +904,7 @@ class LoadAnvilEsDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
 class LoadAnvilHailDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    DAG_NAME = 'v03_pipeline-SNV_INDEL'
+    DAG_NAMES = ['v03_pipeline-SNV_INDEL']
     HAS_DAG_ID_PREFIX = False
     ES_HOST = ''
     UPLOAD_ID_FILE = False
