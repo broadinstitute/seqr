@@ -54,9 +54,7 @@ def _trigger_data_loading_dag(get_dag_name: Callable, get_dag_variables: Callabl
     dag_id = get_dag_id(dag_name)
 
     if not upload_info:
-        upload_info = []
-        for file_upload_config in _get_file_upload_configs(is_internal):
-            upload_info += _upload_data_loading_files(file_upload_config, projects, is_internal, user, genome_version, sample_type)
+        upload_info = _upload_data_loading_files(_get_file_upload_configs(is_internal), projects, is_internal, user, genome_version, sample_type)
 
     try:
         _check_dag_running_state(dag_id)
@@ -84,7 +82,7 @@ def write_data_loading_pedigree(project: Project, user: User):
         raise ValueError(f'No {SEQR_DATASETS_GS_PATH} project directory found for {project.guid}')
     callset, sample_type = match
     _upload_data_loading_files(
-        PEDIGREE_FILE_CONFIG, [project], is_internal=callset != 'AnVIL', user=user, genome_version=project.genome_version,
+        [PEDIGREE_FILE_CONFIG], [project], is_internal=callset != 'AnVIL', user=user, genome_version=project.genome_version,
         sample_type=sample_type, callset=callset,
     )
 
@@ -179,13 +177,15 @@ def _get_file_upload_configs(is_internal: bool):
     return file_upload_configs + [PEDIGREE_FILE_CONFIG]
 
 
-def _upload_data_loading_files(config: tuple[str, str, dict[str, F]], projects: list[Project], is_internal: bool,
+def _upload_data_loading_files(configs: list[tuple[str, str, dict[str, F]]], projects: list[Project], is_internal: bool,
                                user: User, genome_version: str, sample_type: str, **kwargs):
-    if config is None:
-        return []
+    file_types = []
+    annotations = {}
+    for file_type, _, file_annotations in configs:
+        file_types.append(file_type.title())
+        annotations.update(file_annotations)
 
-    file_type, file_format, file_annotations = config
-    annotations = {'project': F('family__project__guid'), **file_annotations}
+    annotations = {'project': F('family__project__guid'), **annotations}
     data = Individual.objects.filter(family__project__in=projects).order_by('family_id', 'individual_id').values(
         **dict(annotations))
 
@@ -196,13 +196,17 @@ def _upload_data_loading_files(config: tuple[str, str, dict[str, F]], projects: 
     info = []
     for project_guid, rows in data_by_project.items():
         gs_path = _get_dag_project_gs_path(project_guid, genome_version, sample_type, is_internal, **kwargs)
+        files = []
+        file_suffixes = {}
+        for file_type, file_format, file_annotations in configs:
+            file_name = f'{project_guid}_{file_type}'
+            files.append((file_name, file_annotations.keys(), rows))
+            file_suffixes[file_name] = file_format
         try:
-            write_multiple_files_to_gs(
-                [(f'{project_guid}_{file_type}', file_annotations.keys(), rows)], gs_path, user, file_format=file_format,
-            )
+            write_multiple_files_to_gs(files, gs_path, user, file_format='tsv', file_suffixes=file_suffixes)
         except Exception as e:
-            logger.error(f'Uploading {file_type} to Google Storage failed. Errors: {e}', user, detail=rows)
-        info.append(f'{file_type.title()} file has been uploaded to {gs_path}')
+            logger.error(f'Uploading {" and ".join(file_types)} to Google Storage failed. Errors: {e}', user, detail=rows)
+        info.append(f'{" and ".join(file_types)} file(s) have been uploaded to {gs_path}')
 
     return info
 

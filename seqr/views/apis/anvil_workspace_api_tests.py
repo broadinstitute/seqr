@@ -79,9 +79,9 @@ PROJECT2_SAMPLE_DATA = [
 ]
 
 NEW_PROJECT_SAMPLE_DATA = [
-    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F000023_1', 'Family_ID': '1', 'Individual_ID': 'NA19675', 'Paternal_ID': 'NA19678', 'Maternal_ID': None, 'Sex': 'F'},
-    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F000023_1', 'Family_ID': '1', 'Individual_ID': 'NA19678', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
-    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F000024_21', 'Family_ID': '21', 'Individual_ID': 'HG00735', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'U'},
+    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_1_workspace2', 'Family_ID': '1', 'Individual_ID': 'NA19675', 'Paternal_ID': 'NA19678', 'Maternal_ID': None, 'Sex': 'F'},
+    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_1_workspace2', 'Family_ID': '1', 'Individual_ID': 'NA19678', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
+    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_21_workspace2', 'Family_ID': '21', 'Individual_ID': 'HG00735', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'U'},
 ]
 
 REQUEST_BODY_ADD_DATA = deepcopy(REQUEST_BODY)
@@ -518,6 +518,7 @@ class LoadAnvilDataAPITest(object):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+    @mock.patch('seqr.models.Family._compute_guid', lambda family: f'F_{family.family_id}_{family.project.workspace_name[17:]}')
     @mock.patch('seqr.models.Project._compute_guid', lambda project: f'P_{project.name}')
     @responses.activate
     def test_create_project_from_workspace(self):
@@ -660,10 +661,42 @@ class LoadAnvilDataAPITest(object):
 
         self.mock_api_logger.error.assert_not_called()
 
-        self.mock_temp_open.assert_called_with(f'{TEMP_PATH}/{project.guid}_{self.UPLOAD_FILE_SUFFIX}', 'w')
+        self.assertEqual(self.mock_temp_open.call_count, 2 if self.UPLOAD_ID_FILE else 1)
+        self.mock_temp_open.assert_called_with(f'{TEMP_PATH}/{project.guid}_pedigree.tsv', 'w')
+        header = ['Project_GUID', 'Family_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex']
+        if test_add_data:
+            rows = [
+                ['R0001_1kg', 'F000001_1', '1', 'NA19675', 'NA19678', '', 'F'],
+                ['R0001_1kg', 'F000001_1', '1', 'NA19678', '', '', 'M'],
+                ['R0001_1kg', 'F000001_1', '1', 'NA19679', '', '', 'F'],
+                ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
+                ['R0001_1kg', 'F000002_2', '2', 'HG00732', '', '', 'M'],
+                ['R0001_1kg', 'F000002_2', '2', 'HG00733', '', '', 'F'],
+                ['R0001_1kg', 'F000003_3', '3', 'NA20870', '', '', 'M'],
+                ['R0001_1kg', 'F000004_4', '4', 'NA20872', '', '', 'M'],
+                ['R0001_1kg', 'F000005_5', '5', 'NA20874', '', '', 'M'],
+                ['R0001_1kg', 'F000006_6', '6', 'NA20875', '', '', 'M'],
+                ['R0001_1kg', 'F000007_7', '7', 'NA20876', '', '', 'M'],
+                ['R0001_1kg', 'F000008_8', '8', 'NA20888', '', '', 'F'],
+                ['R0001_1kg', 'F000009_9', '9', 'NA20878', '', '', 'M'],
+                ['R0001_1kg', 'F000010_10', '10', 'NA20881', '', '', 'M'],
+                ['R0001_1kg', 'F000015_21', '21', 'HG00735', '', '', 'U']
+            ]
+        else:
+            rows = [
+                ['P_anvil-no-project-workspace1', 'F_1_workspace1', '1', 'NA19675', 'NA19678', '', 'F'],
+                ['P_anvil-no-project-workspace1', 'F_1_workspace1', '1', 'NA19678', '', '', 'M'],
+                ['P_anvil-no-project-workspace1', 'F_21_workspace1', '21', 'HG00735', '', '', 'U'],
+            ]
         self.mock_temp_open.return_value.__enter__.return_value.write.assert_called_with(
-            '\n'.join(self._expected_upload_data(test_add_data))
+            '\n'.join(['\t'.join(row) for row in [header] + rows])
         )
+        if self.UPLOAD_ID_FILE:
+            self.mock_temp_open.assert_any_call(f'{TEMP_PATH}/{project.guid}_ids.txt', 'w')
+            self.mock_temp_open.return_value.__enter__.return_value.write.assert_any_call(
+                '\n'.join(self._expected_upload_data(test_add_data))
+            )
+
         self.mock_mv_file.assert_called_with(
             f'{TEMP_PATH}/*', f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base/',
             self.manager_user
@@ -689,13 +722,13 @@ class LoadAnvilDataAPITest(object):
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
 
-        {file_type} file has been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/
+        Pedigree{additional_file_type} file(s) have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/
 
         DAG {dag_id} is triggered with following:
         ```{dag}```
     """.format(guid=project.guid, version=genome_version, workspace_name=project.workspace_name,
                    project_name=project.name, sample_summary=sample_summary,
-               dag_id=self._get_dag_id(), file_type=self.UPLOAD_FILE_SUFFIX.split('.')[0].title(),
+               dag_id=self._get_dag_id(), additional_file_type=' and Id' if self.UPLOAD_ID_FILE else '',
                dag=json.dumps(self._get_project_dag_variables(project.guid, genome_version), indent=4),
                )
         self.mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
@@ -738,9 +771,9 @@ class LoadAnvilDataAPITest(object):
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(**workspace)
 
-        file_type = self.UPLOAD_FILE_SUFFIX.split('.')[0]
+        additional_file_type = ' and Id' if self.UPLOAD_ID_FILE else ''
         self.mock_airflow_logger.error.assert_called_with(
-            f'Uploading {file_type} to Google Storage failed. Errors: Something wrong while moving the file.',
+            f'Uploading Pedigree{additional_file_type} to Google Storage failed. Errors: Something wrong while moving the file.',
             self.manager_user, detail=self._format_error_detail(sample_data))
         self.mock_api_logger.error.assert_not_called()
         self.mock_airflow_logger.warning.assert_called_with(
@@ -832,7 +865,7 @@ class LoadAnvilEsDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
 
     DAG_NAME = 'AnVIL_WES'
     ES_HOST = 'testhost'
-    UPLOAD_FILE_SUFFIX = 'ids.txt'
+    UPLOAD_ID_FILE = True
     ADDITIONAL_REQUEST_COUNT = 1
 
     def setUp(self):
@@ -869,7 +902,7 @@ class LoadAnvilHailDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
     DAG_NAME = 'v03_pipeline-SNV_INDEL'
     HAS_DAG_ID_PREFIX = False
     ES_HOST = ''
-    UPLOAD_FILE_SUFFIX = 'pedigree.tsv'
+    UPLOAD_ID_FILE = False
     ADDITIONAL_REQUEST_COUNT = 1
 
     def setUp(self):
@@ -888,34 +921,6 @@ class LoadAnvilHailDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
             'sample_type': 'WES',
             'reference_genome': genome_version,
         }
-
-    def _expected_upload_data(self, test_add_data):
-        header = ['Project_GUID', 'Family_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex']
-        if test_add_data:
-            rows = [
-                ['R0001_1kg', 'F000001_1', '1', 'NA19675', 'NA19678', '', 'F'],
-                ['R0001_1kg', 'F000001_1', '1', 'NA19678', '', '', 'M'],
-                ['R0001_1kg', 'F000001_1', '1', 'NA19679', '', '', 'F'],
-                ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
-                ['R0001_1kg', 'F000002_2', '2', 'HG00732', '', '', 'M'],
-                ['R0001_1kg', 'F000002_2', '2', 'HG00733', '', '', 'F'],
-                ['R0001_1kg', 'F000003_3', '3', 'NA20870', '', '', 'M'],
-                ['R0001_1kg', 'F000004_4', '4', 'NA20872', '', '', 'M'],
-                ['R0001_1kg', 'F000005_5', '5', 'NA20874', '', '', 'M'],
-                ['R0001_1kg', 'F000006_6', '6', 'NA20875', '', '', 'M'],
-                ['R0001_1kg', 'F000007_7', '7', 'NA20876', '', '', 'M'],
-                ['R0001_1kg', 'F000008_8', '8', 'NA20888', '', '', 'F'],
-                ['R0001_1kg', 'F000009_9', '9', 'NA20878', '', '', 'M'],
-                ['R0001_1kg', 'F000010_10', '10', 'NA20881', '', '', 'M'],
-                ['R0001_1kg', 'F000015_21', '21', 'HG00735', '', '', 'U']
-            ]
-        else:
-            rows = [
-                ['P_anvil-no-project-workspace1', 'F000021_1', '1', 'NA19675', 'NA19678', '', 'F'],
-                ['P_anvil-no-project-workspace1', 'F000021_1', '1', 'NA19678', '', '', 'M'],
-                ['P_anvil-no-project-workspace1', 'F000022_21', '21', 'HG00735', '', '', 'U'],
-            ]
-        return ['\t'.join(row) for row in [header] + rows]
 
     @staticmethod
     def _format_error_detail(sample_data):
