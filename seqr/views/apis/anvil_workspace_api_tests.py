@@ -79,9 +79,9 @@ PROJECT2_SAMPLE_DATA = [
 ]
 
 NEW_PROJECT_SAMPLE_DATA = [
-    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F000023_1', 'Family_ID': '1', 'Individual_ID': 'NA19675', 'Paternal_ID': 'NA19678', 'Maternal_ID': None, 'Sex': 'F'},
-    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F000023_1', 'Family_ID': '1', 'Individual_ID': 'NA19678', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
-    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F000024_21', 'Family_ID': '21', 'Individual_ID': 'HG00735', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'U'},
+    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_1_workspace2', 'Family_ID': '1', 'Individual_ID': 'NA19675', 'Paternal_ID': 'NA19678', 'Maternal_ID': None, 'Sex': 'F'},
+    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_1_workspace2', 'Family_ID': '1', 'Individual_ID': 'NA19678', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
+    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_21_workspace2', 'Family_ID': '21', 'Individual_ID': 'HG00735', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'U'},
 ]
 
 REQUEST_BODY_ADD_DATA = deepcopy(REQUEST_BODY)
@@ -463,7 +463,9 @@ class LoadAnvilDataAPITest(object):
     LOADING_PROJECT_GUID = f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
 
     @staticmethod
-    def _expected_dag_params(additional_tasks_check=False):
+    def _expected_dag_params(project=None, genome_version=None, additional_tasks_check=False):
+        if project:
+            return project, genome_version
         return (PROJECT1_GUID, 'GRCh37') if additional_tasks_check else (LoadAnvilDataAPITest.LOADING_PROJECT_GUID, 'GRCh38')
 
     def setup_patchers(self):
@@ -518,6 +520,7 @@ class LoadAnvilDataAPITest(object):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+    @mock.patch('seqr.models.Family._compute_guid', lambda family: f'F_{family.family_id}_{family.project.workspace_name[17:]}')
     @mock.patch('seqr.models.Project._compute_guid', lambda project: f'P_{project.name}')
     @responses.activate
     def test_create_project_from_workspace(self):
@@ -660,10 +663,46 @@ class LoadAnvilDataAPITest(object):
 
         self.mock_api_logger.error.assert_not_called()
 
-        self.mock_temp_open.assert_called_with(f'{TEMP_PATH}/{project.guid}_{self.UPLOAD_FILE_SUFFIX}', 'w')
+        self.assertEqual(self.mock_temp_open.call_count, 2 if self.UPLOAD_ID_FILE else 1)
+        self.mock_temp_open.assert_called_with(f'{TEMP_PATH}/{project.guid}_pedigree.tsv', 'w')
+        header = ['Project_GUID', 'Family_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex']
+        if test_add_data:
+            rows = [
+                ['R0001_1kg', 'F000001_1', '1', 'NA19675', 'NA19678', '', 'F'],
+                ['R0001_1kg', 'F000001_1', '1', 'NA19678', '', '', 'M'],
+                ['R0001_1kg', 'F000001_1', '1', 'NA19679', '', '', 'F'],
+                ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
+                ['R0001_1kg', 'F000002_2', '2', 'HG00732', '', '', 'M'],
+                ['R0001_1kg', 'F000002_2', '2', 'HG00733', '', '', 'F'],
+                ['R0001_1kg', 'F000003_3', '3', 'NA20870', '', '', 'M'],
+                ['R0001_1kg', 'F000004_4', '4', 'NA20872', '', '', 'M'],
+                ['R0001_1kg', 'F000005_5', '5', 'NA20874', '', '', 'M'],
+                ['R0001_1kg', 'F000006_6', '6', 'NA20875', '', '', 'M'],
+                ['R0001_1kg', 'F000007_7', '7', 'NA20876', '', '', 'M'],
+                ['R0001_1kg', 'F000008_8', '8', 'NA20888', '', '', 'F'],
+                ['R0001_1kg', 'F000009_9', '9', 'NA20878', '', '', 'M'],
+                ['R0001_1kg', 'F000010_10', '10', 'NA20881', '', '', 'M'],
+                ['R0001_1kg', 'F000015_21', '21', 'HG00735', '', '', 'U']
+            ]
+        else:
+            rows = [
+                ['P_anvil-no-project-workspace1', 'F_1_workspace1', '1', 'NA19675', 'NA19678', '', 'F'],
+                ['P_anvil-no-project-workspace1', 'F_1_workspace1', '1', 'NA19678', '', '', 'M'],
+                ['P_anvil-no-project-workspace1', 'F_21_workspace1', '21', 'HG00735', '', '', 'U'],
+            ]
         self.mock_temp_open.return_value.__enter__.return_value.write.assert_called_with(
-            '\n'.join(self._expected_upload_data(test_add_data))
+            '\n'.join(['\t'.join(row) for row in [header] + rows])
         )
+        if self.UPLOAD_ID_FILE:
+            self.mock_temp_open.assert_any_call(f'{TEMP_PATH}/{project.guid}_ids.txt', 'w')
+            additional_rows = [
+                'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20870', 'NA20872', 'NA20874', 'NA20875', 'NA20876',
+                'NA20888', 'NA20878', 'NA20881',
+            ] if test_add_data else []
+            self.mock_temp_open.return_value.__enter__.return_value.write.assert_any_call(
+                '\n'.join(['s', 'NA19675', 'NA19678'] + additional_rows + ['HG00735'])
+            )
+
         self.mock_mv_file.assert_called_with(
             f'{TEMP_PATH}/*', f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base/',
             self.manager_user
@@ -685,20 +724,22 @@ class LoadAnvilDataAPITest(object):
         sample_summary = '3 new'
         if test_add_data:
             sample_summary += ' and 7 re-loaded'
-        slack_message = """
+        slack_messages = ["""
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
 
-        {file_type} file has been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/
+        {additional_file_type}Pedigree file(s) have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/
 
         DAG {dag_id} is triggered with following:
         ```{dag}```
     """.format(guid=project.guid, version=genome_version, workspace_name=project.workspace_name,
                    project_name=project.name, sample_summary=sample_summary,
-               dag_id=self._get_dag_id(), file_type=self.UPLOAD_FILE_SUFFIX.split('.')[0].title(),
-               dag=json.dumps(self._get_project_dag_variables(project.guid, genome_version), indent=4),
-               )
-        self.mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
+               dag_id=self._get_dag_id(dag_name), additional_file_type='Ids and ' if self.UPLOAD_ID_FILE else '',
+               dag=json.dumps(dag_variables, indent=4),
+               ) for dag_name, dag_variables in self._get_all_project_dag_variables(project.guid, genome_version)]
+        self.mock_slack.assert_has_calls(
+            [mock.call(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message) for message in slack_messages],
+        )
         self.mock_send_email.assert_not_called()
 
         # test database models
@@ -738,32 +779,36 @@ class LoadAnvilDataAPITest(object):
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(**workspace)
 
-        file_type = self.UPLOAD_FILE_SUFFIX.split('.')[0]
+        additional_file_type = 'Ids and ' if self.UPLOAD_ID_FILE else ''
         self.mock_airflow_logger.error.assert_called_with(
-            f'Uploading {file_type} to Google Storage failed. Errors: Something wrong while moving the file.',
+            f'Uploading {additional_file_type}Pedigree to Google Storage failed. Errors: Something wrong while moving the file.',
             self.manager_user, detail=self._format_error_detail(sample_data))
         self.mock_api_logger.error.assert_not_called()
-        self.mock_airflow_logger.warning.assert_called_with(
-            f'{self._get_dag_id()} is running and cannot be triggered again.', self.manager_user)
+        self.mock_airflow_logger.warning.assert_has_calls(
+            [mock.call(f'{self._get_dag_id(dag_name)} is running and cannot be triggered again.', self.manager_user)
+             for dag_name in self.dag_url_map])
         self.mock_airtable_logger.error.assert_called_with(
             f'Airtable create "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: '
             f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', self.manager_user)
 
-        slack_message_on_failure = """ERROR triggering AnVIL loading for project {guid}: {dag_id} is running and cannot be triggered again.
+        slack_messages_on_failure = ["""ERROR triggering AnVIL loading for project {guid}: {dag_id} is running and cannot be triggered again.
         
         DAG {dag_id} should be triggered with following: 
         ```{dag}```
         """.format(
             guid=project.guid,
-            dag_id=self._get_dag_id(),
-            dag=json.dumps(self._get_project_dag_variables(project.guid, genome_version), indent=4),
+            dag_id=self._get_dag_id(dag_name),
+            dag=json.dumps(dag_variables, indent=4),
+        ) for dag_name, dag_variables in self._get_all_project_dag_variables(project.guid, genome_version)]
+        self.mock_slack.assert_has_calls(
+            [mock.call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message) for message in slack_messages_on_failure],
+            any_order=True
         )
-        self.mock_slack.assert_any_call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message_on_failure)
         self.mock_send_email.assert_not_called()
         self.assert_airflow_calls(trigger_error=True)
 
         # Airtable record created with correct status
-        self.assertDictEqual(json.loads(responses.calls[1].request.body), {'records': [{'fields': {
+        self.assertDictEqual(json.loads(responses.calls[-1].request.body), {'records': [{'fields': {
             'Requester Name': 'Test Manager User',
             'Requester Email': 'test_user_manager@test.com',
             'AnVIL Project URL': f'http://testserver/project/{project.guid}/project_page',
@@ -827,60 +872,21 @@ class LoadAnvilDataAPITest(object):
             'AnVIL loading delay email error: Unable to send email', self.manager_user)
 
 
-class LoadAnvilEsDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
+class LoadAnvilHailDataAPITest(LoadAnvilDataAPITest, AirflowTestCase):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    DAG_NAME = 'AnVIL_WES'
-    ES_HOST = 'testhost'
-    UPLOAD_FILE_SUFFIX = 'ids.txt'
-    ADDITIONAL_REQUEST_COUNT = 1
-
-    def setUp(self):
-        super().setup_patchers()
-        super().setUp()
-
-    def _get_expected_dag_variables(self, **kwargs):
-        return self._get_project_dag_variables(*self._expected_dag_params(**kwargs))
-
-    @staticmethod
-    def _get_project_dag_variables(project, genome_version):
-        return {
-            'active_projects': [project],
-            'projects_to_run': [project],
-            'vcf_path': 'gs://test_bucket/test_path.vcf',
-            'project_path': f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project}/v20210301',
-        }
-
-    def _expected_upload_data(self, test_add_data):
-        if test_add_data:
-            rows = ['NA19675', 'NA19678', 'NA19679', 'HG00731', 'HG00732', 'HG00733', 'NA20870', 'NA20872', 'NA20874', 'NA20875', 'NA20876', 'NA20888', 'NA20878', 'NA20881', 'HG00735']
-        else:
-            rows = ['NA19675', 'NA19678', 'HG00735']
-        return ['s'] + rows
-
-    @staticmethod
-    def _format_error_detail(sample_data):
-        return [{'s': sample['Individual_ID']} for sample in sample_data]
-
-
-class LoadAnvilHailDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
-
-    DAG_NAME = 'v03_pipeline-SNV_INDEL'
-    HAS_DAG_ID_PREFIX = False
+    V2_DAG_NAME = None
+    V3_DAG_NAME = 'v03_pipeline-SNV_INDEL'
     ES_HOST = ''
-    UPLOAD_FILE_SUFFIX = 'pedigree.tsv'
+    UPLOAD_ID_FILE = False
     ADDITIONAL_REQUEST_COUNT = 1
 
     def setUp(self):
         super().setup_patchers()
         super().setUp()
 
-    def _get_expected_dag_variables(self, **kwargs):
-        return self._get_project_dag_variables(*self._expected_dag_params(**kwargs))
-
-    @staticmethod
-    def _get_project_dag_variables(project, genome_version):
+    def _get_v3_dag_variables(self, *args, **kwargs):
+        project, genome_version = self._expected_dag_params(**kwargs)
         return {
             'projects_to_run': [project],
             'callset_paths': ['gs://test_bucket/test_path.vcf'],
@@ -889,37 +895,38 @@ class LoadAnvilHailDataAPITest(AirflowTestCase, LoadAnvilDataAPITest):
             'reference_genome': genome_version,
         }
 
-    def _expected_upload_data(self, test_add_data):
-        header = ['Project_GUID', 'Family_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex']
-        if test_add_data:
-            rows = [
-                ['R0001_1kg', 'F000001_1', '1', 'NA19675', 'NA19678', '', 'F'],
-                ['R0001_1kg', 'F000001_1', '1', 'NA19678', '', '', 'M'],
-                ['R0001_1kg', 'F000001_1', '1', 'NA19679', '', '', 'F'],
-                ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
-                ['R0001_1kg', 'F000002_2', '2', 'HG00732', '', '', 'M'],
-                ['R0001_1kg', 'F000002_2', '2', 'HG00733', '', '', 'F'],
-                ['R0001_1kg', 'F000003_3', '3', 'NA20870', '', '', 'M'],
-                ['R0001_1kg', 'F000004_4', '4', 'NA20872', '', '', 'M'],
-                ['R0001_1kg', 'F000005_5', '5', 'NA20874', '', '', 'M'],
-                ['R0001_1kg', 'F000006_6', '6', 'NA20875', '', '', 'M'],
-                ['R0001_1kg', 'F000007_7', '7', 'NA20876', '', '', 'M'],
-                ['R0001_1kg', 'F000008_8', '8', 'NA20888', '', '', 'F'],
-                ['R0001_1kg', 'F000009_9', '9', 'NA20878', '', '', 'M'],
-                ['R0001_1kg', 'F000010_10', '10', 'NA20881', '', '', 'M'],
-                ['R0001_1kg', 'F000015_21', '21', 'HG00735', '', '', 'U']
-            ]
-        else:
-            rows = [
-                ['P_anvil-no-project-workspace1', 'F000021_1', '1', 'NA19675', 'NA19678', '', 'F'],
-                ['P_anvil-no-project-workspace1', 'F000021_1', '1', 'NA19678', '', '', 'M'],
-                ['P_anvil-no-project-workspace1', 'F000022_21', '21', 'HG00735', '', '', 'U'],
-            ]
-        return ['\t'.join(row) for row in [header] + rows]
+    def _get_all_project_dag_variables(self, project, genome_version):
+        return [(self.V3_DAG_NAME, self._get_v3_dag_variables(project=project, genome_version=genome_version))]
 
     @staticmethod
     def _format_error_detail(sample_data):
         return sample_data
+
+
+class LoadAnvilEsDataAPITest(LoadAnvilHailDataAPITest):
+
+    V2_DAG_NAME = 'AnVIL_WES'
+    ES_HOST = 'testhost'
+    UPLOAD_ID_FILE = True
+
+    def _get_v2_dag_variables(self, **kwargs):
+        project, genome_version = self._expected_dag_params(**kwargs)
+        return {
+            'active_projects': [project],
+            'projects_to_run': [project],
+            'vcf_path': 'gs://test_bucket/test_path.vcf',
+            'project_path': f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project}/v20210301',
+        }
+
+    def _get_all_project_dag_variables(self, project, genome_version):
+        return [
+            *super()._get_all_project_dag_variables(project, genome_version),
+            (self.V2_DAG_NAME, self._get_v2_dag_variables(project=project, genome_version=genome_version)),
+        ]
+
+    @staticmethod
+    def _format_error_detail(sample_data):
+        return [{'s': sample['Individual_ID'], **sample} for sample in sample_data]
 
 
 class NoGoogleAnvilWorkspaceAPITest(AuthenticationTestCase):
