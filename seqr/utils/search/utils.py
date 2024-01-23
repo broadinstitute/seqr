@@ -11,7 +11,7 @@ from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend, \
-    hail_variant_lookup
+    hail_variant_lookup, validate_hail_backend_no_location_search
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos
 
@@ -247,7 +247,9 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
 
     samples, genome_version = _get_families_search_data(families, dataset_type=search_dataset_type)
     if parsed_search.get('inheritance'):
-        samples = _parse_inheritance(parsed_search, samples, previous_search_results)
+        samples = _parse_inheritance(parsed_search, samples)
+
+    _validate_search(parsed_search, samples, previous_search_results)
 
     variant_results = backend_specific_call(get_es_variants, get_hail_variants)(
         samples, parsed_search, user, previous_search_results, genome_version,
@@ -362,7 +364,7 @@ def _annotation_dataset_type(annotations):
     return ALL_DATA_TYPES
 
 
-def _parse_inheritance(search, samples, previous_search_results):
+def _parse_inheritance(search, samples):
     inheritance = search.pop('inheritance')
     inheritance_mode = inheritance.get('mode')
     inheritance_filter = inheritance.get('filter') or {}
@@ -383,12 +385,16 @@ def _parse_inheritance(search, samples, previous_search_results):
         search['skipped_samples'] = skipped_samples
         samples = samples.exclude(id__in=[s.id for s in skipped_samples])
 
-    has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
+    return samples
+
+
+def _validate_search(search, samples, previous_search_results):
+    has_comp_het_search = search.get('inheritance_mode') in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
+    has_location_filter = any(search['parsedLocus'][field] for field in ['genes', 'intervals', 'parsed_variant_ids'])
     if has_comp_het_search:
         if not search.get('annotations'):
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
-        has_location_filter = bool(search['parsedLocus']['genes'] or search['parsedLocus']['intervals'])
         family_ids = {s.individual.family_id for s in samples.select_related('individual')}
         if not has_location_filter and len(family_ids) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
             raise InvalidSearchException(
@@ -404,7 +410,8 @@ def _parse_inheritance(search, samples, previous_search_results):
                     f'Unable to search for comp-het pairs with dataset type "{invalid_type}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
                 )
 
-    return samples
+    if not has_location_filter:
+        backend_specific_call(lambda *args: None, validate_hail_backend_no_location_search)(samples)
 
 
 def _filter_inheritance_family_samples(samples, inheritance_filter):

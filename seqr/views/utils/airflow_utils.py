@@ -8,6 +8,7 @@ from google.auth.transport.requests import Request
 from google.oauth2 import id_token
 import re
 import requests
+from typing import Callable
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Individual, Sample, Project
@@ -28,19 +29,32 @@ class DagRunningException(Exception):
     pass
 
 
-def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type: str, data_path: str, user: User,
+def trigger_data_loading(*args, **kwargs):
+    get_dag_helpers = [(_construct_v3_dag_name, _construct_v3_dag_variables, lambda name: name)] + backend_specific_call(
+        [(_construct_v2_dag_name, _construct_v2_dag_variables, _construct_v2_dag_id)], [])
+    all_success = True
+    upload_info = None
+    for get_dag in get_dag_helpers:
+        success, upload_info = _trigger_data_loading_dag(*get_dag, upload_info, *args, **kwargs)
+        all_success &= success
+    return all_success
+
+
+def _trigger_data_loading_dag(get_dag_name: Callable, get_dag_variables: Callable[[dict], str],
+                         get_dag_id: Callable[[str], str], upload_info: list[str],
+                         projects: list[Project], sample_type: str, dataset_type: str, data_path: str, user: User,
                          success_message: str, success_slack_channel: str, error_message: str,
                          genome_version: str = GENOME_VERSION_GRCh38, is_internal: bool = False):
-    success = True
-    dag_name = backend_specific_call(_construct_v2_dag_name, _construct_v3_dag_name)(
-        sample_type=sample_type, dataset_type=dataset_type, is_internal=is_internal)
-    project_guids = sorted([p.guid for p in projects])
-    updated_variables = backend_specific_call(_construct_v2_dag_variables, _construct_v3_dag_variables)(
-        project_guids, data_path, genome_version, is_internal, dag_name=dag_name, user=user, sample_type=sample_type)
-    dag_id = backend_specific_call(_construct_v2_dag_id, lambda name: name)(dag_name)
 
-    file_upload_config = backend_specific_call(_get_v2_upload_file, _get_v3_upload_file)(is_internal)
-    upload_info = _upload_data_loading_files(file_upload_config, projects, is_internal, user, genome_version, sample_type)
+    success = True
+    dag_name = get_dag_name(sample_type=sample_type, dataset_type=dataset_type, is_internal=is_internal)
+    project_guids = sorted([p.guid for p in projects])
+    updated_variables = get_dag_variables(
+        project_guids, data_path, genome_version, is_internal, dag_name=dag_name, user=user, sample_type=sample_type)
+    dag_id = get_dag_id(dag_name)
+
+    if not upload_info:
+        upload_info = _upload_data_loading_files(_get_file_upload_configs(is_internal), projects, is_internal, user, genome_version, sample_type)
 
     try:
         _check_dag_running_state(dag_id)
@@ -55,7 +69,7 @@ def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type
 
     if success or success_slack_channel != SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL:
         _send_load_data_slack_msg([success_message] + upload_info, success_slack_channel, dag_id, updated_variables)
-    return success
+    return success, upload_info
 
 
 def write_data_loading_pedigree(project: Project, user: User):
@@ -68,7 +82,7 @@ def write_data_loading_pedigree(project: Project, user: User):
         raise ValueError(f'No {SEQR_DATASETS_GS_PATH} project directory found for {project.guid}')
     callset, sample_type = match
     _upload_data_loading_files(
-        PEDIGREE_FILE_CONFIG, [project], is_internal=callset != 'AnVIL', user=user, genome_version=project.genome_version,
+        [PEDIGREE_FILE_CONFIG], [project], is_internal=callset != 'AnVIL', user=user, genome_version=project.genome_version,
         sample_type=sample_type, callset=callset,
     )
 
@@ -158,21 +172,20 @@ PEDIGREE_FILE_CONFIG = ('pedigree', 'tsv', OrderedDict({
 }))
 
 
-def _get_v2_upload_file(is_internal: bool):
-    return None if is_internal else SAMPLE_SUBSET_FILE_CONFIG
+def _get_file_upload_configs(is_internal: bool):
+    file_upload_configs = [] if is_internal else backend_specific_call([SAMPLE_SUBSET_FILE_CONFIG], [])
+    return file_upload_configs + [PEDIGREE_FILE_CONFIG]
 
 
-def _get_v3_upload_file(*args):
-    return PEDIGREE_FILE_CONFIG
-
-
-def _upload_data_loading_files(config: tuple[str, str, dict[str, F]], projects: list[Project], is_internal: bool,
+def _upload_data_loading_files(configs: list[tuple[str, str, dict[str, F]]], projects: list[Project], is_internal: bool,
                                user: User, genome_version: str, sample_type: str, **kwargs):
-    if config is None:
-        return []
+    file_types = []
+    annotations = {}
+    for file_type, _, file_annotations in configs:
+        file_types.append(file_type.title())
+        annotations.update(file_annotations)
 
-    file_type, file_format, file_annotations = config
-    annotations = {'project': F('family__project__guid'), **file_annotations}
+    annotations = {'project': F('family__project__guid'), **annotations}
     data = Individual.objects.filter(family__project__in=projects).order_by('family_id', 'individual_id').values(
         **dict(annotations))
 
@@ -183,13 +196,17 @@ def _upload_data_loading_files(config: tuple[str, str, dict[str, F]], projects: 
     info = []
     for project_guid, rows in data_by_project.items():
         gs_path = _get_dag_project_gs_path(project_guid, genome_version, sample_type, is_internal, **kwargs)
+        files = []
+        file_suffixes = {}
+        for file_type, file_format, file_annotations in configs:
+            file_name = f'{project_guid}_{file_type}'
+            files.append((file_name, file_annotations.keys(), rows))
+            file_suffixes[file_name] = file_format
         try:
-            write_multiple_files_to_gs(
-                [(f'{project_guid}_{file_type}', file_annotations.keys(), rows)], gs_path, user, file_format=file_format,
-            )
+            write_multiple_files_to_gs(files, gs_path, user, file_format='tsv', file_suffixes=file_suffixes)
         except Exception as e:
-            logger.error(f'Uploading {file_type} to Google Storage failed. Errors: {e}', user, detail=rows)
-        info.append(f'{file_type.title()} file has been uploaded to {gs_path}')
+            logger.error(f'Uploading {" and ".join(file_types)} to Google Storage failed. Errors: {e}', user, detail=rows)
+        info.append(f'{" and ".join(file_types)} file(s) have been uploaded to {gs_path}')
 
     return info
 

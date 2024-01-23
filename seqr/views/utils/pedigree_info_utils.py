@@ -103,7 +103,7 @@ def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
                     i + 1, len(row), ', '.join(row), len(header), ', '.join(header)
                 ))
 
-        formatted_rows = [{header_item: field.strip() for header_item, field in zip(header, row)} for row in rows]
+        formatted_rows = [{header_item: str(field).strip() for header_item, field in zip(header, row)} for row in rows]
         return formatted_rows, header
 
     except Exception as e:
@@ -187,7 +187,7 @@ def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
 
             try:
                 value = _format_value(value, column)
-            except ValueError:
+            except (KeyError, ValueError):
                 errors.append(f'Invalid value "{value}" for {_to_title_case(_to_snake_case(column))} in row #{i + 1}')
                 continue
 
@@ -227,7 +227,7 @@ def _format_value(value, column):
     if format_func:
         if (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
             value = format_func(value)
-            if value is None and column not in JsonConstants.JSON_COLUMNS:
+            if value is None and column not in JsonConstants.NULLABLE_COLUMNS:
                 raise ValueError()
     elif value == '':
         value = None
@@ -299,7 +299,7 @@ def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
                 actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
                 if actual_sex != expected_sex:
                     actual_sex_label = dict(Individual.SEX_CHOICES)[actual_sex]
-                    errors.append("%(parent_id)s is recorded as %(actual_sex_label)s and also as the %(parent_id_type)s of %(individual_id)s" % locals())
+                    errors.append("%(parent_id)s is recorded as %(actual_sex_label)s sex and also as the %(parent_id_type)s of %(individual_id)s" % locals())
 
             # is the parent in the same family?
             parent = records_by_id[parent_id]
@@ -784,6 +784,8 @@ class JsonConstants:
     TISSUE_AFFECTED_STATUS = 'tissueAffectedStatus'
 
     JSON_COLUMNS = {MATERNAL_ETHNICITY, PATERNAL_ETHNICITY, BIRTH_YEAR, DEATH_YEAR, ONSET_AGE, AFFECTED_RELATIVES}
+    NULLABLE_COLUMNS = {TISSUE_AFFECTED_STATUS}
+    NULLABLE_COLUMNS.update(JSON_COLUMNS)
 
     FORMAT_COLUMNS = {
         SEX_COLUMN: _parse_sex,
@@ -794,7 +796,7 @@ class JsonConstants:
         PRIMARY_BIOSAMPLE: lambda value: next(
             (code for code, uberon_code in Individual.BIOSAMPLE_CHOICES if value.startswith(uberon_code)), None),
         ANALYTE_TYPE: Individual.ANALYTE_REVERSE_LOOKUP.get,
-        TISSUE_AFFECTED_STATUS: {'Yes': True, 'No': False}.get,
+        TISSUE_AFFECTED_STATUS: lambda value: {'Yes': True, 'No': False, 'Unknown': None}[value],
     }
     FORMAT_COLUMNS.update({col: json.loads for col in JSON_COLUMNS})
 
