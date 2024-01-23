@@ -1127,13 +1127,13 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
         ('-', '3′ to 5′ direction'),
         ('*', 'Any direction'),
     )
-    """meanCounts	totalCounts	meanTotalCounts"""
 
     rank = models.IntegerField()
     p_adjust = models.FloatField()
     chrom = models.CharField(max_length=2)
     start = models.IntegerField()
     end = models.IntegerField()
+    strand = models.CharField(max_length=1, choices=STRAND_CHOICES)
     type = models.CharField(max_length=12)
     delta_intron_jaccard_index = models.FloatField()
     counts = models.IntegerField()
@@ -1144,11 +1144,11 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
     rare_disease_samples_total = models.IntegerField()
 
     class Meta:
-        unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end', 'type')
+        unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end', 'strand', 'type')
 
-        json_fields = ['gene_id', 'p_adjust', 'chrom', 'start', 'end', 'delta_intron_jaccard_index', 'counts', 'type',
-                       'rare_disease_samples_with_this_junction', 'rare_disease_samples_total', 'mean_counts',
-                       'total_counts', 'mean_total_counts']
+        json_fields = ['gene_id', 'p_adjust', 'chrom', 'start', 'end', 'strand', 'counts', 'type',
+                       'rare_disease_samples_with_this_junction', 'rare_disease_samples_total',
+                       'delta_intron_jaccard_index', 'mean_counts', 'total_counts', 'mean_total_counts']
 
 
 class PhenotypePrioritization(BulkOperationBase):

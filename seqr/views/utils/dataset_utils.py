@@ -229,6 +229,7 @@ TPM_HEADER_COLS = {col.lower(): col for col in [GENE_ID_COL, TPM_COL]}
 CHROM_COL = 'chrom'
 START_COL = 'start'
 END_COL = 'end'
+STRAND_COL = 'strand'
 COUNTS_COL = 'counts'
 MEAN_COUNTS_COL = 'mean_counts'
 TOTAL_COUNTS_COL = 'total_counts'
@@ -239,7 +240,7 @@ DELTA_INDEX_COL = 'delta_intron_jaccard_index'
 RARE_DISEASE_SAMPLES_WITH_JUNCTION = 'rare_disease_samples_with_this_junction'
 RARE_DISEASE_SAMPLES_TOTAL = 'rare_disease_samples_total'
 SPLICE_OUTLIER_COLS = [
-    CHROM_COL, START_COL, END_COL, SPLICE_TYPE_COL, P_ADJUST_COL, DELTA_INDEX_COL, COUNTS_COL, MEAN_COUNTS_COL,
+    CHROM_COL, START_COL, END_COL, STRAND_COL, SPLICE_TYPE_COL, P_ADJUST_COL, DELTA_INDEX_COL, COUNTS_COL, MEAN_COUNTS_COL,
     TOTAL_COUNTS_COL, MEAN_TITAL_COUNTS_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION, RARE_DISEASE_SAMPLES_TOTAL,
 ]
 SPLICE_OUTLIER_FORMATTER = {
@@ -276,7 +277,8 @@ def load_rna_seq_tpm(*args, **kwargs):
 
 
 def _get_splice_id(row):
-    return '-'.join([row[GENE_ID_COL], row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[SPLICE_TYPE_COL]])
+    return '-'.join([row[GENE_ID_COL], row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[STRAND_COL],
+                     row[SPLICE_TYPE_COL]])
 
 
 def load_rna_seq_splice_outlier(*args, **kwargs):
