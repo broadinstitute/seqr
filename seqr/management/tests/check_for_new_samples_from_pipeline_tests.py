@@ -3,6 +3,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 import json
 import mock
+import responses
 
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 from seqr.models import Project, Family, Individual, Sample
@@ -31,15 +32,26 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 class CheckNewSamplesTest(AnvilAuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
+    @mock.patch('seqr.views.utils.variant_utils.redis.StrictRedis')
+    @mock.patch('seqr.views.utils.airtable_utils.logger')
+    @mock.patch('seqr.views.utils.variant_utils.logger')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
     @mock.patch('seqr.utils.search.add_data_utils.send_html_email')
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.logger')
     @mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: GUID_ID)
+    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', 'http://testairtable')
     @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
-    def test_command(self, mock_logger, mock_send_email, mock_send_slack, mock_subprocess):
+    @responses.activate
+    def test_command(self, mock_logger, mock_send_email, mock_send_slack, mock_subprocess, mock_utils_logger, mock_airtable_utils, mock_redis):
+        mock_redis.return_value.keys.side_effect = lambda pattern: [pattern]
+        responses.add(
+            responses.GET,
+            "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
+            json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
+
         # Test errors
         with self.assertRaises(CommandError) as ce:
             call_command('check_for_new_samples_from_pipeline')
@@ -50,7 +62,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(str(ce.exception), 'Run failed for GRCh38/SNV_INDEL: auto__2023-08-08, unable to load data')
 
         metadata = {
-            'callset': '1kg.vcf.gz',
+            'callsets': ['1kg.vcf.gz'],
             'sample_type': 'WES',
             'families': {
                 'F0000123_ABC': ['NA22882', 'NA20885'],
@@ -58,16 +70,18 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 'F000014_14': ['NA21234'],
             },
         }
-        mock_subprocess.return_value.wait.return_value = 0
+        mock_subprocess.return_value.wait.return_value = 1
         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
 
         with self.assertRaises(CommandError) as ce:
-            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
+            call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08', '--allow-failed')
         self.assertEqual(
             str(ce.exception), 'Invalid families in run metadata GRCh38/SNV_INDEL: auto__2023-08-08 - F0000123_ABC')
+        mock_logger.warning.assert_called_with('Loading for failed run GRCh38/SNV_INDEL: auto__2023-08-08')
 
         metadata['families']['F000011_11'] = metadata['families'].pop('F0000123_ABC')
         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
+        mock_subprocess.return_value.wait.return_value = 0
         with self.assertRaises(CommandError) as ce:
             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
         self.assertEqual(
@@ -86,12 +100,13 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
 
         # Test success
+        mock_logger.reset_mock()
         mock_subprocess.reset_mock()
         call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
 
         mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [
-            'gsutil ls gs://seqr-datasets/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/_SUCCESS',
-            'gsutil cat gs://seqr-datasets/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/metadata.json',
+            'gsutil ls gs://seqr-hail-search-data/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/_SUCCESS',
+            'gsutil cat gs://seqr-hail-search-data/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/metadata.json',
         ]], any_order=True)
 
         mock_logger.info.assert_has_calls([
@@ -99,6 +114,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             mock.call('Loading 4 WES SNV_INDEL samples in 2 projects'),
             mock.call('DONE'),
         ])
+        mock_logger.warining.assert_not_called()
+
+        mock_redis.return_value.delete.assert_called_with('search_results__*')
+        mock_utils_logger.info.assert_called_with('Reset 1 cached results')
 
         # Tests Sample models created/updated
         updated_sample_models = Sample.objects.filter(guid__in={
@@ -168,6 +187,11 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
         self.assertEqual(mock_send_email.call_count, 1)
         mock_send_email.assert_called_with(EMAIL, subject='New data available in seqr', to=['test_user_manager@test.com'])
+        mock_airtable_utils.error.assert_called_with(
+            'Airtable patch "AnVIL Seqr Loading Requests Tracking" error: Unable to identify record to update', None, detail={
+                'or_filters': {'Status': ['Loading', 'Loading Requested']},
+                'and_filters': {'AnVIL Project URL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'},
+                'update': {'Status': 'Available in Seqr'}})
 
         # Test reloading has no effect
         mock_logger.reset_mock()

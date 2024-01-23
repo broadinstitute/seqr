@@ -52,9 +52,9 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None):
         for line in _google_bucket_file_iter(file_path, byte_range=byte_range, raw_content=raw_content, user=user):
             yield line
     elif byte_range:
-        command = 'dd skip={offset} count={size} bs=1 if={file_path}'.format(
+        command = 'dd skip={offset} count={size} bs=1 if={file_path} status="none"'.format(
             offset=byte_range[0],
-            size=byte_range[1]-byte_range[0],
+            size=byte_range[1]-byte_range[0] + 1,
             file_path=file_path,
         )
         process = run_command(command, user=user)

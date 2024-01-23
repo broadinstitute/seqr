@@ -6,13 +6,13 @@ from django.db import transaction
 from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 
-from hail_search.test_utils import HAIL_BACKEND_SINGLE_FAMILY_VARIANTS
+from hail_search.test_utils import HAIL_BACKEND_SINGLE_FAMILY_VARIANTS, VARIANT_LOOKUP_VARIANT
 from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
 from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.search.elasticsearch.es_utils import InvalidIndexException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
-    update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
+    update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown, variant_lookup_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
     GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     PA_LOCUS_LIST_FIELDS, INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
@@ -48,6 +48,14 @@ PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'genomeVersion', 'variantTagTypes', 'v
 
 EXPECTED_TAG = {k: mock.ANY for k in TAG_FIELDS}
 expected_functional_tag = {k: mock.ANY for k in FUNCTIONAL_FIELDS}
+expected_aip_tag = {
+    'aipMetadata': {
+        '4': {'date': '2023-11-15', 'name': 'de Novo'},
+        'support': {'date': '2023-11-15', 'name': 'High in Silico Scores'},
+    },
+    **EXPECTED_TAG,
+}
+del expected_aip_tag['metadata']
 EXPECTED_GENE = {k: mock.ANY for k in GENE_VARIANT_FIELDS}
 EXPECTED_GENE['locusListGuids'] = []
 expected_pa_gene = deepcopy(EXPECTED_GENE)
@@ -93,6 +101,7 @@ EXPECTED_SEARCH_RESPONSE = {
     'variantTagsByGuid': {
         'VT1708633_2103343353_r0390_100': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
         'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726961_2103343353_r0390_100': EXPECTED_TAG,
+        'VT1726985_2103343353_r0390_100': expected_aip_tag,
     },
     'variantNotesByGuid': {
         'VN0714935_2103343353_r0390_100': {k: mock.ANY for k in VARIANT_NOTE_FIELDS},
@@ -112,6 +121,7 @@ EXPECTED_SEARCH_RESPONSE = {
         'I000002_na19678': {'ENSG00000268903': {'lirical': EXPECTED_LIRICAL_DATA}},
     },
     'mmeSubmissionsByGuid': {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}},
+    'familiesByGuid': {'F000001_1': {'tpmGenes': ['ENSG00000227232']}},
 }
 
 EXPECTED_SEARCH_CONTEXT_RESPONSE = {
@@ -125,13 +135,13 @@ EXPECTED_SEARCH_CONTEXT_RESPONSE = {
 }
 
 EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE = {
+    **EXPECTED_SEARCH_RESPONSE,
     'familiesByGuid': {'F000001_1': mock.ANY, 'F000002_2': mock.ANY},
     'individualsByGuid': mock.ANY,
     'igvSamplesByGuid': mock.ANY,
     'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY},
     'familyNotesByGuid': mock.ANY,
 }
-EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE.update(deepcopy(EXPECTED_SEARCH_RESPONSE))
 
 def _get_es_variants(results_model, **kwargs):
     results_model.save()
@@ -386,11 +396,11 @@ class VariantSearchAPITest(object):
             ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
              '1', '', '', '', '', '', 'NA19679', '0', '99.0', '0.0', '', '', '', '', '', '', '', ''],
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-             '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '', '', '',
+             '', '2', 'AIP (None)|Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '', '', '',
              '', '', '', '', '', '', '', '', ''],
             ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
              '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
-             '2.000999927520752', '0.0', '', 'tolerated', '', 'damaging', 'rs1801131', 'ENST00000376585.6:c.1409A>C',
+             '2.000999927520752', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000376585.6:c.1409A>C',
              'ENSP00000365770.1:p.Glu470Ala', 'Conflicting_interpretations_of_pathogenicity', '1', '', '2', '', '', '', '', '', 'HG00731', '2', '99', '1.0',
              'HG00732', '1', '99', '0.625', 'HG00733', '0', '40', '0.0'],
             ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
@@ -398,7 +408,7 @@ class VariantSearchAPITest(object):
              '', 'rs13447464', 'ENST00000428239.5:c.115+890G>A', '', '', '', '', '2', '', '', '', '', '', 'HG00731',
              '1', '99', '1.0', 'HG00732', '0', '99', '0.4594594594594595', 'HG00733', '1', '99', '0.4074074074074074'],
         ]
-        self.assertEqual(response.content, ('\n'.join(['\t'.join(line) for line in expected_content])+'\n').encode('utf-8'))
+        self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], expected_content)
 
         # test export with max families
         with mock.patch('seqr.views.apis.variant_search_api.MAX_FAMILIES_PER_ROW', 1):
@@ -420,11 +430,11 @@ class VariantSearchAPITest(object):
                 ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
                  '1', '', '', 'NA19679', '0', '99.0', '0.0', '', '', '', '', '', '', '', '',],
                 ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-                 '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)',
+                 '', '2', 'AIP (None)|Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)',
                  '', '', '', '', '', '', '', '', '', '', '', '',],
                 ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
                  '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
-                 '2.000999927520752', '0.0', '', 'tolerated', '', 'damaging', 'rs1801131', 'ENST00000376585.6:c.1409A>C',
+                 '2.000999927520752', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000376585.6:c.1409A>C',
                  'ENSP00000365770.1:p.Glu470Ala', 'Conflicting_interpretations_of_pathogenicity', '1', '', '2', '', '', 'HG00731', '2', '99', '1.0',
                  'HG00732', '1', '99', '0.625', 'HG00733', '0', '40', '0.0'],
                 ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
@@ -433,8 +443,7 @@ class VariantSearchAPITest(object):
                  '1', '99', '1.0', 'HG00732', '0', '99', '0.4594594594594595', 'HG00733', '1', '99',
                  '0.4074074074074074'],
             ]
-            self.assertEqual(response.content,
-                             ('\n'.join(['\t'.join(line) for line in expected_content]) + '\n').encode('utf-8'))
+            self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], expected_content)
 
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True, user=self.collaborator_user)
         mock_error_logger.assert_not_called()
@@ -462,7 +471,6 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
         expected_search_response = deepcopy(EXPECTED_SEARCH_RESPONSE)
         expected_search_response.update({
             'searchedVariants': COMP_HET_VARAINTS,
@@ -471,6 +479,7 @@ class VariantSearchAPITest(object):
             'transcriptsById': {},
             'variantTagsByGuid': {
                 'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
+                'VT1726985_2103343353_r0390_100': expected_aip_tag,
             },
             'variantFunctionalDataByGuid': {},
             'phenotypeGeneScores': {},
@@ -478,6 +487,8 @@ class VariantSearchAPITest(object):
             'mmeSubmissionsByGuid': {},
         })
         expected_search_response['search']['totalResults'] = 1
+        del expected_search_response['familiesByGuid']
+        self.assertSetEqual(set(response_json.keys()), set(expected_search_response.keys()))
         self.assertDictEqual(response_json, expected_search_response)
         self._assert_expected_results_context(response_json, has_pa_detail=False, rnaseq=False)
         mock_error_logger.assert_not_called()
@@ -491,7 +502,7 @@ class VariantSearchAPITest(object):
         expected_search_results = deepcopy(EXPECTED_SEARCH_RESPONSE)
         expected_search_results['searchedVariants'] = VARIANTS_WITH_DISCOVERY_TAGS
         expected_search_results['savedVariantsByGuid']['SV0000002_1248367227_r0390_100']['discoveryTags'] = DISCOVERY_TAGS
-        expected_search_results['familiesByGuid'] = {'F000012_12': mock.ANY}
+        expected_search_results['familiesByGuid'].update({'F000012_12': mock.ANY})
         self.assertSetEqual(set(response_json.keys()), set(expected_search_results.keys()))
         self.assertDictEqual(response_json, expected_search_results)
         self._assert_expected_results_context(response_json)
@@ -718,8 +729,10 @@ class VariantSearchAPITest(object):
         })
         expected_search_response.pop('search')
         expected_search_response['savedVariantsByGuid'].pop('SV0000002_1248367227_r0390_100')
-        expected_search_response['variantTagsByGuid'].pop('VT1726945_2103343353_r0390_100')
-        expected_search_response['variantTagsByGuid'].pop('VT1726970_2103343353_r0004_tes')
+        expected_search_response['variantTagsByGuid'] = {
+            k: EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE['variantTagsByGuid'][k]
+            for k in {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'}
+        }
         expected_search_response['variantNotesByGuid'] = {}
         expected_search_response['genesById'] = {
             k: v for k, v in expected_search_response['genesById'].items() if k in {'ENSG00000227232', 'ENSG00000268903'}
@@ -739,6 +752,40 @@ class VariantSearchAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Variant not found')
+
+    @mock.patch('seqr.views.apis.variant_search_api.variant_lookup')
+    def test_variant_lookup(self, mock_variant_lookup):
+        mock_variant_lookup.return_value = VARIANT_LOOKUP_VARIANT
+
+        url = f'{reverse(variant_lookup_handler)}?variantId=1-10439-AC-A&genomeVersion=38'
+        self.check_require_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        expected_body = {
+            'genesById': {},
+            'locusListsByGuid': {},
+            'mmeSubmissionsByGuid': {},
+            'phenotypeGeneScores': {},
+            'rnaSeqData': {},
+            'savedVariantsByGuid': {},
+            'transcriptsById': {},
+            'variant': VARIANT_LOOKUP_VARIANT,
+        }
+        self.assertDictEqual(response.json(), expected_body)
+        mock_variant_lookup.assert_called_with(self.no_access_user, variant_id='1-10439-AC-A', genome_version='38')
+
+        variant = {**VARIANTS[0], 'familyGuids': [], 'genotypes': {}}
+        mock_variant_lookup.return_value = variant
+        expected_body.update({
+            'variant': variant,
+            'genesById': {'ENSG00000227232': EXPECTED_GENE, 'ENSG00000268903': EXPECTED_GENE},
+            'transcriptsById': EXPECTED_SEARCH_RESPONSE['transcriptsById'],
+        })
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), expected_body)
 
     def test_saved_search(self):
         get_saved_search_url = reverse(get_saved_search_handler)

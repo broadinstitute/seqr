@@ -20,11 +20,12 @@ import {
   LOCUS_LIST_ITEMS_FIELD,
   AFFECTED,
   UNAFFECTED,
-  PREDICTOR_FIELDS,
+  ORDERED_PREDICTOR_FIELDS,
   SPLICE_AI_FIELD,
   VEP_GROUP_SV_NEW,
   PANEL_APP_CONFIDENCE_LEVELS,
   SCREEN_LABELS,
+  predictorColorRanges,
 } from 'shared/utils/constants'
 
 import LocusListItemsFilter from './LocusListItemsFilter'
@@ -452,46 +453,42 @@ const REQUIRE_SCORE_FIELD = {
   label: 'Require Filtered Predictor',
   labelHelp: 'Only return variants where at least one filtered predictor is present. By default, variants are returned if a predictor meets the filtered value or is missing entirely',
 }
-export const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
-  ({ field, fieldTitle, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
-    const label = fieldTitle || snakecaseToTitlecase(field)
-    const filterField = { name: field, label, group }
+export const IN_SILICO_FIELDS = [
+  REQUIRE_SCORE_FIELD,
+  ...ORDERED_PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
+    ({ field, fieldTitle, thresholds, reverseThresholds, indicatorMap, group, min, max, requiresCitation }) => {
+      const label = fieldTitle || snakecaseToTitlecase(field)
+      const filterField = { name: field, label, group }
 
-    if (indicatorMap) {
+      if (indicatorMap) {
+        return {
+          labelHelp: `Select a value for ${label}`,
+          component: Select,
+          options: [
+            { text: '', value: null },
+            ...Object.entries(indicatorMap).map(([val, { value, ...opt }]) => ({ value: val, text: value, ...opt })),
+          ],
+          ...filterField,
+        }
+      }
+
+      const labelHelp = (
+        <div>
+          {`Enter a numeric cutoff for ${label}`}
+          {thresholds && predictorColorRanges(thresholds, requiresCitation, reverseThresholds)}
+        </div>
+      )
       return {
-        labelHelp: `Select a value for ${label}`,
-        component: Select,
-        options: [
-          { text: '', value: null },
-          ...Object.entries(indicatorMap).map(([val, { value, ...opt }]) => ({ value: val, text: value, ...opt })),
-        ],
+        labelHelp,
+        control: Form.Input,
+        type: 'number',
+        min: min || 0,
+        max: max || 1,
+        step: max ? 1 : 0.05,
         ...filterField,
       }
-    }
-
-    const labelHelp = (
-      <div>
-        {`Enter a numeric cutoff for ${label}`}
-        {dangerThreshold && (
-          <div>
-            Thresholds:
-            <div>{`Red > ${dangerThreshold}`}</div>
-            <div>{`Yellow > ${warningThreshold}`}</div>
-          </div>
-        )}
-      </div>
-    )
-    return {
-      labelHelp,
-      control: Form.Input,
-      type: 'number',
-      min: min || 0,
-      max: max || 1,
-      step: max ? 1 : 0.05,
-      ...filterField,
-    }
-  },
-)]
+    },
+  )]
 
 export const SNP_QUALITY_FILTER_FIELDS = [
   {

@@ -2,17 +2,19 @@ GENOME_VERSION_GRCh38 = 'GRCh38'
 
 AFFECTED = 'A'
 UNAFFECTED = 'N'
+UNKNOWN_AFFECTED = 'U'
 AFFECTED_ID = 0
 UNAFFECTED_ID = 1
+UNKNOWN_AFFECTED_ID = 2
 MALE = 'M'
 
-VARIANT_KEY_FIELD = 'variantId'
 GROUPED_VARIANTS_FIELD = 'variants'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
 SPLICE_AI_FIELD = 'splice_ai'
 NEW_SV_FIELD = 'new_structural_variants'
 SCREEN_KEY = 'SCREEN'  # uses all caps to match filter provided by the seqr UI
 CLINVAR_KEY = 'clinvar'
+CLINVAR_MITO_KEY = 'clinvar_mito'
 HGMD_KEY = 'hgmd'
 STRUCTURAL_ANNOTATION_FIELD = 'structural'
 

@@ -61,7 +61,7 @@ const BaseGeneLabelContent = styled(({ color, customColor, label, maxWidth, disp
     }
   }
 `
-const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
+export const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
 
 const GeneLinks = styled.div`
   font-size: .9em;
@@ -189,7 +189,7 @@ const BaseLocusListLabels = React.memo(({
       paLocusList,
       geneSymbol,
     }) : {
-      description: label,
+      description: locusListDescription,
       initials: false,
       customColor: false,
     }
@@ -228,7 +228,7 @@ const mapLocusListStateToProps = state => ({
   locusListsByGuid: getLocusListsByGuid(state),
 })
 
-export const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
+const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
 
 const ClinGenRow = ({ value, label, href }) => (
   <Table.Row>
@@ -268,6 +268,25 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
+export const omimPhenotypesDetail = (phenotypes, showCoordinates) => (
+  <List>
+    {phenotypes.map(phenotype => (
+      <ListItemLink
+        key={phenotype.phenotypeDescription}
+        content={(
+          <span>
+            {phenotype.phenotypeDescription}
+            {phenotype.phenotypeInheritance && <i>{` (${phenotype.phenotypeInheritance})`}</i>}
+            {showCoordinates && ` ${phenotype.chrom}:${phenotype.start}-${phenotype.end}`}
+          </span>
+        )}
+        target="_blank"
+        href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
+      />
+    ))}
+  </List>
+)
+
 const GENE_DISEASE_DETAIL_SECTIONS = [
   {
     color: 'violet',
@@ -298,23 +317,7 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
     compactLabel: 'OMIM Disease Phenotypes',
     expandedDisplay: true,
     showDetails: gene => gene.omimPhenotypes.length > 0,
-    detailsDisplay: gene => (
-      <List>
-        {gene.omimPhenotypes.map(phenotype => (
-          <ListItemLink
-            key={phenotype.phenotypeDescription}
-            content={phenotype.phenotypeInheritance ? (
-              <span>
-                {phenotype.phenotypeDescription}
-                <i>{` (${phenotype.phenotypeInheritance})`}</i>
-              </span>
-            ) : phenotype.phenotypeDescription}
-            target="_blank"
-            href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
-          />
-        ))}
-      </List>
-    ),
+    detailsDisplay: gene => omimPhenotypesDetail(gene.omimPhenotypes),
   },
 ]
 
@@ -384,25 +387,27 @@ const GENE_DETAIL_SECTIONS = [
       (gene.sHet.postMean && gene.sHet.postMean > SHET_THRESHOLD),
     detailsDisplay: gene => (
       <List bulleted>
-        <List.Item>
-          This gene ranks as &nbsp;
-          {gene.constraints.louefRank}
-          &nbsp;most intolerant of LoF mutations out of &nbsp;
-          {gene.constraints.totalGenes}
-          &nbsp;genes under study (louef: &nbsp;
-          {gene.constraints.louef.toPrecision(4)}
-          {gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}
-          )
-          <a href="https://pubmed.ncbi.nlm.nih.gov/32461654/" target="_blank" rel="noreferrer"> Karczewski (2020)</a>
-        </List.Item>
-        {gene.sHet.postMean && (
+        {gene.constraints.louef < LOF_THRESHHOLD && (
+          <List.Item>
+            This gene ranks as &nbsp;
+            {gene.constraints.louefRank}
+            &nbsp;most intolerant of LoF mutations out of &nbsp;
+            {gene.constraints.totalGenes}
+            &nbsp;genes under study (louef: &nbsp;
+            {gene.constraints.louef.toPrecision(4)}
+            {gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}
+            )
+            <a href="https://pubmed.ncbi.nlm.nih.gov/32461654/" target="_blank" rel="noreferrer"> Karczewski (2020)</a>
+          </List.Item>
+        )}
+        {gene.sHet.postMean > SHET_THRESHOLD && (
           <List.Item>
             This gene has a Shet score of &nbsp;
             {gene.sHet.postMean.toPrecision(4)}
             <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10245655" target="_blank" rel="noreferrer"> Zeng (2023)</a>
           </List.Item>
         )}
-        {gene.cnSensitivity.phi && (
+        {gene.cnSensitivity.phi > HI_THRESHOLD && (
           <List.Item>
             This gene has a haploinsufficiency (HI) score of &nbsp;
             {gene.cnSensitivity.phi.toPrecision(4)}

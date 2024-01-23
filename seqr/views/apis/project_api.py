@@ -7,12 +7,13 @@ from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Max, Q, Case, When, Value
-from django.db.models.functions import JSONObject
+from django.db.models.functions import JSONObject, TruncDate
 from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, SavedVariant, \
+from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, \
     FamilyNote, CAN_EDIT
+from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json, update_model_from_json
@@ -21,10 +22,11 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
-    has_workspace_perm, has_case_review_permissions
+    has_workspace_perm, has_case_review_permissions, is_internal_anvil_project
 from seqr.views.utils.project_context_utils import families_discovery_tags, \
     add_project_tag_types, get_project_analysis_groups, get_project_locus_lists, MME_TAG_NAME
-from seqr.views.utils.terra_api_utils import is_anvil_authenticated
+from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
+from settings import BASE_URL
 
 
 @pm_required
@@ -209,11 +211,24 @@ def project_overview(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     sample_models = Sample.objects.filter(individual__family__project=project)
+
+    active_samples = sample_models.filter(is_active=True)
+    first_loaded_samples = sample_models.order_by('individual__family', 'loaded_date').distinct('individual__family')
+    samples_by_guid = {}
+    for samples in [active_samples, first_loaded_samples]:
+        samples_by_guid.update({s['sampleGuid']: s for s in get_json_for_samples(samples, project_guid=project_guid)})
+
+    sample_load_counts = sample_models.values(
+        'sample_type', 'dataset_type', loadedDate=TruncDate('loaded_date'),
+    ).order_by('loadedDate').annotate(familyCounts=ArrayAgg('individual__family__guid'))
+    grouped_sample_counts = defaultdict(list)
+    for s in sample_load_counts:
+        s['familyCounts'] = {f: s['familyCounts'].count(f) for f in s['familyCounts']}
+        grouped_sample_counts[f'{s.pop("sample_type")}__{s.pop("dataset_type")}'].append(s)
+
     response = {
-        'projectsByGuid': {project_guid: {'projectGuid': project_guid}},
-        'samplesByGuid': {
-            s['sampleGuid']: s for s in get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
-        },
+        'projectsByGuid': {project_guid: {'projectGuid': project_guid, 'sampleCounts': grouped_sample_counts}},
+        'samplesByGuid': samples_by_guid,
     }
 
     add_project_tag_types(response['projectsByGuid'])
@@ -253,6 +268,17 @@ def project_individuals(request, project_guid):
     return create_json_response({
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
     })
+
+
+@login_and_policies_required
+def project_samples(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+    samples = Sample.objects.filter(individual__family__project=project)
+
+    return create_json_response({
+        'samplesByGuid': {s['sampleGuid']: s for s in get_json_for_samples(samples, project_guid=project_guid)},
+    })
+
 
 @login_and_policies_required
 def project_analysis_groups(request, project_guid):
@@ -304,6 +330,9 @@ def project_mme_submisssions(request, project_guid):
 
 
 def _add_tag_type_counts(project, project_variant_tags):
+    project_tags = VariantTag.objects.filter(saved_variants__family__project=project)
+    project_notes = VariantNote.objects.filter(saved_variants__family__project=project)
+
     family_tag_type_counts = defaultdict(dict)
     note_tag_type = {
         'variantTagTypeGuid': 'notes',
@@ -312,15 +341,13 @@ def _add_tag_type_counts(project, project_variant_tags):
         'description': '',
         'color': 'grey',
         'order': 100,
-        'numTags': SavedVariant.objects.filter(family__project=project, variantnote__isnull=False).distinct().count(),
+        'numTags': project_notes.aggregate(count=Count('saved_variants__guid', distinct=True))['count'],
     }
 
-    project_variants = VariantTag.objects.filter(saved_variants__family__project=project)
-
-    mme_counts_by_family = project_variants.filter(saved_variants__matchmakersubmissiongenes__isnull=False) \
+    mme_counts_by_family = project_tags.filter(saved_variants__matchmakersubmissiongenes__isnull=False) \
         .values('saved_variants__family__guid').annotate(count=Count('saved_variants__guid', distinct=True))
 
-    tag_counts_by_type_and_family = project_variants.values(
+    tag_counts_by_type_and_family = project_tags.values(
         'saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))
     for tag_type in project_variant_tags:
         current_tag_type_counts = mme_counts_by_family if tag_type['name'] == MME_TAG_NAME else [
@@ -354,3 +381,11 @@ def _delete_project(project_guid, user):
     Family.bulk_delete(user, project=project)
 
     project.delete_model(user, user_can_delete=True)
+
+    if anvil_enabled() and not is_internal_anvil_project(project):
+        AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_patch_records(
+            ANVIL_REQUEST_TRACKING_TABLE,
+            record_or_filters={'Status': ['Loading', 'Loading Requested', 'Available in Seqr']},
+            record_and_filters={'AnVIL Project URL': f'{BASE_URL}project/{project_guid}/project_page'},
+            update={'Status': 'Project Deleted'},
+        )

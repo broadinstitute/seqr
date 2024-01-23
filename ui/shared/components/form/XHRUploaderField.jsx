@@ -17,6 +17,11 @@ class UploaderFieldComponent extends React.PureComponent {
     uploaderProps: PropTypes.object,
   }
 
+  onStarted = () => {
+    const { input } = this.props
+    input.onChange({ loading: true })
+  }
+
   onFinished = (xhrResponse, uploaderState) => {
     const { input } = this.props
     input.onChange({ uploaderState, ...xhrResponse })
@@ -29,6 +34,7 @@ class UploaderFieldComponent extends React.PureComponent {
     return ([
       <React.Suspense key="uploader" fallback={<Loader />}>
         <XHRUploaderWithEvents
+          onUploadStarted={this.onStarted}
           onUploadFinished={this.onFinished}
           initialState={input.value ? input.value.uploaderState : null}
           url={`${url}${path}`}
@@ -44,7 +50,15 @@ class UploaderFieldComponent extends React.PureComponent {
 
 }
 
-export const uploadedFileHasErrors = value => value && value.errors && (value.errors.length ? value.errors : undefined)
+export const uploadedFileHasErrors = (value) => {
+  if (value?.errors && value.errors.length) {
+    return value.errors
+  }
+  if (value?.loading) {
+    return 'File upload incomplete'
+  }
+  return undefined
+}
 const hasUploadedFile = value => (value && value.uploadedFileId ? undefined : 'File not uploaded')
 export const validateUploadedFile = value => uploadedFileHasErrors(value) || hasUploadedFile(value)
 export const warnUploadedFile = value => value && value.warnings && (value.warnings.length ? value.warnings : undefined)

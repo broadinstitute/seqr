@@ -1,13 +1,14 @@
 from datetime import datetime
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.urls.base import reverse
 import json
 import mock
 import responses
 
 from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, hpo_summary_data, \
-    bulk_update_family_analysed_by, sample_metadata_export
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
-from seqr.models import FamilyAnalysedBy
+    bulk_update_family_external_analysis, individual_metadata
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest, PARSED_VARIANTS
+from seqr.models import FamilyAnalysedBy, SavedVariant, VariantTag
 from settings import AIRTABLE_URL
 
 
@@ -32,51 +33,78 @@ SAVED_VARIANT_RESPONSE_KEYS = {
 }
 
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
-    "project_guid": "R0003_test",
+    "projectGuid": "R0003_test",
     "num_saved_variants": 2,
-    "solve_state": "Tier 1",
+    "solve_status": "No",
     "sample_id": "NA20889",
-    "Gene_Class-1": "Tier 1 - Candidate",
-    "Gene_Class-2": "Tier 1 - Candidate",
-    "inheritance_description-1": "Autosomal recessive (compound heterozygous)",
-    "inheritance_description-2": "Autosomal recessive (compound heterozygous)",
-    "hpo_absent": "",
-    "novel_mendelian_gene-1": "Y",
-    "novel_mendelian_gene-2": "Y",
+    "gene_known_for_phenotype-1": "Known",
+    "gene_known_for_phenotype-2": "Known",
+    "variant_inheritance-1": "unknown",
+    "variant_inheritance-2": "unknown",
+    'genetic_findings_id-1': 'NA20889_1_248367227',
+    'genetic_findings_id-2': 'NA20889_1_249045487',
     "hgvsc-1": "c.3955G>A",
     "date_data_generation": "2017-02-05",
-    "Zygosity-1": "Heterozygous",
-    "Zygosity-2": "Heterozygous",
-    "Ref-1": "TC",
-    "sv_type-2": "Deletion",
-    "sv_name-2": "DEL:chr12:49045487-49045898",
-    "Chrom-2": "12",
-    "Pos-2": "49045487",
+    "zygosity-1": "Heterozygous",
+    "zygosity-2": "Heterozygous",
+    "ref-1": "TC",
+    "svType-2": "DEL",
+    "sv_name-2": "DEL:chr1:249045487-249045898",
+    "chrom-2": "1",
+    "pos-2": 249045487,
+    'end-2': 249045898,
     "maternal_id": "",
     "paternal_id": "",
+    "maternal_guid": "",
+    "paternal_guid": "",
     "hgvsp-1": "c.1586-17C>G",
-    "project_id": "Test Reprocessed Project",
-    "Pos-1": "248367227",
+    "internal_project_id": "Test Reprocessed Project",
+    "pos-1": 248367227,
     "data_type": "WES",
-    "family_guid": "F000012_12",
-    "congenital_status": "Unknown",
+    "familyGuid": "F000012_12",
     "family_history": "Yes",
     "hpo_present": "HP:0011675 (Arrhythmia)|HP:0001509 ()",
-    "Transcript-1": "ENST00000505820",
+    "transcript-1": "ENST00000505820",
+    'seqr_chosen_consequence-1': 'intron_variant',
     "ancestry": "Ashkenazi Jewish",
-    "phenotype_group": "",
     "sex": "Female",
-    "Chrom-1": "1",
-    "Alt-1": "T",
-    "Gene-1": "OR4G11P",
+    "chrom-1": "1",
+    "alt-1": "T",
+    "gene-1": "OR4G11P",
+    "gene_id-1": "ENSG00000240361",
+    'variant_reference_assembly-1': 'GRCh37',
+    'variant_reference_assembly-2': 'GRCh37',
     "pmid_id": None,
     "phenotype_description": None,
     "affected_status": "Affected",
+    "analysisStatus": "Q",
+    "filter_flags": "",
+    "disorders": None,
     "family_id": "12",
-    "MME": "Y",
-    "subject_id": "NA20889",
-    "proband_relationship": "",
-    "consanguinity": "None suspected",
+    "displayName": "12",
+    "MME": "Yes",
+    "participant_id": "NA20889",
+    "individual_guid": "I000017_na20889",
+    "proband_relationship": "Self",
+    "consanguinity": "Unknown",
+    'analysis_groups': '',
+    'alt-2': None,
+    'ref-2': None,
+    'hgvsc-2': '',
+    'hgvsp-2': '',
+    'transcript-2': None,
+    'seqr_chosen_consequence-2': None,
+    'gene-2': None,
+    'gene_id-2': None,
+    'svName-2': None,
+    'svType-1': None,
+    'sv_name-1': None,
+    'svName-1': None,
+    'end-1': None,
+    'allele_balance_or_heteroplasmy_percentage-1': None,
+    'allele_balance_or_heteroplasmy_percentage-2': None,
+    'notes-1': None,
+    'notes-2': None,
 }
 EXPECTED_SAMPLE_METADATA_ROW = {
     "dbgap_submission": "No",
@@ -85,6 +113,58 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "multiple_datasets": "No",
 }
 EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
+EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
+    'participant_id': 'NA21234',
+    'sample_id': 'NA21234',
+    'familyGuid': 'F000014_14',
+    'family_id': '14',
+    'displayName': '14',
+    'projectGuid': 'R0004_non_analyst_project',
+    'internal_project_id': 'Non-Analyst Project',
+    'affected_status': 'Affected',
+    'analysisStatus': 'Rncc',
+    'ancestry': '',
+    'consanguinity': 'Unknown',
+    'data_type': 'WGS',
+    'date_data_generation': '2018-02-05',
+    'disorders': None,
+    'filter_flags': '',
+    'individual_guid': 'I000018_na21234',
+    'variant_inheritance-1': 'unknown',
+    'maternal_guid': '',
+    'maternal_id': '',
+    'MME': 'Yes',
+    'family_history': 'Yes',
+    'genetic_findings_id-1': 'NA21234_1_248367227',
+    'num_saved_variants': 1,
+    'paternal_guid': '',
+    'paternal_id': '',
+    'phenotype_description': None,
+    'pmid_id': None,
+    'proband_relationship': 'Self',
+    'sex': 'Female',
+    'solve_status': 'No',
+    'alt-1': 'T',
+    'chrom-1': '1',
+    'gene_known_for_phenotype-1': 'Candidate',
+    'pos-1': 248367227,
+    'end-1': None,
+    'ref-1': 'TC',
+    'zygosity-1': 'Heterozygous',
+    'variant_reference_assembly-1': 'GRCh37',
+    'allele_balance_or_heteroplasmy_percentage-1': None,
+    'gene-1': None,
+    'gene_id-1': None,
+    'hgvsc-1': '',
+    'hgvsp-1': '',
+    'notes-1': None,
+    'seqr_chosen_consequence-1': None,
+    'svName-1': None,
+    'svType-1': None,
+    'sv_name-1': None,
+    'transcript-1': None,
+    'analysis_groups': '',
+}
 
 AIRTABLE_SAMPLE_RECORDS = {
   "records": [
@@ -248,8 +328,6 @@ class SummaryDataAPITest(AirtableTest):
         expected_variant_guids = {
             'SV0000001_2103343353_r0390_100', 'SV0000007_prefix_19107_DEL_r00', 'SV0000006_1248367227_r0003_tes',
         }
-        if self.MANAGER_VARIANT_GUID:
-            expected_variant_guids.add(self.MANAGER_VARIANT_GUID)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
@@ -262,7 +340,6 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
-        expected_variant_guids.discard(self.MANAGER_VARIANT_GUID)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
 
         all_tag_url = reverse(saved_variants_page, args=['ALL'])
@@ -348,14 +425,19 @@ class SummaryDataAPITest(AirtableTest):
             },
         ])
 
+    @mock.patch('seqr.views.apis.summary_data_api.datetime')
+    @mock.patch('seqr.views.apis.summary_data_api.get_variants_for_variant_ids')
     @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
-    def test_bulk_update_family_analysed_by(self, mock_load_uploaded_file):
-        url = reverse(bulk_update_family_analysed_by)
+    def test_bulk_update_family_external_analysis(self, mock_load_uploaded_file, mock_get_variants_for_variant_ids, mock_datetime):
+        mock_created_time = datetime(2023, 12, 5, 20, 16, 1)
+        mock_datetime.now.return_value = mock_created_time
+
+        url = reverse(bulk_update_family_external_analysis)
         self.check_analyst_login(url)
 
         mock_load_uploaded_file.return_value = [['foo', 'bar']]
-        response = self.client.post(url, content_type='application/json', data=json.dumps(
-            {'dataType': 'RNA', 'familiesFile': {'uploadedFileId': 'abc123'}}))
+        body = {'dataType': 'RNA', 'familiesFile': {'uploadedFileId': 'abc123'}}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Project and Family columns are required')
 
@@ -366,9 +448,7 @@ class SummaryDataAPITest(AirtableTest):
             ['Test Reprocessed Project', 'not_a_family'],
             ['not_a_project', '2'],
         ]
-        created_time = datetime.now()
-        response = self.client.post(url, content_type='application/json', data=json.dumps(
-            {'dataType': 'RNA', 'familiesFile': {'uploadedFileId': 'abc123'}}))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertDictEqual(response.json(), {
             'warnings': [
                 'No match found for the following families: not_a_family (Test Reprocessed Project), 2 (not_a_project)'
@@ -376,26 +456,102 @@ class SummaryDataAPITest(AirtableTest):
             'info': ['Updated "analysed by" for 2 families'],
         })
 
-        models = FamilyAnalysedBy.objects.filter(last_modified_date__gte=created_time)
+        models = FamilyAnalysedBy.objects.filter(last_modified_date__gte=mock_created_time)
         self.assertEqual(len(models), 2)
         self.assertSetEqual({fab.data_type for fab in models}, {'RNA'})
         self.assertSetEqual({fab.created_by for fab in models}, {self.analyst_user})
         self.assertSetEqual({fab.family.family_id for fab in models}, {'1', '12'})
 
+        # Test AIP
+        aip_upload = {
+            'metadata': {
+                'categories': {
+                    '1': 'ClinVar Pathogenic',
+                    '2': 'New Gene-Disease Association',
+                    '3': 'High Impact Variant',
+                    '4': 'De-Novo',
+                    'support': 'High in Silico Scores'
+                }
+            },
+            'results': {
+                'HG00731': {
+                    '12-48367227-TC-T': {'categories': ['3', '4'], 'support_vars': ['2-103343353-GAGA-G']},
+                    '1-248367227-TC-T': {'categories': ['1'], 'support_vars': ['12-48367227-TC-T']},
+                },
+                'SAM_123': {
+                    '12-48367227-TC-T': {'categories': ['4', 'support'], 'support_vars': []},
+                },
+            }
+        }
+        mock_load_uploaded_file.return_value = aip_upload
+        mock_get_variants_for_variant_ids.return_value = PARSED_VARIANTS
+        body['dataType'] = 'AIP'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['errors'], ['Unable to find the following individuals: SAM_123'])
+
+        aip_upload['results']['NA20889'] = aip_upload['results'].pop('SAM_123')
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['errors'], [
+            "Unable to find the following family's AIP variants in the search backend: 2 (1-248367227-TC-T)",
+        ])
+
+        aip_upload['results']['HG00731']['2-103343353-GAGA-G'] = aip_upload['results']['HG00731'].pop('1-248367227-TC-T')
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'info': ['Loaded 2 new and 1 updated AIP tags for 2 families']})
+
+        new_saved_variant = SavedVariant.objects.get(variant_id='2-103343353-GAGA-G')
+        self.assertDictEqual(new_saved_variant.saved_variant_json, PARSED_VARIANTS[1])
+
+        aip_tags = VariantTag.objects.filter(variant_tag_type__name='AIP').order_by('id').values(
+            'metadata', saved_variant_ids=ArrayAgg('saved_variants__id'))
+        self.assertEqual(len(aip_tags), 4)
+
+        existing_tag = aip_tags[0]
+        self.assertListEqual(existing_tag['saved_variant_ids'], [2])
+        self.assertDictEqual(
+            json.loads(existing_tag['metadata']), {
+                '3': {'name': 'High Impact Variant', 'date': '2023-12-05'},
+                '4': {'name': 'de Novo', 'date': '2023-11-15'},
+                'removed': {
+                    'support': {'date': '2023-11-15', 'name': 'High in Silico Scores'},
+                },
+            })
+
+        new_saved_variant_tag = aip_tags[2]
+        self.assertListEqual(new_saved_variant_tag['saved_variant_ids'], [new_saved_variant.id])
+        self.assertDictEqual(
+            json.loads(new_saved_variant_tag['metadata']),
+            {'1': {'name': 'ClinVar Pathogenic', 'date': '2023-12-05'}},
+        )
+
+        comp_het_tag = aip_tags[1]
+        self.assertSetEqual(set(comp_het_tag['saved_variant_ids']), {2, new_saved_variant.id})
+        self.assertIsNone(comp_het_tag['metadata'])
+
+        existing_variant_new_tag = aip_tags[3]
+        self.assertListEqual(existing_variant_new_tag['saved_variant_ids'], [6])
+        self.assertDictEqual(
+            json.loads(existing_variant_new_tag['metadata']),
+            {'4': {'name': 'De-Novo', 'date': '2023-12-05'}, 'support': {'name': 'High in Silico Scores', 'date': '2023-12-05'}},
+        )
+
         self.check_no_analyst_no_access(url)
 
-    def _has_expected_metadata_response(self, response, expected_samples, has_airtable=False, has_duplicate=False):
+    def _has_expected_metadata_response(self, response, expected_individuals, has_airtable=False, has_duplicate=False):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertEqual(len(response_json['rows']), len(expected_samples) + (1 if has_duplicate else 0))
-        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
-        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertSetEqual({r['participant_id'] for r in response_json['rows']}, expected_individuals)
+        self.assertEqual(len(response_json['rows']), len(expected_individuals) + (2 if has_duplicate else 0))
+        test_row = next(r for r in response_json['rows'] if r['participant_id'] == 'NA20889')
         self.assertDictEqual(
             EXPECTED_SAMPLE_METADATA_ROW if has_airtable else EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row
         )
         if has_duplicate:
-            self.assertEqual(len([r['subject_id'] for r in response_json['rows'] if r['subject_id'] == 'NA20888']), 2)
+            self.assertEqual(len([r['participant_id'] for r in response_json['rows'] if r['participant_id'] == 'NA20888']), 2)
 
     @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 2)
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
@@ -403,7 +559,7 @@ class SummaryDataAPITest(AirtableTest):
     @responses.activate
     def test_sample_metadata_export(self, mock_google_authenticated):
         mock_google_authenticated.return_value = False
-        url = reverse(sample_metadata_export, args=['R0003_test'])
+        url = reverse(individual_metadata, args=['R0003_test'])
         self.check_require_login(url)
 
         response = self.client.get(url)
@@ -413,53 +569,62 @@ class SummaryDataAPITest(AirtableTest):
         # Test collaborator access
         self.login_collaborator()
         response = self.client.get(url)
-        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
-        self._has_expected_metadata_response(response, expected_samples)
+        expected_individuals = {'NA20885', 'NA20888', 'NA20889', 'NA20870'}
+        self._has_expected_metadata_response(response, expected_individuals)
 
         # Test airtable not returned for non-analysts
         include_airtable_url = f'{url}?includeAirtable=true'
         response = self.client.get(include_airtable_url)
-        self._has_expected_metadata_response(response, expected_samples)
+        self._has_expected_metadata_response(response, expected_individuals)
 
         # Test all projects
-        all_projects_url = reverse(sample_metadata_export, args=['all'])
-        multi_project_samples = {
-            'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
-            'NA20872', 'NA20881', 'HG00733',
+        all_projects_url = reverse(individual_metadata, args=['all'])
+        multi_project_individuals = {
+            'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675_1', 'HG00731',
+            'NA20872', 'NA20881', 'HG00733', 'NA20878',
         }
-        multi_project_samples.update(expected_samples)
+        multi_project_individuals.update(expected_individuals)
         response = self.client.get(all_projects_url)
-        self._has_expected_metadata_response(response, multi_project_samples, has_duplicate=True)
+        self._has_expected_metadata_response(response, multi_project_individuals, has_duplicate=True)
 
         # Test gregor projects no access
-        gregor_projects_url = reverse(sample_metadata_export, args=['gregor'])
+        gregor_projects_url = reverse(individual_metadata, args=['gregor'])
         response = self.client.get(gregor_projects_url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
+        # Test no gene for discovery variant
+        self.login_manager()
+        no_analyst_project_url = reverse(individual_metadata, args=['R0004_non_analyst_project'])
+        response = self.client.get(no_analyst_project_url)
+        self.assertEqual(response.status_code, 200)
+        rows = response.json()['rows']
+        self.assertEqual(len(rows), 2)
+        test_row = next(r for r in rows if r['participant_id'] == 'NA21234')
+        self.assertDictEqual(test_row, EXPECTED_NO_GENE_SAMPLE_METADATA_ROW)
+
         # Test analyst access
         self.login_analyst_user()
-        unauthorized_project_url = reverse(sample_metadata_export, args=['R0004_non_analyst_project'])
-        response = self.client.get(unauthorized_project_url)
+        response = self.client.get(no_analyst_project_url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.get(url)
-        self._has_expected_metadata_response(response, expected_samples)
+        self._has_expected_metadata_response(response, expected_individuals)
 
         # Test empty project
-        empty_project_url = reverse(sample_metadata_export, args=['R0002_empty'])
+        empty_project_url = reverse(individual_metadata, args=['R0002_empty'])
         response = self.client.get(empty_project_url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'rows': []})
 
         # Test all projects
         response = self.client.get(all_projects_url)
-        all_project_samples = {*multi_project_samples, *self.ADDITIONAL_SAMPLES}
-        self._has_expected_metadata_response(response, all_project_samples, has_duplicate=True)
+        all_project_individuals = {*multi_project_individuals, *self.ADDITIONAL_SAMPLES}
+        self._has_expected_metadata_response(response, all_project_individuals, has_duplicate=True)
 
         response = self.client.get(f'{all_projects_url}?includeAirtable=true')
-        self._has_expected_metadata_response(response, all_project_samples, has_duplicate=True)
+        self._has_expected_metadata_response(response, all_project_individuals, has_duplicate=True)
 
         # Test invalid airtable responses
         response = self.client.get(include_airtable_url)
@@ -519,7 +684,7 @@ class SummaryDataAPITest(AirtableTest):
 
         # Test airtable success
         response = self.client.get(include_airtable_url)
-        self._has_expected_metadata_response(response, expected_samples, has_airtable=True)
+        self._has_expected_metadata_response(response, expected_individuals, has_airtable=True)
         self.assertEqual(len(responses.calls), 8)
         self.assert_expected_airtable_call(
             -1, "OR(RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
@@ -527,18 +692,17 @@ class SummaryDataAPITest(AirtableTest):
 
         # Test gregor projects
         response = self.client.get(gregor_projects_url)
-        self._has_expected_metadata_response(response, multi_project_samples, has_duplicate=True)
+        self._has_expected_metadata_response(response, multi_project_individuals, has_duplicate=True)
 
         response = self.client.get(f'{gregor_projects_url}?includeAirtable=true')
-        self._has_expected_metadata_response(response, multi_project_samples, has_airtable=True, has_duplicate=True)
+        self._has_expected_metadata_response(response, multi_project_individuals, has_airtable=True, has_duplicate=True)
 
 
 # Tests for AnVIL access disabled
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
     NUM_MANAGER_SUBMISSIONS = 4
-    MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
-    ADDITIONAL_SAMPLES = ['NA21234']
+    ADDITIONAL_SAMPLES = ['NA21234', 'NA21987']
 
 
 def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
@@ -554,7 +718,6 @@ def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
 class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     NUM_MANAGER_SUBMISSIONS = 4
-    MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
     ADDITIONAL_SAMPLES = []
 
     def test_mme_details(self, *args):

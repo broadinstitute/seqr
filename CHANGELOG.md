@@ -2,6 +2,16 @@
 
 ## dev
 
+## 1/8/24
+* Support OMIM entries with no associated gene and remove phenotypic_series_number (REQUIRES DB MIGRATION)
+
+## 11/21/23
+* Support AIP upload
+  * To add the required tag type, run `./manage.py loaddata new_variant_tag_types`
+
+## 11/13/23
+* Add Partial Solve analysis status in Family model (REQUIRES DB MIGRATION)
+
 ## 10/19/23
 * Migrate Family post_discovery_omim_number to integer array (REQUIRES DB MIGRATION)
 * Add GeneShet model to the reference DB (REQUIRES DB MIGRATION)

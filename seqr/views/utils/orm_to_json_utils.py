@@ -8,6 +8,7 @@ from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharF
 from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JSONObject
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
+import json
 
 from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
@@ -327,15 +328,7 @@ def add_individual_hpo_details(parsed_individuals):
                 feature.update({'category': hpo.category_id, 'label': hpo.name})
 
 
-def get_json_for_samples(samples, project_guid=None, family_guid=None, individual_guid=None, skip_nested=False, **kwargs):
-    """Returns a JSON representation of the given list of Samples.
-
-    Args:
-        samples (array): array of django models for the Samples.
-    Returns:
-        array: array of json objects
-    """
-
+def _get_sample_json_kwargs(project_guid=None, family_guid=None, individual_guid=None, skip_nested=False, **kwargs):
     if project_guid or not skip_nested:
         additional_kwargs = {'nested_fields': [
             {'fields': ('individual', 'guid'), 'value': individual_guid},
@@ -344,8 +337,19 @@ def get_json_for_samples(samples, project_guid=None, family_guid=None, individua
         ]}
     else:
         additional_kwargs = {'additional_model_fields': ['individual_id']}
+    return {'guid_key': 'sampleGuid', **additional_kwargs, **kwargs}
 
-    return _get_json_for_models(samples, guid_key='sampleGuid', **additional_kwargs, **kwargs)
+
+def get_json_for_samples(samples, **kwargs):
+    """Returns a JSON representation of the given list of Samples.
+
+    Args:
+        samples (array): array of django models for the Samples.
+    Returns:
+        array: array of json objects
+    """
+
+    return get_json_for_queryset(samples, **_get_sample_json_kwargs(**kwargs))
 
 
 def get_json_for_sample(sample, **kwargs):
@@ -357,7 +361,7 @@ def get_json_for_sample(sample, **kwargs):
         dict: json object
     """
 
-    return _get_json_for_model(sample, get_json_for_models=get_json_for_samples, **kwargs)
+    return _get_json_for_model(sample, **_get_sample_json_kwargs(**kwargs))
 
 
 def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False, **kwargs):
@@ -433,6 +437,14 @@ def _format_functional_tags(tags):
     return tags
 
 
+AIP_TAG_TYPE = 'AIP'
+def _format_variant_tags(tags):
+    for tag in tags:
+        if tag['name'] == AIP_TAG_TYPE and tag['metadata']:
+            tag['aipMetadata'] = json.loads(tag.pop('metadata'))
+    return tags
+
+
 def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, tag_filter=None):
     variant_tag_id_map = defaultdict(list)
     for savedvariant_id, tag_id in tag_cls.saved_variants.through.objects.filter(
@@ -456,6 +468,8 @@ def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, ta
         tag_models, guid_key=guid_key, nested_fields=nested_fields, additional_model_fields=['id'])
     if tag_cls == VariantFunctionalData:
         _format_functional_tags(tags)
+    elif tag_cls == VariantTag:
+        _format_variant_tags(tags)
 
     variant_tag_map = defaultdict(list)
     for tag in tags:
@@ -601,7 +615,7 @@ def get_json_for_locus_lists(locus_lists, user, include_metadata=True, additiona
         ll_additional_values.update(additional_values)
     if include_metadata:
         ll_additional_values.update({
-            'numEntries': Count('locuslistgene') + Count('locuslistinterval'),
+            'numEntries': Count('locuslistgene', distinct=True) + Count('locuslistinterval', distinct=True),
             'canEdit': Case(When(created_by=user, then=Value(True)), default=Value(False)),
         })
 

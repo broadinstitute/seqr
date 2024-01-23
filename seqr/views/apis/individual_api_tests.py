@@ -263,7 +263,7 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Invalid parental guid I000020_na65432',
-            'NA21234 is recorded as Female and also as the father of NA21987',
+            'NA21234 is recorded as Female sex and also as the father of NA21987',
         ])
 
         update_json = deepcopy(EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA)
@@ -441,8 +441,8 @@ class IndividualAPITest(object):
             'errors': [
                 'Invalid proband relationship "Father" for NA19675_1 with given gender Female',
                 'NA19675_1 is recorded as their own father',
-                'NA19675_1 is recorded as Female and also as the father of NA19675_1',
-                'NA19675_1 is recorded as Female and also as the father of NA19675_2',
+                'NA19675_1 is recorded as Female sex and also as the father of NA19675_1',
+                'NA19675_1 is recorded as Female sex and also as the father of NA19675_2',
                 'NA19675_1 is recorded as the father of NA19675_2 but they have different family ids: 1 and 2',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
             ],
@@ -455,9 +455,9 @@ class IndividualAPITest(object):
         self.check_manager_login(individuals_url)
 
         data = 'Family ID	Individual ID	Previous Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes	familyNotes\n\
-"1"	"NA19675"	"NA19675_1"	"NA19678"	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
+"1"	" NA19675 "	"NA19675_1 "	"NA19678 "	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
 "1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
-"21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family""'
+"21"	" HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family""'
 
         f = SimpleUploadedFile("1000_genomes demo_individuals.tsv", data.encode('utf-8'))
 
@@ -530,7 +530,7 @@ class IndividualAPITest(object):
 
         def _send_request_data(data):
             return self.client.post(receive_url, {'f': SimpleUploadedFile(
-                'sample_manifest.tsv', '\n'.join(['\t'.join(row) for row in data]).encode('utf-8')),
+                'sample_manifest.tsv', '\n'.join(['\t'.join([str(c) for c in row]) for row in data]).encode('utf-8')),
             })
 
         header_2 = [
@@ -580,7 +580,7 @@ class IndividualAPITest(object):
         data[2] = header_3
         data += [
             ['SK-3QVD', 'A02', 'SM-IRW6C', 'PED073', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', '', '', 'male',
-             'unaffected', 'UBERON:0000479 (tissue)', 'blood plasma', '', 'Unknown', '20', '94.8', 'probably dad', '',
+             'unaffected', 'UBERON:0000479 (tissue)', 'blood plasma', '', 'Unknown', '20', 94.8, 'probably dad', '',
              '', 'GMB', '1234'],
             ['SK-3QVD', 'A03', 'SM-IRW69', 'PED073', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1',
              'SCO_PED073B_GA0339_1', 'SCO_PED073A_GA0338_1', 'female', 'affected', 'UBERON:0002371 (bone marrow)',
@@ -607,7 +607,12 @@ class IndividualAPITest(object):
             missing_columns_error, 'Consent code in manifest "GMB" does not match project consent code "HMB"',
         ]})
 
-        data[3][12] = 'No'
+        data[3][12] = 'Maybe'
+        response = _send_request_data(data)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'warnings': None, 'errors': ['Invalid value "Maybe" for Tissue Affected Status in row #1']})
+
+        data[3][12] = 'Unknown'
         data[3][17] = 'microcephaly'
         data[3][18] = 'MONDO:0001149'
         data[3][-2] = ''
@@ -667,7 +672,7 @@ class IndividualAPITest(object):
         # Test original file copy is correct
         original_wb = load_workbook(BytesIO(mock_email.call_args.kwargs['attachments'][1][1]))
         original_ws = original_wb.active
-        self.assertListEqual([[cell.value or '' for cell in row] for row in original_ws], data)
+        self.assertListEqual([[cell.value or '' for cell in row] for row in original_ws], [[str(c) for c in row] for row in data])
 
         url = reverse(save_individuals_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
         response = self.client.post(url)
@@ -691,7 +696,7 @@ class IndividualAPITest(object):
         indiv_1 = next(i for i in response_json['individualsByGuid'].values() if i['individualId'] == 'SCO_PED073B_GA0339_1')
         self.assertDictEqual({k: v for k, v in indiv_1.items() if k in test_keys}, {
             'affected': 'N', 'notes': 'probably dad', 'sex': 'M', 'maternalId': None, 'paternalId': None,
-            'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': False,
+            'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': None,
             'probandRelationship': 'F',
         })
         indiv_2 = next(i for i in response_json['individualsByGuid'].values() if i['individualId'] == 'SCO_PED073C_GA0341_1')

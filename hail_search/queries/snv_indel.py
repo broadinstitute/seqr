@@ -1,6 +1,6 @@
 import hail as hl
 
-from hail_search.constants import HGMD_KEY, HGMD_PATH_RANGES, \
+from hail_search.constants import CLINVAR_KEY, CLINVAR_MITO_KEY, HGMD_KEY, HGMD_PATH_RANGES, \
     GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     SCREEN_KEY, SPLICE_AI_FIELD
 from hail_search.queries.base import PredictionPath, QualityFilterFormat
@@ -28,7 +28,7 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
     PREDICTION_FIELDS_CONFIG = {
         'cadd': PredictionPath('cadd', 'PHRED'),
         'eigen': PredictionPath('eigen', 'Eigen_phred'),
-        'fathmm': PredictionPath('dbnsfp', 'fathmm_MKL_coding_pred'),
+        'fathmm': PredictionPath('dbnsfp', 'fathmm_MKL_coding_score'),
         'gnomad_noncoding': PredictionPath('gnomad_non_coding_constraint', 'z_score'),
         'mpc': PredictionPath('mpc', 'MPC'),
         'mut_pred': PredictionPath('dbnsfp', 'MutPred_score'),
@@ -37,14 +37,15 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         'splice_ai_consequence': PredictionPath(SPLICE_AI_FIELD, 'splice_consequence'),
         'vest': PredictionPath('dbnsfp', 'VEST4_score'),
         'mut_taster': PredictionPath('dbnsfp', 'MutationTaster_pred'),
-        'polyphen': PredictionPath('dbnsfp', 'Polyphen2_HVAR_pred'),
+        'polyphen': PredictionPath('dbnsfp', 'Polyphen2_HVAR_score'),
         'revel': PredictionPath('dbnsfp', 'REVEL_score'),
-        'sift': PredictionPath('dbnsfp', 'SIFT_pred'),
+        'sift': PredictionPath('dbnsfp', 'SIFT_score'),
     }
     PATHOGENICITY_FILTERS = {
         **MitoHailTableQuery.PATHOGENICITY_FILTERS,
         HGMD_KEY: ('class', HGMD_PATH_RANGES),
     }
+    PATHOGENICITY_FIELD_MAP = {}
 
     BASE_ANNOTATION_FIELDS = {
         k: v for k, v in MitoHailTableQuery.BASE_ANNOTATION_FIELDS.items()
@@ -57,10 +58,12 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
             'format_value': lambda value: value.region_types.first(),
         },
     }
+    ENUM_ANNOTATION_FIELDS[CLINVAR_KEY] = ENUM_ANNOTATION_FIELDS.pop(CLINVAR_MITO_KEY)
 
     SORTS = {
         **MitoHailTableQuery.SORTS,
-        PATHOGENICTY_HGMD_SORT_KEY: lambda r: MitoHailTableQuery.SORTS[PATHOGENICTY_SORT_KEY](r) + [r.hgmd.class_id],
+        PATHOGENICTY_SORT_KEY: lambda r: [MitoHailTableQuery.CLINVAR_SORT(CLINVAR_KEY, r)],
+        PATHOGENICTY_HGMD_SORT_KEY: lambda r: [MitoHailTableQuery.CLINVAR_SORT(CLINVAR_KEY, r), r.hgmd.class_id],
     }
 
     def _prefilter_entries_table(self, ht, *args, **kwargs):

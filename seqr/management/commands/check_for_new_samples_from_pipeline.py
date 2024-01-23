@@ -8,10 +8,11 @@ from seqr.models import Family, Sample
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
+from seqr.views.utils.variant_utils import reset_cached_search_results
 
 logger = logging.getLogger(__name__)
 
-GS_PATH_TEMPLATE = 'gs://seqr-datasets/v03/{path}/runs/{version}/'
+GS_PATH_TEMPLATE = 'gs://seqr-hail-search-data/v03/{path}/runs/{version}/'
 
 
 class Command(BaseCommand):
@@ -20,6 +21,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('path')
         parser.add_argument('version')
+        parser.add_argument('--allow-failed', action='store_true')
 
     def handle(self, *args, **options):
         path = options['path']
@@ -33,7 +35,10 @@ class Command(BaseCommand):
         logger.info(f'Loading new samples from {path}: {version}')
         gs_path = GS_PATH_TEMPLATE.format(path=path, version=version)
         if not does_file_exist(gs_path + '_SUCCESS'):
-            raise CommandError(f'Run failed for {path}: {version}, unable to load data')
+            if options['allow_failed']:
+                logger.warning(f'Loading for failed run {path}: {version}')
+            else:
+                raise CommandError(f'Run failed for {path}: {version}, unable to load data')
 
         metadata = json.loads(next(line for line in file_iter(gs_path + 'metadata.json')))
         families = Family.objects.filter(guid__in=metadata['families'].keys())
@@ -65,11 +70,14 @@ class Command(BaseCommand):
         updated_samples, inactivated_sample_guids, *args = match_and_update_search_samples(
             projects=samples_by_project.keys(),
             sample_project_tuples=sample_project_tuples,
-            sample_data={'data_source': version, 'elasticsearch_index': metadata['callset']},
+            sample_data={'data_source': version, 'elasticsearch_index': ';'.join(metadata['callsets'])},
             sample_type=sample_type,
             dataset_type=dataset_type,
             user=None,
         )
+
+        # Reset cached results for all projects, as seqr AFs will have changed for all projects when new data is added
+        reset_cached_search_results(project=None)
 
         # Send loading notifications
         for project, sample_ids in samples_by_project.items():

@@ -53,7 +53,7 @@ docker-compose logs -f seqr  # (optional) continuously print seqr logs to see wh
 
 To update reference data in seqr, such as OMIM, HPO, etc., run the following
 ```bash
-docker-compose exec seqr manage.py update_all_reference_data --use-cached-omim --skip-gencode
+docker-compose exec seqr ./manage.py update_all_reference_data --use-cached-omim --skip-gencode
 ```
    
 ### Annotating and loading VCF callsets 
@@ -139,6 +139,12 @@ The steps below describe how to annotate a callset and then load it into your on
 1. start a pipeline-runner container
    ```bash
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
+   ```
+
+1. authenticate into your google cloud account.
+This is required for hail to access buckets hosted on gcloud.
+   ```bash
+   docker-compose exec pipeline-runner  gcloud auth application-default login
    ```
    
 1. if you haven't already, download VEP and other reference data to the docker image's mounted directories. 

@@ -71,8 +71,12 @@ class GcnvHailTableQuery(SvHailTableQuery):
             get_default(r), agg(entries.map(lambda g: g[sample_field]))
         )
 
-    def _format_results(self, ht, *args, **kwargs):
-        ht = ht.annotate(**{k: self._get_genotype_override_field(ht, k) for k in self.GENOTYPE_OVERRIDE_FIELDS})
+    def _format_results(self, ht, *args, include_genotype_overrides=True, **kwargs):
+        ht = ht.annotate(**{
+            k: self._get_genotype_override_field(ht, k) if include_genotype_overrides
+            else self.GENOTYPE_OVERRIDE_FIELDS[k][1](ht)
+            for k in self.GENOTYPE_OVERRIDE_FIELDS
+        })
         return super()._format_results(ht, *args, **kwargs)
 
     def get_allowed_sv_type_ids(self, sv_types):

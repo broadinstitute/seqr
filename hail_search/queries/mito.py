@@ -1,20 +1,24 @@
 import hail as hl
 
-from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
+from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
     PATHOGENICTY_HGMD_SORT_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
 
+def _clinvar_sort(clinvar_field, r):
+    return hl.or_else(r[clinvar_field].pathogenicity_id, ABSENT_PATH_SORT_OFFSET)
+
+
 class MitoHailTableQuery(BaseHailTableQuery):
 
     DATA_TYPE = 'MITO'
+    KEY_FIELD = ('locus', 'alleles')
 
     TRANSCRIPTS_FIELD = 'sorted_transcript_consequences'
     TRANSCRIPT_CONSEQUENCE_FIELD = 'consequence_term'
     GENOTYPE_FIELDS = {
         'dp': 'DP',
-        'gq': 'GQ',
         'hl': 'HL',
         'mitoCn': 'mito_cn',
         'contamination': 'contamination',
@@ -47,6 +51,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
     PATHOGENICITY_FILTERS = {
         CLINVAR_KEY: ('pathogenicity', CLINVAR_PATH_RANGES),
     }
+    PATHOGENICITY_FIELD_MAP = {CLINVAR_KEY: CLINVAR_MITO_KEY}
 
     GLOBALS = BaseHailTableQuery.GLOBALS + ['versions']
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
@@ -68,11 +73,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
         **BaseHailTableQuery.BASE_ANNOTATION_FIELDS,
     }
     ENUM_ANNOTATION_FIELDS = {
-        'clinvar': {'annotate_value': lambda value, enum, ht_globals: {
-            'conflictingPathogenicities': MitoHailTableQuery._format_enum(
-                value, 'conflictingPathogenicities', enum, enum_keys=['pathogenicity']),
-            'version': ht_globals['versions'].clinvar,
-        }},
+        CLINVAR_MITO_KEY: {
+            'response_key': CLINVAR_KEY,
+            'include_version': True,
+            'annotate_value': lambda value, enum: {
+                'conflictingPathogenicities': MitoHailTableQuery._format_enum(
+                    value, 'conflictingPathogenicities', enum, enum_keys=['pathogenicity']),
+            },
+        },
         TRANSCRIPTS_FIELD: {
             **BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
             'annotate_value': lambda transcript, *args: {'major_consequence': transcript.consequence_terms.first()},
@@ -80,26 +88,27 @@ class MitoHailTableQuery(BaseHailTableQuery):
         }
     }
 
+    CLINVAR_SORT = _clinvar_sort
     SORTS = {
         CONSEQUENCE_SORT: lambda r: [
             hl.min(r.sorted_transcript_consequences.flatmap(lambda t: t.consequence_term_ids)),
             hl.min(r.selected_transcript.consequence_term_ids),
         ],
-        PATHOGENICTY_SORT_KEY: lambda r: [hl.or_else(r.clinvar.pathogenicity_id, ABSENT_PATH_SORT_OFFSET)],
+        PATHOGENICTY_SORT_KEY: lambda r: [_clinvar_sort(CLINVAR_MITO_KEY, r)],
         **BaseHailTableQuery.SORTS,
     }
     SORTS[PATHOGENICTY_HGMD_SORT_KEY] = SORTS[PATHOGENICTY_SORT_KEY]
 
     @staticmethod
     def _selected_main_transcript_expr(ht):
-        gene_id = getattr(ht, 'gene_id', None)
-        if gene_id is not None:
-            gene_transcripts = ht.sorted_transcript_consequences.filter(lambda t: t.gene_id == ht.gene_id)
+        comp_het_gene_ids = getattr(ht, 'comp_het_gene_ids', None)
+        if comp_het_gene_ids is not None:
+            gene_transcripts = ht.sorted_transcript_consequences.filter(lambda t: comp_het_gene_ids.contains(t.gene_id))
         else:
             gene_transcripts = getattr(ht, 'gene_transcripts', None)
 
         allowed_transcripts = getattr(ht, ALLOWED_TRANSCRIPTS, None)
-        if gene_id is not None and hasattr(ht, ALLOWED_SECONDARY_TRANSCRIPTS):
+        if comp_het_gene_ids is not None and hasattr(ht, ALLOWED_SECONDARY_TRANSCRIPTS):
             allowed_transcripts = hl.if_else(
                 allowed_transcripts.any(hl.is_defined), allowed_transcripts, ht[ALLOWED_SECONDARY_TRANSCRIPTS],
             ) if allowed_transcripts is not None else ht[ALLOWED_SECONDARY_TRANSCRIPTS]
@@ -124,11 +133,11 @@ class MitoHailTableQuery(BaseHailTableQuery):
         self._filter_hts = {}
         super().__init__(*args, **kwargs)
 
-    def _parse_intervals(self, intervals, variant_ids, exclude_intervals=False, **kwargs):
-        parsed_intervals, variant_ids = super()._parse_intervals(intervals, variant_ids, **kwargs)
+    def _parse_intervals(self, intervals, exclude_intervals=False, **kwargs):
+        parsed_intervals = super()._parse_intervals(intervals,**kwargs)
         if parsed_intervals and not exclude_intervals:
             self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
-        return parsed_intervals, variant_ids
+        return parsed_intervals
 
     def _get_family_passes_quality_filter(self, quality_filter, ht=None, pathogenicity=None, **kwargs):
         passes_quality = super()._get_family_passes_quality_filter(quality_filter)
@@ -173,6 +182,17 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 for chrom, pos, ref, alt in variant_ids
             ])
         return ht.filter(variant_id_q)
+
+    def _parse_variant_keys(self, variant_ids=None, **kwargs):
+        if not variant_ids:
+            return variant_ids
+
+        return [
+            hl.struct(
+                locus=hl.locus(f'chr{chrom}' if self._should_add_chr_prefix() else chrom, pos, reference_genome=self._genome_version),
+                alleles=[ref, alt],
+            ) for chrom, pos, ref, alt in variant_ids
+        ]
 
     def _prefilter_entries_table(self, ht, parsed_intervals=None, exclude_intervals=False, **kwargs):
         if exclude_intervals and parsed_intervals:
@@ -221,7 +241,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def _has_path_expr(self, terms, field):
         subfield, range_configs = self.PATHOGENICITY_FILTERS[field]
-        enum_lookup = self._get_enum_lookup(field, subfield)
+        field_name = self.PATHOGENICITY_FIELD_MAP.get(field, field)
+        enum_lookup = self._get_enum_lookup(field_name, subfield)
 
         ranges = [[None, None]]
         for path_filter, start, end in range_configs:
@@ -233,7 +254,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ranges.append([None, None])
 
         ranges = [r for r in ranges if r[0] is not None]
-        value = self._ht[field][f'{subfield}_id']
+        value = self._ht[field_name][f'{subfield}_id']
         return hl.any(lambda r: (value >= r[0]) & (value <= r[1]), ranges)
 
     def _format_results(self, ht, *args, **kwargs):

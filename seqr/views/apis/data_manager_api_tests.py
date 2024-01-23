@@ -377,6 +377,13 @@ EXPECTED_UPDATED_LIRICAL_DATA = [
      'tool': 'lirical', 'rank': 4, 'individualGuid': 'I000002_na19678'},
 ]
 
+PEDIGREE_HEADER = ['Project_GUID', 'Family_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex']
+EXPECTED_PEDIGREE_ROWS = [
+    ['R0001_1kg', 'F000001_1', '1', 'NA19675_1', 'NA19678', 'NA19679', 'M'],
+    ['R0001_1kg', 'F000001_1', '1', 'NA19678', '', '', 'M'],
+    ['R0001_1kg', 'F000001_1', '1', 'NA19679', '', '', 'F'],
+    ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
+]
 
 class DataManagerAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -1184,16 +1191,34 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], f'No gs://seqr-datasets/v02 project directory found for {PROJECT_GUID}')
-        mock_subprocess.assert_has_calls(
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_External/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_External/base/projects/R0001_1kg')
-        )
+
+        project_directory_paths = [
+            'gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/',
+            'gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg/',
+            'gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_External/base/projects/R0001_1kg/',
+            'gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_External/base/projects/R0001_1kg/',
+            'gs://seqr-datasets/v02/GRCh37/AnVIL_WGS/R0001_1kg/base/',
+            'gs://seqr-datasets/v02/GRCh37/AnVIL_WES/R0001_1kg/base/',
+        ]
+        expected_calls = []
+        for path in project_directory_paths:
+            expected_calls += self._ls_subprocess_calls(path)
+        mock_subprocess.assert_has_calls(expected_calls)
 
         # Test success
+        self._test_write_success(
+            'gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg/',
+            url, mock_subprocess, mock_open, project_directory_paths,
+        )
+        self._test_write_success(
+            'gs://seqr-datasets/v02/GRCh37/AnVIL_WES/R0001_1kg/base/',
+            url, mock_subprocess, mock_open, project_directory_paths,
+        )
+
+    def _test_write_success(self, success_path, url, mock_subprocess, mock_open, project_directory_paths):
+        success_index = project_directory_paths.index(success_path)
         mock_subprocess.reset_mock()
-        mock_subprocess.return_value.wait.side_effect = [1, 0, 0]
+        mock_subprocess.return_value.wait.side_effect = [1 for _ in range(success_index)] + [0, 0]
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
@@ -1202,22 +1227,16 @@ class DataManagerAPITest(AuthenticationTestCase):
         write_call = mock_open.return_value.__enter__.return_value.write.call_args.args[0]
         file = [row.split('\t') for row in write_call.split('\n')]
         self.assertEqual(len(file), 15)
-        self.assertListEqual(file[:5], [
-            ['Project_GUID', 'Family_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex'],
-            ['R0001_1kg', 'F000001_1', '1', 'NA19675_1', 'NA19678', 'NA19679', 'M'],
-            ['R0001_1kg', 'F000001_1', '1', 'NA19678', '', '', 'M'],
-            ['R0001_1kg', 'F000001_1', '1', 'NA19679', '', '', 'F'],
-            ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
-         ])
+        self.assertListEqual(file[:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS)
 
-        mock_subprocess.assert_has_calls(
-            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg') +
-            self._ls_subprocess_calls(
-                'gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg', is_error=False,
-            ) + [
-            mock.call('gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg', stdout=-1, stderr=-2, shell=True),
+        expected_calls = []
+        for path in project_directory_paths[:success_index]:
+            expected_calls += self._ls_subprocess_calls(path)
+        expected_calls += self._ls_subprocess_calls(success_path, is_error=False) + [
+            mock.call('gsutil mv /mock/tmp/* ' + success_path, stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
-        ])
+        ]
+        mock_subprocess.assert_has_calls(expected_calls)
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1267,44 +1286,164 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class LoadDataAPITest(AirflowTestCase):
-    fixtures = ['users', 'social_auth', '1kg_project']
-
-    DAG_NAME = 'RDG_WGS_Broad_Internal_MITO'
+class LoadDataAPITest(object):
     LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
+    PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
 
-    def _get_expected_dag_variables(self, *args, **kwargs):
-        variables = super(LoadDataAPITest, self)._get_expected_dag_variables()
-        variables.update({
-            'vcf_path': 'gs://test_bucket/mito_callset.mt',
-            'version_path': 'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01',
-        })
-        return variables
+    SUCCESS_SLACK_TEMPLATE = """*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
+
+        Pedigree file(s) have been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/
+
+        Pedigree file(s) have been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project/
+
+        DAG {dag_id} is triggered with following:
+        ```{dag}```
+    """
+    ERROR_SLACK_TEMPLATE = """ERROR triggering internal WES SV loading: {error}
+        
+        DAG {dag_id} should be triggered with following: 
+        ```{dag}```
+        """
+
+    def patch_es(self, es_host):
+        patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', es_host)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     @responses.activate
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+    @mock.patch('seqr.views.utils.export_utils.open')
+    @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_load_data(self, mock_subprocess):
+    def test_load_data(self, mock_subprocess, mock_temp_dir, mock_open):
         url = reverse(load_data)
         self.check_pm_login(url)
 
-        responses.replace(responses.GET, f'{self.dag_url}/dagRuns', json={'dag_runs': []})
+        mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
+        mock_subprocess.return_value.wait.return_value = 0
         mock_subprocess.return_value.communicate.return_value = b'', b'File not found'
         body = {'filePath': 'gs://test_bucket/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'projects': [
-            'R0001_1kg', 'R0004_non_analyst_project',
+            'R0001_1kg', 'R0004_non_analyst_project', 'R0005_not_project',
         ]}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
+
+        body['projects'] = body['projects'][:-1]
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
         self.assert_airflow_calls()
-        mock_subprocess.assert_called_with(
-            'gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO', stdout=-1, stderr=-1, shell=True)  # nosec
+        self._has_expected_gs_calls(mock_subprocess, mock_open)
 
-        slack_message = """*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
+        slack_message_data = [{'dag_name': self.V3_DAG_NAME, 'dag': self.V3_DAG_JSON}]
+        if self.V2_DAG_NAME:
+            slack_message_data.append({'dag_name': self.V2_DAG_NAME, 'dag': self.V2_DAG_JSON})
+        self.assertEqual(self.mock_slack.call_count, len(slack_message_data))
+        self.mock_slack.assert_has_calls([
+            mock.call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, self.SUCCESS_SLACK_TEMPLATE.format(
+                dag_id=self._get_dag_id(data['dag_name']), **data,
+            )) for data in slack_message_data],
+        )
 
-        DAG seqr_vcf_to_es_RDG_WGS_Broad_Internal_MITO_v0.0.1 is triggered with following:
-        ```{
+        # Test loading trigger error
+        self.mock_slack.reset_mock()
+        mock_open.reset_mock()
+        responses.calls.reset()
+        mock_subprocess.reset_mock()
+        mock_subprocess.return_value.communicate.return_value = b'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_SV/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v01/\ngs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_GCNV/v02/', b''
+
+        body.update({'datasetType': 'SV', 'filePath': 'gs://test_bucket/sv_callset.vcf', 'sampleType': 'WES'})
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+
+        self.assert_airflow_calls(trigger_error=True, secondary_dag_names=self.SECOND_DAG_NAMES)
+        self._has_expected_gs_calls(mock_subprocess, mock_open, is_second_dag=True, sample_type='WES')
+        self.mock_airflow_logger.warning.assert_not_called()
+        self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
+        errors = [call.args[0] for call in self.mock_airflow_logger.error.call_args_list]
+        for error in errors:
+            self.assertRegex(error, 'Connection refused by Responses')
+
+        self.assertEqual(self.mock_slack.call_count, len(slack_message_data))
+        self.mock_slack.assert_has_calls([
+            mock.call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, self.ERROR_SLACK_TEMPLATE.format(
+                error=errors[i],
+                dag_name=self.SECOND_DAG_NAMES[data['dag_name']],
+                dag_id=self._get_dag_id(data['dag_name'], name_map=self.SECOND_DAG_NAMES),
+                dag=data['dag'].replace('mito_callset.mt', 'sv_callset.vcf').replace(
+                    'WGS', 'WES').replace('MITO', 'GCNV').replace('v01', 'v03'),
+            )) for i, data in enumerate(slack_message_data)
+        ])
+
+
+class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    V2_DAG_NAME = None
+    V3_DAG_NAME = 'v03_pipeline-MITO'
+    SECOND_DAG_NAMES = {V3_DAG_NAME: 'v03_pipeline-GCNV'}
+    INITIAL_DAG_RUNS = []
+    ES_HOST = ''
+    V3_DAG_JSON = """{
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "callset_paths": [
+        "gs://test_bucket/mito_callset.mt"
+    ],
+    "sample_source": "Broad_Internal",
+    "sample_type": "WGS",
+    "reference_genome": "GRCh38"
+}"""
+
+    def setUp(self):
+        self.patch_es(self.ES_HOST)
+        super().setUp()
+
+    def _get_v3_dag_variables(self, *args, **kwargs):
+        return {
+            'projects_to_run': self.PROJECTS,
+            'callset_paths': ['gs://test_bucket/mito_callset.mt'],
+            'sample_source': 'Broad_Internal',
+            'sample_type': 'WGS',
+            'reference_genome': 'GRCh38',
+        }
+
+    def _has_expected_gs_calls(self, mock_subprocess, mock_open, sample_type='WGS', **kwargs):
+        mock_open.assert_has_calls([
+            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in self.PROJECTS
+        ], any_order=True)
+        files = [
+            [row.split('\t') for row in write_call.args[0].split('\n')]
+            for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
+        ]
+        self.assertEqual(len(files), 2)
+        self.assertEqual(len(files[0]), 15)
+        self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS)
+        self.assertEqual(len(files[1]), 3)
+        self.assertListEqual(files[1], [
+            PEDIGREE_HEADER,
+            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'],
+            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
+        ])
+
+        mock_subprocess.assert_has_calls([
+            mock.call(
+                f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/',
+                stdout=-1, stderr=-2, shell=True,  # nosec
+            ) for project in self.PROJECTS
+        ], any_order=True)
+
+
+class LoadEsDataAPITest(LoadHailDataAPITest):
+    V2_DAG_NAME = 'RDG_WGS_Broad_Internal_MITO'
+    SECOND_DAG_NAMES = {V2_DAG_NAME: 'RDG_WES_Broad_Internal_GCNV', **LoadHailDataAPITest.SECOND_DAG_NAMES}
+    ES_HOST = 'testhost'
+    V2_DAG_JSON = """{
     "active_projects": [
         "R0001_1kg",
         "R0004_non_analyst_project"
@@ -1315,44 +1454,19 @@ class LoadDataAPITest(AirflowTestCase):
     ],
     "vcf_path": "gs://test_bucket/mito_callset.mt",
     "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01"
-}```
-    """
+}"""
 
-        self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message)
+    def _get_v2_dag_variables(self, **kwargs):
+        return {
+            'active_projects': self.PROJECTS,
+            'projects_to_run': self.PROJECTS,
+            'vcf_path': 'gs://test_bucket/mito_callset.mt',
+            'version_path': 'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01',
+        }
 
-        # Test loading trigger error
-        self.mock_slack.reset_mock()
-        responses.calls.reset()
-        mock_subprocess.return_value.communicate.return_value = b'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v01/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v02/', b''
+    def _has_expected_gs_calls(self, mock_subprocess, mock_open, is_second_dag=False, **kwargs):
+        super()._has_expected_gs_calls(mock_subprocess, mock_open, **kwargs)
 
-        body.update({'datasetType': 'SV', 'filePath': 'gs://test_bucket/sv_callset.vcf'})
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
-
-        self.assert_airflow_calls(trigger_error=True, dag_name='RDG_WGS_Broad_Internal_SV')
-
+        dag_name = self.SECOND_DAG_NAMES[self.V2_DAG_NAME] if is_second_dag else self.V2_DAG_NAME
         mock_subprocess.assert_called_with(
-            'gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV', stdout=-1, stderr=-1, shell=True)  # nosec
-        self.mock_airflow_logger.warning.assert_not_called()
-        self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
-        error = self.mock_airflow_logger.error.call_args.args[0]
-        self.assertRegex(error, 'Connection refused by Responses')
-
-        error_message = f"""ERROR triggering internal WGS SV loading: {error}
-        
-        DAG seqr_vcf_to_es_RDG_WGS_Broad_Internal_SV_v0.0.1 should be triggered with following: 
-        ```{{
-    "active_projects": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "projects_to_run": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "vcf_path": "gs://test_bucket/sv_callset.vcf",
-    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v03"
-}}```
-        """
-        self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
+            f'gsutil ls gs://seqr-datasets/v02/GRCh38/{dag_name}', stdout=-1, stderr=-1, shell=True)  # nosec

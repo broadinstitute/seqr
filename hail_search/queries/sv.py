@@ -8,6 +8,7 @@ from hail_search.queries.base import BaseHailTableQuery, PredictionPath
 class SvHailTableQuery(BaseHailTableQuery):
 
     DATA_TYPE = 'SV_WGS'
+    KEY_FIELD = ('variant_id',)
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['CN', 'GQ']}
     COMPUTED_GENOTYPE_FIELDS = {
@@ -49,9 +50,9 @@ class SvHailTableQuery(BaseHailTableQuery):
         )],
     }
 
-    def _parse_intervals(self, intervals, variant_ids, variant_keys=None, **kwargs):
-        parsed_intervals, _ = super()._parse_intervals(intervals, variant_ids=None, **kwargs)
-        return parsed_intervals, variant_keys
+    @classmethod
+    def _get_sample_type(cls, *args):
+        return cls.DATA_TYPE.split('_')[-1]
 
     def _filter_annotated_table(self, *args, parsed_intervals=None, exclude_intervals=False, **kwargs):
         if parsed_intervals:
