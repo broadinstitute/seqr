@@ -1133,7 +1133,7 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
     chrom = models.CharField(max_length=2)
     start = models.IntegerField()
     end = models.IntegerField()
-    strand = models.CharField(max_length=1, choices=STRAND_CHOICES)
+    strand = models.CharField(max_length=1, choices=STRAND_CHOICES)  # "+", "-", or "*"
     type = models.CharField(max_length=12)
     delta_intron_jaccard_index = models.FloatField()
     counts = models.IntegerField()
