@@ -97,6 +97,7 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
 
         if annotations.get(SCREEN_KEY):
             allowed_consequences = hl.set(self._get_enum_terms_ids(SCREEN_KEY.lower(), 'region_type', annotations[SCREEN_KEY]))
+            # TODO hg37 support
             annotation_filters.append(allowed_consequences.contains(self._ht.screen.region_type_ids.first()))
         if annotations.get(SPLICE_AI_FIELD):
             score_filter, _ = self._get_in_silico_filter(SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD])
