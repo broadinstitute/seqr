@@ -2,7 +2,7 @@ import hail as hl
 
 from hail_search.constants import CLINVAR_KEY, CLINVAR_MITO_KEY, HGMD_KEY, HGMD_PATH_RANGES, \
     GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
-    SCREEN_KEY, SPLICE_AI_FIELD
+    SCREEN_KEY, SPLICE_AI_FIELD, GENOME_VERSION_GRCh37
 from hail_search.queries.base import PredictionPath, QualityFilterFormat
 from hail_search.queries.mito import MitoHailTableQuery
 
@@ -10,6 +10,7 @@ from hail_search.queries.mito import MitoHailTableQuery
 class SnvIndelHailTableQuery(MitoHailTableQuery):
 
     DATA_TYPE = 'SNV_INDEL'
+    GENOME_VERSIONS = MitoHailTableQuery.GENOME_VERSIONS + [GENOME_VERSION_GRCh37]
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ', 'AB']}
     QUALITY_FILTER_FORMAT = {
