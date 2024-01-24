@@ -315,7 +315,8 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
 
     samples_by_id = defaultdict(dict)
     f = file_iter(file_path, user=user)
-    header = _parse_tsv_row(next(f))
+    parsed_f = parse_file(file_path.replace('.gz', ''), f, iter=True)
+    header = next(parsed_f)
     required_column_map = _validate_rna_header(header, column_map)
 
     sample_id_to_tissue_type = {}
