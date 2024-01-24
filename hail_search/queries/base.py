@@ -48,7 +48,6 @@ class BaseHailTableQuery(object):
     POPULATION_FIELDS = {}
     POPULATION_KEYS = ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']
     PREDICTION_FIELDS_CONFIG = {}
-    GENOME_BUILD_PREDICTION_FIELDS_CONFIG = {}
 
     GENOME_VERSIONS = [GENOME_VERSION_GRCh38]
     GLOBALS = ['enums']
@@ -108,13 +107,13 @@ class BaseHailTableQuery(object):
             'predictions': lambda r: hl.struct(**{
                 prediction: self._format_enum(r[path.source], path.field, self._enums[path.source][path.field])
                 if self._enums.get(path.source, {}).get(path.field) else path.format(r[path.source][path.field])
-                for prediction, path in self._prediction_field_configs.items()
+                for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
         annotation_fields.update(self._additional_annotation_fields())
 
-        prediction_fields = {path.source for path in self._prediction_field_configs.values()}
+        prediction_fields = {path.source for path in self.PREDICTION_FIELDS_CONFIG.values()}
         annotation_fields.update([
             self._format_enum_response(k, enum) for k, enum in self._enums.items()
             if enum and k not in prediction_fields
@@ -231,10 +230,6 @@ class BaseHailTableQuery(object):
     @property
     def _enums(self):
         return self._globals['enums']
-
-    @property
-    def _prediction_field_configs(self):
-        return {**self.PREDICTION_FIELDS_CONFIG, **self.GENOME_BUILD_PREDICTION_FIELDS_CONFIG.get(self._genome_version, {})}
 
     def _load_filtered_table(self, sample_data, intervals=None, **kwargs):
         parsed_intervals = self._parse_intervals(intervals, **kwargs)
@@ -616,7 +611,7 @@ class BaseHailTableQuery(object):
     def _filter_by_in_silico(self, in_silico_filters):
         in_silico_filters = in_silico_filters or {}
         require_score = in_silico_filters.get('requireScore', False)
-        in_silico_filters = {k: v for k, v in in_silico_filters.items() if k in self._prediction_field_configs and v}
+        in_silico_filters = {k: v for k, v in in_silico_filters.items() if k in self.PREDICTION_FIELDS_CONFIG and v}
         if not in_silico_filters:
             return
 
@@ -634,7 +629,7 @@ class BaseHailTableQuery(object):
         self._ht = self._ht.filter(hl.any(in_silico_qs))
 
     def _get_in_silico_filter(self, in_silico, value):
-        score_path = self._prediction_field_configs[in_silico]
+        score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
         enum_lookup = self._get_enum_lookup(*score_path[:2])
         if enum_lookup is not None:
             ht_value = self._ht[score_path.source][f'{score_path.field}_id']
@@ -890,8 +885,8 @@ class BaseHailTableQuery(object):
         if sort in self.SORTS:
             return self.SORTS[sort](ht)
 
-        if sort in self._prediction_field_configs:
-            prediction_path = self._prediction_field_configs[sort]
+        if sort in self.PREDICTION_FIELDS_CONFIG:
+            prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
             return [-hl.float64(ht[prediction_path.source][prediction_path.field])]
 
         if sort == OMIM_SORT:
