@@ -2,7 +2,7 @@ import hail as hl
 
 from hail_search.constants import CLINVAR_KEY, CLINVAR_MITO_KEY, HGMD_KEY, HGMD_PATH_RANGES, \
     GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
-    SCREEN_KEY, SPLICE_AI_FIELD, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
+    SCREEN_KEY, SPLICE_AI_FIELD
 from hail_search.queries.base import PredictionPath, QualityFilterFormat
 from hail_search.queries.mito import MitoHailTableQuery
 
@@ -10,7 +10,6 @@ from hail_search.queries.mito import MitoHailTableQuery
 class SnvIndelHailTableQuery(MitoHailTableQuery):
 
     DATA_TYPE = 'SNV_INDEL'
-    GENOME_VERSIONS = MitoHailTableQuery.GENOME_VERSIONS + [GENOME_VERSION_GRCh37]
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ', 'AB']}
     QUALITY_FILTER_FORMAT = {
@@ -26,7 +25,7 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         'gnomad_exomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None, 'sort': 'gnomad_exomes'},
         GNOMAD_GENOMES_FIELD: {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None, 'sort': 'gnomad'},
     }
-    PREDICTION_FIELDS_CONFIG = {
+    PREDICTION_FIELDS_CONFIG_ALL_BUILDS = {
         'cadd': PredictionPath('cadd', 'PHRED'),
         'eigen': PredictionPath('eigen', 'Eigen_phred'),
         'mpc': PredictionPath('mpc', 'MPC'),
@@ -38,13 +37,15 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         'revel': PredictionPath('dbnsfp', 'REVEL_score'),
         'sift': PredictionPath('dbnsfp', 'SIFT_score'),
     }
-    GENOME_BUILD_PREDICTION_FIELDS_CONFIG = {
-        GENOME_VERSION_GRCh38: {
-            'fathmm': PredictionPath('dbnsfp', 'fathmm_MKL_coding_score'),
-            'mut_pred': PredictionPath('dbnsfp', 'MutPred_score'),
-            'vest': PredictionPath('dbnsfp', 'VEST4_score'),
-            'gnomad_noncoding': PredictionPath('gnomad_non_coding_constraint', 'z_score'),
-        },
+    PREDICTION_FIELDS_CONFIG_38 = {
+        'fathmm': PredictionPath('dbnsfp', 'fathmm_MKL_coding_score'),
+        'mut_pred': PredictionPath('dbnsfp', 'MutPred_score'),
+        'vest': PredictionPath('dbnsfp', 'VEST4_score'),
+        'gnomad_noncoding': PredictionPath('gnomad_non_coding_constraint', 'z_score'),
+    }
+    PREDICTION_FIELDS_CONFIG = {
+        **PREDICTION_FIELDS_CONFIG_ALL_BUILDS,
+        **PREDICTION_FIELDS_CONFIG_38
     }
     PATHOGENICITY_FILTERS = {
         **MitoHailTableQuery.PATHOGENICITY_FILTERS,
@@ -97,7 +98,6 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
 
         if annotations.get(SCREEN_KEY):
             allowed_consequences = hl.set(self._get_enum_terms_ids(SCREEN_KEY.lower(), 'region_type', annotations[SCREEN_KEY]))
-            # TODO hg37 support
             annotation_filters.append(allowed_consequences.contains(self._ht.screen.region_type_ids.first()))
         if annotations.get(SPLICE_AI_FIELD):
             score_filter, _ = self._get_in_silico_filter(SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD])
