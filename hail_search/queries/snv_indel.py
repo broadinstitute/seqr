@@ -25,21 +25,27 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         'gnomad_exomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None, 'sort': 'gnomad_exomes'},
         GNOMAD_GENOMES_FIELD: {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None, 'sort': 'gnomad'},
     }
-    PREDICTION_FIELDS_CONFIG = {
+    PREDICTION_FIELDS_CONFIG_ALL_BUILDS = {
         'cadd': PredictionPath('cadd', 'PHRED'),
         'eigen': PredictionPath('eigen', 'Eigen_phred'),
-        'fathmm': PredictionPath('dbnsfp', 'fathmm_MKL_coding_score'),
-        'gnomad_noncoding': PredictionPath('gnomad_non_coding_constraint', 'z_score'),
         'mpc': PredictionPath('mpc', 'MPC'),
-        'mut_pred': PredictionPath('dbnsfp', 'MutPred_score'),
         'primate_ai': PredictionPath('primate_ai', 'score'),
         SPLICE_AI_FIELD: PredictionPath(SPLICE_AI_FIELD, 'delta_score'),
         'splice_ai_consequence': PredictionPath(SPLICE_AI_FIELD, 'splice_consequence'),
-        'vest': PredictionPath('dbnsfp', 'VEST4_score'),
         'mut_taster': PredictionPath('dbnsfp', 'MutationTaster_pred'),
         'polyphen': PredictionPath('dbnsfp', 'Polyphen2_HVAR_score'),
         'revel': PredictionPath('dbnsfp', 'REVEL_score'),
         'sift': PredictionPath('dbnsfp', 'SIFT_score'),
+    }
+    PREDICTION_FIELDS_CONFIG_38 = {
+        'fathmm': PredictionPath('dbnsfp', 'fathmm_MKL_coding_score'),
+        'mut_pred': PredictionPath('dbnsfp', 'MutPred_score'),
+        'vest': PredictionPath('dbnsfp', 'VEST4_score'),
+        'gnomad_noncoding': PredictionPath('gnomad_non_coding_constraint', 'z_score'),
+    }
+    PREDICTION_FIELDS_CONFIG = {
+        **PREDICTION_FIELDS_CONFIG_ALL_BUILDS,
+        **PREDICTION_FIELDS_CONFIG_38
     }
     PATHOGENICITY_FILTERS = {
         **MitoHailTableQuery.PATHOGENICITY_FILTERS,
