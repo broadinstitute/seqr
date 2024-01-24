@@ -14,6 +14,5 @@ class SnvIndelHailTableQuery37(SnvIndelHailTableQuery):
         return False
 
     def _get_annotation_override_filters(self, annotations, *args, **kwargs):
-        # TODO test
-        annotations = {k: v for k, v in annotations if k != SCREEN_KEY}
+        annotations = {k: v for k, v in annotations.items() if k != SCREEN_KEY}
         return super()._get_annotation_override_filters(annotations, *args, **kwargs)
