@@ -1,5 +1,3 @@
-import hail as hl
-
 from hail_search.constants import SCREEN_KEY, GENOME_VERSION_GRCh37
 from hail_search.queries.snv_indel import SnvIndelHailTableQuery
 
