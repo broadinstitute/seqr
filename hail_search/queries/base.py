@@ -272,7 +272,7 @@ class BaseHailTableQuery(object):
         query_result = hl.query_table(query_table_path, ht.key).first().drop(*ht.key)
         return ht.annotate(**query_result)
 
-    def import_filtered_table(self, sample_data, intervals=None, **kwargs):
+    def _parse_sample_data(self, sample_data):
         family_samples = defaultdict(list)
         project_samples = defaultdict(list)
         for s in sample_data:
@@ -280,23 +280,31 @@ class BaseHailTableQuery(object):
             project_samples[s['project_guid']].append(s)
 
         logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
+        return project_samples, family_samples
+
+    def _load_filtered_project_hts(self, project_samples, **kwargs):
+        filtered_project_hts = []
+        exception_messages = set()
+        for project_guid, project_sample_data in project_samples.items():
+            project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True)
+            try:
+                filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
+            except HTTPBadRequest as e:
+                exception_messages.add(e.reason)
+
+        if exception_messages:
+            raise HTTPBadRequest(reason='; '.join(exception_messages))
+
+        return filtered_project_hts
+
+    def import_filtered_table(self, sample_data, intervals=None, **kwargs):
+        project_samples, family_samples = self._parse_sample_data(sample_data)
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
             family_ht = self._read_table(f'families/{family_guid}.ht', use_ssd_dir=True)
             families_ht, _ = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
-            filtered_project_hts = []
-            exception_messages = set()
-            for project_guid, project_sample_data in project_samples.items():
-                project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True)
-                try:
-                    filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
-                except HTTPBadRequest as e:
-                    exception_messages.add(e.reason)
-
-            if exception_messages:
-                raise HTTPBadRequest(reason='; '.join(exception_messages))
-
+            filtered_project_hts = self._load_filtered_project_hts(project_samples, **kwargs)
             families_ht, num_families = filtered_project_hts[0]
             entry_type = families_ht.family_entries.dtype.element_type
             for project_ht, num_project_families in filtered_project_hts[1:]:
@@ -937,18 +945,25 @@ class BaseHailTableQuery(object):
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
         ))
 
-    def lookup_variant(self, variant_id):
+    def lookup_variant(self, variant_id, sample_data=None):
         self._parse_intervals(intervals=None, variant_ids=[variant_id], variant_keys=[variant_id])
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
-        ht = ht.filter(hl.is_defined(ht[XPOS])).key_by()
+        ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         annotation_fields = self.annotation_fields()
-        annotation_fields.update({
-            'familyGuids': lambda ht: hl.empty_array(hl.tstr),
-            'genotypes': lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
-            'genotypeFilters': lambda ht: hl.str(''),
-        })
-        formatted = self._format_results(ht, annotation_fields=annotation_fields, include_genotype_overrides=False)
+        annotation_fields['genotypeFilters'] = lambda ht: hl.str('')
+
+        if sample_data:
+            project_samples, _ = self._parse_sample_data(sample_data)
+            project_entries = [pht[ht.key].family_entries for pht, _ in self._load_filtered_project_hts(project_samples)]
+            ht = ht.annotate(family_entries=hl.array(project_entries).flatmap(lambda x: x))
+        else:
+            annotation_fields.update({
+                'familyGuids': lambda ht: hl.empty_array(hl.tstr),
+                'genotypes': lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
+            })
+
+        formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=bool(sample_data))
 
         variants = formatted.aggregate(hl.agg.take(formatted.row, 1))
         if not variants:

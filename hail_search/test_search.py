@@ -573,6 +573,11 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, VARIANT_LOOKUP_VARIANT)
 
+        async with self.client.request('POST', '/lookup', json={**body, 'sample_data': MULTI_PROJECT_SAMPLE_DATA['SNV_INDEL']}) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, MULTI_PROJECT_VARIANT1)
+
         body['variant_id'] = VARIANT_ID_SEARCH['variant_ids'][1]
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 404)
