@@ -49,7 +49,7 @@ class BaseHailTableQuery(object):
     POPULATION_KEYS = ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']
     PREDICTION_FIELDS_CONFIG = {}
 
-    GENOME_VERSIONS = [GENOME_VERSION_GRCh38]
+    GENOME_VERSION = GENOME_VERSION_GRCh38
     GLOBALS = ['enums']
     TRANSCRIPTS_FIELD = None
     CORE_FIELDS = [XPOS]
@@ -78,11 +78,9 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def load_globals(cls):
-        cls.LOADED_GLOBALS = {}
-        for genome_version in cls.GENOME_VERSIONS:
-            ht_path = cls._get_generic_table_path(genome_version, 'annotations.ht')
-            ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
-            cls.LOADED_GLOBALS[genome_version] = {k: ht_globals[k] for k in cls.GLOBALS}
+        ht_path = cls._get_table_path('annotations.ht')
+        ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
+        cls.LOADED_GLOBALS = {k: ht_globals[k] for k in cls.GLOBALS}
 
     @classmethod
     def _format_population_config(cls, pop_config):
@@ -111,6 +109,7 @@ class BaseHailTableQuery(object):
             }),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
+        annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         annotation_fields.update(self._additional_annotation_fields())
 
         prediction_fields = {path.source for path in self.PREDICTION_FIELDS_CONFIG.values()}
@@ -119,8 +118,6 @@ class BaseHailTableQuery(object):
             if enum and k not in prediction_fields
         ])
 
-        if self._genome_version == GENOME_VERSION_GRCh38:
-            annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
 
     def _additional_annotation_fields(self):
@@ -198,10 +195,9 @@ class BaseHailTableQuery(object):
 
         return value
 
-    def __init__(self, sample_data, genome_version, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
+    def __init__(self, sample_data, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
                  override_comp_het_alt=False, **kwargs):
         self.unfiltered_comp_het_ht = None
-        self._genome_version = genome_version
         self._sort = sort
         self._sort_metadata = sort_metadata
         self._num_results = num_results
@@ -225,7 +221,7 @@ class BaseHailTableQuery(object):
 
     @property
     def _globals(self):
-        return self.LOADED_GLOBALS[self._genome_version]
+        return self.LOADED_GLOBALS
 
     @property
     def _enums(self):
@@ -251,11 +247,8 @@ class BaseHailTableQuery(object):
                 self._ht = None
 
     @classmethod
-    def _get_generic_table_path(cls, genome_version, path, use_ssd_dir=False):
-        return f'{SSD_DATASETS_DIR if use_ssd_dir else DATASETS_DIR}/{genome_version}/{cls.DATA_TYPE}/{path}'
-
-    def _get_table_path(self, path, use_ssd_dir=False):
-        return self._get_generic_table_path(self._genome_version, path, use_ssd_dir=use_ssd_dir)
+    def _get_table_path(cls, path, use_ssd_dir=False):
+        return f'{SSD_DATASETS_DIR if use_ssd_dir else DATASETS_DIR}/{cls.GENOME_VERSION}/{cls.DATA_TYPE}/{path}'
 
     def _read_table(self, path, drop_globals=None, use_ssd_dir=False):
         table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
@@ -561,11 +554,11 @@ class BaseHailTableQuery(object):
             ]
 
         if is_x_linked:
-            reference_genome = hl.get_reference(self._genome_version)
+            reference_genome = hl.get_reference(self.GENOME_VERSION)
             intervals = (intervals or []) + [reference_genome.x_contigs[0]]
 
         parsed_intervals = [
-            hl.eval(hl.parse_locus_interval(interval, reference_genome=self._genome_version, invalid_missing=True))
+            hl.eval(hl.parse_locus_interval(interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
             for interval in intervals
         ]
         invalid_intervals = [raw_intervals[i] for i, interval in enumerate(parsed_intervals) if interval is None]
@@ -575,7 +568,7 @@ class BaseHailTableQuery(object):
         return parsed_intervals
 
     def _should_add_chr_prefix(self):
-        return self._genome_version == 'GRCh38'
+        return True
 
     def _filter_by_frequency(self, frequencies, pathogenicity):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
@@ -851,7 +844,7 @@ class BaseHailTableQuery(object):
         annotations = {k: v(ht) for k, v in annotation_fields.items()}
         annotations.update({
             '_sort': self._sort_order(ht),
-            'genomeVersion': self._genome_version.replace('GRCh', ''),
+            'genomeVersion': self.GENOME_VERSION.replace('GRCh', ''),
         })
         results = ht.annotate(**annotations)
         return results.select(*self.CORE_FIELDS, *list(annotations.keys()))
