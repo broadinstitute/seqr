@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { NavLink } from 'react-router-dom'
 import styled from 'styled-components'
 import { Popup, Label, Icon } from 'semantic-ui-react'
 
@@ -11,6 +12,7 @@ import {
   getFamiliesByGuid,
   getUser,
   getSpliceOutliersByChromFamily,
+  getElasticsearchEnabled,
 } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import CopyToClipboardButton from '../../buttons/CopyToClipboardButton'
@@ -278,7 +280,7 @@ const VARIANT_LINKS = [
   },
 ]
 
-const variantSearchLinks = (variant, mainTranscript, genesById, user) => {
+const variantSearchLinks = (variant, mainTranscript, genesById, user, elasticsearchEnabled) => {
   const { chrom, endChrom, pos, end, ref, alt, genomeVersion, svType, variantId, transcripts } = variant
 
   const mainGene = genesById[mainTranscript.geneId]
@@ -313,19 +315,28 @@ const variantSearchLinks = (variant, mainTranscript, genesById, user) => {
 
   const linkVariant = { genes, variations, hgvsc, ...variant }
 
+  const seqrSearchLink = (elasticsearchEnabled || svType) ? (
+    <SearchResultsLink
+      buttonText="seqr"
+      genomeVersion={genomeVersion}
+      svType={svType}
+      variantId={svType ? null : variantId}
+      location={svType && (
+        (endChrom && endChrom !== chrom) ? `${chrom}:${pos - 50}-${pos + 50}` : `${chrom}:${pos}-${end}%20`)}
+    />
+  ) : (
+    <NavLink
+      to={`/summary_data/variant_lookup?variantId=${variantId}&genomeVersion=${genomeVersion}&include_genotypes=true`}
+      target="_blank"
+    >
+      seqr
+    </NavLink>
+  )
+
   return [
     <Popup
       key="seqr-search"
-      trigger={(
-        <SearchResultsLink
-          buttonText="seqr"
-          genomeVersion={genomeVersion}
-          svType={svType}
-          variantId={svType ? null : variantId}
-          location={svType && (
-            (endChrom && endChrom !== chrom) ? `${chrom}:${pos - 50}-${pos + 50}` : `${chrom}:${pos}-${end}%20`)}
-        />
-      )}
+      trigger={seqrSearchLink}
       content={`Search for this variant across all your seqr projects${svType ? '. Any structural variant with ≥20% reciprocal overlap will be returned.' : ''}`}
       size="tiny"
     />,
@@ -342,6 +353,7 @@ class BaseSearchLinks extends React.PureComponent {
     mainTranscript: PropTypes.object,
     genesById: PropTypes.object,
     user: PropTypes.object,
+    elasticsearchEnabled: PropTypes.bool,
   }
 
   state = { showAll: false }
@@ -351,10 +363,10 @@ class BaseSearchLinks extends React.PureComponent {
   }
 
   render() {
-    const { variant, mainTranscript, genesById, user } = this.props
+    const { variant, mainTranscript, genesById, user, elasticsearchEnabled } = this.props
     const { showAll } = this.state
 
-    const links = variantSearchLinks(variant, mainTranscript, genesById, user)
+    const links = variantSearchLinks(variant, mainTranscript, genesById, user, elasticsearchEnabled)
     if (links.length < 5) {
       return links
     }
@@ -373,6 +385,7 @@ class BaseSearchLinks extends React.PureComponent {
 const mapStateToProps = state => ({
   genesById: getGenesById(state),
   user: getUser(state),
+  elasticsearchEnabled: getElasticsearchEnabled(state),
 })
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
