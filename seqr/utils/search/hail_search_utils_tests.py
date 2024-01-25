@@ -219,6 +219,12 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37', 'foo': 'bar',
         })
 
+        variant_lookup(self.user, '1-10439-AC-A', genome_version='37', families=self.families)
+        self._test_minimal_search_call(expected_search_body={
+            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37',
+            'sample_data': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL'],
+        })
+
         with self.assertRaises(InvalidSearchException) as cm:
             variant_lookup(self.user, 'prefix_123_DEL')
         self.assertEqual(str(cm.exception), 'Invalid variant prefix_123_DEL')
