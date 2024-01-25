@@ -42,6 +42,9 @@ DISCOVERY_TAGS = [{
 }]
 VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = DISCOVERY_TAGS
 
+SINGLE_FAMILY_VARIANT = deepcopy(VARIANTS[0])
+SINGLE_FAMILY_VARIANT['familyGuids'] = ['F000001_1']
+
 PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes', 'analysisGroupsLoaded', 'projectGuid', 'name'}
 
 PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'genomeVersion', 'variantTagTypes', 'variantFunctionalTagTypes'}
@@ -707,41 +710,14 @@ class VariantSearchAPITest(object):
 
     @mock.patch('seqr.views.apis.variant_search_api.get_single_variant')
     def test_query_single_variant(self, mock_get_variant):
-        single_family_variant = deepcopy(VARIANTS[0])
-        single_family_variant['familyGuids'] = ['F000001_1']
-        mock_get_variant.return_value = single_family_variant
+        mock_get_variant.return_value = SINGLE_FAMILY_VARIANT
 
         url = '{}?familyGuid=F000001_1'.format(reverse(query_single_variant_handler, args=['21-3343353-GAGA-G']))
         self.check_collaborator_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-
-        response_keys = {'projectsByGuid'}
-        response_keys.update(EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE)
-        response_keys.remove('search')
-        self.assertSetEqual(set(response_json.keys()), response_keys)
-
-        expected_search_response = deepcopy(EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE)
-        expected_search_response.update({
-            k: EXPECTED_SEARCH_CONTEXT_RESPONSE[k] for k in ['projectsByGuid', 'familiesByGuid', 'locusListsByGuid']
-        })
-        expected_search_response.pop('search')
-        expected_search_response['savedVariantsByGuid'].pop('SV0000002_1248367227_r0390_100')
-        expected_search_response['variantTagsByGuid'] = {
-            k: EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE['variantTagsByGuid'][k]
-            for k in {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'}
-        }
-        expected_search_response['variantNotesByGuid'] = {}
-        expected_search_response['genesById'] = {
-            k: v for k, v in expected_search_response['genesById'].items() if k in {'ENSG00000227232', 'ENSG00000268903'}
-        }
-        expected_search_response['searchedVariants'] = [single_family_variant]
-        self.assertDictEqual(response_json, expected_search_response)
-        self._assert_expected_results_family_context(response_json, locus_list_detail=True)
-        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_TAG_TYPE_FIELDS)
-        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1'})
+        self._assert_expected_single_variant_results_context(response.json(), searchedVariants=[SINGLE_FAMILY_VARIANT])
 
         mock_get_variant.assert_called_with(mock.ANY, '21-3343353-GAGA-G', user=self.collaborator_user)
         searched_families = mock_get_variant.call_args.args[0]
@@ -752,6 +728,36 @@ class VariantSearchAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Variant not found')
+
+    def _assert_expected_single_variant_results_context(self, response_json, omit_fields=None, **expected_response):
+        omit_fields = {'search', *(omit_fields or [])}
+        response_keys = {'projectsByGuid'}
+        response_keys.update(EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE)
+        response_keys.update(expected_response.keys())
+        if omit_fields:
+            response_keys -= omit_fields
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+
+        expected_search_response = deepcopy(EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE)
+        expected_search_response.update(expected_response)
+        expected_search_response.update({
+            k: EXPECTED_SEARCH_CONTEXT_RESPONSE[k] for k in ['projectsByGuid', 'familiesByGuid', 'locusListsByGuid']
+        })
+        for k in omit_fields:
+            expected_search_response.pop(k)
+        expected_search_response['savedVariantsByGuid'].pop('SV0000002_1248367227_r0390_100')
+        expected_search_response['variantTagsByGuid'] = {
+            k: EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE['variantTagsByGuid'][k]
+            for k in {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'}
+        }
+        expected_search_response['variantNotesByGuid'] = {}
+        expected_search_response['genesById'] = {
+            k: v for k, v in expected_search_response['genesById'].items() if k in {'ENSG00000227232', 'ENSG00000268903'}
+        }
+        self.assertDictEqual(response_json, expected_search_response)
+        self._assert_expected_results_family_context(response_json, locus_list_detail=True)
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_TAG_TYPE_FIELDS)
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1'})
 
     @mock.patch('seqr.views.apis.variant_search_api.variant_lookup')
     def test_variant_lookup(self, mock_variant_lookup):
@@ -773,7 +779,7 @@ class VariantSearchAPITest(object):
             'variant': VARIANT_LOOKUP_VARIANT,
         }
         self.assertDictEqual(response.json(), expected_body)
-        mock_variant_lookup.assert_called_with(self.no_access_user, variant_id='1-10439-AC-A', genome_version='38')
+        mock_variant_lookup.assert_called_with(self.no_access_user, variant_id='1-10439-AC-A', genome_version='38', families=None)
 
         variant = {**VARIANTS[0], 'familyGuids': [], 'genotypes': {}}
         mock_variant_lookup.return_value = variant
@@ -786,6 +792,21 @@ class VariantSearchAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_body)
+
+        self.login_collaborator()
+        mock_variant_lookup.return_value = SINGLE_FAMILY_VARIANT
+        response = self.client.get(f'{url.replace("38", "37")}&include_genotypes=true')
+        self.assertEqual(response.status_code, 200)
+        self._assert_expected_single_variant_results_context(
+            response.json(), variant=SINGLE_FAMILY_VARIANT, omit_fields={'searchedVariants'},
+        )
+        mock_variant_lookup.assert_called_with(
+            self.collaborator_user, variant_id='1-10439-AC-A', genome_version='37', families=mock.ANY,
+        )
+        self.assertSetEqual({
+            'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
+            'F000009_9', 'F000010_10', 'F000013_13',
+        }, {f.guid for f in mock_variant_lookup.call_args.kwargs['families']})
 
     def test_saved_search(self):
         get_saved_search_url = reverse(get_saved_search_handler)

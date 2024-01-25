@@ -534,9 +534,19 @@ def _flatten_variants(variants):
 @login_and_policies_required
 def variant_lookup_handler(request):
     kwargs = {_to_snake_case(k): v for k, v in request.GET.items()}
-    if kwargs.pop('include_genotypes', False):
-        kwargs['families'] = _all_genome_version_families(kwargs.get('genome_version', GENOME_VERSION_GRCh38), user)
-    variant = variant_lookup(request.user, **kwargs)
-    response = get_variants_response(request, saved_variants=None, response_variants=[variant])
+    include_genotypes = kwargs.pop('include_genotypes', False)
+    families = None
+    if include_genotypes:
+        families = _all_genome_version_families(
+            kwargs.get('genome_version', GENOME_VERSION_GRCh38), request.user,
+        )
+
+    variant = variant_lookup(request.user, families=families, **kwargs)
+    saved_variants, _ = _get_saved_variant_models([variant], families) if families else (None, None)
+    response = get_variants_response(
+        request, saved_variants=saved_variants, response_variants=[variant],
+        add_all_context=include_genotypes, add_locus_list_detail=include_genotypes,
+    )
     response['variant'] = variant
+
     return create_json_response(response)
