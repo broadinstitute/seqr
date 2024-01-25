@@ -44,14 +44,16 @@ const onSubmit = updateQueryParams => (data) => {
 
 const VariantLookup = ({ queryParams, receiveData, updateQueryParams }) => (
   <Grid divided="vertically" centered>
-    <Grid.Row>
-      <Grid.Column width={5} />
-      <Grid.Column width={6}>
-        <Header dividing size="medium" content="Lookup Variant" />
-        <FormWrapper noModal fields={FIELDS} initialValues={queryParams} onSubmit={onSubmit(updateQueryParams)} />
-      </Grid.Column>
-      <Grid.Column width={5} />
-    </Grid.Row>
+    {!queryParams.include_genotypes && (
+      <Grid.Row>
+        <Grid.Column width={5} />
+        <Grid.Column width={6}>
+          <Header dividing size="medium" content="Lookup Variant" />
+          <FormWrapper noModal fields={FIELDS} initialValues={queryParams} onSubmit={onSubmit(updateQueryParams)} />
+        </Grid.Column>
+        <Grid.Column width={5} />
+      </Grid.Row>
+    )}
     <StateDataLoader
       url={queryParams.variantId && '/api/variant_lookup'}
       query={queryParams}
