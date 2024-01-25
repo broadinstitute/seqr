@@ -1,5 +1,6 @@
 from aiohttp import web
 import json
+import os
 import hail as hl
 import logging
 import traceback
