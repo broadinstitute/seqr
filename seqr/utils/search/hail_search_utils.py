@@ -74,12 +74,15 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     return response_json['results']
 
 
-def hail_variant_lookup(user, variant_id, genome_version=None, **kwargs):
-    return _execute_search({
+def hail_variant_lookup(user, variant_id, genome_version=None, samples=None, **kwargs):
+    body = {
         'genome_version': GENOME_VERSION_LOOKUP[genome_version or GENOME_VERSION_GRCh38],
         'variant_id': variant_id,
         **kwargs,
-    }, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
+    }
+    if samples:
+        body['sample_data'] = _get_sample_data(samples)[Sample.DATASET_TYPE_VARIANT_CALLS]
+    return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
 
 
 def _format_search_body(samples, genome_version, num_results, search):

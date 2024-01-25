@@ -9,7 +9,7 @@ from django.db.utils import IntegrityError
 from django.db.models import Q, F, Value
 from math import ceil
 
-from reference_data.models import GENOME_VERSION_GRCh37
+from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples, \
     variant_lookup
@@ -72,6 +72,15 @@ def _all_project_family_search_genome(search_context):
     return (search_context or {}).get('allGenomeProjectFamilies')
 
 
+def _all_genome_version_families(genome_version, user):
+    omit_projects = [p.guid for p in Project.objects.filter(is_demo=True).only('guid')]
+    project_guids = [
+        project_guid for project_guid in get_project_guids_user_can_view(user, limit_data_manager=True)
+        if project_guid not in omit_projects
+    ]
+    return Family.objects.filter(project__guid__in=project_guids, project__genome_version=genome_version)
+
+
 def _get_or_create_results_model(search_hash, search_context, user):
     results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
     if not results_model:
@@ -80,13 +89,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
 
         all_project_genome_version = _all_project_family_search_genome(search_context)
         if all_project_genome_version:
-            omit_projects = [p.guid for p in Project.objects.filter(is_demo=True).only('guid')]
-            project_guids = [
-                project_guid for project_guid in get_project_guids_user_can_view(user, limit_data_manager=True)
-                if project_guid not in omit_projects
-            ]
-            families = Family.objects.filter(
-                project__guid__in=project_guids, project__genome_version=all_project_genome_version)
+            families = _all_genome_version_families(all_project_genome_version, user)
         elif search_context.get('projectGuids'):
             families = Family.objects.filter(project__guid__in=search_context['projectGuids'])
         elif search_context.get('projectFamilies'):
@@ -530,7 +533,10 @@ def _flatten_variants(variants):
 
 @login_and_policies_required
 def variant_lookup_handler(request):
-    variant = variant_lookup(request.user, **{_to_snake_case(k): v for k, v in request.GET.items()})
+    kwargs = {_to_snake_case(k): v for k, v in request.GET.items()}
+    if kwargs.pop('include_genotypes', False):
+        kwargs['families'] = _all_genome_version_families(kwargs.get('genome_version', GENOME_VERSION_GRCh38), user)
+    variant = variant_lookup(request.user, **kwargs)
     response = get_variants_response(request, saved_variants=None, response_variants=[variant])
     response['variant'] = variant
     return create_json_response(response)
