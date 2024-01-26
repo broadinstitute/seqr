@@ -457,9 +457,9 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
     Sample.bulk_update(user, {'data_source': data_source}, guid__in=[s['guid'] for s in existing_samples.values()])
 
     # TODO do this during file loading
-    samples = {**new_samples, **existing_samples}
+    samples = {**existing_samples, **new_samples}
     samples_to_load = {
-        sample['guid']: samples_by_id[sample_key] for sample_key, sample in samples.items()
+        sample['guid']: samples_by_id[sample_key[:2]] for sample_key, sample in samples.items()
         if sample['guid'] not in loaded_sample_guids
     }
 
