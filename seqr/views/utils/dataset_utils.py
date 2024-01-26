@@ -321,9 +321,13 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
                 prev_tissue_type = sample_id_to_tissue_type[(sample_id, project)]
                 if tissue_type != prev_tissue_type:
                     samples_with_conflict_tissues[(sample_id, project)].update({prev_tissue_type, tissue_type})
-                    continue
+                    samples_by_id.pop((sample_id, project, prev_tissue_type), None)
+
+            if (sample_id, project) in samples_with_conflict_tissues:
+                continue
 
             sample_id_to_tissue_type[(sample_id, project)] = tissue_type
+            sample_key = (sample_id, project, tissue_type)
 
             gene_id = row_dict[GENE_ID_COL]
             if gene_id:
@@ -333,7 +337,7 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
                 gene_or_unique_id = get_unique_key(row_dict)
             else:
                 gene_or_unique_id = gene_id
-            existing_data = samples_by_id[(sample_id, project)].get(gene_or_unique_id)
+            existing_data = samples_by_id[sample_key].get(gene_or_unique_id)
             if existing_data and existing_data != row_dict:
                 errors.append(f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries '
                               f'{existing_data} and {row_dict}')
@@ -341,7 +345,7 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
             if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
                 sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
 
-            samples_by_id[(sample_id, project)][gene_or_unique_id] = row_dict
+            samples_by_id[sample_key][gene_or_unique_id] = row_dict
 
     matched_gene_ids = set(GeneInfo.objects.filter(gene_id__in=gene_ids).values_list('gene_id', flat=True))
     unknown_gene_ids = gene_ids - matched_gene_ids
@@ -360,14 +364,12 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
 
     tissue_conflict_messages = []
     for (sample_id, project), tissue_types in samples_with_conflict_tissues.items():
-        sample_id_to_tissue_type.pop((sample_id, project))
-        samples_by_id.pop((sample_id, project))
         tissue_conflict_messages.append(
             f'{sample_id} ({", ".join(sorted([REVERSE_TISSUE_TYPE[tissue_type] for tissue_type in tissue_types]))})')
     warnings = [f'Skipped data loading for the following {len(samples_with_conflict_tissues)} sample(s) due to mismatched'
                 f' tissue type: {", ".join(tissue_conflict_messages)}'] if samples_with_conflict_tissues else []
 
-    return warnings, samples_by_id, sample_id_to_individual_id_mapping, sample_id_to_tissue_type
+    return warnings, samples_by_id, sample_id_to_individual_id_mapping
 
 
 def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=False, **kwargs):
@@ -378,16 +380,13 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
         key_fields=key_fields, values={'dataSource': F('data_source'), 'model_count': Count(model_cls.__name__.lower())},
     )
 
-    warnings, samples_by_id, sample_id_to_individual_id_mapping, sample_id_to_tissue_type = _load_rna_seq_file(
+    warnings, loaded_samples_by_key, sample_id_to_individual_id_mapping = _load_rna_seq_file(
         file_path, user, *args, **kwargs)
-    message = f'Parsed {len(samples_by_id)} RNA-seq samples'
+    message = f'Parsed {len(loaded_samples_by_key)} RNA-seq samples'
     info = [message]
     logger.info(message, user)
 
     data_source = file_path.split('/')[-1].split('_-_')[-1]
-
-    # TODO do this during file loading
-    loaded_samples_by_key = {(*k, sample_id_to_tissue_type[k]): s for k, s in samples_by_id.items()}
 
     remaining_sample_keys = set(loaded_samples_by_key) - set(potential_samples)
     existing_samples = {k: potential_samples[k] for k in loaded_samples_by_key if k in potential_samples}
@@ -420,7 +419,7 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
     # TODO do this during file loading
     samples = {**existing_samples, **new_samples}
     samples_to_load = {
-        sample['guid']: samples_by_id[sample_key[:2]] for sample_key, sample in samples.items()
+        sample['guid']: loaded_samples_by_key[sample_key] for sample_key, sample in samples.items()
         if sample['guid'] not in loaded_sample_guids
     }
 
