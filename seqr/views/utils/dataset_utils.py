@@ -43,60 +43,42 @@ def _get_matched_samples_by_key(projects, key_fields=None, values=None, **sample
     }
 
 
-def _create_samples(projects, user, remaining_sample_keys, matched_individual_ids=None,
-                    sample_id_to_individual_id_mapping=None,
-                    sample_id_to_tissue_type=None,
-                    raise_no_match_error=False,
-                    raise_unmatched_error_template=None,
-                    create_active=False,
-                    data_source=None,
-                    loaded_date=timezone.now(),
-                    **sample_params):
+def _create_samples(projects, user, remaining_sample_keys, matched_individual_ids=None, get_unmatched_error=None,
+                    sample_id_to_individual_id_mapping=None, loaded_date=timezone.now(), key_fields=None, **kwargs):
     individuals = Individual.objects.filter(family__project__in=projects)
     if matched_individual_ids:
         individuals = individuals.exclude(id__in=matched_individual_ids)
-    # TODO clean up
-    remaining_individuals_dict = {
-        (i.individual_id, i.family.project.name): i for i in individuals.select_related('family__project')
+    individual_id_by_key = {
+        (individual_id, project_name): (id, individual_id)
+        for id, individual_id, project_name in individuals.values_list('id', 'individual_id', 'family__project__name')
     }
 
-    # find Individual records with exactly-matching individual_ids
-    sample_id_to_individual_record = {}
+    sample_to_individual_ids = {}
     for sample_key in remaining_sample_keys:
         individual_key = ((sample_id_to_individual_id_mapping or {}).get(sample_key[0], sample_key[0]), sample_key[1])
-        if individual_key not in remaining_individuals_dict:
-            continue
-        sample_id_to_individual_record[sample_key] = remaining_individuals_dict[individual_key]
-        del remaining_individuals_dict[individual_key]
+        if individual_key in individual_id_by_key:
+            sample_to_individual_ids[sample_key] = individual_id_by_key[individual_key]
 
-    logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
-
-    remaining_sample_keys -= set(sample_id_to_individual_record.keys())
-    if raise_no_match_error and len(remaining_sample_keys) == len(sample_project_tuples):
-        raise ValueError(
-            'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(
-                len(sample_project_tuples)))
-    if raise_unmatched_error_template and remaining_sample_keys:
-        raise ValueError(raise_unmatched_error_template.format(
-            sample_ids=(', '.join(sorted([sample_id for sample_id, _ in remaining_sample_keys])))))
+    remaining_sample_keys -= set(sample_to_individual_ids.keys())
+    if remaining_sample_keys and get_unmatched_error:
+        error = get_unmatched_error(sorted([sample_key[0] for sample_key in remaining_sample_keys]))
+        if error:
+            raise ValueError(error)
 
     # create new Sample records for Individual records that matches
     new_sample_args = {sample_key: {
-        'guid': 'S{}_{}'.format(random.randint(10 ** 9, 10 ** 10), individual.individual_id)[:Sample.MAX_GUID_SIZE],
+        'guid': 'S{}_{}'.format(random.randint(10 ** 9, 10 ** 10), individual_id)[:Sample.MAX_GUID_SIZE],
         # nosec
-        'individual_id': individual.id,
-    } for sample_key, individual in sample_id_to_individual_record.items()}
-    if data_source not in sample_params:
-        sample_params['data_source'] = data_source
+        'individual_id': individual_db_id,
+        **{key_field: sample_key[i+2] for i, key_field in enumerate(key_fields or [])}
+    } for sample_key, (individual_db_id, individual_id) in sample_to_individual_ids.items()}
     new_samples = [
         Sample(
             sample_id=sample_key[0],
             created_date=timezone.now(),
-            is_active=create_active,
-            tissue_type=sample_id_to_tissue_type.get(sample_key) if sample_id_to_tissue_type else tissue_type,
             loaded_date=loaded_date,
             **created_sample_data,
-            **sample_params
+            **kwargs,
         ) for sample_key, created_sample_data in new_sample_args.items()]
     Sample.bulk_create(user, new_samples)
 
@@ -171,6 +153,11 @@ def match_and_update_search_samples(
     matched_individual_ids = {sample['individual_id'] for sample in samples.values()}
     loaded_date = timezone.now()
     if len(remaining_sample_keys) > 0:
+        def get_unmatched_error(sample_ids):
+            if raise_unmatched_error_template:
+                return raise_unmatched_error_template.format(sample_ids=', '.join(sample_ids))
+            elif len(sample_ids) == len(sample_project_tuples):
+                return f'None of the individuals or samples in the project matched the {len(sample_ids)} expected sample id(s)'
         new_samples, remaining_sample_keys = _create_samples(
             projects,
             user,
@@ -178,8 +165,7 @@ def match_and_update_search_samples(
             matched_individual_ids=matched_individual_ids,
             loaded_date=loaded_date,
             sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-            raise_no_match_error=not raise_unmatched_error_template,
-            raise_unmatched_error_template=raise_unmatched_error_template,
+            get_unmatched_error=get_unmatched_error,
             **sample_params,
         )
         samples.update(new_samples)
@@ -386,9 +372,10 @@ def _load_rna_seq_file(file_path, user, column_map, mapping_file=None, get_uniqu
 
 def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=False, **kwargs):
     projects = get_internal_projects()
+    key_fields = ['tissue_type']
     potential_samples = _get_matched_samples_by_key(
         projects, sample_type=Sample.SAMPLE_TYPE_RNA, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        key_fields=['tissue_type'], values={'dataSource': F('data_source'), 'model_count': Count(model_cls.__name__.lower())},
+        key_fields=key_fields, values={'dataSource': F('data_source'), 'model_count': Count(model_cls.__name__.lower())},
     )
 
     warnings, samples_by_id, sample_id_to_individual_id_mapping, sample_id_to_tissue_type = _load_rna_seq_file(
@@ -402,7 +389,7 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
     # TODO do this during file loading
     loaded_samples_by_key = {(*k, sample_id_to_tissue_type[k]): s for k, s in samples_by_id.items()}
 
-    remaining_sample_keys = {(k[0], k[1]) for k in loaded_samples_by_key if k not in potential_samples}
+    remaining_sample_keys = set(loaded_samples_by_key) - set(potential_samples)
     existing_samples = {k: potential_samples[k] for k in loaded_samples_by_key if k in potential_samples}
 
     all_loaded_samples = {s['guid']: s for s in existing_samples.values() if s['model_count'] > 0}
@@ -414,13 +401,13 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
         projects=projects,
         user=user,
         remaining_sample_keys=remaining_sample_keys,
-        data_source=data_source,
+        key_fields=key_fields,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-        raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}',
-        sample_id_to_tissue_type=sample_id_to_tissue_type,
+        get_unmatched_error=None if ignore_extra_samples else lambda sample_ids: f'Unable to find matches for the following samples: {", ".join(sample_ids)}',
         sample_type=Sample.SAMPLE_TYPE_RNA,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        create_active=True,
+        data_source=data_source,
+        is_active=True,
     )
 
     # Delete old data
@@ -450,7 +437,7 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
     _notify_rna_loading(model_cls, sample_projects)
 
     if remaining_sample_keys:
-        skipped_samples = ', '.join(sorted({sample_id for sample_id, _ in remaining_sample_keys}))
+        skipped_samples = ', '.join(sorted({sample_key[0] for sample_key in remaining_sample_keys}))
         message = f'Skipped loading for the following {len(remaining_sample_keys)} unmatched samples: {skipped_samples}'
         warnings.append(message)
     if loaded_sample_guids:
