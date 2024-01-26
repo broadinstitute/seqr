@@ -43,49 +43,6 @@ def _get_matched_samples_by_key(projects, key_fields=None, values=None, **sample
     }
 
 
-# TODO clean up
-def _find_or_create_samples(
-        sample_project_tuples,
-        projects,
-        user,
-        sample_type,
-        dataset_type,
-        sample_id_to_tissue_type=None,
-        tissue_type=None,
-        sample_data=None,
-        **kwargs
-):
-    sample_params = {'sample_type': sample_type, 'dataset_type': dataset_type}
-    sample_params.update(sample_data or {})
-
-    samples_by_key = _get_matched_samples_by_key(
-        projects,
-        sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
-        **({'tissue_type__in': set(sample_id_to_tissue_type.values())} if sample_id_to_tissue_type else {
-            'tissue_type': tissue_type}),
-        **sample_params,
-    )
-
-    existing_samples = {
-        key: s for key, s in samples_by_key.items() if key in sample_project_tuples
-        and (sample_id_to_tissue_type is None or sample_id_to_tissue_type[key] == s['tissue_type'])
-    }
-    remaining_sample_keys = set(sample_project_tuples) - set(existing_samples.keys())
-
-    matched_individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
-    loaded_date = timezone.now()
-    if len(remaining_sample_keys) > 0:
-        new_samples, remaining_sample_keys = _create_samples(
-            projects, user, remaining_sample_keys, matched_individual_ids=matched_individual_ids,
-            sample_id_to_tissue_type=sample_id_to_tissue_type, tissue_type=tissue_type, loaded_date=loaded_date,
-            **sample_params, **kwargs,
-        )
-    else:
-        new_samples = {}
-
-    return {**existing_samples, **new_samples}, existing_samples, remaining_sample_keys, loaded_date
-
-
 def _create_samples(projects, user, remaining_sample_keys, matched_individual_ids=None,
                     sample_id_to_individual_id_mapping=None,
                     sample_id_to_tissue_type=None,
@@ -197,18 +154,35 @@ def match_and_update_search_samples(
         projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
         sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
 ):
-    samples, _, remaining_sample_keys, loaded_date = _find_or_create_samples(
-        sample_project_tuples=sample_project_tuples,
-        projects=projects,
-        user=user,
-        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-        raise_no_match_error=not raise_unmatched_error_template,
-        raise_unmatched_error_template=raise_unmatched_error_template,
-        sample_type=sample_type,
-        dataset_type=dataset_type,
-        tissue_type=Sample.NO_TISSUE_TYPE,
-        sample_data=sample_data,
+    sample_params = {
+        'sample_type': sample_type,
+        'dataset_type': dataset_type,
+        'tissue_type': Sample.NO_TISSUE_TYPE,
+        **(sample_data or {}),
+    }
+
+    samples_by_key = _get_matched_samples_by_key(
+        projects, sample_id__in={sample_id for sample_id, _ in sample_project_tuples}, **sample_params,
     )
+
+    samples = {key: s for key, s in samples_by_key.items() if key in sample_project_tuples}
+    remaining_sample_keys = set(sample_project_tuples) - set(samples.keys())
+
+    matched_individual_ids = {sample['individual_id'] for sample in samples.values()}
+    loaded_date = timezone.now()
+    if len(remaining_sample_keys) > 0:
+        new_samples, remaining_sample_keys = _create_samples(
+            projects,
+            user,
+            remaining_sample_keys,
+            matched_individual_ids=matched_individual_ids,
+            loaded_date=loaded_date,
+            sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+            raise_no_match_error=not raise_unmatched_error_template,
+            raise_unmatched_error_template=raise_unmatched_error_template,
+            **sample_params,
+        )
+        samples.update(new_samples)
 
     samples_guids = [sample['guid'] for sample in samples.values()]
     individual_ids = {sample['individual_id'] for sample in samples.values()}
