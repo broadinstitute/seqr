@@ -10,6 +10,7 @@ from seqr.utils.search.utils import get_single_variant, get_variants_for_variant
     query_variants, variant_lookup, InvalidSearchException
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
 
+NON_SNP_INDEL_SAMPLES = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733', 'S000149_hg00733']
 
 class SearchTestHelper(object):
 
@@ -56,6 +57,12 @@ class SearchUtilsTests(SearchTestHelper):
         self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
         mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='38')
 
+        variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='37', families=self.families)
+        self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
+        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='37', samples=mock.ANY)
+        expected_samples = {s for s in self.search_samples if s.guid not in NON_SNP_INDEL_SAMPLES}
+        self.assertSetEqual(set(mock_variant_lookup.call_args.kwargs['samples']), expected_samples)
+
         with self.assertRaises(InvalidSearchException) as cm:
             variant_lookup(self.user, '100-10439-AC-A')
         self.assertEqual(str(cm.exception), 'Invalid variant 100-10439-AC-A')
@@ -67,9 +74,7 @@ class SearchUtilsTests(SearchTestHelper):
         mock_get_variants_for_ids.assert_called_with(
             mock.ANY, '37', {'2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G')}, self.user, return_all_queried_families=False,
         )
-        expected_samples = {
-            s for s in self.search_samples if s.guid not in ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733', 'S000149_hg00733']
-        }
+        expected_samples = {s for s in self.search_samples if s.guid not in NON_SNP_INDEL_SAMPLES}
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), expected_samples)
 
         get_single_variant(self.families, '2-103343353-GAGA-G', user=self.user, return_all_queried_families=True)
