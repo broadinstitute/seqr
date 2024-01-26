@@ -846,7 +846,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         loaded_data_row = params['loaded_data_row']
 
         # Test errors
-        body = {'dataType': data_type, 'file': 'gs://rna_data/muscle_samples.tsv.gz'}
+        body = {'dataType': data_type, 'file': 'gs://rna_data/muscle_samples.tsv'}
         mock_datetime.now.return_value = datetime(2020, 4, 15)
         mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
         mock_load_uploaded_file.return_value = [['a']]
@@ -855,7 +855,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_subprocess.side_effect = [mock_does_file_exist]
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'error': 'File not found: gs://rna_data/muscle_samples.tsv.gz'})
+        self.assertDictEqual(response.json(), {'error': 'File not found: gs://rna_data/muscle_samples.tsv'})
 
         mock_does_file_exist.wait.return_value = 0
         mock_file_iter = mock.MagicMock()
@@ -911,6 +911,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_send_slack.reset_mock()
         self.reset_logs()
         _set_file_iter_stdout([header, loaded_data_row])
+        body['file'] = 'gs://rna_data/muscle_samples.tsv.gz'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         info = [
