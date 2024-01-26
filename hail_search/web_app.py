@@ -59,7 +59,7 @@ async def status(request: web.Request) -> web.Response:
 
 async def init_web_app():
     # memory limits adapted from https://github.com/hail-is/hail/blob/main/hail/python/hailtop/hailctl/dataproc/start.py#L321C17-L321C36
-    spark_conf = {'spark.driver.memory': f'{(int(MACHINE_MEM)-11)*JVM_MEMORY_FRACTION}g'} if MACHINE_MEM else None
+    spark_conf = {'spark.driver.memory': f'{int((int(MACHINE_MEM)-11)*JVM_MEMORY_FRACTION)}g'} if MACHINE_MEM else None
     hl.init(idempotent=True, spark_conf=spark_conf)
     load_globals()
     app = web.Application(middlewares=[error_middleware], client_max_size=(1024**2)*10)
