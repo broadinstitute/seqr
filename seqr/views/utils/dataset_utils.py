@@ -386,7 +386,8 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
     )
     potential_loaded_samples = {key for key, s in potential_samples.items() if s['dataSource'] == data_source}
 
-    # TODO load in batches - create models and notify every ~100 samples
+    # TODO create samples as you go, write valid rows immediately to file (or call handler passed from manage command)
+    # Do not keep data in memory
 
     warnings, loaded_samples_by_key, sample_id_to_individual_id_mapping, loaded_samples = _load_rna_seq_file(
         file_path, user, potential_loaded_samples, *args, **kwargs)
