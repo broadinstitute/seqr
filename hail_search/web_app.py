@@ -9,6 +9,7 @@ from hail_search.search import search_hail_backend, load_globals, lookup_variant
 
 logger = logging.getLogger(__name__)
 
+JAVA_OPTS_XSS = os.environ.get('JAVA_OPTS_XSS')
 MACHINE_MEM = os.environ.get('MACHINE_MEM')
 JVM_MEMORY_FRACTION = 0.9
 
@@ -58,9 +59,13 @@ async def status(request: web.Request) -> web.Response:
 
 
 async def init_web_app():
+    spark_conf = {}
     # memory limits adapted from https://github.com/hail-is/hail/blob/main/hail/python/hailtop/hailctl/dataproc/start.py#L321C17-L321C36
-    spark_conf = {'spark.driver.memory': f'{int((int(MACHINE_MEM)-11)*JVM_MEMORY_FRACTION)}g'} if MACHINE_MEM else None
-    hl.init(idempotent=True, spark_conf=spark_conf)
+    if MACHINE_MEM:
+        spark_conf['spark.driver.memory'] = f'{int((int(MACHINE_MEM)-11)*JVM_MEMORY_FRACTION)}g'
+    if JAVA_OPTS_XSS:
+        spark_conf.update({f'spark.{field}.extraJavaOptions': f'-Xss{JAVA_OPTS_XSS}' for field in ['driver', 'executor']})
+    hl.init(idempotent=True, spark_conf=spark_conf or None)
     load_globals()
     app = web.Application(middlewares=[error_middleware], client_max_size=(1024**2)*10)
     app.add_routes([
