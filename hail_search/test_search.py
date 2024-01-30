@@ -644,7 +644,13 @@ class HailSearchTestCase(AioHTTPTestCase):
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 404)
 
-        body.update({'variant_id': ['M', 4429, 'G', 'A'], 'data_type': 'MITO'})
+        body.update({'genome_version': 'GRCh37', 'variant_id': ['7', 143270172, 'A', 'G']})
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {**GRCH37_VARIANT, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''})
+
+        body.update({'variant_id': ['M', 4429, 'G', 'A'], 'data_type': 'MITO', 'genome_version': 'GRCh38'})
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
