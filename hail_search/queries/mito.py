@@ -189,7 +189,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         return [
             hl.struct(
-                locus=hl.locus(f'chr{chrom}', pos, reference_genome=self.GENOME_VERSION),
+                locus=hl.locus(f'chr{chrom}' if self._should_add_chr_prefix() else chrom, pos, reference_genome=self.GENOME_VERSION),
                 alleles=[ref, alt],
             ) for chrom, pos, ref, alt in variant_ids
         ]
