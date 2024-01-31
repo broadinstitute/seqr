@@ -311,6 +311,7 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
     samples_with_conflict_tissues = defaultdict(set)
     loaded_samples = set()
     unmatched_samples = set()
+    existing_sample_keys = set()
     samples_to_create = {}
     errors = []
     missing_required_fields = defaultdict(list)
@@ -328,6 +329,7 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
                     prev_sample_key = (sample_id, project, prev_tissue_type)
                     samples_by_id.pop(prev_sample_key, None)
                     samples_to_create.pop(prev_sample_key, None)
+                    existing_sample_keys.discard(prev_sample_key)
 
             if (sample_id, project) in samples_with_conflict_tissues:
                 continue
@@ -340,7 +342,9 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
 
             if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
                 sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
-            if sample_key not in potential_samples and sample_key not in unmatched_samples:
+            if sample_key in potential_samples:
+                existing_sample_keys.add(sample_key)
+            elif sample_key not in unmatched_samples:
                 individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
                 if individual_key in individual_id_by_key:
                     samples_to_create[sample_key] = individual_id_by_key[individual_key]
@@ -402,7 +406,7 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
     if post_process:
         post_process(samples_by_id)
 
-    return warnings, samples_by_id, samples_to_create, len(loaded_samples) + len(unmatched_samples)
+    return warnings, samples_by_id, samples_to_create, existing_sample_keys, len(loaded_samples) + len(unmatched_samples)
 
 
 def _load_rna_seq(model_cls, file_path, *args, user=None, **kwargs):
@@ -422,13 +426,13 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, **kwargs):
 
     # TODO write valid rows immediately to file (or call handler passed from manage command), Do not keep data in memory
 
-    warnings, loaded_samples_by_key, samples_to_create, not_loaded_count = _load_rna_seq_file(
+    warnings, loaded_samples_by_key, samples_to_create, existing_sample_keys, not_loaded_count = _load_rna_seq_file(
         file_path, user, potential_loaded_samples, potential_samples, individual_id_by_key, *args, **kwargs)
     message = f'Parsed {len(loaded_samples_by_key) + not_loaded_count} RNA-seq samples'
     info = [message]
     logger.info(message, user)
 
-    existing_samples = {k: potential_samples[k] for k in loaded_samples_by_key if k in potential_samples}
+    existing_samples = {k: potential_samples[k] for k in existing_sample_keys}
 
     all_loaded_samples = {s['guid']: s for s in existing_samples.values() if s['model_count'] > 0}
     to_delete_samples = {guid: s for guid, s in all_loaded_samples.items() if s['dataSource'] != data_source}
