@@ -24,6 +24,7 @@ from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tp
     load_rna_seq_splice_outlier
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 
 from seqr.models import Sample, Individual, Project, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, RnaSeqSpliceOutlier
@@ -312,6 +313,7 @@ def load_rna_seq_sample_data(request, sample_guid):
 
     model_cls = RNA_DATA_TYPE_CONFIGS[data_type]['model_class']
     model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_by_gene.values()])
+    update_model_from_json(sample, {'is_active': True}, user=request.user)
 
     return create_json_response({'success': True})
 

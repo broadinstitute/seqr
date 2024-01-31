@@ -807,11 +807,11 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         self.assert_json_logs(self.data_manager_user, expected_logs)
 
-    def _check_rna_sample_model(self, individual_id, data_source, tissue_type):
+    def _check_rna_sample_model(self, individual_id, data_source, tissue_type, is_active_sample=True):
         rna_samples = Sample.objects.filter(individual_id=individual_id, sample_type='RNA', tissue_type=tissue_type)
         self.assertEqual(len(rna_samples), 1)
         sample = rna_samples.first()
-        self.assertTrue(sample.is_active)
+        self.assertEqual(sample.is_active, is_active_sample)
         self.assertIsNone(sample.elasticsearch_index)
         self.assertEqual(sample.sample_type, 'RNA')
         self.assertEqual(sample.tissue_type, tissue_type)
@@ -942,7 +942,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                                                  'fileName': file_name})
             new_sample_guid = self._check_rna_sample_model(
                 individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz',
-                tissue_type=params.get('sample_tissue_type'),
+                tissue_type=params.get('sample_tissue_type'), is_active_sample=False,
             )
             self.assertTrue(new_sample_guid in response_json['sampleGuids'])
             additional_logs = [(f'create {num_created_samples} Samples', {'dbUpdate': {
@@ -1044,6 +1044,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 models = model_cls.objects.all()
                 self.assertEqual(models.count(), 2)
                 self.assertSetEqual({model.sample.guid for model in models}, {sample_guid})
+                self.assertTrue(all(model.sample.is_active for model in models))
 
                 mock_open.assert_called_with(file_name, 'rt')
 

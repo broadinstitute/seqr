@@ -382,9 +382,12 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
     key_fields = ['tissue_type']
     potential_samples = _get_matched_samples_by_key(
         projects, sample_type=Sample.SAMPLE_TYPE_RNA, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        key_fields=key_fields, values={'dataSource': F('data_source'), 'model_count': Count(model_cls.__name__.lower())},
+        key_fields=key_fields, values={
+            'dataSource': F('data_source'), 'model_count': Count(model_cls.__name__.lower()),
+            'active': F('is_active'),
+        },
     )
-    potential_loaded_samples = {key for key, s in potential_samples.items() if s['dataSource'] == data_source}
+    potential_loaded_samples = {key for key, s in potential_samples.items() if s['dataSource'] == data_source and s['active']}
 
     # TODO create samples as you go, write valid rows immediately to file (or call handler passed from manage command)
     # Do not keep data in memory
@@ -413,7 +416,6 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, ignore_extra_samples=F
         sample_type=Sample.SAMPLE_TYPE_RNA,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         data_source=data_source,
-        is_active=True,
     )
 
     # Delete old data
