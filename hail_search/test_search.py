@@ -635,11 +635,22 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, VARIANT_LOOKUP_VARIANT)
 
+        async with self.client.request('POST', '/lookup', json={**body, 'sample_data': MULTI_PROJECT_SAMPLE_DATA['SNV_INDEL']}) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, MULTI_PROJECT_VARIANT1)
+
         body['variant_id'] = VARIANT_ID_SEARCH['variant_ids'][1]
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 404)
 
-        body.update({'variant_id': ['M', 4429, 'G', 'A'], 'data_type': 'MITO'})
+        body.update({'genome_version': 'GRCh37', 'variant_id': ['7', 143270172, 'A', 'G']})
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {**GRCH37_VARIANT, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''})
+
+        body.update({'variant_id': ['M', 4429, 'G', 'A'], 'data_type': 'MITO', 'genome_version': 'GRCh38'})
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()

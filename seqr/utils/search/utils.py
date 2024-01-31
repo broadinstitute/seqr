@@ -152,10 +152,15 @@ def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None
     )
 
 
-def variant_lookup(user, variant_id, **kwargs):
+def variant_lookup(user, variant_id, families=None, **kwargs):
     parsed_variant_id = _parse_variant_id(variant_id)
     if not parsed_variant_id:
         raise InvalidSearchException(f'Invalid variant {variant_id}')
+
+    if families:
+        samples, _ = _get_families_search_data(families, dataset_type=DATASET_TYPE_SNP_INDEL_ONLY)
+        kwargs['samples'] = samples
+
     lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), hail_variant_lookup)
     return lookup_func(user, parsed_variant_id, **kwargs)
 
