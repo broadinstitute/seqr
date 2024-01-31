@@ -59,7 +59,6 @@ def _get_individual_key(sample_key, sample_id_to_individual_id_mapping):
 
 def _create_samples(sample_to_individual_ids, user, loaded_date=timezone.now(), key_fields=None, **kwargs):
 
-    # create new Sample records for Individual records that matches
     new_sample_args = {sample_key: {
         'guid': 'S{}_{}'.format(random.randint(10 ** 9, 10 ** 10), individual_id)[:Sample.MAX_GUID_SIZE],
         # nosec
@@ -256,17 +255,17 @@ def _get_splice_id(row):
 
 
 def load_rna_seq_splice_outlier(*args, **kwargs):
-    samples_to_load, info, warnings = _load_rna_seq(
+    return _load_rna_seq(
         RnaSeqSpliceOutlier, *args, SPLICE_OUTLIER_HEADER_COLS, format_fields=SPLICE_OUTLIER_FORMATTER,
-        get_unique_key=_get_splice_id, allow_missing_gene=True, **kwargs
+        get_unique_key=_get_splice_id, allow_missing_gene=True, post_process=_add_splice_rank, **kwargs
     )
 
+
+def _add_splice_rank(samples_to_load):
     for sample_data_rows in samples_to_load.values():
         sorted_data_rows = sorted([data_row for data_row in sample_data_rows.values()], key=lambda d: d[P_VALUE_COL])
         for i, data_row in enumerate(sorted_data_rows):
             data_row['rank'] = i
-
-    return samples_to_load, info, warnings
 
 
 def _validate_rna_header(header, column_map):
@@ -296,7 +295,7 @@ def _parse_rna_row(row, column_map, required_column_map, missing_required_fields
             yield sample_id, row_dict
 
 
-def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samples, individual_id_by_key, column_map, mapping_file=None, get_unique_key=None, allow_missing_gene=False, ignore_extra_samples=False, **kwargs):
+def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samples, individual_id_by_key, column_map, mapping_file=None, get_unique_key=None, allow_missing_gene=False, ignore_extra_samples=False, post_process=None, **kwargs):
 
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
@@ -399,6 +398,10 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
         )
     if loaded_samples:
         warnings.append(f'Skipped loading for {len(loaded_samples)} samples already loaded from this file')
+
+    if post_process:
+        post_process(samples_by_id)
+
     return warnings, samples_by_id, samples_to_create, len(loaded_samples) + len(unmatched_samples)
 
 

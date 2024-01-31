@@ -31,6 +31,7 @@ class Command(BaseCommand):
             with open(options['mapping_file']) as f:
                 mapping_file = parse_file(options['mapping_file'], f)
 
+        # TODO update manage commands to work with updated model
         samples_to_load, _, _ = load_rna_seq_tpm(
             options['input_file'], mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
 
