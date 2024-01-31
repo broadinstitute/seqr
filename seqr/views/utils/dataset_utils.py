@@ -48,8 +48,8 @@ def _get_individuals_by_key(projects, matched_individual_ids=None):
     if matched_individual_ids:
         individuals = individuals.exclude(id__in=matched_individual_ids)
     return {
-        (individual_id, project_name): (id, individual_id)
-        for id, individual_id, project_name in individuals.values_list('id', 'individual_id', 'family__project__name')
+        (i['individual_id'], i.pop('family__project__name')): i
+        for i in individuals.values('id', 'individual_id', 'family__project__name')
     }
 
 
@@ -60,11 +60,11 @@ def _get_individual_key(sample_key, sample_id_to_individual_id_mapping):
 def _create_samples(sample_to_individual_ids, user, loaded_date=timezone.now(), key_fields=None, **kwargs):
 
     new_sample_args = {sample_key: {
-        'guid': 'S{}_{}'.format(random.randint(10 ** 9, 10 ** 10), individual_id)[:Sample.MAX_GUID_SIZE],
+        'guid': 'S{}_{}'.format(random.randint(10 ** 9, 10 ** 10), individual['individual_id'])[:Sample.MAX_GUID_SIZE],
         # nosec
-        'individual_id': individual_db_id,
+        'individual_id': individual['id'],
         **{key_field: sample_key[i+2] for i, key_field in enumerate(key_fields or [])}
-    } for sample_key, (individual_db_id, individual_id) in sample_to_individual_ids.items()}
+    } for sample_key, individual in sample_to_individual_ids.items()}
     new_samples = [
         Sample(
             sample_id=sample_key[0],
