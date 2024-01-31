@@ -713,18 +713,12 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'muscle', 0.112],
                 # a project mismatched sample NA20878
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
-                # conflict tissue types samples
-                ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 1.34],
-                ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19678', 'fibroblasts', 0.05],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'M',
             'num_parsed_samples': 4,
             'initial_model_count': 4,
             'deleted_count': 3,
-            'extra_warnings': [
-                'Skipped data loading for the following 1 sample(s) due to mismatched tissue type: NA19678 (fibroblasts, muscle)',
-            ],
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.0)],
@@ -947,7 +941,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             self.assertTrue(new_sample_guid in response_json['sampleGuids'])
             additional_logs = [(f'create {num_created_samples} Samples', {'dbUpdate': {
                 'dbEntity': 'Sample', 'updateType': 'bulk_create',
-                'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [response_json['sampleGuids'][-1]],
+                'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [new_sample_guid],
             }})] + (additional_logs or [])
             self._has_expected_file_loading_logs(
                 'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings,
@@ -967,8 +961,6 @@ class DataManagerAPITest(AuthenticationTestCase):
         warnings = [
             f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
             f'unmatched samples: {params["skipped_samples"]}']
-        if params.get('extra_warnings'):
-            warnings += params['extra_warnings']
         deleted_count = params.get('deleted_count', params['initial_model_count'])
         response_json, new_sample_guid = _test_basic_data_loading(
             params['new_data'], params["num_parsed_samples"], 2, 16, body,
@@ -1015,6 +1007,21 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_writes = []
         _test_basic_data_loading(data, 2, 2, 20, body, '1kg project nåme with uniçøde, Test Reprocessed Project',
                                  num_created_samples=2)
+        self.assertSetEqual(set([s.split('_', 1)[1] for s in mock_writes]), params['write_data'])
+
+        # Test loading data when where an individual has multiple tissue types
+        data = [data[1][:2] + data[0][2:], data[1]]
+        mock_writes = []
+        new_sample_individual_id = 7
+        response_json, new_sample_guid = _test_basic_data_loading(data, 2, 2, new_sample_individual_id, body,
+                                                                  '1kg project nåme with uniçøde')
+        second_tissue_sample_guid = self._check_rna_sample_model(
+            individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz',
+            tissue_type='M' if params.get('sample_tissue_type') == 'F' else 'F', is_active_sample=False,
+        )
+        self.assertTrue(second_tissue_sample_guid != new_sample_guid)
+        self.assertTrue(second_tissue_sample_guid in response_json['sampleGuids'])
+        self.assertSetEqual(set([s.split('\t')[0] for s in mock_writes]), set(response_json['sampleGuids']))
         self.assertSetEqual(set([s.split('_', 1)[1] for s in mock_writes]), params['write_data'])
 
     @mock.patch('seqr.views.apis.data_manager_api.os')

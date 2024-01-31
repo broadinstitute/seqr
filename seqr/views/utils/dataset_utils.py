@@ -310,8 +310,6 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
     header = next(parsed_f)
     required_column_map = _validate_rna_header(header, column_map)
 
-    sample_id_to_tissue_type = {}
-    samples_with_conflict_tissues = defaultdict(set)
     loaded_samples = set()
     unmatched_samples = set()
     existing_samples_by_guid = {}
@@ -319,27 +317,14 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
     errors = []
     missing_required_fields = defaultdict(list)
     gene_ids = set()
-    sample_key_to_guid = {} # TODO remove
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in _parse_rna_row(
                 row, column_map, required_column_map, missing_required_fields, allow_missing_gene, **kwargs):
             tissue_type = TISSUE_TYPE_MAP[row[TISSUE_COL]]
             project = row[PROJECT_COL]
-            if (sample_id, project) in sample_id_to_tissue_type:
-                prev_tissue_type = sample_id_to_tissue_type[(sample_id, project)]
-                if tissue_type != prev_tissue_type:
-                    samples_with_conflict_tissues[(sample_id, project)].update({prev_tissue_type, tissue_type})
-                    prev_sample_key = (sample_id, project, prev_tissue_type)
-                    samples_by_guid.pop(sample_key_to_guid[prev_sample_key], None)
-                    existing_samples_by_guid.pop(sample_key_to_guid[prev_sample_key], None)
-                    samples_to_create.pop(prev_sample_key, None)
-
-            if (sample_id, project) in samples_with_conflict_tissues:
-                continue
-
-            sample_id_to_tissue_type[(sample_id, project)] = tissue_type
             sample_key = (sample_id, project, tissue_type)
+
             if sample_key in potential_loaded_samples:
                 loaded_samples.add(sample_key)
                 continue
@@ -362,7 +347,6 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
                 sample_guid = samples_to_create.get(sample_key, {}).get('guid')
             if sample_key in unmatched_samples:
                 continue
-            sample_key_to_guid[sample_key] = sample_guid
 
             gene_id = row_dict[GENE_ID_COL]
             if gene_id:
@@ -402,15 +386,6 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
     if errors:
         raise ErrorsWarningsException(errors)
 
-    tissue_conflict_messages = []
-    for (sample_id, project), tissue_types in samples_with_conflict_tissues.items():
-        tissue_conflict_messages.append(
-            f'{sample_id} ({", ".join(sorted([REVERSE_TISSUE_TYPE[tissue_type] for tissue_type in tissue_types]))})')
-    if samples_with_conflict_tissues:
-        warnings.append(
-            f'Skipped data loading for the following {len(samples_with_conflict_tissues)} sample(s) due to mismatched'
-            f' tissue type: {", ".join(tissue_conflict_messages)}'
-        )
     if loaded_samples:
         warnings.append(f'Skipped loading for {len(loaded_samples)} samples already loaded from this file')
 
