@@ -340,7 +340,7 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
 
     mismatches = defaultdict(set)
 
-    loaded_sample_guids = set()
+    sample_guids_to_load = set()
     def _save_sample_data(sample_guid, sample_data):
         prev_data = load_saved_data(sample_guid) or {}
         new_mismatches = {k for k, v in prev_data.items() if k in sample_data and v != sample_data[k]}
@@ -351,7 +351,7 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
         if post_process:
             post_process(sample_data)
 
-        loaded_sample_guids.add(sample_guid)
+        sample_guids_to_load.add(sample_guid)
         save_data(sample_guid, sample_data)
 
     samples_by_guid = defaultdict(dict)
@@ -381,20 +381,11 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
 
             if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
                 sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
-            if sample_key in potential_samples:
-                sample = potential_samples[sample_key]
-                sample_guid = sample['guid']
-                existing_samples_by_guid[sample_guid] = sample
-            else:
-                if sample_key not in samples_to_create and sample_key not in unmatched_samples:
-                    individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
-                    if individual_key in individual_data_by_key:
-                        samples_to_create[sample_key] = _get_new_sample_args(
-                            sample_key, individual_data_by_key[individual_key], key_fields=['tissue_type'],
-                        )
-                    else:
-                        unmatched_samples.add(sample_key)
-                sample_guid = samples_to_create.get(sample_key, {}).get('guid')
+
+            sample_guid = _get_matched_sample(
+                sample_key, potential_samples, unmatched_samples, existing_samples_by_guid, samples_to_create,
+                individual_data_by_key, sample_id_to_individual_id_mapping,
+            )
             if sample_key in unmatched_samples:
                 continue
 
@@ -455,7 +446,27 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
     if loaded_samples:
         warnings.append(f'Skipped loading for {len(loaded_samples)} samples already loaded from this file')
 
-    return warnings, loaded_sample_guids, samples_to_create.values(), existing_samples_by_guid, len(loaded_samples) + len(unmatched_samples)
+    return warnings, sample_guids_to_load, samples_to_create.values(), existing_samples_by_guid, len(loaded_samples) + len(unmatched_samples)
+
+
+def _get_matched_sample(sample_key, potential_samples, unmatched_samples, existing_samples_by_guid, samples_to_create,
+                        individual_data_by_key, sample_id_to_individual_id_mapping):
+    if sample_key in potential_samples:
+        sample = potential_samples[sample_key]
+        sample_guid = sample['guid']
+        existing_samples_by_guid[sample_guid] = sample
+        return sample_guid
+
+    if sample_key not in samples_to_create and sample_key not in unmatched_samples:
+        individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
+        if individual_key in individual_data_by_key:
+            samples_to_create[sample_key] = _get_new_sample_args(
+                sample_key, individual_data_by_key[individual_key], key_fields=['tissue_type'],
+            )
+        else:
+            unmatched_samples.add(sample_key)
+
+    return samples_to_create.get(sample_key, {}).get('guid')
 
 
 def _load_rna_seq(model_cls, file_path, *args, user=None, **kwargs):
@@ -473,18 +484,18 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, **kwargs):
     potential_loaded_samples = {key for key, s in potential_samples.items() if s['dataSource'] == data_source and s['active']}
     individual_id_by_key = _get_individuals_by_key(projects)
 
-    warnings, loaded_sample_guids, samples_to_create, existing_samples_by_guid, not_loaded_count = _load_rna_seq_file(
+    warnings, sample_guids_to_load, samples_to_create, existing_samples_by_guid, not_loaded_count = _load_rna_seq_file(
         file_path, user, potential_loaded_samples, potential_samples, individual_id_by_key, *args, **kwargs)
-    message = f'Parsed {len(loaded_sample_guids) + not_loaded_count} RNA-seq samples'
+    message = f'Parsed {len(sample_guids_to_load) + not_loaded_count} RNA-seq samples'
     info = [message]
     logger.info(message, user)
 
     _create_samples(
         samples_to_create,
         user=user,
+        data_source=data_source,
         sample_type=Sample.SAMPLE_TYPE_RNA,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        data_source=data_source,
     )
 
     # Delete old data
@@ -498,13 +509,13 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, **kwargs):
 
     Sample.bulk_update(user, {'data_source': data_source}, guid__in=existing_samples_by_guid)
 
-    sample_projects = Project.objects.filter(family__individual__sample__guid__in=loaded_sample_guids).values(
+    sample_projects = Project.objects.filter(family__individual__sample__guid__in=sample_guids_to_load).values(
         'guid', 'name', new_sample_ids=ArrayAgg(
             'family__individual__sample__sample_id', distinct=True, ordering='family__individual__sample__sample_id',
             filter=~Q(family__individual__id__in=to_delete_sample_individuals.values()) if to_delete_sample_individuals else None
         ))
     project_names = ', '.join(sorted([project['name'] for project in sample_projects]))
-    message = f'Attempted data loading for {len(loaded_sample_guids)} RNA-seq samples in the following {len(sample_projects)} projects: {project_names}'
+    message = f'Attempted data loading for {len(sample_guids_to_load)} RNA-seq samples in the following {len(sample_projects)} projects: {project_names}'
     info.append(message)
     logger.info(message, user)
 
@@ -513,7 +524,7 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, **kwargs):
     for warning in warnings:
         logger.warning(warning, user)
 
-    return loaded_sample_guids, info, warnings
+    return sample_guids_to_load, info, warnings
 
 
 RNA_MODEL_DISPLAY_NAME = {
