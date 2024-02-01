@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 from django.urls.base import reverse
 import json
@@ -301,19 +302,19 @@ SAMPLE_GENE_SPLICE_DATA2 = {
         'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 0,
     }
 }
-RNA_OUTLIER_SAMPLE_DATA = [
-    f'{RNA_MUSCLE_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_OUTLIER_DATA)}\n',
-    f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'p_value': '0.04', 'p_adjust': '0.112', 'z_score': '1.9'}})}\n",
-]
-RNA_TPM_SAMPLE_DATA = [
-    f'{RNA_MUSCLE_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n',
-    f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '0.112'}})}\n",
-]
-RNA_SPLICE_SAMPLE_DATA = [
-    f'{RNA_SPLICE_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_SPLICE_DATA)}\n',
-    f'{PLACEHOLDER_GUID}\t\t{json.dumps(SAMPLE_GENE_SPLICE_DATA2)}\n',
-]
-RNA_FILENAME_TEMPLATE = 'rna_sample_data__{}__2020-04-15T00:00:00.json.gz'
+RNA_OUTLIER_SAMPLE_DATA = {
+    RNA_MUSCLE_SAMPLE_GUID: json.dumps(SAMPLE_GENE_OUTLIER_DATA),
+    PLACEHOLDER_GUID: json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'p_value': '0.04', 'p_adjust': '0.112', 'z_score': '1.9'}}),
+}
+RNA_TPM_SAMPLE_DATA = {
+    RNA_MUSCLE_SAMPLE_GUID: json.dumps(SAMPLE_GENE_TPM_DATA),
+    PLACEHOLDER_GUID: json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '0.112'}}),
+}
+RNA_SPLICE_SAMPLE_DATA = {
+    RNA_SPLICE_SAMPLE_GUID: json.dumps(SAMPLE_GENE_SPLICE_DATA),
+    PLACEHOLDER_GUID: json.dumps(SAMPLE_GENE_SPLICE_DATA2),
+}
+RNA_FILENAME_TEMPLATE = 'rna_sample_data__{}__2020-04-15T00:00:00'
 
 PHENOTYPE_PRIORITIZATION_HEADER = [['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName',
                                    'scoreName1', 'score1', 'scoreName2', 'score2', 'scoreName3', 'score3']]
@@ -667,8 +668,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000240361', 'fibroblasts', 'detail2', 0.01, 0.13, -3.1],
             ],
             'write_data': {
-                'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "p_value": "0.064", "p_adjust": "0.0000057", "z_score": "7.8"}}\n',
-                'NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "p_value": "0.01", "p_adjust": "0.13", "z_score": "-3.1"}}\n'
+                '{"ENSG00000233750": {"gene_id": "ENSG00000233750", "p_value": "0.064", "p_adjust": "0.0000057", "z_score": "7.8"}}\n',
+                '{"ENSG00000240361": {"gene_id": "ENSG00000240361", "p_value": "0.01", "p_adjust": "0.13", "z_score": "-3.1"}}\n'
             },
             'new_data': [
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'muscle', 'detail1', 0.01, 0.13, -3.1],
@@ -699,8 +700,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'muscle', 7.8],
                 ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.0],
             ],
-            'write_data': {'NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}\n',
-                           'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.0"}}\n'},
+            'write_data': {'{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}\n',
+                           '{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.0"}}\n'},
             'new_data': [
                 # existing sample NA19675_D2
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
@@ -741,11 +742,11 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000135953', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
             ],
-            'write_data': {'NA20870\t\t{"ENSG00000233750-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
+            'write_data': {'{"ENSG00000233750-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
                            ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000233750",'
                            ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}\n',
-                           'NA20870\t\t{"ENSG00000135953-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
+                           '{"ENSG00000135953-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
                            ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000135953",'
                            ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}\n',
@@ -869,11 +870,10 @@ class DataManagerAPITest(AuthenticationTestCase):
         _set_file_iter_stdout([header, loaded_data_row, loaded_data_row, mismatch_row])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        response_json = response.json()
-        self.assertTrue('errors' in response_json.keys())
-        self.assertEqual(len(response_json['errors']), 1)
-        self.assertTrue(response_json['errors'][0].startswith(
-            f'Error in {loaded_data_row[0]} data for {params.get("row_id", mismatch_row[2])}: mismatched entries '))
+        self.assertDictEqual(response.json(), {
+            'errors': [f'Error in {loaded_data_row[0]}: mismatched entries for {params.get("row_id", mismatch_row[2])}'],
+            'warnings': None,
+        })
 
         missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
         _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
@@ -953,10 +953,8 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_open.reset_mock()
         self.reset_logs()
         mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
-        mock_writes = []
-        def mock_write(content):
-            mock_writes.append(content)
-        mock_open.return_value.__enter__.return_value.write.side_effect = mock_write
+        mock_files = defaultdict(lambda: mock.MagicMock())
+        mock_open.side_effect = lambda file_name, *args: mock_files[file_name]
         body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
         warnings = [
             f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
@@ -994,8 +992,16 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         # test correct file interactions
         mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
-        mock_open.assert_called_with(RNA_FILENAME_TEMPLATE.format(data_type), 'wt')
-        self.assertListEqual(mock_writes, [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']])
+        filename = RNA_FILENAME_TEMPLATE.format(data_type) + f'__{new_sample_guid}.json.gz'
+        expected_files = {
+            f'{RNA_FILENAME_TEMPLATE.format(data_type)}__{new_sample_guid if sample_guid == PLACEHOLDER_GUID else sample_guid}.json.gz': data
+            for sample_guid, data in params['parsed_file_data'].items()
+        }
+        mock_open.assert_has_calls([mock.call(filename, 'wt') for filename in expected_files])
+        self.assertEqual(
+            ''.join([call.args[0] for call in mock_files[filename].__enter__.return_value.write.call_args_list]),
+            expected_files[filename],
+        )
 
         # test loading new data without deleting existing data
         data = [params['no_existing_data']]
@@ -1004,10 +1010,14 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         # Test loading data when where are duplicated individual ids in different projects.
         data = params['duplicated_indiv_id_data']
-        mock_writes = []
+        for file in mock_files:
+            del mock_files[file]
         _test_basic_data_loading(data, 2, 2, 20, body, '1kg project nåme with uniçøde, Test Reprocessed Project',
                                  num_created_samples=2)
-        self.assertSetEqual(set([s.split('_', 1)[1] for s in mock_writes]), params['write_data'])
+        self.assertSetEqual(
+            {''.join([call.args[0] for call in mock_file.__enter__.return_value.write.call_args_list]) for mock_file in mock_files.values()},
+            params['write_data'],
+        )
 
         # Test loading data when where an individual has multiple tissue types
         data = [data[1][:2] + data[0][2:], data[1]]
@@ -1021,6 +1031,8 @@ class DataManagerAPITest(AuthenticationTestCase):
         )
         self.assertTrue(second_tissue_sample_guid != new_sample_guid)
         self.assertTrue(second_tissue_sample_guid in response_json['sampleGuids'])
+        # NA20870
+        # mock_open.assert_has_calls([mock.call(filename, 'wt') for filename in expected_files])
         self.assertSetEqual(set([s.split('\t')[0] for s in mock_writes]), set(response_json['sampleGuids']))
         self.assertSetEqual(set([s.split('_', 1)[1] for s in mock_writes]), params['write_data'])
 

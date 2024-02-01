@@ -278,25 +278,39 @@ def update_rna_seq(request):
     if uploaded_mapping_file_id:
         mapping_file = load_uploaded_file(uploaded_mapping_file_id)
 
+    file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
+
+    def _save_sample_data(sample_guid, sample_data):
+        file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
+        with gzip.open(file_name, 'wt') as f:
+            json.dump(sample_data, f)
+
+    def _load_saved_sample_data(sample_guid):
+        return None  # TODO
+        file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
+        if os.path.exists(file_name):
+            with gzip.open(file_name, 'rt') as f:
+                return json.load(f)
+        return None
+
     try:
         load_func = RNA_DATA_TYPE_CONFIGS[data_type]['load_func']
-        samples_to_load, info, warnings = load_func(
-            file_path, user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
+        sample_guids, info, warnings = load_func(
+            file_path, _save_sample_data, _load_saved_sample_data,
+            user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
-
-    # Save sample data for loading
-    file_name = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}.json.gz'
-    with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'wt') as f:
-        for sample_guid, sample_data in samples_to_load.items():
-            f.write(f'{sample_guid}\t\t{json.dumps(sample_data)}\n')
 
     return create_json_response({
         'info': info,
         'warnings': warnings,
-        'fileName': file_name,
-        'sampleGuids': list(samples_to_load.keys()),
+        'fileName': file_name_prefix,
+        'sampleGuids': list(sample_guids),
     })
+
+
+def _get_sample_file_name(file_name_prefix, sample_guid):
+    return f'{file_name_prefix}__{sample_guid}.json.gz'
 
 
 @data_manager_required
@@ -307,9 +321,8 @@ def load_rna_seq_sample_data(request, sample_guid):
     request_json = json.loads(request.body)
     file_name = request_json['fileName']
     data_type = request_json['dataType']
-    with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'rt') as f:
-        row = next(line for line in f if line.split('\t\t')[0] == sample_guid)
-        data_by_gene = json.loads(row.split('\t\t')[1])
+    with gzip.open(os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name, sample_guid)), 'rt') as f:
+        data_by_gene = json.load(f)
 
     model_cls = RNA_DATA_TYPE_CONFIGS[data_type]['model_class']
     model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_by_gene.values()])
