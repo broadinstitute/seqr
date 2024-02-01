@@ -7,7 +7,7 @@ import os
 from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
-    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, UNKNOWN_AFFECTED, UNKNOWN_AFFECTED_ID
+    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, UNKNOWN_AFFECTED, UNKNOWN_AFFECTED_ID, FAMILY_GUID_FIELD, GENOTYPES_FIELD
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
@@ -54,7 +54,7 @@ class BaseHailTableQuery(object):
     TRANSCRIPTS_FIELD = None
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
-        'familyGuids': lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
+        FAMILY_GUID_FIELD: lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'variantId': lambda r: r.variant_id,
     }
@@ -91,7 +91,7 @@ class BaseHailTableQuery(object):
 
     def annotation_fields(self):
         annotation_fields = {
-            'genotypes': lambda r: r.family_entries.flatmap(lambda x: x).filter(
+            GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
                 lambda gt: hl.is_defined(gt.individualGuid)
             ).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0].select(
                 'sampleId', 'sampleType', 'individualGuid', 'familyGuid',
@@ -914,7 +914,7 @@ class BaseHailTableQuery(object):
     def _gene_count_selects(cls):
         return {
             'gene_ids': cls._gene_ids_expr,
-            'families': cls.BASE_ANNOTATION_FIELDS['familyGuids'],
+            'families': cls.BASE_ANNOTATION_FIELDS[FAMILY_GUID_FIELD],
         }
 
     def format_gene_count_hts(self):
@@ -944,21 +944,26 @@ class BaseHailTableQuery(object):
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         annotation_fields = self.annotation_fields()
-        annotation_fields['genotypeFilters'] = lambda ht: hl.str('')
-
-        if sample_data:
-            project_samples, _ = self._parse_sample_data(sample_data)
-            project_entries = [pht[ht.key].family_entries for pht, _ in self._load_filtered_project_hts(project_samples)]
-            ht = ht.annotate(family_entries=hl.array(project_entries).flatmap(lambda x: x))
-        else:
-            annotation_fields.update({
-                'familyGuids': lambda ht: hl.empty_array(hl.tstr),
-                'genotypes': lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
-            })
+        entry_annotations = {k: annotation_fields[k] for k in [FAMILY_GUID_FIELD, GENOTYPES_FIELD]}
+        annotation_fields.update({
+            FAMILY_GUID_FIELD: lambda ht: hl.empty_array(hl.tstr),
+            GENOTYPES_FIELD: lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
+            'genotypeFilters': lambda ht: hl.str(''),
+        })
 
         formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=bool(sample_data))
 
         variants = formatted.aggregate(hl.agg.take(formatted.row, 1))
         if not variants:
             raise HTTPNotFound()
-        return variants[0]
+        variant = dict(variants[0])
+
+        if sample_data:
+            project_samples, _ = self._parse_sample_data(sample_data)
+            for pht, _ in self._load_filtered_project_hts(project_samples):
+                project_entries = pht.aggregate(hl.agg.take(hl.struct(**{k: v(pht) for k, v in entry_annotations.items()}), 1))
+                if project_entries:
+                    variant[FAMILY_GUID_FIELD] += project_entries[0][FAMILY_GUID_FIELD]
+                    variant[GENOTYPES_FIELD].update(project_entries[0][GENOTYPES_FIELD])
+
+        return variant
