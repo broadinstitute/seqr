@@ -305,7 +305,7 @@ def update_rna_seq(request):
         'info': info,
         'warnings': warnings,
         'fileName': file_name_prefix,
-        'sampleGuids': list(sample_guids),
+        'sampleGuids': sorted(sample_guids),
     })
 
 

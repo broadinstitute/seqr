@@ -668,8 +668,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000240361', 'fibroblasts', 'detail2', 0.01, 0.13, -3.1],
             ],
             'write_data': {
-                '{"ENSG00000233750": {"gene_id": "ENSG00000233750", "p_value": "0.064", "p_adjust": "0.0000057", "z_score": "7.8"}}\n',
-                '{"ENSG00000240361": {"gene_id": "ENSG00000240361", "p_value": "0.01", "p_adjust": "0.13", "z_score": "-3.1"}}\n'
+                '{"ENSG00000233750": {"gene_id": "ENSG00000233750", "p_value": "0.064", "p_adjust": "0.0000057", "z_score": "7.8"}}',
+                '{"ENSG00000240361": {"gene_id": "ENSG00000240361", "p_value": "0.01", "p_adjust": "0.13", "z_score": "-3.1"}}'
             },
             'new_data': [
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'muscle', 'detail1', 0.01, 0.13, -3.1],
@@ -700,8 +700,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'muscle', 7.8],
                 ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.0],
             ],
-            'write_data': {'{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}\n',
-                           '{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.0"}}\n'},
+            'write_data': {'{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}',
+                           '{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.0"}}'},
             'new_data': [
                 # existing sample NA19675_D2
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
@@ -745,11 +745,11 @@ class DataManagerAPITest(AuthenticationTestCase):
             'write_data': {'{"ENSG00000233750-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
                            ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000233750",'
-                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}\n',
+                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}',
                            '{"ENSG00000135953-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
                            ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000135953",'
-                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}\n',
+                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}',
             },
             'new_data': [
                 # existing sample NA19675_1
@@ -1010,10 +1010,11 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         # Test loading data when where are duplicated individual ids in different projects.
         data = params['duplicated_indiv_id_data']
-        for file in mock_files:
+        for file in expected_files:
             del mock_files[file]
         _test_basic_data_loading(data, 2, 2, 20, body, '1kg project nåme with uniçøde, Test Reprocessed Project',
                                  num_created_samples=2)
+
         self.assertSetEqual(
             {''.join([call.args[0] for call in mock_file.__enter__.return_value.write.call_args_list]) for mock_file in mock_files.values()},
             params['write_data'],

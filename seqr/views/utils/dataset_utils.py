@@ -73,7 +73,7 @@ def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
             loaded_date=loaded_date,
             **created_sample_data,
             **kwargs,
-        ) for created_sample_data in sample_data]
+        ) for created_sample_data in sorted(sample_data, key=lambda s: s['guid'])]
     Sample.bulk_create(user, new_samples)
 
 
@@ -436,8 +436,6 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, **kwargs):
     )
     potential_loaded_samples = {key for key, s in potential_samples.items() if s['dataSource'] == data_source and s['active']}
     individual_id_by_key = _get_individuals_by_key(projects)
-
-    # TODO write valid rows immediately to file (or call handler passed from manage command), Do not keep data in memory
 
     warnings, loaded_sample_guids, samples_to_create, existing_samples_by_guid, not_loaded_count = _load_rna_seq_file(
         file_path, user, potential_loaded_samples, potential_samples, individual_id_by_key, *args, **kwargs)
