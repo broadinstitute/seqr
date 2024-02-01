@@ -34,27 +34,17 @@ def load_mapping_file_content(file_content):
     return id_mapping
 
 
-def _get_matched_samples_by_key(projects, key_fields=None, values=None, **sample_params):
-    return {
-        (s.pop('sample_id'), s.pop('individual__family__project__name'), *[s[field] for field in (key_fields or [])]): s
-        for s in Sample.objects.filter(
-            individual__family__project__in=projects,
-            **sample_params
-        ).values('guid', 'individual_id', 'sample_id', 'tissue_type', 'individual__family__project__name', **(values or {}))
-    }
-
-
 def _find_or_create_samples(
-    sample_project_tuples,
-    projects,
-    user,
-    sample_type,
-    dataset_type,
-    sample_id_to_individual_id_mapping,
-    raise_no_match_error=False,
-    raise_unmatched_error_template=None,
-    tissue_type=None,
-    sample_data=None,
+        sample_project_tuples,
+        projects,
+        user,
+        sample_type,
+        dataset_type,
+        sample_id_to_individual_id_mapping,
+        raise_no_match_error=False,
+        raise_unmatched_error_template=None,
+        tissue_type=None,
+        sample_data=None,
 ):
     sample_params = {'sample_type': sample_type, 'dataset_type': dataset_type, 'tissue_type': tissue_type}
     sample_params.update(sample_data or {})
@@ -73,6 +63,8 @@ def _find_or_create_samples(
     samples = {**existing_samples}
     if len(remaining_sample_keys) > 0:
         remaining_individuals_dict = _get_individuals_by_key(projects, matched_individual_ids)
+
+        # find Individual records with exactly-matching individual_ids
         sample_id_to_individual_record = {}
         for sample_key in remaining_sample_keys:
             individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
@@ -116,6 +108,16 @@ def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
             **kwargs,
         ) for created_sample_data in sorted(sample_data, key=lambda s: s['guid'])]
     Sample.bulk_create(user, new_samples)
+
+
+def _get_matched_samples_by_key(projects, key_fields=None, values=None, **sample_params):
+    return {
+        (s.pop('sample_id'), s.pop('individual__family__project__name'), *[s[field] for field in (key_fields or [])]): s
+        for s in Sample.objects.filter(
+            individual__family__project__in=projects,
+            **sample_params
+        ).values('guid', 'individual_id', 'sample_id', 'tissue_type', 'individual__family__project__name', **(values or {}))
+    }
 
 
 def _get_individuals_by_key(projects, matched_individual_ids=None):
