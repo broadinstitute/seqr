@@ -288,12 +288,14 @@ def _parse_rna_row(row, column_map, required_column_map, missing_required_fields
         for mapped_key, format_func in (format_fields or {}).items():
             row_dict[mapped_key] = format_func(row_dict[mapped_key])
 
-        missing_cols = [col_id for col, col_id in required_column_map.items() if not row.get(col)]
+        missing_cols = {col_id for col, col_id in required_column_map.items() if not row.get(col)}
+        if allow_missing_gene:
+            missing_cols.discard(GENE_ID_COL)
         sample_id = row_dict.pop(SAMPLE_ID_COL) if SAMPLE_ID_COL in row_dict else row[SAMPLE_ID_COL]
         if missing_cols:
             for col in missing_cols:
                 missing_required_fields[col].append(sample_id)
-        if not missing_cols or (allow_missing_gene and missing_cols == [GENE_ID_COL]):
+        if not missing_cols:
             yield sample_id, row_dict
 
 
@@ -319,7 +321,6 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
         loaded_sample_guids.add(sample_guid)
         save_data(sample_guid, sample_data)
 
-    # TODO if has errors do not save data
     samples_by_guid = defaultdict(dict)
     f = file_iter(file_path, user=user)
     parsed_f = parse_file(file_path.replace('.gz', ''), f, iter=True)
@@ -364,15 +365,19 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
             if sample_key in unmatched_samples:
                 continue
 
+            gene_id = row_dict[GENE_ID_COL]
+            if gene_id:
+                gene_ids.add(gene_id)
+
+            if missing_required_fields or (unmatched_samples and not ignore_extra_samples):
+                # If there are definite errors, do not process/save data, just continue to check for additional errors
+                continue
+
             if current_sample != sample_guid:
                 if len(samples_by_guid[current_sample]) > 5000:
                     _save_sample_data(current_sample, samples_by_guid[current_sample])
                     del samples_by_guid[current_sample]
                 current_sample = sample_guid
-
-            gene_id = row_dict[GENE_ID_COL]
-            if gene_id:
-                gene_ids.add(gene_id)
 
             if get_unique_key:
                 gene_or_unique_id = get_unique_key(row_dict)
@@ -395,8 +400,6 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
 
     matched_gene_ids = set(GeneInfo.objects.filter(gene_id__in=gene_ids).values_list('gene_id', flat=True))
     unknown_gene_ids = gene_ids - matched_gene_ids
-    if allow_missing_gene:
-        missing_required_fields.pop(GENE_ID_COL, None)
     if missing_required_fields:
         errors += [
             f'Samples missing required "{col}": {", ".join(sorted(sample_ids))}'
