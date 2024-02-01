@@ -34,13 +34,88 @@ def load_mapping_file_content(file_content):
     return id_mapping
 
 
-def _get_matched_samples_by_key(projects, key_fields=None, values=None, **sample_filter):
+def _get_matched_samples_by_key(projects, key_fields=None, values=None, **sample_params):
     return {
         (s.pop('sample_id'), s.pop('individual__family__project__name'), *[s[field] for field in (key_fields or [])]): s
-        for s in Sample.objects.filter(individual__family__project__in=projects, **sample_filter).values(
-            'guid', 'individual_id', 'sample_id', 'tissue_type', 'individual__family__project__name', **(values or {})
-        )
+        for s in Sample.objects.filter(
+            individual__family__project__in=projects,
+            **sample_params
+        ).values('guid', 'individual_id', 'sample_id', 'tissue_type', 'individual__family__project__name', **(values or {}))
     }
+
+
+def _find_or_create_samples(
+    sample_project_tuples,
+    projects,
+    user,
+    sample_type,
+    dataset_type,
+    sample_id_to_individual_id_mapping,
+    raise_no_match_error=False,
+    raise_unmatched_error_template=None,
+    tissue_type=None,
+    sample_data=None,
+):
+    sample_params = {'sample_type': sample_type, 'dataset_type': dataset_type, 'tissue_type': tissue_type}
+    sample_params.update(sample_data or {})
+
+    samples_by_key = _get_matched_samples_by_key(
+        projects, sample_id__in={sample_id for sample_id, _ in sample_project_tuples}, **sample_params,
+    )
+
+    existing_samples = {
+        key: s for key, s in samples_by_key.items() if key in sample_project_tuples
+    }
+    remaining_sample_keys = set(sample_project_tuples) - set(existing_samples.keys())
+
+    matched_individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
+    loaded_date = timezone.now()
+    samples = {**existing_samples}
+    if len(remaining_sample_keys) > 0:
+        remaining_individuals_dict = _get_individuals_by_key(projects, matched_individual_ids)
+        sample_id_to_individual_record = {}
+        for sample_key in remaining_sample_keys:
+            individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
+            if individual_key not in remaining_individuals_dict:
+                continue
+            sample_id_to_individual_record[sample_key] = remaining_individuals_dict[individual_key]
+            del remaining_individuals_dict[individual_key]
+
+        logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
+
+        remaining_sample_keys -= set(sample_id_to_individual_record.keys())
+        if raise_no_match_error and len(remaining_sample_keys) == len(sample_project_tuples):
+            raise ValueError(
+                'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(
+                    len(sample_project_tuples)))
+        if raise_unmatched_error_template and remaining_sample_keys:
+            raise ValueError(raise_unmatched_error_template.format(
+                sample_ids=(', '.join(sorted([sample_id for sample_id, _ in remaining_sample_keys])))))
+
+        # create new Sample records for Individual records that matches
+        new_sample_args = {
+            sample_key: _get_new_sample_args(sample_key, individual)
+            for sample_key, individual in sample_id_to_individual_record.items()
+        }
+        samples.update(new_sample_args)
+        _create_samples(
+            new_sample_args.values(),
+            user,
+            loaded_date=loaded_date,
+            **sample_params,
+        )
+    return samples, remaining_sample_keys, loaded_date
+
+
+def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
+    new_samples = [
+        Sample(
+            created_date=timezone.now(),
+            loaded_date=loaded_date,
+            **created_sample_data,
+            **kwargs,
+        ) for created_sample_data in sorted(sample_data, key=lambda s: s['guid'])]
+    Sample.bulk_create(user, new_samples)
 
 
 def _get_individuals_by_key(projects, matched_individual_ids=None):
@@ -64,17 +139,6 @@ def _get_new_sample_args(sample_key, individual_data, key_fields=None):
         'sample_id': sample_key[0],
         **{key_field: sample_key[i+2] for i, key_field in enumerate(key_fields or [])}
     }
-
-
-def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
-    new_samples = [
-        Sample(
-            created_date=timezone.now(),
-            loaded_date=loaded_date,
-            **created_sample_data,
-            **kwargs,
-        ) for created_sample_data in sorted(sample_data, key=lambda s: s['guid'])]
-    Sample.bulk_create(user, new_samples)
 
 
 def _validate_samples_families(samples_guids, included_family_guids, sample_type, dataset_type, expected_families=None):
@@ -128,51 +192,18 @@ def match_and_update_search_samples(
         projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
         sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
 ):
-    sample_params = {
-        'sample_type': sample_type,
-        'dataset_type': dataset_type,
-        'tissue_type': Sample.NO_TISSUE_TYPE,
-        **(sample_data or {}),
-    }
-
-    samples_by_key = _get_matched_samples_by_key(
-        projects, sample_id__in={sample_id for sample_id, _ in sample_project_tuples}, **sample_params,
+    samples, remaining_sample_keys, loaded_date = _find_or_create_samples(
+        sample_project_tuples=sample_project_tuples,
+        projects=projects,
+        user=user,
+        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+        raise_no_match_error=not raise_unmatched_error_template,
+        raise_unmatched_error_template=raise_unmatched_error_template,
+        sample_type=sample_type,
+        dataset_type=dataset_type,
+        tissue_type=Sample.NO_TISSUE_TYPE,
+        sample_data=sample_data,
     )
-
-    samples = {key: s for key, s in samples_by_key.items() if key in sample_project_tuples}
-    remaining_sample_keys = set(sample_project_tuples) - set(samples.keys())
-
-    matched_individual_ids = {sample['individual_id'] for sample in samples.values()}
-    loaded_date = timezone.now()
-    if len(remaining_sample_keys) > 0:
-        individual_id_by_key = _get_individuals_by_key(projects, matched_individual_ids)
-        sample_to_individual = {}
-        for sample_key in remaining_sample_keys:
-            individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
-            if individual_key in individual_id_by_key:
-                sample_to_individual[sample_key] = individual_id_by_key[individual_key]
-
-        remaining_sample_keys -= set(sample_to_individual.keys())
-        if remaining_sample_keys:
-            error = None
-            if raise_unmatched_error_template:
-                error = raise_unmatched_error_template.format(sample_ids=', '.join(sorted([sample_key[0] for sample_key in remaining_sample_keys])))
-            elif len(remaining_sample_keys) == len(sample_project_tuples):
-                error = f'None of the individuals or samples in the project matched the {len(remaining_sample_keys)} expected sample id(s)'
-            if error:
-                raise ValueError(error)
-
-        new_sample_data = {
-            sample_key: _get_new_sample_args(sample_key, individual) for
-            sample_key, individual in sample_to_individual.items()
-        }
-        _create_samples(
-            new_sample_data.values(),
-            user,
-            loaded_date=loaded_date,
-            **sample_params,
-        )
-        samples.update(new_sample_data)
 
     samples_guids = [sample['guid'] for sample in samples.values()]
     individual_ids = {sample['individual_id'] for sample in samples.values()}
