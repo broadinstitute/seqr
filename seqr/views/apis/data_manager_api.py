@@ -285,18 +285,10 @@ def update_rna_seq(request):
         with gzip.open(file_name, 'wt') as f:
             json.dump(sample_data, f)
 
-    def _load_saved_sample_data(sample_guid):
-        return None  # TODO
-        file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
-        if os.path.exists(file_name):
-            with gzip.open(file_name, 'rt') as f:
-                return json.load(f)
-        return None
-
     try:
         load_func = RNA_DATA_TYPE_CONFIGS[data_type]['load_func']
         sample_guids, info, warnings = load_func(
-            file_path, _save_sample_data, _load_saved_sample_data,
+            file_path, _save_sample_data, lambda sample_guid: _load_saved_sample_data(file_name_prefix, sample_guid),
             user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
@@ -313,6 +305,14 @@ def _get_sample_file_name(file_name_prefix, sample_guid):
     return f'{file_name_prefix}__{sample_guid}.json.gz'
 
 
+def _load_saved_sample_data(file_name_prefix, sample_guid):
+    file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
+    if os.path.exists(file_name):
+        with gzip.open(file_name, 'rt') as f:
+            return json.load(f)
+    return None
+
+
 @data_manager_required
 def load_rna_seq_sample_data(request, sample_guid):
     sample = Sample.objects.get(guid=sample_guid)
@@ -321,8 +321,7 @@ def load_rna_seq_sample_data(request, sample_guid):
     request_json = json.loads(request.body)
     file_name = request_json['fileName']
     data_type = request_json['dataType']
-    with gzip.open(os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name, sample_guid)), 'rt') as f:
-        data_by_gene = json.load(f)
+    data_by_gene = _load_saved_sample_data(file_name, sample_guid)
 
     model_cls = RNA_DATA_TYPE_CONFIGS[data_type]['model_class']
     model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_by_gene.values()])

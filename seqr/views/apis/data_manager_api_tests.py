@@ -844,6 +844,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         body = {'dataType': data_type, 'file': 'gs://rna_data/muscle_samples.tsv'}
         mock_datetime.now.return_value = datetime(2020, 4, 15)
         mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
+        mock_os.path.exists.return_value = False
         mock_load_uploaded_file.return_value = [['a']]
         mock_does_file_exist = mock.MagicMock()
         mock_does_file_exist.wait.return_value = 1
@@ -1044,6 +1045,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     def test_load_rna_seq_sample_data(self, mock_open, mock_os):
         mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
+        mock_os.path.exists.return_value = True
 
         url = reverse(load_rna_seq_sample_data, args=[RNA_MUSCLE_SAMPLE_GUID])
         self.check_data_manager_login(url)
@@ -1055,7 +1057,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 model_cls = params['model_cls']
                 model_cls.objects.all().delete()
                 self.reset_logs()
-                mock_open.return_value.__enter__.return_value.__iter__.return_value = params['parsed_file_data']
+                mock_open.return_value.__enter__.return_value.read.return_value = params['parsed_file_data'][sample_guid]
                 file_name = RNA_FILENAME_TEMPLATE.format(data_type)
 
                 response = self.client.post(url, content_type='application/json', data=json.dumps({
@@ -1069,7 +1071,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertSetEqual({model.sample.guid for model in models}, {sample_guid})
                 self.assertTrue(all(model.sample.is_active for model in models))
 
-                mock_open.assert_called_with(file_name, 'rt')
+                mock_open.assert_called_with(f'{file_name}__{sample_guid}.json.gz', 'rt')
 
                 self.assert_json_logs(self.data_manager_user, [
                     (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
