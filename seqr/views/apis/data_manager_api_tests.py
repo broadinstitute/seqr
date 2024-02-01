@@ -1010,8 +1010,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         # Test loading data when where are duplicated individual ids in different projects.
         data = params['duplicated_indiv_id_data']
-        for file in expected_files:
-            del mock_files[file]
+        mock_files = defaultdict(lambda: mock.MagicMock())
         _test_basic_data_loading(data, 2, 2, 20, body, '1kg project nåme with uniçøde, Test Reprocessed Project',
                                  num_created_samples=2)
 
@@ -1022,7 +1021,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         # Test loading data when where an individual has multiple tissue types
         data = [data[1][:2] + data[0][2:], data[1]]
-        mock_writes = []
+        mock_files = defaultdict(lambda: mock.MagicMock())
         new_sample_individual_id = 7
         response_json, new_sample_guid = _test_basic_data_loading(data, 2, 2, new_sample_individual_id, body,
                                                                   '1kg project nåme with uniçøde')
@@ -1032,10 +1031,14 @@ class DataManagerAPITest(AuthenticationTestCase):
         )
         self.assertTrue(second_tissue_sample_guid != new_sample_guid)
         self.assertTrue(second_tissue_sample_guid in response_json['sampleGuids'])
-        # NA20870
-        # mock_open.assert_has_calls([mock.call(filename, 'wt') for filename in expected_files])
-        self.assertSetEqual(set([s.split('\t')[0] for s in mock_writes]), set(response_json['sampleGuids']))
-        self.assertSetEqual(set([s.split('_', 1)[1] for s in mock_writes]), params['write_data'])
+        mock_open.assert_has_calls([
+            mock.call(f'{RNA_FILENAME_TEMPLATE.format(data_type)}__{sample_guid}.json.gz', 'wt')
+            for sample_guid in response_json['sampleGuids']
+        ])
+        self.assertSetEqual(
+            {''.join([call.args[0] for call in mock_file.__enter__.return_value.write.call_args_list]) for mock_file in mock_files.values()},
+            params['write_data'],
+        )
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
