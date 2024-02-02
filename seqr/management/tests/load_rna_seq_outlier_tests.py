@@ -5,6 +5,7 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from seqr.models import Sample, RnaSeqOutlier
+from seqr.utils.middleware import ErrorsWarningsException
 
 RNA_FILE_ID = 'tmp_-_2021-03-01T00:00:00_-_test_data_manager_-_new_muscle_samples.tsv.gz'
 EXISTING_SAMPLE_GUID = 'S000152_na19675_d2'
@@ -34,13 +35,13 @@ class LoadRnaSeqTest(TestCase):
         ]
         mock_open.return_value.__enter__.return_value.__iter__.return_value = ['NA19675_D4\tNA19678']
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(ErrorsWarningsException) as e:
             call_command('load_rna_seq_outlier', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19675_D3, NA19675_D4')
+        self.assertEqual(e.exception.errors, ['Unable to find matches for the following samples: NA19675_D3, NA19675_D4'])
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(ErrorsWarningsException) as e:
             call_command('load_rna_seq_outlier', RNA_FILE_ID, '--mapping-file', 'map.tsv')
-        self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19675_D3')
+        self.assertEqual(e.exception.errors, ['Unable to find matches for the following samples: NA19675_D3'])
 
         call_command('load_rna_seq_outlier', RNA_FILE_ID, '--ignore-extra-samples')
 

@@ -21,15 +21,18 @@ class Command(BaseCommand):
             with open(options['mapping_file']) as f:
                 mapping_file = parse_file(options['mapping_file'], f)
 
-        samples_to_load, _, _ = load_rna_seq_outlier(options['input_file'], mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
+        sample_guids, _, _ = load_rna_seq_outlier(
+            options['input_file'], self._save_sample_data, lambda *args: {}, create_models_before_save=True,
+            mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
 
-        sample_id_map = {
-            s['guid']: s for s in Sample.objects.filter(guid__in=samples_to_load).values('guid', 'id', 'sample_id')
-        }
-        for sample_guid, data_by_gene in samples_to_load.items():
-            sample_data = sample_id_map[sample_guid]
-            models = RnaSeqOutlier.objects.bulk_create(
-                [RnaSeqOutlier(sample_id=sample_data['id'], **data) for data in data_by_gene.values()])
-            logger.info(f'create {len(models)} RnaSeqOutliers for {sample_data["sample_id"]}')
+        Sample.bulk_update(user=None, update_json={'is_active': True}, guid__in=sample_guids)
+
+    @staticmethod
+    def _save_sample_data(sample_guid, data_by_gene):
+        sample = Sample.objects.get(guid=sample_guid)
+        models = RnaSeqOutlier.objects.bulk_create(
+            [RnaSeqOutlier(sample=sample, **data) for data in data_by_gene.values()])
+        logger.info(f'create {len(models)} RnaSeqOutliers for {sample.sample_id}')
+
 
 
