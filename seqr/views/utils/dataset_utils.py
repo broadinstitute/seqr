@@ -78,8 +78,7 @@ def _find_or_create_samples(
         remaining_sample_keys -= set(sample_id_to_individual_record.keys())
         if raise_no_match_error and len(remaining_sample_keys) == len(sample_project_tuples):
             raise ValueError(
-                'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(
-                    len(sample_project_tuples)))
+                'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(len(sample_project_tuples)))
         if raise_unmatched_error_template and remaining_sample_keys:
             raise ValueError(raise_unmatched_error_template.format(
                 sample_ids=(', '.join(sorted([sample_id for sample_id, _ in remaining_sample_keys])))))
@@ -464,26 +463,6 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
     return warnings, sample_guids_to_load, len(loaded_samples) + len(unmatched_samples)
 
 
-def _get_matched_sample(sample_key, potential_samples, unmatched_samples, existing_samples_by_guid, samples_to_create,
-                        individual_data_by_key, sample_id_to_individual_id_mapping):
-    if sample_key in potential_samples:
-        sample = potential_samples[sample_key]
-        sample_guid = sample['guid']
-        existing_samples_by_guid[sample_guid] = sample
-        return sample_guid
-
-    if sample_key not in samples_to_create and sample_key not in unmatched_samples:
-        individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
-        if individual_key in individual_data_by_key:
-            samples_to_create[sample_key] = _get_new_sample_args(
-                sample_key, individual_data_by_key[individual_key], key_fields=['tissue_type'],
-            )
-        else:
-            unmatched_samples.add(sample_key)
-
-    return samples_to_create.get(sample_key, {}).get('guid')
-
-
 def _load_rna_seq(model_cls, file_path, *args, user=None, **kwargs):
     projects = get_internal_projects()
     data_source = file_path.split('/')[-1].split('_-_')[-1]
@@ -546,6 +525,26 @@ def _load_rna_seq(model_cls, file_path, *args, user=None, **kwargs):
         logger.warning(warning, user)
 
     return sample_guids_to_load, info, warnings
+
+
+def _get_matched_sample(sample_key, potential_samples, unmatched_samples, existing_samples_by_guid, samples_to_create,
+                        individual_data_by_key, sample_id_to_individual_id_mapping):
+    if sample_key in potential_samples:
+        sample = potential_samples[sample_key]
+        sample_guid = sample['guid']
+        existing_samples_by_guid[sample_guid] = sample
+        return sample_guid
+
+    if sample_key not in samples_to_create and sample_key not in unmatched_samples:
+        individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
+        if individual_key in individual_data_by_key:
+            samples_to_create[sample_key] = _get_new_sample_args(
+                sample_key, individual_data_by_key[individual_key], key_fields=['tissue_type'],
+            )
+        else:
+            unmatched_samples.add(sample_key)
+
+    return samples_to_create.get(sample_key, {}).get('guid')
 
 
 RNA_MODEL_DISPLAY_NAME = {
