@@ -954,7 +954,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_open.reset_mock()
         self.reset_logs()
         mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
-        mock_files = defaultdict(lambda: mock.MagicMock())
+        mock_files = defaultdict(mock.MagicMock)
         mock_open.side_effect = lambda file_name, *args: mock_files[file_name]
         body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
         warnings = [

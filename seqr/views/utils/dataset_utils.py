@@ -365,7 +365,7 @@ def _load_rna_seq_file(file_path, user, potential_loaded_samples, potential_samp
 
     samples_by_guid = defaultdict(dict)
     f = file_iter(file_path, user=user)
-    parsed_f = parse_file(file_path.replace('.gz', ''), f, iter=True)
+    parsed_f = parse_file(file_path.replace('.gz', ''), f, iter_file=True)
     header = next(parsed_f)
     required_column_map = _validate_rna_header(header, column_map)
 
