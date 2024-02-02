@@ -42,7 +42,6 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             'Unable to find matches for the following samples: NA19677, NA19678, NA19678_D1',
         ])
 
-        mock_gzip_file.__iter__.return_value[2] = 'NA19678_D1\t1kg project nåme with uniçøde\tNA19678\tENSG00000233750\t 6.04\twhole_blood\n'
         mock_gzip_file.__iter__.return_value = [
             mock_gzip_file.__iter__.return_value[0],
             'NA19678_D1\t1kg project nåme with uniçøde\tNA19678\tENSG00000233750\t 6.04\twhole_blood\n',
@@ -83,7 +82,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         ])
 
         # Test a new sample created for a mismatched tissue and a row with 0.0 tpm
-        mock_gzip_file.__iter__.return_value[2] = 'NA19678_D1\t1kg project nåme with uniçøde\tNA19678\tENSG00000233750\t0.0\tfibroblasts\n'
+        mock_gzip_file.__iter__.return_value[1] = 'NA19678_D1\t1kg project nåme with uniçøde\tNA19678\tENSG00000233750\t0.0\tfibroblasts\n'
         call_command('load_rna_seq_tpm', 'new_file.tsv.gz', '--ignore-extra-samples')
         models = RnaSeqTpm.objects.select_related('sample').filter(sample__sample_id='NA19678_D1')
         self.assertEqual(models.count(), 2)
