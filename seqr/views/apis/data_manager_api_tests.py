@@ -1011,7 +1011,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         # Test loading data when where are duplicated individual ids in different projects.
         data = params['duplicated_indiv_id_data']
-        mock_files = defaultdict(lambda: mock.MagicMock())
+        mock_files = defaultdict(mock.MagicMock)
         _test_basic_data_loading(data, 2, 2, 20, body, '1kg project nåme with uniçøde, Test Reprocessed Project',
                                  num_created_samples=2)
 
@@ -1022,7 +1022,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         # Test loading data when where an individual has multiple tissue types
         data = [data[1][:2] + data[0][2:], data[1]]
-        mock_files = defaultdict(lambda: mock.MagicMock())
+        mock_files = defaultdict(mock.MagicMock)
         new_sample_individual_id = 7
         response_json, new_sample_guid = _test_basic_data_loading(data, 2, 2, new_sample_individual_id, body,
                                                                   '1kg project nåme with uniçøde')
