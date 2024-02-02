@@ -31,10 +31,17 @@ class Command(BaseCommand):
             with open(options['mapping_file']) as f:
                 mapping_file = parse_file(options['mapping_file'], f)
 
-        # TODO update manage commands to work with updated model
-        samples_to_load, _, _ = load_rna_seq_tpm(
-            options['input_file'], mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
+        sample_guids, _, _ = load_rna_seq_tpm(
+            options['input_file'], self._save_sample_data, lambda *args: {},
+            mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
 
+        Sample.bulk_update(user=None, update_json={'is_active': True}, guid__in=sample_guids)
+
+        logger.info('DONE')
+
+    @staticmethod
+    def _save_sample_data(sample_guid, sample_data):
+        # TODO
         sample_id_map = {
             s['guid']: s for s in Sample.objects.filter(guid__in=samples_to_load).values('guid', 'id', 'sample_id')
         }
@@ -43,7 +50,3 @@ class Command(BaseCommand):
             models = RnaSeqTpm.objects.bulk_create(
                 [RnaSeqTpm(sample_id=sample_data['id'], **data) for data in data_by_gene.values()], batch_size=1000)
             logger.info(f'create {len(models)} RnaSeqTpm for {sample_data["sample_id"]}')
-
-        logger.info('DONE')
-
-
