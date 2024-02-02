@@ -946,7 +946,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             }})] + (additional_logs or [])
             self._has_expected_file_loading_logs(
                 'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings,
-                additional_logs=additional_logs, additional_logs_offset=3)
+                additional_logs=additional_logs, additional_logs_offset=2)
 
             return response_json, new_sample_guid
 
