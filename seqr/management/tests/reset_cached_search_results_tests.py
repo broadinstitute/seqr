@@ -23,7 +23,7 @@ class ResetCachedSearchResultsTest(TestCase):
     @mock.patch('seqr.views.utils.variant_utils.logger')
     @mock.patch('seqr.management.commands.reset_cached_search_results.logger')
     def test_command(self, mock_command_logger, mock_utils_logger, mock_redis):
-        mock_redis.return_value.keys.side_effect = lambda pattern: [pattern]
+        mock_redis.return_value.keys.side_effect = lambda pattern: [pattern] if pattern != 'variant_lookup_results__*' else []
 
         # Test command with a --project argument
         call_command('reset_cached_search_results', '--project={}'.format(PROJECT_NAME))
@@ -47,9 +47,10 @@ class ResetCachedSearchResultsTest(TestCase):
 
         # Test command for reset metadata
         mock_redis.reset_mock()
+        mock_redis.return_value.keys.side_effect = lambda pattern: [pattern]
         call_command('reset_cached_search_results', '--reset-index-metadata')
-        mock_redis.return_value.delete.assert_called_with('search_results__*', 'index_metadata__*')
-        mock_utils_logger.info.assert_called_with('Reset 2 cached results')
+        mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*', 'index_metadata__*')
+        mock_utils_logger.info.assert_called_with('Reset 3 cached results')
         mock_command_logger.info.assert_called_with('Reset cached search results for all projects')
 
         # Test with connection error

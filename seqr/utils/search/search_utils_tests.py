@@ -29,8 +29,8 @@ class SearchTestHelper(object):
     def set_cache(self, cached):
         self.mock_redis.get.return_value = json.dumps(cached)
 
-    def assert_cached_results(self, expected_results, sort='xpos'):
-        cache_key = f'search_results__{self.results_model.guid}__{sort}'
+    def assert_cached_results(self, expected_results, sort='xpos', cache_key=None):
+        cache_key = cache_key or f'search_results__{self.results_model.guid}__{sort}'
         self.mock_redis.set.assert_called_with(cache_key, mock.ANY)
         self.assertEqual(json.loads(self.mock_redis.set.call_args.args[1]), expected_results)
         self.mock_redis.expire.assert_called_with(cache_key, timedelta(weeks=2))
@@ -55,17 +55,26 @@ class SearchUtilsTests(SearchTestHelper):
         mock_variant_lookup.return_value = VARIANT_LOOKUP_VARIANT
         variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='38')
         self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
-        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='38')
+        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh38')
+        cache_key = 'variant_lookup_results__1-10439-AC-A__38__test_user'
+        self.assert_cached_results(variant, cache_key=cache_key)
 
         variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='37', families=self.families)
         self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
-        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='37', samples=mock.ANY)
+        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh37', samples=mock.ANY)
         expected_samples = {s for s in self.search_samples if s.guid not in NON_SNP_INDEL_SAMPLES}
         self.assertSetEqual(set(mock_variant_lookup.call_args.kwargs['samples']), expected_samples)
 
         with self.assertRaises(InvalidSearchException) as cm:
             variant_lookup(self.user, '100-10439-AC-A')
         self.assertEqual(str(cm.exception), 'Invalid variant 100-10439-AC-A')
+
+        mock_variant_lookup.reset_mock()
+        self.set_cache(variant)
+        cached_variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='38')
+        self.assertDictEqual(variant, cached_variant)
+        mock_variant_lookup.assert_not_called()
+        self.mock_redis.get.assert_called_with(cache_key)
 
     def test_get_single_variant(self, mock_get_variants_for_ids):
         mock_get_variants_for_ids.return_value = [PARSED_VARIANTS[0]]
