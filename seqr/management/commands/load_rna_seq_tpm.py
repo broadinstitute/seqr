@@ -32,7 +32,7 @@ class Command(BaseCommand):
                 mapping_file = parse_file(options['mapping_file'], f)
 
         sample_guids, _, _ = load_rna_seq_tpm(
-            options['input_file'], self._save_sample_data, lambda *args: {},
+            options['input_file'], self._save_sample_data, lambda *args: {}, create_models_before_save=True,
             mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
 
         Sample.bulk_update(user=None, update_json={'is_active': True}, guid__in=sample_guids)
@@ -40,13 +40,8 @@ class Command(BaseCommand):
         logger.info('DONE')
 
     @staticmethod
-    def _save_sample_data(sample_guid, sample_data):
-        # TODO
-        sample_id_map = {
-            s['guid']: s for s in Sample.objects.filter(guid__in=samples_to_load).values('guid', 'id', 'sample_id')
-        }
-        for sample_guid, data_by_gene in samples_to_load.items():
-            sample_data = sample_id_map[sample_guid]
-            models = RnaSeqTpm.objects.bulk_create(
-                [RnaSeqTpm(sample_id=sample_data['id'], **data) for data in data_by_gene.values()], batch_size=1000)
-            logger.info(f'create {len(models)} RnaSeqTpm for {sample_data["sample_id"]}')
+    def _save_sample_data(sample_guid, data_by_gene):
+        sample = Sample.objects.get(guid=sample_guid)
+        models = RnaSeqTpm.objects.bulk_create(
+            [RnaSeqTpm(sample=sample, **data) for data in data_by_gene.values()], batch_size=1000)
+        logger.info(f'create {len(models)} RnaSeqTpm for {sample.sample_id}')
