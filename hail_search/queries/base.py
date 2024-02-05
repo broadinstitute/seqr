@@ -55,7 +55,7 @@ class BaseHailTableQuery(object):
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
         FAMILY_GUID_FIELD: lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
-        # 'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
+        'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'variantId': lambda r: r.variant_id,
     }
     ENUM_ANNOTATION_FIELDS = {

@@ -202,5 +202,5 @@ def validate_hail_backend_no_location_search(samples):
     from seqr.utils.search.utils import InvalidSearchException
     if sample_counts and (len(sample_counts) > 1 or sample_counts[0]['project_count'] > 1):
         raise InvalidSearchException('Location must be specified to search across multiple projects')
-    # if sample_counts and sample_counts[0]['family_count'] > MAX_FAMILY_COUNTS[sample_counts[0]['sample_type']]:
-    #     raise InvalidSearchException('Location must be specified to search across multiple families in large projects')
+    if sample_counts and sample_counts[0]['family_count'] > MAX_FAMILY_COUNTS[sample_counts[0]['sample_type']]:
+        raise InvalidSearchException('Location must be specified to search across multiple families in large projects')
