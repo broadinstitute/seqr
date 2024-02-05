@@ -290,7 +290,9 @@ class BaseHailTableQuery(object):
             if project_ht is None:
                 continue
             try:
-                filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
+                filtered_project_hts.append(
+                    (self._filter_entries_table(project_ht, project_sample_data, **kwargs), len(project_sample_data))
+                )
             except HTTPBadRequest as e:
                 exception_messages.add(e.reason)
 
@@ -309,7 +311,7 @@ class BaseHailTableQuery(object):
             family_ht = family_ht.annotate_globals(
                 family_guids=[family_guid], family_samples={family_guid: family_ht.sample_ids},
             )
-            families_ht, _ = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
+            families_ht = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = self._load_filtered_project_hts(project_samples, **kwargs)
             families_ht, num_families = filtered_project_hts[0]
@@ -346,7 +348,7 @@ class BaseHailTableQuery(object):
         if not self._load_table_kwargs:
             ht = self._prefilter_entries_table(ht, **kwargs)
 
-        ht, sorted_family_sample_data, num_families = self._add_entry_sample_families(ht, sample_data)
+        ht, sorted_family_sample_data = self._add_entry_sample_families(ht, sample_data)
 
         quality_filter = quality_filter or {}
         if quality_filter.get('vcf_filter'):
@@ -363,7 +365,7 @@ class BaseHailTableQuery(object):
             ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
         )
 
-        return ht.select_globals('family_guids'), num_families
+        return ht.select_globals('family_guids')
 
     @classmethod
     def _add_entry_sample_families(cls, ht, sample_data):
@@ -406,8 +408,7 @@ class BaseHailTableQuery(object):
             lambda sample_tuple: ht.family_entries[family_tuple[0]][sample_tuple[0]].annotate(**sample_tuple[1])
         )))
 
-        # TODO do not need to pass through num_families
-        return ht, sorted_family_sample_data, len(sample_data)
+        return ht, sorted_family_sample_data
 
     @classmethod
     def _get_sample_type(cls, ht_globals):
