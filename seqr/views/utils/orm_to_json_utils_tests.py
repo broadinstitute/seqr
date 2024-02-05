@@ -160,7 +160,6 @@ class JSONUtilsTest(object):
         #     Items in the second set but not the first:
         #     'metadata'
         # self.assertSetEqual(set(next(iter(json['variantTagsByGuid'].values())).keys()), TAG_FIELDS)
-        self.assertSetEqual(set(next(iter(json['variantTagsByGuid'].values())).keys()), TAG_FIELDS)
         for tag_guid in v1_tag_guids:
             self.assertListEqual(json['variantTagsByGuid'][tag_guid]['variantGuids'], [variant_guid_1])
         for tag_guid in v2_tag_guids:
