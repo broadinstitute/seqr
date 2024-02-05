@@ -283,7 +283,7 @@ class BaseHailTableQuery(object):
         exception_messages = set()
         for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
             project_ht = self._read_table(
-                f'projects_grouped/{project_guid}.ht',
+                f'projects/{project_guid}.ht',
                 use_ssd_dir=True,
                 skip_missing_field='entries' if skip_all_missing or i > 0 else None,
             )
