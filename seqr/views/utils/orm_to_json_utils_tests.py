@@ -155,6 +155,11 @@ class JSONUtilsTest(object):
         self.assertSetEqual(set(var_2['noteGuids']), set(v2_note_guids))
 
         self.assertSetEqual(set(json['variantTagsByGuid'].keys()), v1_tag_guids | v2_tag_guids)
+        # mfranklin: AssertionError: Items in the first set but not the second:
+        #     'aipMetadata'
+        #     Items in the second set but not the first:
+        #     'metadata'
+        # self.assertSetEqual(set(next(iter(json['variantTagsByGuid'].values())).keys()), TAG_FIELDS)
         self.assertSetEqual(set(next(iter(json['variantTagsByGuid'].values())).keys()), TAG_FIELDS)
         for tag_guid in v1_tag_guids:
             self.assertListEqual(json['variantTagsByGuid'][tag_guid]['variantGuids'], [variant_guid_1])
