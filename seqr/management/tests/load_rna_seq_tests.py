@@ -2,6 +2,7 @@
 import mock
 
 from django.core.management import call_command
+from django.core.management.base import CommandError
 
 from seqr.models import Sample, RnaSeqTpm, RnaSeqOutlier
 from seqr.utils.middleware import ErrorsWarningsException
@@ -16,9 +17,9 @@ class LoadRnaSeqTest(AuthenticationTestCase):
 
     @mock.patch('seqr.utils.file_utils.gzip.open')
     @mock.patch('seqr.views.utils.dataset_utils.logger')
-    @mock.patch('seqr.management.commands.load_rna_seq_tpm.logger')
-    @mock.patch('seqr.management.commands.load_rna_seq_tpm.open')
-    def test_command(self, mock_open, mock_logger, mock_utils_logger, mock_gzip_open):
+    @mock.patch('seqr.management.commands.load_rna_seq.logger')
+    @mock.patch('seqr.management.commands.load_rna_seq.open')
+    def test_tpm(self, mock_open, mock_logger, mock_utils_logger, mock_gzip_open):
         mock_gzip_file = mock_gzip_open.return_value.__enter__.return_value
         mock_gzip_file.__iter__.return_value = [
             '',
@@ -30,13 +31,17 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             'NA19678\tTest Reprocessed Project\t\tENSG00000240361\t0.2\twhole_blood\n',
         ]
 
+        with self.assertRaises(CommandError) as e:
+            call_command('load_rna_seq', 'not_a_type', RNA_FILE_ID)
+        self.assertEqual(str(e.exception), "Error: argument data_type: invalid choice: 'not_a_type' (choose from 'outlier', 'splice_outlier', 'tpm')")
+
         with self.assertRaises(ValueError) as e:
-            call_command('load_rna_seq_tpm', RNA_FILE_ID)
+            call_command('load_rna_seq', 'tpm', RNA_FILE_ID)
         self.assertEqual(str(e.exception), 'Invalid file: missing column(s): TPM, gene_id, project, sample_id, tissue')
 
         mock_gzip_file.__iter__.return_value[0] = 'sample_id\tproject\tindividual_id\tgene_id\tTPM\ttissue\n'
         with self.assertRaises(ErrorsWarningsException) as e:
-            call_command('load_rna_seq_tpm', RNA_FILE_ID)
+            call_command('load_rna_seq', 'tpm', RNA_FILE_ID)
         self.assertListEqual(e.exception.errors, [
             'Samples missing required "tissue": NA19675_D2',
             'Unable to find matches for the following samples: NA19677, NA19678, NA19678_D1',
@@ -46,7 +51,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             mock_gzip_file.__iter__.return_value[0],
             'NA19678_D1\t1kg project nåme with uniçøde\tNA19678\tENSG00000233750\t 6.04\twhole_blood\n',
         ] + mock_gzip_file.__iter__.return_value[2:]
-        call_command('load_rna_seq_tpm', RNA_FILE_ID, '--ignore-extra-samples')
+        call_command('load_rna_seq', 'tpm', RNA_FILE_ID, '--ignore-extra-samples')
 
         # Existing outlier data should be unchanged
         self.assertEqual(RnaSeqOutlier.objects.count(), 3)
@@ -83,7 +88,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
 
         # Test a new sample created for a mismatched tissue and a row with 0.0 tpm
         mock_gzip_file.__iter__.return_value[1] = 'NA19678_D1\t1kg project nåme with uniçøde\tNA19678\tENSG00000233750\t0.0\tfibroblasts\n'
-        call_command('load_rna_seq_tpm', 'new_file.tsv.gz', '--ignore-extra-samples')
+        call_command('load_rna_seq', 'tpm', 'new_file.tsv.gz', '--ignore-extra-samples')
         models = RnaSeqTpm.objects.select_related('sample').filter(sample__sample_id='NA19678_D1')
         self.assertEqual(models.count(), 2)
         self.assertSetEqual(set(models.values_list('sample__tissue_type', flat=True)), {'F', 'WB'})
