@@ -277,12 +277,15 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
         return project_samples, family_samples
 
+    def _get_project_table_path(self, project_guid, **kwargs):
+        return f'projects_grouped/{project_guid}.ht'
+
     def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
         filtered_project_hts = []
         exception_messages = set()
         for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
             project_ht = self._read_table(
-                f'projects_grouped/{project_guid}.ht',
+                self._get_project_table_path(project_guid, **kwargs),
                 use_ssd_dir=True,
                 skip_missing_field='entries' if skip_all_missing or i > 0 else None,
             )

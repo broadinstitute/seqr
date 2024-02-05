@@ -72,13 +72,20 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         PATHOGENICTY_HGMD_SORT_KEY: lambda r: [MitoHailTableQuery.CLINVAR_SORT(CLINVAR_KEY, r), r.hgmd.class_id],
     }
 
-    def _prefilter_entries_table(self, ht, *args, **kwargs):
-        ht = super()._prefilter_entries_table(ht, *args, **kwargs)
-        af_ht = self._get_loaded_filter_ht(
-            GNOMAD_GENOMES_FIELD, 'high_af_variants.ht', self._get_gnomad_af_prefilter, **kwargs)
-        if af_ht:
-            ht = ht.filter(hl.is_missing(af_ht[ht.key]))
-        return ht
+    # def _prefilter_entries_table(self, ht, *args, **kwargs):
+    #     ht = super()._prefilter_entries_table(ht, *args, **kwargs)
+    #     af_ht = self._get_loaded_filter_ht(
+    #         GNOMAD_GENOMES_FIELD, 'high_af_variants.ht', self._get_gnomad_af_prefilter, **kwargs)
+    #     if af_ht:
+    #         ht = ht.filter(hl.is_missing(af_ht[ht.key]))
+    #     return ht
+
+    def _get_project_table_path(self, project_guid, **kwargs):
+        path = super()._get_project_table_path(project_guid)
+        af_prefilter = self._get_gnomad_af_prefilter(**kwargs)
+        if af_prefilter:
+            path = path.replace(project_guid, f'{project_guid}_rare_3_percent_repartiton')
+        return path
 
     def _get_gnomad_af_prefilter(self, frequencies=None, pathogenicity=None, **kwargs):
         gnomad_genomes_filter = (frequencies or {}).get(GNOMAD_GENOMES_FIELD, {})
