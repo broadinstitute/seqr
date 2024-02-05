@@ -372,8 +372,6 @@ class BaseHailTableQuery(object):
     def _add_entry_sample_families(cls, ht, sample_data):
         ht_globals = hl.eval(ht.globals)
 
-        sample_type = cls._get_sample_type(ht_globals)
-        affected_id_map = {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID, UNKNOWN_AFFECTED: UNKNOWN_AFFECTED_ID}
         missing_samples = set()
         family_sample_index_data = []
         family_guids = sorted(sample_data.keys())
