@@ -268,14 +268,15 @@ class BaseHailTableQuery(object):
         return ht.annotate(**query_result)
 
     def _parse_sample_data(self, sample_data):
-        family_samples = defaultdict(list)
+        families = set()
         project_samples = defaultdict(lambda: defaultdict(list))
         for s in sample_data:
-            family_samples[s['family_guid']].append(s)
+            families.add(s['family_guid'])
             project_samples[s['project_guid']][s['family_guid']].append(s)
 
-        logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
-        return project_samples, family_samples
+        num_families = len(families)
+        logger.info(f'Loading {self.DATA_TYPE} data for {num_families} families in {len(project_samples)} projects')
+        return project_samples, num_families
 
     def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
         filtered_project_hts = []
@@ -299,10 +300,15 @@ class BaseHailTableQuery(object):
         return filtered_project_hts
 
     def import_filtered_table(self, sample_data, intervals=None, **kwargs):
-        project_samples, family_samples = self._parse_sample_data(sample_data)
-        if len(family_samples) == 1:
-            family_guid, family_sample_data = list(family_samples.items())[0]
+        project_samples, num_families = self._parse_sample_data(sample_data)
+        if num_families == 1:
+            family_sample_data = list(project_samples.values())[0]
+            family_guid = list(family_sample_data.keys())[0]
             family_ht = self._read_table(f'families/{family_guid}.ht', use_ssd_dir=True)
+            family_ht = family_ht.transmute(family_entries=[ht.entries])
+            family_ht = family_ht.annotate_globals(
+                family_guids=[family_guid], family_samples={family_guid: family_ht.sample_ids},
+            )
             families_ht, _ = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
             filtered_project_hts = self._load_filtered_project_hts(project_samples, **kwargs)
