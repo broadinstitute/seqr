@@ -7,7 +7,8 @@ import os
 from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
-    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, UNKNOWN_AFFECTED, UNKNOWN_AFFECTED_ID, FAMILY_GUID_FIELD, GENOTYPES_FIELD
+    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, UNKNOWN_AFFECTED, UNKNOWN_AFFECTED_ID, FAMILY_GUID_FIELD, GENOTYPES_FIELD, \
+    AFFECTED_ID_MAP
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
@@ -383,16 +384,12 @@ class BaseHailTableQuery(object):
             if missing_family_samples:
                 missing_samples.update(missing_family_samples)
             else:
-                family_sample_index_data.append((ht_globals.family_guids.index(family_guid), [
-                    (ht_family_samples.index(s['sample_id']), hl.struct(
-                        familyGuid=family_guid,
-                        sampleId=s['sample_id'],
-                        sampleType=sample_type,
-                        individualGuid=s['individual_guid'],
-                        affected_id=affected_id_map.get(s['affected']),
-                        is_male='sex' in s and s['sex'] == MALE,
-                    )) for s in samples
-                ]))
+                family_sample_index_data.append(
+                    (ht_globals.family_guids.index(family_guid), [
+                        (ht_family_samples.index(s['sample_id']), cls._sample_entry_data(s, family_guid, ht_globals))
+                        for s in samples
+                    ])
+                )
 
         if missing_samples:
             raise HTTPBadRequest(
@@ -409,6 +406,17 @@ class BaseHailTableQuery(object):
         )))
 
         return ht, sorted_family_sample_data
+
+    @classmethod
+    def _sample_entry_data(cls, sample, family_guid, ht_globals):
+        return hl.struct(
+            sampleId=sample['sample_id'],
+            sampleType=cls._get_sample_type(ht_globals),
+            individualGuid=sample['individual_guid'],
+            familyGuid=family_guid,
+            affected_id=AFFECTED_ID_MAP.get(sample['affected']),
+            is_male='sex' in sample and sample['sex'] == MALE,
+        )
 
     @classmethod
     def _get_sample_type(cls, ht_globals):
