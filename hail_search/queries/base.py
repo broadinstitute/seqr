@@ -447,12 +447,11 @@ class BaseHailTableQuery(object):
     def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data, field):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
-        affected_id_map = {v: k for k, v in {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID, UNKNOWN_AFFECTED: UNKNOWN_AFFECTED_ID}.items()}  # TODO shared
         entry_indices_by_gt = defaultdict(lambda: defaultdict(list))
         for family_index, samples in enumerate(sorted_family_sample_data):
             for sample_index, s in enumerate(samples):
                 genotype = individual_genotype_filter.get(s.individualGuid) \
-                    if individual_genotype_filter else INHERITANCE_FILTERS[inheritance_mode].get(affected_id_map[s.affected_id])
+                    if individual_genotype_filter else INHERITANCE_FILTERS[inheritance_mode].get(s.affected_id)
                 if inheritance_mode == X_LINKED_RECESSIVE and s.affected_id == UNAFFECTED_ID and s.is_male:
                     genotype = REF_REF
                 if genotype == COMP_HET_ALT and self._override_comp_het_alt:
