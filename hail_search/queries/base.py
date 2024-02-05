@@ -307,7 +307,7 @@ class BaseHailTableQuery(object):
             family_sample_data = list(project_samples.values())[0]
             family_guid = list(family_sample_data.keys())[0]
             family_ht = self._read_table(f'families/{family_guid}.ht', use_ssd_dir=True)
-            family_ht = family_ht.transmute(family_entries=[ht.entries])
+            family_ht = family_ht.transmute(family_entries=[family_ht.entries])
             family_ht = family_ht.annotate_globals(
                 family_guids=[family_guid], family_samples={family_guid: family_ht.sample_ids},
             )
