@@ -38,4 +38,4 @@ class Command(BaseCommand):
         sample = Sample.objects.get(guid=sample_guid)
         models = self.model_cls.objects.bulk_create(
             [self.model_cls(sample=sample, **data) for data in data_by_gene.values()], batch_size=1000)
-        logger.info(f'create {len(models)} RnaSeqTpm for {sample.sample_id}')
+        logger.info(f'create {len(models)} {self.model_cls} for {sample.sample_id}')
