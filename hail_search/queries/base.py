@@ -277,18 +277,17 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
         return project_samples, family_samples
 
-    def _get_project_table_path(self, project_guid, **kwargs):
-        return f'projects_grouped/{project_guid}.ht'
+    def _read_project_table(self, project_guid, skip_missing_field=False, **kwargs):
+        return self._read_table(
+            f'projects_grouped/{project_guid}.ht', use_ssd_dir=True, skip_missing_field=skip_missing_field
+        )
 
     def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
         filtered_project_hts = []
         exception_messages = set()
         for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
-            project_ht = self._read_table(
-                self._get_project_table_path(project_guid, **kwargs),
-                use_ssd_dir=True,
-                skip_missing_field='entries' if skip_all_missing or i > 0 else None,
-            )
+            project_ht = self._read_project_table(
+                project_guid, skip_missing_field='entries' if skip_all_missing or i > 0 else None, **kwargs)
             if project_ht is None:
                 continue
             try:
@@ -343,11 +342,11 @@ class BaseHailTableQuery(object):
         if not self._load_table_kwargs:
             ht = self._prefilter_entries_table(ht, **kwargs)
 
-        ht, sorted_family_sample_data, num_families = self._add_entry_sample_families(ht, sample_data)
-
         quality_filter = quality_filter or {}
         if quality_filter.get('vcf_filter'):
             ht = self._filter_vcf_filters(ht)
+
+        ht, sorted_family_sample_data, num_families = self._add_entry_sample_families(ht, sample_data)
 
         passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht=ht, **kwargs)
         if passes_quality_filter is not None:
@@ -373,7 +372,7 @@ class BaseHailTableQuery(object):
         family_guids = sorted(sample_data.keys())
         for family_guid in family_guids:
             samples = sample_data[family_guid]
-            ht_family_samples = ht_globals.family_samples[family_guid]
+            ht_family_samples = ht_globals.family_samples[0][family_guid]
             missing_family_samples = [s['sample_id'] for s in samples if s['sample_id'] not in ht_family_samples]
             if missing_family_samples:
                 missing_samples.update(missing_family_samples)

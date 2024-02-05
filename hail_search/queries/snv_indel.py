@@ -72,33 +72,30 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         PATHOGENICTY_HGMD_SORT_KEY: lambda r: [MitoHailTableQuery.CLINVAR_SORT(CLINVAR_KEY, r), r.hgmd.class_id],
     }
 
-    # def _prefilter_entries_table(self, ht, *args, **kwargs):
-    #     ht = super()._prefilter_entries_table(ht, *args, **kwargs)
-    #     af_ht = self._get_loaded_filter_ht(
-    #         GNOMAD_GENOMES_FIELD, 'high_af_variants.ht', self._get_gnomad_af_prefilter, **kwargs)
-    #     if af_ht:
-    #         ht = ht.filter(hl.is_missing(af_ht[ht.key]))
-    #     return ht
-
-    def _get_project_table_path(self, project_guid, **kwargs):
-        path = super()._get_project_table_path(project_guid)
+    def _read_project_table(self, project_guid, skip_missing_field=False, **kwargs):
+        ht = self._read_table(
+            f'projects_grouped/{project_guid}_rare_10_percent.ht',
+            use_ssd_dir=True,
+            skip_missing_field=skip_missing_field,
+        )
         af_prefilter = self._get_gnomad_af_prefilter(**kwargs)
-        if af_prefilter:
-            path = path.replace(project_guid, f'{project_guid}_rare_3_percent_repartiton')
-        return path
+        if not af_prefilter:
+            common_ht = self._read_table(
+                f'projects_grouped/{project_guid}_common_10_percent.ht',
+                use_ssd_dir=True, skip_missing_field=skip_missing_field,
+            )
+            if ht is None:
+                ht = common_ht
+            elif common_ht is not None:
+                ht = ht.union(common_ht)
+        return ht
 
     def _get_gnomad_af_prefilter(self, frequencies=None, pathogenicity=None, **kwargs):
         gnomad_genomes_filter = (frequencies or {}).get(GNOMAD_GENOMES_FIELD, {})
         af_cutoff = gnomad_genomes_filter.get('af')
         if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
             af_cutoff = PREFILTER_FREQ_CUTOFF
-        if af_cutoff is None:
-            return False
-
-        if self._get_clinvar_path_filters(pathogenicity):
-            af_cutoff = max(af_cutoff, PATH_FREQ_OVERRIDE_CUTOFF)
-
-        return 'is_gt_10_percent' if af_cutoff > PREFILTER_FREQ_CUTOFF else True
+        return bool(af_cutoff) and af_cutoff < 1
 
     def _get_annotation_override_filters(self, annotations, *args, **kwargs):
         annotation_filters = super()._get_annotation_override_filters(annotations, *args, **kwargs)
