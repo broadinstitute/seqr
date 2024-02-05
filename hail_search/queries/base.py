@@ -55,7 +55,7 @@ class BaseHailTableQuery(object):
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
         FAMILY_GUID_FIELD: lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
-        'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
+        # 'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'variantId': lambda r: r.variant_id,
     }
     ENUM_ANNOTATION_FIELDS = {
@@ -269,10 +269,10 @@ class BaseHailTableQuery(object):
 
     def _parse_sample_data(self, sample_data):
         family_samples = defaultdict(list)
-        project_samples = defaultdict(list)
+        project_samples = defaultdict(lambda: defaultdict(list))
         for s in sample_data:
             family_samples[s['family_guid']].append(s)
-            project_samples[s['project_guid']].append(s)
+            project_samples[s['project_guid']][s['family_guid']].append(s)
 
         logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
         return project_samples, family_samples
@@ -282,7 +282,7 @@ class BaseHailTableQuery(object):
         exception_messages = set()
         for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
             project_ht = self._read_table(
-                f'projects/{project_guid}.ht',
+                f'projects_grouped/{project_guid}.ht',
                 use_ssd_dir=True,
                 skip_missing_field='entries' if skip_all_missing or i > 0 else None,
             )
@@ -340,7 +340,7 @@ class BaseHailTableQuery(object):
         if not self._load_table_kwargs:
             ht = self._prefilter_entries_table(ht, **kwargs)
 
-        ht, sample_id_family_index_map, num_families = self._add_entry_sample_families(ht, sample_data)
+        ht, sorted_family_sample_data, num_families = self._add_entry_sample_families(ht, sample_data)
 
         quality_filter = quality_filter or {}
         if quality_filter.get('vcf_filter'):
@@ -354,7 +354,7 @@ class BaseHailTableQuery(object):
             ht = ht.filter(ht.family_entries.any(hl.is_defined))
 
         ht = self._filter_inheritance(
-            ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map,
+            ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
         )
 
         return ht.select_globals('family_guids'), num_families
@@ -362,59 +362,52 @@ class BaseHailTableQuery(object):
     @classmethod
     def _add_entry_sample_families(cls, ht, sample_data):
         ht_globals = hl.eval(ht.globals)
-        sample_index_id_map = dict(enumerate(ht_globals.sample_ids))
-        sample_id_index_map = {v: k for k, v in sample_index_id_map.items()}
-        sample_index_id_map = hl.dict(sample_index_id_map)
-        sample_individual_map = {s['sample_id']: s['individual_guid'] for s in sample_data}
-        missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
+
+        sample_type = cls._get_sample_type(ht_globals)
+        affected_id_map = {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID, UNKNOWN_AFFECTED: UNKNOWN_AFFECTED_ID}
+        missing_samples = set()
+        family_sample_index_data = []
+        family_guids = sorted(sample_data.keys())
+        for family_guid in family_guids:
+            samples = sample_data[family_guid]
+            ht_family_samples = ht_globals.family_samples[family_guid]
+            missing_family_samples = [s['sample_id'] for s in samples if s['sample_id'] not in ht_family_samples]
+            if missing_family_samples:
+                missing_samples.update(missing_family_samples)
+            else:
+                family_sample_index_data.append((ht_globals.family_guids.index(family_guid), [
+                    (ht_family_samples.index(s['sample_id']), hl.struct(
+                        familyGuid=family_guid,
+                        sampleId=s['sample_id'],
+                        sampleType=sample_type,
+                        individualGuid=s['individual_guid'],
+                        affected_id=affected_id_map.get(s['affected']),
+                        is_male='sex' in s and s['sex'] == MALE,
+                    )) for s in samples
+                ]))
+
         if missing_samples:
             raise HTTPBadRequest(
                 reason=f'The following samples are available in seqr but missing the loaded data: {", ".join(sorted(missing_samples))}'
             )
 
-        affected_id_map = {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID, UNKNOWN_AFFECTED: UNKNOWN_AFFECTED_ID}
-        sample_index_affected_status = hl.dict({
-            sample_id_index_map[s['sample_id']]: affected_id_map.get(s['affected']) for s in sample_data
-        })
-        sample_index_individual_map = hl.dict({
-            sample_id_index_map[sample_id]: i_guid for sample_id, i_guid in sample_individual_map.items()
-        })
-        sample_id_family_map = {s['sample_id']: s['family_guid'] for s in sample_data}
-        sample_index_family_map = hl.dict({sample_id_index_map[k]: v for k, v in sample_id_family_map.items()})
-        family_guids = sorted(set(sample_id_family_map.values()))
-        family_index_map = {f: i for i, f in enumerate(family_guids)}
-        num_families = len(family_index_map)
-        family_sample_indices = [None] * num_families
-        sample_id_family_index_map = {}
-        for sample_id, family_guid in sorted(sample_id_family_map.items()):
-            sample_index = sample_id_index_map[sample_id]
-            family_index = family_index_map[family_guid]
-            if not family_sample_indices[family_index]:
-                family_sample_indices[family_index] = []
-            sample_id_family_index_map[sample_id] = (family_index, len(family_sample_indices[family_index]))
-            family_sample_indices[family_index].append(sample_index)
-        family_sample_indices = hl.array(family_sample_indices)
+        sorted_family_sample_data = [[hl.eval(sample) for _, sample in samples] for _, samples in family_sample_index_data]
+        family_sample_index_data = hl.array(family_sample_index_data)
 
         ht = ht.annotate_globals(family_guids=family_guids)
-        ht = ht.transmute(
-            family_entries=family_sample_indices.map(lambda sample_indices: sample_indices.map(
-                lambda i: ht.entries[i].annotate(
-                    sampleId=sample_index_id_map.get(i),
-                    sampleType=cls._get_sample_type(ht_globals),
-                    individualGuid=sample_index_individual_map.get(i),
-                    familyGuid=sample_index_family_map.get(i),
-                    affected_id=sample_index_affected_status.get(i),
-                )
-            ))
-        )
 
-        return ht, sample_id_family_index_map, num_families
+        ht = ht.transmute(family_entries=family_sample_index_data.map(lambda family_tuple: family_tuple[1].map(
+            lambda sample_tuple: ht.family_entries[family_tuple[0]][sample_tuple[0]].annotate(**sample_tuple[1])
+        )))
+
+        # TODO do not need to pass through num_families
+        return ht, sorted_family_sample_data, len(sample_data)
 
     @classmethod
     def _get_sample_type(cls, ht_globals):
         return ht_globals.sample_type
 
-    def _filter_inheritance(self, ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map):
+    def _filter_inheritance(self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data):
         any_valid_entry = lambda x: self.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
 
         is_any_affected = inheritance_mode == ANY_AFFECTED
@@ -434,7 +427,7 @@ class BaseHailTableQuery(object):
 
         for mode, field in sorted(filter_mode_map.items()):
             ht = self._filter_families_inheritance(
-                ht, mode, inheritance_filter, sample_id_family_index_map, sample_data, field,
+                ht, mode, inheritance_filter, sorted_family_sample_data, field,
             )
 
         filter_expr = ht.family_entries.any(hl.is_defined)
@@ -444,20 +437,21 @@ class BaseHailTableQuery(object):
 
         return ht.filter(filter_expr)
 
-    def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data, field):
+    def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data, field):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
+        affected_id_map = {v: k for k, v in {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID, UNKNOWN_AFFECTED: UNKNOWN_AFFECTED_ID}.items()}  # TODO shared
         entry_indices_by_gt = defaultdict(lambda: defaultdict(list))
-        for s in sample_data:
-            genotype = individual_genotype_filter.get(s['individual_guid']) \
-                if individual_genotype_filter else INHERITANCE_FILTERS[inheritance_mode].get(s['affected'])
-            if inheritance_mode == X_LINKED_RECESSIVE and s['affected'] == UNAFFECTED and s['sex'] == MALE:
-                genotype = REF_REF
-            if genotype == COMP_HET_ALT and self._override_comp_het_alt:
-                genotype = HAS_ALT
-            if genotype:
-                family_index, entry_index = sample_id_family_index_map[s['sample_id']]
-                entry_indices_by_gt[genotype][family_index].append(entry_index)
+        for family_index, samples in enumerate(sorted_family_sample_data):
+            for sample_index, s in enumerate(samples):
+                genotype = individual_genotype_filter.get(s.individualGuid) \
+                    if individual_genotype_filter else INHERITANCE_FILTERS[inheritance_mode].get(affected_id_map[s.affected_id])
+                if inheritance_mode == X_LINKED_RECESSIVE and s.affected_id == UNAFFECTED_ID and s.is_male:
+                    genotype = REF_REF
+                if genotype == COMP_HET_ALT and self._override_comp_het_alt:
+                    genotype = HAS_ALT
+                if genotype:
+                    entry_indices_by_gt[genotype][family_index].append(sample_index)
 
         for genotype, entry_indices in entry_indices_by_gt.items():
             entry_indices = hl.dict(entry_indices)
