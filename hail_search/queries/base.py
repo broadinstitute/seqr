@@ -286,7 +286,7 @@ class BaseHailTableQuery(object):
             project_ht = self._read_table(
                 f'projects/{project_guid}.ht',
                 use_ssd_dir=True,
-                skip_missing_field='entries' if skip_all_missing or i > 0 else None,
+                skip_missing_field='family_entries' if skip_all_missing or i > 0 else None,
             )
             if project_ht is None:
                 continue
