@@ -7,6 +7,7 @@ import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import StateDataLoader from 'shared/components/StateDataLoader'
 import FormWrapper from 'shared/components/form/FormWrapper'
+import { helpLabel } from 'shared/components/form/FormHelpers'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
 import { Variant } from 'shared/components/panel/variants/Variants'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
@@ -14,7 +15,14 @@ import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
 const FIELDS = [
   {
     name: 'variantId',
-    label: 'Variant ID',
+    label: helpLabel('Variant ID', (
+      <div>
+        Variants should be represented as &nbsp;
+        <i>chrom-pos-ref-alt</i>
+        <br />
+        For example, 4-88047328-C-T
+      </div>
+    )),
     inline: true,
     required: true,
     component: BaseSemanticInput,
@@ -36,14 +44,16 @@ const onSubmit = updateQueryParams => (data) => {
 
 const VariantLookup = ({ queryParams, receiveData, updateQueryParams }) => (
   <Grid divided="vertically" centered>
-    <Grid.Row>
-      <Grid.Column width={5} />
-      <Grid.Column width={6}>
-        <Header dividing size="medium" content="Lookup Variant" />
-        <FormWrapper noModal fields={FIELDS} initialValues={queryParams} onSubmit={onSubmit(updateQueryParams)} />
-      </Grid.Column>
-      <Grid.Column width={5} />
-    </Grid.Row>
+    {!queryParams.include_genotypes && (
+      <Grid.Row>
+        <Grid.Column width={5} />
+        <Grid.Column width={6}>
+          <Header dividing size="medium" content="Lookup Variant" />
+          <FormWrapper noModal fields={FIELDS} initialValues={queryParams} onSubmit={onSubmit(updateQueryParams)} />
+        </Grid.Column>
+        <Grid.Column width={5} />
+      </Grid.Row>
+    )}
     <StateDataLoader
       url={queryParams.variantId && '/api/variant_lookup'}
       query={queryParams}

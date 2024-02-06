@@ -155,7 +155,7 @@ class JSONUtilsTest(object):
         self.assertSetEqual(set(var_2['noteGuids']), set(v2_note_guids))
 
         self.assertSetEqual(set(json['variantTagsByGuid'].keys()), v1_tag_guids | v2_tag_guids)
-        self.assertSetEqual(set(next(iter(json['variantTagsByGuid'].values())).keys()), TAG_FIELDS)
+        self.assertSetEqual(set(json['variantTagsByGuid']['VT1726961_2103343353_r0390_100'].keys()), TAG_FIELDS)
         for tag_guid in v1_tag_guids:
             self.assertListEqual(json['variantTagsByGuid'][tag_guid]['variantGuids'], [variant_guid_1])
         for tag_guid in v2_tag_guids:

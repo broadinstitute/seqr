@@ -2,6 +2,7 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
 
+from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
@@ -152,12 +153,25 @@ def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None
     )
 
 
-def variant_lookup(user, variant_id, **kwargs):
+def variant_lookup(user, variant_id, families=None, genome_version=None, **kwargs):
+    genome_version = genome_version or GENOME_VERSION_GRCh38
+    cache_key = f'variant_lookup_results__{variant_id}__{genome_version}__{user}'
+    variant = safe_redis_get_json(cache_key)
+    if variant:
+        return variant
+
     parsed_variant_id = _parse_variant_id(variant_id)
     if not parsed_variant_id:
         raise InvalidSearchException(f'Invalid variant {variant_id}')
+
+    if families:
+        samples, _ = _get_families_search_data(families, dataset_type=DATASET_TYPE_SNP_INDEL_ONLY)
+        kwargs['samples'] = samples
+
     lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), hail_variant_lookup)
-    return lookup_func(user, parsed_variant_id, **kwargs)
+    variant = lookup_func(user, parsed_variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], **kwargs)
+    safe_redis_set_json(cache_key, variant, expire=timedelta(weeks=2))
+    return variant
 
 
 def _get_search_cache_key(search_model, sort=None):

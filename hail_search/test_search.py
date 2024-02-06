@@ -62,6 +62,62 @@ PROJECT_2_VARIANT = {
     '_sort': [1000010146],
 }
 
+GRCH37_VARIANT = {
+    'variantId': '7-143270172-A-G',
+    'xpos': 7143270172,
+    'chrom': '7',
+    'pos': 143270172,
+    'ref': 'A',
+    'alt': 'G',
+    'genomeVersion': '37',
+    'rsid': 'rs72611576',
+    'familyGuids': ['F000002_2'],
+    'genotypes': {
+        'I000004_hg00731': {
+            'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
+            'familyGuid': 'F000002_2', 'numAlt': 2, 'dp': 16, 'gq': 48, 'ab': 1,
+        }, 'I000005_hg00732': {
+            'sampleId': 'HG00732', 'sampleType': 'WGS', 'individualGuid': 'I000005_hg00732',
+            'familyGuid': 'F000002_2', 'numAlt': 0, 'dp': 2, 'gq': 6, 'ab': 0,
+        }, 'I000006_hg00733': {
+            'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733',
+            'familyGuid': 'F000002_2', 'numAlt': 1, 'dp': 49, 'gq': 99, 'ab': 0.6530612111091614,
+        },
+    },
+    'genotypeFilters': 'VQSRTrancheSNP99.90to99.95',
+    'populations': {
+        'seqr': {'af': 0.5912399888038635, 'ac': 4711, 'an': 7968, 'hom': 1508},
+        'topmed': {'af': 0.5213189721107483, 'ac': 65461, 'an': 125568, 'hom': 16156, 'het': 33149},
+        'exac': {'af': 0.6299999952316284, 'ac': 66593, 'an': 104352, 'hom': 22162, 'hemi': 0, 'het': 22269, 'filter_af': 0.8198773860931396},
+        'gnomad_exomes': {'af': 0.6354219317436218, 'ac': 137532, 'an': 216442, 'hom': 45869, 'hemi': 0, 'filter_af': 0.8226116299629211},
+        'gnomad_genomes': {'af': 0.6136477589607239, 'ac': 14649, 'an': 23872, 'hom': 4584, 'hemi': 0, 'filter_af': 0.828438937664032},
+    },
+    'predictions': {
+        'cadd': 13.020000457763672, 'eigen': 3.9509999752044678, 'primate_ai': 0.4906357526779175,
+        'splice_ai': 0, 'splice_ai_consequence': 'No consequence',
+        'mpc': None, 'mut_taster': None, 'polyphen': None, 'revel': None, 'sift': None,
+    },
+    'clinvar': None,
+    'hgmd': None,
+    'transcripts': {
+        'ENSG00000271079': [
+            {'aminoAcids': 'E/G', 'canonical': 1, 'codons': 'gAa/gGa', 'geneId': 'ENSG00000271079',
+             'hgvsc': 'ENST00000420911.2:c.1262A>G', 'hgvsp': 'ENSP00000474204.1:p.Glu421Gly',
+             'transcriptId': 'ENST00000420911', 'isLofNagnag': None, 'transcriptRank': 0,
+             'biotype': 'protein_coding', 'lofFilters': None, 'majorConsequence': 'missense_variant'},
+        ],
+        'ENSG00000176227': [
+            {'aminoAcids': None, 'canonical': 1, 'codons': None, 'geneId': 'ENSG00000176227',
+             'hgvsc': 'ENST00000447022.1:n.1354A>G', 'hgvsp': None,
+             'transcriptId': 'ENST00000447022', 'isLofNagnag': None, 'transcriptRank': 1,
+             'biotype': 'processed_pseudogene', 'lofFilters': None, 'majorConsequence': 'non_coding_transcript_exon_variant'},
+        ],
+    },
+    'mainTranscriptId': 'ENST00000420911',
+    'selectedMainTranscriptId': None,
+    '_sort': [7143270172],
+}
+
 FAMILY_3_VARIANT = deepcopy(VARIANT3)
 FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
 FAMILY_3_VARIANT['genotypes'] = {
@@ -188,6 +244,9 @@ class HailSearchTestCase(AioHTTPTestCase):
                 'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'], **FAMILY_2_ALL_SAMPLE_DATA, **SV_WGS_SAMPLE_DATA,
             }, gene_counts={**variant_gene_counts, **mito_gene_counts, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
         )
+
+        await self._assert_expected_search(
+            [GRCH37_VARIANT], genome_version='GRCh37', sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 
         await self._assert_expected_search([{
             'variantId': '1-8403825-CTTTTTTTT-C',
@@ -518,6 +577,9 @@ class HailSearchTestCase(AioHTTPTestCase):
             [MULTI_FAMILY_VARIANT, VARIANT4], omit_sample_type='SV_WES', **LOCATION_SEARCH,
         )
 
+        await self._assert_expected_search(
+            [GRCH37_VARIANT], intervals=['7:143268894-143271480'], genome_version='GRCh37', sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
+
         sv_intervals = ['1:9310023-9380264', '17:38717636-38724781']
         await self._assert_expected_search(
             [GCNV_VARIANT3, GCNV_VARIANT4], intervals=sv_intervals, gene_ids=['ENSG00000275023'], omit_sample_type='SNV_INDEL',
@@ -573,11 +635,22 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, VARIANT_LOOKUP_VARIANT)
 
+        async with self.client.request('POST', '/lookup', json={**body, 'sample_data': MULTI_PROJECT_SAMPLE_DATA['SNV_INDEL']}) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, MULTI_PROJECT_VARIANT1)
+
         body['variant_id'] = VARIANT_ID_SEARCH['variant_ids'][1]
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 404)
 
-        body.update({'variant_id': ['M', 4429, 'G', 'A'], 'data_type': 'MITO'})
+        body.update({'genome_version': 'GRCh37', 'variant_id': ['7', 143270172, 'A', 'G']})
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {**GRCH37_VARIANT, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''})
+
+        body.update({'variant_id': ['M', 4429, 'G', 'A'], 'data_type': 'MITO', 'genome_version': 'GRCh38'})
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
@@ -671,9 +744,15 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
+        annotations = {'SCREEN': ['CTCF-only', 'DNase-only']}
         await self._assert_expected_search(
-            [VARIANT1, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations={'SCREEN': ['CTCF-only', 'DNase-only']},
+            [VARIANT1, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
             sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+        )
+
+        await self._assert_expected_search(
+            [], pathogenicity=pathogenicity, annotations=annotations, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA,
+            genome_version='GRCh37',
         )
 
         annotations = {
@@ -841,10 +920,15 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
     async def test_in_silico_filter(self):
-        in_silico = {'eigen': '5.5', 'mut_taster': 'N'}
+        in_silico = {'eigen': '3.5', 'mut_taster': 'N', 'vest': 0.5}
         await self._assert_expected_search(
             [VARIANT1, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], in_silico=in_silico,
             sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+        )
+
+        await self._assert_expected_search(
+            [GRCH37_VARIANT], genome_version='GRCh37', in_silico=in_silico,
+            sample_data=FAMILY_2_VARIANT_SAMPLE_DATA,
         )
 
         in_silico['requireScore'] = True

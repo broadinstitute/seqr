@@ -88,6 +88,7 @@ def reset_cached_search_results(project, reset_index_metadata=False):
                 keys_to_delete += redis_client.keys(pattern='search_results__{}*'.format(guid))
         else:
             keys_to_delete = redis_client.keys(pattern='search_results__*')
+        keys_to_delete += redis_client.keys(pattern='variant_lookup_results__*')
         if reset_index_metadata:
             keys_to_delete += redis_client.keys(pattern='index_metadata__*')
         if keys_to_delete:
