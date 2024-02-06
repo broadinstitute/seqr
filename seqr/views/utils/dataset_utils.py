@@ -378,11 +378,11 @@ def _load_rna_seq_file(
         missing_cols = {col_id for col, col_id in required_column_map.items() if not row.get(col)}
         if allow_missing_gene:
             missing_cols.discard(GENE_ID_COL)
-
         sample_id = row_dict.pop(SAMPLE_ID_COL) if SAMPLE_ID_COL in row_dict else row[SAMPLE_ID_COL]
         if missing_cols:
             for col in missing_cols:
                 missing_required_fields[col].append(sample_id)
+        if missing_cols:
             continue
 
         tissue_type = TISSUE_TYPE_MAP[row[TISSUE_COL]]
