@@ -277,32 +277,44 @@ REVERSE_TISSUE_TYPE = dict(Sample.TISSUE_TYPE_CHOICES)
 TISSUE_TYPE_MAP = {v: k for k, v in REVERSE_TISSUE_TYPE.items() if k != Sample.NO_TISSUE_TYPE}
 
 
-def load_rna_seq_outlier(*args, **kwargs):
-    return _load_rna_seq(RnaSeqOutlier, *args, RNA_OUTLIER_COLUMNS, **kwargs)
-
-
-def load_rna_seq_tpm(*args, **kwargs):
-    return _load_rna_seq(
-        RnaSeqTpm, *args, TPM_HEADER_COLS, should_skip=lambda row: row[SAMPLE_ID_COL].startswith('GTEX'), **kwargs,
-    )
-
-
 def _get_splice_id(row):
     return '-'.join([row[GENE_ID_COL], row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[STRAND_COL],
                     row[SPLICE_TYPE_COL]])
-
-
-def load_rna_seq_splice_outlier(*args, **kwargs):
-    return _load_rna_seq(
-        RnaSeqSpliceOutlier, *args, SPLICE_OUTLIER_HEADER_COLS, format_fields=SPLICE_OUTLIER_FORMATTER,
-        get_unique_key=_get_splice_id, allow_missing_gene=True, post_process=_add_splice_rank, **kwargs
-    )
 
 
 def _add_splice_rank(sample_data_rows):
     sorted_data_rows = sorted([data_row for data_row in sample_data_rows.values()], key=lambda d: d[P_VALUE_COL])
     for i, data_row in enumerate(sorted_data_rows):
         data_row['rank'] = i
+
+
+RNA_DATA_TYPE_CONFIGS = {
+    'outlier': {
+        'model_class': RnaSeqOutlier,
+        'columns': RNA_OUTLIER_COLUMNS,
+        'additional_kwargs': {},
+    },
+    'tpm': {
+        'model_class': RnaSeqTpm,
+        'columns': TPM_HEADER_COLS,
+        'additional_kwargs': {'should_skip': lambda row: row[SAMPLE_ID_COL].startswith('GTEX')},
+    },
+    'splice_outlier': {
+        'model_class': RnaSeqSpliceOutlier,
+        'columns': SPLICE_OUTLIER_HEADER_COLS,
+        'additional_kwargs': {
+            'format_fields': SPLICE_OUTLIER_FORMATTER,
+            'allow_missing_gene': True,
+            'get_unique_key': _get_splice_id,
+            'post_process': _add_splice_rank,
+        },
+    },
+}
+
+
+def load_rna_seq(data_type, *args, **kwargs):
+    config = RNA_DATA_TYPE_CONFIGS[data_type]
+    return _load_rna_seq(config['model_class'], *args, config['columns'], **config['additional_kwargs'], **kwargs)
 
 
 def _validate_rna_header(header, column_map):
