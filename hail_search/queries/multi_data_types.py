@@ -1,20 +1,21 @@
 import hail as hl
 import os
 
-from hail_search.constants import ALT_ALT, REF_REF, CONSEQUENCE_SORT, OMIM_SORT, GROUPED_VARIANTS_FIELD
+from hail_search.constants import ALT_ALT, REF_REF, CONSEQUENCE_SORT, OMIM_SORT, GROUPED_VARIANTS_FIELD, GENOME_VERSION_GRCh38
 from hail_search.queries.base import BaseHailTableQuery
 from hail_search.queries.mito import MitoHailTableQuery
 from hail_search.queries.snv_indel import SnvIndelHailTableQuery
+from hail_search.queries.snv_indel_37 import SnvIndelHailTableQuery37
 from hail_search.queries.sv import SvHailTableQuery
 from hail_search.queries.gcnv import GcnvHailTableQuery
 from hail_search.queries.ont_snv_indel import OntSnvIndelHailTableQuery
 
 ONT_ENABLED = os.environ.get('ONT_ENABLED')
 
-QUERY_CLASSES = [SnvIndelHailTableQuery, MitoHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]
+QUERY_CLASSES = [SnvIndelHailTableQuery, SnvIndelHailTableQuery37, MitoHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]
 if ONT_ENABLED:
     QUERY_CLASSES.append(OntSnvIndelHailTableQuery)
-QUERY_CLASS_MAP = {cls.DATA_TYPE: cls for cls in QUERY_CLASSES}
+QUERY_CLASS_MAP = {(cls.DATA_TYPE, cls.GENOME_VERSION): cls for cls in QUERY_CLASSES}
 SNV_INDEL_DATA_TYPE = SnvIndelHailTableQuery.DATA_TYPE
 
 
@@ -22,7 +23,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
     def __init__(self, sample_data, *args, **kwargs):
         self._data_type_queries = {
-            k: QUERY_CLASS_MAP[k](v, *args, override_comp_het_alt=k == SNV_INDEL_DATA_TYPE, **kwargs)
+            k: QUERY_CLASS_MAP[(k, GENOME_VERSION_GRCh38)](v, *args, override_comp_het_alt=k == SNV_INDEL_DATA_TYPE, **kwargs)
             for k, v in sample_data.items()
         }
         self._comp_het_hts = {}

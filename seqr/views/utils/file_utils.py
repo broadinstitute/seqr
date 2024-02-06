@@ -38,20 +38,20 @@ def _parsed_file_iter(stream, parse_line=lambda l: l):
         yield parse_line(line)
 
 
-def parse_file(filename, stream, iter=False):
+def parse_file(filename, stream, iter_file=False):
     if filename.endswith('.tsv') or filename.endswith('.fam') or filename.endswith('.ped'):
         parse_line = lambda line: [s.strip().strip('"') for s in line.rstrip('\n').split('\t')]
-        if iter:
+        if iter_file:
             return _parsed_file_iter(stream, parse_line)
         return [parse_line(line) for line in stream]
 
     elif filename.endswith('.csv'):
         reader = csv.reader(stream)
-        if iter:
+        if iter_file:
             return _parsed_file_iter(reader)
         return [row for row in reader]
 
-    elif (filename.endswith('.xls') or filename.endswith('.xlsx')) and not iter:
+    elif filename.endswith('.xls') or filename.endswith('.xlsx') and not iter_file:
         wb = xl.load_workbook(stream, read_only=True)
         ws = wb[wb.sheetnames[0]]
         rows = [[_parse_excel_string_cell(cell) for cell in row] for row in ws.iter_rows()]
@@ -65,10 +65,10 @@ def parse_file(filename, stream, iter=False):
 
         return rows
 
-    elif filename.endswith('.json') and not iter:
+    elif filename.endswith('.json') and not iter_file:
         return json.loads(stream.read())
 
-    raise ValueError("Unexpected file type: {}".format(filename))
+    raise ValueError(f"Unexpected{' iterated' if iter_file else ''} file type: {filename}")
 
 
 def _parse_excel_string_cell(cell):

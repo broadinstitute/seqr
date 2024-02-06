@@ -7,7 +7,7 @@ import os
 from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
-    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, UNKNOWN_AFFECTED, UNKNOWN_AFFECTED_ID
+    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, UNKNOWN_AFFECTED, UNKNOWN_AFFECTED_ID, FAMILY_GUID_FIELD, GENOTYPES_FIELD
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
@@ -49,12 +49,12 @@ class BaseHailTableQuery(object):
     POPULATION_KEYS = ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']
     PREDICTION_FIELDS_CONFIG = {}
 
-    GENOME_VERSIONS = [GENOME_VERSION_GRCh38]
+    GENOME_VERSION = GENOME_VERSION_GRCh38
     GLOBALS = ['enums']
     TRANSCRIPTS_FIELD = None
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
-        'familyGuids': lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
+        FAMILY_GUID_FIELD: lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'variantId': lambda r: r.variant_id,
     }
@@ -78,11 +78,9 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def load_globals(cls):
-        cls.LOADED_GLOBALS = {}
-        for genome_version in cls.GENOME_VERSIONS:
-            ht_path = cls._get_generic_table_path(genome_version, 'annotations.ht')
-            ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
-            cls.LOADED_GLOBALS[genome_version] = {k: ht_globals[k] for k in cls.GLOBALS}
+        ht_path = cls._get_table_path('annotations.ht')
+        ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
+        cls.LOADED_GLOBALS = {k: ht_globals[k] for k in cls.GLOBALS}
 
     @classmethod
     def _format_population_config(cls, pop_config):
@@ -93,7 +91,7 @@ class BaseHailTableQuery(object):
 
     def annotation_fields(self):
         annotation_fields = {
-            'genotypes': lambda r: r.family_entries.flatmap(lambda x: x).filter(
+            GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
                 lambda gt: hl.is_defined(gt.individualGuid)
             ).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0].select(
                 'sampleId', 'sampleType', 'individualGuid', 'familyGuid',
@@ -111,6 +109,7 @@ class BaseHailTableQuery(object):
             }),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
+        annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         annotation_fields.update(self._additional_annotation_fields())
 
         prediction_fields = {path.source for path in self.PREDICTION_FIELDS_CONFIG.values()}
@@ -119,8 +118,6 @@ class BaseHailTableQuery(object):
             if enum and k not in prediction_fields
         ])
 
-        if self._genome_version == GENOME_VERSION_GRCh38:
-            annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
 
     def _additional_annotation_fields(self):
@@ -198,10 +195,9 @@ class BaseHailTableQuery(object):
 
         return value
 
-    def __init__(self, sample_data, genome_version, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
+    def __init__(self, sample_data, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
                  override_comp_het_alt=False, **kwargs):
         self.unfiltered_comp_het_ht = None
-        self._genome_version = genome_version
         self._sort = sort
         self._sort_metadata = sort_metadata
         self._num_results = num_results
@@ -225,7 +221,7 @@ class BaseHailTableQuery(object):
 
     @property
     def _globals(self):
-        return self.LOADED_GLOBALS[self._genome_version]
+        return self.LOADED_GLOBALS
 
     @property
     def _enums(self):
@@ -251,16 +247,15 @@ class BaseHailTableQuery(object):
                 self._ht = None
 
     @classmethod
-    def _get_generic_table_path(cls, genome_version, path, use_ssd_dir=False):
-        return f'{SSD_DATASETS_DIR if use_ssd_dir else DATASETS_DIR}/{genome_version}/{cls.DATA_TYPE}/{path}'
+    def _get_table_path(cls, path, use_ssd_dir=False):
+        return f'{SSD_DATASETS_DIR if use_ssd_dir else DATASETS_DIR}/{cls.GENOME_VERSION}/{cls.DATA_TYPE}/{path}'
 
-    def _get_table_path(self, path, use_ssd_dir=False):
-        return self._get_generic_table_path(self._genome_version, path, use_ssd_dir=use_ssd_dir)
-
-    def _read_table(self, path, drop_globals=None, use_ssd_dir=False):
+    def _read_table(self, path, drop_globals=None, use_ssd_dir=False, skip_missing_field=None):
         table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
+            if skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field])):
+                return None
             ht_globals = hl.read_table(table_path).globals
             if drop_globals:
                 ht_globals = ht_globals.drop(*drop_globals)
@@ -272,7 +267,7 @@ class BaseHailTableQuery(object):
         query_result = hl.query_table(query_table_path, ht.key).first().drop(*ht.key)
         return ht.annotate(**query_result)
 
-    def import_filtered_table(self, sample_data, intervals=None, **kwargs):
+    def _parse_sample_data(self, sample_data):
         family_samples = defaultdict(list)
         project_samples = defaultdict(list)
         for s in sample_data:
@@ -280,23 +275,37 @@ class BaseHailTableQuery(object):
             project_samples[s['project_guid']].append(s)
 
         logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
+        return project_samples, family_samples
+
+    def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
+        filtered_project_hts = []
+        exception_messages = set()
+        for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
+            project_ht = self._read_table(
+                f'projects/{project_guid}.ht',
+                use_ssd_dir=True,
+                skip_missing_field='entries' if skip_all_missing or i > 0 else None,
+            )
+            if project_ht is None:
+                continue
+            try:
+                filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
+            except HTTPBadRequest as e:
+                exception_messages.add(e.reason)
+
+        if exception_messages:
+            raise HTTPBadRequest(reason='; '.join(exception_messages))
+
+        return filtered_project_hts
+
+    def import_filtered_table(self, sample_data, intervals=None, **kwargs):
+        project_samples, family_samples = self._parse_sample_data(sample_data)
         if len(family_samples) == 1:
             family_guid, family_sample_data = list(family_samples.items())[0]
             family_ht = self._read_table(f'families/{family_guid}.ht', use_ssd_dir=True)
             families_ht, _ = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
-            filtered_project_hts = []
-            exception_messages = set()
-            for project_guid, project_sample_data in project_samples.items():
-                project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True)
-                try:
-                    filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
-                except HTTPBadRequest as e:
-                    exception_messages.add(e.reason)
-
-            if exception_messages:
-                raise HTTPBadRequest(reason='; '.join(exception_messages))
-
+            filtered_project_hts = self._load_filtered_project_hts(project_samples, **kwargs)
             families_ht, num_families = filtered_project_hts[0]
             entry_type = families_ht.family_entries.dtype.element_type
             for project_ht, num_project_families in filtered_project_hts[1:]:
@@ -553,11 +562,11 @@ class BaseHailTableQuery(object):
             ]
 
         if is_x_linked:
-            reference_genome = hl.get_reference(self._genome_version)
+            reference_genome = hl.get_reference(self.GENOME_VERSION)
             intervals = (intervals or []) + [reference_genome.x_contigs[0]]
 
         parsed_intervals = [
-            hl.eval(hl.parse_locus_interval(interval, reference_genome=self._genome_version, invalid_missing=True))
+            hl.eval(hl.parse_locus_interval(interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
             for interval in intervals
         ]
         invalid_intervals = [raw_intervals[i] for i, interval in enumerate(parsed_intervals) if interval is None]
@@ -567,7 +576,7 @@ class BaseHailTableQuery(object):
         return parsed_intervals
 
     def _should_add_chr_prefix(self):
-        return self._genome_version == 'GRCh38'
+        return True
 
     def _filter_by_frequency(self, frequencies, pathogenicity):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
@@ -843,7 +852,7 @@ class BaseHailTableQuery(object):
         annotations = {k: v(ht) for k, v in annotation_fields.items()}
         annotations.update({
             '_sort': self._sort_order(ht),
-            'genomeVersion': self._genome_version.replace('GRCh', ''),
+            'genomeVersion': self.GENOME_VERSION.replace('GRCh', ''),
         })
         results = ht.annotate(**annotations)
         return results.select(*self.CORE_FIELDS, *list(annotations.keys()))
@@ -913,7 +922,7 @@ class BaseHailTableQuery(object):
     def _gene_count_selects(cls):
         return {
             'gene_ids': cls._gene_ids_expr,
-            'families': cls.BASE_ANNOTATION_FIELDS['familyGuids'],
+            'families': cls.BASE_ANNOTATION_FIELDS[FAMILY_GUID_FIELD],
         }
 
     def format_gene_count_hts(self):
@@ -937,20 +946,31 @@ class BaseHailTableQuery(object):
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
         ))
 
-    def lookup_variant(self, variant_id):
+    def lookup_variant(self, variant_id, sample_data=None):
         self._parse_intervals(intervals=None, variant_ids=[variant_id], variant_keys=[variant_id])
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
-        ht = ht.filter(hl.is_defined(ht[XPOS])).key_by()
+        ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         annotation_fields = self.annotation_fields()
+        entry_annotations = {k: annotation_fields[k] for k in [FAMILY_GUID_FIELD, GENOTYPES_FIELD]}
         annotation_fields.update({
-            'familyGuids': lambda ht: hl.empty_array(hl.tstr),
-            'genotypes': lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
+            FAMILY_GUID_FIELD: lambda ht: hl.empty_array(hl.tstr),
+            GENOTYPES_FIELD: lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
             'genotypeFilters': lambda ht: hl.str(''),
         })
-        formatted = self._format_results(ht, annotation_fields=annotation_fields, include_genotype_overrides=False)
+
+        formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=bool(sample_data))
 
         variants = formatted.aggregate(hl.agg.take(formatted.row, 1))
         if not variants:
             raise HTTPNotFound()
-        return variants[0]
+        variant = dict(variants[0])
+
+        if sample_data:
+            project_samples, _ = self._parse_sample_data(sample_data)
+            for pht, _ in self._load_filtered_project_hts(project_samples, skip_all_missing=True):
+                project_entries = pht.aggregate(hl.agg.take(hl.struct(**{k: v(pht) for k, v in entry_annotations.items()}), 1))
+                variant[FAMILY_GUID_FIELD] += project_entries[0][FAMILY_GUID_FIELD]
+                variant[GENOTYPES_FIELD].update(project_entries[0][GENOTYPES_FIELD])
+
+        return variant
