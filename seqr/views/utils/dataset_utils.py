@@ -329,26 +329,10 @@ def _validate_rna_header(header, column_map):
     return required_column_map
 
 
-def _parse_rna_row(row, column_map, required_column_map, missing_required_fields, allow_missing_gene, should_skip=None, format_fields=None):
-    if not (should_skip and should_skip(row)):
-        row_dict = {mapped_key: row[col] for mapped_key, col in column_map.items()}
-        for mapped_key, format_func in (format_fields or {}).items():
-            row_dict[mapped_key] = format_func(row_dict[mapped_key])
-
-        missing_cols = {col_id for col, col_id in required_column_map.items() if not row.get(col)}
-        if allow_missing_gene:
-            missing_cols.discard(GENE_ID_COL)
-        sample_id = row_dict.pop(SAMPLE_ID_COL) if SAMPLE_ID_COL in row_dict else row[SAMPLE_ID_COL]
-        if missing_cols:
-            for col in missing_cols:
-                missing_required_fields[col].append(sample_id)
-        if not missing_cols:
-            yield sample_id, row_dict
-
-
 def _load_rna_seq_file(
         file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample, mismatches,
-        column_map, mapping_file=None, get_unique_key=None, allow_missing_gene=False, ignore_extra_samples=False, **kwargs,
+        column_map, mapping_file=None, get_unique_key=None, allow_missing_gene=False, ignore_extra_samples=False,
+        should_skip=None, format_fields=None,
 ):
 
     sample_id_to_individual_id_mapping = {}
@@ -366,44 +350,59 @@ def _load_rna_seq_file(
     missing_required_fields = defaultdict(list)
     gene_ids = set()
     current_sample = None
-    for line in tqdm(f, unit=' rows'):
-        row = dict(zip(header, _parse_tsv_row(line)))
-        for sample_id, row_dict in _parse_rna_row(
-                row, column_map, required_column_map, missing_required_fields, allow_missing_gene, **kwargs):
-            tissue_type = TISSUE_TYPE_MAP[row[TISSUE_COL]]
-            project = row[PROJECT_COL]
-            sample_key = (sample_id, project, tissue_type)
+    for line in tqdm(parsed_f, unit=' rows'):
+        row = dict(zip(header, line))
+        if should_skip and should_skip(row):
+            continue
 
-            if sample_key in potential_loaded_samples:
-                loaded_samples.add(sample_key)
-                continue
+        row_dict = {mapped_key: row[col] for mapped_key, col in column_map.items()}
+        for mapped_key, format_func in (format_fields or {}).items():
+            row_dict[mapped_key] = format_func(row_dict[mapped_key])
 
-            if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
-                sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
+        missing_cols = {col_id for col, col_id in required_column_map.items() if not row.get(col)}
+        if allow_missing_gene:
+            missing_cols.discard(GENE_ID_COL)
+        sample_id = row_dict.pop(SAMPLE_ID_COL) if SAMPLE_ID_COL in row_dict else row[SAMPLE_ID_COL]
+        if missing_cols:
+            for col in missing_cols:
+                missing_required_fields[col].append(sample_id)
+        if missing_cols:
+            continue
 
-            gene_id = row_dict[GENE_ID_COL]
-            if gene_id:
-                gene_ids.add(gene_id)
+        tissue_type = TISSUE_TYPE_MAP[row[TISSUE_COL]]
+        project = row[PROJECT_COL]
+        sample_key = (sample_id, project, tissue_type)
 
-            sample_guid = get_matched_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping)
+        if sample_key in potential_loaded_samples:
+            loaded_samples.add(sample_key)
+            continue
 
-            if missing_required_fields or (unmatched_samples and not ignore_extra_samples) or (sample_key in unmatched_samples):
-                # If there are definite errors, do not process/save data, just continue to check for additional errors
-                continue
+        if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
+            sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
 
-            if current_sample != sample_guid:
-                # If a large amount of data has been parsed for the previous sample, save and do not keep in memory
-                if len(samples_by_guid[current_sample]) > MAX_UNSAVED_DATA_PER_SAMPLE:
-                    save_sample_data(current_sample, samples_by_guid[current_sample])
-                    del samples_by_guid[current_sample]
-                current_sample = sample_guid
+        gene_id = row_dict[GENE_ID_COL]
+        if gene_id:
+            gene_ids.add(gene_id)
 
-            gene_or_unique_id = get_unique_key(row_dict) if get_unique_key else gene_id
-            existing_data = samples_by_guid[sample_guid].get(gene_or_unique_id)
-            if existing_data and existing_data != row_dict:
-                mismatches[sample_guid].add(gene_or_unique_id)
+        sample_guid = get_matched_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping)
 
-            samples_by_guid[sample_guid][gene_or_unique_id] = row_dict
+        if missing_required_fields or (unmatched_samples and not ignore_extra_samples) or (sample_key in unmatched_samples):
+            # If there are definite errors, do not process/save data, just continue to check for additional errors
+            continue
+
+        if current_sample != sample_guid:
+            # If a large amount of data has been parsed for the previous sample, save and do not keep in memory
+            if len(samples_by_guid[current_sample]) > MAX_UNSAVED_DATA_PER_SAMPLE:
+                save_sample_data(current_sample, samples_by_guid[current_sample])
+                del samples_by_guid[current_sample]
+            current_sample = sample_guid
+
+        gene_or_unique_id = get_unique_key(row_dict) if get_unique_key else gene_id
+        existing_data = samples_by_guid[sample_guid].get(gene_or_unique_id)
+        if existing_data and existing_data != row_dict:
+            mismatches[sample_guid].add(gene_or_unique_id)
+
+        samples_by_guid[sample_guid][gene_or_unique_id] = row_dict
 
     errors, warnings = _process_rna_errors(
         gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
