@@ -1,13 +1,15 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
-import { getUser } from 'redux/selectors'
+import configureStore from 'redux-mock-store'
 import Annotations from './Annotations'
-import { VARIANT, SV_VARIANT } from '../fixtures'
+import { STATE1, VARIANT, SV_VARIANT } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
-  shallow(<Annotations variant={VARIANT} />)
-  shallow(<Annotations variant={SV_VARIANT} />)
+  const store = configureStore()(STATE1)
+
+  shallow(<Annotations store={store} variant={VARIANT} />)
+  shallow(<Annotations store={store} variant={SV_VARIANT} />)
 })

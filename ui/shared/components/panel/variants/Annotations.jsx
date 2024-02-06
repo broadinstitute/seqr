@@ -7,6 +7,7 @@ import { Popup, Label, Icon } from 'semantic-ui-react'
 
 import {
   getGenesById,
+  getTranscriptsById,
   getLocusListIntervalsByChromProject,
   getOmimIntervalsByChrom,
   getFamiliesByGuid,
@@ -218,6 +219,21 @@ const getLitSearch = (genes, variations) => {
   return search
 }
 
+const shouldShowNonDefaultTranscriptInfoIcon = (variant, transcript, transcriptsById) => {
+  const allVariantTranscripts = Object.values(variant.transcripts)?.flat() || []
+  const canonical = allVariantTranscripts.find(t => t.canonical) || null
+  const mane = allVariantTranscripts.find(
+    t => transcriptsById[t.transcriptId]?.isManeSelect || false,
+  ) || null
+
+  const result = canonical !== null &&
+    mane !== null &&
+    transcript.transcriptId !== canonical.transcriptId &&
+    transcript.transcriptId !== mane.transcriptId
+
+  return result
+}
+
 const VARIANT_LINKS = [
   {
     name: 'gnomAD',
@@ -417,7 +433,7 @@ const svSizeDisplay = (size) => {
   return `${(size / 1000000).toFixed(2) / 1}Mb`
 }
 
-const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
+const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcriptsById }) => {
   const {
     rsid, svType, numExon, pos, end, svTypeDetail, svSourceDetail, cpxIntervals, algorithms, bothsidesSupport,
     endChrom,
@@ -457,32 +473,51 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
   return (
     <div>
       {(mainTranscript.majorConsequence || svType) && (
-        <Modal
-          modalName={`${variant.variantId}-annotations`}
-          title="Transcripts"
-          size="large"
-          trigger={
-            <ButtonLink size={svType && 'big'}>
-              {svType ? (SVTYPE_LOOKUP[svType] || svType) : mainTranscript.majorConsequence.replace(/_/g, ' ')}
-              {svType && (svTypeDetail || svSourceDetail) && (
-                <Popup
-                  trigger={<Icon name="info circle" size="small" corner="top right" />}
-                  content={
-                    <div>
-                      {(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail || ''}
-                      {svTypeDetail && <br />}
-                      {svSourceDetail && `Inserted from chr${svSourceDetail.chrom}`}
-                    </div>
-                  }
-                  position="top center"
-                />
-              )}
-            </ButtonLink>
-          }
-          popup={transcriptPopupProps}
-        >
-          <Transcripts variant={variant} />
-        </Modal>
+        <div>
+          <Modal
+            modalName={`${variant.variantId}-annotations`}
+            title="Transcripts"
+            size="large"
+            trigger={
+              <ButtonLink size={svType && 'big'}>
+                {svType ? (SVTYPE_LOOKUP[svType] || svType) : mainTranscript.majorConsequence.replace(/_/g, ' ')}
+                {svType && (svTypeDetail || svSourceDetail) && (
+                  <Popup
+                    trigger={<Icon name="info circle" size="small" corner="top right" />}
+                    content={
+                      <div>
+                        {(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail || ''}
+                        {svTypeDetail && <br />}
+                        {svSourceDetail && `Inserted from chr${svSourceDetail.chrom}`}
+                      </div>
+                    }
+                    position="top center"
+                  />
+                )}
+              </ButtonLink>
+            }
+            popup={transcriptPopupProps}
+          >
+            <Transcripts variant={variant} />
+          </Modal>
+          <HorizontalSpacer width={2} />
+          {shouldShowNonDefaultTranscriptInfoIcon(variant, mainTranscript, transcriptsById) && (
+            <span>
+              <Popup
+                trigger={<Icon name="info circle" color="yellow" />}
+                content={
+                  <div>
+                    This transcript is neither the Gencode Canonical transcript nor the MANE transcript.
+                    It has been selected by seqr as it has the most severe consequence for the variant
+                    given your search parameters.
+                    Click on the consequence to see alternate transcripts which may have other consequences.
+                  </div>
+                }
+                position="top left"
+              />
+            </span>
+          )}
+        </div>
       )}
       {svType && end && !endChrom && end !== pos && (
         <b>
@@ -602,6 +637,11 @@ Annotations.propTypes = {
   variant: PropTypes.object,
   mainGeneId: PropTypes.string,
   showMainGene: PropTypes.bool,
+  transcriptsById: PropTypes.object.isRequired,
 }
 
-export default Annotations
+const mapAnnotationsStateToProps = state => ({
+  transcriptsById: getTranscriptsById(state),
+})
+
+export default connect(mapAnnotationsStateToProps)(Annotations)

@@ -116,8 +116,8 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         ])
         mock_logger.warining.assert_not_called()
 
-        mock_redis.return_value.delete.assert_called_with('search_results__*')
-        mock_utils_logger.info.assert_called_with('Reset 1 cached results')
+        mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
+        mock_utils_logger.info.assert_called_with('Reset 2 cached results')
 
         # Tests Sample models created/updated
         updated_sample_models = Sample.objects.filter(guid__in={
