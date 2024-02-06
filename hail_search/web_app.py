@@ -2,6 +2,7 @@ from aiohttp import web
 import json
 import hail as hl
 import logging
+import traceback
 
 from hail_search.search import search_hail_backend, load_globals, lookup_variant
 
@@ -20,7 +21,8 @@ async def error_middleware(request, handler):
     except web.HTTPError as e:
         _handle_exception(e, request)
     except Exception as e:
-        _handle_exception(web.HTTPInternalServerError(reason=str(e)), request)
+        error_reason = f'{e}: {traceback.format_exc()}'
+        _handle_exception(web.HTTPInternalServerError(reason=error_reason), request)
 
 
 def _hl_json_default(o):

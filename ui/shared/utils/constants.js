@@ -1319,6 +1319,7 @@ export const SPLICE_AI_FIELD = 'splice_ai'
 
 const rangeSourceLink = <a href="https://pubmed.ncbi.nlm.nih.gov/36413997" target="_blank" rel="noreferrer">36413997</a>
 const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
+const REVERSE_PRED_COLOR_MAP = [...PRED_COLOR_MAP].reverse()
 
 export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'cadd', group: CODING_IN_SILICO_GROUP, thresholds: [0.151, 22.8, 25.3, 28.1, undefined], min: 1, max: 99, fieldTitle: 'CADD', requiresCitation: true },
@@ -1341,10 +1342,10 @@ export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'eigen', group: CODING_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1, 2, undefined], max: 99 },
   { field: 'dann', displayOnly: true, thresholds: [undefined, undefined, 0.93, 0.96, undefined] },
   { field: 'strvctvre', group: SV_IN_SILICO_GROUP, thresholds: [undefined, undefined, 0.5, 0.75, undefined] },
-  { field: 'polyphen', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: POLYPHEN_MAP, fieldTitle: 'PolyPhen', requiresCitation: true },
-  { field: 'sift', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP, fieldTitle: 'SIFT', requiresCitation: true },
+  { field: 'polyphen', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.114, 0.978, 0.999, undefined], indicatorMap: POLYPHEN_MAP, fieldTitle: 'PolyPhen', requiresCitation: true },
+  { field: 'sift', reverseThresholds: true, thresholds: [undefined, 0, 0.002, 0.081, undefined], group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP, fieldTitle: 'SIFT', requiresCitation: true },
   { field: 'mut_taster', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: MUTTASTER_MAP, fieldTitle: 'MutTaster' },
-  { field: 'fathmm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: FATHMM_MAP, fieldTitle: 'FATHMM', requiresCitation: true },
+  { field: 'fathmm', reverseThresholds: true, thresholds: [undefined, -5.041, -4.14, 3.32, undefined], group: MISSENSE_IN_SILICO_GROUP, indicatorMap: FATHMM_MAP, fieldTitle: 'FATHMM', requiresCitation: true },
   { field: 'apogee', thresholds: [undefined, undefined, 0.5, 0.5, undefined] },
   {
     field: 'gnomad_noncoding',
@@ -1360,7 +1361,7 @@ export const ORDERED_PREDICTOR_FIELDS = [
 
 export const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
 export const predictionFieldValue = (
-  predictions, { field, thresholds, indicatorMap, infoField, infoTitle },
+  predictions, { field, thresholds, reverseThresholds, indicatorMap, infoField, infoTitle },
 ) => {
   let value = predictions[field]
   if (value === null || value === undefined) {
@@ -1369,21 +1370,22 @@ export const predictionFieldValue = (
 
   const infoValue = predictions[infoField]
 
-  if (thresholds) {
-    value = parseFloat(value).toPrecision(3)
-    const color = PRED_COLOR_MAP.find(
+  const floatValue = parseFloat(value)
+  if (thresholds && !(indicatorMap && Number.isNaN(floatValue))) {
+    value = floatValue.toPrecision(3)
+    const color = (reverseThresholds ? REVERSE_PRED_COLOR_MAP : PRED_COLOR_MAP).find(
       (clr, i) => (thresholds[i - 1] || thresholds[i]) &&
         (thresholds[i - 1] === undefined || value >= thresholds[i - 1]) &&
         (thresholds[i] === undefined || value < thresholds[i]),
     )
-    return { value, color, infoValue, infoTitle, thresholds }
+    return { value, color, infoValue, infoTitle, thresholds, reverseThresholds }
   }
 
   return indicatorMap[value[0]] || indicatorMap[value]
 }
-export const predictorColorRanges = (thresholds, requiresCitation) => (
+export const predictorColorRanges = (thresholds, requiresCitation, reverseThresholds) => (
   <div>
-    {PRED_COLOR_MAP.map((c, i) => {
+    {(reverseThresholds ? REVERSE_PRED_COLOR_MAP : PRED_COLOR_MAP).map((c, i) => {
       const prevUndefined = thresholds[i - 1] === undefined
       let range
       if (thresholds[i] === undefined) {
@@ -1450,10 +1452,10 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'revel', getVal: variant => (variant.predictions || {}).revel },
   { header: 'eigen', getVal: variant => (variant.predictions || {}).eigen },
   { header: 'splice_ai', getVal: variant => (variant.predictions || {}).splice_ai },
-  { header: 'polyphen', getVal: variant => (POLYPHEN_MAP[(variant.predictions || {}).polyphen] || {}).value },
-  { header: 'sift', getVal: variant => (INDICATOR_MAP[(variant.predictions || {}).sift] || {}).value },
+  { header: 'polyphen', getVal: variant => (POLYPHEN_MAP[(variant.predictions || {}).polyphen] || {}).value || (variant.predictions || {}).polyphen },
+  { header: 'sift', getVal: variant => (INDICATOR_MAP[(variant.predictions || {}).sift] || {}).value || (variant.predictions || {}).sift },
   { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).mut_taster] || {}).value },
-  { header: 'fathmm', getVal: variant => (INDICATOR_MAP[(variant.predictions || {}).fathmm] || {}).value },
+  { header: 'fathmm', getVal: variant => (INDICATOR_MAP[(variant.predictions || {}).fathmm] || {}).value || (variant.predictions || {}).fathmm },
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => getVariantMainTranscript(variant).hgvsc },
   { header: 'hgvsp', getVal: variant => getVariantMainTranscript(variant).hgvsp },

@@ -1,5 +1,5 @@
 from collections import defaultdict
-from django.db.models import F, Min
+from django.db.models import F, Min, Count
 
 import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38
@@ -101,7 +101,7 @@ def _get_sample_data(samples, inheritance_filter=None, inheritance_mode=None, **
     )
     if inheritance_mode == X_LINKED_RECESSIVE:
         sample_values['sex'] = F('individual__sex')
-    sample_data = samples.order_by('id').values('sample_id', 'dataset_type', 'sample_type', **sample_values)
+    sample_data = samples.order_by('id').values('individual__individual_id', 'dataset_type', 'sample_type', **sample_values)
 
     custom_affected = (inheritance_filter or {}).pop('affected', None)
     if custom_affected:
@@ -112,6 +112,7 @@ def _get_sample_data(samples, inheritance_filter=None, inheritance_mode=None, **
     for s in sample_data:
         dataset_type = s.pop('dataset_type')
         sample_type = s.pop('sample_type')
+        s['sample_id'] = s.pop('individual__individual_id')
         data_type_key = f'{dataset_type}_{sample_type}' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else dataset_type
         sample_data_by_data_type[data_type_key].append(s)
 
@@ -185,3 +186,18 @@ def _validate_expected_families(results, expected_families):
             f'{variant_id} ({"; ".join(sorted(families))})' for variant_id, families in invalid_family_variants
         ])
         raise InvalidSearchException(f'Unable to return all families for the following variants: {missing}')
+
+
+MAX_FAMILY_COUNTS = {Sample.SAMPLE_TYPE_WES: 200, Sample.SAMPLE_TYPE_WGS: 35}
+
+
+def validate_hail_backend_no_location_search(samples):
+    sample_counts = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS).values('sample_type').annotate(
+        family_count=Count('individual__family_id', distinct=True),
+        project_count=Count('individual__family__project_id', distinct=True),
+    )
+    from seqr.utils.search.utils import InvalidSearchException
+    if sample_counts and (len(sample_counts) > 1 or sample_counts[0]['project_count'] > 1):
+        raise InvalidSearchException('Location must be specified to search across multiple projects')
+    if sample_counts and sample_counts[0]['family_count'] > MAX_FAMILY_COUNTS[sample_counts[0]['sample_type']]:
+        raise InvalidSearchException('Location must be specified to search across multiple families in large projects')

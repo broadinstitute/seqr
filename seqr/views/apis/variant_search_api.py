@@ -179,7 +179,10 @@ MUTTASTR_MAP = {
 
 
 def _get_prediction_val(prediction):
-    return PREDICTION_MAP.get(prediction[0]) if prediction else None
+    try:
+        return float(prediction or '')
+    except ValueError:
+        return PREDICTION_MAP.get(prediction[0]) if prediction else None
 
 
 def _get_variant_main_transcript_field_val(parsed_variant):

@@ -31,7 +31,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 
 # class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 #     fixtures = ['users', '1kg_project']
-#
+
 #     @mock.patch('seqr.views.utils.variant_utils.redis.StrictRedis')
 #     @mock.patch('seqr.views.utils.airtable_utils.logger')
 #     @mock.patch('seqr.views.utils.variant_utils.logger')
@@ -51,16 +51,16 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 #             responses.GET,
 #             "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
 #             json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
-#
+
 #         # Test errors
 #         with self.assertRaises(CommandError) as ce:
 #             call_command('check_for_new_samples_from_pipeline')
 #         self.assertEqual(str(ce.exception), 'Error: the following arguments are required: path, version')
-#
+
 #         with self.assertRaises(CommandError) as ce:
 #             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
 #         self.assertEqual(str(ce.exception), 'Run failed for GRCh38/SNV_INDEL: auto__2023-08-08, unable to load data')
-#
+
 #         metadata = {
 #             'callsets': ['1kg.vcf.gz'],
 #             'sample_type': 'WES',
@@ -70,51 +70,55 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 #                 'F000014_14': ['NA21234'],
 #             },
 #         }
-#         mock_subprocess.return_value.wait.return_value = 0
+#         mock_subprocess.return_value.wait.return_value = 1
 #         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
-#
+
 #         with self.assertRaises(CommandError) as ce:
-#             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
+#             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08', '--allow-failed')
 #         self.assertEqual(
 #             str(ce.exception), 'Invalid families in run metadata GRCh38/SNV_INDEL: auto__2023-08-08 - F0000123_ABC')
-#
+#         mock_logger.warning.assert_called_with('Loading for failed run GRCh38/SNV_INDEL: auto__2023-08-08')
+
 #         metadata['families']['F000011_11'] = metadata['families'].pop('F0000123_ABC')
 #         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
+#         mock_subprocess.return_value.wait.return_value = 0
 #         with self.assertRaises(CommandError) as ce:
 #             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
 #         self.assertEqual(
 #             str(ce.exception),
 #             'Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)')
-#
+
 #         project = Project.objects.get(guid=PROJECT_GUID)
 #         project.genome_version = 38
 #         project.save()
-#
+
 #         with self.assertRaises(ValueError) as ce:
 #             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
 #         self.assertEqual(str(ce.exception), 'Matches not found for sample ids: NA22882')
-#
+
 #         metadata['families']['F000011_11'] = metadata['families']['F000011_11'][1:]
 #         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
-#
+
 #         # Test success
+#         mock_logger.reset_mock()
 #         mock_subprocess.reset_mock()
 #         call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
-#
+
 #         mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [
 #             'gsutil ls gs://seqr-hail-search-data/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/_SUCCESS',
 #             'gsutil cat gs://seqr-hail-search-data/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/metadata.json',
 #         ]], any_order=True)
-#
+
 #         mock_logger.info.assert_has_calls([
 #             mock.call(f'Loading new samples from GRCh38/SNV_INDEL: auto__2023-08-08'),
 #             mock.call('Loading 4 WES SNV_INDEL samples in 2 projects'),
 #             mock.call('DONE'),
 #         ])
-#
+#         mock_logger.warining.assert_not_called()
+
 #         mock_redis.return_value.delete.assert_called_with('search_results__*')
 #         mock_utils_logger.info.assert_called_with('Reset 1 cached results')
-#
+
 #         # Tests Sample models created/updated
 #         updated_sample_models = Sample.objects.filter(guid__in={
 #             EXISTING_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4})
@@ -128,19 +132,19 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 #             {datetime.now().strftime('%Y-%m-%d')},
 #             {date.strftime('%Y-%m-%d') for date in updated_sample_models.values_list('loaded_date', flat=True)}
 #         )
-#
+
 #         old_data_sample_guid = 'S000143_na20885'
 #         self.assertFalse(Sample.objects.get(guid=old_data_sample_guid).is_active)
-#
+
 #         # Previously loaded WGS data should be unchanged by loading WES data
 #         self.assertEqual(
 #             Sample.objects.get(guid=EXISTING_WGS_SAMPLE_GUID).last_modified_date.strftime('%Y-%m-%d'), '2017-03-13')
-#
+
 #         # Previously loaded SV data should be unchanged by loading SNV_INDEL data
 #         sv_sample = Sample.objects.get(guid=EXISTING_SV_SAMPLE_GUID)
 #         self.assertEqual(sv_sample.last_modified_date.strftime('%Y-%m-%d'), '2018-03-13')
 #         self.assertTrue(sv_sample.is_active)
-#
+
 #         # Test Individual models properly associated with Samples
 #         self.assertSetEqual(
 #             set(Individual.objects.get(guid='I000015_na20885').sample_set.values_list('guid', flat=True)),
@@ -158,7 +162,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 #             set(Individual.objects.get(guid='I000018_na21234').sample_set.values_list('guid', flat=True)),
 #             {EXISTING_SV_SAMPLE_GUID, NEW_SAMPLE_GUID_P4}
 #         )
-#
+
 #         # Test Family models updated
 #         self.assertListEqual(list(Family.objects.filter(
 #             guid__in=['F000011_11', 'F000012_12']
@@ -167,7 +171,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 #             {'analysis_status': 'I', 'analysis_status_last_modified_date': None},
 #         ])
 #         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
-#
+
 #         # Test notifications
 #         self.assertEqual(mock_send_slack.call_count, 2)
 #         mock_send_slack.assert_has_calls([
@@ -180,7 +184,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 #                 f'1 new WES samples are loaded in {SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page',
 #             ),
 #         ])
-#
+
 #         self.assertEqual(mock_send_email.call_count, 1)
 #         mock_send_email.assert_called_with(EMAIL, subject='New data available in seqr', to=['test_user_manager@test.com'])
 #         mock_airtable_utils.error.assert_called_with(
@@ -188,14 +192,14 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 #                 'or_filters': {'Status': ['Loading', 'Loading Requested']},
 #                 'and_filters': {'AnVIL Project URL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'},
 #                 'update': {'Status': 'Available in Seqr'}})
-#
+
 #         # Test reloading has no effect
 #         mock_logger.reset_mock()
 #         mock_send_email.reset_mock()
 #         mock_send_slack.reset_mock()
 #         sample_last_modified = Sample.objects.filter(
 #             last_modified_date__isnull=False).values_list('last_modified_date', flat=True).order_by('-last_modified_date')[0]
-#
+
 #         call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
 #         mock_logger.info.assert_called_with(f'Data already loaded for GRCh38/SNV_INDEL: auto__2023-08-08')
 #         mock_send_email.assert_not_called()

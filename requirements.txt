@@ -112,11 +112,7 @@ oauthlib==3.2.2
     #   social-auth-core
 openpyxl==3.1.2
     # via -r requirements.in
-packaging==23.1
-    # via
-    #   google-cloud-appengine-logging
-    #   google-cloud-logging
-pillow==9.5.0
+pillow==10.2.0
     # via -r requirements.in
 proto-plus==1.22.2
     # via

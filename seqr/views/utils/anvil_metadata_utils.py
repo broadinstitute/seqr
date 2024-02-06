@@ -556,8 +556,8 @@ def _update_conditions(family_subject_row, variants, omim_conditions, mondo_cond
 def _format_omim_conditions(conditions):
     return {
         'condition_id': '|'.join(sorted({f"OMIM:{o['phenotype_mim_number']}" for o in conditions})),
-        'known_condition_name': '|'.join(sorted({o['phenotype_description'] for o in conditions})),
+        'known_condition_name': '|'.join(sorted({o['phenotype_description'] for o in conditions if o.get('phenotype_description')})),
         'condition_inheritance': '|'.join(sorted({
-            MIM_INHERITANCE_MAP.get(i, i) for o in conditions for i in (o['phenotype_inheritance'] or '').split(', ')
+            MIM_INHERITANCE_MAP.get(i, i) for o in conditions if o.get('phenotype_inheritance') for i in o['phenotype_inheritance'].split(', ')
         }))
     }

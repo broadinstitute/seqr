@@ -59,7 +59,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertListEqual(family['analysedBy'], [
             {'createdBy': 'Test No Access User', 'dataType': 'SNP', 'lastModifiedDate': '2022-07-22T19:27:08.563+00:00'},
         ])
-        self.assertListEqual(family['postDiscoveryOmimNumbers'], [615120, 615123])
+        self.assertListEqual(family['postDiscoveryOmimNumbers'], [615123, 615120])
         self.assertDictEqual(family['postDiscoveryOmimOptions'], {
             '615120': {'phenotypeMimNumber': 615120, 'phenotypes': [{
                 'geneSymbol': 'RP11', 'mimNumber': 103320, 'phenotypeMimNumber': 615120,

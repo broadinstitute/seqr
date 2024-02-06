@@ -9,7 +9,8 @@ import responses
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
-    project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists
+    project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists, \
+    project_samples
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
@@ -258,7 +259,7 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
         project_fields = {
-            'variantTagTypes', 'variantFunctionalTagTypes',
+            'variantTagTypes', 'variantFunctionalTagTypes', 'sampleCounts',
             'projectGuid', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
         }
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
@@ -286,9 +287,22 @@ class ProjectAPITest(object):
             'order': 99,
             'numTags': 1,
         })
+        self.assertDictEqual(project_response['sampleCounts'], {
+            'WES__SNV_INDEL': [{
+                'familyCounts': {
+                    'F000001_1': 3, 'F000002_2': 3, 'F000003_3': 1, 'F000004_4': 1, 'F000005_5': 1, 'F000006_6': 1,
+                    'F000007_7': 1, 'F000008_8': 1, 'F000010_10': 1,
+                },
+                'loadedDate': '2017-02-05',
+            }],
+            'WES__SV': [{'familyCounts': {'F000002_2': 3}, 'loadedDate': '2018-02-05'}],
+            'WGS__MITO': [{'familyCounts': {'F000002_2': 1}, 'loadedDate': '2022-02-05'}],
+            'RNA__SNV_INDEL': [{'familyCounts': {'F000001_1': 3}, 'loadedDate': '2017-02-05'}],
+        })
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
+        self.assertEqual(len(response_json['samplesByGuid']), 19)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
@@ -439,6 +453,24 @@ class ProjectAPITest(object):
             set(next(iter(response.json()['individualsByGuid'].values())).keys()),
             NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS,
         )
+
+    def test_project_samples(self):
+        url = reverse(project_samples, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        response_keys = {'samplesByGuid'}
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+
+        self.assertEqual(len(response_json['samplesByGuid']), 20)
+        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
+
+        # Test empty project
+        empty_url = reverse(project_samples, args=[EMPTY_PROJECT_GUID])
+        self._check_empty_project(empty_url, response_keys)
 
     def test_project_analysis_groups(self):
         url = reverse(project_analysis_groups, args=[PROJECT_GUID])
