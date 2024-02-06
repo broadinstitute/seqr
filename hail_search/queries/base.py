@@ -250,10 +250,12 @@ class BaseHailTableQuery(object):
     def _get_table_path(cls, path, use_ssd_dir=False):
         return f'{SSD_DATASETS_DIR if use_ssd_dir else DATASETS_DIR}/{cls.GENOME_VERSION}/{cls.DATA_TYPE}/{path}'
 
-    def _read_table(self, path, drop_globals=None, use_ssd_dir=False):
+    def _read_table(self, path, drop_globals=None, use_ssd_dir=False, skip_missing_field=None):
         table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
+            if skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field])):
+                return None
             ht_globals = hl.read_table(table_path).globals
             if drop_globals:
                 ht_globals = ht_globals.drop(*drop_globals)
@@ -275,11 +277,17 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
         return project_samples, family_samples
 
-    def _load_filtered_project_hts(self, project_samples, **kwargs):
+    def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
         filtered_project_hts = []
         exception_messages = set()
-        for project_guid, project_sample_data in project_samples.items():
-            project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True)
+        for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
+            project_ht = self._read_table(
+                f'projects/{project_guid}.ht',
+                use_ssd_dir=True,
+                skip_missing_field='entries' if skip_all_missing or i > 0 else None,
+            )
+            if project_ht is None:
+                continue
             try:
                 filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
             except HTTPBadRequest as e:
@@ -960,10 +968,9 @@ class BaseHailTableQuery(object):
 
         if sample_data:
             project_samples, _ = self._parse_sample_data(sample_data)
-            for pht, _ in self._load_filtered_project_hts(project_samples):
+            for pht, _ in self._load_filtered_project_hts(project_samples, skip_all_missing=True):
                 project_entries = pht.aggregate(hl.agg.take(hl.struct(**{k: v(pht) for k, v in entry_annotations.items()}), 1))
-                if project_entries:
-                    variant[FAMILY_GUID_FIELD] += project_entries[0][FAMILY_GUID_FIELD]
-                    variant[GENOTYPES_FIELD].update(project_entries[0][GENOTYPES_FIELD])
+                variant[FAMILY_GUID_FIELD] += project_entries[0][FAMILY_GUID_FIELD]
+                variant[GENOTYPES_FIELD].update(project_entries[0][GENOTYPES_FIELD])
 
         return variant

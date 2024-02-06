@@ -859,6 +859,13 @@ class DataManagerAPITest(AuthenticationTestCase):
             mock_file_iter.stdout = [('\t'.join([str(col) for col in row]) + '\n').encode() for row in rows]
             mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
 
+        _set_file_iter_stdout([])
+        invalid_body = {**body, 'file': body['file'].replace('tsv', 'xlsx')}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(invalid_body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(
+            response.json(), {'error': 'Unexpected iterated file type: gs://rna_data/muscle_samples.xlsx'})
+
         _set_file_iter_stdout([['']])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)

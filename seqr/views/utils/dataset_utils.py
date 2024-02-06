@@ -20,6 +20,9 @@ from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL
 logger = SeqrLogger(__name__)
 
 
+MAX_UNSAVED_DATA_PER_SAMPLE = 5000
+
+
 def load_mapping_file(mapping_file_path, user):
     file_content = parse_file(mapping_file_path, file_iter(mapping_file_path, user=user))
     return load_mapping_file_content(file_content)
@@ -389,7 +392,8 @@ def _load_rna_seq_file(
                 continue
 
             if current_sample != sample_guid:
-                if len(samples_by_guid[current_sample]) > 5000:
+                # If a large amount of data has been parsed for the previous sample, save and do not keep in memory
+                if len(samples_by_guid[current_sample]) > MAX_UNSAVED_DATA_PER_SAMPLE:
                     save_sample_data(current_sample, samples_by_guid[current_sample])
                     del samples_by_guid[current_sample]
                 current_sample = sample_guid

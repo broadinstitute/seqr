@@ -68,7 +68,7 @@ def parse_file(filename, stream, iter_file=False):
     elif filename.endswith('.json') and not iter_file:
         return json.loads(stream.read())
 
-    raise ValueError("Unexpected file type: {}".format(filename))
+    raise ValueError(f"Unexpected{' iterated' if iter_file else ''} file type: {filename}")
 
 
 def _parse_excel_string_cell(cell):
