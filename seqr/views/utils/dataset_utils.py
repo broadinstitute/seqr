@@ -61,6 +61,7 @@ def _find_or_create_samples(
     }
     remaining_sample_keys = set(sample_project_tuples) - set(existing_samples.keys())
 
+    matched_individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
     loaded_date = timezone.now()
     samples = {**existing_samples}
     if len(remaining_sample_keys) > 0:
@@ -83,7 +84,7 @@ def _find_or_create_samples(
                 'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(len(sample_project_tuples)))
         if raise_unmatched_error_template and remaining_sample_keys:
             raise ValueError(raise_unmatched_error_template.format(
-                sample_ids=(', '.join(sorted([sample_key[0] for sample_key in remaining_sample_keys])))))
+                sample_ids=(', '.join(sorted([sample_id for sample_id, _ in remaining_sample_keys])))))
 
         # create new Sample records for Individual records that matches
         new_sample_args = {
@@ -285,7 +286,7 @@ TISSUE_TYPE_MAP = {v: k for k, v in REVERSE_TISSUE_TYPE.items() if k != Sample.N
 
 def _get_splice_id(row):
     return '-'.join([row[GENE_ID_COL], row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[STRAND_COL],
-                     row[SPLICE_TYPE_COL]])
+                    row[SPLICE_TYPE_COL]])
 
 
 def _add_splice_rank(sample_data_rows):
@@ -341,6 +342,7 @@ def _load_rna_seq_file(
         column_map, mapping_file=None, get_unique_key=None, allow_missing_gene=False, ignore_extra_samples=False,
         should_skip=None, format_fields=None, warn_format_fields=None,
 ):
+
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
