@@ -40,10 +40,25 @@ def send_welcome_email(user, referrer):
     user.email_user('Set up your seqr account', email_content, fail_silently=False)
 
 
-def send_html_email(email_body, **kwargs):
+def send_html_email(email_body, process_message=None, **kwargs):
     email_message = EmailMultiAlternatives(
         body=strip_tags(email_body),
         **kwargs,
     )
     email_message.attach_alternative(email_body, 'text/html')
+    if process_message:
+        process_message(email_message)
     email_message.send()
+
+
+def send_notification_email(email_body, users, subject):
+    send_html_email(email_body, to=users, subject=subject, process_message=_set_bulk_notification_stream)
+
+
+def _set_bulk_notification_stream(message):
+    message.esp_extra = {
+        'MessageStream': 'seqr-notifications',
+    }
+    # Use batch API: emails are all sent with a single request and each recipient sees only their own email address
+    message.merge_data = {}
+
