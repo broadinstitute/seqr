@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Feed } from 'semantic-ui-react'
 
 import { getUser } from 'redux/selectors'
 import StateDataLoader from 'shared/components/StateDataLoader'
@@ -11,11 +12,13 @@ import { getCurrentProject } from '../selectors'
 // TODO add read count, ability to see read notifications
 
 const ProjectNotifications = React.memo(({ unreadNotifications }) => (
-  <div>
-    {unreadNotifications.map(({ verb, timestamp }) => (
-      <div>{`${verb} on ${new Date(timestamp).toLocaleDateString()}`}</div>
+  <Feed>
+    {unreadNotifications.map(({ verb, timestamp, id }) => (
+      <Feed.Event key={id}>
+        <Feed.Content><Feed.Summary date={new Date(timestamp).toLocaleDateString()} content={verb} /></Feed.Content>
+      </Feed.Event>
     ))}
-  </div>
+  </Feed>
 ))
 
 ProjectNotifications.propTypes = {
