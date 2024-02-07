@@ -6,7 +6,9 @@ from collections import defaultdict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Sample, IgvSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_individual_parents, create_model_from_json
+from seqr.utils.search.utils import backend_specific_call
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_individual_parents, create_model_from_json, \
+    update_family_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, _get_json_for_families, get_json_for_family_notes
 from seqr.views.utils.pedigree_info_utils import JsonConstants
 
@@ -50,7 +52,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     families_by_id = {f.family_id: f for f in Family.objects.filter(project=project, family_id__in=family_ids)}
 
     missing_family_ids = family_ids - set(families_by_id.keys())
-    for family_id in missing_family_ids:
+    for family_id in sorted(missing_family_ids):
         family = create_model_from_json(Family, {'project': project, 'family_id': family_id}, user)
         families_by_id[family_id] = family
         updated_family_ids.add(family.id)
@@ -143,6 +145,14 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         note = create_model_from_json(FamilyNote, {'note': family_notes, 'note_type': 'C', 'family': family}, user)
         updated_note_ids.append(note.id)
 
+    family_record = {
+        k: record.pop(k) for k in [JsonConstants.CODED_PHENOTYPE_COLUMN, JsonConstants.MONDO_ID_COLUMN] if k in record
+    }
+    if family_record:
+        is_updated = update_family_from_json(family, family_record, user=user)
+        if is_updated:
+            updated_family_ids.add(family.id)
+
     is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
     if is_updated:
         updated_individuals.add(individual)
@@ -164,12 +174,9 @@ def delete_individuals(project, individual_guids, user):
     individuals_to_delete = Individual.objects.filter(
         family__project=project, guid__in=individual_guids)
 
-    submission_individuals = individuals_to_delete.filter(
-        matchmakersubmission__isnull=False, matchmakersubmission__deleted_date__isnull=True,
-    ).values_list('individual_id', flat=True)
-    if submission_individuals:
-        raise ErrorsWarningsException([
-            f'Unable to delete individuals with active MME submission: {", ".join(submission_individuals)}'])
+    errors = backend_specific_call(_validate_no_submissions, _validate_no_sumissions_no_search_samples)(individuals_to_delete)
+    if errors:
+        raise ErrorsWarningsException(errors)
 
     Sample.bulk_delete(user, individual__in=individuals_to_delete)
     IgvSample.bulk_delete(user, individual__in=individuals_to_delete)
@@ -186,19 +193,29 @@ def delete_individuals(project, individual_guids, user):
     return families_with_deleted_individuals
 
 
+def _validate_delete_individuals(individuals_to_delete, error_type, query):
+    errors = []
+    invalid_individuals = individuals_to_delete.filter(**query).distinct().values_list('individual_id', flat=True)
+    if invalid_individuals:
+        errors.append(f'Unable to delete individuals with active {error_type}: {", ".join(sorted(invalid_individuals))}')
+    return errors
+
+
+def _validate_no_submissions(individuals_to_delete):
+    return _validate_delete_individuals(
+        individuals_to_delete, 'MME submission',
+        dict(matchmakersubmission__isnull=False, matchmakersubmission__deleted_date__isnull=True)
+    )
+
+
+def _validate_no_sumissions_no_search_samples(individuals_to_delete):
+    return _validate_no_submissions(individuals_to_delete) + _validate_delete_individuals(
+        individuals_to_delete, 'search sample', dict(sample__is_active=True)
+    )
+
+
 def _remove_pedigree_images(families, user):
     Family.bulk_update(user, {'pedigree_image': None}, queryset=families)
-
-
-def get_parsed_feature(feature):
-    optional_fields = ['notes', 'qualifiers']
-    feature_json = {'id': feature['id']}
-
-    for field in optional_fields:
-        if field in feature:
-            feature_json[field] = feature[field]
-
-    return feature_json
 
 
 def _get_updated_pedigree_json(updated_individuals, updated_families, updated_note_ids, user):

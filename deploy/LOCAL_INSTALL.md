@@ -1,4 +1,4 @@
-#### Prerequisites
+### Prerequisites
 - *Hardware:*  At least **16 Gb RAM**, **4 CPUs**, **50 Gb disk space**  
 
 - *Software:* 
@@ -22,7 +22,7 @@
   This will prevent elasticsearch start up error: `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
     
 
-#### Starting seqr
+### Starting seqr
 
 The steps below describe how to create a new empty seqr instance with a single Admin user account.
 
@@ -39,7 +39,7 @@ docker-compose exec seqr python manage.py createsuperuser  # create a seqr Admin
 open http://localhost     # open the seqr landing page in your browser. Log in to seqr using the email and password from the previous step
 ```
 
-#### Updating seqr
+### Updating seqr
 
 Updating your local installation of seqr involves pulling the latest version of the seqr docker container, and then recreating the container.
 
@@ -53,12 +53,12 @@ docker-compose logs -f seqr  # (optional) continuously print seqr logs to see wh
 
 To update reference data in seqr, such as OMIM, HPO, etc., run the following
 ```bash
-docker-compose exec seqr manage.py update_all_reference_data --use-cached-omim --skip-gencode
+docker-compose exec seqr ./manage.py update_all_reference_data --use-cached-omim --skip-gencode
 ```
    
-#### Annotating and loading VCF callsets 
+### Annotating and loading VCF callsets 
 
-##### Option #1: annotate on a Google Dataproc cluster, then load in to an on-prem seqr instance 
+#### Option #1: annotate on a Google Dataproc cluster, then load in to an on-prem seqr instance 
 
 Google Dataproc makes it easy to start a spark cluster which can be used to parallelize annotation across many machines.
 The steps below describe how to annotate a callset and then load it into your on-prem elasticsearch instance.
@@ -119,7 +119,7 @@ annotations, but you will need to re-load previously loaded projects to get the 
    
    ``` 
    
-##### Option #2: annotate and load on-prem
+#### Option #2: annotate and load on-prem
 
 Annotating a callset with VEP and reference data can be very slow - as slow as several variants / sec per CPU, so although it is possible to run the pipeline on a single machine, it is recommended to use multiple machines.
 
@@ -139,6 +139,12 @@ The steps below describe how to annotate a callset and then load it into your on
 1. start a pipeline-runner container
    ```bash
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
+   ```
+
+1. authenticate into your google cloud account.
+This is required for hail to access buckets hosted on gcloud.
+   ```bash
+   docker-compose exec pipeline-runner  gcloud auth application-default login
    ```
    
 1. if you haven't already, download VEP and other reference data to the docker image's mounted directories. 
@@ -177,7 +183,7 @@ annotations, but you will need to re-load previously loaded projects to get the 
    
    ``` 
 
-#### Adding a loaded dataset to a seqr project
+### Adding a loaded dataset to a seqr project
 
 After the dataset is loaded into elasticsearch, it can be added to your seqr project with these steps:
 
@@ -185,6 +191,41 @@ After the dataset is loaded into elasticsearch, it can be added to your seqr pro
 1. Click on Edit Datasets
 1. Enter the elasticsearch index name (the `$INDEX_NAME` argument you provided at loading time), and submit the form.
 
-#### Enable read viewing in the browser (optional)
+### Enable read viewing in the browser (optional)
 
 To make .bam/.cram files viewable in the browser through igv.js, see **[ReadViz Setup Instructions](https://github.com/populationgenomics/seqr/blob/master/deploy/READVIZ_SETUP.md)**      
+
+### Loading RNASeq datasets
+
+Currently, seqr has a preliminary integration for RNA data, which requires the use of publicly available 
+pipelines run outside of the seqr platform. After these pipelines are run, the output must be annotated with metadata 
+from seqr to ensure samples are properly associated with the correct seqr families. After calling is completed, it can
+be added to seqr from the "Data Management" > "Rna Seq" page. You will need to provide the file path for the data and the 
+data type. Note that the file path can either be a gs:// path to a google bucket or as a local file any of the volumes
+specified in the docker-compose file. The following data types are supported:
+
+#### Gene Expression
+
+seqr accepts normalized expression TPMs from STAR or RNAseqQC. TSV files should have the following columns:
+
+- sample_id
+- project
+- gene_id
+- TPM
+- tissue
+
+#### Expression Outliers
+
+seqr accepts gene expression outliers from OUTRIDER.  TSV files should have the following columns:
+
+- sampleID
+- geneID
+- pValue
+- padjust
+- zScore
+
+#### IGV
+
+Splice junctions (.junctions.bed.gz) and coverage (.bigWig) can be visualized in seqr using IGV.
+See [ReadViz Setup Instructions](https://github.com/broadinstitute/seqr/blob/master/deploy/READVIZ_SETUP.md) for 
+instructions on adding this data, as the process is identical for all IGV tracks. 

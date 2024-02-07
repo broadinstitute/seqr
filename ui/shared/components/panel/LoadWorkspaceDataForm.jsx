@@ -3,8 +3,6 @@ import PropTypes from 'prop-types'
 import { Header, Segment, Message } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-
 import {
   FILE_FIELD_NAME,
   PROJECT_DESC_FIELD,
@@ -29,6 +27,20 @@ import { getAnvilLoadingDelayDate } from 'redux/selectors'
 import AnvilFileSelector from 'shared/components/form/AnvilFileSelector'
 
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
+
+export const WORKSPACE_REQUIREMENTS = [
+  '"Writer" or "Owner" level access to the workspace',
+  'The "Can Share" permission enabled for the workspace',
+  (
+    <span>
+      No &nbsp;
+      <a href="https://support.terra.bio/hc/en-us/articles/360026775691" target="_blank" rel="noreferrer">
+        authorization domains
+      </a>
+      &nbsp; to be associated with the workspace
+    </span>
+  ),
+]
 
 const NON_ID_REQUIRED_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
 
@@ -124,33 +136,28 @@ const DATA_BUCK_FIELD = {
 
 const REQUIRED_GENOME_FIELD = { ...GENOME_VERSION_FIELD, validate: validators.required }
 
-const postWorkspaceValues = (path, formatVals, formatUrl) => onSuccess => (
-  { workspaceNamespace, workspaceName, ...values },
-) => (
-  new HttpRequestHelper(
-    formatUrl ? formatUrl(values) : `/api/create_project_from_workspace/${workspaceNamespace}/${workspaceName}/${path}`,
-    onSuccess,
-  ).post(formatVals ? formatVals(values) : values)
+const formatWorkspaceUrl = path => ({ workspaceNamespace, workspaceName }) => (
+  `/api/create_project_from_workspace/${workspaceNamespace}/${workspaceName}/${path}`
 )
 
-const postSubmitValues = formatUrl => postWorkspaceValues(
-  'submit', ({ uploadedFile, ...values }) => ({ ...values, uploadedFileId: uploadedFile.uploadedFileId }), formatUrl,
-)
+const formatSubmitValues = ({ uploadedFile, ...values }) => ({ ...values, uploadedFileId: uploadedFile.uploadedFileId })
 
-const createProjectFromWorkspace = postSubmitValues()((responseJson) => {
+const onProjectCreateSuccess = (responseJson) => {
   window.location.href = `/project/${responseJson.projectGuid}/project_page`
-})
+}
 
-const addDataFromWorkspace = values => dispatch => postSubmitValues(
-  ({ projectGuid }) => (`/api/project/${projectGuid}/add_workspace_data`),
-)((responseJson) => {
+const formatAddDataUrl = ({ projectGuid }) => (`/api/project/${projectGuid}/add_workspace_data`)
+
+const onAddDataFromWorkspace = responseJson => (dispatch) => {
   dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-})(values)
+}
 
-const GRANT_ACCESS_PAGE = { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') }
+const GRANT_ACCESS_PAGE = {
+  fields: [AGREE_CHECKBOX], formatSubmitUrl: formatWorkspaceUrl('grant_access'),
+}
 const VALIDATE_VCF_PAGE = {
   fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD],
-  onPageSubmit: postWorkspaceValues('validate_vcf'),
+  formatSubmitUrl: formatWorkspaceUrl('validate_vcf'),
 }
 
 const NEW_PROJECT_WIZARD_PAGES = [
@@ -203,7 +210,9 @@ const LoadWorkspaceDataForm = React.memo(({ params, onAddData, createProject, an
     </Segment>
     <FormWizard
       {...props}
-      onSubmit={createProject ? createProjectFromWorkspace : onAddData}
+      formatSubmitUrl={createProject ? formatWorkspaceUrl('submit') : formatAddDataUrl}
+      onSubmitSuccess={createProject ? onProjectCreateSuccess : onAddData}
+      formatSubmitValues={formatSubmitValues}
       pages={params.projectGuid ? ADD_DATA_WIZARD_PAGES : NEW_PROJECT_WIZARD_PAGES}
       initialValues={params}
       size="small"
@@ -232,7 +241,7 @@ const mapStateToProps = state => ({
 })
 
 const mapDispatchToProps = {
-  onAddData: addDataFromWorkspace,
+  onAddData: onAddDataFromWorkspace,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(LoadWorkspaceDataForm)

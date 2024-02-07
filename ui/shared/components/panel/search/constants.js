@@ -3,7 +3,7 @@ import { Form } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
-import { RadioGroup, AlignedBooleanCheckbox, Select } from 'shared/components/form/Inputs'
+import { RadioGroup, AlignedBooleanCheckbox, Select, InlineToggle } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase, camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
@@ -20,11 +20,12 @@ import {
   LOCUS_LIST_ITEMS_FIELD,
   AFFECTED,
   UNAFFECTED,
-  PREDICTOR_FIELDS,
+  ORDERED_PREDICTOR_FIELDS,
   SPLICE_AI_FIELD,
   VEP_GROUP_SV_NEW,
   PANEL_APP_CONFIDENCE_LEVELS,
   SCREEN_LABELS,
+  predictorColorRanges,
 } from 'shared/utils/constants'
 
 import LocusListItemsFilter from './LocusListItemsFilter'
@@ -325,6 +326,7 @@ export const ALL_ANNOTATION_FILTER_DETAILS =
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
 export const SV_CALLSET_FREQUENCY = 'sv_callset'
+export const TOPMED_FREQUENCY = 'topmed'
 export const SNP_FREQUENCIES = [
   {
     name: 'gnomad_genomes',
@@ -339,7 +341,7 @@ export const SNP_FREQUENCIES = [
     labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD exomes, or by allele frequency (popmax AF) in any one of these five subpopulations defined for gnomAD exomes: AFR, AMR, EAS, NFE, SAS',
   },
   {
-    name: 'topmed',
+    name: TOPMED_FREQUENCY,
     label: 'TOPMed',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) or allele frequency (AF) in TOPMed',
@@ -451,48 +453,52 @@ const REQUIRE_SCORE_FIELD = {
   label: 'Require Filtered Predictor',
   labelHelp: 'Only return variants where at least one filtered predictor is present. By default, variants are returned if a predictor meets the filtered value or is missing entirely',
 }
-export const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
-  ({ field, fieldTitle, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
-    const label = fieldTitle || snakecaseToTitlecase(field)
-    const filterField = { name: field, label, group }
+export const IN_SILICO_FIELDS = [
+  REQUIRE_SCORE_FIELD,
+  ...ORDERED_PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
+    ({ field, fieldTitle, thresholds, indicatorMap, group, min, max, requiresCitation }) => {
+      const label = fieldTitle || snakecaseToTitlecase(field)
+      const filterField = { name: field, label, group }
 
-    if (indicatorMap) {
+      if (indicatorMap) {
+        return {
+          labelHelp: `Select a value for ${label}`,
+          component: Select,
+          options: [
+            { text: '', value: null },
+            ...Object.entries(indicatorMap).map(([val, { value, ...opt }]) => ({ value: val, text: value, ...opt })),
+          ],
+          ...filterField,
+        }
+      }
+
+      const labelHelp = (
+        <div>
+          {`Enter a numeric cutoff for ${label}`}
+          {thresholds && predictorColorRanges(thresholds, requiresCitation)}
+        </div>
+      )
       return {
-        labelHelp: `Select a value for ${label}`,
-        component: Select,
-        options: [
-          { text: '', value: null },
-          ...Object.entries(indicatorMap).map(([val, { value, ...opt }]) => ({ value: val, text: value, ...opt })),
-        ],
+        labelHelp,
+        control: Form.Input,
+        type: 'number',
+        min: min || 0,
+        max: max || 1,
+        step: max ? 1 : 0.05,
         ...filterField,
       }
-    }
-
-    const labelHelp = (
-      <div>
-        {`Enter a numeric cutoff for ${label}`}
-        {dangerThreshold && (
-          <div>
-            Thresholds:
-            <div>{`Red > ${dangerThreshold}`}</div>
-            <div>{`Yellow > ${warningThreshold}`}</div>
-          </div>
-        )}
-      </div>
-    )
-    return {
-      labelHelp,
-      control: Form.Input,
-      type: 'number',
-      min: min || 0,
-      max: max || 1,
-      step: max ? 1 : 0.05,
-      ...filterField,
-    }
-  },
-)]
+    },
+  )]
 
 export const SNP_QUALITY_FILTER_FIELDS = [
+  {
+    name: 'affected_only',
+    label: 'Affected Only',
+    labelHelp: 'Only apply quality filters to affected individuals',
+    control: InlineToggle,
+    color: 'grey',
+    width: 6,
+  },
   {
     name: 'vcf_filter',
     label: 'Filter Value',
@@ -549,7 +555,7 @@ export const SV_QUALITY_FILTER_FIELDS = [
   {
     name: 'min_gq_sv',
     label: 'WGS SV Genotype Quality',
-    labelHelp: 'The genotype quality (GQ) represents the quality of a Structural Variant call. Recommended SV-QG cutoffs for filtering: > 10.',
+    labelHelp: 'The genotype quality (GQ) represents the quality of a Structural Variant call. Recommended SV-GQ cutoffs for filtering: > 10.',
     min: 0,
     max: 100,
     step: 10,

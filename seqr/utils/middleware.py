@@ -130,15 +130,21 @@ class LogRequestMiddleware(MiddlewareMixin):
         try:
             try:
                 response_json = json.loads(response.content)
+                is_json = True
             except ValueError:
                 response_json = response.data
+                is_json = False
 
             error = response_json.get('error')
             if response_json.get('errors'):
                 error = '; '.join(response_json['errors'])
-            traceback = response_json.get('traceback')
+            traceback = response_json.pop('traceback', None)
             detail = response_json.get('detail')
             log_error = response_json.get('log_error')
+            if is_json:
+                response.content = json.dumps(response_json)
+            else:
+                response.data = response_json
         except (ValueError, AttributeError):
             pass
 

@@ -1,8 +1,10 @@
 import json
 import mock
+from copy import deepcopy
 from datetime import datetime
 from django.urls.base import reverse
 from io import StringIO
+import responses
 
 from seqr.models import Sample, Family
 from seqr.views.apis.dataset_api import add_variants_dataset_handler
@@ -15,7 +17,7 @@ NON_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
 INDEX_NAME = 'test_index'
 SV_INDEX_NAME = 'test_new_sv_index'
 NEW_SAMPLE_TYPE_INDEX_NAME = 'test_new_index'
-ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
+ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'SNV_INDEL'})
 MAPPING_PROPS_SAMPLES_NUM_ALT_1 = {
     "samples_num_alt_1": {"type": "keyword"},
 }
@@ -32,11 +34,17 @@ MAPPING_JSON = {
             },
             "properties": MAPPING_PROPS_SAMPLES_NUM_ALT_1
         }}}
-
+MAPPING_JSON_38 = deepcopy(MAPPING_JSON)
+MAPPING_JSON_38[INDEX_NAME]['mappings']['_meta']['genomeVersion'] = '38'
 
 MOCK_REDIS = mock.MagicMock()
 MOCK_OPEN = mock.MagicMock()
 MOCK_FILE_ITER = MOCK_OPEN.return_value.__enter__.return_value.__iter__
+
+MOCK_AIRTABLE_URL = 'http://testairtable'
+MOCK_RECORD_ID = 'recH4SEO1CeoIlOiE'
+MOCK_RECORDS = {'records': [{'id': MOCK_RECORD_ID, 'fields': {'Status': 'Loading'}}]}
+
 
 @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
@@ -44,12 +52,13 @@ MOCK_FILE_ITER = MOCK_OPEN.return_value.__enter__.return_value.__iter__
 class DatasetAPITest(object):
 
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
-    @mock.patch('seqr.views.apis.dataset_api.safe_post_to_slack')
-    @mock.patch('seqr.views.apis.dataset_api.send_html_email')
-    @mock.patch('seqr.views.apis.dataset_api.BASE_URL', 'https://seqr.populationgenomics.org.au/')
-    @mock.patch('seqr.views.apis.dataset_api.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
-    @mock.patch('seqr.views.apis.dataset_api.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
+    @mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
+    @mock.patch('seqr.utils.search.add_data_utils.send_html_email')
+    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', MOCK_AIRTABLE_URL)
+    @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
+    @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @urllib3_responses.activate
+    @responses.activate
     def test_add_variants_dataset(self, mock_send_email, mock_send_slack, mock_random):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
         self.check_data_manager_login(url)
@@ -74,6 +83,12 @@ class DatasetAPITest(object):
 
         mock_random.return_value = 98765432101234567890
 
+        airtable_tracking_url = f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking'
+        responses.add(
+            responses.GET,
+            airtable_tracking_url + "?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
+            json=MOCK_RECORDS)
+
         urllib3_responses.add_json('/{}/_mapping'.format(INDEX_NAME), MAPPING_JSON)
         urllib3_responses.add_json('/{}/_search?size=0'.format(INDEX_NAME), {'aggregations': {
             'sample_ids': {'buckets': [{'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'}, {'key': 'NA20878'}]}
@@ -83,7 +98,7 @@ class DatasetAPITest(object):
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'mappingFilePath': 'mapping.csv',
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
         }))
         self.assertEqual(response.status_code, 200)
         MOCK_OPEN.assert_called_with('mapping.csv', 'r')
@@ -101,12 +116,16 @@ class DatasetAPITest(object):
         )
         self.assertDictEqual(response_json['individualsByGuid'], {
             'I000002_na19678': {'sampleGuids': mock.ANY},
-            'I000003_na19679': {'sampleGuids': [existing_sample_guid]},
+            'I000003_na19679': {'sampleGuids': mock.ANY},
             'I000013_na20878': {'sampleGuids': [new_sample_guid]},
         })
         self.assertSetEqual(
             set(response_json['individualsByGuid']['I000002_na19678']['sampleGuids']),
             {replaced_sample_guid, existing_old_index_sample_guid}
+        )
+        self.assertSetEqual(
+            set(response_json['individualsByGuid']['I000003_na19679']['sampleGuids']),
+            {'S000153_na19679', existing_sample_guid}
         )
 
         self.assertDictEqual(response_json['familiesByGuid'], {
@@ -145,7 +164,7 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         if self.SLACK_MESSAGE_TEMPLATE:
             mock_send_slack.assert_called_with(
-                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES', samples='NA20878'))
+                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES', samples='NA19679, NA20878', count=2))
         else:
             mock_send_slack.assert_not_called()
 
@@ -188,15 +207,16 @@ class DatasetAPITest(object):
 
         # Regular variant sample should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
-        self.assertEqual(len(sample_models), 5)
+        self.assertEqual(len(sample_models), 4)
         self.assertSetEqual({sv_sample_guid, existing_index_sample_guid} | existing_rna_seq_sample_guids,
                             {sample.guid for sample in sample_models})
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
         mock_send_email.assert_not_called()
+        self.assertEqual(len(responses.calls), 0)
         if self.SLACK_MESSAGE_TEMPLATE:
             mock_send_slack.assert_called_with(
-                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES SV', samples='NA19675_1'))
+                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES SV', samples='NA19675_1', count=1))
         else:
             mock_send_slack.assert_not_called()
 
@@ -220,7 +240,7 @@ class DatasetAPITest(object):
         }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': NEW_SAMPLE_TYPE_INDEX_NAME,
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
         }))
         self.assertEqual(response.status_code, 200)
 
@@ -229,7 +249,7 @@ class DatasetAPITest(object):
         new_sample_type_sample_guid = 'S987654_NA19675_1'
         self.assertDictEqual(response_json['familiesByGuid'], {})
         self.assertListEqual(list(response_json['samplesByGuid'].keys()), [new_sample_type_sample_guid])
-        self.assertEqual(response_json['samplesByGuid'][new_sample_type_sample_guid]['datasetType'], 'VARIANTS')
+        self.assertEqual(response_json['samplesByGuid'][new_sample_type_sample_guid]['datasetType'], 'SNV_INDEL')
         self.assertEqual(response_json['samplesByGuid'][new_sample_type_sample_guid]['sampleType'], 'WGS')
         self.assertTrue(response_json['samplesByGuid'][new_sample_type_sample_guid]['isActive'])
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
@@ -242,13 +262,13 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         if self.SLACK_MESSAGE_TEMPLATE:
             mock_send_slack.assert_called_with(
-                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WGS', samples='NA19675_1'))
+                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WGS', samples='NA19675_1', count=1))
         else:
             mock_send_slack.assert_not_called()
 
         # Previous variant samples should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
-        self.assertEqual(len(sample_models), 6)
+        self.assertEqual(len(sample_models), 5)
         self.assertSetEqual(
             {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid} | existing_rna_seq_sample_guids,
             {sample.guid for sample in sample_models})
@@ -257,6 +277,7 @@ class DatasetAPITest(object):
         # Test sending email for adding dataset to a non-analyst project
         url = reverse(add_variants_dataset_handler, args=[NON_ANALYST_PROJECT_GUID])
 
+        urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), MAPPING_JSON_38)
         urllib3_responses.replace_json('/{}/_search?size=0'.format(INDEX_NAME), {'aggregations': {
             'sample_ids': {'buckets': [{'key': 'NA21234'}]}
         }}, method=urllib3_responses.POST)
@@ -264,7 +285,7 @@ class DatasetAPITest(object):
         mock_send_slack.reset_mock()
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
         }))
         self.assertEqual(response.status_code, 200)
 
@@ -287,6 +308,10 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
                 f'1 new WES samples are loaded in {SEQR_URL}/project/{NON_ANALYST_PROJECT_GUID}/project_page',
             )
 
+            self.assertEqual(responses.calls[1].request.url, f'{airtable_tracking_url}/{MOCK_RECORD_ID}')
+            self.assertEqual(responses.calls[1].request.method, 'PATCH')
+            self.assertDictEqual(json.loads(responses.calls[1].request.body), {'fields': {'Status': 'Available in Seqr'}})
+
     @urllib3_responses.activate
     def test_add_variants_dataset_errors(self):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
@@ -308,7 +333,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
             response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+        self.assertEqual(response.json()['errors'][0], 'Adding samples is disabled for the hail backend')
 
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
@@ -361,7 +386,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
             }, "properties": MAPPING_PROPS_WITH_SAMPLES}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has dataset type SV but expects VARIANTS']})
+        self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has dataset type SV but expects SNV_INDEL']})
 
         urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
             'sub_index_1': {'mappings': {'_meta': {
@@ -418,7 +443,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
             'ignoreExtraSamplesInCallset': True,
         }))
         self.assertEqual(response.status_code, 400)
@@ -429,7 +454,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
             'ignoreExtraSamplesInCallset': True,
         }))
         self.assertEqual(response.status_code, 400)
@@ -440,7 +465,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'mappingFilePath': 'mapping.csv',
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
         }))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(
@@ -452,7 +477,7 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'mappingFilePath': 'mapping.csv',
-            'datasetType': 'VARIANTS',
+            'datasetType': 'SNV_INDEL',
         }))
         self.assertEqual(response.status_code, 500)
         self.assertEqual(response.json()['error'], 'Unhandled base exception')

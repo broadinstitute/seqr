@@ -24,3 +24,5 @@ tqdm                              # convenient way to create progress bar for lo
 whitenoise
 google-cloud-storage==1.44.0      # read GCS blobs
 google-cloud-logging==2.6.0      # Improves logging in update_reference_server.py cron script
+feedparser
+markdownify

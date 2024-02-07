@@ -1,20 +1,19 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Tab, Table } from 'semantic-ui-react'
+import { Tab } from 'semantic-ui-react'
 
 import Modal from 'shared/components/modal/Modal'
-import { ButtonLink, NoBorderTable } from 'shared/components/StyledComponents'
+import { ButtonLink } from 'shared/components/StyledComponents'
 import FormWrapper from 'shared/components/form/FormWrapper'
-import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
+import { UPLOAD_PROJECT_IGV_FIELD } from 'shared/components/form/IGVUploadField'
+import FileUploadField from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
 import AddWorkspaceDataForm from 'shared/components/panel/LoadWorkspaceDataForm'
-import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
+import { DATASET_TYPE_SNV_INDEL_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
 
 import { addVariantsDataset, addIGVDataset } from '../reducers'
 import { getCurrentProject, getProjectGuid } from '../selectors'
-
-const UPLOADER_STYLES = { placeHolderStyle: { paddingLeft: '5%', paddingRight: '5%' } }
 
 const MODAL_NAME = 'Datasets'
 
@@ -65,7 +64,7 @@ const UPLOAD_CALLSET_FIELDS = [
     labelHelp: 'The caller used to generate the raw data for this index',
     component: Select,
     options: [
-      { value: DATASET_TYPE_VARIANT_CALLS, name: 'Haplotypecaller' },
+      { value: DATASET_TYPE_SNV_INDEL_CALLS, name: 'Haplotypecaller' },
       { value: DATASET_TYPE_SV_CALLS, name: 'SV Caller' },
       { value: DATASET_TYPE_MITO_CALLS, name: 'Mitochondria Caller' },
     ],
@@ -85,64 +84,19 @@ const UPLOAD_CALLSET_FIELDS = [
   },
 ]
 
-const IGVFileUploadField = React.memo(({ projectGuid, ...props }) => (
-  <FileUploadField
-    dropzoneLabel={
-      <NoBorderTable basic="very" compact="very">
-        <Table.Body>
-          <Table.Row>
-            <Table.Cell colSpan={2}>
-              Upload a file that maps seqr Individual Ids to IGV file paths
-            </Table.Cell>
-          </Table.Row>
-          <Table.Row><Table.Cell /></Table.Row>
-          <Table.Row>
-            <Table.HeaderCell>File Format:</Table.HeaderCell>
-            <Table.Cell>Tab-separated file (.tsv) or Excel spreadsheet (.xls)</Table.Cell>
-          </Table.Row>
-          <Table.Row><Table.Cell /></Table.Row>
-          <Table.Row>
-            <Table.HeaderCell>Column 1:</Table.HeaderCell>
-            <Table.Cell>Individual ID</Table.Cell>
-          </Table.Row>
-          <Table.Row>
-            <Table.HeaderCell>Column 2:</Table.HeaderCell>
-            <Table.Cell>gs:// Google bucket path or server filesystem path for this Individual</Table.Cell>
-          </Table.Row>
-          <Table.Row>
-            <Table.HeaderCell>Column 3 (Optional):</Table.HeaderCell>
-            <Table.Cell>
-              Sample ID for this file, if different from the Individual ID. Used primarily for gCNV files to identify
-              the sample in the batch path
-            </Table.Cell>
-          </Table.Row>
-        </Table.Body>
-      </NoBorderTable>
-    }
-    url={`/api/project/${projectGuid}/upload_igv_dataset`}
-    required
-    styles={UPLOADER_STYLES}
-    {...props}
-  />
-))
-
-IGVFileUploadField.propTypes = {
-  projectGuid: PropTypes.string,
-}
-
 const mapStateToProps = state => ({
-  projectGuid: getProjectGuid(state),
+  url: `/api/project/${getProjectGuid(state)}/upload_igv_dataset`,
 })
 
 const UPLOAD_IGV_FIELDS = [
   {
-    name: 'mappingFile',
-    component: connect(mapStateToProps)(IGVFileUploadField),
-    validate: validateUploadedFile,
+    ...UPLOAD_PROJECT_IGV_FIELD,
+    component: connect(mapStateToProps)(FileUploadField),
+    required: true,
   },
 ]
 
-const DEFAULT_UPLOAD_CALLSET_VALUE = { datasetType: DATASET_TYPE_VARIANT_CALLS }
+const DEFAULT_UPLOAD_CALLSET_VALUE = { datasetType: DATASET_TYPE_SNV_INDEL_CALLS }
 
 const PANES = [
   {
@@ -177,8 +131,9 @@ const mapAddDataStateToProps = state => ({
 
 const AddProjectWorkspaceDataForm = connect(mapAddDataStateToProps)(AddWorkspaceDataForm)
 
-const EditDatasetsButton = React.memo(({ showLoadWorkspaceData, user }) => {
+const EditDatasetsButton = React.memo(({ showLoadWorkspaceData, elasticsearchEnabled, user }) => {
   const showEditDatasets = user.isDataManager || user.isPm
+  const showAddCallset = user.isDataManager && elasticsearchEnabled
   return (
     (showEditDatasets || showLoadWorkspaceData) ? (
       <Modal
@@ -187,7 +142,7 @@ const EditDatasetsButton = React.memo(({ showLoadWorkspaceData, user }) => {
         size="small"
         trigger={<ButtonLink>{showEditDatasets ? 'Edit Datasets' : 'Load Additional Data'}</ButtonLink>}
       >
-        {showEditDatasets ? <Tab panes={user.isDataManager ? PANES : IGV_ONLY_PANES} /> : (
+        {showEditDatasets ? <Tab panes={showAddCallset ? PANES : IGV_ONLY_PANES} /> : (
           <AddProjectWorkspaceDataForm
             successMessage="Your request to load data has been submitted. Loading data from AnVIL to seqr is a slow process, and generally takes a week. You will receive an email letting you know once your new data is available."
           />
@@ -199,6 +154,7 @@ const EditDatasetsButton = React.memo(({ showLoadWorkspaceData, user }) => {
 
 EditDatasetsButton.propTypes = {
   showLoadWorkspaceData: PropTypes.bool,
+  elasticsearchEnabled: PropTypes.bool,
   user: PropTypes.object,
 }
 

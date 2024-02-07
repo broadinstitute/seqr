@@ -8,6 +8,7 @@ import { Grid, Popup, Loader, Label } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById, getUser } from 'redux/selectors'
+import { getDecipherGeneLink } from 'shared/utils/constants'
 import { SectionHeader, ColoredLabel } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
 import NoteListFieldView from '../view-fields/NoteListFieldView'
@@ -174,6 +175,7 @@ DosageSensitivity.propTypes = {
 
 export const HI_THRESHOLD = 0.86
 export const TS_THRESHOLD = 0.94
+export const SHET_THRESHOLD = 0.1
 const HAPLOINSUFFICIENT_FIELDS = [{ field: 'phi', label: 'pHaplo' }]
 const TRIPLOSENSITIVE_FIELDS = [{ field: 'pts', label: 'pTriplo' }]
 const STAT_DETAILS = [
@@ -208,6 +210,24 @@ const STAT_DETAILS = [
     rankDescription: 'intolerant of LoF mutations',
     note: 'These metrics are based on the amount of expected variation observed in the gnomAD data and is a measure ' +
     'of how likely the gene is to be intolerant of loss-of-function mutations.',
+  },
+  {
+    title: 'Shet',
+    scoreField: 'sHet',
+    fields: [
+      { field: 'postMean', label: 'post_mean' },
+    ],
+    note: (
+      <span>
+        This score was developed by the Pritchard lab [
+        <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10245655" target="_blank" rel="noreferrer">
+          Zeng et al 2023
+        </a>
+        ] to predict gene constraint based on functional and evolutionary information. Scores &gt;
+        {SHET_THRESHOLD}
+        &nbsp; are considered to have high likelihood to be under extreme selection.
+      </span>
+    ),
   },
   {
     title: 'Haploinsufficient',
@@ -311,7 +331,7 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
     { title: 'NCBI Gene', link: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.geneId}`, description: 'NCBI\'s gene information resource' },
     { title: 'GTEx Portal', link: `http://www.gtexportal.org/home/gene/${gene.geneId}`, description: 'Reference of public data for this gene' },
     { title: 'Monarch', link: `http://monarchinitiative.org/gene/ENSEMBL:${gene.geneId}`, description: 'Cross-species gene and phenotype resource' },
-    { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.geneId}/overview/protein-genomic-info`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
+    { title: 'Decipher', link: getDecipherGeneLink(gene), description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
     { title: 'UniProt', link: `http://www.uniprot.org/uniprot?query=${gene.geneId}+AND(reviewed:true)+AND(organism_id:9606)`, description: 'Protein sequence and functional information' },
     { title: 'Geno2MP', link: `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${gene.geneSymbol}/gene/0/0/0`, description: 'Genotype to Mendelian Phenotype' },
     { title: 'gnomAD', link: `https://gnomad.broadinstitute.org/gene/${gene.geneId}?dataset=gnomad_r3`, description: 'Genome Aggregation Database' },

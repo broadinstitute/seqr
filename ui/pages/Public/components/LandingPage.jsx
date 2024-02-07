@@ -19,6 +19,38 @@ const LOGIN_BUTTON_PROPS = {
   label: 'Already a seqr user?', content: 'Sign In', primary: true, size: 'big', labelPosition: 'left',
 }
 
+export const SeqrAvailability = () => (
+  <List ordered>
+    <List.Item>
+      This instance is available for collaborators of the &nbsp;
+      <Anchor href="https://populationgenomics.org.au">Centre for Population Genomics</Anchor>
+      with data pre-loaded into projects.
+      If you are interested in collaborating with our group, please &nbsp;
+      <a href="mailto:seqr@populationgenomics.org.au"><b>contact us</b></a>
+      .
+    </List.Item>
+    <List.Item>
+      The Broad
+      <Anchor href="https://seqr.broadinstitute.org">Institute&apos;s instance</Anchor>
+      is available for all collaborators within the &nbsp;
+      <Anchor href="https://cmg.broadinstitute.org">Broad Institute Center for Mendelian Genomics</Anchor>
+      or Mendelian Genomics Research Center with data pre-loaded into projects
+    </List.Item>
+    <List.Item>
+      Available for use on the
+      <Anchor href="https://anvilproject.org">AnVIL platform</Anchor>
+      where requests
+      can be placed for loading a joint called vcf into seqr
+    </List.Item>
+    <List.Item>
+      Available on GitHub as an &nbsp;
+      <Anchor href="http://github.com/broadinstitute/seqr">open source project</Anchor>
+      for download and local
+      installation
+    </List.Item>
+  </List>
+)
+
 const LandingPage = () => (
   <Segment.Group>
     <PageSegment textAlign="center" size="massive" secondary>
@@ -58,52 +90,13 @@ const LandingPage = () => (
         View the <SeqrPaperLink content={<span><i>seqr</i> paper</span>} />
       </Header>
     </PageSegment>
-    <PageSegment size="large" padded="very">
-      <Header
-        textAlign="center"
-        size="medium"
-        content={
-          <span>
-            <i>seqr</i>
-            &nbsp; is available through four methods:
-          </span>
-        }
-      />
-      <Grid>
-        <Grid.Column width={3} />
-        <Grid.Column width={10}>
-          <List ordered>
-            <List.Item>
-              This instance is available for collaborators of the &nbsp;
-              <Anchor href="https://populationgenomics.org.au">Centre for Population Genomics</Anchor>
-              with data pre-loaded into projects.
-              If you are interested in collaborating with our group, please &nbsp;
-              <a href="mailto:seqr@populationgenomics.org.au"><b>contact us</b></a>
-              .
-            </List.Item>
-            <List.Item>
-              The Broad
-              <Anchor href="https://seqr.broadinstitute.org">Institute&apos;s instance</Anchor>
-              is available for all collaborators within the &nbsp;
-              <Anchor href="https://cmg.broadinstitute.org">Broad Institute Center for Mendelian Genomics</Anchor>
-              or Mendelian Genomics Research Center with data pre-loaded into projects
-            </List.Item>
-            <List.Item>
-              Available for use on the
-              <Anchor href="https://anvilproject.org">AnVIL platform</Anchor>
-              where requests
-              can be placed for loading a joint called vcf into seqr
-            </List.Item>
-            <List.Item>
-              Available on GitHub as an &nbsp;
-              <Anchor href="http://github.com/broadinstitute/seqr">open source project</Anchor>
-              for download and local
-              installation
-            </List.Item>
-          </List>
-        </Grid.Column>
-        <Grid.Column width={3} />
-      </Grid>
+    <PageSegment size="large">
+      <Header textAlign="center" size="large">
+        <i>seqr</i>
+        &nbsp; is available through three methods:
+      </Header>
+      <VerticalSpacer height={10} />
+      <SeqrAvailability />
     </PageSegment>
     <PageSegment secondary>
       <List bulleted>

@@ -6,11 +6,13 @@ from requests import HTTPError
 import responses
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
-    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree
-from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _get_json_for_models
-from seqr.views.utils.test_utils import AuthenticationTestCase
+    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree, validate_callset, \
+    get_loaded_projects, load_data
+from seqr.views.utils.orm_to_json_utils import _get_json_for_models
+from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
+from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -268,8 +270,7 @@ SAMPLE_SV_WGS_QC_DATA = [
     b'NA19678	FALSE\n',
 ]
 
-RNA_SAMPLE_GUID = 'S000150_na19675_d2'
-RNA_TPM_SAMPLE_GUID = 'S000152_na19675_d2'
+RNA_MUSCLE_SAMPLE_GUID = 'S000152_na19675_d2'
 RNA_SPLICE_SAMPLE_GUID = 'S000151_na19675_1'
 PLACEHOLDER_GUID = 'S0000100'
 RNA_FILE_ID = 'gs://rna_data/new_muscle_samples.tsv.gz'
@@ -279,32 +280,33 @@ SAMPLE_GENE_OUTLIER_DATA = {
 }
 SAMPLE_GENE_TPM_DATA = {
     'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '7.8'},
-    'ENSG00000233750': {'gene_id': 'ENSG00000233750', 'tpm': '0.064'},
+    'ENSG00000233750': {'gene_id': 'ENSG00000233750', 'tpm': '0.0'},
 }
 SAMPLE_GENE_SPLICE_DATA = {
-    'ENSG00000163092-2-167254166-167258349-*-psi3': {
+    'ENSG00000233750-2-167254166-167258349-*-psi3': {
         'chrom': '2', 'start': 167254166, 'end': 167258349, 'strand': '*', 'type': 'psi3',
-        'p_value': 1.56e-25, 'z_score': -4.9, 'delta_psi': -0.46, 'read_count': 166, 'gene_id': 'ENSG00000163092',
-        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20
+        'p_value': 1.56e-25, 'z_score': -4.9, 'delta_psi': -0.46, 'read_count': 166, 'gene_id': 'ENSG00000233750',
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 1,
     },
-    'ENSG00000106554-7-132885746-132975168-*-psi5': {
+    'ENSG00000240361-7-132885746-132975168-*-psi5': {
         'chrom': '7', 'start': 132885746, 'end': 132975168, 'strand': '*', 'type': 'psi5',
-        'p_value': 1.08e-56, 'z_score': -6.53, 'delta_psi': -0.85, 'read_count': 231, 'gene_id': 'ENSG00000106554',
-        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20},
+        'p_value': 1.08e-56, 'z_score': -6.53, 'delta_psi': -0.85, 'read_count': 231, 'gene_id': 'ENSG00000240361',
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 0,
+    },
 }
 SAMPLE_GENE_SPLICE_DATA2 = {
-    'ENSG00000163092-2-167258096-167258349-*-psi3': {
+    '-2-167258096-167258349-*-psi3': {
         'chrom': '2', 'start': 167258096, 'end': 167258349, 'strand': '*', 'type': 'psi3',
-        'p_value': 1.56e-25, 'z_score': 6.33, 'delta_psi': 0.45, 'read_count': 143, 'gene_id': 'ENSG00000163092',
-        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20
+        'p_value': 1.56e-25, 'z_score': 6.33, 'delta_psi': 0.45, 'read_count': 143, 'gene_id': '',
+        'rare_disease_samples_with_junction': 1, 'rare_disease_samples_total': 20, 'rank': 0,
     }
 }
 RNA_OUTLIER_SAMPLE_DATA = [
-    f'{RNA_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_OUTLIER_DATA)}\n',
+    f'{RNA_MUSCLE_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_OUTLIER_DATA)}\n',
     f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'p_value': '0.04', 'p_adjust': '0.112', 'z_score': '1.9'}})}\n",
 ]
 RNA_TPM_SAMPLE_DATA = [
-    f'{RNA_TPM_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n',
+    f'{RNA_MUSCLE_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n',
     f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '0.112'}})}\n",
 ]
 RNA_SPLICE_SAMPLE_DATA = [
@@ -375,6 +377,13 @@ EXPECTED_UPDATED_LIRICAL_DATA = [
      'tool': 'lirical', 'rank': 4, 'individualGuid': 'I000002_na19678'},
 ]
 
+PEDIGREE_HEADER = ['Project_GUID', 'Family_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex']
+EXPECTED_PEDIGREE_ROWS = [
+    ['R0001_1kg', 'F000001_1', '1', 'NA19675_1', 'NA19678', 'NA19679', 'M'],
+    ['R0001_1kg', 'F000001_1', '1', 'NA19678', '', '', 'M'],
+    ['R0001_1kg', 'F000001_1', '1', 'NA19679', '', '', 'F'],
+    ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
+]
 
 class DataManagerAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -412,7 +421,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+            self.assertEqual(response.json()['error'], 'Elasticsearch is disabled')
 
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
@@ -446,7 +455,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
             response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
             self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.json()['error'], 'Elasticsearch backend is disabled')
+            self.assertEqual(response.json()['error'], 'Deleting indices is disabled for the hail backend')
 
     # 2022-04-05 mfranklin: disabled because we don't have access to gs://seqr-datasets/
     # @mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -650,36 +659,35 @@ class DataManagerAPITest(AuthenticationTestCase):
         'outlier': {
             'model_cls': RnaSeqOutlier,
             'message_data_type': 'Expression Outlier',
-            'header': ['sampleID', 'project', 'geneID', 'detail', 'pValue', 'padjust', 'zScore'],
+            'header': ['sampleID', 'project', 'geneID', 'tissue', 'detail', 'pValue', 'padjust', 'zScore'],
             'optional_headers': ['detail'],
-            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'muscle', 'detail1', 0.01, 0.001, -3.1],
+            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
             'duplicated_indiv_id_data': [
-                ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
+                ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000240361', 'fibroblasts', 'detail2', 0.01, 0.13, -3.1],
             ],
             'write_data': {
                 'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "p_value": "0.064", "p_adjust": "0.0000057", "z_score": "7.8"}}\n',
                 'NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "p_value": "0.01", "p_adjust": "0.13", "z_score": "-3.1"}}\n'
             },
             'new_data': [
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.13, -3.1],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA19675_D3', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'muscle', 'detail1', 0.01, 0.13, -3.1],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'muscle', 'detail2', 0.01, 0.13, -3.1],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA19675_D3', 'Test Reprocessed Project', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'muscle', '', 0.04, 0.112, 1.9],
             ],
             'skipped_samples': 'NA19675_D3',
+            'sample_tissue_type': 'M',
             'num_parsed_samples': 3,
             'initial_model_count': 3,
             'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
-            'get_models_json': get_json_for_rna_seq_outliers,
+            'get_models_json': lambda models: list(models.values_list('gene_id', 'p_adjust', 'p_value', 'z_score')),
             'expected_models_json': [
-                {'geneId': 'ENSG00000240361', 'pAdjust': 0.13, 'pValue': 0.01, 'zScore': -3.1, 'isSignificant': False},
-                {'geneId': 'ENSG00000233750', 'pAdjust': 0.0000057, 'pValue': 0.064, 'zScore': 7.8,
-                 'isSignificant': True},
+                ('ENSG00000240361', 0.13, 0.01, -3.1), ('ENSG00000233750', 0.0000057, 0.064, 7.8),
             ],
-            'sample_guid': RNA_SAMPLE_GUID,
+            'sample_guid': RNA_MUSCLE_SAMPLE_GUID,
         },
         'tpm': {
             'model_cls': RnaSeqTpm,
@@ -690,15 +698,14 @@ class DataManagerAPITest(AuthenticationTestCase):
             'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 0.064],
             'duplicated_indiv_id_data': [
                 ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'muscle', 7.8],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.064],
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.0],
             ],
             'write_data': {'NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}\n',
-                           'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.064"}}\n'},
+                           'NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.0"}}\n'},
             'new_data': [
                 # existing sample NA19675_D2
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.0],
                 # no matched individual NA19675_D3
                 ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
                 # skip GTEX samples
@@ -714,15 +721,15 @@ class DataManagerAPITest(AuthenticationTestCase):
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'M',
             'num_parsed_samples': 4,
-            'initial_model_count': 3,
-            'deleted_count': 1,
+            'initial_model_count': 4,
+            'deleted_count': 3,
             'extra_warnings': [
                 'Skipped data loading for the following 1 sample(s) due to mismatched tissue type: NA19678 (fibroblasts, muscle)',
             ],
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
-            'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
-            'sample_guid': RNA_TPM_SAMPLE_GUID,
+            'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.0)],
+            'sample_guid': RNA_MUSCLE_SAMPLE_GUID,
         },
         'splice_outlier': {
             'model_cls': RnaSeqSpliceOutlier,
@@ -731,55 +738,57 @@ class DataManagerAPITest(AuthenticationTestCase):
                        'deltaPsi', 'readCount', 'tissue', 'dotSize', 'rareDiseaseSamplesWithJunction',
                        'rareDiseaseSamplesTotal'],
             'optional_headers': ['geneName', 'dotSize'],
-            'loaded_data_row': ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
+            'loaded_data_row': ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000240361', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
                                 'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
-            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
+            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000240361', 'chr7', 132885746, 132886973, '*', 'CHCHD3',
                                 'psi5', 1.08E-56, 12.34, 0.85, 1297, 'fibroblasts', 0.53953638, 1, 20],
             'duplicated_indiv_id_data': [
-                ['NA20870', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000163093', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000135953', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
             ],
-            'write_data': {'NA20870\t\t{"ENSG00000163092-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
+            'write_data': {'NA20870\t\t{"ENSG00000233750-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
-                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163092",'
-                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
-                           'NA20870\t\t{"ENSG00000163093-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
+                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000233750",'
+                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}\n',
+                           'NA20870\t\t{"ENSG00000135953-2-167258096-167258349-*-psi3": {"chrom": "2", "start": 167258096,'
                            ' "end": 167258349, "strand": "*", "type": "psi3", "p_value": 1.56e-25, "z_score": 6.33,'
-                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000163093",'
-                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20}}\n',
+                           ' "delta_psi": 0.45, "read_count": 143, "gene_id": "ENSG00000135953",'
+                           ' "rare_disease_samples_with_junction": 1, "rare_disease_samples_total": 20, "rank": 0}}\n',
             },
             'new_data': [
                 # existing sample NA19675_1
-                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000163092', 'chr2', 167254166, 167258349, '*', 'XIRP2', 'psi3',
+                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000233750', 'chr2', 167254166, 167258349, '*', 'XIRP2', 'psi3',
                  1.56E-25, -4.9, -0.46, 166, 'fibroblasts', 0.03850364, 1, 20],
-                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000106554', 'chr7', 132885746, 132975168, '*', 'CHCHD3', 'psi5',
+                ['NA19675_1', '1kg project nåme with uniçøde', 'ENSG00000240361', 'chr7', 132885746, 132975168, '*', 'CHCHD3', 'psi5',
                  1.08E-56, -6.53, -0.85, 231, 'fibroblasts', 0.53953638, 1, 20],
                 # no matched individual NA19675_D3
-                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'muscle', 0.03454739, 1, 20],
                 # a new sample NA20888
-                ['NA20888', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2',
+                ['NA20888', 'Test Reprocessed Project', '', 'chr2', 167258096, 167258349, '*', 'XIRP2',
                  'psi3', 1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
                 # a project mismatched sample NA20878
-                ['NA20878', 'Test Reprocessed Project', 'ENSG00000163092', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3',
+                ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3',
                  1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'F',
             'num_parsed_samples': 4,
-            'initial_model_count': 1,
+            'initial_model_count': 7,
+            'deleted_count': 4,
             'parsed_file_data': RNA_SPLICE_SAMPLE_DATA,
+            'allow_missing_gene': True,
             'get_models_json': lambda models: list(
                 models.values_list('gene_id', 'chrom', 'start', 'end', 'strand', 'type', 'p_value', 'z_score', 'delta_psi',
                                    'read_count', 'rare_disease_samples_with_junction', 'rare_disease_samples_total')),
             'expected_models_json': [
-                ('ENSG00000163092', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
-                ('ENSG00000106554', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 1, 20)
+                ('ENSG00000233750', '2', 167254166, 167258349, '*', 'psi3', 1.56e-25, -4.9, -0.46, 166, 1, 20),
+                ('ENSG00000240361', '7', 132885746, 132975168, '*', 'psi5', 1.08e-56, -6.53, -0.85, 231, 1, 20)
             ],
             'sample_guid': RNA_SPLICE_SAMPLE_GUID,
-            'row_id': 'ENSG00000106554-7-132885746-132886973-*-psi5',
+            'row_id': 'ENSG00000240361-7-132885746-132886973-*-psi5',
         },
     }
     #
@@ -995,7 +1004,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     def test_load_rna_seq_sample_data(self, mock_open, mock_os):
         mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
 
-        url = reverse(load_rna_seq_sample_data, args=[RNA_SAMPLE_GUID])
+        url = reverse(load_rna_seq_sample_data, args=[RNA_MUSCLE_SAMPLE_GUID])
         self.check_data_manager_login(url)
 
         for data_type, params in self.RNA_DATA_TYPE_PARAMS.items():
@@ -1194,3 +1203,233 @@ class DataManagerAPITest(AuthenticationTestCase):
     #         mock.call().wait(),
     #     ])
 
+        body['datasetType'] = 'MITO'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Data file or path gs://test_bucket/mito_callset.mt is not found.'])
+
+        mock_subprocess.return_value.wait.return_value = 0
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+
+        # test data manager access
+        self.login_data_manager_user()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+    def test_get_loaded_projects(self):
+        url = reverse(get_loaded_projects, args=['WGS', 'SV'])
+        self.check_pm_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'projects': [
+            {'dataTypeLastLoaded': None, 'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg'},
+            {'dataTypeLastLoaded': '2018-02-05T06:42:55.397Z', 'name': 'Non-Analyst Project', 'projectGuid': 'R0004_non_analyst_project'},
+        ]})
+
+        # test data manager access
+        self.login_data_manager_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+
+class LoadDataAPITest(object):
+    LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
+    PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
+
+    def patch_es(self, es_host):
+        patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', es_host)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    @responses.activate
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+    @mock.patch('seqr.views.utils.export_utils.open')
+    @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_load_data(self, mock_subprocess, mock_temp_dir, mock_open):
+        url = reverse(load_data)
+        self.check_pm_login(url)
+
+        responses.replace(responses.GET, f'{self.dag_url}/dagRuns', json={'dag_runs': []})
+        mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
+        mock_subprocess.return_value.wait.return_value = 0
+        mock_subprocess.return_value.communicate.return_value = b'', b'File not found'
+        body = {'filePath': 'gs://test_bucket/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'projects': [
+            'R0001_1kg', 'R0004_non_analyst_project', 'R0005_not_project',
+        ]}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
+
+        body['projects'] = body['projects'][:-1]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+
+        self.assert_airflow_calls()
+        self._has_expected_gs_calls(mock_subprocess, mock_open)
+        slack_message = f'*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects{self.SUCCESS_SLACK_DETAIL}'
+
+        self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message)
+
+        # Test loading trigger error
+        self.mock_slack.reset_mock()
+        mock_open.reset_mock()
+        responses.calls.reset()
+        mock_subprocess.reset_mock()
+        mock_subprocess.return_value.communicate.return_value = b'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_SV/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v01/\ngs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_GCNV/v02/', b''
+
+        body.update({'datasetType': 'SV', 'filePath': 'gs://test_bucket/sv_callset.vcf', 'sampleType': 'WES'})
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+
+        self.assert_airflow_calls(trigger_error=True, dag_name=self.SECOND_DAG_NAME)
+        self._has_expected_gs_calls(mock_subprocess, mock_open, dag_name=self.SECOND_DAG_NAME, sample_type='WES')
+        self.mock_airflow_logger.warning.assert_not_called()
+        self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
+        error = self.mock_airflow_logger.error.call_args.args[0]
+        self.assertRegex(error, 'Connection refused by Responses')
+
+        error_message = f'ERROR triggering internal WES SV loading: {error}{self.ERROR_SLACK_DETAIL}'
+        self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
+
+
+class LoadEsDataAPITest(AirflowTestCase, LoadDataAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+    DAG_NAME = 'RDG_WGS_Broad_Internal_MITO'
+    SECOND_DAG_NAME = 'RDG_WES_Broad_Internal_GCNV'
+    SUCCESS_SLACK_DETAIL = """
+
+        DAG seqr_vcf_to_es_RDG_WGS_Broad_Internal_MITO_v0.0.1 is triggered with following:
+        ```{
+    "active_projects": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "vcf_path": "gs://test_bucket/mito_callset.mt",
+    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01"
+}```
+    """
+    ERROR_SLACK_DETAIL = """
+        
+        DAG seqr_vcf_to_es_RDG_WES_Broad_Internal_GCNV_v0.0.1 should be triggered with following: 
+        ```{
+    "active_projects": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "vcf_path": "gs://test_bucket/sv_callset.vcf",
+    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_GCNV/v03"
+}```
+        """
+
+    def setUp(self):
+        self.patch_es('testhost')
+        super().setUp()
+
+    def _get_expected_dag_variables(self, **kwargs):
+        return {
+            'active_projects': self.PROJECTS,
+            'projects_to_run': self.PROJECTS,
+            'vcf_path': 'gs://test_bucket/mito_callset.mt',
+            'version_path': 'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01',
+        }
+
+    def _has_expected_gs_calls(self, mock_subprocess, mock_open, dag_name=DAG_NAME, **kwargs):
+        mock_open.assert_not_called()
+        mock_subprocess.assert_called_with(
+            f'gsutil ls gs://seqr-datasets/v02/GRCh38/{dag_name}', stdout=-1, stderr=-1, shell=True)  # nosec
+
+
+class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+    DAG_NAME = 'v03_pipeline-MITO'
+    SECOND_DAG_NAME = 'v03_pipeline-GCNV'
+    HAS_DAG_ID_PREFIX = False
+    SUCCESS_SLACK_DETAIL = """
+
+        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/
+
+        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project/
+
+        DAG v03_pipeline-MITO is triggered with following:
+        ```{
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "callset_paths": [
+        "gs://test_bucket/mito_callset.mt"
+    ],
+    "sample_source": "Broad_Internal",
+    "sample_type": "WGS",
+    "reference_genome": "GRCh38"
+}```
+    """
+    ERROR_SLACK_DETAIL = """
+        
+        DAG v03_pipeline-GCNV should be triggered with following: 
+        ```{
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "callset_paths": [
+        "gs://test_bucket/sv_callset.vcf"
+    ],
+    "sample_source": "Broad_Internal",
+    "sample_type": "WES",
+    "reference_genome": "GRCh38"
+}```
+        """
+
+    def setUp(self):
+        self.patch_es('')
+        super().setUp()
+
+    def _get_expected_dag_variables(self, **kwargs):
+        return {
+            'projects_to_run': self.PROJECTS,
+            'callset_paths': ['gs://test_bucket/mito_callset.mt'],
+            'sample_source': 'Broad_Internal',
+            'sample_type': 'WGS',
+            'reference_genome': 'GRCh38',
+        }
+
+    def _has_expected_gs_calls(self, mock_subprocess, mock_open, sample_type='WGS', **kwargs):
+        mock_open.assert_has_calls([
+            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in self.PROJECTS
+        ], any_order=True)
+        files = [
+            [row.split('\t') for row in write_call.args[0].split('\n')]
+            for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
+        ]
+        self.assertEqual(len(files), 2)
+        self.assertEqual(len(files[0]), 15)
+        self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS)
+        self.assertEqual(len(files[1]), 3)
+        self.assertListEqual(files[1], [
+            PEDIGREE_HEADER,
+            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'],
+            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
+        ])
+
+        mock_subprocess.assert_has_calls([
+            mock.call(
+                f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/',
+                stdout=-1, stderr=-2, shell=True,  # nosec
+            ) for project in self.PROJECTS
+        ], any_order=True)

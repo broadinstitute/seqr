@@ -6,7 +6,7 @@ import { Grid, Icon, Popup, Loader, Dimmer } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
-import { getUser } from 'redux/selectors'
+import { getUser, getElasticsearchEnabled } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
@@ -289,7 +289,7 @@ class DatasetSection extends React.PureComponent {
 
 }
 
-const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, user }) => {
+const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, user, elasticsearchEnabled }) => {
   const datasetSections = Object.entries(samplesByType).map(([sampleTypeKey, loadedSampleCounts]) => {
     const [sampleType, datasetType] = sampleTypeKey.split('__')
     return {
@@ -332,8 +332,13 @@ const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, us
   return datasetSections.map((sectionProps, i) => (
     <DetailSection
       {...sectionProps}
-      button={(datasetSections.length - 1 === i) ?
-        <EditDatasetsButton showLoadWorkspaceData={showLoadWorkspaceData && !noLoadedData} user={user} /> : null}
+      button={(datasetSections.length - 1 === i) ? (
+        <EditDatasetsButton
+          showLoadWorkspaceData={showLoadWorkspaceData && !noLoadedData}
+          user={user}
+          elasticsearchEnabled={elasticsearchEnabled}
+        />
+      ) : null}
     />
   ))
 })
@@ -342,11 +347,13 @@ Dataset.propTypes = {
   samplesByType: PropTypes.object.isRequired,
   hasAnvil: PropTypes.bool,
   showLoadWorkspaceData: PropTypes.bool,
+  elasticsearchEnabled: PropTypes.bool,
   user: PropTypes.object.isRequired,
 }
 
 const mapDatasetStateToProps = (state, ownProps) => ({
   user: getUser(state),
+  elasticsearchEnabled: getElasticsearchEnabled(state),
   samplesByType: getProjectAnalysisGroupSamplesByTypes(state, ownProps),
 })
 

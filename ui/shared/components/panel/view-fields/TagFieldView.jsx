@@ -124,6 +124,7 @@ class TagFieldView extends React.PureComponent {
     simplifiedValue: PropTypes.bool,
     validate: PropTypes.func,
     disabledTagType: PropTypes.string,
+    noEditTagType: PropTypes.string,
     linkTagType: PropTypes.string,
     tagLinkUrl: PropTypes.string,
   }
@@ -134,7 +135,7 @@ class TagFieldView extends React.PureComponent {
   }
 
   getMappedProps() {
-    const { field, initialValues, validate } = this.props
+    const { field, initialValues, validate, noEditTagType } = this.props
 
     const fieldValues = this.fieldValues()
     const tagSelectOptions = this.tagSelectOptions()
@@ -155,7 +156,9 @@ class TagFieldView extends React.PureComponent {
       formFieldProps.validate = validate
     }
 
-    return { initialValues: mappedValues, formFieldProps, tagOptions: tagSelectOptions }
+    const tagOptions = noEditTagType ? tagSelectOptions.filter(({ name }) => name !== noEditTagType) : tagSelectOptions
+
+    return { initialValues: mappedValues, formFieldProps, tagOptions }
   }
 
   fieldValues = () => {

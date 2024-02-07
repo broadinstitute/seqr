@@ -9,6 +9,7 @@ import json
 import logging
 import mock
 import re
+import responses
 from urllib.parse import quote_plus, urlparse
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
@@ -87,6 +88,12 @@ class AuthenticationTestCase(TestCase):
 
         pm_group = Group.objects.get(pk=5)
         pm_group.user_set.add(cls.pm_user)
+
+    @classmethod
+    def add_analyst_project(cls, project_id):
+        analyst_group = Group.objects.get(pk=4)
+        assign_perm(user_or_group=analyst_group, perm=CAN_VIEW, obj=Project.objects.filter(id=project_id))
+        return True
 
     def check_require_login(self, url, **request_kwargs):
         self._check_login(url, self.AUTHENTICATED_USER, **request_kwargs)
@@ -235,9 +242,14 @@ class AuthenticationTestCase(TestCase):
     def assert_json_logs(self, user, expected):
         logs = self._log_stream.getvalue().split('\n')
         for i, (message, extra) in enumerate(expected):
-            self.assertDictEqual(json.loads(logs[i]), {
-                'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, 'message': message, **(extra or {}),
+            extra = extra or {}
+            validate = extra.pop('validate', None)
+            log_value = json.loads(logs[i])
+            self.assertDictEqual(log_value, {
+                'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, 'message': message, **extra,
             })
+            if validate:
+                validate(log_value)
 
     def assert_no_logs(self):
         self.assertEqual(self._log_stream.getvalue(), '')
@@ -248,6 +260,8 @@ TEST_WORKSPACE_NAME1 = 'anvil-project 1000 Genomes Demo'
 TEST_EMPTY_PROJECT_WORKSPACE = 'empty'
 TEST_NO_PROJECT_WORKSPACE_NAME = 'anvil-no-project-workspace1'
 TEST_NO_PROJECT_WORKSPACE_NAME2 = 'anvil-no-project-workspace2'
+EXT_WORKSPACE_NAMESPACE = 'ext-data'
+EXT_WORKSPACE_NAME = 'anvil-non-analyst-project 1000 Genomes Demo'
 
 TEST_SERVICE_ACCOUNT = 'test_account@my-seqr.iam.gserviceaccount.com'
 
@@ -386,8 +400,8 @@ ANVIL_WORKSPACES = [{
         'bucketName': 'test_bucket'
     },
 }, {
-    'workspace_namespace': 'ext-data',
-    'workspace_name': 'anvil-non-analyst-project 1000 Genomes Demo',
+    'workspace_namespace': EXT_WORKSPACE_NAMESPACE,
+    'workspace_name': EXT_WORKSPACE_NAME,
     'public': True,
     'acl': {
         'test_user_manager@test.com': {
@@ -395,6 +409,12 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": True,
             "canCompute": True
+        },
+        'test_pm_user@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
         },
     },
     'workspace': {
@@ -524,10 +544,171 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         analyst_group = Group.objects.get(pk=4)
         analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
 
+    @classmethod
+    def add_analyst_project(cls, project_id):
+        return False
+
     def assert_no_extra_anvil_calls(self):
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_groups.assert_not_called()
         self.mock_get_group_members.assert_not_called()
+
+
+MOCK_TOKEN = 'mock_openid_bearer'  # nosec
+MOCK_AIRFLOW_URL = 'http://testairflowserver'
+PROJECT_GUID = 'R0001_1kg'
+
+
+class AirflowTestCase(AnvilAuthenticationTestCase):
+    ADDITIONAL_REQUEST_COUNT = 0
+    HAS_DAG_ID_PREFIX = True
+
+    def setUp(self):
+        self.dag_url = f'{MOCK_AIRFLOW_URL}/api/v1/dags/{self._get_dag_id()}'
+        self.auth_header = f'Bearer {MOCK_TOKEN}'
+        headers = {'Authorization': self.auth_header}
+
+        # check dag running state
+        responses.add(responses.GET, f'{self.dag_url}/dagRuns', headers=headers, json={
+            'dag_runs': [{
+                'conf': {},
+                'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1',
+                'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
+                'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00',
+                'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00',
+                'state': 'success'}
+            ]})
+        # update variables
+        responses.add(
+            responses.PATCH, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', headers=headers,
+            json={'key': self.DAG_NAME, 'value': 'updated variables'},
+        )
+        # get task id
+        self.add_dag_tasks_response(['R0006_test'])
+        # get task id again if the response of the previous request didn't include the updated guid
+        self.add_dag_tasks_response([self.LOADING_PROJECT_GUID])
+        # get task id again if the response of the previous request didn't include the updated guid
+        self.add_dag_tasks_response([self.LOADING_PROJECT_GUID, PROJECT_GUID])
+        # trigger dag
+        responses.add(responses.POST, f'{self.dag_url}/dagRuns', headers=headers, json={})
+
+        patcher = mock.patch('seqr.views.utils.airflow_utils.id_token.fetch_id_token', lambda *args: MOCK_TOKEN)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.safe_post_to_slack')
+        self.mock_slack = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.logger')
+        self.mock_airflow_logger = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        super(AirflowTestCase, self).setUp()
+
+    def add_dag_tasks_response(self, projects):
+        tasks = []
+        for project in projects:
+            tasks += [
+                {'task_id': 'create_dataproc_cluster'},
+                {'task_id': f'pyspark_compute_project_{project}'},
+                {'task_id': f'pyspark_compute_variants_{self.DAG_NAME}'},
+                {'task_id': f'pyspark_export_project_{project}'},
+                {'task_id': 'scale_dataproc_cluster'},
+                {'task_id': f'skip_compute_project_subset_{project}'}
+            ]
+        responses.add(responses.GET, f'{self.dag_url}/tasks', headers={'Authorization': self.auth_header}, json={
+            'tasks': tasks, 'total_entries': len(tasks),
+        })
+
+    def set_dag_trigger_error_response(self):
+        responses.replace(responses.GET, f'{self.dag_url}/dagRuns', json={'dag_runs': [{
+            'conf': {},
+            'dag_id': self._get_dag_id(),
+            'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
+            'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00',
+            'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00',
+            'state': 'running'}
+        ]})
+
+    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dag_name=None):
+        self.mock_airflow_logger.info.assert_not_called()
+
+        # Test triggering anvil dags
+        call_count = 5
+        if additional_tasks_check:
+            call_count = 6
+        if trigger_error:
+            call_count = 1
+        self.assertEqual(len(responses.calls), call_count + self.ADDITIONAL_REQUEST_COUNT)
+        # check dag running state
+        dag_url = self.dag_url.replace(self.DAG_NAME, dag_name) if dag_name else self.dag_url
+        self.assertEqual(responses.calls[0].request.url, f'{dag_url}/dagRuns')
+        self.assertEqual(responses.calls[0].request.method, "GET")
+        self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+
+        if trigger_error:
+            return
+
+        # update variables
+        self.assertEqual(responses.calls[1].request.url, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}')
+        self.assertEqual(responses.calls[1].request.method, 'PATCH')
+        self.assertDictEqual(json.loads(responses.calls[1].request.body), {
+            'key': self.DAG_NAME,
+            'value': json.dumps(self._get_expected_dag_variables(additional_tasks_check=additional_tasks_check)),
+        })
+        self.assertEqual(responses.calls[1].request.headers['Authorization'], self.auth_header)
+
+        # get task id
+        self.assertEqual(responses.calls[2].request.url, f'{self.dag_url}/tasks')
+        self.assertEqual(responses.calls[2].request.method, 'GET')
+        self.assertEqual(responses.calls[2].request.headers['Authorization'], self.auth_header)
+
+        self.assertEqual(responses.calls[3].request.url, f'{self.dag_url}/tasks')
+        self.assertEqual(responses.calls[3].request.method, 'GET')
+        self.assertEqual(responses.calls[3].request.headers['Authorization'], self.auth_header)
+
+        call_cnt = 5 if additional_tasks_check else 4
+        if additional_tasks_check:
+            self.assertEqual(responses.calls[4].request.url, f'{self.dag_url}/tasks')
+            self.assertEqual(responses.calls[4].request.method, 'GET')
+            self.assertEqual(responses.calls[4].request.headers['Authorization'], self.auth_header)
+
+        # trigger dag
+        self.assertEqual(responses.calls[call_cnt].request.url, f'{self.dag_url}/dagRuns')
+        self.assertEqual(responses.calls[call_cnt].request.method, 'POST')
+        self.assertDictEqual(json.loads(responses.calls[call_cnt].request.body), {})
+        self.assertEqual(responses.calls[call_cnt].request.headers['Authorization'], self.auth_header)
+
+        self.mock_airflow_logger.warning.assert_not_called()
+        self.mock_airflow_logger.error.assert_not_called()
+
+    def _get_dag_id(self):
+        return f'seqr_vcf_to_es_{self.DAG_NAME}_v0.0.1' if self.HAS_DAG_ID_PREFIX else self.DAG_NAME
+
+    def _get_expected_dag_variables(self, **kwargs):
+        raise NotImplementedError
+
+
+class AirtableTest(object):
+
+    def assert_expected_airtable_call(self, call_index, filter_formula, fields, additional_params=None):
+        expected_params = {
+            'fields[]': mock.ANY,
+            'pageSize': '100',
+            'filterByFormula': filter_formula,
+        }
+        if additional_params:
+            expected_params.update(additional_params)
+        self.assertDictEqual(responses.calls[call_index].request.params, expected_params)
+        self.assertListEqual(self._get_list_param(responses.calls[call_index].request, 'fields%5B%5D'), fields)
+
+    @staticmethod
+    def _get_list_param(call, param):
+        query_params = call.url.split('?')[1].split('&')
+        param_str = f'{param}='
+        return [p.replace(param_str, '') for p in query_params if p.startswith(param_str)]
 
 
 USER_FIELDS = {
@@ -545,7 +726,7 @@ ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGui
 
 FAMILY_FIELDS = {
     'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
-    'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst', 'codedPhenotype', 'postDiscoveryOmimNumber',
+    'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst', 'codedPhenotype', 'postDiscoveryOmimNumbers',
     'pedigreeDataset', 'analysisStatusLastModifiedDate', 'analysisStatusLastModifiedBy', 'mondoId',
 }
 CASE_REVIEW_FAMILY_FIELDS = {
@@ -636,7 +817,7 @@ GENE_FIELDS = {
     'gencodeGeneType', 'geneId', 'geneSymbol', 'startGrch37', 'startGrch38',
 }
 GENE_VARIANT_DISPLAY_FIELDS = {
-    'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity', 'genCc', 'clinGen',
+    'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity', 'genCc', 'clinGen', 'sHet',
 }
 GENE_VARIANT_DISPLAY_FIELDS.update(GENE_FIELDS)
 GENE_VARIANT_FIELDS = {
@@ -918,7 +1099,8 @@ PARSED_VARIANTS = [
                                    'hom': None, 'id': None, 'max_hl': None},
         },
         'pos': 248367227,
-        'predictions': {'splice_ai': 0.75, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
+        'predictions': {'splice_ai': 0.75, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': 'D',
+                        'vest': '0.335', 'mut_pred': None,
                         'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None,
                         'polyphen': None, 'dann': None, 'sift': None, 'cadd': '25.9', 'primate_ai': None,
                         'mpc': None, 'strvctvre': None, 'splice_ai_consequence': None, 'gnomad_noncoding': 1.01272,},
@@ -1003,7 +1185,7 @@ PARSED_VARIANTS = [
         'predictions': {
             'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None, 'gnomad_noncoding': None,
             'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None, 'polyphen': None,
-            'dann': None, 'sift': None, 'cadd': None, 'primate_ai': 1,
+            'dann': None, 'sift': None, 'cadd': None, 'primate_ai': 1, 'vest': None, 'mut_pred': None,
             'mpc': None, 'strvctvre': None, 'splice_ai_consequence': None,
         },
         'ref': 'GAGA',
@@ -1088,7 +1270,7 @@ PARSED_SV_VARIANT = {
     'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
                     'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None, 'gnomad_noncoding': None,
                     'polyphen': None, 'dann': None, 'sift': None, 'cadd': None, 'primate_ai': None,
-                    'mpc': None, 'strvctvre': 0.374, 'splice_ai_consequence': None},
+                    'vest': None, 'mut_pred': None, 'mpc': None, 'strvctvre': 0.374, 'splice_ai_consequence': None},
     'ref': None,
     'rsid': None,
     'screenRegionType': None,
@@ -1171,6 +1353,7 @@ PARSED_SV_WGS_VARIANT = {
     },
     'pos': 49045387,
     'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
+                    'vest': None, 'mut_pred': None,
                     'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None,
                     'polyphen': None, 'dann': None, 'sift': None, 'cadd': None, 'primate_ai': None,
                     'mpc': None, 'strvctvre': None, 'gnomad_noncoding': None, 'splice_ai_consequence': None},
@@ -1264,7 +1447,7 @@ PARSED_MITO_VARIANT = {
     'predictions': {'hmtvar': 0.71, 'apogee': 0.42, 'cadd': None, 'dann': None, 'eigen': None, 'fathmm': 'T',
                     'haplogroup_defining': None, 'mitotip': None, 'mpc': None, 'mut_taster': 'N', 'polyphen': None,
                     'primate_ai': None, 'revel': None, 'sift': 'D', 'splice_ai': None, 'splice_ai_consequence': None,
-                    'strvctvre': None, 'gnomad_noncoding': None,},
+                    'vest': None, 'mut_pred': None, 'strvctvre': None, 'gnomad_noncoding': None,},
     'ref': 'C',
     'rg37LocusEnd': None,
     'rsid': None,

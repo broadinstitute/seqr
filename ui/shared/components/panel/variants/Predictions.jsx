@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Icon, Transition, Popup } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
-import { PREDICTOR_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
+import { ORDERED_PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, predictionFieldValue, getVariantMainGeneId } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
@@ -19,57 +19,33 @@ const PredictionValue = styled.span`
 
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
 
-const predictionFieldValue = (
-  predictions, { field, dangerThreshold, warningThreshold, indicatorMap, infoField, infoTitle },
+const Prediction = (
+  { field, fieldTitle, value, color, infoValue, infoTitle, thresholds, href, requiresCitation },
 ) => {
-  let value = predictions[field]
-  if (value === null || value === undefined) {
-    return { value }
-  }
-
-  const infoValue = predictions[infoField]
-
-  if (dangerThreshold) {
-    value = parseFloat(value).toPrecision(2)
-    let color = 'green'
-    if (value >= dangerThreshold) {
-      color = 'red'
-    } else if (value >= warningThreshold) {
-      color = 'yellow'
-    }
-    return { value, color, infoValue, infoTitle, dangerThreshold, warningThreshold }
-  }
-
-  return indicatorMap[value[0]] || indicatorMap[value]
-}
-
-const Prediction = ({ field, fieldTitle, value, color, infoValue, infoTitle, warningThreshold, dangerThreshold }) => {
   const indicator = infoValue ? (
     <Popup
       header={infoTitle}
       content={infoValue}
       trigger={<Icon name="question circle" size="small" color={color} />}
     />
-  ) : <Icon name="circle" size="small" color={color} />
+  ) : coloredIcon(color)
   const fieldName = fieldTitle || snakecaseToTitlecase(field)
-  const fieldDisplay = dangerThreshold ? (
+  const fieldDisplay = thresholds ? (
     <Popup
       header={`${fieldName} Color Ranges`}
-      content={
-        <div>
-          <div>{`Red > ${dangerThreshold}`}</div>
-          {warningThreshold < dangerThreshold && <div>{`Yellow > ${warningThreshold}`}</div>}
-        </div>
-      }
+      hoverable
+      content={predictorColorRanges(thresholds, requiresCitation)}
       trigger={<span>{fieldName}</span>}
     />
   ) : fieldName
+
+  const valueDisplay = href ? <a href={href} target="_blank" rel="noreferrer">{value}</a> : value
 
   return (
     <div>
       {indicator}
       {fieldDisplay}
-      <PredictionValue>{value}</PredictionValue>
+      <PredictionValue>{valueDisplay}</PredictionValue>
     </div>
   )
 }
@@ -81,8 +57,27 @@ Prediction.propTypes = {
   infoTitle: PropTypes.string,
   fieldTitle: PropTypes.string,
   color: PropTypes.string,
-  warningThreshold: PropTypes.number,
-  dangerThreshold: PropTypes.number,
+  thresholds: PropTypes.arrayOf(PropTypes.number),
+  href: PropTypes.string,
+  requiresCitation: PropTypes.bool,
+}
+
+const getPredictorFields = (variant, predictions, genePredictors) => {
+  const mappedFields = ORDERED_PREDICTOR_FIELDS.map(({
+    fieldTitle,
+    getHref,
+    ...predictorField
+  }) => ({
+    field: predictorField.field,
+    fieldTitle,
+    href: getHref && getHref(variant),
+    requiresCitation: predictorField.requiresCitation,
+    ...predictionFieldValue(predictions, genePredictors[predictorField.field] || predictorField),
+  }))
+
+  return mappedFields.filter(
+    predictorField => predictorField.value !== null && predictorField.value !== undefined,
+  )
 }
 
 class Predictions extends React.PureComponent {
@@ -111,16 +106,13 @@ class Predictions extends React.PureComponent {
     if (gene && gene.primateAi) {
       genePredictors.primate_ai = {
         field: 'primate_ai',
-        warningThreshold: gene.primateAi.percentile25,
-        dangerThreshold: gene.primateAi.percentile75,
+        thresholds: [undefined, undefined, gene.primateAi.percentile25.toPrecision(3),
+          gene.primateAi.percentile75.toPrecision(3), undefined],
       }
     }
 
-    const predictorFields = PREDICTOR_FIELDS.map(({ fieldTitle, ...predictorField }) => ({
-      field: predictorField.field,
-      fieldTitle,
-      ...predictionFieldValue(predictions, genePredictors[predictorField.field] || predictorField),
-    })).filter(predictorField => predictorField.value !== null && predictorField.value !== undefined)
+    const predictorFields = getPredictorFields(variant, predictions, genePredictors)
+
     return (
       <div>
         {

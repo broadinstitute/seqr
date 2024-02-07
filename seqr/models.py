@@ -145,6 +145,12 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         return entity_ids
 
     @classmethod
+    def bulk_update_models(cls, user, models, fields):
+        """Helper bulk update method that logs the update and allows different update data for each model"""
+        log_model_bulk_update(logger, models, user, 'update', update_fields=fields)
+        cls.objects.bulk_update(models, fields)
+
+    @classmethod
     def bulk_delete(cls, user, queryset=None, **filter_kwargs):
         """Helper bulk delete method that logs the deletion"""
         if queryset is None:
@@ -264,32 +270,33 @@ class ProjectCategory(ModelWithGUID):
 
 class Family(ModelWithGUID):
     ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS='I'
+    ANALYSIS_STATUS_PARTIAL_SOLVE = 'P'
     ANALYSIS_STATUS_WAITING_FOR_DATA='Q'
-    ANALYSIS_STATUS_SOLVED = 'S'
-    ANALYSIS_STATUS_SOLVED_KGP = 'S_kgfp'
-    ANALYSIS_STATUS_SOLVED_KGDP = 'S_kgdp'
-    ANALYSIS_STATUS_SOLVED_NOVEL = 'S_ng'
-    ANALYSIS_STATUS_SOLVED_EXTERNAL = 'ES'
-    ANALYSIS_STATUS_CHOICES = (
+    SOLVED_ANALYSIS_STATUS_CHOICES = (
         ('S', 'Solved'),
         ('S_kgfp', 'Solved - known gene for phenotype'),
         ('S_kgdp', 'Solved - gene linked to different phenotype'),
         ('S_ng', 'Solved - novel gene'),
         ('ES', 'External solve'),
+    )
+    STRONG_CANDIDATE_STATUS_CHOICES = (
         ('Sc_kgfp', 'Strong candidate - known gene for phenotype'),
         ('Sc_kgdp', 'Strong candidate - gene linked to different phenotype'),
         ('Sc_ng', 'Strong candidate - novel gene'),
+    )
+    ANALYSIS_STATUS_CHOICES = (
+        *SOLVED_ANALYSIS_STATUS_CHOICES,
+        *STRONG_CANDIDATE_STATUS_CHOICES,
         ('Rcpc', 'Reviewed, currently pursuing candidates'),
         ('Rncc', 'Reviewed, no clear candidate'),
         ('C', 'Closed, no longer under analysis'),
-        ('I', 'Analysis in Progress'),
-        ('Q', 'Waiting for data'),
+        (ANALYSIS_STATUS_PARTIAL_SOLVE, 'Partial Solve - Analysis in Progress'),
+        (ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS, 'Analysis in Progress'),
+        (ANALYSIS_STATUS_WAITING_FOR_DATA, 'Waiting for data'),
         ('N', 'No data expected'),
     )
-    SOLVED_ANALYSIS_STATUSES = [
-        ANALYSIS_STATUS_SOLVED, ANALYSIS_STATUS_SOLVED_KGP, ANALYSIS_STATUS_SOLVED_KGDP, ANALYSIS_STATUS_SOLVED_NOVEL,
-        ANALYSIS_STATUS_SOLVED_EXTERNAL,
-    ]
+    SOLVED_ANALYSIS_STATUSES = [status for status, _ in SOLVED_ANALYSIS_STATUS_CHOICES]
+    STRONG_CANDIDATE_ANALYSIS_STATUSES = [status for status, _ in STRONG_CANDIDATE_STATUS_CHOICES]
 
     SUCCESS_STORY_TYPE_CHOICES = (
         ('N', 'Novel Discovery'),
@@ -324,7 +331,7 @@ class Family(ModelWithGUID):
 
     coded_phenotype = models.TextField(null=True, blank=True)
     mondo_id = models.CharField(null=True, blank=True, max_length=30)
-    post_discovery_omim_number = models.TextField(null=True, blank=True)
+    post_discovery_omim_numbers = ArrayField(models.PositiveIntegerField(), default=list)
     pubmed_ids = ArrayField(models.TextField(), default=list)
 
     analysis_status = models.CharField(
@@ -347,7 +354,7 @@ class Family(ModelWithGUID):
 
         json_fields = [
             'guid', 'family_id', 'description', 'analysis_status', 'created_date',
-            'post_discovery_omim_number', 'pedigree_dataset', 'coded_phenotype', 'mondo_id',
+            'post_discovery_omim_numbers', 'pedigree_dataset', 'coded_phenotype', 'mondo_id',
         ]
         internal_json_fields = [
             'success_story_types', 'success_story', 'pubmed_ids',
@@ -639,29 +646,33 @@ class Sample(ModelWithGUID):
         (SAMPLE_TYPE_RNA, 'RNA'),
     )
 
-    DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+    DATASET_TYPE_VARIANT_CALLS = 'SNV_INDEL'
     DATASET_TYPE_SV_CALLS = 'SV'
     DATASET_TYPE_MITO_CALLS = 'MITO'
     DATASET_TYPE_CHOICES = (
         (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
         (DATASET_TYPE_SV_CALLS, 'SV Calls'),
         (DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
+        ('ONT_SNV_INDEL', 'ONT Calls'),
     )
     DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
+    NO_TISSUE_TYPE = 'X'
     TISSUE_TYPE_CHOICES = (
-        ('WB', 'Whole Blood'),
-        ('F', 'Fibroblast'),
-        ('M', 'Muscle'),
-        ('L', 'Lymphocyte'),
+        ('WB', 'whole_blood'),
+        ('F', 'fibroblasts'),
+        ('M', 'muscle'),
+        ('L', 'lymphocytes'),
+        ('A', 'airway_cultured_epithelium'),
+        (NO_TISSUE_TYPE, 'None'),
     )
 
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
 
     sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
-    dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES)
+    dataset_type = models.CharField(max_length=13, choices=DATASET_TYPE_CHOICES)
 
-    tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES, null=True, blank=True)
+    tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES)
 
     # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
     sample_id = models.TextField(db_index=True)
@@ -1070,8 +1081,8 @@ class BulkOperationBase(models.Model):
 class DeletableSampleMetadataModel(BulkOperationBase):
     PARENT_FIELD = 'sample'
 
-    sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
-    gene_id = models.CharField(max_length=20, db_index=True)  # ensembl ID
+    sample = models.ForeignKey('Sample', on_delete=models.CASCADE)
+    gene_id = models.CharField(max_length=20)  # ensembl ID
 
     def __unicode__(self):
         return "%s:%s" % (self.sample.sample_id, self.gene_id)
@@ -1082,6 +1093,7 @@ class DeletableSampleMetadataModel(BulkOperationBase):
 
 class RnaSeqOutlier(DeletableSampleMetadataModel):
     SIGNIFICANCE_THRESHOLD = 0.05
+    SIGNIFICANCE_FIELD = 'p_adjust'
 
     p_value = models.FloatField()
     p_adjust = models.FloatField()
@@ -1092,7 +1104,7 @@ class RnaSeqOutlier(DeletableSampleMetadataModel):
 
         json_fields = ['gene_id', 'p_value', 'p_adjust', 'z_score']
 
-        indexes = [models.Index(fields=['gene_id']), models.Index(fields=['p_adjust'])]
+        indexes = [models.Index(fields=['sample_id', 'gene_id']), models.Index(fields=['p_adjust'])]
 
 
 class RnaSeqTpm(DeletableSampleMetadataModel):
@@ -1103,14 +1115,20 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
 
         json_fields = ['gene_id', 'tpm']
 
+        indexes = [models.Index(fields=['sample_id', 'gene_id'])]
+
 
 class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
+    SIGNIFICANCE_THRESHOLD = 0.01
+    SIGNIFICANCE_FIELD = 'p_value'
+    MAX_SIGNIFICANT_OUTLIER_NUM = 50
     STRAND_CHOICES = (
         ('+', '5′ to 3′ direction'),
         ('-', '3′ to 5′ direction'),
         ('*', 'Any direction'),
     )
 
+    rank = models.IntegerField()
     p_value = models.FloatField()
     z_score = models.FloatField()
     chrom = models.CharField(max_length=2)

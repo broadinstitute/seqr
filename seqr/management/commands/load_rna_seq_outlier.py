@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 import logging
 
-from seqr.models import RnaSeqOutlier
+from seqr.models import RnaSeqOutlier, Sample
 from seqr.views.utils.dataset_utils import load_rna_seq_outlier
 from seqr.views.utils.file_utils import parse_file
 
@@ -23,9 +23,13 @@ class Command(BaseCommand):
 
         samples_to_load, _, _ = load_rna_seq_outlier(options['input_file'], mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
 
-        for sample, data_by_gene in samples_to_load.items():
+        sample_id_map = {
+            s['guid']: s for s in Sample.objects.filter(guid__in=samples_to_load).values('guid', 'id', 'sample_id')
+        }
+        for sample_guid, data_by_gene in samples_to_load.items():
+            sample_data = sample_id_map[sample_guid]
             models = RnaSeqOutlier.objects.bulk_create(
-                [RnaSeqOutlier(sample=sample, **data) for data in data_by_gene.values()])
-            logger.info(f'create {len(models)} RnaSeqOutliers for {sample.sample_id}')
+                [RnaSeqOutlier(sample_id=sample_data['id'], **data) for data in data_by_gene.values()])
+            logger.info(f'create {len(models)} RnaSeqOutliers for {sample_data["sample_id"]}')
 
 

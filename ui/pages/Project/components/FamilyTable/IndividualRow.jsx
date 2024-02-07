@@ -23,13 +23,12 @@ import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import {
   AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
-  INDIVIDUAL_FIELD_AFFECTED,
+  INDIVIDUAL_FIELD_AFFECTED, INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_LOOKUP,
 } from 'shared/utils/constants'
 
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid, getMmeSubmissionsByGuid } from 'redux/selectors'
-import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
-import { HPO_FIELD_RENDER } from '../HpoTerms'
+import { HPO_FORM_FIELDS } from '../HpoTerms'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
   ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS,
@@ -40,7 +39,6 @@ import { getCurrentProject, getParentOptionsByIndividual } from '../../selectors
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 import CollapsableLayout from './CollapsableLayout'
 
-const RnaSeqOutliers = React.lazy(() => import('../RnaSeqOutliers'))
 const PhenotypePrioritizedGenes = React.lazy(() => import('../PhenotypePrioritizedGenes'))
 
 const Detail = styled.div`
@@ -63,13 +61,6 @@ const IndividualContainer = styled.div`
 const PaddedRadioButtonGroup = styled(RadioButtonGroup)`
   padding: 10px;
 `
-
-const FLAG_TITLE = {
-  chimera: '% Chimera',
-  contamination: '% Contamination',
-  coverage_exome: '% 20X Coverage',
-  coverage_genome: 'Mean Coverage',
-}
 
 const POPULATION_MAP = {
   AFR: 'African',
@@ -107,11 +98,6 @@ const ETHNICITY_OPTIONS = [
   'Western European',
 ].map(title => ({ title }))
 
-const ratioLabel = (flag) => {
-  const words = snakecaseToTitlecase(flag).split(' ')
-  return `Ratio ${words[1]}/${words[2]}`
-}
-
 const CaseReviewStatus = React.memo(({ individual }) => (
   <CaseReviewDropdownContainer>
     <CaseReviewStatusDropdown individual={individual} />
@@ -131,13 +117,6 @@ CaseReviewStatus.propTypes = {
 }
 
 const SHOW_DATA_MODAL_CONFIG = [
-  {
-    shouldShowField: 'hasRnaOutlierData',
-    component: RnaSeqOutliers,
-    modalName: ({ sampleId }) => `OUTRIDER-${sampleId}`,
-    title: ({ sampleId }) => `RNA-Seq OUTRIDER: ${sampleId}`,
-    linkText: 'Show RNA-Seq OUTRIDER',
-  },
   {
     shouldShowField: 'hasPhenotypeGeneScores',
     component: PhenotypePrioritizedGenes,
@@ -175,7 +154,9 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         <Popup
           flowing
           trigger={
-            <MmeStatusLabel title="Removed from MME" dateField="deletedDate" color="red" individual={individual} mmeSubmission={mmeSubmission} />
+            <div>
+              <MmeStatusLabel title="Removed from MME" dateField="deletedDate" color="red" individual={individual} mmeSubmission={mmeSubmission} />
+            </div>
           }
           content={
             <div>
@@ -185,6 +166,16 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
           }
         />
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
+    )}
+    {individual.hasRnaOutlierData && (
+      <div>
+        <Link
+          target="_blank"
+          to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/rnaseq_results/${individual.individualGuid}`}
+        >
+          RNAseq Results
+        </Link>
+      </div>
     )}
     {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
       ({ modalName, title, modalSize, linkText, component }) => {
@@ -196,7 +187,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
             modalName={modalName(titleIds)}
             title={title(titleIds)}
             size={modalSize}
-            trigger={<ButtonLink padding="1em 0 0 0" content={linkText} />}
+            trigger={<ButtonLink padding="0 0 0 0" content={linkText} />}
           >
             <React.Suspense fallback={<Loader />}>
               {React.createElement(component,
@@ -375,40 +366,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   population: {
     fieldDisplay: population => POPULATION_MAP[population] || population || 'Not Loaded',
   },
-  filterFlags: {
-    fieldDisplay: filterFlags => Object.entries(filterFlags).map(([flag, val]) => (
-      <Label
-        key={flag}
-        basic
-        horizontal
-        color="orange"
-        content={`${FLAG_TITLE[flag] || snakecaseToTitlecase(flag)}: ${parseFloat(val).toFixed(2)}`}
-      />
-    )),
-  },
-  popPlatformFilters: {
-    fieldDisplay: filterFlags => Object.keys(filterFlags).map(flag => (
-      <Label
-        key={flag}
-        basic
-        horizontal
-        color="orange"
-        content={flag.startsWith('r_') ? ratioLabel(flag) : snakecaseToTitlecase(flag.replace('n_', 'num._'))}
-      />
-    )),
-  },
-  svFlags: {
-    fieldDisplay: filterFlags => filterFlags.map(flag => (
-      <Label
-        key={flag}
-        basic
-        horizontal
-        color="orange"
-        content={snakecaseToTitlecase(flag)}
-      />
-    )),
-  },
-  features: HPO_FIELD_RENDER,
+  [INDIVIDUAL_FIELD_FEATURES]: { formFields: HPO_FORM_FIELDS },
   disorders: {
     component: ListFieldView,
     formFieldProps: {
@@ -427,10 +385,11 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
 
 const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(
   ({ field, header, subFields, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate }) => {
-    const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field]
-    const formattedField = {
-      field, fieldName: header, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate, ...fieldProps,
+    const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field] || {}
+    const coreField = {
+      field, fieldName: header, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate,
     }
+    const formattedField = { ...(INDIVIDUAL_FIELD_LOOKUP[field] || {}), ...coreField, ...fieldProps }
     if (subFields) {
       formattedField.formFields = subFields.map(subField => (
         { name: subField.field, label: subField.header, ...subFieldProps, ...(subFieldsLookup || {})[subField.field] }

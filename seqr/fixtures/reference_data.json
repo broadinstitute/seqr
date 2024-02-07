@@ -979,6 +979,44 @@
         "gencode_release": 27
     }
 }, {
+    "model": "reference_data.geneinfo",
+    "pk": 60,
+    "fields": {
+        "gene_id": "ENSG00000177000",
+        "gene_symbol": "MTHFR",
+        "chrom_grch37": "1",
+        "start_grch37": 11785723,
+        "end_grch37": 11806455,
+        "strand_grch37": "+",
+        "coding_region_size_grch37": 0,
+        "chrom_grch38": "1",
+        "start_grch38": 11785723,
+        "end_grch38": 11806455,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0,
+        "gencode_gene_type": "protein_coding",
+        "gencode_release": 27
+    }
+}, {
+    "model": "reference_data.geneinfo",
+    "pk": 61,
+    "fields": {
+        "gene_id": "ENSG00000097046",
+        "gene_symbol": "CDC7",
+        "chrom_grch37": "1",
+        "start_grch37": 91500851,
+        "end_grch37": 91525764,
+        "strand_grch37": "+",
+        "coding_region_size_grch37": 0,
+        "chrom_grch38": "1",
+        "start_grch38": 91500851,
+        "end_grch38": 91525764,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0,
+        "gencode_gene_type": "protein_coding",
+        "gencode_release": 27
+    }
+}, {
     "model": "reference_data.transcriptinfo",
     "pk": 1,
     "fields": {
@@ -1033,6 +1071,9 @@
         "phenotype_inheritance": "Autosomal recessive",
         "phenotype_mim_number": 616126,
         "phenotype_description": "Immunodeficiency 38",
+        "chrom": "1",
+        "start": 11869,
+        "end": 14409,
         "phenotype_map_method": "3"
     }
 },
@@ -1040,11 +1081,14 @@
     "model": "reference_data.omim",
     "pk": 2,
     "fields": {
-        "gene": 3,
+        "gene": 48,
         "mim_number": 103320,
+        "chrom": "1",
+        "start": 29554,
+        "end": 31109,
         "gene_description": "Agrin",
         "comments": "",
-        "phenotype_inheritance": "Autosomal recessive",
+        "phenotype_inheritance": "Autosomal recessive, X-linked recessive",
         "phenotype_mim_number": 615120,
         "phenotype_description": "Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects",
         "phenotype_map_method": "3"
@@ -1054,13 +1098,15 @@
     "model": "reference_data.omim",
     "pk": 3,
     "fields": {
-        "gene": 5,
+        "gene": null,
         "mim_number": 600315,
+        "chrom": "1",
+        "start": 249044482,
+        "end": 249055991,
         "gene_description": "Tumor necrosis factor receptor superfamily, member 4",
         "comments": "mutation identified in 1 IMD16 family",
         "phenotype_inheritance": "Autosomal recessive",
-        "phenotype_mim_number": 615593,
-        "phenotypic_series_number": 12345,
+        "phenotype_mim_number": 615120,
         "phenotype_description": "?Immunodeficiency 16",
         "phenotype_map_method": "3"
     }
@@ -1128,6 +1174,14 @@
         "gene": 1,
         "pHI": 0.90576,
         "pTS": 0.7346
+    }
+},
+{
+    "model": "reference_data.geneshet",
+    "pk": 1,
+    "fields": {
+        "gene": 1,
+        "post_mean": 0.90576
     }
 },
     {
@@ -1382,6 +1436,18 @@
         "category_id": "HP:0033127",
         "is_category": "f",
         "name": "Tetralogy of Fallot",
+        "definition": "",
+        "comment": ""
+    }
+}, {
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 12,
+    "fields": {
+        "hpo_id": "HP:0000006",
+        "parent_id": "HP:0034345",
+        "category_id": "",
+        "is_category": "f",
+        "name": "Autosomal dominant inheritance",
         "definition": "",
         "comment": ""
     }

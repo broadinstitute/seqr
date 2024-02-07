@@ -13,6 +13,8 @@ from django.utils import timezone
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, SavedVariant, \
     FamilyNote, CAN_EDIT
+from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
+from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json, update_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, \
@@ -20,10 +22,11 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
-    has_workspace_perm, has_case_review_permissions
+    has_workspace_perm, has_case_review_permissions, is_internal_anvil_project
 from seqr.views.utils.project_context_utils import families_discovery_tags, \
     add_project_tag_types, get_project_analysis_groups, get_project_locus_lists, MME_TAG_NAME
-from seqr.views.utils.terra_api_utils import is_anvil_authenticated
+from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
+from settings import BASE_URL
 
 
 @pm_required
@@ -346,11 +349,18 @@ def _delete_project(project_guid, user):
     project = Project.objects.get(guid=project_guid)
     check_user_created_object_permissions(project, user)
 
-    IgvSample.bulk_delete(user, individual__family__project=project)
-    Sample.bulk_delete(user, individual__family__project=project)
-
-    Individual.bulk_delete(user, family__project=project)
+    individual_guids_to_delete = Individual.objects.filter(
+        family__project__guid=project_guid).values_list('guid', flat=True)
+    delete_individuals(project, individual_guids_to_delete, user)
 
     Family.bulk_delete(user, project=project)
 
     project.delete_model(user, user_can_delete=True)
+
+    if anvil_enabled() and not is_internal_anvil_project(project):
+        AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_patch_records(
+            ANVIL_REQUEST_TRACKING_TABLE,
+            record_or_filters={'Status': ['Loading', 'Loading Requested', 'Available in Seqr']},
+            record_and_filters={'AnVIL Project URL': f'{BASE_URL}project/{project_guid}/project_page'},
+            update={'Status': 'Project Deleted'},
+        )

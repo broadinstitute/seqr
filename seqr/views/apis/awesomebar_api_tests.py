@@ -85,15 +85,15 @@ class AwesomebarAPITest(object):
         self.assertEqual(len(genes), 5)
         self.assertListEqual(
             [g['title'] for g in genes],
-            ['ENSG00000135953', 'ENSG00000186092', 'ENSG00000185097', 'DDX11L1', 'ENSG00000237613'],
+            ['ENSG00000135953', 'ENSG00000177000', 'ENSG00000186092', 'ENSG00000185097', 'DDX11L1'],
         )
-        self.assertDictEqual(genes[1], {
+        self.assertDictEqual(genes[2], {
             'key': 'ENSG00000186092',
             'title': 'ENSG00000186092',
             'description': '(OR4F5)',
             'href': '/summary_data/gene_info/ENSG00000186092',
         })
-        self.assertDictEqual(genes[3], {
+        self.assertDictEqual(genes[4], {
             'key': 'ENSG00000223972',
             'title': 'DDX11L1',
             'description': '(ENSG00000223972)',
@@ -125,8 +125,8 @@ class AwesomebarAPITest(object):
         hpo_terms = matches['hpo_terms']['results']
         self.assertEqual(len(hpo_terms), 5)
         self.assertListEqual([h['title'] for h in hpo_terms], [
-            'Tetralogy of Fallot', 'Arrhythmia', 'Complete atrioventricular canal defect',
-            'Defect in the atrial septum', 'Failure to thrive',
+            'Tetralogy of Fallot', 'Arrhythmia',  'Autosomal dominant inheritance', 'Complete atrioventricular canal defect',
+            'Defect in the atrial septum',
         ])
         self.assertDictEqual(hpo_terms[0], {
             'key': 'HP:0001636',

@@ -30,10 +30,13 @@ export const getIndividualGeneDataByFamilyGene = createSelector(
       if (rnaSeqData) {
         acc[familyGuid] = acc[familyGuid] || {}
         acc[familyGuid].rnaSeqData = Object.entries(rnaSeqData).reduce(
-          (acc2, [geneId, data]) => (data.isSignificant ? {
+          (acc2, [geneId, data]) => ({
             ...acc2,
-            [geneId]: [...(acc2[geneId] || []), { ...data, individualName: displayName }],
-          } : acc2), acc[familyGuid].rnaSeqData || {},
+            [geneId]: [
+              ...(acc2[geneId] || []),
+              ...data.filter(({ isSignificant }) => isSignificant).map(d => ({ ...d, individualName: displayName })),
+            ],
+          }), acc[familyGuid].rnaSeqData || {},
         )
       }
       if (phenotypeGeneScores) {
@@ -65,29 +68,80 @@ const matchingVariants = (variants, matchFunc) => variants.filter(o => (Array.is
 // sorts manual variants to top of list, as manual variants are missing all populations
 const sortCompHet = (a, b) => (a.populations ? 1 : 0) - (b.populations ? 1 : 0)
 
-export const getPairedSelectedSavedVariants = createSelector(
-  getSavedVariantsByGuid,
+const getProjectSavedVariantsSelection = createSelector(
   (state, props) => props.match.params,
   getFamiliesByGuid,
   getAnalysisGroupsByGuid,
-  (state, props) => (props.project || {}).projectGuid,
+  state => state.currentProjectGuid,
   getVariantTagsByGuid,
-  getVariantNotesByGuid,
-  (savedVariants, { tag, gene, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid,
-    projectGuid, tagsByGuid, notesByGuid) => {
-    let variants = Object.values(savedVariants)
-    if (variantGuid) {
-      variants = variants.filter(o => variantGuid.split(',').includes(o.variantGuid))
-      return variants.length > 1 ? [variants] : variants
+  ({ tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid,
+    projectGuid, tagsByGuid) => {
+    if (!projectGuid) {
+      return null
     }
 
-    if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {
+    let variantFilter
+    if (variantGuid) {
+      variantFilter = o => variantGuid.split(',').includes(o.variantGuid)
+    } else if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {
       const analysisGroupFamilyGuids = analysisGroupsByGuid[analysisGroupGuid].familyGuids
-      variants = variants.filter(o => o.familyGuids.some(fg => analysisGroupFamilyGuids.includes(fg)))
+      variantFilter = o => o.familyGuids.some(fg => analysisGroupFamilyGuids.includes(fg))
     } else if (familyGuid) {
-      variants = variants.filter(o => o.familyGuids.includes(familyGuid))
-    } else if (projectGuid) {
-      variants = variants.filter(o => o.familyGuids.some(fg => familiesByGuid[fg].projectGuid === projectGuid))
+      variantFilter = o => o.familyGuids.includes(familyGuid)
+    } else {
+      variantFilter = o => o.familyGuids.some(fg => familiesByGuid[fg].projectGuid === projectGuid)
+    }
+
+    const pairedFilters = []
+    if (tag === NOTE_TAG_NAME) {
+      pairedFilters.push(({ noteGuids }) => noteGuids.length)
+    } else if (tag === MME_TAG_NAME) {
+      pairedFilters.push(({ mmeSubmissions = [] }) => mmeSubmissions.length)
+    } else if (tag && tag !== SHOW_ALL) {
+      pairedFilters.push(({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag))
+    } else if (!(familyGuid || analysisGroupGuid)) {
+      pairedFilters.push(({ tagGuids }) => tagGuids.length)
+    }
+
+    return [variantFilter, pairedFilters]
+  },
+)
+
+const getSummaryDataSavedVariantsSelection = createSelector(
+  (state, props) => props.match.params,
+  state => state.currentProjectGuid,
+  getVariantTagsByGuid,
+  ({ tag, gene }, projectGuid, tagsByGuid) => {
+    if (projectGuid) {
+      return null
+    }
+    const pairedFilters = []
+    if (gene) {
+      pairedFilters.push(({ transcripts }) => gene in (transcripts || {}))
+    } if (tag && tag !== SHOW_ALL) {
+      const tags = tag.split(';')
+      pairedFilters.push(({ tagGuids }) => tags.every(t => tagGuids.some(tagGuid => (
+        tagsByGuid[tagGuid][t === DISCOVERY_CATEGORY_NAME ? 'category' : 'name'] === t
+      ))))
+    }
+
+    const variantFilter = tag || gene ? null : () => false
+    return [variantFilter, pairedFilters]
+  },
+)
+
+export const getPairedSelectedSavedVariants = createSelector(
+  getProjectSavedVariantsSelection,
+  getSummaryDataSavedVariantsSelection,
+  getSavedVariantsByGuid,
+  getVariantTagsByGuid,
+  getVariantNotesByGuid,
+  (projectVariants, summaryDataVariants, savedVariants, tagsByGuid, notesByGuid) => {
+    const [variantFilter, pairedFilters] = projectVariants || summaryDataVariants
+
+    let variants = Object.values(savedVariants)
+    if (variantFilter) {
+      variants = variants.filter(variantFilter)
     }
 
     const selectedVariantsByGuid = variants.reduce((acc, variant) => ({ ...acc, [variant.variantGuid]: variant }), {})
@@ -130,21 +184,9 @@ export const getPairedSelectedSavedVariants = createSelector(
       return acc
     }, [])
 
-    if (tag === NOTE_TAG_NAME) {
-      pairedVariants = matchingVariants(pairedVariants, ({ noteGuids }) => noteGuids.length)
-    } else if (tag === MME_TAG_NAME) {
-      pairedVariants = matchingVariants(pairedVariants, ({ mmeSubmissions = [] }) => mmeSubmissions.length)
-    } else if (tag && tag !== SHOW_ALL) {
-      pairedVariants = matchingVariants(
-        pairedVariants, ({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag),
-      )
-    } else if (!(familyGuid || analysisGroupGuid)) {
-      pairedVariants = matchingVariants(pairedVariants, ({ tagGuids }) => tagGuids.length)
-    }
-
-    if (gene) {
-      pairedVariants = matchingVariants(pairedVariants, ({ transcripts }) => gene in (transcripts || {}))
-    }
+    pairedFilters.forEach((pairedFilter) => {
+      pairedVariants = matchingVariants(pairedVariants, pairedFilter)
+    })
 
     return pairedVariants
   },

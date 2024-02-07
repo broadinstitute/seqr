@@ -3,7 +3,7 @@ from django.db.models import Min
 from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual, Sample, PhenotypePrioritization
 from seqr.utils.search.constants import COMPOUND_HET, RECESSIVE, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, \
-    PATHOGENICTY_HGMD_SORT_KEY
+    PATHOGENICTY_HGMD_SORT_KEY, PRIORITIZED_GENE_SORT, X_LINKED_RECESSIVE
 
 
 MAX_VARIANTS = 10000
@@ -32,7 +32,6 @@ GENOTYPE_QUERY_MAP = {
     },
 }
 
-X_LINKED_RECESSIVE = 'x_linked_recessive'
 HOMOZYGOUS_RECESSIVE = 'homozygous_recessive'
 ANY_AFFECTED = 'any_affected'
 RECESSIVE_FILTER = {
@@ -55,20 +54,7 @@ INHERITANCE_FILTERS = {
 
 PATH_FREQ_OVERRIDE_CUTOFF = 0.05
 
-CLINVAR_SIGNFICANCE_MAP = {
-    'pathogenic': ['Pathogenic', 'Pathogenic/Likely_pathogenic'],
-    'likely_pathogenic': ['Likely_pathogenic', 'Pathogenic/Likely_pathogenic'],
-    'benign': ['Benign', 'Benign/Likely_benign'],
-    'likely_benign': ['Likely_benign', 'Benign/Likely_benign'],
-    'vus_or_conflicting': [
-        'Conflicting_interpretations_of_pathogenicity',
-        'Uncertain_significance',
-        'not_provided',
-        'other'
-    ],
-}
-CLINVAR_PATH_SIGNIFICANCES = set(CLINVAR_SIGNFICANCE_MAP['pathogenic'])
-CLINVAR_PATH_SIGNIFICANCES.update(CLINVAR_SIGNFICANCE_MAP['likely_pathogenic'])
+CLINVAR_PATH_SIGNIFICANCES = {'pathogenic', 'likely_pathogenic'}
 
 HGMD_CLASS_MAP = {
     'disease_causing': ['DM'],
@@ -174,11 +160,7 @@ CLINVAR_SORT = {
 
 
 def _get_phenotype_priority_ranks_by_gene(samples, *args):
-    from seqr.utils.search.utils import InvalidSearchException
     families = {s.individual.family for s in samples}
-    if len(families) > 1:
-        raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
-
     family_ranks = PhenotypePrioritization.objects.filter(
         individual__family=list(families)[0], rank__lte=100).values('gene_id').annotate(min_rank=Min('rank'))
     return {agg['gene_id']: agg['min_rank'] for agg in family_ranks}
@@ -200,7 +182,7 @@ SORT_FIELDS = {
             'script': {
                 'params': {
                     'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.filter(
-                        phenotype_mim_number__isnull=False).only('gene__gene_id')]
+                        phenotype_mim_number__isnull=False, gene__isnull=False).only('gene__gene_id')]
                 },
                 'source': "(doc.containsKey('mainTranscript_gene_id') && !doc['mainTranscript_gene_id'].empty && params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value)) ? 0 : 1",
             }
@@ -220,7 +202,7 @@ SORT_FIELDS = {
             }
         }
     }],
-    'prioritized_gene': [{
+    PRIORITIZED_GENE_SORT: [{
         '_script': {
             'type': 'number',
             'script': {
@@ -311,6 +293,7 @@ HGMD_FIELDS = ['accession', 'class']
 GENOTYPES_FIELD_KEY = 'genotypes'
 HAS_ALT_FIELD_KEYS = ['samples_num_alt_1', 'samples_num_alt_2', 'samples']
 SORTED_TRANSCRIPTS_FIELD_KEY = 'sortedTranscriptConsequences'
+CANONICAL_TRANSCRIPT_FILTER = 'non_coding_transcript_exon_variant__canonical'
 NESTED_FIELDS = {
     field_name: {field: {} for field in fields} for field_name, fields in {
         CLINVAR_KEY: CLINVAR_FIELDS,
@@ -321,7 +304,6 @@ NESTED_FIELDS = {
 GRCH38_LOCUS_FIELD = 'rg37_locus'
 XSTOP_FIELD = 'xstop'
 SPLICE_AI_FIELD = 'splice_ai'
-NEW_SV_FIELD = 'new_structural_variants'
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
@@ -356,7 +338,11 @@ PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
     'dbnsfp_DANN_score': {},
     'eigen_Eigen_phred': {},
-    'dbnsfp_FATHMM_pred': {},
+    'dbnsfp_VEST4_score': {
+        'response_key': 'vest',
+        'format_value': lambda x: x and next((v for v in x.split(';') if v != '.'), None),
+    },
+    'dbnsfp_MutPred_score': {'response_key': 'mut_pred', 'format_value': lambda x: None if x == '-' else x},
     'mpc_MPC': {},
     'dbnsfp_MutationTaster_pred': {'response_key': 'mut_taster'},
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
@@ -383,6 +369,11 @@ PREDICTION_FIELD_LOOKUP = {
     field_config.get('response_key', get_prediction_response_key(field)): field
     for field, field_config in PREDICTION_FIELDS_CONFIG.items()
 }
+MULTI_FIELD_PREDICTORS = {
+    'fathmm': ['dbnsfp_fathmm_MKL_coding_pred', 'dbnsfp_FATHMM_pred']
+}
+PREDICTION_FIELDS_RESPONSE_CONFIG = {k: {'response_key': k} for k, v in MULTI_FIELD_PREDICTORS.items()}
+PREDICTION_FIELDS_RESPONSE_CONFIG.update(PREDICTION_FIELDS_CONFIG)
 
 QUALITY_QUERY_FIELDS = {'gq_sv': 10}
 SHARED_QUALITY_FIELDS = {'gq': 5}
@@ -435,6 +426,7 @@ GENOTYPE_FIELDS = {
 }
 
 QUERY_FIELD_NAMES = list(CORE_FIELDS_CONFIG.keys()) + list(PREDICTION_FIELDS_CONFIG.keys()) + \
+                    [field for fields in MULTI_FIELD_PREDICTORS.values() for field in fields] + \
                     [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY, GRCH38_LOCUS_FIELD] + HAS_ALT_FIELD_KEYS
 for field_name, fields in NESTED_FIELDS.items():
     QUERY_FIELD_NAMES += ['{}_{}'.format(field_name, field) for field in fields.keys()]

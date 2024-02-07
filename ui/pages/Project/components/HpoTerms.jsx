@@ -7,7 +7,7 @@ import { Form, Header, Accordion, Icon, Tab } from 'semantic-ui-react'
 
 import { RadioGroup } from 'shared/components/form/Inputs'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
-import HpoPanel, { getHpoTermsForCategory, CATEGORY_NAMES } from 'shared/components/panel/HpoPanel'
+import { getHpoTermsForCategory, CATEGORY_NAMES } from 'shared/components/panel/HpoPanel'
 import DataLoader from 'shared/components/DataLoader'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
@@ -239,7 +239,9 @@ class HpoTermsEditor extends React.PureComponent {
 
   addItem = (data) => {
     const { onChange, value } = this.props
-    onChange([...value, data])
+    if (value.every(({ id }) => id !== data.id)) {
+      onChange([...value, data])
+    }
     this.setState({ showAddItem: false })
   }
 
@@ -275,38 +277,31 @@ class HpoTermsEditor extends React.PureComponent {
 
 }
 
-export const HPO_FIELD_RENDER = { // eslint-disable-line import/prefer-default-export
-  fieldDisplay: individual => <HpoPanel individual={individual} />,
-  formFields: [
-    {
-      name: 'nonstandardFeatures',
-      component: HpoTermsEditor,
-      format: val => getFlattenedHpoTermsByCategory([], val),
-      allowAdditions: false,
-      header: { content: 'Present', color: 'green' },
-    },
-    {
-      name: 'features',
-      component: HpoTermsEditor,
-      format: val => getFlattenedHpoTermsByCategory(val),
-      allowAdditions: true,
-    },
-    {
-      name: 'absentNonstandardFeatures',
-      component: HpoTermsEditor,
-      format: val => getFlattenedHpoTermsByCategory([], val),
-      allowAdditions: false,
-      header: { content: 'Not Present', color: 'red' },
-    },
-    {
-      name: 'absentFeatures',
-      component: HpoTermsEditor,
-      format: val => getFlattenedHpoTermsByCategory(val),
-      allowAdditions: true,
-    },
-  ],
-  individualFields: individual => ({
-    initialValues: { ...individual, individualField: 'hpo_terms' },
-    fieldValue: individual,
-  }),
-}
+export const HPO_FORM_FIELDS = [ // eslint-disable-line import/prefer-default-export
+  {
+    name: 'nonstandardFeatures',
+    component: HpoTermsEditor,
+    format: val => getFlattenedHpoTermsByCategory([], val),
+    allowAdditions: false,
+    header: { content: 'Present', color: 'green' },
+  },
+  {
+    name: 'features',
+    component: HpoTermsEditor,
+    format: val => getFlattenedHpoTermsByCategory(val),
+    allowAdditions: true,
+  },
+  {
+    name: 'absentNonstandardFeatures',
+    component: HpoTermsEditor,
+    format: val => getFlattenedHpoTermsByCategory([], val),
+    allowAdditions: false,
+    header: { content: 'Not Present', color: 'red' },
+  },
+  {
+    name: 'absentFeatures',
+    component: HpoTermsEditor,
+    format: val => getFlattenedHpoTermsByCategory(val),
+    allowAdditions: true,
+  },
+]

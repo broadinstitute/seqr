@@ -106,7 +106,7 @@ export const HGMD_PATHOGENICITY_PANEL = {
   headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(HGMD_PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
   fields: HGMD_PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
-  helpText: 'Filter by reported pathogenicity. This overrides the annotation filter, so variants will be returned if they have either the specified transcript consequence OR pathogenicity. This also overrides the frequency filter, so variants will be returned if they have either the specified frequency OR pathogenicity and frequency up to 0.05',
+  helpText: 'Filter by reported pathogenicity.  This overrides the annotation filter, the frequency filter, and the call quality filter.  Variants will be returned if they have the specified transcript consequence AND the specified frequencies AND all individuals pass all specified quality filters OR if the variant has the specified pathogenicity and a frequency up to 0.05.',
 }
 
 const IN_SILICO_SPLICING_FIELD = IN_SILICO_FIELDS.find(({ name }) => name === SPLICE_AI_FIELD)
@@ -185,6 +185,7 @@ export const ANNOTATION_PANEL = {
   fieldLayout: annotationFieldLayout([
     SV_GROUPS, HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS_SCREEN,
   ]),
+  helpText: 'Filter by reported annotation. Variants will be returned if they have ANY of the specified annotations, including if they have a Splice AI score above the threshold and no other annotations. This filter is overridden by the pathogenicity filter, so variants will be returned if they have the specified pathogenicity even if none of the annotation filters match.',
 }
 
 export const FREQUENCY_PANEL = {
@@ -198,7 +199,11 @@ export const FREQUENCY_PANEL = {
     },
   },
   fields: FREQUENCIES,
-  fieldProps: { control: FrequencyFilter, format: val => val || {} },
+  fieldProps: {
+    control: FrequencyFilter,
+    format: val => val || {},
+    formatNoEsLabel: label => label.replace('Callset', '').replace('This', 'seqr'),
+  },
   fieldLayout: freqFieldLayout,
   helpText: 'Filter by allele frequency (popmax AF where available) or by allele count (AC). In applicable populations, also filter by homozygous/hemizygous count (H/H).',
 }
@@ -228,13 +233,13 @@ export const QUALITY_PANEL = {
 
 const stopPropagation = e => e.stopPropagation()
 
-const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) => (
+const HeaderContent = React.memo(({ name, title, inputSize, inputProps, esEnabled }) => (
   <Grid>
     <Grid.Row>
       <Grid.Column width={inputSize ? 16 - inputSize : 8} verticalAlign="middle">{title}</Grid.Column>
       {inputProps && (
         <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right" onClick={stopPropagation}>
-          {configuredField({ ...inputProps, name: `search.${name}` })}
+          {configuredField({ ...inputProps, name: `search.${name}`, esEnabled })}
         </ToggleHeaderFieldColumn>
       )}
     </Grid.Row>
@@ -246,13 +251,21 @@ HeaderContent.propTypes = {
   name: PropTypes.string,
   inputSize: PropTypes.number,
   inputProps: PropTypes.object,
+  esEnabled: PropTypes.bool,
 }
 
 const searchFieldName = (name, field) => (field.fullFieldValue ? `search.${name}` : `search.${name}.${field.name}`)
 
-const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayout }) => {
+const formatField = (field, name, esEnabled, { formatNoEsLabel, ...fieldProps }) => ({
+  ...fieldProps,
+  ...field,
+  name: searchFieldName(name, field),
+  label: (!esEnabled && formatNoEsLabel) ? formatNoEsLabel(field.label) : field.label,
+})
+
+const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayout, esEnabled }) => {
   const fieldComponents = fields && configuredFields(
-    { fields: fields.map(field => ({ ...(fieldProps || {}), ...field, name: searchFieldName(name, field) })) },
+    { fields: fields.map(field => formatField(field, name, esEnabled, fieldProps || {})) },
   )
   return (
     <div>
@@ -277,12 +290,14 @@ PanelContent.propTypes = {
   fieldProps: PropTypes.object,
   helpText: PropTypes.node,
   fieldLayout: PropTypes.func,
+  esEnabled: PropTypes.bool,
 }
 
 class VariantSearchFormPanels extends React.PureComponent {
 
   static propTypes = {
     panels: PropTypes.arrayOf(PropTypes.object),
+    esEnabled: PropTypes.bool,
   }
 
   state = { active: {} }
@@ -304,7 +319,7 @@ class VariantSearchFormPanels extends React.PureComponent {
   }
 
   render() {
-    const { panels } = this.props
+    const { panels, esEnabled } = this.props
     const { active } = this.state
     return (
       <div>
@@ -339,7 +354,7 @@ class VariantSearchFormPanels extends React.PureComponent {
                 attached={attachedTitle}
               >
                 <Icon name="dropdown" />
-                <HeaderContent name={name} {...headerProps} />
+                <HeaderContent name={name} esEnabled={esEnabled} {...headerProps} />
               </Accordion.Title>,
               <Accordion.Content
                 key={`${name}-content`}
@@ -349,7 +364,7 @@ class VariantSearchFormPanels extends React.PureComponent {
                 padded
                 textAlign="center"
               >
-                <PanelContent name={name} {...panelContentProps} />
+                <PanelContent name={name} esEnabled={esEnabled} {...panelContentProps} />
               </Accordion.Content>,
             ]
           }, [])}

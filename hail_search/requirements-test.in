@@ -1,0 +1,2 @@
+coverage<5.2
+pytest-aiohttp

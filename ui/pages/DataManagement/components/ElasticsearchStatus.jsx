@@ -7,7 +7,7 @@ import { Header, Grid, Message, Button } from 'semantic-ui-react'
 import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButton'
 import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
-import { DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
+import { DATASET_TYPE_SNV_INDEL_CALLS } from 'shared/utils/constants'
 import { getElasticsearchStatusLoading, getElasticsearchStatusData } from '../selectors'
 import { loadElasticsearchStatus, deleteEsIndex } from '../reducers'
 
@@ -39,7 +39,7 @@ const INDEX_COLUMNS = [
   {
     name: 'datasetType',
     content: 'Caller Type',
-    format: row => (!row.datasetType || row.datasetType === DATASET_TYPE_VARIANT_CALLS ? 'SNV' : row.datasetType),
+    format: row => (!row.datasetType || row.datasetType === DATASET_TYPE_SNV_INDEL_CALLS ? 'SNV' : row.datasetType),
   },
   { name: 'sampleType', content: 'Data Type' },
   { name: 'genomeVersion', content: 'Genome Version' },

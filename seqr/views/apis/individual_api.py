@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.db.models import prefetch_related_objects
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Individual, Family, RnaSeqOutlier
+from seqr.models import Individual, Family
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
@@ -20,7 +20,7 @@ from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
     is_internal_anvil_project, service_account_access
-from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
+from seqr.views.utils.individual_utils import delete_individuals, add_or_update_individuals_and_families
 
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
@@ -88,7 +88,7 @@ def update_individual_hpo_terms(request, individual_guid):
 
     feature_fields = ['features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures']
     update_json = {
-        key: [get_parsed_feature(feature) for feature in request_json[key]] if request_json.get(key) else None
+        key: _get_parsed_features(request_json[key]) if request_json.get(key) else None
         for key in feature_fields
     }
     update_model_from_json(individual, update_json, user=request.user)
@@ -99,6 +99,18 @@ def update_individual_hpo_terms(request, individual_guid):
     return create_json_response({
         individual.guid: individual_json
     })
+
+
+def _get_parsed_features(features):
+    parsed_features = {}
+    for feature in features:
+        feature_id = feature['id']
+        feature_json = {'id': feature_id}
+        for field in ['notes', 'qualifiers']:
+            if field in feature:
+                feature_json[field] = feature[field]
+        parsed_features[feature_id] = feature_json
+    return list(parsed_features.values())
 
 
 def _anvil_project_can_edit_pedigree(project, user):
@@ -430,7 +442,7 @@ def _gene_list_value(val):
 
 
 INDIVIDUAL_METADATA_FIELDS = {
-    FEATURES_COL: lambda val: [{'id': feature} for feature in val],
+    FEATURES_COL: lambda val: [{'id': feature} for feature in set(val)],
     ABSENT_FEATURES_COL: lambda val: [{'id': feature} for feature in val],
     BIRTH_COL: int,
     DEATH_COL: int,
@@ -589,18 +601,21 @@ def _process_hpo_records(records, filename, project, user):
                 row[ABSENT_FEATURES_COL] = _parse_hpo_terms(row.get(ABSENT_FEATURES_COL))
 
         elif HPO_TERM_NUMBER_COL in column_map:
-            aggregate_rows = defaultdict(lambda: {FEATURES_COL: [], ABSENT_FEATURES_COL: []})
+            aggregate_rows = defaultdict(lambda: {FEATURES_COL: set(), ABSENT_FEATURES_COL: set()})
             for row in row_dicts:
                 column = ABSENT_FEATURES_COL if row.pop(AFFECTED_FEATURE_COL) == 'no' else FEATURES_COL
                 aggregate_entry = aggregate_rows[(row.get(FAMILY_ID_COL), row.get(INDIVIDUAL_ID_COL))]
                 term = row.pop(HPO_TERM_NUMBER_COL, None)
                 if term:
-                    aggregate_entry[column].append(term.strip())
+                    aggregate_entry[column].add(term.strip())
                 else:
-                    aggregate_entry[column] = []
+                    aggregate_entry[column] = set()
                 aggregate_entry.update({k: v for k, v in row.items() if v})
 
-            return _parse_individual_hpo_terms(list(aggregate_rows.values()), project, user)
+            row_dicts = [
+                {**entry, FEATURES_COL: list(entry[FEATURES_COL]), ABSENT_FEATURES_COL: list(entry[ABSENT_FEATURES_COL])}
+                for entry in aggregate_rows.values()
+            ]
 
     return _parse_individual_hpo_terms(row_dicts, project, user)
 
@@ -715,7 +730,8 @@ def _get_record_updates(record, individual, invalid_values, allowed_assigned_ana
             if k == ASSIGNED_ANALYST_COL:
                 if v not in allowed_assigned_analysts:
                     raise ValueError
-                parsed_val = v
+                if v:
+                    update_record[k] = v
             else:
                 parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
                 if (
@@ -724,8 +740,8 @@ def _get_record_updates(record, individual, invalid_values, allowed_assigned_ana
                 ):
                     parsed_val = None
 
-            if isinstance(parsed_val, bool) or parsed_val:
-                update_record[k] = parsed_val
+                if isinstance(parsed_val, bool) or parsed_val:
+                    update_record[k] = parsed_val
         except (KeyError, ValueError):
             invalid_values[k][v].append(individual.individual_id)
     return update_record
@@ -805,21 +821,25 @@ def save_individuals_metadata_table_handler_base(project, json_records, user):
 
     return response
 
+
 @login_and_policies_required
 def get_individual_rna_seq_data(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     check_project_permissions(individual.family.project, request.user)
-    outlier_data = RnaSeqOutlier.objects.filter(sample__individual=individual, sample__is_active=True)
 
-    rna_seq_data = {
-        data['geneId']: data for data in get_json_for_rna_seq_outliers(outlier_data)
-    }
-    genes_to_show = get_genes([gene_id for gene_id, data in rna_seq_data.items() if data['isSignificant']])
+    filters = {'sample__individual': individual}
+    outlier_data = get_json_for_rna_seq_outliers(filters, significant_only=False, individual_guid=individual_guid)
+
+    genes_to_show = get_genes({
+        gene_id for rna_data in outlier_data.get(individual_guid, {}).values() for gene_id, data in rna_data.items()
+        if any([d['isSignificant'] for d in (data if isinstance(data, list) else [data])])
+    })
 
     return create_json_response({
-        'rnaSeqData': {individual_guid: {'outliers': rna_seq_data}},
+        'rnaSeqData': outlier_data,
         'genesById': genes_to_show,
     })
+
 
 @login_and_policies_required
 def get_hpo_terms(request, hpo_parent_id):

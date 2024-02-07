@@ -8,17 +8,17 @@ import responses
 from seqr.models import Project, Family, Individual
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     validate_anvil_vcf, grant_workspace_access, add_workspace_data, get_anvil_vcf_list
-from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, TEST_WORKSPACE_NAMESPACE,\
-    TEST_WORKSPACE_NAME, TEST_WORKSPACE_NAME1, TEST_NO_PROJECT_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME2
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, AirflowTestCase, \
+    TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME, TEST_WORKSPACE_NAME1, TEST_NO_PROJECT_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME2
 from seqr.views.utils.terra_api_utils import remove_token, TerraAPIException, TerraRefreshTokenFailedException
 from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 LOAD_SAMPLE_DATA = [
     ["Family ID", "Individual ID", "Previous Individual ID", "Paternal ID", "Maternal ID", "Sex", "Affected Status",
      "Notes", "familyNotes"],
-    ["1", "NA19675", "NA19675_1", "NA19678", "", "Female", "Affected", "A affected individual, test1-zsf", ""],
+    ["1", " NA19675 ", "NA19675_1 ", "NA19678 ", "", "Female", "Affected", "A affected individual, test1-zsf", ""],
     ["1", "NA19678", "", "", "", "Male", "Unaffected", "a individual note", ""],
-    ["21", "HG00735", "", "", "", "Unknown", "Unknown", "", "a new family"]]
+    ["21", " HG00735", "", "", "", "Unknown", "Unknown", "", "a new family"]]
 
 BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "A affected individual, test1-zsf", ""]]
 
@@ -63,92 +63,26 @@ REQUEST_BODY.update(VALIDATE_VFC_RESPONSE)
 
 TEMP_PATH = '/temp_path/temp_filename'
 
-TEST_GUID=f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
-MOCK_TOKEN = 'mock_openid_bearer' # nosec
-MOCK_AIRFLOW_URL = 'http://testairflowserver'
 MOCK_AIRTABLE_URL = 'http://testairtable'
 MOCK_AIRTABLE_KEY = 'mock_key' # nosec
 
-DAG_RUNS = {
-    'dag_runs': [
-        {'conf': {},
-         'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1',
-         'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
-         'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00',
-         'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00',
-         'state': 'success'}
-    ]
-}
-
-DAG_RUNS_RUNNING = {
-    'dag_runs': [
-        {'conf': {},
-         'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1',
-         'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
-         'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00',
-         'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00',
-         'state': 'running'}
-    ]
-}
-
-UPDATED_ANVIL_VARIABLES = {
-    "key": "AnVIL_WES",
-    "value": json.dumps({
-        "active_projects": [TEST_GUID],
-        "vcf_path": "gs://test_bucket/test_path.vcf",
-        "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v20210301".format(guid=TEST_GUID),
-        "projects_to_run": [TEST_GUID] })
-}
-
-DAG_TASKS_RESP = {
-    "tasks": [
-        {
-            "task_id": "create_dataproc_cluster",
-        },
-        {
-            "task_id": "pyspark_compute_project_R0006_test",
-        },
-        {
-            "task_id": "pyspark_compute_variants_AnVIL_WES",
-        },
-        {
-            "task_id": "pyspark_export_project_R0006_test",
-        },
-        {
-            "task_id": "scale_dataproc_cluster",
-        },
-        {
-            "task_id": "skip_compute_project_subset_R0006_test",
-        }
-        ],
-    "total_entries": 6
-}
-UPDATE_DAG_TASKS_RESP = {
-            "tasks": [
-                {
-                    "task_id": "create_dataproc_cluster",
-                },
-                {
-                    "task_id": f"pyspark_compute_project_{TEST_GUID}",
-                },
-                {
-                    "task_id": "pyspark_compute_variants_AnVIL_WES",
-                },
-                {
-                    "task_id": f"pyspark_export_project_{TEST_GUID}",
-                },
-                {
-                    "task_id": "scale_dataproc_cluster",
-                },
-                {
-                    "task_id": f"skip_compute_project_subset_{TEST_GUID}",
-                }
-                ],
-            "total_entries": 6
-        }
-
 PROJECT1_SAMPLES = ['HG00735', 'NA19675', 'NA19678', 'NA20870', 'HG00732', 'NA19675_1', 'NA20874', 'HG00733', 'HG00731']
-PROJECT2_SAMPLES = ['HG00735', 'NA19675', 'NA19678', 'NA20885']
+PROJECT2_SAMPLES = ['NA20885', 'NA19675', 'NA19678', 'HG00735']
+PROJECT2_SAMPLE_DATA = [
+    {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000011_11', 'Family_ID': '11', 'Individual_ID': 'NA20885', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
+    {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000012_12', 'Family_ID': '12', 'Individual_ID': 'NA20870', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
+    {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000012_12', 'Family_ID': '12', 'Individual_ID': 'NA20888', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
+    {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000012_12', 'Family_ID': '12', 'Individual_ID': 'NA20889', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'F'},
+    {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000016_1', 'Family_ID': '1', 'Individual_ID': 'NA19675', 'Paternal_ID': 'NA19678', 'Maternal_ID': None, 'Sex': 'F'},
+    {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000016_1', 'Family_ID': '1', 'Individual_ID': 'NA19678', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
+    {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000017_21', 'Family_ID': '21', 'Individual_ID': 'HG00735', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'U'},
+]
+
+NEW_PROJECT_SAMPLE_DATA = [
+    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F000023_1', 'Family_ID': '1', 'Individual_ID': 'NA19675', 'Paternal_ID': 'NA19678', 'Maternal_ID': None, 'Sex': 'F'},
+    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F000023_1', 'Family_ID': '1', 'Individual_ID': 'NA19678', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
+    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F000024_21', 'Family_ID': '21', 'Individual_ID': 'HG00735', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'U'},
+]
 
 REQUEST_BODY_ADD_DATA = deepcopy(REQUEST_BODY)
 REQUEST_BODY_ADD_DATA['vcfSamples'] = PROJECT1_SAMPLES
@@ -158,37 +92,6 @@ REQUEST_BODY_ADD_DATA2['vcfSamples'] = PROJECT2_SAMPLES
 
 PROJECT1_GUID = 'R0001_1kg'
 PROJECT2_GUID = 'R0003_test'
-ADD_DATA_UPDATED_ANVIL_VARIABLES = {
-    "key": "AnVIL_WES",
-    "value": json.dumps({
-        "active_projects": [PROJECT1_GUID],
-        "vcf_path": "gs://test_bucket/test_path.vcf",
-        "project_path": "gs://seqr-datasets/v02/GRCh37/AnVIL_WES/{guid}/v20210301".format(guid=PROJECT1_GUID),
-        "projects_to_run": [PROJECT1_GUID] })
-}
-ADD_DATA_UPDATE_DAG_TASKS_RESP = {
-            "tasks": [
-                {
-                    "task_id": "create_dataproc_cluster",
-                },
-                {
-                    "task_id": f"pyspark_compute_project_{PROJECT1_GUID}",
-                },
-                {
-                    "task_id": "pyspark_compute_variants_AnVIL_WES",
-                },
-                {
-                    "task_id": f"pyspark_export_project_{PROJECT1_GUID}",
-                },
-                {
-                    "task_id": "scale_dataproc_cluster",
-                },
-                {
-                    "task_id": f"skip_compute_project_subset_{PROJECT1_GUID}",
-                }
-                ],
-            "total_entries": 6
-        }
 
 BASIC_META = [
     b'##fileformat=VCFv4.3\n',
@@ -214,7 +117,8 @@ INFO_META = [
 
 BAD_FORMAT_META = [
     b'##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
-    b'##FORMAT=<ID=DP,Number=1,Type=String,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+    b'##FORMAT=<ID=GQ,Number=1,Type=String,Description="Genotype Quality">\n',
+    b'##reference=file:///references/grch37/reference.bin\n',
 ]
 
 FORMAT_META = [
@@ -222,6 +126,10 @@ FORMAT_META = [
     b'##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
     b'##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
     b'##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+]
+
+REFERENCE_META = [
+    b'##reference=file:///gpfs/internal/sweng/production/Resources/GRCh38_1000genomes/GRCh38_full_analysis_set_plus_decoy_hla.fa\n'
 ]
 
 BAD_HEADER_LINE = [b'#CHROM\tID\tREF\tALT\tQUAL\n']

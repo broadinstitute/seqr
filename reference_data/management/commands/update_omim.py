@@ -8,28 +8,8 @@ OMIM provides data through an API (https://omim.org/help/api) and in downloadabl
 The geneMap API endpoint provides only gene symbols and not the Ensembl gene id, while
 genemap2.txt provides both, so we use genemap2.txt as the data source.
 
-
-API endpoints:
--------------
-http://api.omim.org/api/geneMap?chromosome=1
-   returns a list of 'geneMap' objects - each representing a
-   mimNumber, geneSymbols, geneName, comments, geneInheritance, and a phenotypeMapList
-   which contains one or more mimNumber, phenotypeMimNumber, phenotype description, and
-   phenotypeInheritance
-
-http://api.omim.org/api/entry?mimNumber=612367&format=json&include=all
-   returns detailed info on a particular mim id
-
 Files:
 -----
-mim2gene.txt - contains basic info on mim numbers and their relationships.
-
-For example:
-     100500  moved/removed
-     100600  phenotype
-     100640  gene    216     ALDH1A1 ENSG00000165092,ENST00000297785
-     100650  gene/phenotype  217     ALDH2   ENSG00000111275,ENST00000261733
-
 genemap2.txt - contains chrom, gene_start, gene_end, cyto_location, mim_number,
     gene_symbols, gene_name, approved_symbol, entrez_gene_id, ensembl_gene_id, comments, phenotypes,
     mouse_gene_id  -  where phenotypes contains 1 or more phenotypes in the form
@@ -46,7 +26,6 @@ import json
 import logging
 import os
 import re
-import requests
 
 from django.core.management.base import CommandError
 
@@ -55,20 +34,13 @@ from reference_data.models import Omim
 
 logger = logging.getLogger(__name__)
 
-OMIM_ENTRIES_URL = 'https://api.omim.org/api/entry?apiKey={omim_key}&include=geneMap&format=json&mimNumber={mim_numbers}'
-
-OMIM_PHENOTYPE_MAP_METHOD_CHOICES = {
-    1: 'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.',
-    2: 'the disorder has been placed on the map by linkage; no mutation has been found.',
-    3: 'the molecular basis for the disorder is known; a mutation has been found in the gene.',
-    4: 'a contiguous gene deletion or duplication syndrome, multiple genes are deleted or duplicated causing the phenotype.',
-}
 
 CACHED_RECORDS_BUCKET = 'seqr-reference-data/omim/'
 CACHED_RECORDS_FILENAME = 'parsed_omim_records.txt'
 CACHED_RECORDS_HEADER = [
     'gene_id', 'mim_number', 'gene_description', 'comments', 'phenotype_description',
-    'phenotype_mim_number', 'phenotype_map_method', 'phenotype_inheritance', 'phenotypic_series_number',
+    'phenotype_mim_number', 'phenotype_map_method', 'phenotype_inheritance',
+    'chrom', 'start', 'end',
 ]
 
 class CachedOmimReferenceDataHandler(ReferenceDataHandler):
@@ -76,6 +48,7 @@ class CachedOmimReferenceDataHandler(ReferenceDataHandler):
     model_cls = Omim
     url = 'https://storage.googleapis.com/{bucket}{filename}'.format(
         filename=CACHED_RECORDS_FILENAME, bucket=CACHED_RECORDS_BUCKET)
+    allow_missing_gene = True
 
     @staticmethod
     def get_file_header(f):
@@ -90,6 +63,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = Omim
     url = "https://data.omim.org/downloads/{omim_key}/genemap2.txt"
+    allow_missing_gene = True
 
     def __init__(self, omim_key=None, skip_cache_parsed_records=False, **kwargs):
         """Init OMIM handler."""
@@ -126,12 +100,16 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
 
         else:
             # rename some of the fields
-            output_record = {}
-            output_record['gene_id'] = record['ensembl_gene_id']
-            output_record['mim_number'] = int(record['mim_number'])
-            output_record['gene_symbol'] = record['approved_gene_symbol'].strip() or record['gene_symbols'].split(",")[0]
-            output_record['gene_description'] = record['gene_name']
-            output_record['comments'] = record['comments']
+            output_record = {
+                'gene_id': record['ensembl_gene_id'],
+                'mim_number': int(record['mim_number']),
+                'chrom': record['#_chromosome'].replace('chr', ''),
+                'start': int(record['genomic_position_start']),
+                'end': int(record['genomic_position_end']),
+                'gene_symbol': record['approved_gene_symbol'].strip() or record['gene/locus_and_other_related_symbols'].split(",")[0],
+                'gene_description': record['gene_name'],
+                'comments': record['comments'],
+            }
 
             phenotype_field = record['phenotypes'].strip()
 
@@ -156,33 +134,6 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
                     yield output_record
 
     def post_process_models(self, models):
-        logger.info('Adding phenotypic series information')
-        mim_numbers = {omim_record.mim_number for omim_record in models if omim_record.phenotype_mim_number}
-        mim_numbers = list(map(str, list(mim_numbers)))
-        mim_number_to_phenotypic_series = {}
-        for i in range(0, len(mim_numbers), 20):
-            logger.debug('Fetching entries {}-{}'.format(i, i + 20))
-            entries_to_fetch = mim_numbers[i:i + 20]
-            response = requests.get(OMIM_ENTRIES_URL.format(omim_key=self.omim_key, mim_numbers=','.join(entries_to_fetch)))
-            if not response.ok:
-                raise CommandError('Request failed with {}: {}'.format(response.status_code, response.reason))
-
-            entries = response.json()['omim']['entryList']
-            if len(entries) != len(entries_to_fetch):
-                raise CommandError(
-                    'Expected {} omim entries but recieved {}'.format(len(entries_to_fetch), len(entries)))
-
-            for entry in entries:
-                mim_number = entry['entry']['mimNumber']
-                for phenotype in entry['entry'].get('geneMap', {}).get('phenotypeMapList', []):
-                    phenotypic_series_number = phenotype['phenotypeMap'].get('phenotypicSeriesNumber')
-                    if phenotypic_series_number:
-                        mim_number_to_phenotypic_series[mim_number] = phenotypic_series_number
-
-        for omim_record in models:
-            omim_record.phenotypic_series_number = mim_number_to_phenotypic_series.get(omim_record.mim_number)
-        logger.info('Found {} records with phenotypic series'.format(len(mim_number_to_phenotypic_series)))
-
         if self.cache_parsed_records:
             self._cache_records(models)
 
@@ -190,7 +141,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     def _cache_records(models):
         with open(CACHED_RECORDS_FILENAME, 'w') as f:
             f.write('\n'.join([
-                '\t'.join([model.gene.gene_id] + [str(getattr(model, field) or '') for field in CACHED_RECORDS_HEADER[1:]])
+                '\t'.join([model.gene.gene_id if model.gene else ''] + [str(getattr(model, field) or '') for field in CACHED_RECORDS_HEADER[1:]])
                 for model in models]))
 
         command = 'gsutil mv {filename} gs://{bucket}'.format(filename=CACHED_RECORDS_FILENAME, bucket=CACHED_RECORDS_BUCKET)

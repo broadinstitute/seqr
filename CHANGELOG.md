@@ -2,6 +2,43 @@
 
 ## dev
 
+## 1/8/24
+* Support OMIM entries with no associated gene and remove phenotypic_series_number (REQUIRES DB MIGRATION)
+
+## 11/21/23
+* Support AIP upload
+  * To add the required tag type, run `./manage.py loaddata new_variant_tag_types`
+
+## 11/13/23
+* Add Partial Solve analysis status in Family model (REQUIRES DB MIGRATION)
+
+## 10/19/23
+* Migrate Family post_discovery_omim_number to integer array (REQUIRES DB MIGRATION)
+* Add GeneShet model to the reference DB (REQUIRES DB MIGRATION)
+
+## 10/6/23
+* Require tissue_type in Sample model (REQUIRES DB MIGRATION)
+
+## 9/22/23
+* Update VARIANTS dataset_type in Sample model (REQUIRES DB MIGRATION)
+
+## 8/22/23
+* Add db indices to optimize RNA data queries (REQUIRES DB MIGRATION)
+
+## 7/11/23
+* Add internal UI to trigger airflow data loading
+* Add RnaSeqSpliceOutlier display
+
+## 6/23/23
+* Add a 'rank' field to the RnaSeqSpliceOutlier model (REQUIRES DB MIGRATION)
+* Remove hail python dependency
+
+## 6/2/23
+* Update Clinvar filtering and display
+
+* Add support for Gencode v39
+  * To add new data, run the `update_gencode_latest`
+
 ## 4/26/23
 * Add RnaSeqSpliceOutlier model (REQUIRES DB MIGRATION)
 * Add db index to improve Rna Sample Metadata performance (REQUIRES DB MIGRATION)

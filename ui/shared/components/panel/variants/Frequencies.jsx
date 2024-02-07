@@ -5,7 +5,7 @@ import { Popup, Divider } from 'semantic-ui-react'
 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
-import { GNOMAD_SV_CRITERIA_MESSAGE, SV_CALLSET_CRITERIA_MESSAGE } from '../search/constants'
+import { GNOMAD_SV_CRITERIA_MESSAGE, SV_CALLSET_CRITERIA_MESSAGE, TOPMED_FREQUENCY } from '../search/constants'
 
 const FreqValue = styled.span`
   color: black;
@@ -157,11 +157,15 @@ const sectionTitle = ({ fieldTitle, section }) => (
 const HOM_SECTION = 'Homoplasmy'
 const HET_SECTION = 'Heteroplasmy'
 
+const SV_CALLSET_POP = { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'AC', helpMessage: SV_CALLSET_CRITERIA_MESSAGE }
 const CALLSET_POP = { field: 'callset', fieldTitle: 'This Callset', acDisplay: 'AC' }
+const SEQR_POP = { ...CALLSET_POP, field: 'seqr', fieldTitle: 'seqr' }
 
 const POPULATIONS = [
-  { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'AC', helpMessage: SV_CALLSET_CRITERIA_MESSAGE },
+  SV_CALLSET_POP,
+  { ...SV_CALLSET_POP, field: 'sv_seqr', fieldTitle: 'seqr' },
   CALLSET_POP,
+  SEQR_POP,
   {
     field: 'exac',
     fieldTitle: 'ExAC',
@@ -182,7 +186,7 @@ const POPULATIONS = [
     ...GNOMAD_URL_INFO,
   },
   {
-    field: 'topmed',
+    field: TOPMED_FREQUENCY,
     fieldTitle: 'TopMed',
     precision: 3,
     urls: {
@@ -200,6 +204,14 @@ const POPULATIONS = [
   },
 ]
 
+const CALLSET_HET_POP = {
+  field: 'callset_heteroplasmy',
+  fieldTitle: 'This Callset',
+  acDisplay: 'AC',
+  titleContainer: sectionTitle,
+  section: HET_SECTION,
+}
+
 const MITO_POPULATIONS = [
   {
     ...CALLSET_POP,
@@ -207,12 +219,12 @@ const MITO_POPULATIONS = [
     section: HOM_SECTION,
   },
   {
-    field: 'callset_heteroplasmy',
-    fieldTitle: 'This Callset',
-    acDisplay: 'AC',
+    ...SEQR_POP,
     titleContainer: sectionTitle,
-    section: HET_SECTION,
+    section: HOM_SECTION,
   },
+  CALLSET_HET_POP,
+  { ...CALLSET_HET_POP, field: 'seqr_heteroplasmy', fieldTitle: 'seqr' },
   {
     field: 'gnomad_mito',
     fieldTitle: 'gnomAD mito',
@@ -279,7 +291,7 @@ const getValueDisplay = (pop, valueField, precision) => (valueField === 'ac' ?
 
 const Frequencies = React.memo(({ variant }) => {
   const { populations = {} } = variant
-  const callsetHetPop = populations.callset_heteroplasmy
+  const callsetHetPop = populations.callset_heteroplasmy || populations.seqr_heteroplasmy
   const isMito = callsetHetPop && callsetHetPop.af !== null && callsetHetPop.af !== undefined
   const popConfigs = isMito ? MITO_POPULATIONS : POPULATIONS
   const sections = (isMito ? MITO_DETAIL_SECTIONS : DETAIL_SECTIONS).reduce(

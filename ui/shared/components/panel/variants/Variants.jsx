@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
 
-import { CLINSIG_SEVERITY, GENOME_VERSION_37, getVariantMainGeneId } from 'shared/utils/constants'
+import { GENOME_VERSION_37, clinvarSignificance, clinvarColor, getVariantMainGeneId } from 'shared/utils/constants'
 import { VerticalSpacer } from '../../Spacers'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
 import FamilyReads from '../family/FamilyReads'
@@ -24,14 +24,8 @@ const StyledVariantRow = styled(({ isSV, severity, ...props }) => <Grid.Row {...
   
   color: #999;
   background-color: ${({ severity, isSV }) => {
-    if (severity > 0) {
-      return '#eaa8a857'
-    }
-    if (severity === 0) {
-      return '#f5d55c57'
-    }
-    if (severity < 0) {
-      return '#21a92624'
+    if (severity !== undefined) {
+      return clinvarColor(severity, '#eaa8a857', '#f5d55c57', '#21a92624') || 'inherit'
     }
     if (isSV) {
       return '#f3f8fa'
@@ -133,11 +127,14 @@ VariantLayout.propTypes = {
   children: PropTypes.node,
 }
 
-const Variant = React.memo(({ variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, ...props }) => {
+export const Variant = React.memo((
+  { variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, updateReads, ...props },
+) => {
   const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)
+  const { severity } = clinvarSignificance(variant.clinvar)
   return (
     <VariantLayout
-      severity={CLINSIG_SEVERITY[((variant.clinvar || {}).clinicalSignificance || '').toLowerCase()]}
+      severity={severity}
       isSV={!!variant.svType}
       variant={variant}
       mainGeneId={variantMainGeneId}
