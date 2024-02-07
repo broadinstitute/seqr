@@ -6,37 +6,40 @@ import { getUser } from 'redux/selectors'
 import StateDataLoader from 'shared/components/StateDataLoader'
 import { getCurrentProject } from '../selectors'
 
-const ProjectNotifications = React.memo(({ notifications }) => (
+// TODO add subscribe button for non-subscribers
+// TODO ability to mark unread as read
+// TODO add read count, ability to see read notifications
+
+const ProjectNotifications = React.memo(({ unreadNotifications }) => (
   <div>
-    {notifications.map(({ verb, timestamp }) => (
+    {unreadNotifications.map(({ verb, timestamp }) => (
       <div>{`${verb} on ${new Date(timestamp).toLocaleDateString()}`}</div>
     ))}
   </div>
 ))
 
 ProjectNotifications.propTypes = {
-  notifications: PropTypes.arrayOf(PropTypes.object),
+  unreadNotifications: PropTypes.arrayOf(PropTypes.object),
 }
 
-const mapStateToProps = (state) => {
-  const { canEdit, workspaceName, collaborators, collaboratorGroups } = getCurrentProject(state)
-  return {
-    canEdit,
-    workspaceName,
-    collaborators,
-    collaboratorGroups,
-    user: getUser(state),
-  }
-}
+const mapStateToProps = state => ({
+  project: getCurrentProject(state), // TODO only need guid?
+  user: getUser(state),
+})
 
-const parseResponse = response => ({ notifications: response.unread_list })
+const parseResponse = response => response
 
-// TODO need to query for the current project only, handle if user is not a subscriber but updates exist
-export default connect(mapStateToProps)(props => (
+const LoadedProjectNotifications = ({ project, ...props }) => (
   <StateDataLoader
-    url="/notifications/api/unread_list"
+    url={`/api/project/${project.projectGuid}/get_notification`}
     childComponent={ProjectNotifications}
     parseResponse={parseResponse}
     {...props}
   />
-))
+)
+
+LoadedProjectNotifications.propTypes = {
+  project: PropTypes.object,
+}
+
+export default connect(mapStateToProps)(LoadedProjectNotifications)
