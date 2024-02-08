@@ -394,20 +394,20 @@ class BaseHailTableQuery(object):
                 reason=f'The following samples are available in seqr but missing the loaded data: {", ".join(sorted(missing_samples))}'
             )
 
-        sorted_family_sample_data = [[hl.eval(sample) for _, sample in samples] for _, samples in family_sample_index_data]
+        sorted_family_sample_data = [[sample for _, sample in samples] for _, samples in family_sample_index_data]
         family_sample_index_data = hl.array(family_sample_index_data)
 
         ht = ht.annotate_globals(family_guids=family_guids)
 
         ht = ht.transmute(family_entries=family_sample_index_data.map(lambda family_tuple: family_tuple[1].map(
-            lambda sample_tuple: ht.family_entries[family_tuple[0]][sample_tuple[0]].annotate(**sample_tuple[1])
+            lambda sample_tuple: ht.family_entries[family_tuple[0]][sample_tuple[0]].annotate(**hl.struct(**sample_tuple[1]))
         )))
 
         return ht, sorted_family_sample_data
 
     @classmethod
     def _sample_entry_data(cls, sample, family_guid, ht_globals):
-        return hl.struct(
+        return dict(
             sampleId=sample['sample_id'],
             sampleType=cls._get_sample_type(ht_globals),
             individualGuid=sample['individual_guid'],
@@ -456,9 +456,9 @@ class BaseHailTableQuery(object):
         entry_indices_by_gt = defaultdict(lambda: defaultdict(list))
         for family_index, samples in enumerate(sorted_family_sample_data):
             for sample_index, s in enumerate(samples):
-                genotype = individual_genotype_filter.get(s.individualGuid) \
-                    if individual_genotype_filter else INHERITANCE_FILTERS[inheritance_mode].get(s.affected_id)
-                if inheritance_mode == X_LINKED_RECESSIVE and s.affected_id == UNAFFECTED_ID and s.is_male:
+                genotype = individual_genotype_filter.get(s['individualGuid']) \
+                    if individual_genotype_filter else INHERITANCE_FILTERS[inheritance_mode].get(s['affected_id'])
+                if inheritance_mode == X_LINKED_RECESSIVE and s['affected_id'] == UNAFFECTED_ID and s['is_male']:
                     genotype = REF_REF
                 if genotype == COMP_HET_ALT and self._override_comp_het_alt:
                     genotype = HAS_ALT
