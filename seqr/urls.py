@@ -12,7 +12,6 @@ from django.conf.urls import url, include
 from django.contrib import admin
 from django.views.generic.base import RedirectView
 import django.views.static
-import notifications.urls
 
 from seqr.views.apis.family_api import \
     update_family_fields_handler, \
@@ -403,7 +402,6 @@ if MEDIA_ROOT:
 
 urlpatterns += [
     url('', include('social_django.urls')),
-    url('^notifications/', include(notifications.urls, namespace='notifications')),
 ]
 
 if DEBUG:
