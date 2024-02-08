@@ -331,11 +331,20 @@ def project_mme_submisssions(request, project_guid):
 
 
 @login_and_policies_required
-def project_notifications(request, project_guid):
+def project_notifications(request, project_guid, read_status):
     project = get_project_and_check_permissions(project_guid, request.user)
     # TODO handle if user is not a subscriber but project notifications exist
-    unread_notifications = request.user.notifications.filter(actor_object_id=project.id).unread()
-    return create_json_response({'unreadNotifications': [model_to_dict(n) for n in unread_notifications]})
+    notifications = request.user.notifications.filter(actor_object_id=project.id).unread()
+    response = {}
+    if read_status == 'unread':
+        notifications = notifications.unread()
+        response['readCount'] = notifications.read().count()
+    else:
+        notifications = notifications.read()
+    return create_json_response({
+        f'{read_status}Notifications': [model_to_dict(n) for n in notifications],
+        **response,
+    })
 
 
 def _add_tag_type_counts(project, project_variant_tags):

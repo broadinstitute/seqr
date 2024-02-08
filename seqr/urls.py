@@ -211,7 +211,8 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/get_locus_lists': project_locus_lists,
     'project/(?P<project_guid>[^/]+)/get_overview': project_overview,
     'project/(?P<project_guid>[^/]+)/get_collaborators': project_collaborators,
-    'project/(?P<project_guid>[^/]+)/get_notification': project_notifications,
+    'project/(?P<project_guid>[^/]+)/notifications/mark_read': project_overview,  # TODO
+    'project/(?P<project_guid>[^/]+)/notifications/(?P<read_status>[^/]+)': project_notifications,
 
     'project/create_project': create_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project': update_project_handler,
