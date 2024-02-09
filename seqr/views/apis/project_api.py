@@ -10,6 +10,7 @@ from django.db.models import Count, Max, Q, Case, When, Value
 from django.db.models.functions import JSONObject, TruncDate
 from django.forms import model_to_dict
 from django.utils import timezone
+from notifications.models import Notification
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, \
@@ -333,26 +334,41 @@ def project_mme_submisssions(request, project_guid):
 @login_and_policies_required
 def project_notifications(request, project_guid, read_status):
     project = get_project_and_check_permissions(project_guid, request.user)
-    # TODO handle if user is not a subscriber but project notifications exist
-    response = {
-        'isSubscriber': project.subscribers.user_set.filter(id=request.user.id).exists(),
-    }
-    notifications = request.user.notifications.filter(actor_object_id=project.id)
+    is_subscriber = project.subscribers.user_set.filter(id=request.user.id).exists()
+    if not is_subscriber:
+        max_loaded = _project_notifications(
+            project, request.user.notifications).aggregate(max_loaded=Max('timestamp'))['max_loaded']
+        to_create = _project_notifications(project, Notification.objects).distinct('verb', 'timestamp')
+        if max_loaded:
+            to_create = to_create.filter(timestamp__gt=max_loaded)
+        for notification in to_create:
+            notification.pk = None  # causes django to create a new mode with otherwise identical fields
+            notification.unread = True
+            notification.recipient = request.user
+            notification.save()
+
+    response = {'isSubscriber': is_subscriber}
+    notifications = _project_notifications(project, request.user.notifications)
     if read_status == 'unread':
         response['readCount'] = notifications.read().count()
         notifications = notifications.unread()
     else:
         notifications = notifications.read()
     return create_json_response({
+        # TODO naturaltime for timestamp
         f'{read_status}Notifications': [model_to_dict(n) for n in notifications],
         **response,
     })
 
 
+def _project_notifications(project, notifications):
+    return notifications.filter(actor_object_id=project.id)
+
+
 @login_and_policies_required
 def mark_read_project_notifications(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
-    request.user.notifications.filter(actor_object_id=project.id).mark_all_as_read()
+    _project_notifications(project, request.user.notifications).mark_all_as_read()
     return create_json_response({'readCount': request.user.notifications.read().count(), 'unreadNotifications': []})
 
 

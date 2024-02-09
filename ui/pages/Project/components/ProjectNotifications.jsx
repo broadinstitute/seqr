@@ -31,14 +31,18 @@ const ProjectNotifications = React.memo((
         </Feed.Event>
       )) : <Feed.Event><i>No new notifications</i></Feed.Event>}
       {buttonProps && (
-        <ButtonLink
-          onClick={setPath(setUrlPath, buttonProps.path)}
-          content={buttonProps.content}
-          icon={buttonProps.icon}
-        />
+        <Feed.Event>
+          <ButtonLink
+            onClick={setPath(setUrlPath, buttonProps.path)}
+            content={buttonProps.content}
+            icon={buttonProps.icon}
+          />
+        </Feed.Event>
       )}
       {!isSubscriber && (
-        <ButtonLink onClick={setPath(setUrlPath, 'subscribe')} content="Subscribe" icon="calendar plus outline" />
+        <Feed.Event>
+          <ButtonLink onClick={setPath(setUrlPath, 'subscribe')} content="Subscribe" icon="calendar plus outline" />
+        </Feed.Event>
       )}
     </Feed>
   )
