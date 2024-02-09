@@ -149,7 +149,7 @@ def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None
         dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
 
     return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
-        *_get_families_search_data(families, dataset_type=dataset_type), parsed_variant_ids, user, **kwargs
+        *_get_families_search_data(families, dataset_type=dataset_type), parsed_variant_ids, user, dataset_type=dataset_type, **kwargs
     )
 
 

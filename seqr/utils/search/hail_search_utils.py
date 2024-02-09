@@ -59,28 +59,36 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     return response_json['results'][end_offset - num_results:end_offset]
 
 
-def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user, return_all_queried_families=False):
+def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user, return_all_queried_families=False, dataset_type=None):
     search = {
         'variant_ids': [parsed_id for parsed_id in parsed_variant_ids.values() if parsed_id],
         'variant_keys': [variant_id for variant_id, parsed_id in parsed_variant_ids.items() if not parsed_id],
     }
-    search_body = _format_search_body(samples, genome_version, len(parsed_variant_ids), search)
-    response_json = _execute_search(search_body, user)
+    if len(search['variant_ids']) == 1 and not search['variant_keys']:
+        results = [hail_variant_lookup(
+            user, search['variant_ids'][0], genome_version=GENOME_VERSION_LOOKUP[genome_version], samples=samples,
+            dataset_type=dataset_type,
+        )]
+    else:
+        search_body = _format_search_body(samples, genome_version, len(parsed_variant_ids), search)
+        results = _execute_search(search_body, user)['results']
 
     if return_all_queried_families:
         expected_family_guids = set(samples.values_list('individual__family__guid', flat=True))
-        _validate_expected_families(response_json['results'], expected_family_guids)
+        _validate_expected_families(results, expected_family_guids)
 
-    return response_json['results']
+    return results
 
 
-def hail_variant_lookup(user, variant_id, samples=None, **kwargs):
+def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, **kwargs):
+    dataset_type = (dataset_type or Sample.DATASET_TYPE_VARIANT_CALLS).replace('_only', '')
     body = {
         'variant_id': variant_id,
+        'data_type': dataset_type,
         **kwargs,
     }
     if samples:
-        body['sample_data'] = _get_sample_data(samples)[Sample.DATASET_TYPE_VARIANT_CALLS]
+        body['sample_data'] = _get_sample_data(samples)[dataset_type]
     return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
 
 
