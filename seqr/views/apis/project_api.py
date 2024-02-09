@@ -355,8 +355,9 @@ def project_notifications(request, project_guid, read_status):
     else:
         notifications = notifications.read()
     return create_json_response({
-        # TODO naturaltime for timestamp
-        f'{read_status}Notifications': [model_to_dict(n) for n in notifications],
+        f'{read_status}Notifications': [
+            {'timestamp': n.naturaltime(), **{k: getattr(n, k) for k in ['id', 'verb']}}
+            for n in notifications],
         **response,
     })
 

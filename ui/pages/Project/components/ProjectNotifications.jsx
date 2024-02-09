@@ -3,10 +3,9 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Feed } from 'semantic-ui-react'
 
-import { getUser } from 'redux/selectors'
 import StateDataLoader from 'shared/components/StateDataLoader'
 import { ButtonLink } from 'shared/components/StyledComponents'
-import { getCurrentProject } from '../selectors'
+import { getProjectGuid } from '../selectors'
 
 // TODO add subscribe button for non-subscribers
 
@@ -27,7 +26,7 @@ const ProjectNotifications = React.memo((
     <Feed>
       {notifications ? notifications.map(({ verb, timestamp, id }) => (
         <Feed.Event key={id}>
-          <Feed.Content><Feed.Summary date={new Date(timestamp).toLocaleDateString()} content={verb} /></Feed.Content>
+          <Feed.Content><Feed.Summary date={timestamp} content={verb} /></Feed.Content>
         </Feed.Event>
       )) : <Feed.Event><i>No new notifications</i></Feed.Event>}
       {buttonProps && (
@@ -57,17 +56,16 @@ ProjectNotifications.propTypes = {
 }
 
 const mapStateToProps = state => ({
-  project: getCurrentProject(state), // TODO only need guid?
-  user: getUser(state),
+  projectGuid: getProjectGuid(state),
 })
 
 const parseResponse = response => response
 
-const LoadedProjectNotifications = ({ project, ...props }) => {
+const LoadedProjectNotifications = ({ projectGuid, ...props }) => {
   const [urlPath, setUrlPath] = useState('unread')
   return (
     <StateDataLoader
-      url={`/api/project/${project.projectGuid}/notifications/${urlPath}`}
+      url={`/api/project/${projectGuid}/notifications/${urlPath}`}
       childComponent={ProjectNotifications}
       parseResponse={parseResponse}
       setUrlPath={setUrlPath}
@@ -77,7 +75,7 @@ const LoadedProjectNotifications = ({ project, ...props }) => {
 }
 
 LoadedProjectNotifications.propTypes = {
-  project: PropTypes.object,
+  projectGuid: PropTypes.string,
 }
 
 export default connect(mapStateToProps)(LoadedProjectNotifications)
