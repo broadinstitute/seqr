@@ -7,8 +7,6 @@ import StateDataLoader from 'shared/components/StateDataLoader'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { getProjectGuid } from '../selectors'
 
-// TODO add subscribe button for non-subscribers
-
 const setPath = (setUrlPath, path) => () => setUrlPath(path)
 
 const ProjectNotifications = React.memo((

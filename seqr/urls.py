@@ -139,7 +139,7 @@ from seqr.views.apis.analysis_group_api import update_analysis_group_handler, de
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
     project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists, \
-    project_samples, project_notifications, mark_read_project_notifications
+    project_samples, project_notifications, mark_read_project_notifications, subscribe_project_notifications
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     grant_workspace_access, validate_anvil_vcf, add_workspace_data, get_anvil_vcf_list
@@ -211,6 +211,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/get_overview': project_overview,
     'project/(?P<project_guid>[^/]+)/get_collaborators': project_collaborators,
     'project/(?P<project_guid>[^/]+)/notifications/mark_read': mark_read_project_notifications,
+    'project/(?P<project_guid>[^/]+)/notifications/subscribe': subscribe_project_notifications,
     'project/(?P<project_guid>[^/]+)/notifications/(?P<read_status>(un)?read)': project_notifications,
 
     'project/create_project': create_project_handler,
