@@ -220,7 +220,7 @@ const getLitSearch = (genes, variations) => {
 }
 
 const shouldShowNonDefaultTranscriptInfoIcon = (variant, transcript, transcriptsById) => {
-  const allVariantTranscripts = Object.values(variant.transcripts)?.flat() || []
+  const allVariantTranscripts = Object.values(variant.transcripts || {}).flat() || []
   const canonical = allVariantTranscripts.find(t => t.canonical) || null
   const mane = allVariantTranscripts.find(
     t => transcriptsById[t.transcriptId]?.isManeSelect || false,
