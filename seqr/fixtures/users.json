@@ -32,6 +32,14 @@
     }
 },
 {
+    "model": "auth.group",
+    "pk": 6,
+    "fields": {
+        "name": "subscribers",
+        "permissions": []
+    }
+},
+{
     "model": "auth.user",
     "pk": 10,
     "fields": {
@@ -62,7 +70,7 @@
         "is_staff": false,
         "is_active": true,
         "date_joined": "2017-03-12T23:09:54.180Z",
-        "groups": [],
+        "groups": [6],
         "user_permissions": []
     }
 }, {
