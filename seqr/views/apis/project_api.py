@@ -334,8 +334,10 @@ def project_mme_submisssions(request, project_guid):
 def project_notifications(request, project_guid, read_status):
     project = get_project_and_check_permissions(project_guid, request.user)
     # TODO handle if user is not a subscriber but project notifications exist
+    response = {
+        'isSubscriber': project.subscribers.user_set.filter(id=request.user.id).exists(),
+    }
     notifications = request.user.notifications.filter(actor_object_id=project.id)
-    response = {}
     if read_status == 'unread':
         response['readCount'] = notifications.read().count()
         notifications = notifications.unread()
@@ -351,7 +353,7 @@ def project_notifications(request, project_guid, read_status):
 def mark_read_project_notifications(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
     request.user.notifications.filter(actor_object_id=project.id).mark_all_as_read()
-    return create_json_response({'readCount': request.user.notifications.read().count()})
+    return create_json_response({'readCount': request.user.notifications.read().count(), 'unreadNotifications': []})
 
 
 def _add_tag_type_counts(project, project_variant_tags):

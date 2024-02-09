@@ -12,7 +12,9 @@ import { getCurrentProject } from '../selectors'
 
 const setPath = (setUrlPath, path) => () => setUrlPath(path)
 
-const ProjectNotifications = React.memo(({ readNotifications, unreadNotifications, readCount, setUrlPath }) => {
+const ProjectNotifications = React.memo((
+  { readNotifications, unreadNotifications, readCount, isSubscriber, setUrlPath },
+) => {
   const hasUnread = unreadNotifications?.length > 0
   const notifications = hasUnread ? unreadNotifications : readNotifications
   let buttonProps
@@ -35,6 +37,9 @@ const ProjectNotifications = React.memo(({ readNotifications, unreadNotification
           icon={buttonProps.icon}
         />
       )}
+      {!isSubscriber && (
+        <ButtonLink onClick={setPath(setUrlPath, 'subscribe')} content="Subscribe" icon="calendar plus outline" />
+      )}
     </Feed>
   )
 })
@@ -43,6 +48,7 @@ ProjectNotifications.propTypes = {
   readNotifications: PropTypes.arrayOf(PropTypes.object),
   unreadNotifications: PropTypes.arrayOf(PropTypes.object),
   readCount: PropTypes.number,
+  isSubscriber: PropTypes.bool,
   setUrlPath: PropTypes.func,
 }
 
