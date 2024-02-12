@@ -459,23 +459,34 @@ class BaseHailTableQuery(object):
                 if genotype:
                     entry_indices_by_gt[genotype][family_index].append(sample_index)
 
+        min_unaffected = None
+        if inheritance_mode == COMPOUND_HET:
+            family_unaffected_counts = [
+                len(i) for i in entry_indices_by_gt[INHERITANCE_FILTERS[COMPOUND_HET][UNAFFECTED_ID]].values()
+            ]
+            if any(count > 1 for count in family_unaffected_counts):
+                min_unaffected = min(family_unaffected_counts)
+
         for genotype, entry_indices in entry_indices_by_gt.items():
             entry_indices = hl.dict(entry_indices)
             ht = ht.annotate(family_entries=hl.enumerate(ht.family_entries).map(
-                lambda x: self._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, inheritance_mode)
+                lambda x: self._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, min_unaffected)
             ))
 
         return ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
 
     @classmethod
-    def _valid_genotype_family_entries(cls, entries, gentoype_entry_indices, genotype, inheritance_mode):
+    def _valid_genotype_family_entries(cls, entries, gentoype_entry_indices, genotype, min_unaffected):
         is_valid = hl.is_missing(gentoype_entry_indices) | gentoype_entry_indices.all(
             lambda i: cls.GENOTYPE_QUERY_MAP[genotype](entries[i].GT)
         )
-        if inheritance_mode == COMPOUND_HET and genotype == HAS_REF:
-            is_valid &= ((gentoype_entry_indices.size() < 2) | gentoype_entry_indices.any(
+        if min_unaffected is not None and genotype == HAS_REF:
+            unaffected_filter = gentoype_entry_indices.any(
                 lambda i: cls.GENOTYPE_QUERY_MAP[REF_REF](entries[i].GT)
-            ))
+            )
+            if min_unaffected < 2:
+                unaffected_filter |= gentoype_entry_indices.size() < 2
+            is_valid &= unaffected_filter
         return hl.or_missing(is_valid, entries)
 
     def _get_family_passes_quality_filter(self, quality_filter, **kwargs):
