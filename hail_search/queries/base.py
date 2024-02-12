@@ -432,10 +432,13 @@ class BaseHailTableQuery(object):
                 ht, COMPOUND_HET, inheritance_filter, sorted_family_sample_data,
             )
 
-        if (inheritance_filter or inheritance_mode) and not is_any_affected:
-            ht = None if inheritance_mode == COMPOUND_HET else self._filter_families_inheritance(
-                ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
-            )
+        if is_any_affected or not (inheritance_filter and inheritance_mode):
+            # No sample-specific inheritance filtering needed
+            sorted_family_sample_data = []
+
+        ht = None if inheritance_mode == COMPOUND_HET else self._filter_families_inheritance(
+            ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
+        )
 
         return ht, comp_het_ht
 
@@ -650,7 +653,9 @@ class BaseHailTableQuery(object):
         annotation_override_filters = self._get_annotation_override_filters(ht, annotations, pathogenicity=pathogenicity)
 
         # TODO confirm primary and secondary annotations are actually different before annotating etc -
-        #  ignore empty arrays and data-type specific fields
+        #  ignore empty arrays and data-type specific fields from other data types and different sorts
+        # Run _get_allowed_consequence_ids on both before loading to determine if different
+        # also check diff overrides somehow
         annotation_exprs, _ = self._get_allowed_consequences_annotations(ht, annotations, annotation_override_filters)
         if is_comp_het or (self._has_comp_het_search and not annotation_exprs):
             secondary_exprs, allowed_secondary_consequences = self._get_allowed_consequences_annotations(
