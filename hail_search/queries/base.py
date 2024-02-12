@@ -213,7 +213,7 @@ class BaseHailTableQuery(object):
         self._load_table_kwargs = {}
 
         if sample_data:
-            self._load_filtered_table(sample_data, inheritance_mode=inheritance_mode, **kwargs)
+            self._load_filtered_table(sample_data, **kwargs)
 
     @property
     def _has_comp_het_search(self):
@@ -341,8 +341,7 @@ class BaseHailTableQuery(object):
             ),
         )
 
-    def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, quality_filter=None,
-                              **kwargs):
+    def _filter_entries_table(self, ht, sample_data, inheritance_filter=None, quality_filter=None, **kwargs):
         if not self._load_table_kwargs:
             ht = self._prefilter_entries_table(ht, **kwargs)
 
@@ -360,7 +359,7 @@ class BaseHailTableQuery(object):
             ht = ht.filter(ht.family_entries.any(hl.is_defined))
 
         ht, ch_ht = self._filter_inheritance(
-            ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
+            ht, inheritance_filter, sorted_family_sample_data,
         )
 
         return ht, ch_ht
@@ -417,10 +416,10 @@ class BaseHailTableQuery(object):
     def _get_sample_type(cls, ht_globals):
         return ht_globals.sample_type
 
-    def _filter_inheritance(self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data):
+    def _filter_inheritance(self, ht, inheritance_filter, sorted_family_sample_data):
         any_valid_entry = lambda x: self.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
 
-        is_any_affected = inheritance_mode == ANY_AFFECTED
+        is_any_affected = self._inheritance_mode == ANY_AFFECTED
         if is_any_affected:
             prev_any_valid_entry = any_valid_entry
             any_valid_entry = lambda x: prev_any_valid_entry(x) & (x.affected_id == AFFECTED_ID)
@@ -435,12 +434,12 @@ class BaseHailTableQuery(object):
                 ht, COMPOUND_HET, inheritance_filter, sorted_family_sample_data,
             )
 
-        if is_any_affected or not (inheritance_filter or inheritance_mode):
+        if is_any_affected or not (inheritance_filter or self._inheritance_mode):
             # No sample-specific inheritance filtering needed
             sorted_family_sample_data = []
 
-        ht = None if inheritance_mode == COMPOUND_HET else self._filter_families_inheritance(
-            ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
+        ht = None if self._inheritance_mode == COMPOUND_HET else self._filter_families_inheritance(
+            ht, self._inheritance_mode, inheritance_filter, sorted_family_sample_data,
         )
 
         return ht, comp_het_ht
