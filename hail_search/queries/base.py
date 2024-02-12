@@ -208,7 +208,7 @@ class BaseHailTableQuery(object):
         self._ht = None
         self._comp_het_ht = None
         self._inheritance_mode = inheritance_mode
-        self._has_secondary_annotations = True
+        self._has_secondary_annotations = False
         self._is_multi_data_type_comp_het = False
         self._load_table_kwargs = {}
 
