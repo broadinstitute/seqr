@@ -302,9 +302,13 @@ class BaseHailTableQuery(object):
             entry_type = main_ht.family_entries.dtype.element_type
             for project_ht, comp_het_project_ht, num_project_families in filtered_project_hts[1:]:
                 if families_ht is not None:
-                    families_ht = self._add_project_ht(self, families_ht, project_ht, entry_type)
+                    families_ht = self._add_project_ht(families_ht, project_ht, default=hl.empty_array(entry_type))
                 if comp_het_families_ht is not None:
-                    comp_het_families_ht = self._add_project_ht(self, comp_het_families_ht, comp_het_project_ht, entry_type)
+                    comp_het_families_ht = self._add_project_ht(
+                        comp_het_families_ht, comp_het_project_ht,
+                        default=hl.range(num_families).map(lambda i: hl.missing(entry_type)),
+                        default_1=hl.range(num_project_families).map(lambda i: hl.missing(entry_type)),
+                    )
                 num_families += num_project_families
 
         #  TODO add pre-processing for annotations so do not even read in tables if not going to have vaild annotations
@@ -317,20 +321,22 @@ class BaseHailTableQuery(object):
             ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
             self._ht = self._filter_annotated_table(ht, **kwargs)
 
-    def _add_project_ht(self, families_ht, project_ht, entry_type):
+    def _add_project_ht(self, families_ht, project_ht, default, default_1=None):
+        if default_1 is None:
+            default_1 = default
+
         families_ht = families_ht.join(project_ht, how='outer')
         families_ht = families_ht.select_globals(
             family_guids=families_ht.family_guids.extend(families_ht.family_guids_1)
         )
-        select_fields = {
-            'filters': families_ht.filters.union(families_ht.filters_1),
-            'family_entries': hl.bind(
+        return families_ht.select(
+            filters=families_ht.filters.union(families_ht.filters_1),
+            family_entries=hl.bind(
                 lambda a1, a2: a1.extend(a2),
-                hl.or_else(families_ht.family_entries, hl.empty_array(entry_type)),
-                hl.or_else(families_ht.family_entries_1, hl.empty_array(entry_type)),
+                hl.or_else(families_ht.family_entries, default),
+                hl.or_else(families_ht.family_entries_1, default_1),
             ),
-        }
-        return families_ht.select(**select_fields)
+        )
 
     def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, quality_filter=None,
                               **kwargs):
@@ -567,6 +573,7 @@ class BaseHailTableQuery(object):
         return True
 
     def _filter_by_frequency(self, ht, frequencies, pathogenicity):
+        # TODO do not filter if af == 1
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
         if not frequencies:
             return ht
@@ -642,6 +649,8 @@ class BaseHailTableQuery(object):
         annotations = annotations or {}
         annotation_override_filters = self._get_annotation_override_filters(ht, annotations, pathogenicity=pathogenicity)
 
+        # TODO confirm primary and secondary annotations are actually different before annotating etc -
+        #  ignore empty arrays and data-type specific fields
         annotation_exprs, _ = self._get_allowed_consequences_annotations(ht, annotations, annotation_override_filters)
         if is_comp_het or (self._has_comp_het_search and not annotation_exprs):
             secondary_exprs, allowed_secondary_consequences = self._get_allowed_consequences_annotations(
