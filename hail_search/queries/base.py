@@ -576,7 +576,6 @@ class BaseHailTableQuery(object):
         return True
 
     def _filter_by_frequency(self, ht, frequencies, pathogenicity):
-        # TODO do not filter if af == 1
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
         if not frequencies:
             return ht
