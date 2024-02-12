@@ -311,7 +311,6 @@ class BaseHailTableQuery(object):
                     )
                 num_families += num_project_families
 
-        #  TODO add pre-processing for annotations so do not even read in tables if not going to have vaild annotations
         if comp_het_families_ht is not None:
             comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
             self._comp_het_ht = self._filter_annotated_table(comp_het_ht, is_comp_het=True, **kwargs)
@@ -576,7 +575,6 @@ class BaseHailTableQuery(object):
         return True
 
     def _filter_by_frequency(self, ht, frequencies, pathogenicity):
-        # TODO do not filter if af == 1
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
         if not frequencies:
             return ht
@@ -652,10 +650,6 @@ class BaseHailTableQuery(object):
         annotations = annotations or {}
         annotation_override_filters = self._get_annotation_override_filters(ht, annotations, pathogenicity=pathogenicity)
 
-        # TODO confirm primary and secondary annotations are actually different before annotating etc -
-        #  ignore empty arrays and data-type specific fields from other data types and different sorts
-        #  Run _get_allowed_consequence_ids on both before loading to determine if different
-        #  also check diff overrides somehow
         annotation_exprs, _ = self._get_allowed_consequences_annotations(ht, annotations, annotation_override_filters)
         if is_comp_het or (self._has_comp_het_search and not annotation_exprs):
             secondary_exprs, allowed_secondary_consequences = self._get_allowed_consequences_annotations(
@@ -709,7 +703,6 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _get_annotation_filters(ht, is_secondary=False):
-        # TODO not needed for anything except comp het search, just directly filter for everything else
         suffix = '_secondary' if is_secondary else ''
         annotation_filters = []
 
