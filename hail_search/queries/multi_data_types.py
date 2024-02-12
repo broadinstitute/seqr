@@ -101,6 +101,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             if merged_sort_expr is not None:
                 dt_ht = dt_ht.annotate(_sort=merged_sort_expr)
             hts.append(dt_ht.select('_sort', **{data_type: dt_ht.row}))
+
         for data_type, ch_ht in self._comp_het_hts.items():
             ch_ht = ch_ht.annotate(
                 v1=self._format_comp_het_result(ch_ht.v1, SNV_INDEL_DATA_TYPE),
