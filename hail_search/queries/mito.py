@@ -216,8 +216,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
         canonical_consequences = set()
         any_consequences = set()
         for c in allowed_consequence_ids:
-            if c.endswith('__canonical'):
-                canonical_consequences.add(c.replace('__canonical', ''))
+            if str(c).endswith('__canonical'):
+                canonical_consequences.add(int(c.replace('__canonical', '')))
             else:
                 any_consequences.add(c)
 
