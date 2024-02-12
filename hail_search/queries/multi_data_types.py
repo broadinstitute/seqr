@@ -59,8 +59,12 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         if not overlapped_families:
             return None
 
-        variant_ch_ht = self._family_filtered_ch_ht(variant_ht, overlapped_families, variant_families, 'v1')
-        sv_ch_ht = self._family_filtered_ch_ht(sv_ht, overlapped_families, sv_families, 'v2')
+        if variant_families != sv_families:
+            variant_ht = self._family_filtered_ch_ht(variant_ht, overlapped_families, variant_families)
+            sv_ht = self._family_filtered_ch_ht(sv_ht, overlapped_families, sv_families)
+
+        variant_ch_ht = variant_ht.group_by('gene_ids').aggregate(v1=hl.agg.collect(variant_ht.row))
+        sv_ch_ht = sv_ht.group_by('gene_ids').aggregate(v2=hl.agg.collect(sv_ht.row))
 
         ch_ht = variant_ch_ht.join(sv_ch_ht)
         ch_ht = ch_ht.explode(ch_ht.v1)
@@ -69,11 +73,9 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         return self._filter_grouped_compound_hets(ch_ht)
 
     @staticmethod
-    def _family_filtered_ch_ht(ht, overlapped_families, families, key):
-        # TODO only remap families if different
+    def _family_filtered_ch_ht(ht, overlapped_families, families):
         family_indices = hl.array([families.index(family_guid) for family_guid in overlapped_families])
-        ht = ht.annotate(family_entries=family_indices.map(lambda i: ht.family_entries[i]))
-        return ht.group_by('gene_ids').aggregate(**{key: hl.agg.collect(ht.row)})
+        return ht.annotate(family_entries=family_indices.map(lambda i: ht.family_entries[i]))
 
     def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
         is_valid = super()._is_valid_comp_het_family(ch_ht, entries_1, entries_2)
@@ -105,14 +107,9 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             if merged_sort_expr is not None:
                 dt_ht = dt_ht.annotate(_sort=merged_sort_expr)
             hts.append(dt_ht.select('_sort', **{data_type: dt_ht.row}))
-            # start = time.perf_counter()
-            # logger.info(f'{data_type}: {dt_ht.count()} ({time.perf_counter() - start:0.4f}s)')
+            start = time.perf_counter()
+            logger.info(f'{data_type}: {dt_ht.count()} ({time.perf_counter() - start:0.4f}s)')
             """
-            Hom-recessive only:
-            SV_WGS: 0 (5.9890s)
-            MITO: 0 (2.4309s)
-            SNV_INDEL: 3 (16.8396s)
-
             All recessive (with comp het)
             SV_WGS: 0 (14.6799s)
             MITO: 0 (8.7807s)
@@ -124,7 +121,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             SV_WGS: 0 (20.0788s)
             MITO: 0 (9.6441s)
             SNV_INDEL: 11 (106.1276s)
-            SV_WGS: 0 (82.6384s)
+            comp het SV_WGS: 0 (82.6384s)
             Actual total: ~217s
             (actual-actual: 244.699374)
             """
@@ -138,8 +135,8 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
                 _sort=hl.sorted([ch_ht.v1._sort, ch_ht.v2._sort])[0],
                 **{f'comp_het_{data_type}': ch_ht.row},
             ))
-            # start = time.perf_counter()
-            # logger.info(f'comp het {data_type}: {ch_ht.count()} ({time.perf_counter() - start:0.4f}s)')
+            start = time.perf_counter()
+            logger.info(f'comp het {data_type}: {ch_ht.count()} ({time.perf_counter() - start:0.4f}s)')
 
         ht = hts[0]
         for sub_ht in hts[1:]:
