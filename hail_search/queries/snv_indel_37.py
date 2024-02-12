@@ -11,6 +11,6 @@ class SnvIndelHailTableQuery37(SnvIndelHailTableQuery):
     def _should_add_chr_prefix(self):
         return False
 
-    def _get_annotation_override_filters(self, annotations, *args, **kwargs):
+    def _get_annotation_override_filters(self, ht, annotations, *args, **kwargs):
         annotations = {k: v for k, v in annotations.items() if k != SCREEN_KEY}
-        return super()._get_annotation_override_filters(annotations, *args, **kwargs)
+        return super()._get_annotation_override_filters(ht, annotations, *args, **kwargs)

@@ -62,10 +62,10 @@ class GcnvHailTableQuery(SvHailTableQuery):
     POPULATIONS = {k: v for k, v in SvHailTableQuery.POPULATIONS.items() if k != 'gnomad_svs'}
 
     @classmethod
-    def _get_genotype_override_field(cls, r, field, family_entries_field=None):
+    def _get_genotype_override_field(cls, r, field):
         agg, get_default = cls.GENOTYPE_OVERRIDE_FIELDS[field]
         sample_field = f'sample_{field}'
-        entries = r[family_entries_field or 'family_entries'].flatmap(lambda x: x)
+        entries = r.family_entries.flatmap(lambda x: x)
         return hl.if_else(
             entries.any(lambda g: hl.is_defined(g.GT) & hl.is_missing(g[sample_field])),
             get_default(r), agg(entries.map(lambda g: g[sample_field]))
@@ -85,10 +85,9 @@ class GcnvHailTableQuery(SvHailTableQuery):
         ])
 
     @classmethod
-    def _gene_ids_expr(cls, ht, comp_het=False):
-        family_entries_field = 'comp_het_family_entries' if comp_het else None
+    def _gene_ids_expr(cls, ht):
         return hl.or_else(
-            cls._get_genotype_override_field(ht, 'gene_ids', family_entries_field=family_entries_field),
+            cls._get_genotype_override_field(ht, 'gene_ids'),
             super()._gene_ids_expr(ht),
         )
 

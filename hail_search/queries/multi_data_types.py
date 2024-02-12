@@ -71,7 +71,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
     @staticmethod
     def _family_filtered_ch_ht(ht, overlapped_families, families, key):
         family_indices = hl.array([families.index(family_guid) for family_guid in overlapped_families])
-        ht = ht.annotate(comp_het_family_entries=family_indices.map(lambda i: ht.comp_het_family_entries[i]))
+        ht = ht.annotate(family_entries=family_indices.map(lambda i: ht.family_entries[i]))
         return ht.group_by('gene_ids').aggregate(**{key: hl.agg.collect(ht.row)})
 
     def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
