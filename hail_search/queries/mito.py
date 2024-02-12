@@ -199,33 +199,52 @@ class MitoHailTableQuery(BaseHailTableQuery):
             ht = hl.filter_intervals(ht, parsed_intervals, keep=False)
         return ht
 
-    def _get_transcript_consequence_filter(self, allowed_consequence_ids, allowed_consequences):
+    def _get_allowed_consequence_ids(self, annotations):
+        consequence_ids = super()._get_allowed_consequence_ids(annotations)
         canonical_consequences = {
-            c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
+            c.replace('__canonical', '') for consequences in annotations.values()
+            if consequences for c in consequences if c.endswith('__canonical')
         }
-        canonical_consequences -= allowed_consequences
+        if canonical_consequences:
+            canonical_consequence_ids = super()._get_allowed_consequence_ids({'canonical': canonical_consequences})
+            canonical_consequence_ids -= consequence_ids
+            consequence_ids.update({f'{cid}__canonical' for cid in canonical_consequence_ids})
+        return consequence_ids
+
+    @staticmethod
+    def _get_allowed_transcripts_filter(allowed_consequence_ids):
+        canonical_consequences = set()
+        any_consequences = set()
+        for c in allowed_consequence_ids:
+            if c.endswith('__canonical'):
+                canonical_consequences.add(c.replace('__canonical', ''))
+            else:
+                any_consequences.add(c)
 
         all_consequence_ids = None
         if canonical_consequences:
-            all_consequence_ids = hl.set({
-                *self._get_allowed_consequence_ids(canonical_consequences), *allowed_consequence_ids,
-            })
-        elif not allowed_consequence_ids:
-            return None
+            all_consequence_ids = hl.set({*canonical_consequences, *any_consequences})
 
-        allowed_consequence_ids = hl.set(allowed_consequence_ids) if allowed_consequence_ids else hl.empty_set(hl.tint)
+        allowed_consequence_ids = hl.set(any_consequences) if any_consequences else hl.empty_set(hl.tint)
         return lambda tc: tc.consequence_term_ids.any(
             (hl.if_else(hl.is_defined(tc.canonical), all_consequence_ids, allowed_consequence_ids)
              if canonical_consequences else allowed_consequence_ids
         ).contains)
 
-    def _get_annotation_override_filters(self, ht, annotations, pathogenicity=None, **kwargs):
-        annotation_filters = []
-
+    def _get_annotation_override_fields(self, annotations, pathogenicity=None, **kwargs):
+        annotation_overrides = super()._get_annotation_override_fields(annotations, **kwargs)
         for key in self.PATHOGENICITY_FILTERS.keys():
             path_terms = (pathogenicity or {}).get(key)
             if path_terms:
-                annotation_filters.append(self._has_path_expr(ht,path_terms, key))
+                annotation_overrides[key] = path_terms
+        return annotation_overrides
+
+    def _get_annotation_override_filters(self, ht, annotation_overrides):
+        annotation_filters = []
+
+        for key in self.PATHOGENICITY_FILTERS.keys():
+            if key in annotation_overrides:
+                annotation_filters.append(self._has_path_expr(ht, annotation_overrides[key], key))
 
         return annotation_filters
 
