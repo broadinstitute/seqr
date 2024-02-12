@@ -96,9 +96,6 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
     def format_search_ht(self):
         hts = []
-        import logging
-        import time
-        logger = logging.getLogger(__name__)
         for data_type, query in self._data_type_queries.items():
             dt_ht = query.format_search_ht()
             if dt_ht is None:
@@ -107,24 +104,6 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             if merged_sort_expr is not None:
                 dt_ht = dt_ht.annotate(_sort=merged_sort_expr)
             hts.append(dt_ht.select('_sort', **{data_type: dt_ht.row}))
-            start = time.perf_counter()
-            logger.info(f'{data_type}: {dt_ht.count()} ({time.perf_counter() - start:0.4f}s)')
-            """
-            All recessive (with comp het)
-            SV_WGS: 0 (14.6799s)
-            MITO: 0 (8.7807s)
-            SNV_INDEL: 11 (170.8936s)
-            comp het SV_WGS: 0 (86.7876s)
-            Actual total: ~304s
-            
-            With updates:
-            SV_WGS: 0 (20.0788s)
-            MITO: 0 (9.6441s)
-            SNV_INDEL: 11 (106.1276s)
-            comp het SV_WGS: 0 (82.6384s)
-            Actual total: ~217s
-            (actual-actual: 244.699374)
-            """
 
         for data_type, ch_ht in self._comp_het_hts.items():
             ch_ht = ch_ht.annotate(
@@ -135,8 +114,6 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
                 _sort=hl.sorted([ch_ht.v1._sort, ch_ht.v2._sort])[0],
                 **{f'comp_het_{data_type}': ch_ht.row},
             ))
-            start = time.perf_counter()
-            logger.info(f'comp het {data_type}: {ch_ht.count()} ({time.perf_counter() - start:0.4f}s)')
 
         ht = hts[0]
         for sub_ht in hts[1:]:
