@@ -70,6 +70,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
     def _family_filtered_ch_ht(ht, overlapped_families, families, key):
+        # TODO only remap families if different
         family_indices = hl.array([families.index(family_guid) for family_guid in overlapped_families])
         ht = ht.annotate(family_entries=family_indices.map(lambda i: ht.family_entries[i]))
         return ht.group_by('gene_ids').aggregate(**{key: hl.agg.collect(ht.row)})
@@ -125,6 +126,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             SNV_INDEL: 11 (106.1276s)
             SV_WGS: 0 (82.6384s)
             Actual total: ~217s
+            (actual-actual: 244.699374)
             """
 
         for data_type, ch_ht in self._comp_het_hts.items():

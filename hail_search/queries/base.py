@@ -213,10 +213,6 @@ class BaseHailTableQuery(object):
             self._load_filtered_table(sample_data, inheritance_mode=inheritance_mode, **kwargs)
 
     @property
-    def _is_recessive_search(self):
-        return self._inheritance_mode == RECESSIVE
-
-    @property
     def _has_comp_het_search(self):
         return self._inheritance_mode in {RECESSIVE, COMPOUND_HET}
 
@@ -306,9 +302,9 @@ class BaseHailTableQuery(object):
             entry_type = main_ht.family_entries.dtype.element_type
             for project_ht, comp_het_project_ht, num_project_families in filtered_project_hts[1:]:
                 if families_ht is not None:
-                    families_ht = _add_project_ht(self, families_ht, project_ht, entry_type)
+                    families_ht = self._add_project_ht(self, families_ht, project_ht, entry_type)
                 if comp_het_families_ht is not None:
-                    comp_het_families_ht = _add_project_ht(self, comp_het_families_ht, comp_het_project_ht, entry_type)
+                    comp_het_families_ht = self._add_project_ht(self, comp_het_families_ht, comp_het_project_ht, entry_type)
                 num_families += num_project_families
 
         #  TODO add pre-processing for annotations so do not even read in tables if not going to have vaild annotations
@@ -718,7 +714,7 @@ class BaseHailTableQuery(object):
         ch_ht = self._comp_het_ht
 
         # Get possible pairs of variants within the same gene
-        ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht, comp_het=True))
+        ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
 
         # Filter allowed transcripts to the grouped gene
@@ -822,7 +818,7 @@ class BaseHailTableQuery(object):
         )
 
     @classmethod
-    def _gene_ids_expr(cls, ht, comp_het=False):
+    def _gene_ids_expr(cls, ht):
         return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
 
     def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
