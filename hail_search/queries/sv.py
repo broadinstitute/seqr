@@ -54,18 +54,18 @@ class SvHailTableQuery(BaseHailTableQuery):
     def _get_sample_type(cls, *args):
         return cls.DATA_TYPE.split('_')[-1]
 
-    def _filter_annotated_table(self, *args, parsed_intervals=None, exclude_intervals=False, **kwargs):
+    def _filter_annotated_table(self, ht, *args, parsed_intervals=None, exclude_intervals=False, **kwargs):
         if parsed_intervals:
             interval_filter = hl.array(parsed_intervals).any(lambda interval: hl.if_else(
-                self._ht.start_locus.contig == self._ht.end_locus.contig,
-                interval.overlaps(hl.interval(self._ht.start_locus, self._ht.end_locus)),
-                interval.contains(self._ht.start_locus) | interval.contains(self._ht.end_locus),
+                ht.start_locus.contig == ht.end_locus.contig,
+                interval.overlaps(hl.interval(ht.start_locus, ht.end_locus)),
+                interval.contains(ht.start_locus) | interval.contains(ht.end_locus),
             ))
             if exclude_intervals:
                 interval_filter = ~interval_filter
-            self._ht = self._ht.filter(interval_filter)
+            ht = ht.filter(interval_filter)
 
-        return super()._filter_annotated_table(*args, **kwargs)
+        return super()._filter_annotated_table(ht, *args, **kwargs)
 
     def _get_family_passes_quality_filter(self, quality_filter, annotations=None, **kwargs):
         passes_quality = super()._get_family_passes_quality_filter(quality_filter)
@@ -78,18 +78,18 @@ class SvHailTableQuery(BaseHailTableQuery):
 
         return lambda entries: entries_has_new_call(entries) & passes_quality(entries)
 
-    def _get_allowed_consequences_annotations(self, annotations, annotation_filters, is_secondary=False):
+    def _get_allowed_consequences_annotations(self, ht, annotations, annotation_filters, is_secondary=False):
         if is_secondary:
             # SV search can specify secondary SV types, as well as secondary consequences
-            annotation_filters = self._get_annotation_override_filters(annotations)
-        return super()._get_allowed_consequences_annotations(annotations, annotation_filters)
+            annotation_filters = self._get_annotation_override_filters(ht, annotations)
+        return super()._get_allowed_consequences_annotations(ht, annotations, annotation_filters)
 
-    def _get_annotation_override_filters(self, annotations, **kwargs):
+    def _get_annotation_override_filters(self, ht, annotations, **kwargs):
         annotation_filters = []
         if annotations.get(STRUCTURAL_ANNOTATION_FIELD):
             allowed_type_ids = self.get_allowed_sv_type_ids(annotations[STRUCTURAL_ANNOTATION_FIELD])
             if allowed_type_ids:
-                annotation_filters.append(hl.set(allowed_type_ids).contains(self._ht.sv_type_id))
+                annotation_filters.append(hl.set(allowed_type_ids).contains(ht.sv_type_id))
 
         return annotation_filters
 

@@ -219,19 +219,19 @@ class MitoHailTableQuery(BaseHailTableQuery):
              if canonical_consequences else allowed_consequence_ids
         ).contains)
 
-    def _get_annotation_override_filters(self, annotations, pathogenicity=None, **kwargs):
+    def _get_annotation_override_filters(self, ht, annotations, pathogenicity=None, **kwargs):
         annotation_filters = []
 
         for key in self.PATHOGENICITY_FILTERS.keys():
             path_terms = (pathogenicity or {}).get(key)
             if path_terms:
-                annotation_filters.append(self._has_path_expr(path_terms, key))
+                annotation_filters.append(self._has_path_expr(ht,path_terms, key))
 
         return annotation_filters
 
-    def _frequency_override_filter(self, pathogenicity):
+    def _frequency_override_filter(self, ht, pathogenicity):
         path_terms = self._get_clinvar_path_filters(pathogenicity)
-        return self._has_path_expr(path_terms, CLINVAR_KEY) if path_terms else None
+        return self._has_path_expr(ht, path_terms, CLINVAR_KEY) if path_terms else None
 
     @staticmethod
     def _get_clinvar_path_filters(pathogenicity):
@@ -239,7 +239,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
         }
 
-    def _has_path_expr(self, terms, field):
+    def _has_path_expr(self, ht, terms, field):
         subfield, range_configs = self.PATHOGENICITY_FILTERS[field]
         field_name = self.PATHOGENICITY_FIELD_MAP.get(field, field)
         enum_lookup = self._get_enum_lookup(field_name, subfield)
@@ -254,7 +254,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ranges.append([None, None])
 
         ranges = [r for r in ranges if r[0] is not None]
-        value = self._ht[field_name][f'{subfield}_id']
+        value = ht[field_name][f'{subfield}_id']
         return hl.any(lambda r: (value >= r[0]) & (value <= r[1]), ranges)
 
     def _format_results(self, ht, *args, **kwargs):

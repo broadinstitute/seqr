@@ -93,14 +93,14 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
 
         return 'is_gt_10_percent' if af_cutoff > PREFILTER_FREQ_CUTOFF else True
 
-    def _get_annotation_override_filters(self, annotations, *args, **kwargs):
-        annotation_filters = super()._get_annotation_override_filters(annotations, *args, **kwargs)
+    def _get_annotation_override_filters(self, ht, annotations, *args, **kwargs):
+        annotation_filters = super()._get_annotation_override_filters(ht, annotations, *args, **kwargs)
 
         if annotations.get(SCREEN_KEY):
             allowed_consequences = hl.set(self._get_enum_terms_ids(SCREEN_KEY.lower(), 'region_type', annotations[SCREEN_KEY]))
-            annotation_filters.append(allowed_consequences.contains(self._ht.screen.region_type_ids.first()))
+            annotation_filters.append(allowed_consequences.contains(ht.screen.region_type_ids.first()))
         if annotations.get(SPLICE_AI_FIELD):
-            score_filter, _ = self._get_in_silico_filter(SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD])
+            score_filter, _ = self._get_in_silico_filter(ht, SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD])
             annotation_filters.append(score_filter)
 
         return annotation_filters
