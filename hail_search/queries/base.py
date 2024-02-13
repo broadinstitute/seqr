@@ -210,6 +210,7 @@ class BaseHailTableQuery(object):
         self._inheritance_mode = inheritance_mode
         self._has_secondary_annotations = False
         self._is_multi_data_type_comp_het = False
+        self.max_unaffected_samples = None
         self._load_table_kwargs = {}
 
         if sample_data:
@@ -459,23 +460,37 @@ class BaseHailTableQuery(object):
                 if genotype:
                     entry_indices_by_gt[genotype][family_index].append(sample_index)
 
+        min_unaffected = None
+        if inheritance_mode == COMPOUND_HET:
+            family_unaffected_counts = [
+                len(i) for i in entry_indices_by_gt[INHERITANCE_FILTERS[COMPOUND_HET][UNAFFECTED_ID]].values()
+            ]
+            self.max_unaffected_samples = max(family_unaffected_counts) if family_unaffected_counts else 0
+            if self.max_unaffected_samples > 1:
+                min_unaffected = min(family_unaffected_counts)
+
         for genotype, entry_indices in entry_indices_by_gt.items():
+            if not entry_indices:
+                continue
             entry_indices = hl.dict(entry_indices)
             ht = ht.annotate(family_entries=hl.enumerate(ht.family_entries).map(
-                lambda x: self._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, inheritance_mode)
+                lambda x: self._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, min_unaffected)
             ))
 
         return ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
 
     @classmethod
-    def _valid_genotype_family_entries(cls, entries, gentoype_entry_indices, genotype, inheritance_mode):
+    def _valid_genotype_family_entries(cls, entries, gentoype_entry_indices, genotype, min_unaffected):
         is_valid = hl.is_missing(gentoype_entry_indices) | gentoype_entry_indices.all(
             lambda i: cls.GENOTYPE_QUERY_MAP[genotype](entries[i].GT)
         )
-        if inheritance_mode == COMPOUND_HET and genotype == HAS_REF:
-            is_valid &= ((gentoype_entry_indices.size() < 2) | gentoype_entry_indices.any(
+        if min_unaffected is not None and genotype == HAS_REF:
+            unaffected_filter = gentoype_entry_indices.any(
                 lambda i: cls.GENOTYPE_QUERY_MAP[REF_REF](entries[i].GT)
-            ))
+            )
+            if min_unaffected < 2:
+                unaffected_filter |= gentoype_entry_indices.size() < 2
+            is_valid &= unaffected_filter
         return hl.or_missing(is_valid, entries)
 
     def _get_family_passes_quality_filter(self, quality_filter, **kwargs):
@@ -890,12 +905,14 @@ class BaseHailTableQuery(object):
         return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
 
     def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
-        is_valid = hl.is_defined(entries_1) & hl.is_defined(entries_2) & hl.enumerate(entries_1).all(lambda x: hl.any([
-            (x[1].affected_id != UNAFFECTED_ID), *self._comp_het_entry_has_ref(x[1].GT, entries_2[x[0]].GT),
-        ]))
+        family_filters = [hl.is_defined(entries_1), hl.is_defined(entries_2)]
+        if self.max_unaffected_samples > 0:
+            family_filters.append(hl.enumerate(entries_1).all(lambda x: hl.any([
+                (x[1].affected_id != UNAFFECTED_ID), *self._comp_het_entry_has_ref(x[1].GT, entries_2[x[0]].GT),
+            ])))
         if self._override_comp_het_alt:
-            is_valid &= entries_1.extend(entries_2).all(lambda x: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](x.GT))
-        return is_valid
+            family_filters.append(entries_1.extend(entries_2).all(lambda x: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](x.GT)))
+        return hl.all(family_filters)
 
     def _comp_het_entry_has_ref(self, gt1, gt2):
         return [self.GENOTYPE_QUERY_MAP[REF_REF](gt1), self.GENOTYPE_QUERY_MAP[REF_REF](gt2)]
