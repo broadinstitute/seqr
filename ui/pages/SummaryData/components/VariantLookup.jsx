@@ -31,10 +31,10 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
-const VariantDisplay = ({ variant }) => (variant ? <Variant variant={variant} /> : null)
+const VariantDisplay = ({ variants }) => (variants || []).map(variant => <Variant variant={variant} />)
 
 VariantDisplay.propTypes = {
-  variant: PropTypes.object,
+  variants: PropTypes.arrayOf(PropTypes.object),
 }
 
 const onSubmit = updateQueryParams => (data) => {

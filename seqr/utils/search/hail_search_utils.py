@@ -88,7 +88,8 @@ def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATA
     }
     if samples:
         body['sample_data'] = _get_sample_data(samples)[dataset_type]
-    return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
+    variant = _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
+    return [variant]
 
 
 def _format_search_body(samples, genome_version, num_results, search):
