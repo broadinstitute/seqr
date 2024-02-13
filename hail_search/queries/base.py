@@ -43,6 +43,7 @@ class BaseHailTableQuery(object):
 
     GENOTYPE_FIELDS = {}
     COMPUTED_GENOTYPE_FIELDS = {}
+    GENOTYPE_OVERRIDE_FIELDS = {}
     GENOTYPE_QUERY_FIELDS = {}
     QUALITY_FILTER_FORMAT = {}
     POPULATIONS = {}
@@ -90,7 +91,7 @@ class BaseHailTableQuery(object):
         base_pop_config.pop('sort', None)
         return base_pop_config
 
-    def annotation_fields(self):
+    def annotation_fields(self, include_genotype_overrides=True):
         annotation_fields = {
             GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
                 lambda gt: hl.is_defined(gt.individualGuid)
@@ -98,7 +99,8 @@ class BaseHailTableQuery(object):
                 'sampleId', 'sampleType', 'individualGuid', 'familyGuid',
                 numAlt=hl.if_else(hl.is_defined(x[0].GT), x[0].GT.n_alt_alleles(), self.MISSING_NUM_ALT),
                 **{k: x[0][field] for k, field in self.GENOTYPE_FIELDS.items()},
-                **{_to_camel_case(k): v(x[0], k, r) for k, v in self.COMPUTED_GENOTYPE_FIELDS.items()},
+                **{_to_camel_case(k): v(x[0], k, r) for k, v in self.COMPUTED_GENOTYPE_FIELDS.items()
+                   if include_genotype_overrides or k not in self.GENOTYPE_OVERRIDE_FIELDS},
             )),
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
@@ -952,7 +954,7 @@ class BaseHailTableQuery(object):
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
-        annotation_fields = self.annotation_fields()
+        annotation_fields = self.annotation_fields(include_genotype_overrides=False)
         entry_annotations = {k: annotation_fields[k] for k in [FAMILY_GUID_FIELD, GENOTYPES_FIELD]}
         annotation_fields.update({
             FAMILY_GUID_FIELD: lambda ht: hl.empty_array(hl.tstr),
@@ -960,7 +962,7 @@ class BaseHailTableQuery(object):
             'genotypeFilters': lambda ht: hl.str(''),
         })
 
-        formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=bool(sample_data))
+        formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=False)
 
         variants = formatted.aggregate(hl.agg.take(formatted.row, 1))
         if not variants:
