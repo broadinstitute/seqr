@@ -75,21 +75,42 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
 
 
 def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_type=None, **kwargs):
-    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+    is_sv = dataset_type == Sample.DATASET_TYPE_SV_CALLS
+    if is_sv:
         if not sample_type:
             from seqr.utils.search.utils import InvalidSearchException
             raise InvalidSearchException('Sample type must be specified to look up a structural variant')
         dataset_type = f'{dataset_type}_{sample_type}'
-        # TODO run reciprocal overlap query on other sample type
+
     body = {
         'variant_id': variant_id,
         'data_type': dataset_type,
         **kwargs,
     }
+    sample_data = None
     if samples:
-        body['sample_data'] = _get_sample_data(samples)[dataset_type]
+        sample_data = _get_sample_data(samples)
+        body['sample_data'] = sample_data.pop(dataset_type)
     variant = _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
-    return [variant]
+    variants = [variant]
+
+    if is_sv and sample_data:
+        start = variant['pos']
+        end = variant['end']
+        offset = 0.2
+        if variant.get('endChrom'):
+            start -= 50
+            end += 50
+            offset = None
+        del body['variant_id']
+        body.update({
+            'sample_data': sample_data,
+            'intervals': [_format_interval(chrom=variant['chrom'], start=start, end=end, offset=offset)],
+            'annotations': {'structural': [variant['svType'], f"gCNV_{variant['svType']}"]}
+        })
+        variants += _execute_search(body, user)['results']
+
+    return variants
 
 
 def _format_search_body(samples, genome_version, num_results, search):
