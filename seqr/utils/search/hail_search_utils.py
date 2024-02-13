@@ -74,13 +74,20 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     return response_json['results']
 
 
-def hail_variant_lookup(user, variant_id, samples=None, **kwargs):
+def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_type=None, **kwargs):
+    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+        if not sample_type:
+            from seqr.utils.search.utils import InvalidSearchException
+            raise InvalidSearchException('Sample type must be specified to look up a structural variant')
+        dataset_type = f'{dataset_type}_{sample_type}'
+        # TODO run reciprocal overlap query on other sample type
     body = {
         'variant_id': variant_id,
+        'data_type': dataset_type,
         **kwargs,
     }
     if samples:
-        body['sample_data'] = _get_sample_data(samples)[Sample.DATASET_TYPE_VARIANT_CALLS]
+        body['sample_data'] = _get_sample_data(samples)[dataset_type]
     return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
 
 
