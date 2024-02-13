@@ -19,7 +19,6 @@ CLINVAR_KEY = 'clinvar'
 CLINVAR_MITO_KEY = 'clinvar_mito'
 HGMD_KEY = 'hgmd'
 STRUCTURAL_ANNOTATION_FIELD = 'structural'
-STRUCTURAL_CONSEQUENCE_FIELD = 'structural_consequence'
 FAMILY_GUID_FIELD = 'familyGuids'
 GENOTYPES_FIELD = 'genotypes'
 

@@ -207,8 +207,6 @@ class BaseHailTableQuery(object):
         self._override_comp_het_alt = override_comp_het_alt
         self._ht = None
         self._comp_het_ht = None
-        self._comp_het_override_ht = None
-        self.unfiltered_override_ht = None
         self._inheritance_mode = inheritance_mode
         self._has_secondary_annotations = False
         self._is_multi_data_type_comp_het = False
@@ -319,21 +317,13 @@ class BaseHailTableQuery(object):
                 num_families += num_project_families
 
         if comp_het_families_ht is not None:
-            logger.info(f'comp het count: {comp_het_families_ht.count()}')
             comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
-            comp_het_ht = self._filter_annotated_table(comp_het_ht, is_comp_het=True, **kwargs)
-            self._comp_het_ht = self._filter_compound_hets(
-                comp_het_ht, is_multi_data_type_comp_het=self._is_multi_data_type_comp_het,
-            )
+            self._comp_het_ht = self._filter_annotated_table(comp_het_ht, is_comp_het=True, **kwargs)
+            self._comp_het_ht = self._filter_compound_hets()
 
         if families_ht is not None:
-            logger.info(f'recessive count: {families_ht.count()}')
             ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
             self._ht = self._filter_annotated_table(ht, **kwargs)
-            if self._comp_het_override_ht is not None:
-                self._filter_compound_hets(
-                    self._comp_het_override_ht, unfiltered_ht_name='unfiltered_override_ht', is_multi_data_type_comp_het=True,
-                )
 
     def _add_project_ht(self, families_ht, project_ht, default, default_1=None):
         if default_1 is None:
@@ -449,12 +439,8 @@ class BaseHailTableQuery(object):
             # No sample-specific inheritance filtering needed
             sorted_family_sample_data = []
 
-        inheritance_mode = self._inheritance_mode
-        if self._override_comp_het_alt and self._inheritance_mode == COMPOUND_HET:
-            inheritance_mode = RECESSIVE
-
-        ht = None if inheritance_mode == COMPOUND_HET else self._filter_families_inheritance(
-            ht, inheritance_mode, inheritance_filter, sorted_family_sample_data,
+        ht = None if self._inheritance_mode == COMPOUND_HET else self._filter_families_inheritance(
+            ht, self._inheritance_mode, inheritance_filter, sorted_family_sample_data,
         )
 
         return ht, comp_het_ht
@@ -469,6 +455,8 @@ class BaseHailTableQuery(object):
                     if individual_genotype_filter else INHERITANCE_FILTERS[inheritance_mode].get(s['affected_id'])
                 if inheritance_mode == X_LINKED_RECESSIVE and s['affected_id'] == UNAFFECTED_ID and s['is_male']:
                     genotype = REF_REF
+                if genotype == COMP_HET_ALT and self._override_comp_het_alt:
+                    genotype = HAS_ALT
                 if genotype:
                     entry_indices_by_gt[genotype][family_index].append(sample_index)
 
@@ -718,54 +706,40 @@ class BaseHailTableQuery(object):
     def _filter_by_annotations(self, ht, is_comp_het, consequence_ids=None, annotation_overrides=None,
                                secondary_consequence_ids=None, secondary_annotation_overrides=None, **kwargs):
 
-        annotation_filters = self._get_annotation_override_filters(ht, annotation_overrides)
-        annotation_exprs = self._get_annotation_filter_expressions(ht, consequence_ids, annotation_filters or None)
-
-        secondary_annotation_filters = None if secondary_annotation_overrides is None else \
-            self._get_annotation_override_filters(ht, secondary_annotation_overrides)
-        secondary_annotation_exprs = self._get_annotation_filter_expressions(
-            ht, secondary_consequence_ids, secondary_annotation_filters, suffix='_secondary',
-        )
-
-        if is_comp_het:
-            annotation_exprs.update(secondary_annotation_exprs)
-            return self._filter_computed_annotations(ht, annotation_exprs)
-
-        use_primary_override_ht = False
-        if self._override_comp_het_alt:
-            primary_override, secondary_override = self._override_comp_het_alt
-            if secondary_override:
-                # Cannot just use the recessive table, as need to include secondary annotations
-                override_exprs = {**annotation_exprs, **secondary_annotation_exprs} if primary_override else {
-                    k.replace('_secondary', ''): v for k, v in secondary_annotation_exprs.items()
-                }
-                if override_exprs:
-                    self._comp_het_override_ht = self._filter_computed_annotations(ht, override_exprs)
-            else:
-                use_primary_override_ht = True
-
-        ht = self._filter_computed_annotations(ht, annotation_exprs)
-        if use_primary_override_ht and annotation_exprs:
-            self._comp_het_override_ht = ht
-        if self._inheritance_mode == COMPOUND_HET:
-            # If not a full recessive search, skip recessive only results
-            return None
-        return ht
-
-    def _get_annotation_filter_expressions(self, ht, consequence_ids, annotation_overrides, suffix=''):
         annotation_exprs = {}
-        if annotation_overrides is not None:
-            annotation_exprs[f'{HAS_ANNOTATION_OVERRIDE}{suffix}'] = hl.any(annotation_overrides) if annotation_overrides else False
         if consequence_ids:
-            annotation_exprs[f'{ALLOWED_TRANSCRIPTS}{suffix}'] = self._get_allowed_transcripts(ht, consequence_ids)
-        return annotation_exprs
+            annotation_exprs[ALLOWED_TRANSCRIPTS] = self._get_allowed_transcripts(ht, consequence_ids)
+            ht = ht.annotate(**annotation_exprs)
+        annotation_filters = self._get_annotation_override_filters(ht, annotation_overrides or {})
 
-    def _filter_computed_annotations(self, ht, annotation_exprs):
+        if not is_comp_het:
+            if annotation_exprs:
+                annotation_filters.append(self._has_allowed_transcript_filter(ht, ALLOWED_TRANSCRIPTS))
+            if annotation_filters:
+                ht = ht.filter(hl.any(annotation_filters))
+            return ht
+
+        if annotation_filters:
+            annotation_exprs[HAS_ANNOTATION_OVERRIDE] = hl.any(annotation_filters)
+        if secondary_annotation_overrides is not None:
+            annotation_exprs[f'{HAS_ANNOTATION_OVERRIDE}_secondary'] = hl.any(
+                self._get_annotation_override_filters(ht, secondary_annotation_overrides)
+            ) if secondary_annotation_overrides else False
+        secondary_allowed_transcripts_field = f'{ALLOWED_TRANSCRIPTS}_secondary'
+        if secondary_consequence_ids:
+            annotation_exprs[secondary_allowed_transcripts_field] = self._get_allowed_transcripts(ht, secondary_consequence_ids)
+
+        filter_fields = list(annotation_exprs.keys())
+        transcript_filter_fields = [ALLOWED_TRANSCRIPTS, secondary_allowed_transcripts_field]
+        annotation_exprs.pop(ALLOWED_TRANSCRIPTS, None)
         if annotation_exprs:
             ht = ht.annotate(**annotation_exprs)
 
-        all_filters = self._get_annotation_filters(ht) + self._get_annotation_filters(ht, is_secondary=True)
-        return ht.filter(hl.any(all_filters)) if all_filters else ht
+        all_filters = [
+            self._has_allowed_transcript_filter(ht, field) if field in transcript_filter_fields else ht[field]
+            for field in filter_fields
+        ]
+        return ht.filter(hl.any(all_filters))
 
     def _get_allowed_consequence_ids(self, annotations):
         allowed_consequences = {
@@ -811,7 +785,10 @@ class BaseHailTableQuery(object):
     def _has_allowed_transcript_filter(ht, allowed_transcript_field):
         return hl.is_defined(ht[allowed_transcript_field].first())
 
-    def _filter_compound_hets(self, ch_ht, unfiltered_ht_name='unfiltered_comp_het_ht', is_multi_data_type_comp_het=False):
+    def _filter_compound_hets(self):
+        # pylint: disable=pointless-string-statement
+        ch_ht = self._comp_het_ht
+
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
@@ -824,14 +801,14 @@ class BaseHailTableQuery(object):
         if transcript_annotations:
             ch_ht = ch_ht.annotate(**transcript_annotations)
 
-        unfiltered_ht = ch_ht
         if transcript_annotations or self._has_secondary_annotations:
             primary_filters = self._get_annotation_filters(ch_ht)
             secondary_filters = self._get_annotation_filters(ch_ht, is_secondary=True) if self._has_secondary_annotations else []
-            unfiltered_ht = ch_ht.filter(hl.any(primary_filters + secondary_filters))
-        setattr(self, unfiltered_ht_name, unfiltered_ht)
+            self.unfiltered_comp_het_ht = ch_ht.filter(hl.any(primary_filters + secondary_filters))
+        else:
+            self.unfiltered_comp_het_ht = ch_ht
 
-        if is_multi_data_type_comp_het:
+        if self._is_multi_data_type_comp_het:
             # In cases where comp het pairs must have different data types, there are no single data type results
             return None
 
@@ -933,6 +910,8 @@ class BaseHailTableQuery(object):
             family_filters.append(hl.enumerate(entries_1).all(lambda x: hl.any([
                 (x[1].affected_id != UNAFFECTED_ID), *self._comp_het_entry_has_ref(x[1].GT, entries_2[x[0]].GT),
             ])))
+        if self._override_comp_het_alt:
+            family_filters.append(entries_1.extend(entries_2).all(lambda x: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](x.GT)))
         return hl.all(family_filters)
 
     def _comp_het_entry_has_ref(self, gt1, gt2):
