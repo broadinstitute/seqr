@@ -45,6 +45,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         for data_type in sv_data_types:
             self._current_sv_data_type = data_type
             sv_query = self._data_type_queries[data_type]
+            self.max_unaffected_samples = max(variant_query.max_unaffected_samples, sv_query.max_unaffected_samples)
             merged_ht = self._filter_data_type_comp_hets(variant_ht, variant_families, sv_query)
             if merged_ht is not None:
                 self._comp_het_hts[data_type] = merged_ht.key_by()
