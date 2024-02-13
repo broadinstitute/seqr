@@ -64,7 +64,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         metadata = {
             'callsets': ['1kg.vcf.gz'],
             'sample_type': 'WES',
-            'families': {
+            'family_samples': {
                 'F0000123_ABC': ['NA22882', 'NA20885'],
                 'F000012_12': ['NA20888', 'NA20889'],
                 'F000014_14': ['NA21234'],
@@ -79,7 +79,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             str(ce.exception), 'Invalid families in run metadata GRCh38/SNV_INDEL: auto__2023-08-08 - F0000123_ABC')
         mock_logger.warning.assert_called_with('Loading for failed run GRCh38/SNV_INDEL: auto__2023-08-08')
 
-        metadata['families']['F000011_11'] = metadata['families'].pop('F0000123_ABC')
+        metadata['family_samples']['F000011_11'] = metadata['family_samples'].pop('F0000123_ABC')
         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
         mock_subprocess.return_value.wait.return_value = 0
         with self.assertRaises(CommandError) as ce:
@@ -96,7 +96,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
         self.assertEqual(str(ce.exception), 'Matches not found for sample ids: NA22882')
 
-        metadata['families']['F000011_11'] = metadata['families']['F000011_11'][1:]
+        metadata['family_samples']['F000011_11'] = metadata['family_samples']['F000011_11'][1:]
         mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
 
         # Test success
