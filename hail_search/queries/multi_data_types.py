@@ -1,7 +1,8 @@
 import hail as hl
 import os
 
-from hail_search.constants import ALT_ALT, REF_REF, CONSEQUENCE_SORT, OMIM_SORT, GROUPED_VARIANTS_FIELD, GENOME_VERSION_GRCh38
+from hail_search.constants import ALT_ALT, REF_REF, CONSEQUENCE_SORT, OMIM_SORT, GROUPED_VARIANTS_FIELD, GENOME_VERSION_GRCh38, \
+    STRUCTURAL_ANNOTATION_FIELD, STRUCTURAL_CONSEQUENCE_FIELD, NEW_SV_FIELD
 from hail_search.queries.base import BaseHailTableQuery
 from hail_search.queries.mito import MitoHailTableQuery
 from hail_search.queries.snv_indel import SnvIndelHailTableQuery
@@ -17,44 +18,74 @@ if ONT_ENABLED:
     QUERY_CLASSES.append(OntSnvIndelHailTableQuery)
 QUERY_CLASS_MAP = {(cls.DATA_TYPE, cls.GENOME_VERSION): cls for cls in QUERY_CLASSES}
 SNV_INDEL_DATA_TYPE = SnvIndelHailTableQuery.DATA_TYPE
+SV_DATA_TYPES = [SvHailTableQuery.DATA_TYPE, GcnvHailTableQuery.DATA_TYPE]
 
 
 class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
     def __init__(self, sample_data, *args, **kwargs):
         self._data_type_queries = {
-            k: QUERY_CLASS_MAP[(k, GENOME_VERSION_GRCh38)](v, *args, override_comp_het_alt=k == SNV_INDEL_DATA_TYPE, **kwargs)
+            k: QUERY_CLASS_MAP[(k, GENOME_VERSION_GRCh38)](v, *args, override_comp_het_alt=self._include_comp_het_override(k, sample_data, **kwargs), **kwargs)
             for k, v in sample_data.items()
         }
         self._comp_het_hts = {}
-        self._sv_type_del_id = None
+        self._require_overlap = False
         self._current_sv_data_type = None
         super().__init__(sample_data, *args, **kwargs)
+
+    def _include_comp_het_override(self, data_type, sample_data, annotations=None, annotations_secondary=None, **kwargs):
+        if data_type != SNV_INDEL_DATA_TYPE or all(dt not in sample_data for dt in SV_DATA_TYPES):
+            return None
+
+        # SNPs overlapped by trans deletions may be incorrectly called as hom alt, so we will also call comp hets on
+        # the "recessive" results if it is possible to have them in trans with deletions
+        primary_del = self._allows_deletions(annotations)
+        secondary_del = self._allows_deletions(annotations_secondary)
+        return (secondary_del, primary_del) if primary_del or secondary_del else None
+
+    def _allows_deletions(self, annotations):
+        if not annotations:
+            return False
+        has_del_annotation = any(
+            del_csq in annotations.get(STRUCTURAL_ANNOTATION_FIELD, [])
+            for del_csq in ['DEL', f'{GcnvHailTableQuery.SV_TYPE_PREFIX}DEL']
+        )
+        return has_del_annotation or any(annotations.get(field) for field in [STRUCTURAL_CONSEQUENCE_FIELD, NEW_SV_FIELD])
 
     def _load_filtered_table(self, *args, **kwargs):
         variant_query = self._data_type_queries.get(SNV_INDEL_DATA_TYPE)
         sv_data_types = [
-            data_type for data_type in [SvHailTableQuery.DATA_TYPE, GcnvHailTableQuery.DATA_TYPE]
+            data_type for data_type in SV_DATA_TYPES
             if data_type in self._data_type_queries
         ]
         if not (self._has_comp_het_search and variant_query is not None and sv_data_types):
             return
 
         variant_ht = variant_query.unfiltered_comp_het_ht
+        variant_override_ht = variant_query.unfiltered_override_ht
         variant_families = hl.eval(variant_ht.family_guids)
         for data_type in sv_data_types:
+            self._require_overlap = False
             self._current_sv_data_type = data_type
             sv_query = self._data_type_queries[data_type]
+            sv_ht = sv_query.unfiltered_comp_het_ht
             self.max_unaffected_samples = max(variant_query.max_unaffected_samples, sv_query.max_unaffected_samples)
-            merged_ht = self._filter_data_type_comp_hets(variant_ht, variant_families, sv_query)
+            merged_ht = self._filter_data_type_comp_hets(variant_ht, variant_families, sv_ht)
             if merged_ht is not None:
                 self._comp_het_hts[data_type] = merged_ht.key_by()
 
-    def _filter_data_type_comp_hets(self, variant_ht, variant_families, sv_query):
-        sv_ht = sv_query.unfiltered_comp_het_ht
-        sv_type_del_ids = sv_query.get_allowed_sv_type_ids([f'{getattr(sv_query, "SV_TYPE_PREFIX", "")}DEL'])
-        self._sv_type_del_id = list(sv_type_del_ids)[0] if sv_type_del_ids else None
+            # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
+            # considered comp hets with said deletions
+            if variant_override_ht is not None:
+                self._require_overlap = True
+                sv_type_del_ids = sv_query.get_allowed_sv_type_ids([f'{getattr(sv_query, "SV_TYPE_PREFIX", "")}DEL'])
+                del_id = list(sv_type_del_ids)[0]
+                sv_ht = sv_ht.filter(sv_ht.sv_type_id == del_id)
+                merged_ht = self._filter_data_type_comp_hets(variant_ht, variant_families, sv_ht)
+                if merged_ht is not None:
+                    self._comp_het_hts[f'{data_type}_override'] = merged_ht.key_by()
 
+    def _filter_data_type_comp_hets(self, variant_ht, variant_families, sv_ht):
         sv_families = hl.eval(sv_ht.family_guids)
         overlapped_families = list(set(variant_families).intersection(sv_families))
         if not overlapped_families:
@@ -81,14 +112,12 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
     def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
         is_valid = super()._is_valid_comp_het_family(ch_ht, entries_1, entries_2)
 
-        # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
-        # considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
-        is_allowed_hom_alt = entries_1.all(lambda g: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](g.GT)) | hl.all([
-            ch_ht.v2.sv_type_id == self._sv_type_del_id,
-            ch_ht.v2.start_locus.position <= ch_ht.v1.locus.position,
-            ch_ht.v1.locus.position <= ch_ht.v2.end_locus.position,
-        ])
-        return is_valid & is_allowed_hom_alt
+        if self._require_overlap:
+            is_valid &= hl.all([
+                ch_ht.v2.start_locus.position <= ch_ht.v1.locus.position,
+                ch_ht.v1.locus.position <= ch_ht.v2.end_locus.position,
+            ])
+        return is_valid
 
     def _comp_het_entry_has_ref(self, gt1, gt2):
         variant_query = self._data_type_queries[SNV_INDEL_DATA_TYPE]
@@ -97,6 +126,9 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
 
     def format_search_ht(self):
         hts = []
+        import logging
+        import time
+        logger = logging.getLogger(__name__)
         for data_type, query in self._data_type_queries.items():
             dt_ht = query.format_search_ht()
             if dt_ht is None:
@@ -105,16 +137,27 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             if merged_sort_expr is not None:
                 dt_ht = dt_ht.annotate(_sort=merged_sort_expr)
             hts.append(dt_ht.select('_sort', **{data_type: dt_ht.row}))
+            start = time.perf_counter()
+            logger.info(f'{data_type}: {dt_ht.count()} ({time.perf_counter() - start:0.4f}s)')
+            """
+            SV_WGS: 2 (15.3892s)
+            SNV_INDEL: 36 (178.4971s)
+            comp het SV_WGS: 2 (160.9323s)
+            """
 
         for data_type, ch_ht in self._comp_het_hts.items():
             ch_ht = ch_ht.annotate(
                 v1=self._format_comp_het_result(ch_ht.v1, SNV_INDEL_DATA_TYPE),
-                v2=self._format_comp_het_result(ch_ht.v2, data_type),
+                v2=self._format_comp_het_result(ch_ht.v2, data_type.replace('_override', '')),
             )
             hts.append(ch_ht.select(
                 _sort=hl.sorted([ch_ht.v1._sort, ch_ht.v2._sort])[0],
                 **{f'comp_het_{data_type}': ch_ht.row},
             ))
+            start = time.perf_counter()
+            logger.info(f'comp het {data_type}: {ch_ht.count()} ({time.perf_counter() - start:0.4f}s)')
+
+        raise Exception('WHYYYYY')
 
         ht = hts[0]
         for sub_ht in hts[1:]:
