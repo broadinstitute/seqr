@@ -41,6 +41,8 @@ class SvHailTableQuery(BaseHailTableQuery):
     PREDICTION_FIELDS_CONFIG = {
         'strvctvre': PredictionPath('strvctvre', 'score'),
     }
+    ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD]
+    SECONDARY_ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD]
 
     SORTS = {
         **BaseHailTableQuery.SORTS,
@@ -67,9 +69,14 @@ class SvHailTableQuery(BaseHailTableQuery):
 
         return super()._filter_annotated_table(ht, *args, **kwargs)
 
-    def _get_family_passes_quality_filter(self, quality_filter, annotations=None, **kwargs):
+    def _parse_annotations(self, annotations, *args, **kwargs):
+        parsed_annotations = super()._parse_annotations(annotations, *args, **kwargs)
+        parsed_annotations[NEW_SV_FIELD] = (annotations or {}).get(NEW_SV_FIELD)
+        return parsed_annotations
+
+    def _get_family_passes_quality_filter(self, quality_filter, parsed_annotations=None, **kwargs):
         passes_quality = super()._get_family_passes_quality_filter(quality_filter)
-        if not (annotations or {}).get(NEW_SV_FIELD):
+        if not parsed_annotations[NEW_SV_FIELD]:
             return passes_quality
 
         entries_has_new_call = lambda entries: entries.any(lambda x: x.concordance.new_call)
@@ -78,16 +85,10 @@ class SvHailTableQuery(BaseHailTableQuery):
 
         return lambda entries: entries_has_new_call(entries) & passes_quality(entries)
 
-    def _get_allowed_consequences_annotations(self, ht, annotations, annotation_filters, is_secondary=False):
-        if is_secondary:
-            # SV search can specify secondary SV types, as well as secondary consequences
-            annotation_filters = self._get_annotation_override_filters(ht, annotations)
-        return super()._get_allowed_consequences_annotations(ht, annotations, annotation_filters)
-
-    def _get_annotation_override_filters(self, ht, annotations, **kwargs):
+    def _get_annotation_override_filters(self, ht, annotation_overrides):
         annotation_filters = []
-        if annotations.get(STRUCTURAL_ANNOTATION_FIELD):
-            allowed_type_ids = self.get_allowed_sv_type_ids(annotations[STRUCTURAL_ANNOTATION_FIELD])
+        if annotation_overrides.get(STRUCTURAL_ANNOTATION_FIELD):
+            allowed_type_ids = self.get_allowed_sv_type_ids(annotation_overrides[STRUCTURAL_ANNOTATION_FIELD])
             if allowed_type_ids:
                 annotation_filters.append(hl.set(allowed_type_ids).contains(ht.sv_type_id))
 
