@@ -761,7 +761,7 @@ class VariantSearchAPITest(object):
 
     @mock.patch('seqr.views.apis.variant_search_api.variant_lookup')
     def test_variant_lookup(self, mock_variant_lookup):
-        mock_variant_lookup.return_value = VARIANT_LOOKUP_VARIANT
+        mock_variant_lookup.return_value = [VARIANT_LOOKUP_VARIANT]
 
         url = f'{reverse(variant_lookup_handler)}?variantId=1-10439-AC-A&genomeVersion=38'
         self.check_require_login(url)
@@ -776,15 +776,15 @@ class VariantSearchAPITest(object):
             'rnaSeqData': {},
             'savedVariantsByGuid': {},
             'transcriptsById': {},
-            'variant': VARIANT_LOOKUP_VARIANT,
+            'variants': [VARIANT_LOOKUP_VARIANT],
         }
         self.assertDictEqual(response.json(), expected_body)
         mock_variant_lookup.assert_called_with(self.no_access_user, variant_id='1-10439-AC-A', genome_version='38', families=None)
 
         variant = {**VARIANTS[0], 'familyGuids': [], 'genotypes': {}}
-        mock_variant_lookup.return_value = variant
+        mock_variant_lookup.return_value = [variant]
         expected_body.update({
-            'variant': variant,
+            'variants': [variant],
             'genesById': {'ENSG00000227232': EXPECTED_GENE, 'ENSG00000268903': EXPECTED_GENE},
             'transcriptsById': EXPECTED_SEARCH_RESPONSE['transcriptsById'],
         })
@@ -794,11 +794,11 @@ class VariantSearchAPITest(object):
         self.assertDictEqual(response.json(), expected_body)
 
         self.login_collaborator()
-        mock_variant_lookup.return_value = SINGLE_FAMILY_VARIANT
+        mock_variant_lookup.return_value = [SINGLE_FAMILY_VARIANT]
         response = self.client.get(f'{url.replace("38", "37")}&include_genotypes=true')
         self.assertEqual(response.status_code, 200)
         self._assert_expected_single_variant_results_context(
-            response.json(), variant=SINGLE_FAMILY_VARIANT, omit_fields={'searchedVariants'},
+            response.json(), variants=[SINGLE_FAMILY_VARIANT], omit_fields={'searchedVariants'},
         )
         mock_variant_lookup.assert_called_with(
             self.collaborator_user, variant_id='1-10439-AC-A', genome_version='37', families=mock.ANY,

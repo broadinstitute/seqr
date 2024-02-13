@@ -84,7 +84,7 @@ def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATA
 
     body = {
         'variant_id': variant_id,
-        'data_type': dataset_type,
+        'data_type': dataset_type.replace('_only', ''),
         **kwargs,
     }
     sample_data = None
