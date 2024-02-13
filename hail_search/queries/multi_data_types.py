@@ -45,6 +45,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         for data_type in sv_data_types:
             self._current_sv_data_type = data_type
             sv_query = self._data_type_queries[data_type]
+            self.max_unaffected_samples = max(variant_query.max_unaffected_samples, sv_query.max_unaffected_samples)
             merged_ht = self._filter_data_type_comp_hets(variant_ht, variant_families, sv_query)
             if merged_ht is not None:
                 self._comp_het_hts[data_type] = merged_ht.key_by()
@@ -59,8 +60,12 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         if not overlapped_families:
             return None
 
-        variant_ch_ht = self._family_filtered_ch_ht(variant_ht, overlapped_families, variant_families, 'v1')
-        sv_ch_ht = self._family_filtered_ch_ht(sv_ht, overlapped_families, sv_families, 'v2')
+        if variant_families != sv_families:
+            variant_ht = self._family_filtered_ch_ht(variant_ht, overlapped_families, variant_families)
+            sv_ht = self._family_filtered_ch_ht(sv_ht, overlapped_families, sv_families)
+
+        variant_ch_ht = variant_ht.group_by('gene_ids').aggregate(v1=hl.agg.collect(variant_ht.row))
+        sv_ch_ht = sv_ht.group_by('gene_ids').aggregate(v2=hl.agg.collect(sv_ht.row))
 
         ch_ht = variant_ch_ht.join(sv_ch_ht)
         ch_ht = ch_ht.explode(ch_ht.v1)
@@ -69,10 +74,9 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         return self._filter_grouped_compound_hets(ch_ht)
 
     @staticmethod
-    def _family_filtered_ch_ht(ht, overlapped_families, families, key):
+    def _family_filtered_ch_ht(ht, overlapped_families, families):
         family_indices = hl.array([families.index(family_guid) for family_guid in overlapped_families])
-        ht = ht.annotate(family_entries=family_indices.map(lambda i: ht.family_entries[i]))
-        return ht.group_by('gene_ids').aggregate(**{key: hl.agg.collect(ht.row)})
+        return ht.annotate(family_entries=family_indices.map(lambda i: ht.family_entries[i]))
 
     def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
         is_valid = super()._is_valid_comp_het_family(ch_ht, entries_1, entries_2)

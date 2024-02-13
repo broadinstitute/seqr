@@ -52,6 +52,7 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         HGMD_KEY: ('class', HGMD_PATH_RANGES),
     }
     PATHOGENICITY_FIELD_MAP = {}
+    ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD, SCREEN_KEY]
 
     BASE_ANNOTATION_FIELDS = {
         k: v for k, v in MitoHailTableQuery.BASE_ANNOTATION_FIELDS.items()
@@ -93,14 +94,14 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
 
         return 'is_gt_10_percent' if af_cutoff > PREFILTER_FREQ_CUTOFF else True
 
-    def _get_annotation_override_filters(self, ht, annotations, *args, **kwargs):
-        annotation_filters = super()._get_annotation_override_filters(ht, annotations, *args, **kwargs)
+    def _get_annotation_override_filters(self, ht, annotation_overrides):
+        annotation_filters = super()._get_annotation_override_filters(ht, annotation_overrides)
 
-        if annotations.get(SCREEN_KEY):
-            allowed_consequences = hl.set(self._get_enum_terms_ids(SCREEN_KEY.lower(), 'region_type', annotations[SCREEN_KEY]))
+        if annotation_overrides.get(SCREEN_KEY):
+            allowed_consequences = hl.set(self._get_enum_terms_ids(SCREEN_KEY.lower(), 'region_type', annotation_overrides[SCREEN_KEY]))
             annotation_filters.append(allowed_consequences.contains(ht.screen.region_type_ids.first()))
-        if annotations.get(SPLICE_AI_FIELD):
-            score_filter, _ = self._get_in_silico_filter(ht, SPLICE_AI_FIELD, annotations[SPLICE_AI_FIELD])
+        if annotation_overrides.get(SPLICE_AI_FIELD):
+            score_filter, _ = self._get_in_silico_filter(ht, SPLICE_AI_FIELD, annotation_overrides[SPLICE_AI_FIELD])
             annotation_filters.append(score_filter)
 
         return annotation_filters
