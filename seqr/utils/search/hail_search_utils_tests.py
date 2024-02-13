@@ -214,20 +214,21 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     def test_variant_lookup(self):
         responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=200, json=VARIANT_LOOKUP_VARIANT)
         variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='37', foo='bar')
-        self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
+        self.assertListEqual(variant, [VARIANT_LOOKUP_VARIANT])
         self._test_minimal_search_call(expected_search_body={
-            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37', 'foo': 'bar',
+            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37', 'foo': 'bar', 'data_type': 'SNV_INDEL',
         })
 
         variant_lookup(self.user, '1-10439-AC-A', genome_version='37', families=self.families)
         self._test_minimal_search_call(expected_search_body={
             'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37',
-            'sample_data': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL'],
+            'sample_data': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL'], 'data_type': 'SNV_INDEL',
         })
 
         with self.assertRaises(InvalidSearchException) as cm:
             variant_lookup(self.user, 'prefix_123_DEL')
-        self.assertEqual(str(cm.exception), 'Invalid variant prefix_123_DEL')
+        self.assertEqual(str(cm.exception), 'Sample type must be specified to look up a structural variant')
+        # TODO add test for SVs
 
         responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=404)
         with self.assertRaises(HTTPError) as cm:
@@ -235,7 +236,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.assertEqual(cm.exception.response.status_code, 404)
         self.assertEqual(str(cm.exception), 'Variant not present in seqr')
         self._test_minimal_search_call(expected_search_body={
-            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh38'
+            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh38', 'data_type': 'SNV_INDEL',
         })
 
     @responses.activate
