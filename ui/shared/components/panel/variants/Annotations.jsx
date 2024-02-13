@@ -296,8 +296,13 @@ const VARIANT_LINKS = [
   },
 ]
 
+const getSampleType = (genotypes) => {
+  const sampleTypes = [...new Set(Object.values(genotypes || {}).map(({ sampleType }) => sampleType).filter(s => s))]
+  return sampleTypes.length === 1 ? sampleTypes[0] : ''
+}
+
 const variantSearchLinks = (variant, mainTranscript, genesById, user, elasticsearchEnabled) => {
-  const { chrom, endChrom, pos, end, ref, alt, genomeVersion, svType, variantId, transcripts } = variant
+  const { chrom, endChrom, pos, end, ref, alt, genomeVersion, genotypes, svType, variantId, transcripts } = variant
 
   const mainGene = genesById[mainTranscript.geneId]
   let genes
@@ -331,7 +336,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById, user, elasticsea
 
   const linkVariant = { genes, variations, hgvsc, ...variant }
 
-  const seqrSearchLink = (elasticsearchEnabled || svType) ? (
+  const seqrSearchLink = elasticsearchEnabled ? (
     <SearchResultsLink
       buttonText="seqr"
       genomeVersion={genomeVersion}
@@ -342,7 +347,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById, user, elasticsea
     />
   ) : (
     <NavLink
-      to={`/summary_data/variant_lookup?variantId=${variantId}&genomeVersion=${genomeVersion}&include_genotypes=true`}
+      to={`/summary_data/variant_lookup?variantId=${variantId}&genomeVersion=${genomeVersion}&sampleType=${getSampleType(genotypes)}&include_genotypes=true`}
       target="_blank"
     >
       seqr
