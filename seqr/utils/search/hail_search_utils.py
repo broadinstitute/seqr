@@ -94,7 +94,7 @@ def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATA
     variant = _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
     variants = [variant]
 
-    if is_sv and sample_data:
+    if is_sv and sample_data and variant['svType'] in {'DEL', 'DUP'}:
         start = variant['pos']
         end = variant['end']
         offset = 0.2
