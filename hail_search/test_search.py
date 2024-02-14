@@ -590,6 +590,11 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], intervals=sv_intervals,
+            sample_data={'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'], **SV_WGS_SAMPLE_DATA},
+        )
+
+        await self._assert_expected_search(
             [VARIANT1, VARIANT2], omit_sample_type='SV_WES', **EXCLUDE_LOCATION_SEARCH,
         )
 
