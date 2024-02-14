@@ -203,10 +203,6 @@ class HailSearchTestCase(AioHTTPTestCase):
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
         self.assertEqual(resp_json['total'], len(results))
         for i, result in enumerate(resp_json['results']):
-            if result != results[i]:
-                diff_0 = {k for k, v in results[i][0].items() if v != result[0][k]}
-                diff_1 = {k for k, v in results[i][1].items() if v != result[1][k]}
-                import pdb; pdb.set_trace()
             self.assertEqual(result, results[i])
 
         if gene_counts:
