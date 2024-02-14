@@ -79,17 +79,17 @@ class SvHailTableQuery(BaseHailTableQuery):
             ht = ht.filter(interval_filter)
         if padded_interval:
             padding = int((padded_interval['end'] - padded_interval['start']) * padded_interval['padding'])
+            chrom = f"chr{padded_interval['chrom']}"
             ht = ht.filter(hl.all([
-                ht.start_locus.contig == f"chr{padded_interval['chrom']}",
-                self._locus_in_range(ht.start_locus, padded_interval['start'], padding),
-                self._locus_in_range(ht.end_locus, padded_interval['end'], padding)
+                self._locus_in_range(ht.start_locus, chrom, padded_interval['start'], padding),
+                self._locus_in_range(ht.end_locus, chrom, padded_interval['end'], padding)
             ]))
 
         return super()._filter_annotated_table(ht, *args, **kwargs)
 
-    @staticmethod
-    def _locus_in_range(locus, position, padding):
-        return (max(position - padding, 1) < locus.position) & (min(position + padding, 3e8) > locus.position)
+    def _locus_in_range(self, locus, chrom, position, padding):
+        window = hl.locus(chrom, position, reference_genome=self.GENOME_VERSION).window(padding, padding)
+        return window.contains(locus)
 
     def _parse_annotations(self, annotations, *args, **kwargs):
         parsed_annotations = super()._parse_annotations(annotations, *args, **kwargs)
