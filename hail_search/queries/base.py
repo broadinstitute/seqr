@@ -214,6 +214,7 @@ class BaseHailTableQuery(object):
         self._is_multi_data_type_comp_het = False
         self.max_unaffected_samples = None
         self._load_table_kwargs = {}
+        self.entry_samples_by_family_guid = {}
 
         if sample_data:
             self._load_filtered_table(sample_data, **kwargs)
@@ -366,8 +367,7 @@ class BaseHailTableQuery(object):
 
         return ht, ch_ht
 
-    @classmethod
-    def _add_entry_sample_families(cls, ht, sample_data):
+    def _add_entry_sample_families(self, ht, sample_data):
         ht_globals = hl.eval(ht.globals)
 
         missing_samples = set()
@@ -380,12 +380,14 @@ class BaseHailTableQuery(object):
             if missing_family_samples:
                 missing_samples.update(missing_family_samples)
             else:
+                sample_index_data = [
+                    (ht_family_samples.index(s['sample_id']), self._sample_entry_data(s, family_guid, ht_globals))
+                    for s in samples
+                ]
                 family_sample_index_data.append(
-                    (ht_globals.family_guids.index(family_guid), [
-                        (ht_family_samples.index(s['sample_id']), cls._sample_entry_data(s, family_guid, ht_globals))
-                        for s in samples
-                    ])
+                    (ht_globals.family_guids.index(family_guid), sample_index_data)
                 )
+                self.entry_samples_by_family_guid[family_guid] = [s['sampleId'] for _, s in sample_index_data]
 
         if missing_samples:
             raise HTTPBadRequest(

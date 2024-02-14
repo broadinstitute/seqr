@@ -45,12 +45,13 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         for data_type in sv_data_types:
             self._current_sv_data_type = data_type
             sv_query = self._data_type_queries[data_type]
-            self.max_unaffected_samples = max(variant_query.max_unaffected_samples, sv_query.max_unaffected_samples)
-            merged_ht = self._filter_data_type_comp_hets(variant_ht, variant_families, sv_query)
+            self.max_unaffected_samples = min(variant_query.max_unaffected_samples, sv_query.max_unaffected_samples)
+            merged_ht = self._filter_data_type_comp_hets(variant_query, variant_families, sv_query)
             if merged_ht is not None:
                 self._comp_het_hts[data_type] = merged_ht.key_by()
 
-    def _filter_data_type_comp_hets(self, variant_ht, variant_families, sv_query):
+    def _filter_data_type_comp_hets(self, variant_query, variant_families, sv_query):
+        variant_ht = variant_query.unfiltered_comp_het_ht
         sv_ht = sv_query.unfiltered_comp_het_ht
         sv_type_del_ids = sv_query.get_allowed_sv_type_ids([f'{getattr(sv_query, "SV_TYPE_PREFIX", "")}DEL'])
         self._sv_type_del_id = list(sv_type_del_ids)[0] if sv_type_del_ids else None
@@ -63,6 +64,19 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         if variant_families != sv_families:
             variant_ht = self._family_filtered_ch_ht(variant_ht, overlapped_families, variant_families)
             sv_ht = self._family_filtered_ch_ht(sv_ht, overlapped_families, sv_families)
+        else:
+            overlapped_families = variant_families
+
+        variant_samples_by_family = variant_query.entry_samples_by_family_guid
+        sv_samples_by_family = sv_query.entry_samples_by_family_guid
+        if any(f for f in overlapped_families if variant_samples_by_family[f] != sv_samples_by_family[f]):
+            sv_sample_indices = hl.array([[
+                sv_samples_by_family[f].index(s) if s in sv_samples_by_family[f] else None
+                for s in variant_samples_by_family[f]
+            ] for f in overlapped_families])
+            sv_ht = sv_ht.annotate(family_entries=hl.enumerate(sv_sample_indices).starmap(
+                lambda family_i, indices: indices.map(lambda sample_i: sv_ht.family_entries[family_i][sample_i])
+            ))
 
         variant_ch_ht = variant_ht.group_by('gene_ids').aggregate(v1=hl.agg.collect(variant_ht.row))
         sv_ch_ht = sv_ht.group_by('gene_ids').aggregate(v2=hl.agg.collect(sv_ht.row))
