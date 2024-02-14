@@ -272,23 +272,22 @@ class BaseHailTableQuery(object):
         filtered_project_hts = []
         exception_messages = set()
         for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
+            project_ht = self._read_table(
+                f'projects/{project_guid}.ht',
+                use_ssd_dir=True,
+                skip_missing_field='family_entries' if skip_all_missing or i > 0 else None,
+            )
+            if project_ht is None:
+                continue
             try:
-                project_ht = self._read_table(
-                    f'projects/{project_guid}.ht',
-                    use_ssd_dir=True,
-                    skip_missing_field='family_entries' if skip_all_missing or i > 0 else None,
-                )
-                if project_ht is None:
-                    continue
                 filtered_project_hts.append(
                     (*self._filter_entries_table(project_ht, project_sample_data, **kwargs), len(project_sample_data))
                 )
-            except Exception as e:
-                exception_messages.add(str(e))
+            except HTTPBadRequest as e:
+                exception_messages.add(e.reason)
 
         if exception_messages:
-            logger.info(f'Error in {len(exception_messages)} projects')
-            #raise HTTPBadRequest(reason='; '.join(exception_messages))
+            raise HTTPBadRequest(reason='; '.join(exception_messages))
 
         return filtered_project_hts
 
