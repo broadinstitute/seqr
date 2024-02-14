@@ -80,7 +80,7 @@ class SvHailTableQuery(BaseHailTableQuery):
         if padded_interval:
             padding = int((padded_interval['end'] - padded_interval['start']) * padded_interval['padding'])
             ht = ht.filter(hl.all([
-                ht.start_locus.contig == padded_interval['chrom'],
+                ht.start_locus.contig == f"chr{padded_interval['chrom']}",
                 self._locus_in_range(ht.start_locus, padded_interval['start'], padding),
                 self._locus_in_range(ht.end_locus, padded_interval['end'], padding)
             ]))

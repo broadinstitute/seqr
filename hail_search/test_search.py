@@ -612,17 +612,17 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [GCNV_VARIANT4], padded_interval={'chrom': '17', 'start': 38724781, 'end': 38738703, 'padding': 0.2},
+            [GCNV_VARIANT4], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.2},
             omit_sample_type='SNV_INDEL',
         )
 
         await self._assert_expected_search(
-            [], padded_interval={'chrom': '17', 'start': 38722281, 'end': 38738703, 'padding': 0.1},
+            [], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.1},
             omit_sample_type='SNV_INDEL',
         )
 
         await self._assert_expected_search(
-            [SV_VARIANT1], padded_interval={'chrom': '14', 'start': 106692244, 'end': 106742587, 'padding': 0.1},
+            [SV_VARIANT4], padded_interval={'chrom': '14', 'start': 106692244, 'end': 106742587, 'padding': 0.1},
             sample_data=SV_WGS_SAMPLE_DATA,
         )
 
