@@ -590,6 +590,11 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], intervals=sv_intervals,
+            sample_data={'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'], **SV_WGS_SAMPLE_DATA},
+        )
+
+        await self._assert_expected_search(
             [VARIANT1, VARIANT2], omit_sample_type='SV_WES', **EXCLUDE_LOCATION_SEARCH,
         )
 
@@ -604,6 +609,21 @@ class HailSearchTestCase(AioHTTPTestCase):
         await self._assert_expected_search(
             [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],  omit_sample_type='SV_WES',
             intervals=LOCATION_SEARCH['intervals'][-1:], gene_ids=LOCATION_SEARCH['gene_ids'][:1]
+        )
+
+        await self._assert_expected_search(
+            [GCNV_VARIANT4], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.2},
+            omit_sample_type='SNV_INDEL',
+        )
+
+        await self._assert_expected_search(
+            [], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.1},
+            omit_sample_type='SNV_INDEL',
+        )
+
+        await self._assert_expected_search(
+            [SV_VARIANT4], padded_interval={'chrom': '14', 'start': 106692244, 'end': 106742587, 'padding': 0.1},
+            sample_data=SV_WGS_SAMPLE_DATA,
         )
 
     async def test_variant_id_search(self):

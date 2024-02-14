@@ -249,7 +249,8 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         })
         self._test_minimal_search_call(expected_search_body={
             'genome_version': 'GRCh38', 'data_type': 'SV_WES', 'annotations': {'structural': ['DEL', 'gCNV_DEL']},
-            'intervals': ['17:38718997-38738487'], 'sample_data': {'SV_WGS': SV_WGS_SAMPLE_DATA},
+            'padded_interval': {'chrom': '17', 'start': 38721781, 'end': 38735703, 'padding': 0.2},
+            'sample_data': {'SV_WGS': SV_WGS_SAMPLE_DATA},
         })
 
         # No second lookup call is made for non DELs/DUPs
