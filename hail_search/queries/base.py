@@ -234,7 +234,7 @@ class BaseHailTableQuery(object):
         parsed_intervals = self._parse_intervals(intervals, **kwargs)
         parsed_annotations = self._parse_annotations(annotations, annotations_secondary, **kwargs)
         self.import_filtered_table(
-            sample_data, parsed_intervals=parsed_intervals, parsed_annotations=parsed_annotations, **kwargs)
+            *self._parse_sample_data(sample_data), parsed_intervals=parsed_intervals, parsed_annotations=parsed_annotations, **kwargs)
 
     @classmethod
     def _get_table_path(cls, path, use_ssd_dir=False):
@@ -292,8 +292,7 @@ class BaseHailTableQuery(object):
 
         return filtered_project_hts
 
-    def import_filtered_table(self, sample_data, intervals=None, **kwargs):
-        project_samples, num_families = self._parse_sample_data(sample_data)
+    def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
         if num_families == 1:
             family_sample_data = list(project_samples.values())[0]
             family_guid = list(family_sample_data.keys())[0]
