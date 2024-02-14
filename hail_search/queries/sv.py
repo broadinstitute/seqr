@@ -56,15 +56,16 @@ class SvHailTableQuery(BaseHailTableQuery):
     def _get_sample_type(cls, *args):
         return cls.DATA_TYPE.split('_')[-1]
 
-    def import_filtered_table(self, project_samples, *args, parsed_intervals=None, **kwargs):
-        if len(project_samples) > 1 and parsed_intervals:
+    def import_filtered_table(self, project_samples, *args, parsed_intervals=None, padded_interval=None, **kwargs):
+        if len(project_samples) > 1 and (parsed_intervals or padded_interval):
             # For multi-project interval search, faster to first read and filter the annotation table and then add entries
             ht = self._read_table('annotations.ht')
-            ht = self._filter_annotated_table(ht, parsed_intervals=parsed_intervals)
+            ht = self._filter_annotated_table(ht, parsed_intervals=parsed_intervals, padded_interval=padded_interval)
             self._load_table_kwargs['variant_ht'] = ht.select()
             parsed_intervals = None
+            padded_interval = None
 
-        return super().import_filtered_table(project_samples, *args, parsed_intervals=parsed_intervals, **kwargs)
+        return super().import_filtered_table(project_samples, *args, parsed_intervals=parsed_intervals, padded_interval=padded_interval, **kwargs)
 
     def _filter_annotated_table(self, ht, *args, parsed_intervals=None, exclude_intervals=False, padded_interval=None, **kwargs):
         if parsed_intervals:
