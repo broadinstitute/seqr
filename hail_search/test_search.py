@@ -662,12 +662,27 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {**SV_VARIANT4, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''})
 
+        async with self.client.request('POST', '/lookup', json={**body, 'sample_data': SV_WGS_SAMPLE_DATA['SV_WGS']}) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, SV_VARIANT4)
+
         body.update({'variant_id': 'suffix_140608_DUP', 'data_type': 'SV_WES'})
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {
             **GCNV_VARIANT4, 'numExon': 8, 'end': 38736268, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': '',
+        })
+
+        async with self.client.request('POST', '/lookup', json={**body, 'sample_data': EXPECTED_SAMPLE_DATA['SV_WES']}) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {
+            **GCNV_VARIANT4, 'numExon': 8, 'end': 38736268, 'genotypes': {
+                individual: {k: v for k, v in genotype.items() if k not in {'start', 'end', 'numExon', 'geneIds'}}
+                for individual, genotype in GCNV_VARIANT4['genotypes'].items()
+            }
         })
 
     async def test_frequency_filter(self):

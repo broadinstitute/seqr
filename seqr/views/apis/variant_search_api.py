@@ -541,12 +541,12 @@ def variant_lookup_handler(request):
             kwargs.get('genome_version', GENOME_VERSION_GRCh38), request.user,
         )
 
-    variant = variant_lookup(request.user, families=families, **kwargs)
-    saved_variants, _ = _get_saved_variant_models([variant], families) if families else (None, None)
+    variants = variant_lookup(request.user, families=families, **kwargs)
+    saved_variants, _ = _get_saved_variant_models(variants, families) if families else (None, None)
     response = get_variants_response(
-        request, saved_variants=saved_variants, response_variants=[variant],
+        request, saved_variants=saved_variants, response_variants=variants,
         add_all_context=include_genotypes, add_locus_list_detail=include_genotypes,
     )
-    response['variant'] = variant
+    response['variants'] = variants
 
     return create_json_response(response)

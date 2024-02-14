@@ -76,7 +76,7 @@ class SvHailTableQuery(BaseHailTableQuery):
 
     def _get_family_passes_quality_filter(self, quality_filter, parsed_annotations=None, **kwargs):
         passes_quality = super()._get_family_passes_quality_filter(quality_filter)
-        if not parsed_annotations[NEW_SV_FIELD]:
+        if not (parsed_annotations or {}).get(NEW_SV_FIELD):
             return passes_quality
 
         entries_has_new_call = lambda entries: entries.any(lambda x: x.concordance.new_call)

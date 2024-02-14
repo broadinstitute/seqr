@@ -55,19 +55,17 @@ class SearchUtilsTests(SearchTestHelper):
         mock_variant_lookup.return_value = VARIANT_LOOKUP_VARIANT
         variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='38')
         self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
-        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh38')
+        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh38',
+                                               dataset_type='SNV_INDEL_only')
         cache_key = 'variant_lookup_results__1-10439-AC-A__38__test_user'
         self.assert_cached_results(variant, cache_key=cache_key)
 
         variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='37', families=self.families)
         self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
-        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh37', samples=mock.ANY)
+        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh37', samples=mock.ANY,
+                                               dataset_type='SNV_INDEL_only')
         expected_samples = {s for s in self.search_samples if s.guid not in NON_SNP_INDEL_SAMPLES}
         self.assertSetEqual(set(mock_variant_lookup.call_args.kwargs['samples']), expected_samples)
-
-        with self.assertRaises(InvalidSearchException) as cm:
-            variant_lookup(self.user, '100-10439-AC-A')
-        self.assertEqual(str(cm.exception), 'Invalid variant 100-10439-AC-A')
 
         mock_variant_lookup.reset_mock()
         self.set_cache(variant)

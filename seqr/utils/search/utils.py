@@ -161,15 +161,14 @@ def variant_lookup(user, variant_id, families=None, genome_version=None, **kwarg
         return variant
 
     parsed_variant_id = _parse_variant_id(variant_id)
-    if not parsed_variant_id:
-        raise InvalidSearchException(f'Invalid variant {variant_id}')
+    dataset_type = DATASET_TYPE_SNP_INDEL_ONLY if parsed_variant_id else Sample.DATASET_TYPE_SV_CALLS
 
     if families:
-        samples, _ = _get_families_search_data(families, dataset_type=DATASET_TYPE_SNP_INDEL_ONLY)
+        samples, _ = _get_families_search_data(families, dataset_type=dataset_type)
         kwargs['samples'] = samples
 
     lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), hail_variant_lookup)
-    variant = lookup_func(user, parsed_variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], **kwargs)
+    variant = lookup_func(user, parsed_variant_id or variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], dataset_type=dataset_type, **kwargs)
     safe_redis_set_json(cache_key, variant, expire=timedelta(weeks=2))
     return variant
 
