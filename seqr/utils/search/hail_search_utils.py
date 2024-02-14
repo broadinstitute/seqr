@@ -96,17 +96,10 @@ def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATA
     variants = [variant]
 
     if is_sv and sample_data and variant['svType'] in {'DEL', 'DUP'}:
-        start = variant['pos']
-        end = variant['end']
-        offset = 0.2
-        if variant.get('endChrom'):
-            start -= 50
-            end += 50
-            offset = None
         del body['variant_id']
         body.update({
             'sample_data': sample_data,
-            'intervals': [_format_interval(chrom=variant['chrom'], start=start, end=end, offset=offset)],
+            'padded_interval': {'chrom': variant['chrom'], 'start': variant['pos'], 'end': variant['end'], 'padding': 0.2},
             'annotations': {'structural': [variant['svType'], f"gCNV_{variant['svType']}"]}
         })
         variants += _execute_search(body, user)['results']

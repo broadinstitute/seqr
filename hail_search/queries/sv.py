@@ -56,7 +56,7 @@ class SvHailTableQuery(BaseHailTableQuery):
     def _get_sample_type(cls, *args):
         return cls.DATA_TYPE.split('_')[-1]
 
-    def _filter_annotated_table(self, ht, *args, parsed_intervals=None, exclude_intervals=False, **kwargs):
+    def _filter_annotated_table(self, ht, *args, parsed_intervals=None, exclude_intervals=False, padded_interval=None, **kwargs):
         if parsed_intervals:
             interval_filter = hl.array(parsed_intervals).any(lambda interval: hl.if_else(
                 ht.start_locus.contig == ht.end_locus.contig,
@@ -66,8 +66,19 @@ class SvHailTableQuery(BaseHailTableQuery):
             if exclude_intervals:
                 interval_filter = ~interval_filter
             ht = ht.filter(interval_filter)
+        if padded_interval:
+            padding = int((padded_interval['end'] - padded_interval['start']) * padded_interval['padding'])
+            ht = ht.filter(hl.all([
+                ht.start_locus.contig == padded_interval['chrom'],
+                self._locus_in_range(ht.start_locus, padded_interval['start'], padding),
+                self._locus_in_range(ht.end_locus, padded_interval['end'], padding)
+            ]))
 
         return super()._filter_annotated_table(ht, *args, **kwargs)
+
+    @staticmethod
+    def _locus_in_range(locus, position, padding):
+        return (max(position - padding, 1) < locus.position) & (min(position + padding, 3e8) > locus.position)
 
     def _parse_annotations(self, annotations, *args, **kwargs):
         parsed_annotations = super()._parse_annotations(annotations, *args, **kwargs)
