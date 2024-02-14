@@ -725,9 +725,8 @@ class BaseHailTableQuery(object):
         if annotation_filters:
             annotation_exprs[HAS_ANNOTATION_OVERRIDE] = hl.any(annotation_filters)
         if secondary_annotation_overrides is not None:
-            annotation_exprs[f'{HAS_ANNOTATION_OVERRIDE}_secondary'] = hl.any(
-                self._get_annotation_override_filters(ht, secondary_annotation_overrides)
-            ) if secondary_annotation_overrides else False
+            overrides = self._get_annotation_override_filters(ht, secondary_annotation_overrides)
+            annotation_exprs[f'{HAS_ANNOTATION_OVERRIDE}_secondary'] = hl.any(overrides) if overrides else False
         secondary_allowed_transcripts_field = f'{ALLOWED_TRANSCRIPTS}_secondary'
         if secondary_consequence_ids:
             annotation_exprs[secondary_allowed_transcripts_field] = self._get_allowed_transcripts(ht, secondary_consequence_ids)
