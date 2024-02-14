@@ -14,7 +14,7 @@ def _hail_backend_url(path):
 
 
 def _execute_search(search_body, user, path='search', exception_map=None):
-    response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user.email}, timeout=300)
+    response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user.email}, timeout=350)
 
     if response.status_code >= 400:
         error = (exception_map or {}).get(response.status_code) or response.text or response.reason
