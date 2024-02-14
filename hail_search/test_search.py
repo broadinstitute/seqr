@@ -203,6 +203,10 @@ class HailSearchTestCase(AioHTTPTestCase):
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
         self.assertEqual(resp_json['total'], len(results))
         for i, result in enumerate(resp_json['results']):
+            if result != results[i]:
+                diff_0 = {k for k, v in results[i][0].items() if v != result[0][k]}
+                diff_1 = {k for k, v in results[i][1].items() if v != result[1][k]}
+                import pdb; pdb.set_trace()
             self.assertEqual(result, results[i])
 
         if gene_counts:
@@ -903,6 +907,18 @@ class HailSearchTestCase(AioHTTPTestCase):
             [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3],
             inheritance_mode='recessive', pathogenicity=pathogenicity,
             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
+        )
+
+        # Search works with a different number of samples within the family
+        missing_gt_gcnv_variant = {
+            **GCNV_VARIANT4, 'genotypes': {k: v for k, v in GCNV_VARIANT4['genotypes'].items() if k != 'I000005_hg00732'}
+        }
+        await self._assert_expected_search(
+            [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, missing_gt_gcnv_variant]],
+            inheritance_mode='compound_het', pathogenicity=pathogenicity,
+            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
+            sample_data={**EXPECTED_SAMPLE_DATA, 'SV_WES': [EXPECTED_SAMPLE_DATA['SV_WES'][0], EXPECTED_SAMPLE_DATA['SV_WES'][2]]}
+
         )
 
         # Do not return pairs where annotations match in a non-paired gene
