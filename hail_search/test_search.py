@@ -852,7 +852,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         gcnv_annotations_1 = {'structural': ['gCNV_DUP']}
-        gcnv_annotations_2 = {'structural_consequence': ['LOF']}
+        gcnv_annotations_2 = {'structural_consequence': ['LOF'], 'structural': []}
 
         await self._assert_expected_search(
             [[GCNV_VARIANT3, GCNV_VARIANT4]], omit_sample_type='SNV_INDEL', inheritance_mode='compound_het',
