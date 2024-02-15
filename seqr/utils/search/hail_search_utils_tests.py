@@ -12,8 +12,14 @@ from seqr.utils.search.search_utils_tests import SearchTestHelper
 from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
     FAMILY_2_ALL_SAMPLE_DATA, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
     LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS, FAMILY_2_VARIANT_SAMPLE_DATA, \
-    FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, MULTI_PROJECT_SAMPLE_DATA
+    FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, MULTI_PROJECT_SAMPLE_DATA, \
+    GCNV_VARIANT4, SV_VARIANT2
 MOCK_HOST = 'http://test-hail-host'
+
+SV_WGS_SAMPLE_DATA = [{
+    'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project',
+    'affected': 'A', 'sample_id': 'NA21234',
+}]
 
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HOST)
@@ -28,11 +34,12 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'results': HAIL_BACKEND_VARIANTS, 'total': 5,
         })
 
-    def _test_minimal_search_call(self, expected_search_body=None, **kwargs):
+    def _test_minimal_search_call(self, expected_search_body=None, call_offset=-1, url_path='search', **kwargs):
         expected_search = expected_search_body or get_hail_search_body(genome_version='GRCh37', **kwargs)
 
-        executed_request = responses.calls[-1].request
+        executed_request = responses.calls[call_offset].request
         self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')
+        self.assertEqual(executed_request.url.split('/')[-1], url_path)
         self.assertDictEqual(json.loads(executed_request.body), expected_search)
 
     def _test_expected_search_call(self, search_fields=None, gene_ids=None, intervals=None, exclude_intervals= None,
@@ -149,8 +156,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user)
         sv_sample_data = {
             'SV_WES': FAMILY_2_VARIANT_SAMPLE_DATA['SNV_INDEL'],
-            'SV_WGS': [{'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14',
-                        'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234'}],
+            'SV_WGS': SV_WGS_SAMPLE_DATA,
         }
         self._test_expected_search_call(search_fields=['annotations'], dataset_type='SV', sample_data=sv_sample_data)
 
@@ -208,34 +214,60 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
         self.assertDictEqual(gene_counts, GENE_COUNTS)
         self.assert_cached_results({'gene_aggs': gene_counts})
-        self._test_expected_search_call(sort=None)
+        self._test_expected_search_call(url_path='gene_counts', sort=None)
 
     @responses.activate
     def test_variant_lookup(self):
         responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=200, json=VARIANT_LOOKUP_VARIANT)
         variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='37', foo='bar')
-        self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
-        self._test_minimal_search_call(expected_search_body={
-            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37', 'foo': 'bar',
+        self.assertListEqual(variant, [VARIANT_LOOKUP_VARIANT])
+        self._test_minimal_search_call(url_path='lookup', expected_search_body={
+            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37', 'foo': 'bar', 'data_type': 'SNV_INDEL',
         })
 
         variant_lookup(self.user, '1-10439-AC-A', genome_version='37', families=self.families)
-        self._test_minimal_search_call(expected_search_body={
+        self._test_minimal_search_call(url_path='lookup', expected_search_body={
             'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37',
-            'sample_data': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL'],
+            'sample_data': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL'], 'data_type': 'SNV_INDEL',
         })
 
         with self.assertRaises(InvalidSearchException) as cm:
-            variant_lookup(self.user, 'prefix_123_DEL')
-        self.assertEqual(str(cm.exception), 'Invalid variant prefix_123_DEL')
+            variant_lookup(self.user, 'suffix_140608_DUP')
+        self.assertEqual(str(cm.exception), 'Sample type must be specified to look up a structural variant')
+
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=200, json=GCNV_VARIANT4)
+        variant_lookup(self.user, 'suffix_140608_DUP', sample_type='WES')
+        self._test_minimal_search_call(url_path='lookup', expected_search_body={
+            'variant_id': 'suffix_140608_DUP', 'genome_version': 'GRCh38', 'data_type': 'SV_WES',
+        })
+
+        sv_families = Family.objects.filter(id__in=[2, 14])
+        variant_lookup(self.user, 'suffix_140608_DUP', sample_type='WES', families=sv_families)
+        self._test_minimal_search_call(url_path='lookup', call_offset=-2, expected_search_body={
+            'variant_id': 'suffix_140608_DUP', 'genome_version': 'GRCh38', 'data_type': 'SV_WES',
+            'sample_data': ALL_AFFECTED_SAMPLE_DATA['SV_WES']
+        })
+        self._test_minimal_search_call(expected_search_body={
+            'genome_version': 'GRCh38', 'data_type': 'SV_WES', 'annotations': {'structural': ['DEL', 'gCNV_DEL']},
+            'padded_interval': {'chrom': '17', 'start': 38721781, 'end': 38735703, 'padding': 0.2},
+            'sample_data': {'SV_WGS': SV_WGS_SAMPLE_DATA},
+        })
+
+        # No second lookup call is made for non DELs/DUPs
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=200, json=SV_VARIANT2)
+        variant_lookup(self.user, 'cohort_2911.chr1.final_cleanup_INS_chr1_160', sample_type='WGS', families=sv_families)
+        self._test_minimal_search_call(url_path='lookup', expected_search_body={
+            'variant_id': 'cohort_2911.chr1.final_cleanup_INS_chr1_160', 'genome_version': 'GRCh38', 'data_type': 'SV_WGS',
+            'sample_data': SV_WGS_SAMPLE_DATA
+        })
 
         responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=404)
         with self.assertRaises(HTTPError) as cm:
             variant_lookup(self.user, '1-10439-AC-A')
         self.assertEqual(cm.exception.response.status_code, 404)
         self.assertEqual(str(cm.exception), 'Variant not present in seqr')
-        self._test_minimal_search_call(expected_search_body={
-            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh38'
+        self._test_minimal_search_call(url_path='lookup', expected_search_body={
+            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh38', 'data_type': 'SNV_INDEL',
         })
 
     @responses.activate

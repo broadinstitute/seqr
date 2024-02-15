@@ -13,6 +13,7 @@ from seqr.views.utils.variant_utils import reset_cached_search_results
 logger = logging.getLogger(__name__)
 
 GS_PATH_TEMPLATE = 'gs://seqr-hail-search-data/v03/{path}/runs/{version}/'
+DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 
 
 class Command(BaseCommand):
@@ -27,6 +28,7 @@ class Command(BaseCommand):
         path = options['path']
         version = options['version']
         genome_version, dataset_type = path.split('/')
+        dataset_type = DATASET_TYPE_MAP.get(dataset_type, dataset_type)
 
         if Sample.objects.filter(data_source=version, is_active=True).exists():
             logger.info(f'Data already loaded for {path}: {version}')
@@ -41,14 +43,14 @@ class Command(BaseCommand):
                 raise CommandError(f'Run failed for {path}: {version}, unable to load data')
 
         metadata = json.loads(next(line for line in file_iter(gs_path + 'metadata.json')))
-        families = Family.objects.filter(guid__in=metadata['families'].keys())
-        if len(families) < len(metadata['families']):
-            invalid = metadata['families'].keys() - set(families.values_list('guid', flat=True))
+        families = Family.objects.filter(guid__in=metadata['family_samples'].keys())
+        if len(families) < len(metadata['family_samples']):
+            invalid = metadata['family_samples'].keys() - set(families.values_list('guid', flat=True))
             raise CommandError(f'Invalid families in run metadata {path}: {version} - {", ".join(invalid)}')
 
         family_project_map = {f.guid: f.project for f in families.select_related('project')}
         samples_by_project = defaultdict(list)
-        for family_guid, sample_ids in metadata['families'].items():
+        for family_guid, sample_ids in metadata['family_samples'].items():
             samples_by_project[family_project_map[family_guid]] += sample_ids
 
         sample_project_tuples = []

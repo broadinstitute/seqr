@@ -10,7 +10,8 @@ from seqr.utils.search.utils import get_single_variant, get_variants_for_variant
     query_variants, variant_lookup, InvalidSearchException
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
 
-NON_SNP_INDEL_SAMPLES = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733', 'S000149_hg00733']
+SV_SAMPLES = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
+NON_SNP_INDEL_SAMPLES = SV_SAMPLES + ['S000149_hg00733']
 
 class SearchTestHelper(object):
 
@@ -55,19 +56,17 @@ class SearchUtilsTests(SearchTestHelper):
         mock_variant_lookup.return_value = VARIANT_LOOKUP_VARIANT
         variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='38')
         self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
-        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh38')
+        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh38',
+                                               dataset_type='SNV_INDEL_only')
         cache_key = 'variant_lookup_results__1-10439-AC-A__38__test_user'
         self.assert_cached_results(variant, cache_key=cache_key)
 
         variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='37', families=self.families)
         self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
-        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh37', samples=mock.ANY)
+        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh37', samples=mock.ANY,
+                                               dataset_type='SNV_INDEL_only')
         expected_samples = {s for s in self.search_samples if s.guid not in NON_SNP_INDEL_SAMPLES}
         self.assertSetEqual(set(mock_variant_lookup.call_args.kwargs['samples']), expected_samples)
-
-        with self.assertRaises(InvalidSearchException) as cm:
-            variant_lookup(self.user, '100-10439-AC-A')
-        self.assertEqual(str(cm.exception), 'Invalid variant 100-10439-AC-A')
 
         mock_variant_lookup.reset_mock()
         self.set_cache(variant)
@@ -336,6 +335,13 @@ class SearchUtilsTests(SearchTestHelper):
             self.assertSetEqual(set(gene.keys()), GENE_FIELDS)
         self.assertEqual(parsed_genes['ENSG00000223972']['geneSymbol'], 'DDX11L1')
         self.assertEqual(parsed_genes['ENSG00000186092']['geneSymbol'], 'OR4F5')
+
+        self.search_model.search.update({'pathogenicity': {'clinvar': ['pathogenic', 'likely_pathogenic']}, 'locus': {}})
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            search_fields=['pathogenicity', 'locus'], dataset_type='SNV_INDEL', omitted_sample_guids=SV_SAMPLES,
+        )
 
         self.search_model.search = {
             'inheritance': {'mode': 'recessive'}, 'annotations': {'frameshift': ['frameshift_variant']},

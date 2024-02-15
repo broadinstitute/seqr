@@ -45,11 +45,13 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         for data_type in sv_data_types:
             self._current_sv_data_type = data_type
             sv_query = self._data_type_queries[data_type]
-            merged_ht = self._filter_data_type_comp_hets(variant_ht, variant_families, sv_query)
+            self.max_unaffected_samples = min(variant_query.max_unaffected_samples, sv_query.max_unaffected_samples)
+            merged_ht = self._filter_data_type_comp_hets(variant_query, variant_families, sv_query)
             if merged_ht is not None:
                 self._comp_het_hts[data_type] = merged_ht.key_by()
 
-    def _filter_data_type_comp_hets(self, variant_ht, variant_families, sv_query):
+    def _filter_data_type_comp_hets(self, variant_query, variant_families, sv_query):
+        variant_ht = variant_query.unfiltered_comp_het_ht
         sv_ht = sv_query.unfiltered_comp_het_ht
         sv_type_del_ids = sv_query.get_allowed_sv_type_ids([f'{getattr(sv_query, "SV_TYPE_PREFIX", "")}DEL'])
         self._sv_type_del_id = list(sv_type_del_ids)[0] if sv_type_del_ids else None
@@ -59,8 +61,25 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         if not overlapped_families:
             return None
 
-        variant_ch_ht = self._family_filtered_ch_ht(variant_ht, overlapped_families, variant_families, 'v1')
-        sv_ch_ht = self._family_filtered_ch_ht(sv_ht, overlapped_families, sv_families, 'v2')
+        if variant_families != sv_families:
+            variant_ht = self._family_filtered_ch_ht(variant_ht, overlapped_families, variant_families)
+            sv_ht = self._family_filtered_ch_ht(sv_ht, overlapped_families, sv_families)
+        else:
+            overlapped_families = variant_families
+
+        variant_samples_by_family = variant_query.entry_samples_by_family_guid
+        sv_samples_by_family = sv_query.entry_samples_by_family_guid
+        if any(f for f in overlapped_families if variant_samples_by_family[f] != sv_samples_by_family[f]):
+            sv_sample_indices = hl.array([[
+                sv_samples_by_family[f].index(s) if s in sv_samples_by_family[f] else None
+                for s in variant_samples_by_family[f]
+            ] for f in overlapped_families])
+            sv_ht = sv_ht.annotate(family_entries=hl.enumerate(sv_sample_indices).starmap(
+                lambda family_i, indices: indices.map(lambda sample_i: sv_ht.family_entries[family_i][sample_i])
+            ))
+
+        variant_ch_ht = variant_ht.group_by('gene_ids').aggregate(v1=hl.agg.collect(variant_ht.row))
+        sv_ch_ht = sv_ht.group_by('gene_ids').aggregate(v2=hl.agg.collect(sv_ht.row))
 
         ch_ht = variant_ch_ht.join(sv_ch_ht)
         ch_ht = ch_ht.explode(ch_ht.v1)
@@ -69,10 +88,9 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         return self._filter_grouped_compound_hets(ch_ht)
 
     @staticmethod
-    def _family_filtered_ch_ht(ht, overlapped_families, families, key):
+    def _family_filtered_ch_ht(ht, overlapped_families, families):
         family_indices = hl.array([families.index(family_guid) for family_guid in overlapped_families])
-        ht = ht.annotate(comp_het_family_entries=family_indices.map(lambda i: ht.comp_het_family_entries[i]))
-        return ht.group_by('gene_ids').aggregate(**{key: hl.agg.collect(ht.row)})
+        return ht.annotate(family_entries=family_indices.map(lambda i: ht.family_entries[i]))
 
     def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
         is_valid = super()._is_valid_comp_het_family(ch_ht, entries_1, entries_2)

@@ -590,6 +590,11 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], intervals=sv_intervals,
+            sample_data={'SV_WES': EXPECTED_SAMPLE_DATA['SV_WES'], **SV_WGS_SAMPLE_DATA},
+        )
+
+        await self._assert_expected_search(
             [VARIANT1, VARIANT2], omit_sample_type='SV_WES', **EXCLUDE_LOCATION_SEARCH,
         )
 
@@ -604,6 +609,21 @@ class HailSearchTestCase(AioHTTPTestCase):
         await self._assert_expected_search(
             [SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT],  omit_sample_type='SV_WES',
             intervals=LOCATION_SEARCH['intervals'][-1:], gene_ids=LOCATION_SEARCH['gene_ids'][:1]
+        )
+
+        await self._assert_expected_search(
+            [GCNV_VARIANT4], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.2},
+            omit_sample_type='SNV_INDEL',
+        )
+
+        await self._assert_expected_search(
+            [], padded_interval={'chrom': '17', 'start': 38720781, 'end': 38738703, 'padding': 0.1},
+            omit_sample_type='SNV_INDEL',
+        )
+
+        await self._assert_expected_search(
+            [SV_VARIANT4], padded_interval={'chrom': '14', 'start': 106692244, 'end': 106742587, 'padding': 0.1},
+            sample_data=SV_WGS_SAMPLE_DATA,
         )
 
     async def test_variant_id_search(self):
@@ -662,12 +682,27 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {**SV_VARIANT4, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''})
 
+        async with self.client.request('POST', '/lookup', json={**body, 'sample_data': SV_WGS_SAMPLE_DATA['SV_WGS']}) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, SV_VARIANT4)
+
         body.update({'variant_id': 'suffix_140608_DUP', 'data_type': 'SV_WES'})
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {
             **GCNV_VARIANT4, 'numExon': 8, 'end': 38736268, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': '',
+        })
+
+        async with self.client.request('POST', '/lookup', json={**body, 'sample_data': EXPECTED_SAMPLE_DATA['SV_WES']}) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {
+            **GCNV_VARIANT4, 'numExon': 8, 'end': 38736268, 'genotypes': {
+                individual: {k: v for k, v in genotype.items() if k not in {'start', 'end', 'numExon', 'geneIds'}}
+                for individual, genotype in GCNV_VARIANT4['genotypes'].items()
+            }
         })
 
     async def test_frequency_filter(self):
@@ -817,7 +852,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         gcnv_annotations_1 = {'structural': ['gCNV_DUP']}
-        gcnv_annotations_2 = {'structural_consequence': ['LOF']}
+        gcnv_annotations_2 = {'structural_consequence': ['LOF'], 'structural': []}
 
         await self._assert_expected_search(
             [[GCNV_VARIANT3, GCNV_VARIANT4]], omit_sample_type='SNV_INDEL', inheritance_mode='compound_het',
@@ -888,6 +923,18 @@ class HailSearchTestCase(AioHTTPTestCase):
             [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3],
             inheritance_mode='recessive', pathogenicity=pathogenicity,
             annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
+        )
+
+        # Search works with a different number of samples within the family
+        missing_gt_gcnv_variant = {
+            **GCNV_VARIANT4, 'genotypes': {k: v for k, v in GCNV_VARIANT4['genotypes'].items() if k != 'I000005_hg00732'}
+        }
+        await self._assert_expected_search(
+            [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, missing_gt_gcnv_variant]],
+            inheritance_mode='compound_het', pathogenicity=pathogenicity,
+            annotations=gcnv_annotations_2, annotations_secondary=selected_transcript_annotations,
+            sample_data={**EXPECTED_SAMPLE_DATA, 'SV_WES': [EXPECTED_SAMPLE_DATA['SV_WES'][0], EXPECTED_SAMPLE_DATA['SV_WES'][2]]}
+
         )
 
         # Do not return pairs where annotations match in a non-paired gene

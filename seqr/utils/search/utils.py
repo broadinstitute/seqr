@@ -161,15 +161,14 @@ def variant_lookup(user, variant_id, families=None, genome_version=None, **kwarg
         return variant
 
     parsed_variant_id = _parse_variant_id(variant_id)
-    if not parsed_variant_id:
-        raise InvalidSearchException(f'Invalid variant {variant_id}')
+    dataset_type = DATASET_TYPE_SNP_INDEL_ONLY if parsed_variant_id else Sample.DATASET_TYPE_SV_CALLS
 
     if families:
-        samples, _ = _get_families_search_data(families, dataset_type=DATASET_TYPE_SNP_INDEL_ONLY)
+        samples, _ = _get_families_search_data(families, dataset_type=dataset_type)
         kwargs['samples'] = samples
 
     lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), hail_variant_lookup)
-    variant = lookup_func(user, parsed_variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], **kwargs)
+    variant = lookup_func(user, parsed_variant_id or variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], dataset_type=dataset_type, **kwargs)
     safe_redis_set_json(cache_key, variant, expire=timedelta(weeks=2))
     return variant
 
@@ -352,7 +351,7 @@ def _search_dataset_type(search):
     if search['parsedLocus']['parsed_variant_ids']:
         return Sample.DATASET_TYPE_VARIANT_CALLS, None, _variant_ids_dataset_type(search['parsedLocus']['parsed_variant_ids'])
 
-    dataset_type = _annotation_dataset_type(search.get('annotations'))
+    dataset_type = _annotation_dataset_type(search.get('annotations'), pathogenicity=search.get('pathogenicity'))
     secondary_dataset_type = _annotation_dataset_type(search.get('annotations_secondary'))
     return dataset_type, secondary_dataset_type, None
 
@@ -366,9 +365,9 @@ def _variant_ids_dataset_type(variant_ids):
     return Sample.DATASET_TYPE_VARIANT_CALLS
 
 
-def _annotation_dataset_type(annotations):
+def _annotation_dataset_type(annotations, pathogenicity=None):
     if not annotations:
-        return None
+        return Sample.DATASET_TYPE_VARIANT_CALLS if pathogenicity else None
 
     annotation_types = {k for k, v in annotations.items() if v}
     if annotation_types.issubset(SV_ANNOTATION_TYPES):
