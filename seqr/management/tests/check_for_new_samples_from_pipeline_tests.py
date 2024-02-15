@@ -29,24 +29,71 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
 - The seqr team\n"""
 
 
+@mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: GUID_ID)
+@mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', 'http://testairtable')
+@mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
+@mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
+@mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
 class CheckNewSamplesTest(AnvilAuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
-    @mock.patch('seqr.views.utils.variant_utils.redis.StrictRedis')
+    def setUp(self):
+        patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.logger')
+        self.mock_logger = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.variant_utils.logger')
+        self.mock_utils_logger = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
+        self.mock_send_slack = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
+        self.mock_subprocess = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.variant_utils.redis.StrictRedis')
+        self.mock_redis = patcher.start()
+        self.mock_redis.return_value.keys.side_effect = lambda pattern: [pattern]
+        self.addCleanup(patcher.stop)
+        super().setUp()
+
+    def _test_success(self, path, metadata, dataset_type, sample_guids, num_projects=1):
+        self.mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
+        self.mock_subprocess.return_value.wait.return_value = 0
+
+        call_command('check_for_new_samples_from_pipeline', path, 'auto__2023-08-08')
+
+        self.mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [
+            f'gsutil ls gs://seqr-hail-search-data/v03/{path}/runs/auto__2023-08-08/_SUCCESS',
+            f'gsutil cat gs://seqr-hail-search-data/v03/{path}/runs/auto__2023-08-08/metadata.json',
+        ]], any_order=True)
+
+        self.mock_logger.info.assert_has_calls([
+            mock.call(f'Loading new samples from {path}: auto__2023-08-08'),
+            mock.call(f'Loading {len(sample_guids)} WES {dataset_type} samples in {num_projects} projects'),
+            mock.call('DONE'),
+        ])
+        self.mock_logger.warining.assert_not_called()
+
+        self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
+        self.mock_utils_logger.info.assert_called_with('Reset 2 cached results')
+
+        # Tests Sample models created/updated
+        updated_sample_models = Sample.objects.filter(guid__in=sample_guids)
+        self.assertEqual(len(updated_sample_models), len(sample_guids))
+        self.assertSetEqual({'WES'}, set(updated_sample_models.values_list('sample_type', flat=True)))
+        self.assertSetEqual({dataset_type}, set(updated_sample_models.values_list('dataset_type', flat=True)))
+        self.assertSetEqual({True}, set(updated_sample_models.values_list('is_active', flat=True)))
+        self.assertSetEqual({'1kg.vcf.gz'}, set(updated_sample_models.values_list('elasticsearch_index', flat=True)))
+        self.assertSetEqual({'auto__2023-08-08'}, set(updated_sample_models.values_list('data_source', flat=True)))
+        self.assertSetEqual(
+            {datetime.now().strftime('%Y-%m-%d')},
+            {date.strftime('%Y-%m-%d') for date in updated_sample_models.values_list('loaded_date', flat=True)}
+        )
+
     @mock.patch('seqr.views.utils.airtable_utils.logger')
-    @mock.patch('seqr.views.utils.variant_utils.logger')
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    @mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
     @mock.patch('seqr.utils.search.add_data_utils.send_html_email')
-    @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.logger')
-    @mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: GUID_ID)
-    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', 'http://testairtable')
-    @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
-    @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
-    @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @responses.activate
-    def test_command(self, mock_logger, mock_send_email, mock_send_slack, mock_subprocess, mock_utils_logger, mock_airtable_utils, mock_redis):
-        mock_redis.return_value.keys.side_effect = lambda pattern: [pattern]
+    def test_command(self, mock_send_email, mock_airtable_utils):
         responses.add(
             responses.GET,
             "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
@@ -70,18 +117,18 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 'F000014_14': ['NA21234'],
             },
         }
-        mock_subprocess.return_value.wait.return_value = 1
-        mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
+        self.mock_subprocess.return_value.wait.return_value = 1
+        self.mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
 
         with self.assertRaises(CommandError) as ce:
             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08', '--allow-failed')
         self.assertEqual(
             str(ce.exception), 'Invalid families in run metadata GRCh38/SNV_INDEL: auto__2023-08-08 - F0000123_ABC')
-        mock_logger.warning.assert_called_with('Loading for failed run GRCh38/SNV_INDEL: auto__2023-08-08')
+        self.mock_logger.warning.assert_called_with('Loading for failed run GRCh38/SNV_INDEL: auto__2023-08-08')
 
         metadata['family_samples']['F000011_11'] = metadata['family_samples'].pop('F0000123_ABC')
-        mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
-        mock_subprocess.return_value.wait.return_value = 0
+        self.mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
+        self.mock_subprocess.return_value.wait.return_value = 0
         with self.assertRaises(CommandError) as ce:
             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
         self.assertEqual(
@@ -97,41 +144,13 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(str(ce.exception), 'Matches not found for sample ids: NA22882')
 
         metadata['family_samples']['F000011_11'] = metadata['family_samples']['F000011_11'][1:]
-        mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
 
         # Test success
-        mock_logger.reset_mock()
-        mock_subprocess.reset_mock()
-        call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
-
-        mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [
-            'gsutil ls gs://seqr-hail-search-data/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/_SUCCESS',
-            'gsutil cat gs://seqr-hail-search-data/v03/GRCh38/SNV_INDEL/runs/auto__2023-08-08/metadata.json',
-        ]], any_order=True)
-
-        mock_logger.info.assert_has_calls([
-            mock.call(f'Loading new samples from GRCh38/SNV_INDEL: auto__2023-08-08'),
-            mock.call('Loading 4 WES SNV_INDEL samples in 2 projects'),
-            mock.call('DONE'),
-        ])
-        mock_logger.warining.assert_not_called()
-
-        mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
-        mock_utils_logger.info.assert_called_with('Reset 2 cached results')
-
-        # Tests Sample models created/updated
-        updated_sample_models = Sample.objects.filter(guid__in={
-            EXISTING_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4})
-        self.assertEqual(len(updated_sample_models), 4)
-        self.assertSetEqual({'WES'}, set(updated_sample_models.values_list('sample_type', flat=True)))
-        self.assertSetEqual({'SNV_INDEL'}, set(updated_sample_models.values_list('dataset_type', flat=True)))
-        self.assertSetEqual({True}, set(updated_sample_models.values_list('is_active', flat=True)))
-        self.assertSetEqual({'1kg.vcf.gz'}, set(updated_sample_models.values_list('elasticsearch_index', flat=True)))
-        self.assertSetEqual({'auto__2023-08-08'}, set(updated_sample_models.values_list('data_source', flat=True)))
-        self.assertSetEqual(
-            {datetime.now().strftime('%Y-%m-%d')},
-            {date.strftime('%Y-%m-%d') for date in updated_sample_models.values_list('loaded_date', flat=True)}
-        )
+        self.mock_logger.reset_mock()
+        self.mock_subprocess.reset_mock()
+        self._test_success('GRCh38/SNV_INDEL', metadata, dataset_type='SNV_INDEL', num_projects=2, sample_guids={
+            EXISTING_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4,
+        })
 
         old_data_sample_guid = 'S000143_na20885'
         self.assertFalse(Sample.objects.get(guid=old_data_sample_guid).is_active)
@@ -173,8 +192,8 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
 
         # Test notifications
-        self.assertEqual(mock_send_slack.call_count, 2)
-        mock_send_slack.assert_has_calls([
+        self.assertEqual(self.mock_send_slack.call_count, 2)
+        self.mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
                 f'2 new WES samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20888, NA20889```',
@@ -194,14 +213,27 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 'update': {'Status': 'Available in Seqr'}})
 
         # Test reloading has no effect
-        mock_logger.reset_mock()
+        self.mock_logger.reset_mock()
         mock_send_email.reset_mock()
-        mock_send_slack.reset_mock()
+        self.mock_send_slack.reset_mock()
         sample_last_modified = Sample.objects.filter(
             last_modified_date__isnull=False).values_list('last_modified_date', flat=True).order_by('-last_modified_date')[0]
 
         call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
-        mock_logger.info.assert_called_with(f'Data already loaded for GRCh38/SNV_INDEL: auto__2023-08-08')
+        self.mock_logger.info.assert_called_with(f'Data already loaded for GRCh38/SNV_INDEL: auto__2023-08-08')
         mock_send_email.assert_not_called()
-        mock_send_slack.assert_not_called()
+        self.mock_send_slack.assert_not_called()
         self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
+
+    @responses.activate
+    def test_gcnv_command(self):
+        metadata = {
+            'callsets': ['1kg.vcf.gz'],
+            'sample_type': 'WES',
+            'family_samples': {'F000012_12': ['NA20885']},
+        }
+        self._test_success('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S{GUID_ID}_NA20885'})
+
+        self.mock_send_slack.assert_called_once_with('seqr-data-loading',
+            f'1 new WES SV samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20885```',
+        )
