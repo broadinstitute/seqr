@@ -56,8 +56,9 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.addCleanup(patcher.stop)
         super().setUp()
 
-    def _test_success(self, path, metadata, dataset_type, sample_guids):
+    def _test_success(self, path, metadata, dataset_type, sample_guids, num_projects=1):
         self.mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
+        self.mock_subprocess.return_value.wait.return_value = 0
 
         call_command('check_for_new_samples_from_pipeline', path, 'auto__2023-08-08')
 
@@ -68,7 +69,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
         self.mock_logger.info.assert_has_calls([
             mock.call(f'Loading new samples from {path}: auto__2023-08-08'),
-            mock.call(f'Loading {len(sample_guids)} WES {dataset_type} samples in 2 projects'),
+            mock.call(f'Loading {len(sample_guids)} WES {dataset_type} samples in {num_projects} projects'),
             mock.call('DONE'),
         ])
         self.mock_logger.warining.assert_not_called()
@@ -147,7 +148,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         # Test success
         self.mock_logger.reset_mock()
         self.mock_subprocess.reset_mock()
-        self._test_success('GRCh38/SNV_INDEL', metadata, dataset_type='SNV_INDEL', sample_guids={
+        self._test_success('GRCh38/SNV_INDEL', metadata, dataset_type='SNV_INDEL', num_projects=2, sample_guids={
             EXISTING_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4,
         })
 
@@ -229,17 +230,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         metadata = {
             'callsets': ['1kg.vcf.gz'],
             'sample_type': 'WES',
-            'family_samples': {'F000012_12': ['NA20900']},
+            'family_samples': {'F000012_12': ['NA20885']},
         }
-        self._test_success('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S{GUID_ID}_NA20900'})
+        self._test_success('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S{GUID_ID}_NA20885'})
 
-        self.mock_send_slack.assert_has_calls([
-            mock.call(
-                'seqr-data-loading',
-                f'2 new WES samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20888, NA20889```',
-            ),
-            mock.call(
-                'anvil-data-loading',
-                f'1 new WES samples are loaded in {SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page',
-            ),
-        ])
+        self.mock_send_slack.assert_called_once_with('seqr-data-loading',
+            f'1 new WES SV samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20885```',
+        )

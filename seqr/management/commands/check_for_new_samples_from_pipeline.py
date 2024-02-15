@@ -13,6 +13,7 @@ from seqr.views.utils.variant_utils import reset_cached_search_results
 logger = logging.getLogger(__name__)
 
 GS_PATH_TEMPLATE = 'gs://seqr-hail-search-data/v03/{path}/runs/{version}/'
+DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 
 
 class Command(BaseCommand):
@@ -27,6 +28,7 @@ class Command(BaseCommand):
         path = options['path']
         version = options['version']
         genome_version, dataset_type = path.split('/')
+        dataset_type = DATASET_TYPE_MAP.get(dataset_type, dataset_type)
 
         if Sample.objects.filter(data_source=version, is_active=True).exists():
             logger.info(f'Data already loaded for {path}: {version}')
