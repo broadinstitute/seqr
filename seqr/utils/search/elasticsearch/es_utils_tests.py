@@ -1374,7 +1374,6 @@ class EsUtilsTest(TestCase):
             del expected_search['sort']
         else:
             expected_search['_source'] = mock.ANY
-
         self.assertDictEqual(executed_search, expected_search)
 
         if not expected_search_params.get('gene_count_aggs'):
@@ -1908,19 +1907,27 @@ class EsUtilsTest(TestCase):
     def test_multi_dataset_get_es_variants(self):
         setup_responses()
 
-        search_model = VariantSearch.objects.create(search={'pathogenicity': {
-            'clinvar': ['pathogenic'],
-        }})
+        search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
         variants, _ = query_variants(results_model, num_results=5)
         self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_NO_CONSEQUENCE_FILTER_VARIANTS + [PARSED_MITO_VARIANT])
+        self.assertExecutedSearches([
+            dict(filters=[], start_index=0, size=5, index=SV_INDEX_NAME),
+            dict(filters=[], start_index=0, size=5, index=MITO_WGS_INDEX_NAME),
+            dict(filters=[ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
+        ])
+
+        search_model.search['pathogenicity'] = {'clinvar': ['pathogenic']}
+        search_model.save()
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
+        variants, _ = query_variants(results_model, num_results=5)
+        self.assertListEqual(variants, PARSED_NO_CONSEQUENCE_FILTER_VARIANTS + [PARSED_MITO_VARIANT])
         path_filter = {'regexp': {
-            'clinvar_clinical_significance':  '.*Pathogenic.*'
+            'clinvar_clinical_significance': '.*Pathogenic.*'
         }}
         self.assertExecutedSearches([
-            dict(filters=[path_filter], start_index=0, size=5, index=SV_INDEX_NAME),
             dict(filters=[path_filter], start_index=0, size=5, index=MITO_WGS_INDEX_NAME),
             dict(filters=[path_filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
         ])
