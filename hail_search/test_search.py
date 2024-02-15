@@ -205,9 +205,6 @@ class HailSearchTestCase(AioHTTPTestCase):
         self.assertSetEqual(set(resp_json.keys()), {'results', 'total'})
         self.assertEqual(resp_json['total'], len(results))
         for i, result in enumerate(resp_json['results']):
-            if result != results[i]:
-                exp = results[i]
-                import pdb; pdb.set_trace()
             self.assertEqual(result, results[i])
 
         if gene_counts:
@@ -1176,58 +1173,58 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
     async def test_multi_data_type_comp_het_sort(self):
-        # await self._assert_expected_search(
-        #     [[_sorted(GCNV_VARIANT4, [0]), _sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [11, 11])],
-        #      _sorted(GCNV_VARIANT3, [4.5, 0]), [_sorted(GCNV_VARIANT3, [0]), _sorted(GCNV_VARIANT4, [0])],
-        #      _sorted(VARIANT2, [11, 11]), [_sorted(VARIANT4, [11, 11]), _sorted(VARIANT3, [22, 24])]],
-        #     sort='protein_consequence', inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS,
-        # )
-        #
-        # await self._assert_expected_search(
-        #     [[_sorted(GCNV_VARIANT4, [-14487]), _sorted(GCNV_VARIANT3, [-2666])],
-        #      [_sorted(GCNV_VARIANT4, [-14487]), MULTI_DATA_TYPE_COMP_HET_VARIANT2],
-        #      [VARIANT3, VARIANT4]],
-        #     sort='size', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
-        # )
-        #
-        # await self._assert_expected_search(
-        #     [[_sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [8]), GCNV_VARIANT4],
-        #      [_sorted(VARIANT3, [12.5]), _sorted(VARIANT4, [12.5])],
-        #      [GCNV_VARIANT3, GCNV_VARIANT4]],
-        #     sort='pathogenicity', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
-        # )
-        #
-        # await self._assert_expected_search(
-        #     [[_sorted(VARIANT3, [-0.009999999776482582]), _sorted(VARIANT4, [0])],
-        #      [_sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [0]), GCNV_VARIANT4],
-        #      [GCNV_VARIANT3, GCNV_VARIANT4]],
-        #     sort='splice_ai', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
-        # )
+        await self._assert_expected_search(
+            [[_sorted(GCNV_VARIANT4, [0]), _sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [11, 11])],
+             _sorted(GCNV_VARIANT3, [4.5, 0]), [_sorted(GCNV_VARIANT3, [0]), _sorted(GCNV_VARIANT4, [0])],
+             _sorted(VARIANT2, [11, 11]), [_sorted(VARIANT4, [11, 11]), _sorted(VARIANT3, [22, 24])]],
+            sort='protein_consequence', inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS,
+        )
 
-        # await self._assert_expected_search(
-        #     [[_sorted(GCNV_VARIANT3, [-0.7860000133514404]), _sorted(GCNV_VARIANT4, [-0.7099999785423279])],
-        #      [_sorted(GCNV_VARIANT4, [-0.7099999785423279]), MULTI_DATA_TYPE_COMP_HET_VARIANT2],
-        #      [VARIANT3, VARIANT4]],
-        #     sort='strvctvre', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
-        # )
+        await self._assert_expected_search(
+            [[_sorted(GCNV_VARIANT4, [-14487]), _sorted(GCNV_VARIANT3, [-2666])],
+             [_sorted(GCNV_VARIANT4, [-14487]), MULTI_DATA_TYPE_COMP_HET_VARIANT2],
+             [VARIANT3, VARIANT4]],
+            sort='size', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
+        )
 
-        # await self._assert_expected_search(
-        #     [[_sorted(GCNV_VARIANT3, [0.0015185698866844177]), _sorted(GCNV_VARIANT4, [0.004989586770534515])],
-        #      [_sorted(GCNV_VARIANT4, [0.004989586770534515]), _sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [0.31111112236976624])],
-        #      [_sorted(VARIANT4, [0.02222222276031971]), _sorted(VARIANT3, [0.6666666865348816])]],
-        #     sort='callset_af', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
-        # )
-        #
-        # await self._assert_expected_search(
-        #     [[_sorted(VARIANT3, [0]), _sorted(VARIANT4, [0])],
-        #      [_sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [0.28899794816970825]), GCNV_VARIANT4],
-        #      [GCNV_VARIANT3, GCNV_VARIANT4]],
-        #     sort='gnomad_exomes', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
-        # )
+        await self._assert_expected_search(
+            [[_sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [8]), GCNV_VARIANT4],
+             [_sorted(VARIANT3, [12.5]), _sorted(VARIANT4, [12.5])],
+             [GCNV_VARIANT3, GCNV_VARIANT4]],
+            sort='pathogenicity', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
+        )
+
+        await self._assert_expected_search(
+            [[_sorted(VARIANT3, [-0.009999999776482582]), _sorted(VARIANT4, [0])],
+             [_sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [0]), GCNV_VARIANT4],
+             [GCNV_VARIANT3, GCNV_VARIANT4]],
+            sort='splice_ai', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
+        )
+
+        await self._assert_expected_search(
+            [[_sorted(GCNV_VARIANT3, [-0.7860000133514404]), _sorted(GCNV_VARIANT4, [-0.7099999785423279])],
+             [_sorted(GCNV_VARIANT4, [-0.7099999785423279]), MULTI_DATA_TYPE_COMP_HET_VARIANT2],
+             [VARIANT3, VARIANT4]],
+            sort='strvctvre', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
+        )
+
+        await self._assert_expected_search(
+            [[_sorted(GCNV_VARIANT3, [0.0015185698866844177]), _sorted(GCNV_VARIANT4, [0.004989586770534515])],
+             [_sorted(GCNV_VARIANT4, [0.004989586770534515]), _sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [0.31111112236976624])],
+             [_sorted(VARIANT4, [0.02222222276031971]), _sorted(VARIANT3, [0.6666666865348816])]],
+            sort='callset_af', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
+        )
+
+        await self._assert_expected_search(
+            [[_sorted(VARIANT3, [0]), _sorted(VARIANT4, [0])],
+             [_sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [0.28899794816970825]), GCNV_VARIANT4],
+             [GCNV_VARIANT3, GCNV_VARIANT4]],
+            sort='gnomad_exomes', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
+        )
 
         await self._assert_expected_search(
             [[_sorted(VARIANT3, [0, -2]), _sorted(VARIANT4, [0, -1])],
-             [_sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [0, -1]), _sorted(GCNV_VARIANT4, [0, -1])],
-             [_sorted(GCNV_VARIANT3, [0, -1]), _sorted(GCNV_VARIANT4, [0, -1])]],
+             [_sorted(GCNV_VARIANT3, [-1]), _sorted(GCNV_VARIANT4, [-1])],
+             [_sorted(GCNV_VARIANT4, [0, -1]), _sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [1, -1])]],
             sort='in_omim', sort_metadata=OMIM_SORT_METADATA, inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
         )
