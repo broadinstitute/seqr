@@ -1,5 +1,6 @@
 from collections import defaultdict
 from django.db.models import F, Min, Count
+from urllib3.connectionpool import connection_from_url
 
 import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
@@ -24,7 +25,9 @@ def _execute_search(search_body, user, path='search', exception_map=None):
 
 
 def ping_hail_backend():
-    requests.get(_hail_backend_url('status'), timeout=5).raise_for_status()
+    response = connection_from_url(_hail_backend_url('status')).urlopen('HEAD', '/status', timeout=5, retries=3)
+    if response.status >= 400:
+        raise requests.HTTPError(f'{response.status}: {response.reason or response.text}', response=response)
 
 
 def get_hail_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100,

@@ -2,7 +2,6 @@ from django.test import TestCase
 from django.urls.base import reverse
 import mock
 from requests import HTTPError
-import responses
 
 from seqr.views.status import status_view
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
@@ -22,7 +21,7 @@ class StatusTest(object):
             mock.call(f'Search backend connection error: {self.SEARCH_BACKEND_ERROR}'),
         ]
         if self.HAS_KIBANA:
-            calls.append(mock.call('Search Admin connection error: Connection refused: HEAD /status'))
+            calls.append(mock.call('Search Admin connection error: Kibana Error 400: Bad Request'))
         mock_logger.error.assert_has_calls(calls)
         mock_logger.reset_mock()
 
@@ -30,23 +29,20 @@ class StatusTest(object):
     @mock.patch('seqr.views.status.connections')
     @mock.patch('seqr.views.status.logger')
     @urllib3_responses.activate
-    @responses.activate
     def test_status(self, mock_logger, mock_db_connections, mock_redis):
         url = reverse(status_view)
 
         mock_db_connections.__getitem__.return_value.cursor.side_effect = Exception('No connection')
         mock_redis.return_value.ping.side_effect = HTTPError('Bad connection')
-        responses.add(responses.GET, 'http://test-hail:5000/status', status=400)
+        urllib3_responses.add(urllib3_responses.HEAD, '/status', status=400)
 
         self._test_status_error(url, mock_logger)
 
         mock_db_connections.__getitem__.return_value.cursor.side_effect = None
         mock_redis.return_value.ping.side_effect = None
-        responses.reset()
         urllib3_responses.reset()
-        responses.add(responses.GET, 'http://test-hail:5000/status', status=200)
         urllib3_responses.add(urllib3_responses.HEAD, '/', status=200)
-        urllib3_responses.add(urllib3_responses.HEAD, '/status', status=500)
+        urllib3_responses.add(urllib3_responses.HEAD, '/status', status=500 if self.HAS_KIBANA else 200)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -79,13 +75,12 @@ class ElasticsearchStatusTest(TestCase, StatusTest):
         super(ElasticsearchStatusTest, self).test_status(*args)
 
     def _assert_expected_requests(self):
-        self.assertEqual(len(responses.calls), 0)
         self.assertListEqual([call.request.url for call in urllib3_responses.calls], ['/', '/status', '/', '/status'])
 
 
 class HailSearchStatusTest(TestCase, StatusTest):
 
-    SEARCH_BACKEND_ERROR = '400 Client Error: Bad Request for url: http://test-hail:5000/status'
+    SEARCH_BACKEND_ERROR = '400: Bad Request'
     HAS_KIBANA = False
 
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')
@@ -94,6 +89,5 @@ class HailSearchStatusTest(TestCase, StatusTest):
         super(HailSearchStatusTest, self).test_status(*args)
 
     def _assert_expected_requests(self):
-        self.assertEqual(len(urllib3_responses.calls), 0)
-        self.assertEqual(len(responses.calls), 1)
-        self.assertEqual(responses.calls[0].request.url, 'http://test-hail:5000/status')
+        self.assertEqual(len(urllib3_responses.calls), 1)
+        self.assertEqual(urllib3_responses.calls[0].request.url, '/status')
