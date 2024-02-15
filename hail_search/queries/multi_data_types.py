@@ -126,7 +126,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
                 v2=self._format_comp_het_result(ch_ht.v2, data_type),
             )
             hts.append(ch_ht.select(
-                _sort=hl.sorted([ch_ht.v1._sort, ch_ht.v2._sort])[0],
+                _sort=hl.sorted([ch_ht.v1._sort.map(hl.float64), ch_ht.v2._sort.map(hl.float64)])[0],
                 **{f'comp_het_{data_type}': ch_ht.row},
             ))
 
