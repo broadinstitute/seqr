@@ -48,7 +48,6 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     _parse_location_search(search_body)
 
     path = 'gene_counts' if gene_agg else 'search'
-    import pdb; pdb.set_trace()
     response_json = _execute_search(search_body, user, path)
 
     if gene_agg:
