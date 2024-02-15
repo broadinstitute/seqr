@@ -10,7 +10,8 @@ from seqr.utils.search.utils import get_single_variant, get_variants_for_variant
     query_variants, variant_lookup, InvalidSearchException
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
 
-NON_SNP_INDEL_SAMPLES = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733', 'S000149_hg00733']
+SV_SAMPLES = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
+NON_SNP_INDEL_SAMPLES = SV_SAMPLES + ['S000149_hg00733']
 
 class SearchTestHelper(object):
 
@@ -334,6 +335,13 @@ class SearchUtilsTests(SearchTestHelper):
             self.assertSetEqual(set(gene.keys()), GENE_FIELDS)
         self.assertEqual(parsed_genes['ENSG00000223972']['geneSymbol'], 'DDX11L1')
         self.assertEqual(parsed_genes['ENSG00000186092']['geneSymbol'], 'OR4F5')
+
+        self.search_model.search.update({'pathogenicity': {'clinvar': ['pathogenic', 'likely_pathogenic']}, 'locus': {}})
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
+            search_fields=['pathogenicity', 'locus'], dataset_type='SNV_INDEL', omitted_sample_guids=SV_SAMPLES,
+        )
 
         self.search_model.search = {
             'inheritance': {'mode': 'recessive'}, 'annotations': {'frameshift': ['frameshift_variant']},

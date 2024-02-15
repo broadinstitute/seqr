@@ -351,7 +351,7 @@ def _search_dataset_type(search):
     if search['parsedLocus']['parsed_variant_ids']:
         return Sample.DATASET_TYPE_VARIANT_CALLS, None, _variant_ids_dataset_type(search['parsedLocus']['parsed_variant_ids'])
 
-    dataset_type = _annotation_dataset_type(search.get('annotations'))
+    dataset_type = _annotation_dataset_type(search.get('annotations'), pathogenicity=search.get('pathogenicity'))
     secondary_dataset_type = _annotation_dataset_type(search.get('annotations_secondary'))
     return dataset_type, secondary_dataset_type, None
 
@@ -365,9 +365,9 @@ def _variant_ids_dataset_type(variant_ids):
     return Sample.DATASET_TYPE_VARIANT_CALLS
 
 
-def _annotation_dataset_type(annotations):
+def _annotation_dataset_type(annotations, pathogenicity=None):
     if not annotations:
-        return None
+        return Sample.DATASET_TYPE_VARIANT_CALLS if pathogenicity else None
 
     annotation_types = {k for k, v in annotations.items() if v}
     if annotation_types.issubset(SV_ANNOTATION_TYPES):
