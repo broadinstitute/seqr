@@ -5,6 +5,7 @@ from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_
     PATHOGENICTY_HGMD_SORT_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
+MAX_LOAD_INTERVALS = 1000
 
 def _clinvar_sort(clinvar_field, r):
     return hl.or_else(r[clinvar_field].pathogenicity_id, ABSENT_PATH_SORT_OFFSET)
@@ -135,7 +136,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def _parse_intervals(self, intervals, exclude_intervals=False, **kwargs):
         parsed_intervals = super()._parse_intervals(intervals,**kwargs)
-        if parsed_intervals and not exclude_intervals:
+        if parsed_intervals and not exclude_intervals and len(parsed_intervals) < MAX_LOAD_INTERVALS:
             self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
         return parsed_intervals
 
@@ -197,6 +198,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _prefilter_entries_table(self, ht, parsed_intervals=None, exclude_intervals=False, **kwargs):
         if exclude_intervals and parsed_intervals:
             ht = hl.filter_intervals(ht, parsed_intervals, keep=False)
+        elif len(parsed_intervals) >= MAX_LOAD_INTERVALS:
+            ht = hl.filter_intervals(ht, parsed_intervals)
         return ht
 
     def _get_allowed_consequence_ids(self, annotations):
