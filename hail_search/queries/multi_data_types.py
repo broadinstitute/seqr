@@ -162,6 +162,8 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         data_type = next(data_type for data_type in data_types if row.get(data_type))
         formatted_row = row.get(data_type)
         if 'comp_het' in data_type:
+            if data_type.startswith('SV'):
+                import pdb; pdb.set_trace()
             formatted_row = {GROUPED_VARIANTS_FIELD: sorted([formatted_row.v1, formatted_row.v2], key=lambda x: x._sort)}
         return formatted_row
 
