@@ -223,3 +223,23 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         mock_send_email.assert_not_called()
         self.mock_send_slack.assert_not_called()
         self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
+
+    @responses.activate
+    def test_gcnv_command(self):
+        metadata = {
+            'callsets': ['1kg.vcf.gz'],
+            'sample_type': 'WES',
+            'family_samples': {'F000012_12': ['NA20900']},
+        }
+        self._test_success('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S{GUID_ID}_NA20900'})
+
+        self.mock_send_slack.assert_has_calls([
+            mock.call(
+                'seqr-data-loading',
+                f'2 new WES samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20888, NA20889```',
+            ),
+            mock.call(
+                'anvil-data-loading',
+                f'1 new WES samples are loaded in {SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page',
+            ),
+        ])
