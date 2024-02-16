@@ -13,6 +13,10 @@ from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVE
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 
+# Number of filtered genes at which pre-filtering a table by gene-intervals does not improve performance
+# Estimated based on behavior for several representative gene lists
+MAX_GENE_INTERVALS = 100
+
 logger = logging.getLogger(__name__)
 
 
@@ -245,13 +249,19 @@ class BaseHailTableQuery(object):
         table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
-            if skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field])):
+            if self._should_skip_ht(ht, skip_missing_field):
                 return None
             ht_globals = hl.read_table(table_path).globals
             if drop_globals:
                 ht_globals = ht_globals.drop(*drop_globals)
             return ht.annotate_globals(**hl.eval(ht_globals))
-        return hl.read_table(table_path, **self._load_table_kwargs)
+
+        ht = hl.read_table(table_path, **self._load_table_kwargs)
+        return None if self._should_skip_ht(ht, skip_missing_field) else ht
+
+    @staticmethod
+    def _should_skip_ht(ht, skip_missing_field):
+        return skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field]))
 
     @staticmethod
     def _query_table_annotations(ht, query_table_path):
@@ -290,6 +300,8 @@ class BaseHailTableQuery(object):
         if exception_messages:
             raise HTTPBadRequest(reason='; '.join(exception_messages))
 
+        if len(project_samples) > len(filtered_project_hts):
+            logger.info(f'Found {len(filtered_project_hts)} {self.DATA_TYPE} projects with matched entries')
         return filtered_project_hts
 
     def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
@@ -561,7 +573,7 @@ class BaseHailTableQuery(object):
         rs_id_set = hl.set(rs_ids)
         return ht.filter(rs_id_set.contains(ht.rsid))
 
-    def _parse_intervals(self, intervals, **kwargs):
+    def _parse_intervals(self, intervals, gene_ids=None, **kwargs):
         parsed_variant_keys = self._parse_variant_keys(**kwargs)
         if parsed_variant_keys:
             self._load_table_kwargs['variant_ht'] = hl.Table.parallelize(parsed_variant_keys).key_by(*self.KEY_FIELD)
@@ -581,6 +593,9 @@ class BaseHailTableQuery(object):
         if is_x_linked:
             reference_genome = hl.get_reference(self.GENOME_VERSION)
             intervals = (intervals or []) + [reference_genome.x_contigs[0]]
+
+        if len(intervals) > MAX_GENE_INTERVALS and len(intervals) == len(gene_ids or []):
+            return []
 
         parsed_intervals = [
             hl.eval(hl.parse_locus_interval(interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
@@ -976,7 +991,7 @@ class BaseHailTableQuery(object):
 
         if sort in self.PREDICTION_FIELDS_CONFIG:
             prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
-            return [-hl.float64(ht[prediction_path.source][prediction_path.field])]
+            return [hl.or_else(-hl.float64(ht[prediction_path.source][prediction_path.field]), 0)]
 
         if sort == OMIM_SORT:
             return self._omim_sort(ht, hl.set(set(self._sort_metadata)))

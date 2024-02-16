@@ -115,9 +115,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
             dt_ht = query.format_search_ht()
             if dt_ht is None:
                 continue
-            merged_sort_expr = self._merged_sort_expr(data_type, dt_ht)
-            if merged_sort_expr is not None:
-                dt_ht = dt_ht.annotate(_sort=merged_sort_expr)
+            dt_ht = self._merged_sort(data_type, dt_ht)
             hts.append(dt_ht.select('_sort', **{data_type: dt_ht.row}))
 
         for data_type, ch_ht in self._comp_het_hts.items():
@@ -126,7 +124,7 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
                 v2=self._format_comp_het_result(ch_ht.v2, data_type),
             )
             hts.append(ch_ht.select(
-                _sort=hl.sorted([ch_ht.v1._sort, ch_ht.v2._sort])[0],
+                _sort=hl.sorted([ch_ht.v1._sort.map(hl.float64), ch_ht.v2._sort.map(hl.float64)])[0],
                 **{f'comp_het_{data_type}': ch_ht.row},
             ))
 
@@ -137,21 +135,26 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         return ht
 
     def _format_comp_het_result(self, v, data_type):
-        return self._data_type_queries[data_type]._format_results(v)
+        result = self._data_type_queries[data_type]._format_results(v)
+        return self._merged_sort(data_type, result)
 
-    def _merged_sort_expr(self, data_type, ht):
+    def _merged_sort(self, data_type, ht):
         # Certain sorts have an extra element for variant-type data, so need to add an element for SV data
         if not data_type.startswith('SV'):
-            return None
+            return ht
 
+        sort_expr = None
         if self._sort == CONSEQUENCE_SORT:
-            return hl.array([hl.float64(4.5)]).extend(ht._sort.map(hl.float64))
+            sort_expr = hl.array([hl.float64(4.5)]).extend(ht._sort.map(hl.float64))
         elif self._sort == OMIM_SORT:
-            return hl.array([hl.int64(0)]).extend(ht._sort)
+            sort_expr = hl.array([hl.int64(0)]).extend(ht._sort)
         elif self._sort_metadata:
-            return ht._sort[:1].extend(ht._sort)
+            sort_expr = ht._sort[:1].extend(ht._sort)
 
-        return None
+        if sort_expr is not None:
+            ht = ht.annotate(_sort=sort_expr)
+
+        return ht
 
     def _format_collected_rows(self, collected):
         data_types = [*self._data_type_queries, *[f'comp_het_{data_type}' for data_type in self._comp_het_hts]]
