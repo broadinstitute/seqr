@@ -1,5 +1,4 @@
 from collections import defaultdict, OrderedDict
-from datetime import datetime
 from django.contrib.auth.models import User
 from django.db.models import F
 import itertools
