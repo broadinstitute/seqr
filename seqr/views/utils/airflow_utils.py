@@ -135,11 +135,7 @@ def _upload_data_loading_files(projects: list[Project], is_internal: bool,
 
 
 def _get_dag_project_gs_path(project: str, genome_version: str, sample_type: str, is_internal: bool, callset: str):
-    if is_internal:
-        dag_dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f'_{_dag_dataset_type(sample_type, dataset_type)}'
-        dag_name = f'RDG_{sample_type}_Broad_{callset}{dag_dataset_type}'
-    else:
-        dag_name = f'AnVIL_{sample_type}'
+    dag_name = f'RDG_{sample_type}_Broad_{callset}' if is_internal else f'AnVIL_{sample_type}'
     dag_path = f'{SEQR_DATASETS_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_name}'
     return f'{dag_path}/base/projects/{project}/' if is_internal else f'{dag_path}/{project}/base/'
 

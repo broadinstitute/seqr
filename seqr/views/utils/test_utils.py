@@ -561,7 +561,6 @@ PROJECT_GUID = 'R0001_1kg'
 
 class AirflowTestCase(AnvilAuthenticationTestCase):
     ADDITIONAL_REQUEST_COUNT = 0
-    INITIAL_DAG_RUNS = []
 
     def setUp(self):
         self._dag_url = f'{MOCK_AIRFLOW_URL}/api/v1/dags/{self.DAG_NAME}'
@@ -570,7 +569,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
 
         # check dag running state
         responses.add(responses.GET, f'{self._dag_url}/dagRuns', headers=headers, json={
-            'dag_runs': self.INITIAL_DAG_RUNS or [{
+            'dag_runs': [{
                 'conf': {},
                 'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1',
                 'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
@@ -632,7 +631,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'state': 'running'}
         ]})
 
-    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, secondary_dag_names=None):
+    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, secondary_dag_name=None):
         self.mock_airflow_logger.info.assert_not_called()
 
         # Test triggering anvil dags
@@ -644,13 +643,13 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.assertEqual(len(responses.calls), call_count + self.ADDITIONAL_REQUEST_COUNT)
 
         dag_variables = self._get_dag_variables(additional_tasks_check=additional_tasks_check)
-        self._assert_airflow_calls(self.DAG_NAME, dag_variables, call_count, secondary_dag_names)
+        self._assert_airflow_calls(self.DAG_NAME, dag_variables, call_count, secondary_dag_name)
 
-    def _assert_airflow_calls(self, dag_name, dag_variables, call_count, secondary_dag_names, offset=0):
+    def _assert_airflow_calls(self, dag_name, dag_variables, call_count, secondary_dag_name, offset=0):
         dag_url = self._dag_url
 
         # check dag running state
-        dag_url = self._dag_url.replace(dag_name, secondary_dag_names[dag_name]) if secondary_dag_names else dag_url
+        dag_url = self._dag_url.replace(dag_name, secondary_dag_name) if secondary_dag_name else dag_url
         self.assertEqual(responses.calls[offset].request.url, f'{dag_url}/dagRuns')
         self.assertEqual(responses.calls[offset].request.method, "GET")
         self.assertEqual(responses.calls[offset].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
