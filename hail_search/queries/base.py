@@ -13,6 +13,10 @@ from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVE
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 
+# Number of filtered genes at which pre-filtering a table by gene-intervals does not improve performance
+# Estimated based on behavior for several representative gene lists
+MAX_GENE_INTERVALS = 100
+
 logger = logging.getLogger(__name__)
 
 
@@ -590,7 +594,7 @@ class BaseHailTableQuery(object):
             reference_genome = hl.get_reference(self.GENOME_VERSION)
             intervals = (intervals or []) + [reference_genome.x_contigs[0]]
 
-        if len(intervals) > 100 and len(intervals) == len(gene_ids or []):
+        if len(intervals) > MAX_GENE_INTERVALS and len(intervals) == len(gene_ids or []):
             return []
 
         parsed_intervals = [
