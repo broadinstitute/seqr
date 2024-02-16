@@ -1094,12 +1094,12 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         await self._assert_expected_search(
             [_sorted(VARIANT4, [-0.5260000228881836]), _sorted(VARIANT2, [-0.19699999690055847]),
-             _sorted(VARIANT1, [None]), _sorted(MULTI_FAMILY_VARIANT, [None])], omit_sample_type='SV_WES', sort='revel',
+             _sorted(VARIANT1, [0]), _sorted(MULTI_FAMILY_VARIANT, [0])], omit_sample_type='SV_WES', sort='revel',
         )
 
         await self._assert_expected_search(
             [_sorted(MULTI_FAMILY_VARIANT, [-0.009999999776482582]), _sorted(VARIANT2, [0]), _sorted(VARIANT4, [0]),
-             _sorted(VARIANT1, [None])], omit_sample_type='SV_WES', sort='splice_ai',
+             _sorted(VARIANT1, [0])], omit_sample_type='SV_WES', sort='splice_ai',
         )
 
         sort = 'in_omim'
@@ -1162,7 +1162,7 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         # sort applies to compound hets
         await self._assert_expected_search(
-            [[_sorted(VARIANT4, [-0.5260000228881836]), _sorted(VARIANT3, [None])],
+            [[_sorted(VARIANT4, [-0.5260000228881836]), _sorted(VARIANT3, [0])],
              _sorted(VARIANT2, [-0.19699999690055847])],
             sort='revel', inheritance_mode='recessive', omit_sample_type='SV_WES', **COMP_HET_ALL_PASS_FILTERS,
         )
@@ -1174,8 +1174,8 @@ class HailSearchTestCase(AioHTTPTestCase):
 
     async def test_multi_data_type_comp_het_sort(self):
         await self._assert_expected_search(
-            [[_sorted(GCNV_VARIANT4, [0]), _sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [11, 11])],
-             _sorted(GCNV_VARIANT3, [4.5, 0]), [_sorted(GCNV_VARIANT3, [0]), _sorted(GCNV_VARIANT4, [0])],
+            [_sorted(GCNV_VARIANT3, [4.5, 0]), [_sorted(GCNV_VARIANT3, [0]), _sorted(GCNV_VARIANT4, [0])],
+             [_sorted(GCNV_VARIANT4, [4.5, 0]), _sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [11, 11])],
              _sorted(VARIANT2, [11, 11]), [_sorted(VARIANT4, [11, 11]), _sorted(VARIANT3, [22, 24])]],
             sort='protein_consequence', inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS,
         )
@@ -1192,6 +1192,13 @@ class HailSearchTestCase(AioHTTPTestCase):
              [_sorted(VARIANT3, [12.5]), _sorted(VARIANT4, [12.5])],
              [GCNV_VARIANT3, GCNV_VARIANT4]],
             sort='pathogenicity', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS,
+        )
+
+        await self._assert_expected_search(
+            [[_sorted(VARIANT4, [-0.6869999766349792]), _sorted(VARIANT3, [0])], _sorted(VARIANT2, [0]),
+             [_sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [0]), GCNV_VARIANT4],
+             GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            sort='mut_pred', inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS,
         )
 
         await self._assert_expected_search(
