@@ -561,7 +561,7 @@ class BaseHailTableQuery(object):
         rs_id_set = hl.set(rs_ids)
         return ht.filter(rs_id_set.contains(ht.rsid))
 
-    def _parse_intervals(self, intervals, **kwargs):
+    def _parse_intervals(self, intervals, gene_ids=None, **kwargs):
         parsed_variant_keys = self._parse_variant_keys(**kwargs)
         if parsed_variant_keys:
             self._load_table_kwargs['variant_ht'] = hl.Table.parallelize(parsed_variant_keys).key_by(*self.KEY_FIELD)
@@ -581,6 +581,9 @@ class BaseHailTableQuery(object):
         if is_x_linked:
             reference_genome = hl.get_reference(self.GENOME_VERSION)
             intervals = (intervals or []) + [reference_genome.x_contigs[0]]
+
+        if len(intervals) > 100 and len(intervals) == len(gene_ids or []):
+            return []
 
         parsed_intervals = [
             hl.eval(hl.parse_locus_interval(interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
