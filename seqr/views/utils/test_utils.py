@@ -642,7 +642,14 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             call_count = 1
         self.assertEqual(len(responses.calls), call_count + self.ADDITIONAL_REQUEST_COUNT)
 
-        dag_variables = self._get_dag_variables(additional_tasks_check=additional_tasks_check)
+        dag_variable_overrides = self._get_dag_variable_overrides(additional_tasks_check)
+        dag_variables = {
+            'projects_to_run': [dag_variable_overrides['project']] if 'project' in dag_variable_overrides else self.PROJECTS,
+            'callset_paths': [f'gs://test_bucket/{dag_variable_overrides["callset_path"]}'],
+            'sample_source': dag_variable_overrides['sample_source'],
+            'sample_type': dag_variable_overrides['sample_type'],
+            'reference_genome': dag_variable_overrides.get('reference_genome', 'GRCh38'),
+        }
         self._assert_airflow_calls(self.DAG_NAME, dag_variables, call_count, secondary_dag_name)
 
     def _assert_airflow_calls(self, dag_name, dag_variables, call_count, secondary_dag_name, offset=0):
@@ -690,7 +697,8 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_not_called()
 
-    def _get_dag_variables(self, *args, **kwargs):
+    @staticmethod
+    def _get_dag_variable_overrides(additional_tasks_check):
         raise NotImplementedError
 
 

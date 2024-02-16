@@ -466,21 +466,20 @@ class LoadAnvilDataAPITest(AirflowTestCase):
     DAG_NAME = 'v03_pipeline-SNV_INDEL'
     ADDITIONAL_REQUEST_COUNT = 1
 
-    def _get_dag_variables(self, *args, **kwargs):
-        project, genome_version = self._expected_dag_params(**kwargs)
-        return {
-            'projects_to_run': [project],
-            'callset_paths': ['gs://test_bucket/test_path.vcf'],
+    @staticmethod
+    def _get_dag_variable_overrides(additional_tasks_check):
+        variables = {
+            'project': LoadAnvilDataAPITest.LOADING_PROJECT_GUID,
+            'callset_path': 'test_path.vcf',
             'sample_source': 'AnVIL',
             'sample_type': 'WES',
-            'reference_genome': genome_version,
         }
-
-    @staticmethod
-    def _expected_dag_params(project=None, genome_version=None, additional_tasks_check=False):
-        if project:
-            return project, genome_version
-        return (PROJECT1_GUID, 'GRCh37') if additional_tasks_check else (LoadAnvilDataAPITest.LOADING_PROJECT_GUID, 'GRCh38')
+        if additional_tasks_check:
+            variables.update({
+                'project': PROJECT1_GUID,
+                'reference_genome': 'GRCh37',
+            })
+        return variables
 
     def setUp(self):
         # Set up api responses
@@ -725,6 +724,13 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         }}]})
         self.assertEqual(responses.calls[-1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))
 
+        dag_json = {
+            'projects_to_run': [project.guid],
+            'callset_paths': ['gs://test_bucket/test_path.vcf'],
+            'sample_source': 'AnVIL',
+            'sample_type': 'WES',
+            'reference_genome': genome_version,
+        }
         sample_summary = '3 new'
         if test_add_data:
             sample_summary += ' and 7 re-loaded'
@@ -739,7 +745,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
     """.format(guid=project.guid, version=genome_version, workspace_name=project.workspace_name,
                    project_name=project.name, sample_summary=sample_summary,
                dag_id=self.DAG_NAME,
-               dag=json.dumps(self._get_dag_variables(project=project.guid, genome_version=genome_version), indent=4),
+               dag=json.dumps(dag_json, indent=4),
                )
         self.mock_slack.assert_called_with(
             SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message,
@@ -800,7 +806,13 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         """.format(
             guid=project.guid,
             dag_id=self.DAG_NAME,
-            dag=json.dumps(self._get_dag_variables(project=project.guid, genome_version=genome_version), indent=4),
+            dag=json.dumps({
+                'projects_to_run': [project.guid],
+                'callset_paths': ['gs://test_bucket/test_path.vcf'],
+                'sample_source': 'AnVIL',
+                'sample_type': 'WES',
+                'reference_genome': genome_version,
+            }, indent=4),
         )
 
         self.mock_slack.assert_any_call(

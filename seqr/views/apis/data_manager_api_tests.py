@@ -1322,13 +1322,12 @@ class LoadDataAPITest(AirflowTestCase):
     LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
     PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
 
-    def _get_dag_variables(self, *args, **kwargs):
+    @staticmethod
+    def _get_dag_variable_overrides(*args, **kwargs):
         return {
-            'projects_to_run': self.PROJECTS,
-            'callset_paths': ['gs://test_bucket/mito_callset.mt'],
+            'callset_path': 'mito_callset.mt',
             'sample_source': 'Broad_Internal',
             'sample_type': 'WGS',
-            'reference_genome': 'GRCh38',
         }
 
     @responses.activate
