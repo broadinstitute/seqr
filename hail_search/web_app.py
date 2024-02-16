@@ -1,4 +1,7 @@
 from aiohttp import web
+import asyncio
+import concurrent.futures
+import functools
 import json
 import os
 import hail as hl
@@ -42,16 +45,21 @@ def hl_json_dumps(obj):
 
 
 async def gene_counts(request: web.Request) -> web.Response:
-    return web.json_response(search_hail_backend(await request.json(), gene_counts=True), dumps=hl_json_dumps)
+    loop = asyncio.get_event_loop()
+    hail_results = await loop.run_in_executor(app.pool, functools.partial(search_hail_backend, await request.json(), gene_counts=True))
+    return web.json_response(hail_results, dumps=hl_json_dumps)
 
 
 async def search(request: web.Request) -> web.Response:
-    hail_results, total_results = search_hail_backend(await request.json())
+    loop = asyncio.get_event_loop()
+    hail_results, total_results = await loop.run_in_executor(app.pool, functools.partial(search_hail_backend, await request.json()))
     return web.json_response({'results': hail_results, 'total': total_results}, dumps=hl_json_dumps)
 
 
 async def lookup(request: web.Request) -> web.Response:
-    return web.json_response(lookup_variant(await request.json()), dumps=hl_json_dumps)
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(app.pool, functools.partial(lookup_variant, await request.json()))
+    return web.json_response(result, dumps=hl_json_dumps)
 
 
 async def status(request: web.Request) -> web.Response:
@@ -75,4 +83,5 @@ async def init_web_app():
         web.post('/gene_counts', gene_counts),
         web.post('/lookup', lookup),
     ])
+    app.pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     return app
