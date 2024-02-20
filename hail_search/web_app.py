@@ -10,6 +10,7 @@ import traceback
 
 from hail_search.search import search_hail_backend, load_globals, lookup_variant
 
+loop = asyncio.get_event_loop()
 logger = logging.getLogger(__name__)
 
 JAVA_OPTS_XSS = os.environ.get('JAVA_OPTS_XSS')
@@ -45,20 +46,17 @@ def hl_json_dumps(obj):
 
 
 async def gene_counts(request: web.Request) -> web.Response:
-    loop = asyncio.get_event_loop()
-    hail_results = await loop.run_in_executor(app.pool, functools.partial(search_hail_backend, await request.json(), gene_counts=True))
+    hail_results = await loop.run_in_executor(request.app.pool, functools.partial(search_hail_backend, await request.json(), gene_counts=True))
     return web.json_response(hail_results, dumps=hl_json_dumps)
 
 
 async def search(request: web.Request) -> web.Response:
-    loop = asyncio.get_event_loop()
-    hail_results, total_results = await loop.run_in_executor(app.pool, functools.partial(search_hail_backend, await request.json()))
+    hail_results, total_results = await loop.run_in_executor(request.app.pool, functools.partial(search_hail_backend, await request.json()))
     return web.json_response({'results': hail_results, 'total': total_results}, dumps=hl_json_dumps)
 
 
 async def lookup(request: web.Request) -> web.Response:
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(app.pool, functools.partial(lookup_variant, await request.json()))
+    result = await loop.run_in_executor(request.app.pool, functools.partial(lookup_variant, await request.json()))
     return web.json_response(result, dumps=hl_json_dumps)
 
 
@@ -83,5 +81,8 @@ async def init_web_app():
         web.post('/gene_counts', gene_counts),
         web.post('/lookup', lookup),
     ])
+    # The idea here is to run the hail queries off the main thread so that the
+    # event loop stays live for the /status check to be responsive.  We only
+    # run a single thread though so that hail queries block hail queries.
     app.pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     return app
