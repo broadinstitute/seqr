@@ -10,7 +10,6 @@ import traceback
 
 from hail_search.search import search_hail_backend, load_globals, lookup_variant
 
-loop = asyncio.get_event_loop()
 logger = logging.getLogger(__name__)
 
 JAVA_OPTS_XSS = os.environ.get('JAVA_OPTS_XSS')
@@ -46,16 +45,19 @@ def hl_json_dumps(obj):
 
 
 async def gene_counts(request: web.Request) -> web.Response:
+    loop = asyncio.get_running_loop()
     hail_results = await loop.run_in_executor(request.app.pool, functools.partial(search_hail_backend, await request.json(), gene_counts=True))
     return web.json_response(hail_results, dumps=hl_json_dumps)
 
 
 async def search(request: web.Request) -> web.Response:
-    hail_results, total_results = await loop.run_in_executor(request.app.pool, functools.partial(search_hail_backend, await request.json()))
+    loop = asyncio.get_running_loop()
+    hail_results, total_results = await request.app.loop.run_in_executor(request.app.pool, functools.partial(search_hail_backend, await request.json()))
     return web.json_response({'results': hail_results, 'total': total_results}, dumps=hl_json_dumps)
 
 
 async def lookup(request: web.Request) -> web.Response:
+    loop = asyncio.get_running_loop()
     result = await loop.run_in_executor(request.app.pool, functools.partial(lookup_variant, await request.json()))
     return web.json_response(result, dumps=hl_json_dumps)
 
