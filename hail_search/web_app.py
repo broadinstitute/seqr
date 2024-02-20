@@ -52,7 +52,7 @@ async def gene_counts(request: web.Request) -> web.Response:
 
 async def search(request: web.Request) -> web.Response:
     loop = asyncio.get_running_loop()
-    hail_results, total_results = await request.app.loop.run_in_executor(request.app.pool, functools.partial(search_hail_backend, await request.json()))
+    hail_results, total_results = await loop.run_in_executor(request.app.pool, functools.partial(search_hail_backend, await request.json()))
     return web.json_response({'results': hail_results, 'total': total_results}, dumps=hl_json_dumps)
 
 
