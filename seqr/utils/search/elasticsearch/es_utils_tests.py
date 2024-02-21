@@ -519,13 +519,13 @@ ES_MITO_WGS_VARIANT = {
           "mito_cn": 319.03225806451616,
           "contamination": 0.0,
           "dp": 5139.0,
-          "sample_id": "HG00733"
+          "sample_id": "HG00731"
         },
       ],
       "samples_gq_60_to_65" : [
-        "HG00733"
+        "HG00731"
       ],
-      "samples_num_alt_2" : [ "HG00733" ],
+      "samples_num_alt_2" : [ "HG00731" ],
       "AC" : 0,
       "AC_het" : 1,
       "AF" : 0.0,
@@ -949,6 +949,8 @@ MITO_MAPPING_FIELDS = [
     "ref",
     "rg37_locus",
     "rsid",
+    "samples_num_alt_1",
+    "samples_num_alt_2",
     "sortedTranscriptConsequences",
     "start",
     "variantId",
@@ -1440,6 +1442,9 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_invalid_get_es_variants(self, mock_logger):
         setup_responses()
+        mito_sample = Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME)
+        mito_sample.individual_id = 6
+        mito_sample.save()
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
 
@@ -1573,6 +1578,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_filtered_get_es_variants(self):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={
             'pathogenicity': {
                 'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting'],
@@ -1961,6 +1968,7 @@ class EsUtilsTest(TestCase):
         setup_responses()
         # The family has multiple data types loaded but only one loaded in an affected individual
         Sample.objects.get(individual_id=4, elasticsearch_index=SV_INDEX_NAME).delete()
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
 
         search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
@@ -1988,6 +1996,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_compound_het_get_es_variants(self):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={
             'qualityFilter': {'min_gq': 10},
             'annotations': {'frameshift': ['frameshift_variant']},
@@ -2020,6 +2030,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_compound_het_get_es_variants_secondary_annotation(self):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={
             'qualityFilter': {'min_gq': 10},
             'annotations': {'frameshift': ['frameshift_variant'], 'splice_ai': '0.5'},
@@ -2081,6 +2093,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_recessive_get_es_variants(self):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
             'qualityFilter': {'min_gq': 10, 'vcf_filter': 'pass'},
@@ -2146,6 +2160,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_multi_datatype_recessive_get_es_variants(self):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={
             'inheritance': {'mode': 'recessive'},
             'annotations': {'frameshift': ['frameshift_variant'], 'structural': ['DEL']}
@@ -2265,6 +2281,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_multi_datatype_secondary_annotations_recessive_get_es_variants(self):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={
             'annotations': {'structural': ['DEL']},
             'annotations_secondary': {'frameshift': ['frameshift_variant']},
@@ -2350,6 +2368,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_multi_datatype_secondary_annotations_comp_het_get_es_variants(self):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={
             'annotations': {'structural': ['DEL'], 'SCREEN': ['dELS']},
             'annotations_secondary': {'structural_consequence': ['LOF']},
@@ -2434,9 +2454,18 @@ class EsUtilsTest(TestCase):
 
         variants, total_results = query_variants(results_model, num_results=2)
         self.assertListEqual(variants, PARSED_ANY_AFFECTED_VARIANTS)
-        self.assertEqual(total_results, 5)
+        self.assertEqual(total_results, 10)
 
-        self.assertExecutedSearch(filters=[
+        self.assertExecutedSearches([dict(filters=[
+            ANNOTATION_QUERY,
+            {'bool': {
+                'should': [
+                    {'terms': {'samples_num_alt_1': ['HG00731']}},
+                    {'terms': {'samples_num_alt_2': ['HG00731']}},
+                    {'terms': {'samples': ['HG00731']}},
+                ]
+            }}
+        ], index=MITO_WGS_INDEX_NAME, start_index=0, size=2), dict(filters=[
             ANNOTATION_QUERY,
             {'bool': {
                 'should': [
@@ -2445,12 +2474,13 @@ class EsUtilsTest(TestCase):
                     {'terms': {'samples': ['HG00731', 'NA19675', 'NA20870']}},
                 ]
             }}
-        ])
+        ], index=INDEX_NAME, start_index=0, size=2)])
 
     @mock.patch('seqr.utils.search.elasticsearch.es_search.MAX_SEARCH_CLAUSES', 1)
     @urllib3_responses.activate
     def test_many_family_inheitance_get_es_variants(self):
         setup_responses()
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'recessive'},
         })
@@ -2556,6 +2586,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_multi_project_get_es_variants(self):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
             'qualityFilter': {'min_gq': 10},
@@ -2740,7 +2772,7 @@ class EsUtilsTest(TestCase):
         variants, total_results = query_variants(results_model, num_results=2)
         expected_variants = [PARSED_VARIANTS[0], PARSED_ANY_AFFECTED_MULTI_INDEX_VERSION_VARIANT]
         self.assertListEqual(variants, expected_variants)
-        self.assertEqual(total_results, 9)
+        self.assertEqual(total_results, 14)
 
         self.assertExecutedSearches([
             dict(
@@ -2754,6 +2786,17 @@ class EsUtilsTest(TestCase):
                         ]
                     }}
                 ], start_index=0, size=2, index=SECOND_INDEX_NAME),
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {'bool': {
+                        'should': [
+                            {'terms': {'samples_num_alt_1': ['HG00731']}},
+                            {'terms': {'samples_num_alt_2': ['HG00731']}},
+                            {'terms': {'samples': ['HG00731']}},
+                        ]
+                    }}
+                ], start_index=0, size=2, index=MITO_WGS_INDEX_NAME),
             dict(
                 filters=[
                     ANNOTATION_QUERY,
@@ -2785,7 +2828,7 @@ class EsUtilsTest(TestCase):
 
         gene_filter = {'terms': {'geneIds': ['ENSG00000228198']}}
         prefilter_search = dict(
-            filters=[gene_filter], index=f'{SV_INDEX_NAME},{SECOND_INDEX_NAME},{INDEX_NAME}',
+            filters=[gene_filter], index=f'{SV_INDEX_NAME},{MITO_WGS_INDEX_NAME},{SECOND_INDEX_NAME},{INDEX_NAME}',
             size=200, expected_source_fields=set(),
         )
         sv_search = dict(
@@ -2832,6 +2875,24 @@ class EsUtilsTest(TestCase):
                         '_name': 'F000011_11'
                     }}
             ], start_index=0, size=2, index=SECOND_INDEX_NAME),
+            dict(filters=[
+                gene_filter,
+                {
+                    'bool': {'must': [
+                        {'bool': {'should': [
+                            {'term': {'samples_num_alt_1': 'HG00731'}},
+                            {'term': {'samples_num_alt_2': 'HG00731'}},
+                        ]}}, {'bool': {'must_not': [
+                            {'term': {'samples_gq_0_to_5': 'HG00731'}},
+                            {'term': {'samples_gq_5_to_10': 'HG00731'}},
+                            {'term': {'samples_gq_0_to_5': 'HG00732'}},
+                            {'term': {'samples_gq_5_to_10': 'HG00732'}},
+                            {'term': {'samples_gq_0_to_5': 'HG00733'}},
+                            {'term': {'samples_gq_5_to_10': 'HG00733'}},
+                        ]}}
+                    ],
+                        '_name': 'F000002_2'
+                    }}], start_index=0, size=2, index=MITO_WGS_INDEX_NAME),
             dict(filters=[
                     gene_filter,
                     {'bool': {'should': [
@@ -2946,6 +3007,18 @@ class EsUtilsTest(TestCase):
                         ]
                     }}
                 ], start_index=0, size=2, index=SECOND_INDEX_NAME),
+            dict(
+                filters=[
+                    {'terms': {'geneIds': ['ENSG00000228198']}},
+                    ANNOTATION_QUERY,
+                    {'bool': {
+                        'should': [
+                            {'terms': {'samples_num_alt_1': ['HG00731']}},
+                            {'terms': {'samples_num_alt_2': ['HG00731']}},
+                            {'terms': {'samples': ['HG00731']}},
+                        ]
+                    }}
+                ], start_index=0, size=2, index=MITO_WGS_INDEX_NAME),
             dict(
                 filters=[
                     {'terms': {'geneIds': ['ENSG00000228198']}},
@@ -3098,6 +3171,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_get_es_variant_gene_counts(self):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
             'qualityFilter': {'min_gq': 10},
@@ -3135,6 +3210,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_multi_project_get_es_variant_gene_counts(self):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
             'qualityFilter': {'min_gq': 10},
@@ -3221,6 +3298,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_all_samples_any_affected_get_es_variant_gene_counts(self):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'any_affected'},
         })
@@ -3346,6 +3425,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_genotype_inheritance_filter(self):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         custom_affected = {'I000004_hg00731': 'N', 'I000005_hg00732': 'A'}
         custom_multi_affected = {'I000005_hg00732': 'A'}
 
