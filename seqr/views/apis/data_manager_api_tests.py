@@ -1314,29 +1314,21 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class LoadDataAPITest(object):
+class LoadDataAPITest(AirflowTestCase):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    DAG_NAME = 'v03_pipeline-MITO'
+    SECOND_DAG_NAME = 'v03_pipeline-GCNV'
     LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
     PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
 
-    SUCCESS_SLACK_TEMPLATE = """*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
-
-        Pedigree file(s) have been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/
-
-        Pedigree file(s) have been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project/
-
-        DAG {dag_id} is triggered with following:
-        ```{dag}```
-    """
-    ERROR_SLACK_TEMPLATE = """ERROR triggering internal WES SV loading: {error}
-        
-        DAG {dag_id} should be triggered with following: 
-        ```{dag}```
-        """
-
-    def patch_es(self, es_host):
-        patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', es_host)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+    @staticmethod
+    def _get_dag_variable_overrides(*args, **kwargs):
+        return {
+            'callset_path': 'mito_callset.mt',
+            'sample_source': 'Broad_Internal',
+            'sample_type': 'WGS',
+        }
 
     @responses.activate
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -1365,15 +1357,28 @@ class LoadDataAPITest(object):
         self.assert_airflow_calls()
         self._has_expected_gs_calls(mock_subprocess, mock_open)
 
-        slack_message_data = [{'dag_name': self.V3_DAG_NAME, 'dag': self.V3_DAG_JSON}]
-        if self.V2_DAG_NAME:
-            slack_message_data.append({'dag_name': self.V2_DAG_NAME, 'dag': self.V2_DAG_JSON})
-        self.assertEqual(self.mock_slack.call_count, len(slack_message_data))
-        self.mock_slack.assert_has_calls([
-            mock.call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, self.SUCCESS_SLACK_TEMPLATE.format(
-                dag_id=self._get_dag_id(data['dag_name']), **data,
-            )) for data in slack_message_data],
-        )
+        dag_json = """{
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "callset_paths": [
+        "gs://test_bucket/mito_callset.mt"
+    ],
+    "sample_source": "Broad_Internal",
+    "sample_type": "WGS",
+    "reference_genome": "GRCh38"
+}"""
+        message = f"""*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
+
+        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/
+
+        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project/
+
+        DAG {self.DAG_NAME} is triggered with following:
+        ```{dag_json}```
+    """
+        self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message)
 
         # Test loading trigger error
         self.mock_slack.reset_mock()
@@ -1387,7 +1392,7 @@ class LoadDataAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
-        self.assert_airflow_calls(trigger_error=True, secondary_dag_names=self.SECOND_DAG_NAMES)
+        self.assert_airflow_calls(trigger_error=True, secondary_dag_name=self.SECOND_DAG_NAME)
         self._has_expected_gs_calls(mock_subprocess, mock_open, is_second_dag=True, sample_type='WES')
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
@@ -1395,51 +1400,14 @@ class LoadDataAPITest(object):
         for error in errors:
             self.assertRegex(error, 'Connection refused by Responses')
 
-        self.assertEqual(self.mock_slack.call_count, len(slack_message_data))
-        self.mock_slack.assert_has_calls([
-            mock.call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, self.ERROR_SLACK_TEMPLATE.format(
-                error=errors[i],
-                dag_name=self.SECOND_DAG_NAMES[data['dag_name']],
-                dag_id=self._get_dag_id(data['dag_name'], name_map=self.SECOND_DAG_NAMES),
-                dag=data['dag'].replace('mito_callset.mt', 'sv_callset.vcf').replace(
-                    'WGS', 'WES').replace('MITO', 'GCNV').replace('v01', 'v03'),
-            )) for i, data in enumerate(slack_message_data)
-        ])
-
-
-class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
-
-    V2_DAG_NAME = None
-    V3_DAG_NAME = 'v03_pipeline-MITO'
-    SECOND_DAG_NAMES = {V3_DAG_NAME: 'v03_pipeline-GCNV'}
-    INITIAL_DAG_RUNS = []
-    ES_HOST = ''
-    V3_DAG_JSON = """{
-    "projects_to_run": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "callset_paths": [
-        "gs://test_bucket/mito_callset.mt"
-    ],
-    "sample_source": "Broad_Internal",
-    "sample_type": "WGS",
-    "reference_genome": "GRCh38"
-}"""
-
-    def setUp(self):
-        self.patch_es(self.ES_HOST)
-        super().setUp()
-
-    def _get_v3_dag_variables(self, *args, **kwargs):
-        return {
-            'projects_to_run': self.PROJECTS,
-            'callset_paths': ['gs://test_bucket/mito_callset.mt'],
-            'sample_source': 'Broad_Internal',
-            'sample_type': 'WGS',
-            'reference_genome': 'GRCh38',
-        }
+        dag_json = dag_json.replace('mito_callset.mt', 'sv_callset.vcf').replace(
+            'WGS', 'WES').replace('MITO', 'GCNV').replace('v01', 'v03')
+        error_message = f"""ERROR triggering internal WES SV loading: {errors[0]}
+        
+        DAG {self.SECOND_DAG_NAME} should be triggered with following: 
+        ```{dag_json}```
+        """
+        self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
     def _has_expected_gs_calls(self, mock_subprocess, mock_open, sample_type='WGS', **kwargs):
         mock_open.assert_has_calls([
@@ -1465,36 +1433,3 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
                 stdout=-1, stderr=-2, shell=True,  # nosec
             ) for project in self.PROJECTS
         ], any_order=True)
-
-
-class LoadEsDataAPITest(LoadHailDataAPITest):
-    V2_DAG_NAME = 'RDG_WGS_Broad_Internal_MITO'
-    SECOND_DAG_NAMES = {V2_DAG_NAME: 'RDG_WES_Broad_Internal_GCNV', **LoadHailDataAPITest.SECOND_DAG_NAMES}
-    ES_HOST = 'testhost'
-    V2_DAG_JSON = """{
-    "active_projects": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "projects_to_run": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "vcf_path": "gs://test_bucket/mito_callset.mt",
-    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01"
-}"""
-
-    def _get_v2_dag_variables(self, **kwargs):
-        return {
-            'active_projects': self.PROJECTS,
-            'projects_to_run': self.PROJECTS,
-            'vcf_path': 'gs://test_bucket/mito_callset.mt',
-            'version_path': 'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01',
-        }
-
-    def _has_expected_gs_calls(self, mock_subprocess, mock_open, is_second_dag=False, **kwargs):
-        super()._has_expected_gs_calls(mock_subprocess, mock_open, **kwargs)
-
-        dag_name = self.SECOND_DAG_NAMES[self.V2_DAG_NAME] if is_second_dag else self.V2_DAG_NAME
-        mock_subprocess.assert_called_with(
-            f'gsutil ls gs://seqr-datasets/v02/GRCh38/{dag_name}', stdout=-1, stderr=-1, shell=True)  # nosec
