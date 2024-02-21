@@ -21,6 +21,13 @@ SV_WGS_SAMPLE_DATA = [{
     'affected': 'A', 'sample_id': 'NA21234',
 }]
 
+EXPECTED_MITO_SAMPLE_DATA = deepcopy(FAMILY_2_MITO_SAMPLE_DATA)
+EXPECTED_MITO_SAMPLE_DATA['MITO'][0].update({'individual_guid': 'I000004_hg00731', 'sample_id': 'HG00731', 'affected': 'A'})
+EXPECTED_MITO_SAMPLE_DATA_WITH_SEX = deepcopy(EXPECTED_MITO_SAMPLE_DATA)
+EXPECTED_MITO_SAMPLE_DATA_WITH_SEX['MITO'][0].update({'sex': 'F'})
+
+ALL_EXPECTED_SAMPLE_DATA = {**EXPECTED_SAMPLE_DATA, **EXPECTED_MITO_SAMPLE_DATA}
+
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HOST)
 class HailSearchUtilsTests(SearchTestHelper, TestCase):
@@ -34,8 +41,8 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'results': HAIL_BACKEND_VARIANTS, 'total': 5,
         })
 
-    def _test_minimal_search_call(self, expected_search_body=None, call_offset=-1, url_path='search', **kwargs):
-        expected_search = expected_search_body or get_hail_search_body(genome_version='GRCh37', **kwargs)
+    def _test_minimal_search_call(self, expected_search_body=None, call_offset=-1, url_path='search', sample_data=ALL_EXPECTED_SAMPLE_DATA, **kwargs):
+        expected_search = expected_search_body or get_hail_search_body(genome_version='GRCh37', sample_data=sample_data, **kwargs)
 
         executed_request = responses.calls[call_offset].request
         self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')
@@ -86,7 +93,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.search_model.search['locus'] = {'rawVariantItems': raw_variant_locus}
         query_variants(self.results_model, user=self.user, sort='in_omim')
         self._test_expected_search_call(
-            num_results=2,  dataset_type='SNV_INDEL', omit_sample_type='SV_WES',
+            num_results=2,  dataset_type='SNV_INDEL', sample_data={'SNV_INDEL': EXPECTED_SAMPLE_DATA['SNV_INDEL']},
             sort='in_omim', sort_metadata=['ENSG00000223972', 'ENSG00000135953'],
             **VARIANT_ID_SEARCH,
         )
@@ -143,7 +150,8 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='x_linked_recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
-            search_fields=['annotations', 'annotations_secondary'], sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX,
+            # Follow up: can't have x-linked MITO variants
+            search_fields=['annotations', 'annotations_secondary'], sample_data={**EXPECTED_SAMPLE_DATA_WITH_SEX, **EXPECTED_MITO_SAMPLE_DATA_WITH_SEX},
             omit_sample_type='SV_WES',
         )
 
@@ -167,13 +175,16 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         self.search_model.search['locus'] = {'rawItems': raw_locus}
         query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(**LOCATION_SEARCH, sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data})
+        # Follow up: search should not include MITO data
+        self._test_expected_search_call(**LOCATION_SEARCH, sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data, **EXPECTED_MITO_SAMPLE_DATA})
 
         self.results_model.families.set(Family.objects.filter(project_id=1))
         query_variants(self.results_model, user=self.user)
+        # Follow up: search should not include MITO data
         self._test_expected_search_call(**LOCATION_SEARCH, sample_data={
             'SNV_INDEL': FAMILY_1_SAMPLE_DATA['SNV_INDEL'] + EXPECTED_SAMPLE_DATA['SNV_INDEL'],
             'SV_WES': sv_sample_data['SV_WES'],
+            **EXPECTED_MITO_SAMPLE_DATA,
         })
 
         del self.search_model.search['locus']
@@ -286,7 +297,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         get_single_variant(self.families, 'M-10195-C-A', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[['M', 10195, 'C', 'A']], variant_keys=[],
-            num_results=1, sample_data=FAMILY_2_MITO_SAMPLE_DATA)
+            num_results=1, sample_data=EXPECTED_MITO_SAMPLE_DATA)
 
         with self.assertRaises(InvalidSearchException) as cm:
             get_single_variant(self.families, '1-91502721-G-A', user=self.user, return_all_queried_families=True)
@@ -309,10 +320,11 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     def test_get_variants_for_variant_ids(self):
         variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']
         get_variants_for_variant_ids(self.families, variant_ids, user=self.user)
+        # Follow up: should not query MITO variants
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
             variant_keys=['prefix-938_DEL'],
-            num_results=3, sample_data=ALL_AFFECTED_SAMPLE_DATA)
+            num_results=3, sample_data={**ALL_AFFECTED_SAMPLE_DATA, **EXPECTED_MITO_SAMPLE_DATA})
 
         get_variants_for_variant_ids(self.families, variant_ids, user=self.user, dataset_type='SNV_INDEL')
         self._test_minimal_search_call(
