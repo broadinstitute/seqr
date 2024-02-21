@@ -1304,8 +1304,13 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'projects': [
-            {'dataTypeLastLoaded': None, 'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg'},
             {'dataTypeLastLoaded': '2018-02-05T06:42:55.397Z', 'name': 'Non-Analyst Project', 'projectGuid': 'R0004_non_analyst_project'},
+        ]})
+
+        response = self.client.get(url.replace('SV', 'MITO'))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'projects': [
+            {'dataTypeLastLoaded': None, 'name': 'Non-Analyst Project', 'projectGuid': 'R0004_non_analyst_project'},
         ]})
 
         # test data manager access
