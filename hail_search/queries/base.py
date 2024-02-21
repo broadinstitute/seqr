@@ -249,19 +249,13 @@ class BaseHailTableQuery(object):
         table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
-            if self._should_skip_ht(ht, skip_missing_field):
+            if skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field])):
                 return None
             ht_globals = hl.read_table(table_path).globals
             if drop_globals:
                 ht_globals = ht_globals.drop(*drop_globals)
             return ht.annotate_globals(**hl.eval(ht_globals))
-
-        ht = hl.read_table(table_path, **self._load_table_kwargs)
-        return None if self._should_skip_ht(ht, skip_missing_field) else ht
-
-    @staticmethod
-    def _should_skip_ht(ht, skip_missing_field):
-        return skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field]))
+        return hl.read_table(table_path, **self._load_table_kwargs)
 
     @staticmethod
     def _query_table_annotations(ht, query_table_path):
@@ -300,8 +294,6 @@ class BaseHailTableQuery(object):
         if exception_messages:
             raise HTTPBadRequest(reason='; '.join(exception_messages))
 
-        if len(project_samples) > len(filtered_project_hts):
-            logger.info(f'Found {len(filtered_project_hts)} {self.DATA_TYPE} projects with matched entries')
         return filtered_project_hts
 
     def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
