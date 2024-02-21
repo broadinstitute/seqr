@@ -43,11 +43,11 @@ class SearchUtilsTests(SearchTestHelper):
         super(SearchUtilsTests, self).set_up()
 
         self.non_affected_search_samples = Sample.objects.filter(guid__in=[
-             'S000149_hg00733',  'S000137_na20874',
+             'S000137_na20874',
         ])
         self.affected_search_samples = Sample.objects.filter(guid__in=[
             'S000132_hg00731', 'S000133_hg00732', 'S000134_hg00733', 'S000135_na20870',
-            'S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733',
+            'S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733', 'S000149_hg00733',
         ])
         self.search_samples = list(self.affected_search_samples) + list(self.non_affected_search_samples)
 
