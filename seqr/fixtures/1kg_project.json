@@ -1273,10 +1273,10 @@
         "created_by": null,
         "last_modified_date": "2022-03-13T09:07:49.937Z",
         "elasticsearch_index": "test_index_mito_wgs",
-        "sample_id": "HG00733",
-        "sample_type": "WGS",
+        "sample_id": "HG00731",
+        "sample_type": "WES",
         "is_active": true,
-        "individual": 6,
+        "individual": 4,
         "dataset_type": "MITO",
         "loaded_date": "2022-02-05T06:42:55.397Z"
     }
