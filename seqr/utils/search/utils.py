@@ -91,7 +91,7 @@ def _get_families_search_data(families, dataset_type=None):
         if not samples:
             raise InvalidSearchException(f'Unable to search against dataset type "{dataset_type}"')
 
-    projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name')
+    projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name').distinct()
     project_versions = defaultdict(set)
     for genome_version, project_name in projects:
         project_versions[genome_version].add(project_name)

@@ -177,6 +177,11 @@ def _parse_location_search(search):
             {field: gene[f'{field}{search["genome_version"].title()}'] for field in ['chrom', 'start', 'end']}
             for gene in genes.values()
         ]
+        chromosomes = {gene['chrom'] for gene in gene_coords}
+        if 'M' not in chromosomes:
+            search['sample_data'].pop(Sample.DATASET_TYPE_MITO_CALLS, None)
+        elif chromosomes == {'M'} and Sample.DATASET_TYPE_MITO_CALLS in search['sample_data']:
+            search['sample_data'] = {Sample.DATASET_TYPE_MITO_CALLS: search['sample_data'][Sample.DATASET_TYPE_MITO_CALLS]}
         parsed_intervals = [_format_interval(**interval) for interval in intervals or []] + [
             '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
 
