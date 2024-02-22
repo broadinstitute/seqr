@@ -251,8 +251,11 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     dataset_type, secondary_dataset_type, lookup_dataset_type = _search_dataset_type(parsed_search)
     parsed_search.update({'dataset_type': dataset_type, 'secondary_dataset_type': secondary_dataset_type})
     search_dataset_type = None
-    if dataset_type and dataset_type != ALL_DATA_TYPES and (secondary_dataset_type is None or secondary_dataset_type == dataset_type):
-        search_dataset_type = lookup_dataset_type or dataset_type
+    if dataset_type and dataset_type != ALL_DATA_TYPES:
+        if secondary_dataset_type is None or secondary_dataset_type == dataset_type:
+            search_dataset_type = lookup_dataset_type or dataset_type
+        elif dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+            search_dataset_type = DATASET_TYPE_NO_MITO
 
     samples, genome_version = _get_families_search_data(families, dataset_type=search_dataset_type)
     if parsed_search.get('inheritance'):

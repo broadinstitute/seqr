@@ -123,7 +123,17 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         )
 
         self.search_model.search['inheritance']['filter'] = {}
-        self.search_model.search['annotations_secondary'] = {'structural_consequence': ['LOF']}
+        self.search_model.search['annotations_secondary'] = self.search_model.search['annotations']
+        sv_annotations = {'structural_consequence': ['LOF']}
+        self.search_model.search['annotations'] = sv_annotations
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            inheritance_mode='recessive', dataset_type='SV', secondary_dataset_type='SNV_INDEL',
+            search_fields=['annotations', 'annotations_secondary'], sample_data=EXPECTED_SAMPLE_DATA,
+        )
+
+        self.search_model.search['annotations'] = self.search_model.search['annotations_secondary']
+        self.search_model.search['annotations_secondary'] = sv_annotations
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SV',
