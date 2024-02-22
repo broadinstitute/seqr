@@ -9,7 +9,7 @@ import StateDataLoader from 'shared/components/StateDataLoader'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { helpLabel } from 'shared/components/form/FormHelpers'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
-import { Variant } from 'shared/components/panel/variants/Variants'
+import Variants from 'shared/components/panel/variants/Variants'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
 
 const FIELDS = [
@@ -31,7 +31,7 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
-const VariantDisplay = ({ variants }) => (variants || []).map(variant => <Variant variant={variant} />)
+const VariantDisplay = ({ variants }) => <Variants variants={variants} />
 
 VariantDisplay.propTypes = {
   variants: PropTypes.arrayOf(PropTypes.object),
@@ -54,12 +54,16 @@ const VariantLookup = ({ queryParams, receiveData, updateQueryParams }) => (
         <Grid.Column width={5} />
       </Grid.Row>
     )}
-    <StateDataLoader
-      url={queryParams.variantId && '/api/variant_lookup'}
-      query={queryParams}
-      parseResponse={receiveData}
-      childComponent={VariantDisplay}
-    />
+    <Grid.Row>
+      <Grid.Column width={16}>
+        <StateDataLoader
+          url={queryParams.variantId && '/api/variant_lookup'}
+          query={queryParams}
+          parseResponse={receiveData}
+          childComponent={VariantDisplay}
+        />
+      </Grid.Column>
+    </Grid.Row>
   </Grid>
 )
 
