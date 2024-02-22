@@ -329,14 +329,15 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     def test_get_variants_for_variant_ids(self):
         variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']
         get_variants_for_variant_ids(self.families, variant_ids, user=self.user)
-        # Follow up: should not query MITO variants
+        expected_sample_data = {k: ALL_AFFECTED_SAMPLE_DATA[k] for k in ['SNV_INDEL', 'SV_WES']}
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
             variant_keys=['prefix-938_DEL'],
-            num_results=3, sample_data={**ALL_AFFECTED_SAMPLE_DATA, **EXPECTED_MITO_SAMPLE_DATA})
+            num_results=3, sample_data=expected_sample_data)
 
+        del expected_sample_data['SV_WES']
         get_variants_for_variant_ids(self.families, variant_ids, user=self.user, dataset_type='SNV_INDEL')
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
             variant_keys=[],
-            num_results=2, sample_data={'SNV_INDEL': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL']})
+            num_results=2, sample_data=expected_sample_data)
