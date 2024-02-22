@@ -107,7 +107,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         raw_locus = 'CDC7, chr2:1234-5678, chr7:100-10100%10, ENSG00000177000'
         self.search_model.search['locus']['rawItems'] = raw_locus
         query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(**LOCATION_SEARCH)
+        self._test_expected_search_call(**LOCATION_SEARCH, sample_data=EXPECTED_SAMPLE_DATA)
 
         self.search_model.search['locus']['excludeLocations'] = True
         query_variants(self.results_model, user=self.user)
@@ -173,18 +173,27 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(**VARIANT_ID_SEARCH, num_results=2,  dataset_type='SNV_INDEL', sample_data=MULTI_PROJECT_SAMPLE_DATA)
 
-        self.search_model.search['locus'] = {'rawItems': raw_locus}
+        self.search_model.search['locus'] = {'rawItems': 'M:10-100 '}
         query_variants(self.results_model, user=self.user)
-        # Follow up: search should not include MITO data
-        self._test_expected_search_call(**LOCATION_SEARCH, sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data, **EXPECTED_MITO_SAMPLE_DATA})
+        self._test_expected_search_call(intervals=['M:10-100'], sample_data=EXPECTED_MITO_SAMPLE_DATA)
+
+        self.search_model.search['locus']['rawItems'] += raw_locus
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            gene_ids=LOCATION_SEARCH['gene_ids'],
+            intervals=['M:10-100'] + LOCATION_SEARCH['intervals'],
+            sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data, **EXPECTED_MITO_SAMPLE_DATA},
+        )
+
+        self.search_model.search['locus']['rawItems'] = raw_locus
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(**LOCATION_SEARCH, sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data})
 
         self.results_model.families.set(Family.objects.filter(project_id=1))
         query_variants(self.results_model, user=self.user)
-        # Follow up: search should not include MITO data
         self._test_expected_search_call(**LOCATION_SEARCH, sample_data={
             'SNV_INDEL': FAMILY_1_SAMPLE_DATA['SNV_INDEL'] + EXPECTED_SAMPLE_DATA['SNV_INDEL'],
             'SV_WES': sv_sample_data['SV_WES'],
-            **EXPECTED_MITO_SAMPLE_DATA,
         })
 
         del self.search_model.search['locus']
