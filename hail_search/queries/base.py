@@ -13,6 +13,10 @@ from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVE
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 
+# Number of filtered genes at which pre-filtering a table by gene-intervals does not improve performance
+# Estimated based on behavior for several representative gene lists
+MAX_GENE_INTERVALS = 100
+
 logger = logging.getLogger(__name__)
 
 
@@ -569,7 +573,7 @@ class BaseHailTableQuery(object):
         rs_id_set = hl.set(rs_ids)
         return ht.filter(rs_id_set.contains(ht.rsid))
 
-    def _parse_intervals(self, intervals, **kwargs):
+    def _parse_intervals(self, intervals, gene_ids=None, **kwargs):
         parsed_variant_keys = self._parse_variant_keys(**kwargs)
         if parsed_variant_keys:
             self._load_table_kwargs['variant_ht'] = hl.Table.parallelize(parsed_variant_keys).key_by(*self.KEY_FIELD)
@@ -589,6 +593,9 @@ class BaseHailTableQuery(object):
         if is_x_linked:
             reference_genome = hl.get_reference(self.GENOME_VERSION)
             intervals = (intervals or []) + [reference_genome.x_contigs[0]]
+
+        if len(intervals) > MAX_GENE_INTERVALS and len(intervals) == len(gene_ids or []):
+            return []
 
         parsed_intervals = [
             hl.eval(hl.parse_locus_interval(interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
