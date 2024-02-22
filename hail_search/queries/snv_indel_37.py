@@ -7,10 +7,7 @@ class SnvIndelHailTableQuery37(SnvIndelHailTableQuery):
     GENOME_VERSION = GENOME_VERSION_GRCh37
     PREDICTION_FIELDS_CONFIG = SnvIndelHailTableQuery.PREDICTION_FIELDS_CONFIG_ALL_BUILDS
     LIFTOVER_ANNOTATION_FIELDS = {}
+    ANNOTATION_OVERRIDE_FIELDS = SnvIndelHailTableQuery.ANNOTATION_OVERRIDE_FIELDS[:-1]
 
     def _should_add_chr_prefix(self):
         return False
-
-    def _get_annotation_override_filters(self, annotations, *args, **kwargs):
-        annotations = {k: v for k, v in annotations.items() if k != SCREEN_KEY}
-        return super()._get_annotation_override_filters(annotations, *args, **kwargs)

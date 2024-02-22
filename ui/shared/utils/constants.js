@@ -380,14 +380,14 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
     label: 'Sex',
     format: sex => SEX_LOOKUP[sex],
     width: 3,
-    description: 'Male or Female, leave blank if unknown',
+    description: 'Male, Female, or Unknown',
     formFieldProps: { component: RadioGroup, options: SEX_OPTIONS },
   },
   [INDIVIDUAL_FIELD_AFFECTED]: {
     label: 'Affected Status',
     format: affected => AFFECTED_LOOKUP[affected],
     width: 4,
-    description: 'Affected or Unaffected, leave blank if unknown',
+    description: 'Affected, Unaffected, or Unknown',
     formFieldProps: { component: RadioGroup, options: AFFECTED_OPTIONS },
   },
   [INDIVIDUAL_FIELD_NOTES]: { label: 'Notes', format: stripMarkdown, description: 'free-text notes related to this individual' },
@@ -1328,7 +1328,7 @@ export const ORDERED_PREDICTOR_FIELDS = [
     infoTitle: 'Predicted Consequence',
     fieldTitle: 'SpliceAI',
     getHref: ({ chrom, pos, ref, alt, genomeVersion }) => (
-      `https://spliceailookup.broadinstitute.org/#variant=${chrom}-${pos}-${ref}-${alt}&hg=${genomeVersion}&distance=1000&mask=1`
+      `https://spliceailookup.broadinstitute.org/#variant=${chrom}-${pos}-${ref}-${alt}&hg=${genomeVersion}&distance=1000&mask=0`
     ),
   },
   { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.484, 0.79, 0.867, undefined], fieldTitle: 'PrimateAI', requiresCitation: true },

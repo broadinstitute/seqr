@@ -1,5 +1,6 @@
 from collections import defaultdict
 from django.db.models import F, Min, Count
+from urllib3.connectionpool import connection_from_url
 
 import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
@@ -24,7 +25,9 @@ def _execute_search(search_body, user, path='search', exception_map=None):
 
 
 def ping_hail_backend():
-    requests.get(_hail_backend_url('status'), timeout=5).raise_for_status()
+    response = connection_from_url(_hail_backend_url('status')).urlopen('HEAD', '/status', timeout=5, retries=3)
+    if response.status >= 400:
+        raise requests.HTTPError(f'{response.status}: {response.reason or response.text}', response=response)
 
 
 def get_hail_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100,
@@ -74,14 +77,37 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     return response_json['results']
 
 
-def hail_variant_lookup(user, variant_id, samples=None, **kwargs):
+def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_type=None, **kwargs):
+    data_type = dataset_type.replace('_only', '')
+    is_sv = data_type == Sample.DATASET_TYPE_SV_CALLS
+    if is_sv:
+        if not sample_type:
+            from seqr.utils.search.utils import InvalidSearchException
+            raise InvalidSearchException('Sample type must be specified to look up a structural variant')
+        data_type = f'{data_type}_{sample_type}'
+
     body = {
         'variant_id': variant_id,
+        'data_type': data_type,
         **kwargs,
     }
+    sample_data = None
     if samples:
-        body['sample_data'] = _get_sample_data(samples)[Sample.DATASET_TYPE_VARIANT_CALLS]
-    return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
+        sample_data = _get_sample_data(samples)
+        body['sample_data'] = sample_data.pop(data_type)
+    variant = _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
+    variants = [variant]
+
+    if is_sv and sample_data and variant['svType'] in {'DEL', 'DUP'}:
+        del body['variant_id']
+        body.update({
+            'sample_data': sample_data,
+            'padded_interval': {'chrom': variant['chrom'], 'start': variant['pos'], 'end': variant['end'], 'padding': 0.2},
+            'annotations': {'structural': [variant['svType'], f"gCNV_{variant['svType']}"]}
+        })
+        variants += _execute_search(body, user)['results']
+
+    return variants
 
 
 def _format_search_body(samples, genome_version, num_results, search):

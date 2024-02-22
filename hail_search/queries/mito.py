@@ -5,6 +5,7 @@ from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_
     PATHOGENICTY_HGMD_SORT_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
+MAX_LOAD_INTERVALS = 1000
 
 def _clinvar_sort(clinvar_field, r):
     return hl.or_else(r[clinvar_field].pathogenicity_id, ABSENT_PATH_SORT_OFFSET)
@@ -57,7 +58,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
     MITO_ANNOTATION_FIELDS = {
         'commonLowHeteroplasmy': lambda r: r.common_low_heteroplasmy,
-        'highConstraintRegion': lambda r: r.high_constraint_region,
+        'highConstraintRegion': (
+            lambda r: r.high_constraint_region if hasattr(r, 'high_constraint_region') else r.high_constraint_region_mito
+        ),
         'mitomapPathogenic': lambda r: r.mitomap.pathogenic,
     }
     BASE_ANNOTATION_FIELDS = {
@@ -135,7 +138,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def _parse_intervals(self, intervals, exclude_intervals=False, **kwargs):
         parsed_intervals = super()._parse_intervals(intervals,**kwargs)
-        if parsed_intervals and not exclude_intervals:
+        if parsed_intervals and not exclude_intervals and len(parsed_intervals) < MAX_LOAD_INTERVALS:
             self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
         return parsed_intervals
 
@@ -197,41 +200,62 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _prefilter_entries_table(self, ht, parsed_intervals=None, exclude_intervals=False, **kwargs):
         if exclude_intervals and parsed_intervals:
             ht = hl.filter_intervals(ht, parsed_intervals, keep=False)
+        elif len(parsed_intervals or []) >= MAX_LOAD_INTERVALS:
+            ht = hl.filter_intervals(ht, parsed_intervals)
         return ht
 
-    def _get_transcript_consequence_filter(self, allowed_consequence_ids, allowed_consequences):
+    def _get_allowed_consequence_ids(self, annotations):
+        consequence_ids = super()._get_allowed_consequence_ids(annotations)
         canonical_consequences = {
-            c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
+            c.replace('__canonical', '') for consequences in annotations.values()
+            if consequences for c in consequences if c.endswith('__canonical')
         }
-        canonical_consequences -= allowed_consequences
+        if canonical_consequences:
+            canonical_consequence_ids = super()._get_allowed_consequence_ids({'canonical': canonical_consequences})
+            canonical_consequence_ids -= consequence_ids
+            consequence_ids.update({f'{cid}__canonical' for cid in canonical_consequence_ids})
+        return consequence_ids
+
+    @staticmethod
+    def _get_allowed_transcripts_filter(allowed_consequence_ids):
+        canonical_consequences = set()
+        any_consequences = set()
+        for c in allowed_consequence_ids:
+            if str(c).endswith('__canonical'):
+                canonical_consequences.add(int(c.replace('__canonical', '')))
+            else:
+                any_consequences.add(c)
 
         all_consequence_ids = None
         if canonical_consequences:
-            all_consequence_ids = hl.set({
-                *self._get_allowed_consequence_ids(canonical_consequences), *allowed_consequence_ids,
-            })
-        elif not allowed_consequence_ids:
-            return None
+            all_consequence_ids = hl.set({*canonical_consequences, *any_consequences})
 
-        allowed_consequence_ids = hl.set(allowed_consequence_ids) if allowed_consequence_ids else hl.empty_set(hl.tint)
+        allowed_consequence_ids = hl.set(any_consequences) if any_consequences else hl.empty_set(hl.tint)
         return lambda tc: tc.consequence_term_ids.any(
             (hl.if_else(hl.is_defined(tc.canonical), all_consequence_ids, allowed_consequence_ids)
              if canonical_consequences else allowed_consequence_ids
         ).contains)
 
-    def _get_annotation_override_filters(self, annotations, pathogenicity=None, **kwargs):
-        annotation_filters = []
-
+    def _get_annotation_override_fields(self, annotations, pathogenicity=None, **kwargs):
+        annotation_overrides = super()._get_annotation_override_fields(annotations, **kwargs)
         for key in self.PATHOGENICITY_FILTERS.keys():
             path_terms = (pathogenicity or {}).get(key)
             if path_terms:
-                annotation_filters.append(self._has_path_expr(path_terms, key))
+                annotation_overrides[key] = path_terms
+        return annotation_overrides
+
+    def _get_annotation_override_filters(self, ht, annotation_overrides):
+        annotation_filters = []
+
+        for key in self.PATHOGENICITY_FILTERS.keys():
+            if key in annotation_overrides:
+                annotation_filters.append(self._has_path_expr(ht, annotation_overrides[key], key))
 
         return annotation_filters
 
-    def _frequency_override_filter(self, pathogenicity):
+    def _frequency_override_filter(self, ht, pathogenicity):
         path_terms = self._get_clinvar_path_filters(pathogenicity)
-        return self._has_path_expr(path_terms, CLINVAR_KEY) if path_terms else None
+        return self._has_path_expr(ht, path_terms, CLINVAR_KEY) if path_terms else None
 
     @staticmethod
     def _get_clinvar_path_filters(pathogenicity):
@@ -239,7 +263,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
         }
 
-    def _has_path_expr(self, terms, field):
+    def _has_path_expr(self, ht, terms, field):
         subfield, range_configs = self.PATHOGENICITY_FILTERS[field]
         field_name = self.PATHOGENICITY_FIELD_MAP.get(field, field)
         enum_lookup = self._get_enum_lookup(field_name, subfield)
@@ -254,7 +278,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ranges.append([None, None])
 
         ranges = [r for r in ranges if r[0] is not None]
-        value = self._ht[field_name][f'{subfield}_id']
+        value = ht[field_name][f'{subfield}_id']
         return hl.any(lambda r: (value >= r[0]) & (value <= r[1]), ranges)
 
     def _format_results(self, ht, *args, **kwargs):
