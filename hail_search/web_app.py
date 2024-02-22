@@ -44,23 +44,23 @@ def _hl_json_default(o):
 def hl_json_dumps(obj):
     return json.dumps(obj, default=_hl_json_default)
 
-async def sync_to_async(request: web.Request, func: Callable, *args, **kwargs):
+async def sync_to_async_hail_query(request: web.Request, query: Callable, *args, **kwargs):
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(request.app.pool, functools.partial(func, *args, **kwargs))
+    return await loop.run_in_executor(request.app.pool, functools.partial(query, await request.json(), *args, **kwargs))
 
 
 async def gene_counts(request: web.Request) -> web.Response:
-    hail_results = await sync_to_async(request, search_hail_backend, await request.json(), gene_counts=True)
+    hail_results = await sync_to_async_hail_query(request, search_hail_backend, gene_counts=True)
     return web.json_response(hail_results, dumps=hl_json_dumps)
 
 
 async def search(request: web.Request) -> web.Response:
-    hail_results, total_results = await sync_to_async(request, search_hail_backend, await request.json())
+    hail_results, total_results = await sync_to_async_hail_query(request, search_hail_backend)
     return web.json_response({'results': hail_results, 'total': total_results}, dumps=hl_json_dumps)
 
 
 async def lookup(request: web.Request) -> web.Response:
-    result = await sync_to_async(request, lookup_variant, await request.json())
+    result = await sync_to_async_hail_query(request, lookup_variant)
     return web.json_response(result, dumps=hl_json_dumps)
 
 
