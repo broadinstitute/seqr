@@ -84,7 +84,8 @@ async def init_web_app():
         web.post('/lookup', lookup),
     ])
     # The idea here is to run the hail queries off the main thread so that the
-    # event loop stays live for the /status check to be responsive.  We only
-    # run a single thread though so that hail queries block hail queries.
+    # event loop stays live and the /status check is responsive.  We only
+    # run a single thread, though, so that hail queries block hail queries
+    # and we never run more than a single hail query at a time.
     app.pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     return app
