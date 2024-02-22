@@ -57,7 +57,7 @@ def send_project_notification(project, notification, email_body, subject):
     notify.send(project, recipient=users, verb=notification)
     send_html_email(
         email_body,
-        to=users.values_list('email', flat=True),
+        to=list(users.values_list('email', flat=True)),
         subject=subject,
         process_message=_set_bulk_notification_stream,
     )

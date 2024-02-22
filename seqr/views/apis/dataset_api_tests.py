@@ -45,6 +45,9 @@ MOCK_AIRTABLE_URL = 'http://testairtable'
 MOCK_RECORD_ID = 'recH4SEO1CeoIlOiE'
 MOCK_RECORDS = {'records': [{'id': MOCK_RECORD_ID, 'fields': {'Status': 'Loading'}}]}
 
+SLACK_MESSAGE_TEMPLATE = f'{{count}} new {{type}} samples are loaded in {SEQR_URL}/project/{PROJECT_GUID}/project_page\n```{{samples}}```'
+EMAIL_MESSAGE_TEMPLATE = f'{{count}} new {{type}} samples have been loaded in seqr project <a href={SEQR_URL}/project/{PROJECT_GUID}/project_page>1kg project nåme with uniçøde</a>\n- The seqr team'
+
 
 @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
@@ -53,7 +56,7 @@ class DatasetAPITest(object):
 
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
     @mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
-    @mock.patch('seqr.utils.search.add_data_utils.send_html_email')
+    @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', MOCK_AIRTABLE_URL)
     @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
@@ -162,15 +165,18 @@ class DatasetAPITest(object):
         self.assertTrue(existing_index_sample_model.is_active)
         self.assertTrue(str(existing_index_sample_model.loaded_date).startswith('2017-02-05'))
 
-        mock_send_email.assert_not_called()
-        if self.SLACK_MESSAGE_TEMPLATE:
-            mock_send_slack.assert_called_with(
-                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES', samples='NA19679, NA20878', count=2))
-        else:
-            mock_send_slack.assert_not_called()
+        mock_send_email.assert_called_once_with(
+            '2 new WES samples have been loaded in seqr project <a href=https://seqr.broadinstitute.org/project/R0001_1kg/project_page>1kg project nåme with uniçøde</a>\n- The seqr team',
+            subject='New data available in seqr', to=['test_user_manager@test.com'], process_message=mock.ANY,
+        )
+        # TODO better mocking accurately test process message working
+        # TODO test notification models created
+        mock_send_slack.assert_called_with(
+            'seqr-data-loading', SLACK_MESSAGE_TEMPLATE.format(type='WES', samples='NA19679, NA20878', count=2))
 
         # Adding an SV index works additively with the regular variants index
         mock_random.return_value = 1234567
+        mock_send_email.reset_mock()
         mock_send_slack.reset_mock()
         urllib3_responses.add_json('/{}/_mapping'.format(SV_INDEX_NAME), {
             SV_INDEX_NAME: {'mappings': {'_meta': {
@@ -213,16 +219,17 @@ class DatasetAPITest(object):
                             {sample.guid for sample in sample_models})
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
-        mock_send_email.assert_not_called()
+        mock_send_email.assert_called_with(
+            EMAIL_MESSAGE_TEMPLATE.format(type='WES SV', count=1), to=['test_user_manager@test.com'],
+            subject='New data available in seqr', process_message=mock.ANY,
+        )
         self.assertEqual(len(responses.calls), 0)
-        if self.SLACK_MESSAGE_TEMPLATE:
-            mock_send_slack.assert_called_with(
-                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES SV', samples='NA19675_1', count=1))
-        else:
-            mock_send_slack.assert_not_called()
+        mock_send_slack.assert_called_with(
+            'seqr-data-loading', SLACK_MESSAGE_TEMPLATE.format(type='WES SV', samples='NA19675_1', count=1))
 
         # Adding an index for a different sample type works additively
         mock_random.return_value = 987654
+        mock_send_email.reset_mock()
         mock_send_slack.reset_mock()
         urllib3_responses.add_json('/{}/_mapping'.format(NEW_SAMPLE_TYPE_INDEX_NAME), {
             'sub_index_1': {'mappings': {'_meta': {
@@ -260,12 +267,12 @@ class DatasetAPITest(object):
                             existing_rna_seq_sample_guids)
         self.assertTrue(new_sample_type_sample_guid not in existing_rna_seq_sample_guids)
 
-        mock_send_email.assert_not_called()
-        if self.SLACK_MESSAGE_TEMPLATE:
-            mock_send_slack.assert_called_with(
-                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WGS', samples='NA19675_1', count=1))
-        else:
-            mock_send_slack.assert_not_called()
+        mock_send_email.assert_called_with(
+            EMAIL_MESSAGE_TEMPLATE.format(type='WGS', count=1), to=['test_user_manager@test.com'],
+            subject='New data available in seqr', process_message=mock.ANY,
+        )
+        mock_send_slack.assert_called_with(
+            'seqr-data-loading', SLACK_MESSAGE_TEMPLATE.format(type='WGS', samples='NA19675_1', count=1))
 
         # Previous variant samples should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
@@ -283,6 +290,7 @@ class DatasetAPITest(object):
             'sample_ids': {'buckets': [{'key': 'NA21234'}]}
         }}, method=urllib3_responses.POST)
 
+        mock_send_email.reset_mock()
         mock_send_slack.reset_mock()
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
@@ -290,28 +298,31 @@ class DatasetAPITest(object):
         }))
         self.assertEqual(response.status_code, 200)
 
+        slack_message = f'1 new WES samples are loaded in {SEQR_URL}/project/{NON_ANALYST_PROJECT_GUID}/project_page'
+        seqr_link = f'<a href=https://seqr.broadinstitute.org/project/{NON_ANALYST_PROJECT_GUID}/project_page>Non-Analyst Project</a>'
         if self.ANVIL_DISABLED:
-            mock_send_email.assert_not_called()
-            mock_send_slack.assert_not_called()
+            email = f'1 new WES samples have been loaded in seqr project {seqr_link}\n- The seqr team'
+            slack_message += '\n```NA21234```'
+            slack_channel = 'seqr-data-loading'
         else:
             namespace_path = 'ext-data/anvil-non-analyst-project 1000 Genomes Demo'
-            mock_send_email.assert_called_with("""Hi Test Manager User,
-We are following up on your request to load data from AnVIL on March 12, 2017.
-We have loaded 1 samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}. Let us know if you have any questions.
-- The seqr team\n""".format(
+            email = """We are following up on the request to load data from AnVIL on March 12, 2017.
+We have loaded 1 new WES samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}.
+Let us know if you have any questions.
+- The seqr team""".format(
                 anvil_link=f'<a href=https://anvil.terra.bio/#workspaces/{namespace_path}>{namespace_path}</a>',
-                seqr_link=f'<a href=https://seqr.broadinstitute.org/project/{NON_ANALYST_PROJECT_GUID}/project_page>Non-Analyst Project</a>',
-            ),
-                                               subject='New data available in seqr',
-                                               to=['test_user_manager@test.com'])
-            mock_send_slack.assert_called_with(
-                'anvil-data-loading',
-                f'1 new WES samples are loaded in {SEQR_URL}/project/{NON_ANALYST_PROJECT_GUID}/project_page',
+                seqr_link=seqr_link,
             )
+            slack_channel = 'anvil-data-loading'
 
             self.assertEqual(responses.calls[1].request.url, f'{airtable_tracking_url}/{MOCK_RECORD_ID}')
             self.assertEqual(responses.calls[1].request.method, 'PATCH')
             self.assertDictEqual(json.loads(responses.calls[1].request.body), {'fields': {'Status': 'Available in Seqr'}})
+
+        mock_send_email.assert_called_with(
+            email, to=['test_user_manager@test.com'], subject='New data available in seqr', process_message=mock.ANY,
+        )
+        mock_send_slack.assert_called_with(slack_channel, slack_message)
 
     @urllib3_responses.activate
     def test_add_variants_dataset_errors(self):
@@ -499,8 +510,6 @@ def assert_no_anvil_calls(self):
 class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     ANVIL_DISABLED = False
-
-    SLACK_MESSAGE_TEMPLATE = f'{{count}} new {{type}} samples are loaded in {SEQR_URL}/project/{PROJECT_GUID}/project_page\n```{{samples}}```'
 
     def test_add_variants_dataset(self, *args):
         super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)

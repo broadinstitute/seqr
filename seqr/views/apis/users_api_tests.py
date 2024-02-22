@@ -92,7 +92,7 @@ class UsersAPITest(object):
 
     def _test_user_group_options_response(self, response):
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'groups': ['analysts', 'project-managers']})
+        self.assertDictEqual(response.json(), {'groups': ['analysts', 'project-managers', 'subscribers']})
 
     @mock.patch('django.contrib.auth.models.send_mail')
     def test_create_project_collaborator(self, mock_send_mail):

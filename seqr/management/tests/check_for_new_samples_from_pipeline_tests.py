@@ -23,10 +23,13 @@ EXISTING_SV_SAMPLE_GUID = 'S000147_na21234'
 namespace_path = 'ext-data/anvil-non-analyst-project 1000 Genomes Demo'
 anvil_link = f'<a href=https://anvil.terra.bio/#workspaces/{namespace_path}>{namespace_path}</a>'
 seqr_link = f'<a href=https://seqr.broadinstitute.org/project/{EXTERNAL_PROJECT_GUID}/project_page>Non-Analyst Project</a>'
-EMAIL = f"""Hi Test Manager User,
-We are following up on your request to load data from AnVIL on March 12, 2017.
-We have loaded 1 samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}. Let us know if you have any questions.
-- The seqr team\n"""
+ANVIL_EMAIL = f"""We are following up on the request to load data from AnVIL on March 12, 2017.
+We have loaded 1 new WES samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}.
+Let us know if you have any questions.
+- The seqr team"""
+internal_seqr_link = f'<a href=https://seqr.broadinstitute.org/project/{PROJECT_GUID}/project_page>Test Reprocessed Project</a>'
+INTERNAL_EMAIL = f"""2 new WES samples have been loaded in seqr project {internal_seqr_link}
+- The seqr team"""
 
 
 @mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: GUID_ID)
@@ -91,7 +94,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         )
 
     @mock.patch('seqr.views.utils.airtable_utils.logger')
-    @mock.patch('seqr.utils.search.add_data_utils.send_html_email')
+    @mock.patch('seqr.utils.communication_utils.send_html_email')
     @responses.activate
     def test_command(self, mock_send_email, mock_airtable_utils):
         responses.add(
@@ -204,13 +207,19 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             ),
         ])
 
-        self.assertEqual(mock_send_email.call_count, 1)
-        mock_send_email.assert_called_with(EMAIL, subject='New data available in seqr', to=['test_user_manager@test.com'])
+        self.assertEqual(mock_send_email.call_count, 2)
+        mock_send_email.assert_has_calls([
+            mock.call(INTERNAL_EMAIL, subject='New data available in seqr', to=['test_user_manager@test.com'], process_message=mock.ANY),
+            mock.call(ANVIL_EMAIL, subject='New data available in seqr', to=['test_user_manager@test.com'], process_message=mock.ANY),
+        ])
+        # TODO better mocking accurately test process message working
         mock_airtable_utils.error.assert_called_with(
             'Airtable patch "AnVIL Seqr Loading Requests Tracking" error: Unable to identify record to update', None, detail={
                 'or_filters': {'Status': ['Loading', 'Loading Requested']},
                 'and_filters': {'AnVIL Project URL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'},
                 'update': {'Status': 'Available in Seqr'}})
+
+        # TODO test notification models created
 
         # Test reloading has no effect
         self.mock_logger.reset_mock()

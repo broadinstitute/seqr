@@ -342,7 +342,7 @@ def project_notifications(request, project_guid, read_status):
         if max_loaded:
             to_create = to_create.filter(timestamp__gt=max_loaded)
         for notification in to_create:
-            notification.pk = None  # causes django to create a new mode with otherwise identical fields
+            notification.pk = None  # causes django to create a new model with otherwise identical fields
             notification.unread = True
             notification.recipient = request.user
             notification.save()

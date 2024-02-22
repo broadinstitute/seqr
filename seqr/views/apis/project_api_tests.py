@@ -570,8 +570,8 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     HAS_EMPTY_PROJECT = True
 
     def _check_created_project_groups(self, project):
-        self.assertEqual(project.can_edit_group.name, 'new_project_can_edit_123abd')
-        self.assertEqual(project.can_view_group.name, 'new_project_can_view_123abd')
+        self.assertEqual(project.can_edit_group.name, 'new_project_can_edit_group_123abd')
+        self.assertEqual(project.can_view_group.name, 'new_project_can_view_group_123abd')
         self.assertSetEqual(set(project.can_edit_group.user_set.all()), {self.pm_user})
         self.assertSetEqual(set(project.can_view_group.user_set.all()), {self.pm_user})
 
