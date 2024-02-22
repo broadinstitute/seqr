@@ -1419,9 +1419,9 @@ PARSED_MITO_VARIANT = {
     'genomeVersion': '37',
     'genotypeFilters': '',
     'genotypes':
-        {'I000006_hg00733':
+        {'I000004_hg00731':
              {'contamination': 0.0, 'dp': 5139.0, 'gq': 60.0, 'hl': 1.0, 'mitoCn': 319.03225806451616, 'numAlt': 2,
-              'sampleId': 'HG00733', 'sampleType': 'WGS'}},
+              'sampleId': 'HG00731', 'sampleType': 'WES'}},
     'hgmd': {'accession': None, 'class': None},
     'highConstraintRegion': True,
     'mainTranscriptId': 'ENST00000361227',
