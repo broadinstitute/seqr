@@ -50,17 +50,17 @@ async def sync_to_async(request: web.Request, func: Callable, *args, **kwargs):
 
 
 async def gene_counts(request: web.Request) -> web.Response:
-    hail_results = await sync_to_async(search_hail_backend, await request.json(), gene_counts=True)
+    hail_results = await sync_to_async(request, search_hail_backend, await request.json(), gene_counts=True)
     return web.json_response(hail_results, dumps=hl_json_dumps)
 
 
 async def search(request: web.Request) -> web.Response:
-    hail_results, total_results = await sync_to_async(search_hail_backend, await request.json())
+    hail_results, total_results = await sync_to_async(request, search_hail_backend, await request.json())
     return web.json_response({'results': hail_results, 'total': total_results}, dumps=hl_json_dumps)
 
 
 async def lookup(request: web.Request) -> web.Response:
-    result = await sync_to_async(lookup_variant, await request.json())
+    result = await sync_to_async(request, lookup_variant, await request.json())
     return web.json_response(result, dumps=hl_json_dumps)
 
 
