@@ -23,8 +23,6 @@ SV_WGS_SAMPLE_DATA = [{
 
 EXPECTED_MITO_SAMPLE_DATA = deepcopy(FAMILY_2_MITO_SAMPLE_DATA)
 EXPECTED_MITO_SAMPLE_DATA['MITO'][0].update({'individual_guid': 'I000004_hg00731', 'sample_id': 'HG00731', 'affected': 'A'})
-EXPECTED_MITO_SAMPLE_DATA_WITH_SEX = deepcopy(EXPECTED_MITO_SAMPLE_DATA)
-EXPECTED_MITO_SAMPLE_DATA_WITH_SEX['MITO'][0].update({'sex': 'F'})
 
 ALL_EXPECTED_SAMPLE_DATA = {**EXPECTED_SAMPLE_DATA, **EXPECTED_MITO_SAMPLE_DATA}
 
@@ -150,8 +148,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='x_linked_recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
-            # Follow up: can't have x-linked MITO variants
-            search_fields=['annotations', 'annotations_secondary'], sample_data={**EXPECTED_SAMPLE_DATA_WITH_SEX, **EXPECTED_MITO_SAMPLE_DATA_WITH_SEX},
+            search_fields=['annotations', 'annotations_secondary'], sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX,
             omit_sample_type='SV_WES',
         )
 
