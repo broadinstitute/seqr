@@ -108,6 +108,10 @@ class ProjectAPITest(object):
 
         self._assert_expected_airtable_requests(mock_airtable_logger)
 
+    def _check_created_project_groups(self, project):
+        self.assertEqual(project.subscribers.name, 'new_project_subscribers_123abd')
+        self.assertSetEqual(set(project.subscribers.user_set.all()), {self.pm_user})
+
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_update_project(self):
         update_project_url = reverse(update_project_handler, args=[PROJECT_GUID])
@@ -570,6 +574,7 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     HAS_EMPTY_PROJECT = True
 
     def _check_created_project_groups(self, project):
+        super()._check_created_project_groups(project)
         self.assertEqual(project.can_edit_group.name, 'new_project_can_edit_group_123abd')
         self.assertEqual(project.can_view_group.name, 'new_project_can_view_group_123abd')
         self.assertSetEqual(set(project.can_edit_group.user_set.all()), {self.pm_user})
@@ -623,6 +628,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
                 'update': {'Status': 'Project Deleted'}})
 
     def _check_created_project_groups(self, project):
+        super()._check_created_project_groups(project)
         self.assertIsNone(project.can_edit_group)
         self.assertIsNone(project.can_view_group)
 
