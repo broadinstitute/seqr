@@ -168,6 +168,7 @@ def _get_sort_metadata(sort, samples):
 def _parse_location_search(search):
     locus = search.pop('locus', None) or {}
     parsed_locus = search.pop('parsedLocus')
+    exclude_locations = locus.get('excludeLocations')
 
     genes = parsed_locus.get('genes') or {}
     intervals = parsed_locus.get('intervals')
@@ -179,8 +180,12 @@ def _parse_location_search(search):
         ]
         parsed_intervals = [_format_interval(**interval) for interval in intervals or []] + [
             '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
-
-    exclude_locations = locus.get('excludeLocations')
+        if Sample.DATASET_TYPE_MITO_CALLS in search['sample_data'] and not exclude_locations:
+            chromosomes = {gene['chrom'] for gene in gene_coords + (intervals or [])}
+            if 'M' not in chromosomes:
+                search['sample_data'].pop(Sample.DATASET_TYPE_MITO_CALLS)
+            elif chromosomes == {'M'}:
+                search['sample_data'] = {Sample.DATASET_TYPE_MITO_CALLS: search['sample_data'][Sample.DATASET_TYPE_MITO_CALLS]}
 
     search.update({
         'intervals': parsed_intervals,

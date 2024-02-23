@@ -6,7 +6,7 @@ from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
-    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS
+    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, ALL_DATA_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE
 from seqr.utils.search.elasticsearch.constants import MAX_VARIANTS
 from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_es_index, get_elasticsearch_status, \
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
@@ -42,6 +42,8 @@ DATASET_TYPES_LOOKUP = {
 DATASET_TYPES_LOOKUP[ALL_DATA_TYPES] = [dt for dts in DATASET_TYPES_LOOKUP.values() for dt in dts]
 DATASET_TYPE_SNP_INDEL_ONLY = f'{Sample.DATASET_TYPE_VARIANT_CALLS}_only'
 DATASET_TYPES_LOOKUP[DATASET_TYPE_SNP_INDEL_ONLY] = [Sample.DATASET_TYPE_VARIANT_CALLS]
+DATASET_TYPE_NO_MITO = f'{Sample.DATASET_TYPE_MITO_CALLS}_missing'
+DATASET_TYPES_LOOKUP[DATASET_TYPE_NO_MITO] = [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_SV_CALLS]
 
 
 def _raise_search_error(error):
@@ -91,7 +93,7 @@ def _get_families_search_data(families, dataset_type=None):
         if not samples:
             raise InvalidSearchException(f'Unable to search against dataset type "{dataset_type}"')
 
-    projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name')
+    projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name').distinct()
     project_versions = defaultdict(set)
     for genome_version, project_name in projects:
         project_versions[genome_version].add(project_name)
@@ -140,13 +142,7 @@ def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None
             if (dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and v) or
                (dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS and not v)
         }
-    elif all(v for v in parsed_variant_ids.values()):
-        dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS
-    elif all(v is None for v in parsed_variant_ids.values()):
-        dataset_type = Sample.DATASET_TYPE_SV_CALLS
-
-    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
+    dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
 
     return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
         *_get_families_search_data(families, dataset_type=dataset_type), parsed_variant_ids, user, **kwargs
@@ -255,8 +251,11 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     dataset_type, secondary_dataset_type, lookup_dataset_type = _search_dataset_type(parsed_search)
     parsed_search.update({'dataset_type': dataset_type, 'secondary_dataset_type': secondary_dataset_type})
     search_dataset_type = None
-    if dataset_type and dataset_type != ALL_DATA_TYPES and (secondary_dataset_type is None or secondary_dataset_type == dataset_type):
-        search_dataset_type = lookup_dataset_type or dataset_type
+    if dataset_type and dataset_type != ALL_DATA_TYPES:
+        if secondary_dataset_type is None or secondary_dataset_type == dataset_type:
+            search_dataset_type = lookup_dataset_type or dataset_type
+        elif dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+            search_dataset_type = DATASET_TYPE_NO_MITO
 
     samples, genome_version = _get_families_search_data(families, dataset_type=search_dataset_type)
     if parsed_search.get('inheritance'):
@@ -356,13 +355,17 @@ def _search_dataset_type(search):
     return dataset_type, secondary_dataset_type, None
 
 
-def _variant_ids_dataset_type(variant_ids):
+def _variant_ids_dataset_type(all_variant_ids):
+    variant_ids = [v for v in all_variant_ids if v]
+    any_sv = len(variant_ids) < len(all_variant_ids)
     has_mito = [chrom for chrom, _, _, _ in variant_ids if chrom.replace('chr', '').startswith('M')]
-    if len(has_mito) == len(variant_ids):
+    if len(variant_ids) == 0:
+        return Sample.DATASET_TYPE_SV_CALLS
+    elif len(has_mito) == len(all_variant_ids):
         return Sample.DATASET_TYPE_MITO_CALLS
     elif not has_mito:
-        return DATASET_TYPE_SNP_INDEL_ONLY
-    return Sample.DATASET_TYPE_VARIANT_CALLS
+        return DATASET_TYPE_NO_MITO if any_sv else DATASET_TYPE_SNP_INDEL_ONLY
+    return ALL_DATA_TYPES if any_sv else Sample.DATASET_TYPE_VARIANT_CALLS
 
 
 def _annotation_dataset_type(annotations, pathogenicity=None):
@@ -391,6 +394,9 @@ def _parse_inheritance(search, samples):
 
     if not inheritance_mode and list(inheritance_filter.keys()) == ['affected']:
         raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
+
+    if inheritance_mode == X_LINKED_RECESSIVE:
+        samples = samples.exclude(dataset_type=Sample.DATASET_TYPE_MITO_CALLS)
 
     samples = samples.select_related('individual')
     skipped_samples = _filter_inheritance_family_samples(samples, inheritance_filter)

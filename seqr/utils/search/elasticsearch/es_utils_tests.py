@@ -1395,7 +1395,7 @@ class EsUtilsTest(TestCase):
         get_variants_for_variant_ids(self.families, ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL'])
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']}}],
-            size=9, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME]),
+            size=6, index=','.join([INDEX_NAME, SV_INDEX_NAME]),
         )
 
     @urllib3_responses.activate
