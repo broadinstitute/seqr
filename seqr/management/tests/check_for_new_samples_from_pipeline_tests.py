@@ -23,13 +23,21 @@ EXISTING_SV_SAMPLE_GUID = 'S000147_na21234'
 namespace_path = 'ext-data/anvil-non-analyst-project 1000 Genomes Demo'
 anvil_link = f'<a href=https://anvil.terra.bio/#workspaces/{namespace_path}>{namespace_path}</a>'
 seqr_link = f'<a href=https://seqr.broadinstitute.org/project/{EXTERNAL_PROJECT_GUID}/project_page>Non-Analyst Project</a>'
-ANVIL_EMAIL = f"""We are following up on the request to load data from AnVIL on March 12, 2017.
+ANVIL_EMAIL = f"""Dear seqr user,
+
+We are following up on the request to load data from AnVIL on March 12, 2017.
 We have loaded 1 new WES samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}.
 Let us know if you have any questions.
-- The seqr team"""
+
+All the best,
+The seqr team"""
 internal_seqr_link = f'<a href=https://seqr.broadinstitute.org/project/{PROJECT_GUID}/project_page>Test Reprocessed Project</a>'
-INTERNAL_EMAIL = f"""2 new WES samples have been loaded in seqr project {internal_seqr_link}
-- The seqr team"""
+INTERNAL_EMAIL = f"""Dear seqr user,
+
+This is to notify you that 2 new WES samples have been loaded in seqr project {internal_seqr_link}
+
+All the best,
+The seqr team"""
 
 
 @mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: GUID_ID)

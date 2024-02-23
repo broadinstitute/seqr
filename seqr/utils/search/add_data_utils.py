@@ -67,8 +67,7 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
 
     project_link = f'<a href={url}>{project.name}</a>'
     if is_internal:
-        # TODO better message
-        email = f'{sample_summary} have been loaded in seqr project {project_link}'
+        email = f'This is to notify you that {sample_summary} have been loaded in seqr project {project_link}'
     else:
         AirtableSession(user=None, base=AirtableSession.ANVIL_BASE, no_auth=True).safe_patch_records(
             ANVIL_REQUEST_TRACKING_TABLE, max_records=1,
@@ -87,6 +86,6 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
     send_project_notification(
         project,
         notification=f'Loaded {sample_summary}',
-        email_body=f'{email}\n- The seqr team',
+        email_body=f'Dear seqr user,\n\n{email}\n\nAll the best,\nThe seqr team',
         subject='New data available in seqr',
     )
