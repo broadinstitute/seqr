@@ -46,7 +46,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         'hmtvar': PredictionPath('hmtvar', 'score'),
         'mitotip': PredictionPath('mitotip', 'trna_prediction'),
         'mut_taster': PredictionPath('dbnsfp_mito', 'MutationTaster_pred'),
-        'sift': PredictionPath('dbnsfp_mito', 'SIFT_pred'),
+        'sift': PredictionPath('dbnsfp_mito', 'SIFT_score'),
     }
 
     CLINVAR_PATH_RANGES = [
