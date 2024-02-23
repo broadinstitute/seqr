@@ -369,14 +369,14 @@ def _project_notifications(project, notifications):
 @login_and_policies_required
 def mark_read_project_notifications(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
-    request.user.groups.add(project.subscribers)
+    _project_notifications(project, request.user.notifications).mark_all_as_read()
     return create_json_response({'readCount': request.user.notifications.read().count(), 'unreadNotifications': []})
 
 
 @login_and_policies_required
 def subscribe_project_notifications(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
-    _project_notifications(project, request.user.notifications).mark_all_as_read()
+    request.user.groups.add(project.subscribers)
     return create_json_response({'isSubscriber': True})
 
 

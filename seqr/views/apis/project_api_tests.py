@@ -553,12 +553,39 @@ class ProjectAPITest(object):
     def test_project_notifications(self, mock_datetime):
         mock_datetime.now.return_value = datetime.fromisoformat('2024-01-01 00:00:00+00:00')
         unread_url = reverse(project_notifications, args=[PROJECT_GUID, 'unread'])
-        self.check_require_login(unread_url)
+        self.check_collaborator_login(unread_url)
 
         # Do not allow arbitrary read status
         response = self.client.get(unread_url+'s')
         self.assertEqual(response.status_code, 404)
 
+        # Non-subscribers do not necessarily have notification models for all new notifications
+        self.assertEqual(self.collaborator_user.notifications.count(), 1)
+
+        response = self.client.get(unread_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'isSubscriber': False,
+            'readCount': 0,
+            'unreadNotifications': [
+                {'timestamp': '2 weeks ago', 'id': 4, 'verb': 'Loaded 2 new WES SV samples'},
+                {'timestamp': '4 months ago', 'id': 3, 'verb': 'Loaded 8 new WES samples'},
+            ],
+        })
+
+        # Notification models will have been created for the non-subscriber for any new notifications
+        self.assertEqual(self.collaborator_user.notifications.count(), 2)
+
+        # Notifications only show for the correct project
+        response = self.client.get(reverse(project_notifications, args=[DEMO_PROJECT_GUID, 'unread']))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'isSubscriber': False,
+            'readCount': 0,
+            'unreadNotifications': [],
+        })
+
+        # Test subscribers
         self.login_manager()
         response = self.client.get(unread_url)
         self.assertEqual(response.status_code, 200)
@@ -576,32 +603,30 @@ class ProjectAPITest(object):
             'readNotifications': [{'timestamp': '4 months ago', 'id': 2, 'verb': 'Loaded 8 new WES samples'}],
         })
 
-        # Notifications only show for the correct project
-        response = self.client.get(reverse(project_notifications, args=[DEMO_PROJECT_GUID, 'unread']))
+    def test_mark_read_project_notifications(self):
+        url = reverse(mark_read_project_notifications, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'isSubscriber': True,
-            'readCount': 0,
-            'unreadNotifications': [],
-        })
+        self.assertDictEqual(response.json(), {'readCount': 1, 'unreadNotifications': []})
+        self.assertEqual(self.collaborator_user.notifications.filter(unread=True).count(), 0)
 
-        # Non-subscribers do not necessarily have notification models for all new notifications
-        self.login_collaborator()
-        self.assertEqual(self.collaborator_user.notifications.count(), 1)
-
-        response = self.client.get(unread_url)
+        # Test subscribers
+        self.login_manager()
+        response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'isSubscriber': False,
-            'readCount': 0,
-            'unreadNotifications': [
-                {'timestamp': '2 weeks ago', 'id': 4, 'verb': 'Loaded 2 new WES SV samples'},
-                {'timestamp': '4 months ago', 'id': 3, 'verb': 'Loaded 8 new WES samples'},
-            ],
-        })
+        self.assertDictEqual(response.json(), {'readCount': 2, 'unreadNotifications': []})
+        self.assertEqual(self.manager_user.notifications.filter(unread=True).count(), 0)
 
-        # Notification models will have been created for the non-subscriber for any new notifications
-        self.assertEqual(self.collaborator_user.notifications.count(), 2)
+    def test_subscribe_project_notifications(self):
+        url = reverse(subscribe_project_notifications, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'isSubscriber': True})
+        self.assertTrue(self.collaborator_user.groups.filter(name='subscribers').exists())
 
 
 BASE_COLLABORATORS = [
