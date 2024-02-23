@@ -210,7 +210,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(mock_send_email.call_count, 2)
         mock_send_email.assert_has_calls([
             mock.call(INTERNAL_EMAIL, subject='New data available in seqr', to=['test_user_manager@test.com'], process_message=mock.ANY),
-            mock.call(ANVIL_EMAIL, subject='New data available in seqr', to=['test_user_manager@test.com'], process_message=mock.ANY),
+            mock.call(ANVIL_EMAIL, subject='New data available in seqr', to=['test_user_collaborator@test.com'], process_message=mock.ANY),
         ])
         # TODO better mocking accurately test process message working
         mock_airtable_utils.error.assert_called_with(
@@ -219,7 +219,12 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 'and_filters': {'AnVIL Project URL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'},
                 'update': {'Status': 'Available in Seqr'}})
 
-        # TODO test notification models created
+        self.assertEqual(self.manager_user.notifications.count(), 3)
+        self.assertEqual(
+            str(self.manager_user.notifications.first()), 'Test Reprocessed Project Loaded 2 new WES samples 0 minutes ago')
+        self.assertEqual(self.collaborator_user.notifications.count(), 2)
+        self.assertEqual(
+            str(self.collaborator_user.notifications.first()), 'Non-Analyst Project Loaded 1 new WES samples 0 minutes ago')
 
         # Test reloading has no effect
         self.mock_logger.reset_mock()
