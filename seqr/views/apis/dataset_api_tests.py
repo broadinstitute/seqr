@@ -162,7 +162,7 @@ class DatasetAPITest(object):
         self.assertTrue(existing_index_sample_model.is_active)
         self.assertTrue(str(existing_index_sample_model.loaded_date).startswith('2017-02-05'))
 
-        self._assert_expected_notification(mock_send_email, mock_send_slack, type='WES', count=2, samples='NA19679, NA20878')
+        self._assert_expected_notification(mock_send_email, mock_send_slack, sample_type='WES', count=2, samples='NA19679, NA20878')
 
         # Adding an SV index works additively with the regular variants index
         mock_random.return_value = 1234567
@@ -209,7 +209,7 @@ class DatasetAPITest(object):
                             {sample.guid for sample in sample_models})
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
-        self._assert_expected_notification(mock_send_email, mock_send_slack, type='WES SV', count=1, samples='NA19675_1')
+        self._assert_expected_notification(mock_send_email, mock_send_slack, sample_type='WES SV', count=1, samples='NA19675_1')
         self.assertEqual(len(responses.calls), 0)
 
         # Adding an index for a different sample type works additively
@@ -252,7 +252,7 @@ class DatasetAPITest(object):
                             existing_rna_seq_sample_guids)
         self.assertTrue(new_sample_type_sample_guid not in existing_rna_seq_sample_guids)
 
-        self._assert_expected_notification(mock_send_email, mock_send_slack, type='WGS', count=1, samples='NA19675_1')
+        self._assert_expected_notification(mock_send_email, mock_send_slack, sample_type='WGS', count=1, samples='NA19675_1')
 
         # Previous variant samples should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
@@ -294,20 +294,20 @@ Let us know if you have any questions.""".format(
             self.assertDictEqual(json.loads(responses.calls[1].request.body), {'fields': {'Status': 'Available in Seqr'}})
 
         self._assert_expected_notification(
-            mock_send_email, mock_send_slack, type='WES', count=1, project_guid=NON_ANALYST_PROJECT_GUID,
+            mock_send_email, mock_send_slack, sample_type='WES', count=1, project_guid=NON_ANALYST_PROJECT_GUID,
             project_name='Non-Analyst Project', recipient='test_user_collaborator@test.com', **additional_kwargs,
         )
 
-    def _assert_expected_notification(self, mock_send_email, mock_send_slack, type, count, samples, email_content=None,
+    def _assert_expected_notification(self, mock_send_email, mock_send_slack, sample_type, count, samples, email_content=None,
                                       project_guid=PROJECT_GUID, project_name='1kg project nåme with uniçøde',
                                       recipient='test_user_manager@test.com', slack_channel='seqr-data-loading'):
         if not email_content:
-            email_content = f'This is to notify you that {count} new {type} samples have been loaded in seqr project <a href={SEQR_URL}/project/{project_guid}/project_page>{project_name}</a>'
+            email_content = f'This is to notify you that {count} new {sample_type} samples have been loaded in seqr project <a href={SEQR_URL}/project/{project_guid}/project_page>{project_name}</a>'
         mock_send_email.assert_called_once_with(
             f'Dear seqr user,\n\n{email_content}\n\nAll the best,\nThe seqr team',
             subject='New data available in seqr', to=[recipient], process_message=mock.ANY,
         )
-        slack_message = f'{count} new {type} samples are loaded in {SEQR_URL}/project/{project_guid}/project_page'
+        slack_message = f'{count} new {sample_type} samples are loaded in {SEQR_URL}/project/{project_guid}/project_page'
         if samples:
             slack_message = f'{slack_message}\n```{samples}```'
         mock_send_slack.assert_called_with(slack_channel, slack_message)

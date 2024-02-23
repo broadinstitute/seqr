@@ -8,7 +8,6 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Max, Q, Case, When, Value
 from django.db.models.functions import JSONObject, TruncDate
-from django.forms import model_to_dict
 from django.utils import timezone
 from notifications.models import Notification
 

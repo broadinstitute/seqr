@@ -76,7 +76,7 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
             update={'Status': 'Available in Seqr'},
         )
         workspace_name = f'{project.workspace_namespace}/{project.workspace_name}'
-        reload_summary = f' and {num_sample - num_new_samples} re-loaded samples' if num_samples > num_new_samples else ''
+        reload_summary = f' and {num_samples - num_new_samples} re-loaded samples' if num_samples > num_new_samples else ''
         email = '\n'.join([
             f'We are following up on the request to load data from AnVIL on {project.created_date.date().strftime("%B %d, %Y")}.',
             f'We have loaded {sample_summary}{reload_summary} from the AnVIL workspace <a href={ANVIL_UI_URL}#workspaces/{workspace_name}>{workspace_name}</a> to the corresponding seqr project {project_link}.',
