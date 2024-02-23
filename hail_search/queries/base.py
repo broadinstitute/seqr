@@ -249,19 +249,13 @@ class BaseHailTableQuery(object):
         table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
-            if self._should_skip_ht(ht, skip_missing_field):
+            if skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field])):
                 return None
             ht_globals = hl.read_table(table_path).globals
             if drop_globals:
                 ht_globals = ht_globals.drop(*drop_globals)
             return ht.annotate_globals(**hl.eval(ht_globals))
-
-        ht = hl.read_table(table_path, **self._load_table_kwargs)
-        return None if self._should_skip_ht(ht, skip_missing_field) else ht
-
-    @staticmethod
-    def _should_skip_ht(ht, skip_missing_field):
-        return skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field]))
+        return hl.read_table(table_path, **self._load_table_kwargs)
 
     @staticmethod
     def _query_table_annotations(ht, query_table_path):
@@ -319,16 +313,23 @@ class BaseHailTableQuery(object):
             families_ht, comp_het_families_ht, num_families = filtered_project_hts[0]
             main_ht = comp_het_families_ht if families_ht is None else families_ht
             entry_type = main_ht.family_entries.dtype.element_type
+            num_projects_added = 1
             for project_ht, comp_het_project_ht, num_project_families in filtered_project_hts[1:]:
+                ht_added = False
                 if families_ht is not None:
-                    families_ht = self._add_project_ht(families_ht, project_ht, default=hl.empty_array(entry_type))
+                    families_ht, ht_added = self._add_project_ht(families_ht, project_ht, default=hl.empty_array(entry_type))
                 if comp_het_families_ht is not None:
-                    comp_het_families_ht = self._add_project_ht(
+                    comp_het_families_ht, ht_added = self._add_project_ht(
                         comp_het_families_ht, comp_het_project_ht,
                         default=hl.range(num_families).map(lambda i: hl.missing(entry_type)),
                         default_1=hl.range(num_project_families).map(lambda i: hl.missing(entry_type)),
                     )
-                num_families += num_project_families
+                if ht_added:
+                    num_families += num_project_families
+                    num_projects_added += 1
+
+            if len(filtered_project_hts) > num_projects_added:
+                logger.info(f'Found {num_projects_added} {self.DATA_TYPE} projects with matched entries')
 
         if comp_het_families_ht is not None:
             comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
@@ -343,6 +344,9 @@ class BaseHailTableQuery(object):
         if default_1 is None:
             default_1 = default
 
+        if not project_ht.any(hl.is_defined(project_ht.family_entries)):
+            return families_ht, False
+
         families_ht = families_ht.join(project_ht, how='outer')
         families_ht = families_ht.select_globals(
             family_guids=families_ht.family_guids.extend(families_ht.family_guids_1)
@@ -354,7 +358,7 @@ class BaseHailTableQuery(object):
                 hl.or_else(families_ht.family_entries, default),
                 hl.or_else(families_ht.family_entries_1, default_1),
             ),
-        )
+        ), True
 
     def _filter_entries_table(self, ht, sample_data, inheritance_filter=None, quality_filter=None, **kwargs):
         if not self._load_table_kwargs:
