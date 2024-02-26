@@ -334,14 +334,14 @@ class BaseHailTableQuery(object):
         if comp_het_families_ht is not None:
             logger.info(f'Found {comp_het_families_ht.count()} compound het {self.DATA_TYPE} rows')
             comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
-            logger.info(f'Found {comp_het_ht.count_where(hl.is_defined(comp_het_ht.variant_id))} annotated compound het {self.DATA_TYPE} rows')
+            logger.info(f'Found {comp_het_ht.filter(hl.is_defined(comp_het_ht.variant_id)).count()} annotated compound het {self.DATA_TYPE} rows')
             self._comp_het_ht = self._filter_annotated_table(comp_het_ht, is_comp_het=True, **kwargs)
             self._comp_het_ht = self._filter_compound_hets()
 
         if families_ht is not None:
             logger.info(f'Found {families_ht.count()} {self.DATA_TYPE} rows')
             ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
-            logger.info(f'Found {ht.count_where(hl.is_defined(ht.variant_id))} annotated {self.DATA_TYPE} rows')
+            logger.info(f'Found {ht.filter(hl.is_defined(ht.variant_id)).count()} annotated {self.DATA_TYPE} rows')
             self._ht = self._filter_annotated_table(ht, **kwargs)
 
     def _add_project_ht(self, families_ht, project_ht, default, default_1=None):
