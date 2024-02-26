@@ -79,7 +79,7 @@ def parse_pedigree_table(parsed_file, filename, user, project):
 
 def parse_basic_pedigree_table(project, parsed_file, filename, required_columns=None):
     rows, header = _parse_pedigree_table_rows(parsed_file, filename)
-    return _parse_pedigree_table_json(project, rows, header=header, fail_on_warnings=True, required_columns=required_columns)
+    return _parse_pedigree_table_json(project, rows, header=header, fail_on_warnings=True, required_columns=required_columns, allow_id_update=False)
 
 
 def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
@@ -110,9 +110,9 @@ def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
         raise ErrorsWarningsException(['Error while parsing file: {}. {}'.format(filename, e)], [])
 
 
-def _parse_pedigree_table_json(project, rows, header=None, column_map=None, errors=None, fail_on_warnings=False, required_columns=None):
+def _parse_pedigree_table_json(project, rows, header=None, column_map=None, errors=None, fail_on_warnings=False, required_columns=None, allow_id_update=True):
     # convert to json and validate
-    column_map = column_map or (_parse_header_columns(header) if header else None)
+    column_map = column_map or (_parse_header_columns(header, allow_id_update) if header else None)
     if column_map:
         json_records = _convert_fam_file_rows_to_json(column_map, rows, required_columns=required_columns)
     else:
@@ -200,9 +200,10 @@ def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
     return json_results
 
 
-def _parse_header_columns(header):
+def _parse_header_columns(header, allow_id_update):
     column_map = {}
     for key in header:
+        column = None
         full_key = key
         key = key.lower()
         if full_key in JsonConstants.JSON_COLUMNS:
@@ -211,6 +212,9 @@ def _parse_header_columns(header):
             column = JsonConstants.FAMILY_NOTES_COLUMN
         elif key.startswith("notes"):
             column = JsonConstants.NOTES_COLUMN
+        elif 'indiv' in key and 'previous' in key:
+            if allow_id_update:
+                column = JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN
         else:
             column = next((
                 col for col, substrings in JsonConstants.COLUMN_SUBSTRINGS
@@ -810,7 +814,6 @@ class JsonConstants:
 
     COLUMN_SUBSTRINGS = [
         (FAMILY_ID_COLUMN, ['family']),
-        (PREVIOUS_INDIVIDUAL_ID_COLUMN, ['indiv', 'previous']),
         (INDIVIDUAL_ID_COLUMN, ['indiv']),
         (PATERNAL_ID_COLUMN, ['father']),
         (PATERNAL_ID_COLUMN, ['paternal']),

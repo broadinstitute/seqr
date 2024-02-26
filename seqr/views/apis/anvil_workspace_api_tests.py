@@ -16,11 +16,12 @@ from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, SEQR_SLACK_LOADING_N
 LOAD_SAMPLE_DATA = [
     ["Family ID", "Individual ID", "Previous Individual ID", "Paternal ID", "Maternal ID", "Sex", "Affected Status",
      "Notes", "familyNotes"],
-    ["1", " NA19675 ", "NA19675_1 ", "NA19678 ", "", "Female", "Affected", "A affected individual, test1-zsf", ""],
+    ["1", " NA19675_1 ", "NA19675_1 ", "NA19678 ", "", "Female", "Affected", "A affected individual, test1-zsf", ""],
     ["1", "NA19678", "", "", "", "Male", "Unaffected", "a individual note", ""],
     ["21", " HG00735", "", "", "", "Unknown", "Unknown", "", "a new family"]]
 
 BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "A affected individual, test1-zsf", ""]]
+INVALID_ADDED_SAMPLE_DATA = [['22', 'HG00731', 'HG00731', '', '', 'Female', 'Affected', '', '']]
 
 MISSING_REQUIRED_SAMPLE_DATA = [["21", "HG00736", "", "", "", "", "", "", ""]]
 
@@ -28,7 +29,7 @@ LOAD_SAMPLE_DATA_EXTRA_SAMPLE = LOAD_SAMPLE_DATA + [["1", "NA19679", "", "", "",
 
 FILE_DATA = [
     '##fileformat=VCFv4.2\n',
-    '#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19675	NA19678	HG00735\n',
+    '#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19675_1	NA19678	HG00735\n',
     'chr1	1000	test\n',
 ]
 
@@ -49,7 +50,7 @@ REQUEST_BODY_SHARDED_DATA_PATH = deepcopy(VALIDATE_VCF_BODY)
 REQUEST_BODY_SHARDED_DATA_PATH['dataPath'] = '/test_path-*.vcf.gz'
 
 VALIDATE_VFC_RESPONSE = {
-    'vcfSamples': ['HG00735', 'NA19675', 'NA19678'],
+    'vcfSamples': ['HG00735', 'NA19675_1', 'NA19678'],
     'fullDataPath': 'gs://test_bucket/test_path.vcf',
 }
 
@@ -66,20 +67,20 @@ TEMP_PATH = '/temp_path/temp_filename'
 MOCK_AIRTABLE_URL = 'http://testairtable'
 MOCK_AIRTABLE_KEY = 'mock_key' # nosec
 
-PROJECT1_SAMPLES = ['HG00735', 'NA19675', 'NA19678', 'NA20870', 'HG00732', 'NA19675_1', 'NA20874', 'HG00733', 'HG00731']
-PROJECT2_SAMPLES = ['NA20885', 'NA19675', 'NA19678', 'HG00735']
+PROJECT1_SAMPLES = ['HG00735', 'NA19678', 'NA20870', 'HG00732', 'NA19675_1', 'NA20874', 'HG00733', 'HG00731']
+PROJECT2_SAMPLES = ['NA20885', 'NA19675_1', 'NA19678', 'HG00735']
 PROJECT2_SAMPLE_DATA = [
     {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000011_11', 'Family_ID': '11', 'Individual_ID': 'NA20885', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
     {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000012_12', 'Family_ID': '12', 'Individual_ID': 'NA20870', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
     {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000012_12', 'Family_ID': '12', 'Individual_ID': 'NA20888', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
     {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000012_12', 'Family_ID': '12', 'Individual_ID': 'NA20889', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'F'},
-    {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000016_1', 'Family_ID': '1', 'Individual_ID': 'NA19675', 'Paternal_ID': 'NA19678', 'Maternal_ID': None, 'Sex': 'F'},
+    {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000016_1', 'Family_ID': '1', 'Individual_ID': 'NA19675_1', 'Paternal_ID': 'NA19678', 'Maternal_ID': None, 'Sex': 'F'},
     {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000016_1', 'Family_ID': '1', 'Individual_ID': 'NA19678', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
     {'Project_GUID': 'R0003_test', 'Family_GUID': 'F000017_21', 'Family_ID': '21', 'Individual_ID': 'HG00735', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'U'},
 ]
 
 NEW_PROJECT_SAMPLE_DATA = [
-    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_1_workspace2', 'Family_ID': '1', 'Individual_ID': 'NA19675', 'Paternal_ID': 'NA19678', 'Maternal_ID': None, 'Sex': 'F'},
+    {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_1_workspace2', 'Family_ID': '1', 'Individual_ID': 'NA19675_1', 'Paternal_ID': 'NA19678', 'Maternal_ID': None, 'Sex': 'F'},
     {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_1_workspace2', 'Family_ID': '1', 'Individual_ID': 'NA19678', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'M'},
     {'Project_GUID': 'P_anvil-no-project-workspace2', 'Family_GUID': 'F_21_workspace2', 'Family_ID': '21', 'Individual_ID': 'HG00735', 'Paternal_ID': None, 'Maternal_ID': None, 'Sex': 'U'},
 ]
@@ -134,7 +135,7 @@ REFERENCE_META = [
 
 BAD_HEADER_LINE = [b'#CHROM\tID\tREF\tALT\tQUAL\n']
 NO_SAMPLE_HEADER_LINE = [b'#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\n']
-HEADER_LINE = [b'#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675\tNA19678\n']
+HEADER_LINE = [b'#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675_1\tNA19678\n']
 
 DATA_LINES = [
     b'chr1\t10333\t.\tCT\tC\t1895\tPASS\tAC=5;AF=0.045;AN=112;DP=22546\tGT:AD:DP:GQ\t./.:63,0:63\t./.:44,0:44\t./.:44,0:44\n'
@@ -394,7 +395,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_get_header_subproc.stdout = BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_SHARDED_DATA_PATH))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {'fullDataPath': 'gs://test_bucket/test_path-*.vcf.gz', 'vcfSamples': ['HG00735', 'NA19675', 'NA19678']})
+        self.assertEqual(response.json(), {'fullDataPath': 'gs://test_bucket/test_path-*.vcf.gz', 'vcfSamples': ['HG00735', 'NA19675_1', 'NA19678']})
         mock_subprocess.assert_has_calls([
             mock.call('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-1, shell=True),
             mock.call('gsutil cat -r 0-65536 gs://test_bucket/test_path-001.vcf.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True),
@@ -601,6 +602,15 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         url = reverse(add_workspace_data, args=[PROJECT1_GUID])
         self._test_errors(url, ['uploadedFileId', 'fullDataPath', 'vcfSamples'], TEST_WORKSPACE_NAME)
 
+        # Test Individual ID exists in an omitted family
+        self.mock_load_file.return_value = LOAD_SAMPLE_DATA + INVALID_ADDED_SAMPLE_DATA
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        response_json = response.json()
+        self.assertListEqual(response_json['errors'], [
+            'HG00731 already has loaded data and cannot be moved to a different family',
+        ])
+
         # Test missing loaded samples
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
@@ -609,7 +619,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             response.json()['error'],
             'In order to add new data to this project, new samples must be joint called in a single VCF with all previously'
             ' loaded samples. The following samples were previously loaded in this project but are missing from the VCF:'
-            ' HG00731, HG00732, HG00733, NA19675_1, NA20870, NA20874')
+            ' HG00731, HG00732, HG00733, NA20870, NA20874')
 
         # Test a valid operation
         mock_compute_indiv_guid.return_value = 'I0000020_hg00735'
@@ -677,7 +687,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         header = ['Project_GUID', 'Family_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex']
         if test_add_data:
             rows = [
-                ['R0001_1kg', 'F000001_1', '1', 'NA19675', 'NA19678', '', 'F'],
+                ['R0001_1kg', 'F000001_1', '1', 'NA19675_1', 'NA19678', '', 'F'],
                 ['R0001_1kg', 'F000001_1', '1', 'NA19678', '', '', 'M'],
                 ['R0001_1kg', 'F000001_1', '1', 'NA19679', '', '', 'F'],
                 ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
@@ -695,7 +705,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             ]
         else:
             rows = [
-                ['P_anvil-no-project-workspace1', 'F_1_workspace1', '1', 'NA19675', 'NA19678', '', 'F'],
+                ['P_anvil-no-project-workspace1', 'F_1_workspace1', '1', 'NA19675_1', 'NA19678', '', 'F'],
                 ['P_anvil-no-project-workspace1', 'F_1_workspace1', '1', 'NA19678', '', '', 'M'],
                 ['P_anvil-no-project-workspace1', 'F_21_workspace1', '21', 'HG00735', '', '', 'U'],
             ]
@@ -716,7 +726,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             'Requester Email': 'test_user_manager@test.com',
             'AnVIL Project URL': f'http://testserver/project/{project.guid}/project_page',
             'Initial Request Date': '2021-03-01',
-            'Number of Samples': 9 if test_add_data else 3,
+            'Number of Samples': 8 if test_add_data else 3,
             'Status': 'Loading',
         }}]})
         self.assertEqual(responses.calls[-1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))
@@ -767,7 +777,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             'father__individual_id': None, 'sex': 'U', 'affected': 'U', 'notes': None,
         }, individual_model_data)
         self.assertIn({
-            'family__family_id': '1', 'individual_id': 'NA19675', 'mother__individual_id': None,
+            'family__family_id': '1', 'individual_id': 'NA19675_1', 'mother__individual_id': None,
             'father__individual_id': 'NA19678', 'sex': 'F', 'affected': 'A', 'notes': 'A affected individual, test1-zsf',
         }, individual_model_data)
         self.assertIn({
