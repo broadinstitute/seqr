@@ -1,9 +1,8 @@
 import hail as hl
 
 from hail_search.constants import CLINVAR_KEY, CLINVAR_MITO_KEY, HGMD_KEY, HGMD_PATH_RANGES, \
-    GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, \
-    PATHOGENICTY_HGMD_SORT_KEY, \
-    SCREEN_KEY, SPLICE_AI_FIELD, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER
+    GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
+    SCREEN_KEY, SPLICE_AI_FIELD
 from hail_search.queries.base import PredictionPath, QualityFilterFormat
 from hail_search.queries.mito import MitoHailTableQuery
 
@@ -48,15 +47,8 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         **PREDICTION_FIELDS_CONFIG_ALL_BUILDS,
         **PREDICTION_FIELDS_CONFIG_38
     }
-    CLINVAR_PATH_RANGES = [
-        (CLINVAR_PATH_FILTER, 'Pathogenic', 'Pathogenic/Likely_risk_allele'),
-        (CLINVAR_LIKELY_PATH_FILTER, 'Pathogenic/Likely_pathogenic', 'Likely_risk_allele'),
-        ('vus_or_conflicting', 'Conflicting_interpretations_of_pathogenicity', 'No_pathogenic_assertion'),
-        ('likely_benign', 'Likely_benign', 'Benign/Likely_benign'),
-        ('benign', 'Benign/Likely_benign', 'Benign'),
-    ]
     PATHOGENICITY_FILTERS = {
-        CLINVAR_KEY: ('pathogenicity', CLINVAR_PATH_RANGES),
+        **MitoHailTableQuery.PATHOGENICITY_FILTERS,
         HGMD_KEY: ('class', HGMD_PATH_RANGES),
     }
     PATHOGENICITY_FIELD_MAP = {}

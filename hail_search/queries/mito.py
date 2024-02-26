@@ -1,7 +1,7 @@
 import hail as hl
 
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
-    CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
+    CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
     PATHOGENICTY_HGMD_SORT_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
@@ -49,13 +49,6 @@ class MitoHailTableQuery(BaseHailTableQuery):
         'sift': PredictionPath('dbnsfp_mito', 'SIFT_score'),
     }
 
-    CLINVAR_PATH_RANGES = [
-        (CLINVAR_PATH_FILTER, 'Pathogenic', 'Pathogenic/Likely_risk_allele'),
-        (CLINVAR_LIKELY_PATH_FILTER, 'Pathogenic/Likely_pathogenic', 'Likely_risk_allele'),
-        ('vus_or_conflicting', 'Conflicting_classifications_of_pathogenicity', 'No_pathogenic_assertion'),
-        ('likely_benign', 'Likely_benign', 'Benign/Likely_benign'),
-        ('benign', 'Benign/Likely_benign', 'Benign'),
-    ]
     PATHOGENICITY_FILTERS = {
         CLINVAR_KEY: ('pathogenicity', CLINVAR_PATH_RANGES),
     }
