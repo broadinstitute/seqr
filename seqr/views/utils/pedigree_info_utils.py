@@ -68,7 +68,7 @@ def parse_pedigree_table(parsed_file, filename, user, project):
     except Exception as e:
         raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
 
-    json_records, warnings = _parse_pedigree_table_json(rows, header=header, column_map=column_map, errors=errors)
+    json_records, warnings = _parse_pedigree_table_json(project, rows, header=header, column_map=column_map, errors=errors)
 
     if is_merged_pedigree_sample_manifest:
         _set_proband_relationship(json_records)
@@ -77,9 +77,9 @@ def parse_pedigree_table(parsed_file, filename, user, project):
     return json_records, warnings
 
 
-def parse_basic_pedigree_table(parsed_file, filename, required_columns=None):
+def parse_basic_pedigree_table(project, parsed_file, filename, required_columns=None):
     rows, header = _parse_pedigree_table_rows(parsed_file, filename)
-    return _parse_pedigree_table_json(rows, header=header, fail_on_warnings=True, required_columns=required_columns)
+    return _parse_pedigree_table_json(project, rows, header=header, fail_on_warnings=True, required_columns=required_columns)
 
 
 def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
@@ -110,7 +110,7 @@ def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
         raise ErrorsWarningsException(['Error while parsing file: {}. {}'.format(filename, e)], [])
 
 
-def _parse_pedigree_table_json(rows, header=None, column_map=None, errors=None, fail_on_warnings=False, required_columns=None):
+def _parse_pedigree_table_json(project, rows, header=None, column_map=None, errors=None, fail_on_warnings=False, required_columns=None):
     # convert to json and validate
     column_map = column_map or (_parse_header_columns(header) if header else None)
     if column_map:
@@ -118,7 +118,7 @@ def _parse_pedigree_table_json(rows, header=None, column_map=None, errors=None, 
     else:
         json_records = rows
 
-    warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings, errors=errors)
+    warnings = validate_fam_file_records(project, json_records, fail_on_warnings=fail_on_warnings, errors=errors)
     return json_records, warnings
 
 
@@ -234,7 +234,7 @@ def _format_value(value, column):
     return value
 
 
-def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
+def validate_fam_file_records(project, records, fail_on_warnings=False, errors=None):
     """Basic validation such as checking that parents have the same family id as the child, etc.
 
     Args:
@@ -252,6 +252,9 @@ def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
                      if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)}
     records_by_id.update({r[JsonConstants.INDIVIDUAL_ID_COLUMN]: r for r in records})
 
+    loaded_individual_families = dict(Individual.objects.filter(
+        family__project=project, sample__is_active=True).values_list('individual_id', 'family__family_id'))
+
     errors = errors or []
     warnings = []
     individual_id_counts = defaultdict(int)
@@ -259,6 +262,11 @@ def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
         individual_id = r[JsonConstants.INDIVIDUAL_ID_COLUMN]
         individual_id_counts[individual_id] += 1
         family_id = r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
+
+        if loaded_individual_families.get(r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)):
+            errors.append(f'{r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN]} already has loaded data and cannot update the ID')
+        if loaded_individual_families.get(individual_id) and loaded_individual_families[individual_id] != family_id:
+            errors.append(f'{individual_id} already has loaded data and cannot be moved to a different family')
 
         # check proband relationship has valid gender
         if r.get(JsonConstants.PROBAND_RELATIONSHIP) and r.get(JsonConstants.SEX_COLUMN):
