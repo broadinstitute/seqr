@@ -625,7 +625,7 @@ class BaseHailTableQuery(object):
             pop_filters = []
             pop_expr = ht[self.POPULATION_FIELDS.get(pop, pop)]
             pop_config = self._format_population_config(self.POPULATIONS[pop])
-            if freqs.get('af') is not None:
+            if freqs.get('af') is not None and freqs['af'] < 1:
                 af_field = pop_config.get('filter_af') or pop_config['af']
                 pop_filter = pop_expr[af_field] <= freqs['af']
                 if path_override_filter is not None and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
