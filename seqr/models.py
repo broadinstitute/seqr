@@ -5,7 +5,7 @@ import random
 
 from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import ArrayField
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
 from django.db.models import base, options, ForeignKey, JSONField, prefetch_related_objects
 from django.utils import timezone
@@ -612,6 +612,11 @@ class Individual(ModelWithGUID):
 
     def _compute_guid(self):
         return 'I%07d_%s' % (self.id, _slugify(str(self)))
+
+    def save(self, *args, **kwargs):
+        if Individual.objects.filter(individual_id=self.individual_id, family__project_id=self.family.project_id).count() > 1:
+            raise ValidationError({'individual_id': 'Individual ID must be unique within a project'})
+        super().save(*args, **kwargs)
 
     class Meta:
         unique_together = ('family', 'individual_id')
