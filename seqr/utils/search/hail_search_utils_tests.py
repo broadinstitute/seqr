@@ -21,6 +21,11 @@ SV_WGS_SAMPLE_DATA = [{
     'affected': 'A', 'sample_id': 'NA21234',
 }]
 
+EXPECTED_MITO_SAMPLE_DATA = deepcopy(FAMILY_2_MITO_SAMPLE_DATA)
+EXPECTED_MITO_SAMPLE_DATA['MITO'][0].update({'individual_guid': 'I000004_hg00731', 'sample_id': 'HG00731', 'affected': 'A'})
+
+ALL_EXPECTED_SAMPLE_DATA = {**EXPECTED_SAMPLE_DATA, **EXPECTED_MITO_SAMPLE_DATA}
+
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HOST)
 class HailSearchUtilsTests(SearchTestHelper, TestCase):
@@ -34,8 +39,8 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'results': HAIL_BACKEND_VARIANTS, 'total': 5,
         })
 
-    def _test_minimal_search_call(self, expected_search_body=None, call_offset=-1, url_path='search', **kwargs):
-        expected_search = expected_search_body or get_hail_search_body(genome_version='GRCh37', **kwargs)
+    def _test_minimal_search_call(self, expected_search_body=None, call_offset=-1, url_path='search', sample_data=ALL_EXPECTED_SAMPLE_DATA, **kwargs):
+        expected_search = expected_search_body or get_hail_search_body(genome_version='GRCh37', sample_data=sample_data, **kwargs)
 
         executed_request = responses.calls[call_offset].request
         self.assertEqual(executed_request.headers.get('From'), 'test_user@broadinstitute.org')
@@ -86,7 +91,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self.search_model.search['locus'] = {'rawVariantItems': raw_variant_locus}
         query_variants(self.results_model, user=self.user, sort='in_omim')
         self._test_expected_search_call(
-            num_results=2,  dataset_type='SNV_INDEL', omit_sample_type='SV_WES',
+            num_results=2,  dataset_type='SNV_INDEL', sample_data={'SNV_INDEL': EXPECTED_SAMPLE_DATA['SNV_INDEL']},
             sort='in_omim', sort_metadata=['ENSG00000223972', 'ENSG00000135953'],
             **VARIANT_ID_SEARCH,
         )
@@ -100,7 +105,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         raw_locus = 'CDC7, chr2:1234-5678, chr7:100-10100%10, ENSG00000177000'
         self.search_model.search['locus']['rawItems'] = raw_locus
         query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(**LOCATION_SEARCH)
+        self._test_expected_search_call(**LOCATION_SEARCH, sample_data=EXPECTED_SAMPLE_DATA)
 
         self.search_model.search['locus']['excludeLocations'] = True
         query_variants(self.results_model, user=self.user)
@@ -118,7 +123,17 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         )
 
         self.search_model.search['inheritance']['filter'] = {}
-        self.search_model.search['annotations_secondary'] = {'structural_consequence': ['LOF']}
+        self.search_model.search['annotations_secondary'] = self.search_model.search['annotations']
+        sv_annotations = {'structural_consequence': ['LOF']}
+        self.search_model.search['annotations'] = sv_annotations
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            inheritance_mode='recessive', dataset_type='SV', secondary_dataset_type='SNV_INDEL',
+            search_fields=['annotations', 'annotations_secondary'], sample_data=EXPECTED_SAMPLE_DATA,
+        )
+
+        self.search_model.search['annotations'] = self.search_model.search['annotations_secondary']
+        self.search_model.search['annotations_secondary'] = sv_annotations
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SV',
@@ -165,7 +180,19 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(**VARIANT_ID_SEARCH, num_results=2,  dataset_type='SNV_INDEL', sample_data=MULTI_PROJECT_SAMPLE_DATA)
 
-        self.search_model.search['locus'] = {'rawItems': raw_locus}
+        self.search_model.search['locus'] = {'rawItems': 'M:10-100 '}
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(intervals=['M:10-100'], sample_data=EXPECTED_MITO_SAMPLE_DATA)
+
+        self.search_model.search['locus']['rawItems'] += raw_locus
+        query_variants(self.results_model, user=self.user)
+        self._test_expected_search_call(
+            gene_ids=LOCATION_SEARCH['gene_ids'],
+            intervals=['M:10-100'] + LOCATION_SEARCH['intervals'],
+            sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data, **EXPECTED_MITO_SAMPLE_DATA},
+        )
+
+        self.search_model.search['locus']['rawItems'] = raw_locus
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(**LOCATION_SEARCH, sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data})
 
@@ -286,7 +313,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         get_single_variant(self.families, 'M-10195-C-A', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[['M', 10195, 'C', 'A']], variant_keys=[],
-            num_results=1, sample_data=FAMILY_2_MITO_SAMPLE_DATA)
+            num_results=1, sample_data=EXPECTED_MITO_SAMPLE_DATA)
 
         with self.assertRaises(InvalidSearchException) as cm:
             get_single_variant(self.families, '1-91502721-G-A', user=self.user, return_all_queried_families=True)
@@ -309,13 +336,15 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     def test_get_variants_for_variant_ids(self):
         variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']
         get_variants_for_variant_ids(self.families, variant_ids, user=self.user)
+        expected_sample_data = {k: ALL_AFFECTED_SAMPLE_DATA[k] for k in ['SNV_INDEL', 'SV_WES']}
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
             variant_keys=['prefix-938_DEL'],
-            num_results=3, sample_data=ALL_AFFECTED_SAMPLE_DATA)
+            num_results=3, sample_data=expected_sample_data)
 
+        del expected_sample_data['SV_WES']
         get_variants_for_variant_ids(self.families, variant_ids, user=self.user, dataset_type='SNV_INDEL')
         self._test_minimal_search_call(
             variant_ids=[['2', 103343353, 'GAGA', 'G'], ['1', 248367227, 'TC', 'T']],
             variant_keys=[],
-            num_results=2, sample_data={'SNV_INDEL': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL']})
+            num_results=2, sample_data=expected_sample_data)

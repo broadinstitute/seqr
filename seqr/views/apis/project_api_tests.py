@@ -295,7 +295,7 @@ class ProjectAPITest(object):
                 'loadedDate': '2017-02-05',
             }],
             'WES__SV': [{'familyCounts': {'F000002_2': 3}, 'loadedDate': '2018-02-05'}],
-            'WGS__MITO': [{'familyCounts': {'F000002_2': 1}, 'loadedDate': '2022-02-05'}],
+            'WES__MITO': [{'familyCounts': {'F000002_2': 1}, 'loadedDate': '2022-02-05'}],
             'RNA__SNV_INDEL': [{'familyCounts': {'F000001_1': 3}, 'loadedDate': '2017-02-05'}],
         })
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
