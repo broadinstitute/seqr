@@ -23,6 +23,7 @@ const COLUMNS = [
   { name: 'method_of_discovery' },
   { name: 'Submitted to MME', format: ({ MME }) => (MME ? 'Yes' : 'No') },
   ...VARIANT_METADATA_COLUMNS.slice(-1),
+  { name: 'tags' },
 ]
 
 const FamilyMetadata = props => (
