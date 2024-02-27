@@ -539,7 +539,7 @@ export const GeneDetails = React.memo((
         locusListGuids={gene.locusListGuids}
         panelAppDetail={gene.panelAppDetail}
         compact={compact}
-        showInlineDetails={showInlineDetails}
+        showInlineDetails
         {...labelProps}
       />
     ),
