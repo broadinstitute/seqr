@@ -288,36 +288,11 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
                     ))
 
         # check maternal and paternal ids for consistency
-        for parent_id_type, parent_id, expected_sex in [
+        for parent in [
             ('father', r.get(JsonConstants.PATERNAL_ID_COLUMN), 'M'),
             ('mother', r.get(JsonConstants.MATERNAL_ID_COLUMN), 'F')
         ]:
-            if not parent_id:
-                continue
-
-            # is there a separate record for the parent id?
-            if parent_id not in records_by_id:
-                warnings.append(
-                    f'{parent_id} is the {parent_id_type} of {individual_id} but is not included. '
-                    f'Make sure to create an additional record with {parent_id} as the Individual ID')
-                continue
-
-            # is the parent the same individuals
-            if parent_id == individual_id:
-                errors.append('{} is recorded as their own {}'.format(parent_id, parent_id_type))
-
-            # is father male and mother female?
-            if JsonConstants.SEX_COLUMN in records_by_id[parent_id]:
-                actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
-                if actual_sex != expected_sex:
-                    actual_sex_label = dict(Individual.SEX_CHOICES)[actual_sex]
-                    errors.append("%(parent_id)s is recorded as %(actual_sex_label)s sex and also as the %(parent_id_type)s of %(individual_id)s" % locals())
-
-            # is the parent in the same family?
-            parent = records_by_id[parent_id]
-            parent_family_id = parent.get(JsonConstants.FAMILY_ID_COLUMN) or parent['family']['familyId']
-            if parent_family_id != family_id:
-                errors.append("%(parent_id)s is recorded as the %(parent_id_type)s of %(individual_id)s but they have different family ids: %(parent_family_id)s and %(family_id)s" % locals())
+            _validate_parent(*parent, individual_id, family_id, records_by_id, warnings, errors)
 
     errors += [
         f'{individual_id} is included as {count} separate records, but must be unique within the project'
@@ -330,6 +305,37 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
     if errors:
         raise ErrorsWarningsException(errors, warnings)
     return warnings
+
+
+def _validate_parent(parent_id_type, parent_id, expected_sex, individual_id, family_id, records_by_id, warnings, errors):
+    if not parent_id:
+        return
+
+    # is there a separate record for the parent id?
+    if parent_id not in records_by_id:
+        warnings.append(
+            f'{parent_id} is the {parent_id_type} of {individual_id} but is not included. '
+            f'Make sure to create an additional record with {parent_id} as the Individual ID')
+        return
+
+    # is the parent the same individuals
+    if parent_id == individual_id:
+        errors.append('{} is recorded as their own {}'.format(parent_id, parent_id_type))
+
+    # is father male and mother female?
+    if JsonConstants.SEX_COLUMN in records_by_id[parent_id]:
+        actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
+        if actual_sex != expected_sex:
+            actual_sex_label = dict(Individual.SEX_CHOICES)[actual_sex]
+            errors.append(
+                "%(parent_id)s is recorded as %(actual_sex_label)s sex and also as the %(parent_id_type)s of %(individual_id)s" % locals())
+
+    # is the parent in the same family?
+    parent = records_by_id[parent_id]
+    parent_family_id = parent.get(JsonConstants.FAMILY_ID_COLUMN) or parent['family']['familyId']
+    if parent_family_id != family_id:
+        errors.append(
+            "%(parent_id)s is recorded as the %(parent_id_type)s of %(individual_id)s but they have different family ids: %(parent_family_id)s and %(family_id)s" % locals())
 
 
 def _is_header_row(row):
