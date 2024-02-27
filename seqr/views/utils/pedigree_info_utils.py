@@ -477,13 +477,13 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
 
     original_table_attachment_filename = '{}.xlsx'.format('.'.join(os.path.basename(original_filename).split('.')[:-1]))
 
-    email_body = "User {} just uploaded pedigree info to {}.<br />".format(user.email or user.username, project.name)
+    email_body = "User {} just uploaded pedigree info to {}.\n".format(user.email or user.username, project.name)
 
-    email_body += """This email has 2 attached files:<br />
-    <br />
-    <b>%(sample_manifest_filename)s</b> is the sample manifest file in a format that can be sent to GP.<br />
-    <br />
-    <b>%(original_filename)s</b> is the original merged pedigree-sample-manifest file that the user uploaded.<br />
+    email_body += """This email has 2 attached files:
+    
+    <b>%(sample_manifest_filename)s</b> is the sample manifest file in a format that can be sent to GP.
+    
+    <b>%(original_filename)s</b> is the original merged pedigree-sample-manifest file that the user uploaded.
     """ % locals()
 
     temp_original_file = tempfile.NamedTemporaryFile()

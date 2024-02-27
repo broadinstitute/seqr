@@ -23,10 +23,28 @@ EXISTING_SV_SAMPLE_GUID = 'S000147_na21234'
 namespace_path = 'ext-data/anvil-non-analyst-project 1000 Genomes Demo'
 anvil_link = f'<a href=https://anvil.terra.bio/#workspaces/{namespace_path}>{namespace_path}</a>'
 seqr_link = f'<a href=https://seqr.broadinstitute.org/project/{EXTERNAL_PROJECT_GUID}/project_page>Non-Analyst Project</a>'
-EMAIL = f"""Hi Test Manager User,
-We are following up on your request to load data from AnVIL on March 12, 2017.
-We have loaded 1 samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}. Let us know if you have any questions.
-- The seqr team\n"""
+ANVIL_TEXT_EMAIL = f"""Dear seqr user,
+
+We are following up on the request to load data from AnVIL on March 12, 2017.
+We have loaded 1 new WES samples from the AnVIL workspace {namespace_path} to the corresponding seqr project Non-Analyst Project.
+Let us know if you have any questions.
+
+All the best,
+The seqr team"""
+ANVIL_HTML_EMAIL = f'Dear seqr user,<br /><br />' \
+                   f'We are following up on the request to load data from AnVIL on March 12, 2017.<br />' \
+                   f'We have loaded 1 new WES samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}.' \
+                   f'<br />Let us know if you have any questions.<br /><br />All the best,<br />The seqr team'
+INTERNAL_TEXT_EMAIL = """Dear seqr user,
+
+This is to notify you that 2 new WES samples have been loaded in seqr project Test Reprocessed Project
+
+All the best,
+The seqr team"""
+INTERNAL_HTML_EMAIL = f'Dear seqr user,<br /><br />' \
+                      f'This is to notify you that 2 new WES samples have been loaded in seqr project ' \
+                      f'<a href=https://seqr.broadinstitute.org/project/{PROJECT_GUID}/project_page>Test Reprocessed Project</a>' \
+                      f'<br /><br />All the best,<br />The seqr team'
 
 
 @mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: GUID_ID)
@@ -91,9 +109,9 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         )
 
     @mock.patch('seqr.views.utils.airtable_utils.logger')
-    @mock.patch('seqr.utils.search.add_data_utils.send_html_email')
+    @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     @responses.activate
-    def test_command(self, mock_send_email, mock_airtable_utils):
+    def test_command(self, mock_email, mock_airtable_utils):
         responses.add(
             responses.GET,
             "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
@@ -204,24 +222,41 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             ),
         ])
 
-        self.assertEqual(mock_send_email.call_count, 1)
-        mock_send_email.assert_called_with(EMAIL, subject='New data available in seqr', to=['test_user_manager@test.com'])
+        self.assertEqual(mock_email.call_count, 2)
+        mock_email.assert_has_calls([
+            mock.call(body=INTERNAL_TEXT_EMAIL, subject='New data available in seqr', to=['test_user_manager@test.com']),
+            mock.call().attach_alternative(INTERNAL_HTML_EMAIL, 'text/html'),
+            mock.call().send(),
+            mock.call(body=ANVIL_TEXT_EMAIL, subject='New data available in seqr', to=['test_user_collaborator@test.com']),
+            mock.call().attach_alternative(ANVIL_HTML_EMAIL, 'text/html'),
+            mock.call().send(),
+        ])
+        self.assertDictEqual(mock_email.return_value.esp_extra, {'MessageStream': 'seqr-notifications'})
+        self.assertDictEqual(mock_email.return_value.merge_data, {})
+
         mock_airtable_utils.error.assert_called_with(
             'Airtable patch "AnVIL Seqr Loading Requests Tracking" error: Unable to identify record to update', None, detail={
                 'or_filters': {'Status': ['Loading', 'Loading Requested']},
                 'and_filters': {'AnVIL Project URL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'},
                 'update': {'Status': 'Available in Seqr'}})
 
+        self.assertEqual(self.manager_user.notifications.count(), 3)
+        self.assertEqual(
+            str(self.manager_user.notifications.first()), 'Test Reprocessed Project Loaded 2 new WES samples 0 minutes ago')
+        self.assertEqual(self.collaborator_user.notifications.count(), 2)
+        self.assertEqual(
+            str(self.collaborator_user.notifications.first()), 'Non-Analyst Project Loaded 1 new WES samples 0 minutes ago')
+
         # Test reloading has no effect
         self.mock_logger.reset_mock()
-        mock_send_email.reset_mock()
+        mock_email.reset_mock()
         self.mock_send_slack.reset_mock()
         sample_last_modified = Sample.objects.filter(
             last_modified_date__isnull=False).values_list('last_modified_date', flat=True).order_by('-last_modified_date')[0]
 
         call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
         self.mock_logger.info.assert_called_with(f'Data already loaded for GRCh38/SNV_INDEL: auto__2023-08-08')
-        mock_send_email.assert_not_called()
+        mock_email.assert_not_called()
         self.mock_send_slack.assert_not_called()
         self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
 
