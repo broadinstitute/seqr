@@ -344,7 +344,7 @@ class BaseHailTableQuery(object):
         if default_1 is None:
             default_1 = default
 
-        if not project_ht.any(hl.is_defined(project_ht.family_entries)):
+        if not project_ht.any(project_ht.family_entries.any(hl.is_defined)):
             return families_ht, False
 
         families_ht = families_ht.join(project_ht, how='outer')
