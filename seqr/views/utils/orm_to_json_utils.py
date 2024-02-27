@@ -651,7 +651,7 @@ def get_json_for_locus_list(locus_list, user):
     return result
 
 
-PROJECT_ACCESS_GROUP_NAMES = ['_owners', '_can_view', '_can_edit']
+PROJECT_ACCESS_GROUP_NAMES = ['_owners', '_can_view', '_can_edit', 'subscribers']
 
 
 def get_json_for_project_collaborator_groups(project):

@@ -10,6 +10,7 @@
         "name": "1kg project n\u00e5me with uni\u00e7\u00f8de",
         "description": "1000 genomes project description with uni\u00e7\u00f8de",
         "consent_code": "H",
+        "subscribers": 6,
 	"can_edit_group": 2,
 	"can_view_group": 3,
     "workspace_name": "anvil-1kg project n\u00e5me with uni\u00e7\u00f8de",
@@ -35,6 +36,7 @@
         "consent_code": "H",
         "workspace_name": "empty",
         "workspace_namespace": "my-seqr-billing",
+        "subscribers": 6,
 	"can_edit_group": 2,
 	"can_view_group": 3,
 	"is_mme_enabled": false,
@@ -52,6 +54,7 @@
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Test Reprocessed Project",
         "description": "",
+        "subscribers": 6,
 	"can_edit_group": 2,
 	"can_view_group": 3,
     "workspace_name": "anvil-project 1000 Genomes Demo",
@@ -72,6 +75,7 @@
         "created_by": 11,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Non-Analyst Project",
+        "subscribers": 7,
 	    "can_edit_group": 2,
 	    "can_view_group": 2,
 	    "last_accessed_date": "2017-09-15T18:15:50.827Z",
@@ -2723,5 +2727,67 @@
         "institution": "Broad Center for Mendelian Genomics",
         "patient_id": "NA19675"
     }
-}
-]
+}, {
+    "model": "notifications.notification",
+    "pk": 1,
+    "fields": {
+        "level": "info",
+        "recipient": 11,
+        "unread": true,
+        "actor_content_type": 40,
+        "actor_object_id": "1",
+        "verb": "Loaded 2 new WES SV samples",
+        "description": null,
+        "target_content_type": null,
+        "target_object_id": null,
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2023-12-17T22:14:44.568Z",
+        "public": true,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+}, {
+    "model": "notifications.notification",
+    "pk": 2,
+    "fields": {
+        "level": "info",
+        "recipient": 11,
+        "unread": false,
+        "actor_content_type": 10,
+        "actor_object_id": "1",
+        "verb": "Loaded 8 new WES samples",
+        "description": null,
+        "target_content_type": null,
+        "target_object_id": null,
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2023-08-27T22:14:44.568Z",
+        "public": true,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+}, {
+    "model": "notifications.notification",
+    "pk": 3,
+    "fields": {
+        "level": "info",
+        "recipient": 12,
+        "unread": true,
+        "actor_content_type": 10,
+        "actor_object_id": "1",
+        "verb": "Loaded 8 new WES samples",
+        "description": null,
+        "target_content_type": null,
+        "target_object_id": null,
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2023-08-27T22:14:44.568Z",
+        "public": true,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+}]
