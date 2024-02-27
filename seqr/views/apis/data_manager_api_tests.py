@@ -386,8 +386,6 @@ EXPECTED_PEDIGREE_ROWS = [
     ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
 ]
 
-
-@mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class DataManagerAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
@@ -1268,6 +1266,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         ]
         mock_subprocess.assert_has_calls(expected_calls)
 
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_validate_callset(self, mock_subprocess):
         url = reverse(validate_callset)
@@ -1297,6 +1296,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
 
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_get_loaded_projects(self):
         url = reverse(get_loaded_projects, args=['WGS', 'SV'])
         self.check_pm_login(url)
@@ -1336,6 +1336,7 @@ class LoadDataAPITest(AirflowTestCase):
         }
 
     @responses.activate
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
