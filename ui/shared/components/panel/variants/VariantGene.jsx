@@ -90,10 +90,14 @@ const LocusListsContainer = styled.div`
   overflow-y: auto;
 `
 
+// Fixes popup location for elements in scrollable containers (i.e. locus lists in LocusListsContainer)
+// Suggested fix for known issue from https://github.com/Semantic-Org/Semantic-UI-React/issues/3687
+const POPPER_MODIFIERS = { preventOverflow: { boundariesElement: 'window' } }
+
 const GeneLabel = React.memo(({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
   const content = <GeneLabelContent {...labelProps} />
   return (popupContent || showEmpty) ?
-    <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide hoverable /> : content
+    <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide hoverable popperModifiers={POPPER_MODIFIERS} /> : content
 })
 
 GeneLabel.propTypes = {
@@ -539,7 +543,7 @@ export const GeneDetails = React.memo((
         locusListGuids={gene.locusListGuids}
         panelAppDetail={gene.panelAppDetail}
         compact={compact}
-        showInlineDetails
+        showInlineDetails={showInlineDetails}
         {...labelProps}
       />
     ),
