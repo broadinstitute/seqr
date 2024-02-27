@@ -786,7 +786,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         },
     }
 
-    def _has_expected_file_loading_logs(self, file, info=None, warnings=None, additional_logs=None, additional_logs_offset=None):
+    def _has_expected_file_loading_logs(self, file, user, info=None, warnings=None, additional_logs=None, additional_logs_offset=None):
         expected_logs = [
             (f'==> gsutil ls {file}', None),
             (f'==> gsutil cat {file} | gunzip -c -q - ', None),
@@ -800,7 +800,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             else:
                 expected_logs += additional_logs
 
-        self.assert_json_logs(self.data_manager_user, expected_logs)
+        self.assert_json_logs(user, expected_logs)
 
     def _check_rna_sample_model(self, individual_id, data_source, tissue_type, is_active_sample=True):
         rna_samples = Sample.objects.filter(individual_id=individual_id, sample_type='RNA', tissue_type=tissue_type)
@@ -833,7 +833,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess, mock_load_uploaded_file,
                             mock_os, mock_datetime, mock_send_slack):
         url = reverse(update_rna_seq)
-        self.check_data_manager_login(url)
+        self.check_pm_login(url)
 
         params = self.RNA_DATA_TYPE_PARAMS[data_type]
         model_cls = params['model_cls']
@@ -922,7 +922,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         ]
         warnings = ['Skipped loading for 1 samples already loaded from this file']
         self.assertDictEqual(response.json(), {'info': info, 'warnings': warnings, 'sampleGuids': [], 'fileName': mock.ANY})
-        self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings)
+        self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.pm_user)
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
         mock_send_slack.assert_not_called()
 
@@ -952,7 +952,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [new_sample_guid],
             }})] + (additional_logs or [])
             self._has_expected_file_loading_logs(
-                'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings,
+                'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.pm_user,
                 additional_logs=additional_logs, additional_logs_offset=2)
 
             return response_json, new_sample_guid
@@ -1055,7 +1055,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_os.path.exists.return_value = True
 
         url = reverse(load_rna_seq_sample_data, args=[RNA_MUSCLE_SAMPLE_GUID])
-        self.check_data_manager_login(url)
+        self.check_pm_login(url)
 
         for data_type, params in self.RNA_DATA_TYPE_PARAMS.items():
             with self.subTest(data_type):
@@ -1080,7 +1080,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
                 mock_open.assert_called_with(f'{file_name}__{sample_guid}.json.gz', 'rt')
 
-                self.assert_json_logs(self.data_manager_user, [
+                self.assert_json_logs(self.pm_user, [
                     (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
                     (f'create {model_cls.__name__}s', {'dbUpdate': {
                         'dbEntity': model_cls.__name__, 'numEntities': 2, 'parentEntityIds': [sample_guid],
@@ -1157,7 +1157,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'Project Test Reprocessed Project: loaded 1 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
-        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', additional_logs=[
+        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
             ('delete PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'numEntities': 1, 'updateType': 'bulk_delete',
                 'parentEntityIds': ['I000002_na19678'],
@@ -1182,7 +1182,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'Project 1kg project nåme with uniçøde: deleted 1 record(s), loaded 2 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
-        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', additional_logs=[
+        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
             ('delete PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'numEntities': 1, 'updateType': 'bulk_delete',
                 'parentEntityIds': ['I000002_na19678'],
