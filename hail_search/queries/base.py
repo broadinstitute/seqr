@@ -276,6 +276,7 @@ class BaseHailTableQuery(object):
     def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
         filtered_project_hts = []
         exception_messages = set()
+        num_projects = len(project_samples)
         for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
             project_ht = self._read_table(
                 f'projects/{project_guid}.ht',
@@ -286,7 +287,7 @@ class BaseHailTableQuery(object):
                 continue
             try:
                 filtered_project_hts.append(
-                    (*self._filter_entries_table(project_ht, project_sample_data, **kwargs), len(project_sample_data))
+                    (*self._filter_entries_table(project_ht, project_sample_data, num_projects=num_projects, **kwargs), len(project_sample_data))
                 )
             except HTTPBadRequest as e:
                 exception_messages.add(e.reason)
@@ -361,8 +362,7 @@ class BaseHailTableQuery(object):
         ), True
 
     def _filter_entries_table(self, ht, sample_data, inheritance_filter=None, quality_filter=None, **kwargs):
-        if not self._load_table_kwargs:
-            ht = self._prefilter_entries_table(ht, **kwargs)
+        ht = self._prefilter_entries_table(ht, **kwargs)
 
         ht, sorted_family_sample_data = self._add_entry_sample_families(ht, sample_data)
 
