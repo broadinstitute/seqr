@@ -29,15 +29,14 @@ DISCOVERY_CATEGORY = 'CMG Discovery Tags'
 OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
 
 
-def update_projects_saved_variant_json(projects, user_email, family_id=None):
+def update_projects_saved_variant_json(projects, user_email, **kwargs):
     success = {}
     error = {}
     logger.info(f'Reloading saved variants in {len(projects)} projects')
     for project in tqdm(projects, unit=' project'):
         logger.info(f'Project: {project.name}')
         try:
-            updated_saved_variant_guids = update_project_saved_variant_json(
-                project, family_id=family_id, user_email=user_email)
+            updated_saved_variant_guids = update_project_saved_variant_json(project, user_email=user_email, **kwargs)
             success[project.name] = len(updated_saved_variant_guids)
             logger.info(f'Updated {len(updated_saved_variant_guids)} variants for project {project.name}')
         except Exception as e:
@@ -46,7 +45,7 @@ def update_projects_saved_variant_json(projects, user_email, family_id=None):
             logger.error(f'Error in project {project.name}: {e}')
             error[project.name] = e
 
-    logger.info('Summary: ')
+    logger.info('Reload Summary: ')
     for k, v in success.items():
         if v > 0:
             logger.info(f'  {k}: Updated {v} variants')
@@ -56,10 +55,19 @@ def update_projects_saved_variant_json(projects, user_email, family_id=None):
         logger.info(f'  {k}: {v}')
 
 
-def update_project_saved_variant_json(project, family_id=None, user=None, user_email=None):
+def update_project_saved_variant_json(project, family_id=None, dataset_type=None, user=None, user_email=None):
     saved_variants = SavedVariant.objects.filter(family__project=project).select_related('family')
     if family_id:
         saved_variants = saved_variants.filter(family__family_id=family_id)
+    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+        saved_variants = saved_variants.filter(alt__isnull=True)
+    elif dataset_type:
+        mito_xpos = get_xpos('M', 1)
+        saved_variants = saved_variants.filter(alt__isnull=False)
+        if dataset_type == Sample.DATASET_TYPE_MITO_CALLS:
+            saved_variants = saved_variants.filter(xpos__gte=mito_xpos)
+        else:
+            saved_variants = saved_variants.filter(xpos__lt=mito_xpos)
 
     if not saved_variants:
         return []

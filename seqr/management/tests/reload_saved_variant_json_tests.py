@@ -32,7 +32,7 @@ class ReloadSavedVariantJsonTest(TestCase):
         logger_info_calls = [
             mock.call('Project: 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call('Updated 3 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
-            mock.call('Summary: '),
+            mock.call('Reload Summary: '),
             mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 3 variants')
         ]
         mock_logger.info.assert_has_calls(logger_info_calls)
@@ -61,7 +61,7 @@ class ReloadSavedVariantJsonTest(TestCase):
             mock.call('Updated 2 variants for project Test Reprocessed Project'),
             mock.call('Project: Non-Analyst Project'),
             mock.call('Updated 1 variants for project Non-Analyst Project'),
-            mock.call('Summary: '),
+            mock.call('Reload Summary: '),
             mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 4 variants'),
             mock.call('  Test Reprocessed Project: Updated 2 variants'),
             mock.call('  Non-Analyst Project: Updated 1 variants'),
@@ -80,7 +80,7 @@ class ReloadSavedVariantJsonTest(TestCase):
 
         logger_info_calls = [
             mock.call('Project: 1kg project n\xe5me with uni\xe7\xf8de'),
-            mock.call('Summary: '),
+            mock.call('Reload Summary: '),
             mock.call('1 failed projects'),
             mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Database error.')
         ]

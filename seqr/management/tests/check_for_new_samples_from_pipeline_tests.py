@@ -72,6 +72,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_redis = patcher.start()
         self.mock_redis.return_value.keys.side_effect = lambda pattern: [pattern]
         self.addCleanup(patcher.stop)
+        # TODO actually test correct search being executed, to test email header being set
+        patcher = mock.patch('seqr.views.utils.variant_utils.get_variants_for_variant_ids')
+        self.mock_get_variants = patcher.start()
+        self.addCleanup(patcher.stop)
         super().setUp()
 
     def _test_success(self, path, metadata, dataset_type, sample_guids, num_projects=1):
@@ -93,7 +97,8 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_logger.warining.assert_not_called()
 
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
-        self.mock_utils_logger.info.assert_called_with('Reset 2 cached results')
+        self.mock_utils_logger.info.assert_has_calls([mock.call('Reset 2 cached results')])
+        # TODO actually test correct summary
 
         # Tests Sample models created/updated
         updated_sample_models = Sample.objects.filter(guid__in=sample_guids)
