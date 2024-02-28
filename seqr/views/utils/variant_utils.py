@@ -88,7 +88,7 @@ def update_project_saved_variant_json(project_id, family_ids=None, dataset_type=
     variant_ids = sorted(variant_ids)
     families = sorted(families, key=lambda f: f.guid)
     variants_json = []
-    for sub_var_ids in [variant_ids[i:i+MAX_VARIANTS_FETCH] for i in range(0, len(variant_ids), MAX_VARIANTS_FETCH)]:
+    for sub_var_ids in [varixant_ids[i:i+MAX_VARIANTS_FETCH] for i in range(0, len(variant_ids), MAX_VARIANTS_FETCH)]:
         variants_json += get_variants_for_variant_ids(families, sub_var_ids, user=user, user_email=user_email)
 
     updated_saved_variant_guids = []
