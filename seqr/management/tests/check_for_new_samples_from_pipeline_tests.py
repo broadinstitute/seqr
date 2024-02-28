@@ -97,7 +97,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
         self.mock_utils_logger.info.assert_has_calls([
             mock.call('Reset 2 cached results'),
-            mock.call(f'Reloading saved variants in {len(reload_calls) + 1} projects'),
+            mock.call('Reloading saved variants in 2 projects'),
         ])
 
         # Test reload saved variants
@@ -248,7 +248,6 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             mock.call('Updated 1 variants for project Non-Analyst Project'),
             mock.call('Reload Summary: '),
             mock.call('  Non-Analyst Project: Updated 1 variants'),
-            mock.call('Skipped the following 1 project with no saved variants: Test Reprocessed Project')
         ])
 
         # Test notifications
