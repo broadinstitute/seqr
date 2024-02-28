@@ -107,6 +107,9 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         individual_id = _get_record_individual_id(record)
         individual = individual_lookup[individual_id].get(family)
         if not individual:
+            # Individual is being moved to a different family
+            individual = next((iter(individual_lookup[individual_id].values())), None)
+        if not individual:
             individual = create_model_from_json(
                 Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I'}, user)
             updated_family_ids.add(family.id)
