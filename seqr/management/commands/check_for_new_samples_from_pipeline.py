@@ -95,8 +95,8 @@ class Command(BaseCommand):
         if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
             updated_annotation_samples = updated_annotation_samples.filter(sample_type=sample_type)
         projects = Family.objects.filter(
-            individual__sample__in=updated_annotation_samples,
-        ).values('project').annotate(family_ids=ArrayAgg('family_id', distinct=True)).values_list(
+            project__genome_version=genome_version.replace('GRCh', ''), individual__sample__in=updated_annotation_samples,
+        ).order_by('id').values('project').annotate(family_ids=ArrayAgg('family_id', distinct=True)).values_list(
             'project__id', 'project__name', 'family_ids',
         )
         update_projects_saved_variant_json(projects, user_email='manage_command', dataset_type=dataset_type)

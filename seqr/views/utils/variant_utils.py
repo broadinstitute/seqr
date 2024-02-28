@@ -65,15 +65,14 @@ def update_project_saved_variant_json(project_id, family_ids=None, dataset_type=
     saved_variants = SavedVariant.objects.filter(family__project_id=project_id).select_related('family')
     if family_ids:
         saved_variants = saved_variants.filter(family__family_id__in=family_ids)
-    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
-        saved_variants = saved_variants.filter(alt__isnull=True)
-    elif dataset_type:
-        mito_xpos = get_xpos('M', 1)
-        saved_variants = saved_variants.filter(alt__isnull=False)
-        if dataset_type == Sample.DATASET_TYPE_MITO_CALLS:
-            saved_variants = saved_variants.filter(xpos__gte=mito_xpos)
-        else:
-            saved_variants = saved_variants.filter(xpos__lt=mito_xpos)
+
+    if dataset_type:
+        xpos_filter_key = 'xpos__gte' if dataset_type == Sample.DATASET_TYPE_MITO_CALLS else 'xpos__lt'
+        dataset_filter = {
+            'alt__isnull': dataset_type == Sample.DATASET_TYPE_SV_CALLS,
+            xpos_filter_key: get_xpos('M', 1),
+        }
+        saved_variants = saved_variants.filter(**dataset_filter)
 
     if not saved_variants:
         return None
