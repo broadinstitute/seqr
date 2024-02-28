@@ -12,4 +12,4 @@ case ${COMPONENT} in
   *) CONTAINER="--all-containers" ;;
 esac
 
-kubectl logs -f "${POD_NAME}" ${CONTAINER}
+kubectl logs -f "${POD_NAME}" "${CONTAINER}"
