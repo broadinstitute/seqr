@@ -95,9 +95,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_logger.warining.assert_not_called()
 
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
-        self.mock_utils_logger.info.assert_has_calls([mock.call('Reset 2 cached results')])
-        import pdb; pdb.set_trace()
-        # TODO actually test correct summary
+        self.mock_utils_logger.info.assert_has_calls([
+            mock.call('Reset 2 cached results'),
+            mock.call(f'Reloading saved variants in {len(reload_calls) + 1} projects'),
+        ])
 
         # Test reload saved variants
         self.assertEqual(len(responses.calls), len(reload_calls) + additional_requests)
@@ -241,6 +242,15 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(len(updated_variants), 1)
         self.assertEqual(updated_variants.first().guid, 'SV0000006_1248367227_r0004_non')
 
+        self.mock_utils_logger.error.assert_not_called()
+        self.mock_utils_logger.info.assert_has_calls([
+            mock.call('Updated 0 variants for project Test Reprocessed Project'),
+            mock.call('Updated 1 variants for project Non-Analyst Project'),
+            mock.call('Reload Summary: '),
+            mock.call('  Non-Analyst Project: Updated 1 variants'),
+            mock.call('Skipped the following 1 project with no saved variants: Test Reprocessed Project')
+        ])
+
         # Test notifications
         self.assertEqual(self.mock_send_slack.call_count, 2)
         self.mock_send_slack.assert_has_calls([
@@ -294,7 +304,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
     @responses.activate
     def test_gcnv_command(self):
-        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={'results': [], 'total': 0})
+        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=400)
         metadata = {
             'callsets': ['1kg.vcf.gz'],
             'sample_type': 'WES',
@@ -308,3 +318,11 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_send_slack.assert_called_once_with('seqr-data-loading',
             f'1 new WES SV samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20889```',
         )
+
+        self.mock_utils_logger.error.assert_called_with('Error in project Test Reprocessed Project: Bad Request')
+        self.mock_utils_logger.info.assert_has_calls([
+            mock.call('Reload Summary: '),
+            mock.call('Skipped the following 1 project with no saved variants: 1kg project nåme with uniçøde'),
+            mock.call('1 failed projects'),
+            mock.call('  Test Reprocessed Project: Bad Request'),
+        ])
