@@ -30,7 +30,6 @@ class ReloadSavedVariantJsonTest(TestCase):
             [family_1], ['1-1562437-G-C', '1-46859832-G-A','21-3343353-GAGA-G'], user=None, user_email='manage_command')
 
         logger_info_calls = [
-            mock.call('Project: 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call('Updated 3 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call('Reload Summary: '),
             mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 3 variants')
@@ -53,18 +52,15 @@ class ReloadSavedVariantJsonTest(TestCase):
         ], any_order=True)
 
         logger_info_calls = [
-            mock.call('Project: 1kg project n\xe5me with uni\xe7\xf8de'),
+            mock.call('Reloading saved variants in 4 projects'),
             mock.call('Updated 4 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
-            mock.call('Project: Empty Project'),
-            mock.call('Updated 0 variants for project Empty Project'),
-            mock.call('Project: Test Reprocessed Project'),
             mock.call('Updated 2 variants for project Test Reprocessed Project'),
-            mock.call('Project: Non-Analyst Project'),
             mock.call('Updated 1 variants for project Non-Analyst Project'),
             mock.call('Reload Summary: '),
             mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 4 variants'),
             mock.call('  Test Reprocessed Project: Updated 2 variants'),
             mock.call('  Non-Analyst Project: Updated 1 variants'),
+            mock.call('Skipped the following 1 project with no saved variants: Empty Project'),
         ]
         mock_logger.info.assert_has_calls(logger_info_calls)
         mock_get_variants.reset_mock()
@@ -79,7 +75,6 @@ class ReloadSavedVariantJsonTest(TestCase):
         mock_get_variants.assert_called_with([family_1], ['1-1562437-G-C', '1-46859832-G-A', '21-3343353-GAGA-G'], user=None, user_email='manage_command')
 
         logger_info_calls = [
-            mock.call('Project: 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call('Reload Summary: '),
             mock.call('1 failed projects'),
             mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Database error.')

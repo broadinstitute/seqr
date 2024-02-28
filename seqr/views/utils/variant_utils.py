@@ -31,34 +31,40 @@ OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
 
 def update_projects_saved_variant_json(projects, user_email, **kwargs):
     success = {}
+    skipped = {}
     error = {}
     logger.info(f'Reloading saved variants in {len(projects)} projects')
-    for project in tqdm(projects, unit=' project'):
-        logger.info(f'Project: {project.name}')
+    for project_id, project_name, family_ids in tqdm(projects, unit=' project'):
         try:
-            updated_saved_variant_guids = update_project_saved_variant_json(project, user_email=user_email, **kwargs)
-            success[project.name] = len(updated_saved_variant_guids)
-            logger.info(f'Updated {len(updated_saved_variant_guids)} variants for project {project.name}')
+            updated_saved_variant_guids = update_project_saved_variant_json(
+                project_id, user_email=user_email, family_ids=family_ids, **kwargs)
+            if updated_saved_variant_guids is None:
+                skipped[project_name] = True
+            else:
+                success[project_name] = len(updated_saved_variant_guids)
+                logger.info(f'Updated {len(updated_saved_variant_guids)} variants for project {project_name}')
         except Exception as e:
             traceback_message = traceback.format_exc()
             logger.error(traceback_message)
-            logger.error(f'Error in project {project.name}: {e}')
-            error[project.name] = e
+            logger.error(f'Error in project {project_name}: {e}')
+            error[project_name] = e
 
     logger.info('Reload Summary: ')
     for k, v in success.items():
         if v > 0:
             logger.info(f'  {k}: Updated {v} variants')
+    if skipped:
+        logger.info(f'Skipped the following {len(skipped)} project with no saved variants: {", ".join(skipped)}')
     if len(error):
         logger.info(f'{len(error)} failed projects')
     for k, v in error.items():
         logger.info(f'  {k}: {v}')
 
 
-def update_project_saved_variant_json(project, family_id=None, dataset_type=None, user=None, user_email=None):
-    saved_variants = SavedVariant.objects.filter(family__project=project).select_related('family')
-    if family_id:
-        saved_variants = saved_variants.filter(family__family_id=family_id)
+def update_project_saved_variant_json(project_id, family_ids=None, dataset_type=None, user=None, user_email=None):
+    saved_variants = SavedVariant.objects.filter(family__project_id=project_id).select_related('family')
+    if family_ids:
+        saved_variants = saved_variants.filter(family__family_id__in=family_ids)
     if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
         saved_variants = saved_variants.filter(alt__isnull=True)
     elif dataset_type:
@@ -70,7 +76,7 @@ def update_project_saved_variant_json(project, family_id=None, dataset_type=None
             saved_variants = saved_variants.filter(xpos__lt=mito_xpos)
 
     if not saved_variants:
-        return []
+        return None
 
     families = set()
     variant_ids = set()

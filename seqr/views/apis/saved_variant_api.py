@@ -303,12 +303,12 @@ def update_saved_variant_json(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     reset_cached_search_results(project)
     try:
-        updated_saved_variant_guids = update_project_saved_variant_json(project, user=request.user)
+        updated_saved_variant_guids = update_project_saved_variant_json(project.id, user=request.user)
     except Exception as e:
         logger.error('Unable to reset saved variant json for {}: {}'.format(project_guid, e))
         updated_saved_variant_guids = []
 
-    return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids})
+    return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids or []})
 
 
 def _hail_backend_error(*args, **kwargs):
