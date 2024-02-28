@@ -96,6 +96,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
         self.mock_utils_logger.info.assert_has_calls([mock.call('Reset 2 cached results')])
+        import pdb; pdb.set_trace()
         # TODO actually test correct summary
 
         # Test reload saved variants
