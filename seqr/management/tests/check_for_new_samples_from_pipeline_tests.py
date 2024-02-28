@@ -6,7 +6,7 @@ import mock
 import responses
 
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
-from seqr.models import Project, Family, Individual, Sample
+from seqr.models import Project, Family, Individual, Sample, SavedVariant
 
 SEQR_URL = 'https://seqr.broadinstitute.org/'
 PROJECT_GUID = 'R0003_test'
@@ -105,7 +105,6 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             self.assertEqual(resp.request.url, f'{MOCK_HAIL_HOST}:5000/search')
             self.assertEqual(resp.request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(resp.request.body), call)
-        # TODO test variant json updated on model
 
         # Tests Sample models created/updated
         updated_sample_models = Sample.objects.filter(guid__in=sample_guids)
@@ -129,7 +128,8 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
             json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
         responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
-            'results': [], 'total': 0,
+            'results': [{'variantId': '12-48367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
+            'total': 1,
         })
 
         # Test errors
@@ -234,6 +234,11 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             {'analysis_status': 'I', 'analysis_status_last_modified_date': None},
         ])
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
+
+        # Test SavedVariant model updated
+        updated_variants = SavedVariant.objects.filter(saved_variant_json__updated_field='updated_value')
+        self.assertEqual(len(updated_variants), 1)
+        self.assertEqual(updated_variants.first().guid, 'SV0000006_1248367227_r0004_non')
 
         # Test notifications
         self.assertEqual(self.mock_send_slack.call_count, 2)
