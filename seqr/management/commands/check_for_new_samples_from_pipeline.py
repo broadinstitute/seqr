@@ -99,6 +99,7 @@ class Command(BaseCommand):
         ).order_by('id').values('project').annotate(family_ids=ArrayAgg('family_id', distinct=True)).values_list(
             'project__id', 'project__name', 'family_ids',
         )
+        import pdb; pdb.set_trace()
         update_projects_saved_variant_json(projects, user_email='manage_command', dataset_type=dataset_type)
 
         logger.info('DONE')
