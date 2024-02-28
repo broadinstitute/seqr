@@ -3,6 +3,8 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Q
 import logging
 import redis
+from tqdm import tqdm
+import traceback
 
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
@@ -27,7 +29,34 @@ DISCOVERY_CATEGORY = 'CMG Discovery Tags'
 OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
 
 
-def update_project_saved_variant_json(project, family_id=None, user=None):
+def update_projects_saved_variant_json(projects, user_email, family_id=None):
+    success = {}
+    error = {}
+    logger.info(f'Reloading saved variants in {len(projects)} projects')
+    for project in tqdm(projects, unit=' project'):
+        logger.info(f'Project: {project.name}')
+        try:
+            updated_saved_variant_guids = update_project_saved_variant_json(
+                project, family_id=family_id, user_email=user_email)
+            success[project.name] = len(updated_saved_variant_guids)
+            logger.info(f'Updated {len(updated_saved_variant_guids)} variants for project {project.name}')
+        except Exception as e:
+            traceback_message = traceback.format_exc()
+            logger.error(traceback_message)
+            logger.error(f'Error in project {project.name}: {e}')
+            error[project.name] = e
+
+    logger.info('Summary: ')
+    for k, v in success.items():
+        if v > 0:
+            logger.info(f'  {k}: Updated {v} variants')
+    if len(error):
+        logger.info(f'{len(error)} failed projects')
+    for k, v in error.items():
+        logger.info(f'  {k}: {v}')
+
+
+def update_project_saved_variant_json(project, family_id=None, user=None, user_email=None):
     saved_variants = SavedVariant.objects.filter(family__project=project).select_related('family')
     if family_id:
         saved_variants = saved_variants.filter(family__family_id=family_id)
@@ -47,7 +76,7 @@ def update_project_saved_variant_json(project, family_id=None, user=None):
     families = sorted(families, key=lambda f: f.guid)
     variants_json = []
     for sub_var_ids in [variant_ids[i:i+MAX_VARIANTS_FETCH] for i in range(0, len(variant_ids), MAX_VARIANTS_FETCH)]:
-        variants_json += get_variants_for_variant_ids(families, sub_var_ids, user=user)
+        variants_json += get_variants_for_variant_ids(families, sub_var_ids, user=user, user_email=user_email)
 
     updated_saved_variant_guids = []
     for var in variants_json:

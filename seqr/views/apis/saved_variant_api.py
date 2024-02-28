@@ -298,6 +298,7 @@ def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=Vari
 
 @login_and_policies_required
 def update_saved_variant_json(request, project_guid):
+    # TODO endpoint not used in hail backend, should be disabled
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     reset_cached_search_results(project)
     try:

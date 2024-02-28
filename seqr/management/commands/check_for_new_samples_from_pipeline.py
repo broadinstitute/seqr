@@ -88,4 +88,12 @@ class Command(BaseCommand):
                 project, dataset_type, sample_type, inactivated_sample_guids,
                 updated_samples=project_updated_samples, num_samples=len(sample_ids),
             )
+
+        # Reload saved variant JSON
+        projects = Sample.objects.filter(
+            is_active=True, sample_type=sample_type, dataset_type=dataset_type,
+        ).values_list('individual__family__project').distinct()
+        # TODO only update variants with correct dataset_type
+        update_projects_saved_variant_json(projects, user_email='manage_command')
+
         logger.info('DONE')
