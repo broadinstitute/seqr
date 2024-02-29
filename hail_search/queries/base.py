@@ -217,7 +217,7 @@ class BaseHailTableQuery(object):
         self._has_secondary_annotations = False
         self._is_multi_data_type_comp_het = False
         self.max_unaffected_samples = None
-        self._load_table_kwargs = {}
+        self._load_table_kwargs = {'_n_partitions': (os.cpu_count() or 2)-1}
         self.entry_samples_by_family_guid = {}
 
         if sample_data:
@@ -1048,6 +1048,7 @@ class BaseHailTableQuery(object):
     def lookup_variant(self, variant_id, sample_data=None):
         self._parse_intervals(intervals=None, variant_ids=[variant_id], variant_keys=[variant_id])
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
+        self._load_table_kwargs['_n_partitions'] = 1
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         annotation_fields = self.annotation_fields(include_genotype_overrides=False)
