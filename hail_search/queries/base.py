@@ -845,13 +845,6 @@ class BaseHailTableQuery(object):
             # In cases where comp het pairs must have different data types, there are no single data type results
             return None
 
-        # TODO secondary variant correct transcript selection
-        # if self._has_secondary_annotations:
-        #     if ALLOWED_TRANSCRIPTS in row_agg and ALLOWED_SECONDARY_TRANSCRIPTS in row_agg:
-        #         # Ensure main transcripts are properly selected for primary/secondary annotations in variant pairs
-        #         row_agg = row_agg.annotate(**{ALLOWED_TRANSCRIPTS: row_agg[ALLOWED_SECONDARY_TRANSCRIPTS]})
-        #     secondary_variants = hl.agg.filter(hl.any(secondary_filters), hl.agg.collect(row_agg))
-
         """ Assume a table with the following data
         key_ | gene_ids | is_primary | is_secondary
         1    | A        | true       | true
@@ -903,6 +896,9 @@ class BaseHailTableQuery(object):
          1  | 3  | {A}
          2  | 3  | {A, B}             
         """
+
+        if self._has_secondary_annotations and ALLOWED_TRANSCRIPTS in ch_ht.v2 and ALLOWED_SECONDARY_TRANSCRIPTS in ch_ht.v2:
+            ch_ht = ch_ht.annotate(v2=ch_ht.v2.annotate(**{ALLOWED_TRANSCRIPTS: ch_ht.v2[ALLOWED_SECONDARY_TRANSCRIPTS]}))
 
         ch_ht = self._filter_grouped_compound_hets(ch_ht)
 
