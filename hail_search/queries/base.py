@@ -12,7 +12,6 @@ from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVE
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
-NUM_CPUS = int(os.environ.get('NUM_CPUS', 2))
 
 # Number of filtered genes at which pre-filtering a table by gene-intervals does not improve performance
 # Estimated based on behavior for several representative gene lists
@@ -218,7 +217,7 @@ class BaseHailTableQuery(object):
         self._has_secondary_annotations = False
         self._is_multi_data_type_comp_het = False
         self.max_unaffected_samples = None
-        self._load_table_kwargs = {'_n_partitions': NUM_CPUS-1}
+        self._load_table_kwargs = {'_n_partitions': (os.cpu_count() or 2)-1}
         self.entry_samples_by_family_guid = {}
 
         if sample_data:
