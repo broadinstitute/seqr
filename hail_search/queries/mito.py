@@ -139,7 +139,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _parse_intervals(self, intervals, exclude_intervals=False, **kwargs):
         parsed_intervals = super()._parse_intervals(intervals,**kwargs)
         if parsed_intervals and not exclude_intervals and len(parsed_intervals) < MAX_LOAD_INTERVALS:
-            self._load_table_kwargs.update({'_intervals': parsed_intervals, '_filter_intervals': True})
+            self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
         return parsed_intervals
 
     def _get_family_passes_quality_filter(self, quality_filter, ht=None, pathogenicity=None, **kwargs):
