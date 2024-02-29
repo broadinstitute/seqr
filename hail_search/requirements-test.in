@@ -1,3 +1,2 @@
 coverage<5.2
 pytest-aiohttp
-google-cloud-storage>=2.14.0
