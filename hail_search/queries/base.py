@@ -900,6 +900,7 @@ class BaseHailTableQuery(object):
         if self._has_secondary_annotations and ALLOWED_TRANSCRIPTS in ch_ht.v2 and ALLOWED_SECONDARY_TRANSCRIPTS in ch_ht.v2:
             ch_ht = ch_ht.annotate(v2=ch_ht.v2.annotate(**{ALLOWED_TRANSCRIPTS: ch_ht.v2[ALLOWED_SECONDARY_TRANSCRIPTS]}))
 
+        # TODO filtering should move before parallelize
         ch_ht = self._filter_grouped_compound_hets(ch_ht)
 
         # Return pairs formatted as lists
