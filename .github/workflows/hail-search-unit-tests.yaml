@@ -17,7 +17,7 @@ on:
 jobs:
   hail_search:
     runs-on: ubuntu-latest
-    container: hailgenetics/hail:0.2.126
+    container: hailgenetics/hail:0.2.128
 
     steps:
       - uses: actions/checkout@v2

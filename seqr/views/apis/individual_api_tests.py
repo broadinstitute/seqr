@@ -9,7 +9,7 @@ from django.urls.base import reverse
 from io import BytesIO
 from openpyxl import load_workbook
 
-from seqr.models import Individual
+from seqr.models import Individual, Sample
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
@@ -174,10 +174,21 @@ class IndividualAPITest(object):
         }))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
+            'NA19678 already has loaded data and cannot update the ID',
             "NA20870 is the mother of NA19678_1 but is not included. Make sure to create an additional record with NA20870 as the Individual ID",
         ])
 
+        response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
+            'individuals': [INDIVIDUAL_IDS_UPDATE_DATA, INDIVIDUAL_FAMILY_UPDATE_DATA]
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'NA19678 already has loaded data and cannot update the ID',
+            'NA20870 already has loaded data and cannot be moved to a different family',
+        ])
+
         # send valid request
+        Sample.objects.filter(guid__in=['S000130_na19678', 'S000135_na20870']).update(is_active=False)
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA, INDIVIDUAL_FAMILY_UPDATE_DATA]
         }))
@@ -398,7 +409,10 @@ class IndividualAPITest(object):
             'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"\n"2"	"NA19675_1"	""'.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
-            'errors': ['NA19675_1 is included as 2 separate records, but must be unique within the project'], 'warnings': []
+            'errors': [
+                'NA19675_1 already has loaded data and cannot be moved to a different family',
+                'NA19675_1 is included as 2 separate records, but must be unique within the project',
+            ], 'warnings': []
         })
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
@@ -455,8 +469,9 @@ class IndividualAPITest(object):
         self.check_manager_login(individuals_url)
 
         data = 'Family ID	Individual ID	Previous Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes	familyNotes\n\
-"1"	" NA19675 "	"NA19675_1 "	"NA19678 "	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
+"1"	" NA19675_1 "	""	"NA19678 "	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
 "1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
+"4"	"NA20872_update"	"NA20872"	""	""	"Male"	"Affected"	""	""\n\
 "21"	" HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family""'
 
         f = SimpleUploadedFile("1000_genomes demo_individuals.tsv", data.encode('utf-8'))
@@ -468,9 +483,9 @@ class IndividualAPITest(object):
         self.assertListEqual(response_json['errors'], [])
         self.assertListEqual(response_json['warnings'], [])
         self.assertListEqual(response_json['info'], [
-            '2 families, 3 individuals parsed from 1000_genomes demo_individuals.tsv',
+            '3 families, 4 individuals parsed from 1000_genomes demo_individuals.tsv',
             '1 new families, 1 new individuals will be added to the project',
-            '2 existing individuals will be updated',
+            '3 existing individuals will be updated',
         ])
 
         url = reverse(save_individuals_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
@@ -480,9 +495,10 @@ class IndividualAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid', 'familyNotesByGuid'})
 
-        self.assertEqual(len(response_json['familiesByGuid']), 2)
+        self.assertEqual(len(response_json['familiesByGuid']), 3)
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
-        new_family_guid = next(guid for guid in response_json['familiesByGuid'].keys() if guid != 'F000001_1')
+        self.assertTrue('F000004_4' in response_json['familiesByGuid'])
+        new_family_guid = next(guid for guid in response_json['familiesByGuid'].keys() if guid != 'F000001_1' and guid != 'F000004_4')
         self.assertEqual(response_json['familiesByGuid'][new_family_guid]['familyId'], '21')
         self.assertIsNone(response_json['familiesByGuid']['F000001_1']['pedigreeImage'])
 
@@ -492,17 +508,19 @@ class IndividualAPITest(object):
         self.assertEqual(new_note['noteType'], 'C')
         self.assertEqual(new_note['createdBy'], 'Test Manager User')
 
-        self.assertEqual(len(response_json['individualsByGuid']), 3)
+        self.assertEqual(len(response_json['individualsByGuid']), 4)
         self.assertTrue('I000001_na19675' in response_json['individualsByGuid'])
         self.assertTrue('I000002_na19678' in response_json['individualsByGuid'])
+        self.assertTrue('I000008_na20872' in response_json['individualsByGuid'])
         new_indiv_guid = next(guid for guid in response_json['individualsByGuid'].keys()
-                              if guid not in {'I000001_na19675', 'I000002_na19678'})
-        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['individualId'], 'NA19675')
+                              if guid not in {'I000001_na19675', 'I000002_na19678', 'I000008_na20872'})
+        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['individualId'], 'NA19675_1')
         self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['sex'], 'F')
         self.assertEqual(
             response_json['individualsByGuid']['I000001_na19675']['notes'], 'A affected individual, test1-zsf')
         self.assertEqual(response_json['individualsByGuid'][new_indiv_guid]['individualId'], 'HG00735')
         self.assertEqual(response_json['individualsByGuid'][new_indiv_guid]['sex'], 'F')
+        self.assertEqual(response_json['individualsByGuid']['I000008_na20872']['individualId'], 'NA20872_update')
 
         # Test PM permission
         receive_url = reverse(receive_individuals_table_handler, args=[PM_REQUIRED_PROJECT_GUID])
@@ -644,7 +662,8 @@ class IndividualAPITest(object):
         self.assertEqual(
             mock_email.call_args.kwargs['body'],
             '\n'.join([
-                'User test_pm_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.This email has 2 attached files:',
+                'User test_pm_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.',
+                'This email has 2 attached files:',
                 '    ', '    SK-3QVD.xlsx is the sample manifest file in a format that can be sent to GP.', '    ',
                 '    sample_manifest.tsv is the original merged pedigree-sample-manifest file that the user uploaded.', '    ',
             ]))
@@ -654,7 +673,7 @@ class IndividualAPITest(object):
     <b>SK-3QVD.xlsx</b> is the sample manifest file in a format that can be sent to GP.<br />
     <br />
     <b>sample_manifest.tsv</b> is the original merged pedigree-sample-manifest file that the user uploaded.<br />
-    """, 'text/html')
+    """.replace('\n', ''), 'text/html')
         mock_email.return_value.send.assert_called()
 
         # Test sent sample manifest is correct

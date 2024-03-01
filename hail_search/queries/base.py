@@ -217,7 +217,7 @@ class BaseHailTableQuery(object):
         self._has_secondary_annotations = False
         self._is_multi_data_type_comp_het = False
         self.max_unaffected_samples = None
-        self._load_table_kwargs = {}
+        self._load_table_kwargs = {'_n_partitions': (os.cpu_count() or 2)-1}
         self.entry_samples_by_family_guid = {}
 
         if sample_data:
@@ -276,6 +276,7 @@ class BaseHailTableQuery(object):
     def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
         filtered_project_hts = []
         exception_messages = set()
+        num_projects = len(project_samples)
         for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
             project_ht = self._read_table(
                 f'projects/{project_guid}.ht',
@@ -286,7 +287,7 @@ class BaseHailTableQuery(object):
                 continue
             try:
                 filtered_project_hts.append(
-                    (*self._filter_entries_table(project_ht, project_sample_data, **kwargs), len(project_sample_data))
+                    (*self._filter_entries_table(project_ht, project_sample_data, num_projects=num_projects, **kwargs), len(project_sample_data))
                 )
             except HTTPBadRequest as e:
                 exception_messages.add(e.reason)
@@ -344,7 +345,7 @@ class BaseHailTableQuery(object):
         if default_1 is None:
             default_1 = default
 
-        if not project_ht.any(hl.is_defined(project_ht.family_entries)):
+        if not project_ht.any(project_ht.family_entries.any(hl.is_defined)):
             return families_ht, False
 
         families_ht = families_ht.join(project_ht, how='outer')
@@ -361,8 +362,7 @@ class BaseHailTableQuery(object):
         ), True
 
     def _filter_entries_table(self, ht, sample_data, inheritance_filter=None, quality_filter=None, **kwargs):
-        if not self._load_table_kwargs:
-            ht = self._prefilter_entries_table(ht, **kwargs)
+        ht = self._prefilter_entries_table(ht, **kwargs)
 
         ht, sorted_family_sample_data = self._add_entry_sample_families(ht, sample_data)
 
@@ -1048,6 +1048,7 @@ class BaseHailTableQuery(object):
     def lookup_variant(self, variant_id, sample_data=None):
         self._parse_intervals(intervals=None, variant_ids=[variant_id], variant_keys=[variant_id])
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
+        self._load_table_kwargs['_n_partitions'] = 1
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         annotation_fields = self.annotation_fields(include_genotype_overrides=False)
