@@ -82,13 +82,17 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         sv_ch_ht = sv_ht.group_by('gene_ids').aggregate(v2=hl.agg.collect(sv_ht.row))
 
         variants = variant_ch_ht.join(sv_ch_ht).collect(_localize=False)
-        variants = variants.flatmap(lambda gvs: gvs.v1.flatmap(
-            lambda v1: gvs.v2.map(
-                lambda v2: hl.tuple([v1, v2, hl.set({gvs.gene_ids})])
+        variants = variants.flatmap(lambda gvs: hl.rbind(
+            hl.set({gvs.gene_ids}),
+            lambda comp_het_gene_ids: gvs.v1.flatmap(
+                lambda v1: gvs.v2.map(lambda v2: hl.struct(
+                    v1=v1.annotate(comp_het_gene_ids=comp_het_gene_ids),
+                    v2=v2.annotate(comp_het_gene_ids=comp_het_gene_ids),
+                ))
             )
         ))
         variants = self._filter_comp_het_families(variants, set_secondary_annotations=False)
-        return hl.Table.parallelize(variants.map(lambda v: hl.struct(v1=v[0], v2=v[1])))
+        return hl.Table.parallelize(variants)
 
     @staticmethod
     def _family_filtered_ch_ht(ht, overlapped_families, families):
