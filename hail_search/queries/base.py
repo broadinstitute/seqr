@@ -879,33 +879,28 @@ class BaseHailTableQuery(object):
         """
 
         variants = variants.group_by(lambda v: hl.tuple([v[1].key_, v[2].key_]))
+        variants = variants.values().map(lambda v: hl.rbind(
+            hl.enumerate(v[0][1].family_entries).filter(
+                lambda x: self._is_valid_comp_het_family(v[0][1], v[0][2], x[0])
+            ).map(lambda x: x[0]),
+            hl.set(v.map(lambda v: v[0])),
+            lambda valid_family_indices, comp_het_gene_ids: hl.tuple([v1, v2, valid_family_indices, comp_het_gene_ids])
+        )).filter(lambda v: v[2].any(lambda x: x))
 
-        ch_ht = hl.Table.parallelize(
-            variants.values().map(lambda v:
-                hl.struct(
-                    comp_het_gene_ids=hl.set(v.map(lambda v: v[0])),
-                    v1=v[0][1],
-                    v2=v[0][2],
-                )
-            )
-        )
-
-        """ After grouping by pair and annotating
-         v1 | v2 | comp_het_gene_ids
-         1  | 2  | {A}
-         1  | 3  | {A}
-         2  | 3  | {A, B}             
+        """ After grouping by pair and checking phasing have array of tuples (v1, v2, valid_family_indices, comp_het_gene_ids)
+         (1, 2, [0],    {A})
+         (1, 3, [0, 1], {A})
+         (2, 3, [1],    {A, B}) 
         """
 
-        if self._has_secondary_annotations and ALLOWED_TRANSCRIPTS in ch_ht.v2 and ALLOWED_SECONDARY_TRANSCRIPTS in ch_ht.v2:
-            ch_ht = ch_ht.annotate(v2=ch_ht.v2.annotate(**{ALLOWED_TRANSCRIPTS: ch_ht.v2[ALLOWED_SECONDARY_TRANSCRIPTS]}))
+        return hl.Table.parallelize(
+            variants.map(lambda v: hl.struct(**{GROUPED_VARIANTS_FIELD: hl.array([
+                self._annotated_comp_het_variant(v[0], v[2], v[3]),
+                self._annotated_comp_het_variant(v[1], v[2], v[3], is_secondary=True),
+            ])}))
+        )
 
-        # TODO filtering should move before parallelize
-        ch_ht = self._filter_grouped_compound_hets(ch_ht)
-
-        # Return pairs formatted as lists
-        return ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2])})
-
+    # TODO remove/rework
     def _filter_grouped_compound_hets(self, ch_ht):
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(valid_families=hl.enumerate(ch_ht.v1.family_entries).map(
@@ -916,20 +911,22 @@ class BaseHailTableQuery(object):
 
         return ch_ht
 
-    @staticmethod
-    def _annotated_comp_het_variant(ch_ht, field):
-        variant = ch_ht[field]
+    def _annotated_comp_het_variant(self, variant, valid_family_indices, comp_het_gene_ids, is_secondary=False):
+        if is_secondary and self._has_secondary_annotations and ALLOWED_TRANSCRIPTS in variant and ALLOWED_SECONDARY_TRANSCRIPTS in variant:
+            variant = variant.annotate(**{ALLOWED_TRANSCRIPTS: variant[ALLOWED_SECONDARY_TRANSCRIPTS]})
+
         return variant.annotate(
-            comp_het_gene_ids=ch_ht.comp_het_gene_ids,
-            family_entries=hl.enumerate(ch_ht.valid_families).filter(
-                lambda x: x[1]).map(lambda x: variant.family_entries[x[0]]),
+            comp_het_gene_ids=comp_het_gene_ids,
+            family_entries=valid_family_indices.map(lambda i: variant.family_entries[i]),
         )
 
     @classmethod
     def _gene_ids_expr(cls, ht):
         return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
 
-    def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
+    def _is_valid_comp_het_family(self, v1, v2, family_index):
+        entries_1 = v1.family_entries[family_index]
+        entries_2 = v2.family_entries[family_index]
         family_filters = [hl.is_defined(entries_1), hl.is_defined(entries_2)]
         if self.max_unaffected_samples > 0:
             family_filters.append(hl.enumerate(entries_1).all(lambda x: hl.any([

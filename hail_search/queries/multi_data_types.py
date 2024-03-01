@@ -92,15 +92,16 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         family_indices = hl.array([families.index(family_guid) for family_guid in overlapped_families])
         return ht.annotate(family_entries=family_indices.map(lambda i: ht.family_entries[i]))
 
-    def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
-        is_valid = super()._is_valid_comp_het_family(ch_ht, entries_1, entries_2)
+    def _is_valid_comp_het_family(self, v1, v2, family_index):
+        is_valid = super()._is_valid_comp_het_family(v1, v2, family_index)
 
         # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
         # considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
+        entries_1 = v1.family_entries[family_index]
         is_allowed_hom_alt = entries_1.all(lambda g: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](g.GT)) | hl.all([
-            ch_ht.v2.sv_type_id == self._sv_type_del_id,
-            ch_ht.v2.start_locus.position <= ch_ht.v1.locus.position,
-            ch_ht.v1.locus.position <= ch_ht.v2.end_locus.position,
+            v2.sv_type_id == self._sv_type_del_id,
+            v2.start_locus.position <= v1.locus.position,
+            v1.locus.position <= v2.end_locus.position,
         ])
         return is_valid & is_allowed_hom_alt
 
