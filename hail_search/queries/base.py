@@ -205,7 +205,7 @@ class BaseHailTableQuery(object):
         return value
 
     def __init__(self, sample_data, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
-                 override_comp_het_alt=False, **kwargs):
+                 override_comp_het_alt=False, max_partitions=100, **kwargs):
         self.unfiltered_comp_het_ht = None
         self._sort = sort
         self._sort_metadata = sort_metadata
@@ -217,7 +217,7 @@ class BaseHailTableQuery(object):
         self._has_secondary_annotations = False
         self._is_multi_data_type_comp_het = False
         self.max_unaffected_samples = None
-        self._load_table_kwargs = {'_n_partitions': (os.cpu_count() or 2)-1}
+        self._load_table_kwargs = {'_n_partitions': min(max_partitions, (os.cpu_count() or 2)-1)}
         self.entry_samples_by_family_guid = {}
 
         if sample_data:
