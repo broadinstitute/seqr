@@ -73,9 +73,9 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         PATHOGENICTY_HGMD_SORT_KEY: lambda r: [MitoHailTableQuery.CLINVAR_SORT(CLINVAR_KEY, r), r.hgmd.class_id],
     }
 
-    def _prefilter_entries_table(self, ht, *args, num_projects=1, **kwargs):
+    def _prefilter_entries_table(self, ht, *args, **kwargs):
         ht = super()._prefilter_entries_table(ht, *args, **kwargs)
-        if num_projects > 1 or not self._load_table_kwargs.get('_filter_intervals'):
+        if not self._load_table_kwargs.get('_filter_intervals'):
             af_ht = self._get_loaded_filter_ht(
                 GNOMAD_GENOMES_FIELD, 'high_af_variants.ht', self._get_gnomad_af_prefilter, **kwargs)
             if af_ht:
