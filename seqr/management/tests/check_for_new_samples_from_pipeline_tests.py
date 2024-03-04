@@ -6,11 +6,12 @@ import mock
 import responses
 
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
-from seqr.models import Project, Family, Individual, Sample
+from seqr.models import Project, Family, Individual, Sample, SavedVariant
 
 SEQR_URL = 'https://seqr.broadinstitute.org/'
 PROJECT_GUID = 'R0003_test'
 EXTERNAL_PROJECT_GUID = 'R0004_non_analyst_project'
+MOCK_HAIL_HOST = 'http://test-hail-host'
 
 GUID_ID = 54321
 NEW_SAMPLE_GUID_P3 = f'S{GUID_ID}_NA20888'
@@ -47,6 +48,7 @@ INTERNAL_HTML_EMAIL = f'Dear seqr user,<br /><br />' \
                       f'<br /><br />All the best,<br />The seqr team'
 
 
+@mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HAIL_HOST)
 @mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: GUID_ID)
 @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', 'http://testairtable')
 @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
@@ -74,7 +76,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.addCleanup(patcher.stop)
         super().setUp()
 
-    def _test_success(self, path, metadata, dataset_type, sample_guids, num_projects=1):
+    def _test_success(self, path, metadata, dataset_type, sample_guids, reload_calls, additional_requests=0, num_projects=1):
         self.mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
         self.mock_subprocess.return_value.wait.return_value = 0
 
@@ -93,7 +95,18 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_logger.warining.assert_not_called()
 
         self.mock_redis.return_value.delete.assert_called_with('search_results__*', 'variant_lookup_results__*')
-        self.mock_utils_logger.info.assert_called_with('Reset 2 cached results')
+        self.mock_utils_logger.info.assert_has_calls([
+            mock.call('Reset 2 cached results'),
+            mock.call('Reloading saved variants in 2 projects'),
+        ])
+
+        # Test reload saved variants
+        self.assertEqual(len(responses.calls), len(reload_calls) + additional_requests)
+        for i, call in enumerate(reload_calls):
+            resp = responses.calls[i+additional_requests]
+            self.assertEqual(resp.request.url, f'{MOCK_HAIL_HOST}:5000/search')
+            self.assertEqual(resp.request.headers.get('From'), 'manage_command')
+            self.assertDictEqual(json.loads(resp.request.body), call)
 
         # Tests Sample models created/updated
         updated_sample_models = Sample.objects.filter(guid__in=sample_guids)
@@ -116,6 +129,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             responses.GET,
             "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
             json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
+        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
+            'results': [{'variantId': '12-48367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
+            'total': 1,
+        })
 
         # Test errors
         with self.assertRaises(CommandError) as ce:
@@ -166,9 +183,20 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         # Test success
         self.mock_logger.reset_mock()
         self.mock_subprocess.reset_mock()
+        search_body = {
+            'genome_version': 'GRCh38', 'num_results': 1, 'variant_ids': [['12', 48367227, 'TC', 'T']], 'variant_keys': [],
+        }
         self._test_success('GRCh38/SNV_INDEL', metadata, dataset_type='SNV_INDEL', num_projects=2, sample_guids={
             EXISTING_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4,
-        })
+        }, additional_requests=1, reload_calls=[
+            {**search_body, 'sample_data': {'SNV_INDEL': [
+                {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889'},
+                {'individual_guid': 'I000016_na20888', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20888'},
+            ]}},
+            {**search_body, 'sample_data': {'SNV_INDEL': [
+                {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234'},
+            ]}},
+        ])
 
         old_data_sample_guid = 'S000143_na20885'
         self.assertFalse(Sample.objects.get(guid=old_data_sample_guid).is_active)
@@ -208,6 +236,19 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             {'analysis_status': 'I', 'analysis_status_last_modified_date': None},
         ])
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
+
+        # Test SavedVariant model updated
+        updated_variants = SavedVariant.objects.filter(saved_variant_json__updated_field='updated_value')
+        self.assertEqual(len(updated_variants), 1)
+        self.assertEqual(updated_variants.first().guid, 'SV0000006_1248367227_r0004_non')
+
+        self.mock_utils_logger.error.assert_not_called()
+        self.mock_utils_logger.info.assert_has_calls([
+            mock.call('Updated 0 variants for project Test Reprocessed Project'),
+            mock.call('Updated 1 variants for project Non-Analyst Project'),
+            mock.call('Reload Summary: '),
+            mock.call('  Non-Analyst Project: Updated 1 variants'),
+        ])
 
         # Test notifications
         self.assertEqual(self.mock_send_slack.call_count, 2)
@@ -262,13 +303,25 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
     @responses.activate
     def test_gcnv_command(self):
+        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=400)
         metadata = {
             'callsets': ['1kg.vcf.gz'],
             'sample_type': 'WES',
-            'family_samples': {'F000012_12': ['NA20885']},
+            'family_samples': {'F000012_12': ['NA20889']},
         }
-        self._test_success('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S{GUID_ID}_NA20885'})
+        self._test_success('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S{GUID_ID}_NA20889'}, reload_calls=[{
+            'genome_version': 'GRCh37', 'num_results': 1, 'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'],
+            'sample_data': {'SV_WES': [{'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889'}]},
+        }])
 
         self.mock_send_slack.assert_called_once_with('seqr-data-loading',
-            f'1 new WES SV samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20885```',
+            f'1 new WES SV samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20889```',
         )
+
+        self.mock_utils_logger.error.assert_called_with('Error in project Test Reprocessed Project: Bad Request')
+        self.mock_utils_logger.info.assert_has_calls([
+            mock.call('Reload Summary: '),
+            mock.call('Skipped the following 1 project with no saved variants: 1kg project nåme with uniçøde'),
+            mock.call('1 failed projects'),
+            mock.call('  Test Reprocessed Project: Bad Request'),
+        ])
