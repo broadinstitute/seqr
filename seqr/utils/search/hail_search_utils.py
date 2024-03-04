@@ -45,7 +45,7 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
         'frequencies': frequencies,
         'quality_filter': search_body.pop('qualityFilter', None),
         'custom_query': search_body.pop('customQuery', None),
-        'max_partitions': 12,
+        'max_partitions': 14,
     })
     search_body.pop('skipped_samples', None)
 
