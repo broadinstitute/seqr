@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from hail_search.constants import SCREEN_KEY, GENOME_VERSION_GRCh37, PREFILTER_FREQ_CUTOFF
+from hail_search.constants import GENOME_VERSION_GRCh37, PREFILTER_FREQ_CUTOFF
 from hail_search.queries.snv_indel import SnvIndelHailTableQuery
 
 
