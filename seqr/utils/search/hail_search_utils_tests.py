@@ -53,7 +53,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
                                    quality_filter=None, sort='xpos', sort_metadata=None, **kwargs):
 
         expected_search = {
-            'max_partitions': 16,
+            'max_partitions': 12,
             'sort': sort,
             'sort_metadata': sort_metadata,
             'inheritance_mode': inheritance_mode,
