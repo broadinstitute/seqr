@@ -155,6 +155,8 @@ MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = {
     'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5,
 }
 
+NO_GENOTYPE_GCNV_VARIANT = {**GCNV_VARIANT4, 'numExon': 8, 'end': 38736268}
+
 # Ensures no variants are filtered out by annotation/path filters for compound hets
 COMP_HET_ALL_PASS_FILTERS = {
     'annotations': {'splice_ai': '0.0', 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
@@ -694,18 +696,42 @@ class HailSearchTestCase(AioHTTPTestCase):
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {
-            **GCNV_VARIANT4, 'numExon': 8, 'end': 38736268, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': '',
+            **NO_GENOTYPE_GCNV_VARIANT, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': '',
         })
 
         async with self.client.request('POST', '/lookup', json={**body, 'sample_data': EXPECTED_SAMPLE_DATA['SV_WES']}) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {
-            **GCNV_VARIANT4, 'numExon': 8, 'end': 38736268, 'genotypes': {
+            **NO_GENOTYPE_GCNV_VARIANT, 'genotypes': {
                 individual: {k: v for k, v in genotype.items() if k not in {'start', 'end', 'numExon', 'geneIds'}}
                 for individual, genotype in GCNV_VARIANT4['genotypes'].items()
             }
         })
+
+    async def test_multi_variant_lookup(self):
+        await self._test_multi_lookup(VARIANT_ID_SEARCH['variant_ids'], 'SNV_INDEL', [VARIANT1])
+
+        await self._test_multi_lookup([['7', 143270172, 'A', 'G']], 'SNV_INDEL', [GRCH37_VARIANT], genome_version='GRCh37')
+
+        await self._test_multi_lookup([['M', 4429, 'G', 'A'], ['M', 14783, 'T', 'C']], 'MITO', [MITO_VARIANT1, MITO_VARIANT3])
+
+        await self._test_multi_lookup(
+            ['cohort_2911.chr1.final_cleanup_INS_chr1_160', 'phase2_DEL_chr14_4640'],
+            'SV_WGS', [SV_VARIANT2, SV_VARIANT4],
+        )
+
+        await self._test_multi_lookup(['suffix_140608_DUP'], 'SV_WES', [NO_GENOTYPE_GCNV_VARIANT])
+
+    async def _test_multi_lookup(self, variant_ids, data_type, results, genome_version='GRCh38'):
+        body = {'genome_version': genome_version, 'data_type': data_type, 'variant_ids': variant_ids}
+        async with self.client.request('POST', '/multi_lookup', json=body) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {'results': [
+            {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}}
+            for variant in results
+        ]})
 
     async def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
