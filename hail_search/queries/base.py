@@ -17,6 +17,11 @@ SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 # Estimated based on behavior for several representative gene lists
 MAX_GENE_INTERVALS = 100
 
+# Optimal number of entry table partitions, balancing parallelization with partition overhead
+# Experimentally determined based on compound het search performance:
+# https://github.com/broadinstitute/seqr-private/issues/1283#issuecomment-1973392719
+MAX_PARTITIONS = 12
+
 logger = logging.getLogger(__name__)
 
 
@@ -205,7 +210,7 @@ class BaseHailTableQuery(object):
         return value
 
     def __init__(self, sample_data, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
-                 override_comp_het_alt=False, max_partitions=100, **kwargs):
+                 override_comp_het_alt=False, **kwargs):
         self.unfiltered_comp_het_ht = None
         self._sort = sort
         self._sort_metadata = sort_metadata
@@ -217,7 +222,7 @@ class BaseHailTableQuery(object):
         self._has_secondary_annotations = False
         self._is_multi_data_type_comp_het = False
         self.max_unaffected_samples = None
-        self._load_table_kwargs = {'_n_partitions': min(max_partitions, (os.cpu_count() or 2)-1)}
+        self._load_table_kwargs = {'_n_partitions': min(MAX_PARTITIONS, (os.cpu_count() or 2)-1)}
         self.entry_samples_by_family_guid = {}
 
         if sample_data:
@@ -276,7 +281,6 @@ class BaseHailTableQuery(object):
     def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
         filtered_project_hts = []
         exception_messages = set()
-        num_projects = len(project_samples)
         for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
             project_ht = self._read_table(
                 f'projects/{project_guid}.ht',
@@ -287,7 +291,7 @@ class BaseHailTableQuery(object):
                 continue
             try:
                 filtered_project_hts.append(
-                    (*self._filter_entries_table(project_ht, project_sample_data, num_projects=num_projects, **kwargs), len(project_sample_data))
+                    (*self._filter_entries_table(project_ht, project_sample_data, **kwargs), len(project_sample_data))
                 )
             except HTTPBadRequest as e:
                 exception_messages.add(e.reason)
@@ -300,6 +304,15 @@ class BaseHailTableQuery(object):
         return filtered_project_hts
 
     def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
+        if len(project_samples) > 1 and (kwargs.get('parsed_intervals') or kwargs.get('padded_interval')):
+            # For multi-project interval search, faster to first read and filter the annotation table and then add entries
+            ht = self._read_table('annotations.ht')
+            ht = self._filter_annotated_table(
+                ht, parsed_intervals=kwargs.get('parsed_intervals'), padded_interval=kwargs.get('padded_interval'),
+            )
+            self._load_table_kwargs['variant_ht'] = ht.select()
+            kwargs.update({'parsed_intervals': None, 'padded_interval': None})
+
         if num_families == 1:
             family_sample_data = list(project_samples.values())[0]
             family_guid = list(family_sample_data.keys())[0]
