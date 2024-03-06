@@ -17,6 +17,11 @@ SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 # Estimated based on behavior for several representative gene lists
 MAX_GENE_INTERVALS = 100
 
+# Optimal number of entry table partitions, balancing parallelization with partition overhead
+# Experimentally determined based on compound het search performance:
+# https://github.com/broadinstitute/seqr-private/issues/1283#issuecomment-1973392719
+MAX_PARTITIONS = 12
+
 logger = logging.getLogger(__name__)
 
 
@@ -217,7 +222,7 @@ class BaseHailTableQuery(object):
         self._has_secondary_annotations = False
         self._is_multi_data_type_comp_het = False
         self.max_unaffected_samples = None
-        self._load_table_kwargs = {'_n_partitions': (os.cpu_count() or 2)-1}
+        self._load_table_kwargs = {'_n_partitions': min(MAX_PARTITIONS, (os.cpu_count() or 2)-1)}
         self.entry_samples_by_family_guid = {}
 
         if sample_data:

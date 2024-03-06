@@ -144,8 +144,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def _get_family_passes_quality_filter(self, quality_filter, ht=None, pathogenicity=None, **kwargs):
         passes_quality = super()._get_family_passes_quality_filter(quality_filter)
-        clinvar_path_ht = False if passes_quality is None else self._get_loaded_filter_ht(
-            CLINVAR_KEY, 'clinvar_path_variants.ht', self._get_clinvar_prefilter, pathogenicity=pathogenicity)
+        clinvar_path_ht = False if passes_quality is None else self._get_loaded_clinvar_prefilter_ht(pathogenicity)
         if not clinvar_path_ht:
             return passes_quality
 
@@ -159,10 +158,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
             else:
                 ht = self._read_table(table_path)
                 if ht_filter is not True:
-                    ht = ht.filter(ht[ht_filter])
+                    ht = ht.filter(ht_filter(ht))
                 self._filter_hts[key] = ht
 
         return self._filter_hts[key]
+
+    def _get_loaded_clinvar_prefilter_ht(self, pathogenicity):
+        return self._get_loaded_filter_ht(
+            CLINVAR_KEY, 'clinvar_path_variants.ht', self._get_clinvar_prefilter, pathogenicity=pathogenicity)
 
     def _get_clinvar_prefilter(self, pathogenicity=None):
         clinvar_path_filters = self._get_clinvar_path_filters(pathogenicity)
@@ -170,9 +173,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
             return False
 
         if CLINVAR_LIKELY_PATH_FILTER not in clinvar_path_filters:
-            return 'is_pathogenic'
+            return lambda ht: ht.is_pathogenic
         elif CLINVAR_PATH_FILTER not in clinvar_path_filters:
-            return 'is_likely_pathogenic'
+            return lambda ht: ht.is_likely_pathogenic
         return True
 
     def _filter_variant_ids(self, ht, variant_ids):
