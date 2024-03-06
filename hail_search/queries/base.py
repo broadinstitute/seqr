@@ -354,9 +354,7 @@ class BaseHailTableQuery(object):
             if not use_annotations_ht_first:
                 self._ht = self._filter_annotated_table(self._ht, **kwargs)
             elif self._has_comp_het_search:
-                primary_annotation_filters = self._get_annotation_filters(self._ht)
-                if primary_annotation_filters:
-                    self._ht = self._ht.filter(hl.any(primary_annotation_filters))
+                self._ht = self._filter_by_annotations(self._ht, **(kwargs.get(parsed_annotations) or {}))
 
     def _add_project_ht(self, families_ht, project_ht, default, default_1=None):
         if default_1 is None:
@@ -581,7 +579,7 @@ class BaseHailTableQuery(object):
 
         ht = self._filter_by_in_silico(ht, in_silico)
 
-        return self._filter_by_annotations(ht, is_comp_het, **(parsed_annotations or {}))
+        return self._filter_by_annotations(ht, is_comp_het=is_comp_het, **(parsed_annotations or {}))
 
     def _filter_by_gene_ids(self, ht, gene_ids):
         gene_ids = hl.set(gene_ids)
@@ -742,7 +740,7 @@ class BaseHailTableQuery(object):
         })
         return parsed_annotations
 
-    def _filter_by_annotations(self, ht, is_comp_het, consequence_ids=None, annotation_overrides=None,
+    def _filter_by_annotations(self, ht, is_comp_het=False, consequence_ids=None, annotation_overrides=None,
                                secondary_consequence_ids=None, secondary_annotation_overrides=None, **kwargs):
 
         annotation_exprs = {}
