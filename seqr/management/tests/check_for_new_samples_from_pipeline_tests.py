@@ -171,9 +171,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             str(ce.exception),
             'Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)')
 
-        project = Project.objects.get(guid=PROJECT_GUID)
-        project.genome_version = 38
-        project.save()
+        Project.objects.filter(id__in=[3]).update(genome_version=38)
 
         with self.assertRaises(ValueError) as ce:
             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
