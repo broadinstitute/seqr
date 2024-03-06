@@ -1304,7 +1304,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'projects': [
-            {'dataTypeLastLoaded': '2018-02-05T06:42:55.397Z', 'name': 'Non-Analyst Project', 'projectGuid': 'R0004_non_analyst_project'},
+            {'dataTypeLastLoaded': '2018-02-05T06:31:55.397Z', 'name': 'Non-Analyst Project', 'projectGuid': 'R0004_non_analyst_project'},
         ]})
 
         response = self.client.get(url.replace('SV', 'MITO'))
