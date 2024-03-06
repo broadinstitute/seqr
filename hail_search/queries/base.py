@@ -17,6 +17,11 @@ SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 # Estimated based on behavior for several representative gene lists
 MAX_GENE_INTERVALS = 100
 
+# Optimal number of entry table partitions, balancing parallelization with partition overhead
+# Experimentally determined based on compound het search performance:
+# https://github.com/broadinstitute/seqr-private/issues/1283#issuecomment-1973392719
+MAX_PARTITIONS = 12
+
 logger = logging.getLogger(__name__)
 
 
@@ -217,7 +222,7 @@ class BaseHailTableQuery(object):
         self._has_secondary_annotations = False
         self._is_multi_data_type_comp_het = False
         self.max_unaffected_samples = None
-        self._load_table_kwargs = {}
+        self._load_table_kwargs = {'_n_partitions': min(MAX_PARTITIONS, (os.cpu_count() or 2)-1)}
         self.entry_samples_by_family_guid = {}
 
         if sample_data:
@@ -811,7 +816,10 @@ class BaseHailTableQuery(object):
         ch_ht = self._comp_het_ht
 
         # Get possible pairs of variants within the same gene
-        ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht))
+        def key(v):
+            ks = [v[k] for k in self.KEY_FIELD]
+            return ks[0] if len(self.KEY_FIELD) == 1 else hl.tuple(ks)
+        ch_ht = ch_ht.annotate(key_=key(ch_ht.row), gene_ids=self._gene_ids_expr(ch_ht))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
 
         # Filter allowed transcripts to the grouped gene
@@ -824,108 +832,105 @@ class BaseHailTableQuery(object):
 
         if transcript_annotations or self._has_secondary_annotations:
             primary_filters = self._get_annotation_filters(ch_ht)
-            secondary_filters = self._get_annotation_filters(ch_ht, is_secondary=True) if self._has_secondary_annotations else []
-            self.unfiltered_comp_het_ht = ch_ht.filter(hl.any(primary_filters + secondary_filters))
+            ch_ht = ch_ht.annotate(is_primary=hl.coalesce(hl.any(primary_filters), False))
+            if self._has_secondary_annotations and not self._is_multi_data_type_comp_het:
+                secondary_filters = self._get_annotation_filters(ch_ht, is_secondary=True)
+                is_secondary = hl.coalesce(hl.any(secondary_filters), False)
+            else:
+                is_secondary = ch_ht.is_primary
+            ch_ht = ch_ht.annotate(is_secondary=is_secondary)
+            if transcript_annotations:
+                ch_ht = ch_ht.filter(ch_ht.is_primary | ch_ht.is_secondary)
         else:
-            self.unfiltered_comp_het_ht = ch_ht
+            ch_ht = ch_ht.annotate(is_primary=True, is_secondary=True)
+        self.unfiltered_comp_het_ht = ch_ht
 
         if self._is_multi_data_type_comp_het:
             # In cases where comp het pairs must have different data types, there are no single data type results
             return None
 
-        if self._has_secondary_annotations:
-            primary_variants = hl.agg.filter(hl.any(primary_filters), hl.agg.collect(ch_ht.row))
-            row_agg = ch_ht.row
-            if ALLOWED_TRANSCRIPTS in row_agg and ALLOWED_SECONDARY_TRANSCRIPTS in row_agg:
-                # Ensure main transcripts are properly selected for primary/secondary annotations in variant pairs
-                row_agg = row_agg.annotate(**{ALLOWED_TRANSCRIPTS: row_agg[ALLOWED_SECONDARY_TRANSCRIPTS]})
-            secondary_variants = hl.agg.filter(hl.any(secondary_filters), hl.agg.collect(row_agg))
-        else:
-            if transcript_annotations:
-                ch_ht = ch_ht.filter(hl.any(self._get_annotation_filters(ch_ht)))
-            primary_variants = hl.agg.collect(ch_ht.row)
-            secondary_variants = primary_variants
-
-        ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
-
-        # Compute all distinct variant pairs
         """ Assume a table with the following data
-         gene_ids | v1     | v2
-         A        | [1, 2] | [1, 2, 3]
-         B        | [2]    | [2, 3]
+        key_ | gene_ids | is_primary | is_secondary
+        1    | A        | true       | true
+        2    | A        | true       | true
+        2    | B        | true       | true
+        3    | A        | false      | true
+        3    | B        | false      | true
         """
-        key_expr = lambda v: v[self.KEY_FIELD[0]] if len(self.KEY_FIELD) == 1 else hl.tuple([v[k] for k in self.KEY_FIELD])
-        ch_ht = ch_ht.annotate(
-            v1_set=hl.set(ch_ht.v1.map(key_expr)),
-            v2=ch_ht.v2.group_by(key_expr).map_values(lambda x: x[0]),
+
+        variants = ch_ht.collect(_localize=False)
+        variants = variants.group_by(lambda v: v.gene_ids)
+        variants = variants.items().flatmap(lambda gvs:
+            hl.rbind(gvs[0], gvs[1], lambda gene_id, variants:
+                hl.rbind(
+                    variants.filter(lambda v: v.is_primary),
+                    variants.filter(lambda v: v.is_secondary),
+                    lambda v1s, v2s:
+                        v1s.flatmap(lambda v1:
+                            v2s \
+                            .filter(lambda v2: ~v2.is_primary | ~v1.is_secondary | (v1.key_ < v2.key_)) \
+                            .map(lambda v2: hl.tuple([gene_id, v1, v2]))
+                        )
+                )
+            )
         )
-        ch_ht = ch_ht.explode(ch_ht.v1)
-        """ After annotating and exploding by v1:
-         gene_ids | v1 | v2                          | v1_set 
-         A        | 1  | {id_1: 1, id_2: 2, id_3: 3} | {id_1, id_2}
-         A        | 2  | {id_2: 2, id_3: 3}          | {id_1, id_2}
-         B        | 2  | {id_2: 2, id_3: 3}          | {id_2}
+
+        """ After grouping by gene and pairing/filtering have array of tuples (gene_id, v1, v2)
+        (A, 1, 2)
+        (A, 1, 3)
+        (A, 2, 3)
+        (B, 2, 3)
         """
 
-        v1_key = key_expr(ch_ht.v1)
-        ch_ht = ch_ht.annotate(v2=ch_ht.v2.items().filter(
-            lambda x: ~ch_ht.v2.contains(v1_key) | ~ch_ht.v1_set.contains(x[0]) | (x[0] > v1_key)
+        variants = variants.group_by(lambda v: hl.tuple([v[1].key_, v[2].key_]))
+        variants = variants.values().map(lambda v: hl.rbind(
+            hl.set(v.map(lambda v: v[0])),
+            lambda comp_het_gene_ids: hl.struct(
+                v1=v[0][1].annotate(comp_het_gene_ids=comp_het_gene_ids),
+                v2=v[0][2].annotate(comp_het_gene_ids=comp_het_gene_ids),
+            )
         ))
-        """ After filtering v2:
-         gene_ids | v1 | v2                     | v1_set 
-         A        | 1  | [(id_2, 2), (id_3, 3)] | {id_1, id_2}
-         A        | 2  | [(id_3, 3)]            | {id_1, id_2}
-         B        | 2  | [(id_3, 3)]            | {id_2}
+
+        """ After grouping by pair have array of structs (v1, v2) annotated with comp_het_gene_ids
+        v1 | v2 | v<1/2>.comp_het_gene_ids
+         1 | 2  | {A}
+         1 | 3  | {A}
+         2 | 3  | {A, B} 
         """
 
-        ch_ht = ch_ht.group_by('v1').aggregate(
-            comp_het_gene_ids=hl.agg.collect_as_set(ch_ht.gene_ids),
-            v2_items=hl.agg.collect(ch_ht.v2).flatmap(lambda x: x),
+        variants = self._filter_comp_het_families(variants)
+
+        return hl.Table.parallelize(
+            variants.map(lambda v: hl.struct(**{GROUPED_VARIANTS_FIELD: hl.array([v.v1, v.v2])}))
         )
-        ch_ht = ch_ht.annotate(v2=hl.dict(ch_ht.v2_items).values())
-        """ After grouping by v1:
-         v1 | v2     | comp_het_gene_ids
-         1  | [2, 3] | {A}
-         2  | [3]    | {A, B}             
-        """
 
-        ch_ht = ch_ht.explode(ch_ht.v2)._key_by_assert_sorted()
-        """ After exploding by v2:
-         v1 | v2 | comp_het_gene_ids
-         1  | 2  | {A}
-         1  | 3  | {A}
-         2  | 3  | {A, B}             
-        """
-
-        ch_ht = self._filter_grouped_compound_hets(ch_ht)
-
-        # Return pairs formatted as lists
-        return ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2])})
-
-    def _filter_grouped_compound_hets(self, ch_ht):
-        # Filter variant pairs for family and genotype
-        ch_ht = ch_ht.annotate(valid_families=hl.enumerate(ch_ht.v1.family_entries).map(
-            lambda x: self._is_valid_comp_het_family(ch_ht, x[1], ch_ht.v2.family_entries[x[0]])
+    def _filter_comp_het_families(self, variants, set_secondary_annotations=True):
+        return variants.map(lambda v: v.annotate(
+            valid_family_indices=hl.enumerate(v.v1.family_entries).map(lambda x: x[0]).filter(
+                lambda i: self._is_valid_comp_het_family(v.v1, v.v2, i)
+            )
+        )).filter(
+            lambda v: v.valid_family_indices.any(hl.is_defined)
+        ).map(lambda v: v.select(
+            v1=self._annotated_comp_het_variant(v.v1, v.valid_family_indices),
+            v2=self._annotated_comp_het_variant(v.v2, v.valid_family_indices, is_secondary=set_secondary_annotations),
         ))
-        ch_ht = ch_ht.filter(ch_ht.valid_families.any(lambda x: x))
-        ch_ht = ch_ht.select(**{k: self._annotated_comp_het_variant(ch_ht, k) for k in ['v1', 'v2']})
 
-        return ch_ht
+    def _annotated_comp_het_variant(self, variant, valid_family_indices, is_secondary=False):
+        if is_secondary and self._has_secondary_annotations and ALLOWED_TRANSCRIPTS in variant and ALLOWED_SECONDARY_TRANSCRIPTS in variant:
+            variant = variant.annotate(**{ALLOWED_TRANSCRIPTS: variant[ALLOWED_SECONDARY_TRANSCRIPTS]})
 
-    @staticmethod
-    def _annotated_comp_het_variant(ch_ht, field):
-        variant = ch_ht[field]
         return variant.annotate(
-            comp_het_gene_ids=ch_ht.comp_het_gene_ids,
-            family_entries=hl.enumerate(ch_ht.valid_families).filter(
-                lambda x: x[1]).map(lambda x: variant.family_entries[x[0]]),
+            family_entries=valid_family_indices.map(lambda i: variant.family_entries[i]),
         )
 
     @classmethod
     def _gene_ids_expr(cls, ht):
         return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
 
-    def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
+    def _is_valid_comp_het_family(self, v1, v2, family_index):
+        entries_1 = v1.family_entries[family_index]
+        entries_2 = v2.family_entries[family_index]
         family_filters = [hl.is_defined(entries_1), hl.is_defined(entries_2)]
         if self.max_unaffected_samples > 0:
             family_filters.append(hl.enumerate(entries_1).all(lambda x: hl.any([
@@ -939,9 +944,10 @@ class BaseHailTableQuery(object):
         return [self.GENOTYPE_QUERY_MAP[REF_REF](gt1), self.GENOTYPE_QUERY_MAP[REF_REF](gt2)]
 
     def _format_comp_het_results(self, ch_ht, annotation_fields):
-        formatted_grouped_variants = ch_ht[GROUPED_VARIANTS_FIELD].map(
-            lambda v: self._format_results(v, annotation_fields=annotation_fields)
-        )
+        formatted_grouped_variants = hl.array([
+            self._format_results(ch_ht[GROUPED_VARIANTS_FIELD][0], annotation_fields=annotation_fields),
+            self._format_results(ch_ht[GROUPED_VARIANTS_FIELD][1], annotation_fields=annotation_fields),
+        ])
         ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted(formatted_grouped_variants, key=lambda x: x._sort)})
         return ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
 
@@ -1048,6 +1054,7 @@ class BaseHailTableQuery(object):
     def lookup_variants(self, variant_ids, annotation_fields=None):
         self._parse_intervals(intervals=None, variant_ids=variant_ids, variant_keys=variant_ids)
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
+        self._load_table_kwargs['_n_partitions'] = 1
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         if not annotation_fields:

@@ -2,6 +2,9 @@
 
 ## dev
 
+## 3/1/24
+* Add subscribable project notifications (REQUIRES DB MIGRATION)
+
 ## 1/8/24
 * Support OMIM entries with no associated gene and remove phenotypic_series_number (REQUIRES DB MIGRATION)
 
