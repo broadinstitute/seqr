@@ -76,7 +76,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.addCleanup(patcher.stop)
         super().setUp()
 
-    def _test_success(self, path, metadata, dataset_type, sample_guids, reload_calls, additional_requests=0, num_projects=1):
+    def _test_success(self, path, metadata, dataset_type, sample_guids, reload_calls, reload_annotations_logs, additional_requests=0):
         self.mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
         self.mock_subprocess.return_value.wait.return_value = 0
 
@@ -89,7 +89,8 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
         self.mock_logger.info.assert_has_calls([
             mock.call(f'Loading new samples from {path}: auto__2023-08-08'),
-            mock.call(f'Loading {len(sample_guids)} WES {dataset_type} samples in {num_projects} projects'),
+            mock.call(f'Loading {len(sample_guids)} WES {dataset_type} samples in 2 projects'),
+        ] + [mock.call(log) for log in reload_annotations_logs] + [
             mock.call('DONE'),
         ])
         self.mock_logger.warining.assert_not_called()
@@ -186,7 +187,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         search_body = {
             'genome_version': 'GRCh38', 'num_results': 1, 'variant_ids': [['12', 48367227, 'TC', 'T']], 'variant_keys': [],
         }
-        self._test_success('GRCh38/SNV_INDEL', metadata, dataset_type='SNV_INDEL', num_projects=2, sample_guids={
+        self._test_success('GRCh38/SNV_INDEL', metadata, dataset_type='SNV_INDEL', sample_guids={
             EXISTING_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4,
         }, additional_requests=1, reload_calls=[
             {**search_body, 'sample_data': {'SNV_INDEL': [
@@ -196,7 +197,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             {**search_body, 'sample_data': {'SNV_INDEL': [
                 {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234'},
             ]}},
-        ])
+        ], reload_annotations_logs=[])  # TODO
 
         old_data_sample_guid = 'S000143_na20885'
         self.assertFalse(Sample.objects.get(guid=old_data_sample_guid).is_active)
@@ -307,16 +308,20 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         metadata = {
             'callsets': ['1kg.vcf.gz'],
             'sample_type': 'WES',
-            'family_samples': {'F000012_12': ['NA20889']},
+            'family_samples': {'F000004_4': ['NA20872'], 'F000012_12': ['NA20889']},
         }
-        self._test_success('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S{GUID_ID}_NA20889'}, reload_calls=[{
+        self._test_success('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S{GUID_ID}_NA20872', f'S{GUID_ID}_NA20889'}, reload_calls=[{
             'genome_version': 'GRCh37', 'num_results': 1, 'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'],
             'sample_data': {'SV_WES': [{'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889'}]},
-        }])
+        }], reload_annotations_logs=['No additional saved variants to update'])
 
-        self.mock_send_slack.assert_called_once_with('seqr-data-loading',
-            f'1 new WES SV samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20889```',
-        )
+        self.mock_send_slack.assert_has_calls([
+            mock.call(
+                'seqr-data-loading', f'1 new WES SV samples are loaded in {SEQR_URL}project/R0001_1kg/project_page\n```NA20872```',
+            ), mock.call(
+                'seqr-data-loading', f'1 new WES SV samples are loaded in {SEQR_URL}project/{PROJECT_GUID}/project_page\n```NA20889```',
+            ),
+        ])
 
         self.mock_utils_logger.error.assert_called_with('Error in project Test Reprocessed Project: Bad Request')
         self.mock_utils_logger.info.assert_has_calls([
