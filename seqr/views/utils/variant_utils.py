@@ -34,10 +34,10 @@ def update_projects_saved_variant_json(projects, user_email, **kwargs):
     skipped = {}
     error = {}
     logger.info(f'Reloading saved variants in {len(projects)} projects')
-    for project_id, project_name, family_ids in tqdm(projects, unit=' project'):
+    for project_id, project_name, family_guids in tqdm(projects, unit=' project'):
         try:
             updated_saved_variant_guids = update_project_saved_variant_json(
-                project_id, user_email=user_email, family_ids=family_ids, **kwargs)
+                project_id, user_email=user_email, family_guids=family_guids, **kwargs)
             if updated_saved_variant_guids is None:
                 skipped[project_name] = True
             else:
@@ -61,18 +61,13 @@ def update_projects_saved_variant_json(projects, user_email, **kwargs):
         logger.info(f'  {k}: {v}')
 
 
-def update_project_saved_variant_json(project_id, family_ids=None, dataset_type=None, user=None, user_email=None):
+def update_project_saved_variant_json(project_id, family_guids=None, dataset_type=None, user=None, user_email=None):
     saved_variants = SavedVariant.objects.filter(family__project_id=project_id).select_related('family')
-    if family_ids:
-        saved_variants = saved_variants.filter(family__family_id__in=family_ids)
+    if family_guids:
+        saved_variants = saved_variants.filter(family__guid__in=family_guids)
 
     if dataset_type:
-        xpos_filter_key = 'xpos__gte' if dataset_type == Sample.DATASET_TYPE_MITO_CALLS else 'xpos__lt'
-        dataset_filter = {
-            'alt__isnull': dataset_type == Sample.DATASET_TYPE_SV_CALLS,
-            xpos_filter_key: get_xpos('M', 1),
-        }
-        saved_variants = saved_variants.filter(**dataset_filter)
+        saved_variants = saved_variants.filter(**saved_variants_dataset_type_filter(dataset_type))
 
     if not saved_variants:
         return None
@@ -100,6 +95,14 @@ def update_project_saved_variant_json(project_id, family_ids=None, dataset_type=
                 updated_saved_variant_guids.append(saved_variant.guid)
 
     return updated_saved_variant_guids
+
+
+def saved_variants_dataset_type_filter(dataset_type):
+    xpos_filter_key = 'xpos__gte' if dataset_type == Sample.DATASET_TYPE_MITO_CALLS else 'xpos__lt'
+    return {
+        'alt__isnull': dataset_type == Sample.DATASET_TYPE_SV_CALLS,
+        xpos_filter_key: get_xpos('M', 1),
+    }
 
 
 def parse_saved_variant_json(variant_json, family):
