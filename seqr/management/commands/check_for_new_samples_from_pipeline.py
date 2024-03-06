@@ -8,6 +8,7 @@ from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Family, Sample, Project
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
+from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json
 
