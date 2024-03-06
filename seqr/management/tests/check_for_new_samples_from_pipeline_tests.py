@@ -199,7 +199,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234'},
             ]}},
         ], reload_annotations_logs=[
-            'Reloading shared annotations for 4 saved variants (4 unique)', 'Fetched 1 variants', 'Updated 1 saved variants',
+            'Reloading shared annotations for 4 saved variants (4 unique)', 'Fetched 1 additional variants', 'Updated 2 saved variants',
         ])
 
         old_data_sample_guid = 'S000143_na20885'
@@ -245,16 +245,24 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         multi_lookup_request = responses.calls[3].request
         self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_HOST}:5000/multi_lookup')
         self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
-        # TODO reuse family specific variant where needed (12-48367227-TC-T)
         self.assertDictEqual(json.loads(multi_lookup_request.body), {
             'genome_version': 'GRCh38',
             'data_type': 'SNV_INDEL',
-            'variant_ids': ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G'],
+            'variant_ids': ['1-1562437-G-C', '1-46859832-G-A', '21-3343353-GAGA-G'],
         })
 
         updated_variants = SavedVariant.objects.filter(saved_variant_json__updated_field='updated_value')
-        self.assertEqual(len(updated_variants), 1)
-        self.assertEqual(updated_variants.first().guid, 'SV0000006_1248367227_r0004_non')
+        self.assertEqual(len(updated_variants), 2)
+        self.assertSetEqual(
+            {v.guid for v in updated_variants},
+            {'SV0000006_1248367227_r0004_non', 'SV0000002_1248367227_r0390_100'}
+        )
+        reloaded_variant = next(v for v in updated_variants if v.guid == 'SV0000006_1248367227_r0004_non')
+        annotation_updated_variant = next(v for v in updated_variants if v.guid == 'SV0000002_1248367227_r0390_100')
+        self.assertEqual(len(reloaded_variant.saved_variant_json), 3)
+        self.assertListEqual(reloaded_variant.saved_variant_json['familyGuids'], ['F000014_14'])
+        self.assertEqual(len(annotation_updated_variant.saved_variant_json), 18)
+        self.assertListEqual(annotation_updated_variant.saved_variant_json['familyGuids'], ['F000001_1'])
 
         annotation_updated_json = SavedVariant.objects.get(guid='SV0000001_2103343353_r0390_100').saved_variant_json
         self.assertEqual(len(annotation_updated_json), 20)

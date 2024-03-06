@@ -106,12 +106,15 @@ class Command(BaseCommand):
             updated_project_families.append((project.id, project.name, project_families))
 
         # Reload saved variant JSON
-        update_projects_saved_variant_json(updated_project_families, user_email=USER_EMAIL, dataset_type=dataset_type)
-        self._reload_shared_variant_annotations(updated_families, dataset_type, sample_type, genome_version)
+        updated_variants_by_id = update_projects_saved_variant_json(
+            updated_project_families, user_email=USER_EMAIL, dataset_type=dataset_type)
+        self._reload_shared_variant_annotations(
+            updated_variants_by_id, updated_families, dataset_type, sample_type, genome_version)
 
         logger.info('DONE')
 
-    def _reload_shared_variant_annotations(self, updated_families, dataset_type, sample_type, genome_version):
+    @staticmethod
+    def _reload_shared_variant_annotations(updated_variants_by_id, updated_families, dataset_type, sample_type, genome_version):
         data_type = dataset_type
         updated_annotation_samples = Sample.objects.filter(
             is_active=True, dataset_type=dataset_type,
@@ -134,11 +137,20 @@ class Command(BaseCommand):
             variants_by_id[v.variant_id].append(v)
 
         logger.info(f'Reloading shared annotations for {len(variant_models)} saved variants ({len(variants_by_id)} unique)')
-        updated_variants = hail_variant_multi_lookup(USER_EMAIL, sorted(variants_by_id.keys()), data_type, genome_version)
-        logger.info(f'Fetched {len(updated_variants)} variants')
+
+        updated_variants_by_id = {
+            variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}}
+            for variant_id, variant in updated_variants_by_id.items()
+        }
+        fetch_variant_ids = set(variants_by_id.keys()) - set(updated_variants_by_id.keys())
+        if fetch_variant_ids:
+            updated_variants = hail_variant_multi_lookup(USER_EMAIL, sorted(fetch_variant_ids), data_type, genome_version)
+            logger.info(f'Fetched {len(updated_variants)} additional variants')
+            updated_variants_by_id.update({variant['variantId']: variant for variant in updated_variants})
+
         updated_variant_models = []
-        for variant in updated_variants:
-            for variant_model in variants_by_id[variant['variantId']]:
+        for variant_id, variant in updated_variants_by_id.items():
+            for variant_model in variants_by_id[variant_id]:
                 variant_model.saved_variant_json.update(variant)
                 updated_variant_models.append(variant_model)
 
