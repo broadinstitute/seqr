@@ -27,7 +27,7 @@ class Command(BaseCommand):
             projects = Project.objects.all()
             logging.info("Processing all %s projects" % len(projects))
 
-        family_ids = [family_guid] if family_id else None
+        family_ids = [family_guid] if family_guid else None
         project_list = [(*project, family_ids) for project in projects.values_list('id', 'name')]
         update_projects_saved_variant_json(project_list, user_email='manage_command')
         logger.info("Done")

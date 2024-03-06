@@ -7,7 +7,7 @@ from seqr.models import Family
 
 PROJECT_NAME = '1kg project n\u00e5me with uni\u00e7\u00f8de'
 PROJECT_GUID = 'R0001_1kg'
-FAMILY_ID = '1'
+FAMILY_GUID = 'F000001_1'
 
 
 class ReloadSavedVariantJsonTest(TestCase):
@@ -23,7 +23,7 @@ class ReloadSavedVariantJsonTest(TestCase):
         # Test with a specific project and a family id.
         call_command('reload_saved_variant_json',
                      PROJECT_NAME,
-                     '--family-id={}'.format(FAMILY_ID))
+                     '--family-guid={}'.format(FAMILY_GUID))
 
         family_1 = Family.objects.get(id=1)
         mock_get_variants.assert_called_with(
@@ -70,7 +70,7 @@ class ReloadSavedVariantJsonTest(TestCase):
         mock_get_variants.side_effect = Exception("Database error.")
         call_command('reload_saved_variant_json',
                      PROJECT_GUID,
-                     '--family-id={}'.format(FAMILY_ID))
+                     '--family-guid={}'.format(FAMILY_GUID))
 
         mock_get_variants.assert_called_with([family_1], ['1-1562437-G-C', '1-46859832-G-A', '21-3343353-GAGA-G'], user=None, user_email='manage_command')
 
