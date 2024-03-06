@@ -134,7 +134,7 @@ class Command(BaseCommand):
             variants_by_id[v.variant_id].append(v)
 
         logger.info(f'Reloading shared annotations for {len(variant_models)} saved variants ({len(variants_by_id)} unique)')
-        updated_variants = hail_variant_multi_lookup(USER_EMAIL, variants_by_id.keys(), data_type, genome_version)
+        updated_variants = hail_variant_multi_lookup(USER_EMAIL, sorted(variants_by_id.keys()), data_type, genome_version)
         logger.info(f'Fetched {len(updated_variants)} variants')
         updated_variant_models = []
         for variant in updated_variants:

@@ -76,7 +76,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.addCleanup(patcher.stop)
         super().setUp()
 
-    def _test_success(self, path, metadata, dataset_type, sample_guids, reload_calls, reload_annotations_logs, additional_requests=0):
+    def _test_success(self, path, metadata, dataset_type, sample_guids, reload_calls, reload_annotations_logs, has_additional_requests=False):
         self.mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
         self.mock_subprocess.return_value.wait.return_value = 0
 
@@ -102,9 +102,9 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         ])
 
         # Test reload saved variants
-        self.assertEqual(len(responses.calls), len(reload_calls) + additional_requests)
+        self.assertEqual(len(responses.calls), len(reload_calls) + (2 if has_additional_requests else 0))
         for i, call in enumerate(reload_calls):
-            resp = responses.calls[i+additional_requests]
+            resp = responses.calls[i+(1 if has_additional_requests else 0)]
             self.assertEqual(resp.request.url, f'{MOCK_HAIL_HOST}:5000/search')
             self.assertEqual(resp.request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(resp.request.body), call)
@@ -133,6 +133,9 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
             'results': [{'variantId': '12-48367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
             'total': 1,
+        })
+        responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/multi_lookup', status=200, json={
+            'results': [{'variantId': '21-3343353-GAGA-G', 'updated_new_field': 'updated_value', 'rsid': 'rs123'}],
         })
 
         # Test errors
@@ -171,7 +174,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             str(ce.exception),
             'Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)')
 
-        Project.objects.filter(id__in=[3]).update(genome_version=38)
+        Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
 
         with self.assertRaises(ValueError) as ce:
             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
@@ -187,7 +190,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         }
         self._test_success('GRCh38/SNV_INDEL', metadata, dataset_type='SNV_INDEL', sample_guids={
             EXISTING_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4,
-        }, additional_requests=1, reload_calls=[
+        }, has_additional_requests=True, reload_calls=[
             {**search_body, 'sample_data': {'SNV_INDEL': [
                 {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889'},
                 {'individual_guid': 'I000016_na20888', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20888'},
@@ -195,7 +198,9 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             {**search_body, 'sample_data': {'SNV_INDEL': [
                 {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234'},
             ]}},
-        ], reload_annotations_logs=[])  # TODO
+        ], reload_annotations_logs=[
+            'Reloading shared annotations for 4 saved variants (4 unique)', 'Fetched 1 variants', 'Updated 1 saved variants',
+        ])
 
         old_data_sample_guid = 'S000143_na20885'
         self.assertFalse(Sample.objects.get(guid=old_data_sample_guid).is_active)
@@ -237,9 +242,26 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
 
         # Test SavedVariant model updated
+        multi_lookup_request = responses.calls[3].request
+        self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_HOST}:5000/multi_lookup')
+        self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
+        # TODO reuse family specific variant where needed (12-48367227-TC-T)
+        self.assertDictEqual(json.loads(multi_lookup_request.body), {
+            'genome_version': 'GRCh38',
+            'data_type': 'SNV_INDEL',
+            'variant_ids': ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G'],
+        })
+
         updated_variants = SavedVariant.objects.filter(saved_variant_json__updated_field='updated_value')
         self.assertEqual(len(updated_variants), 1)
         self.assertEqual(updated_variants.first().guid, 'SV0000006_1248367227_r0004_non')
+
+        annotation_updated_json = SavedVariant.objects.get(guid='SV0000001_2103343353_r0390_100').saved_variant_json
+        self.assertEqual(len(annotation_updated_json), 20)
+        self.assertEqual(annotation_updated_json['updated_new_field'], 'updated_value')
+        self.assertEqual(annotation_updated_json['rsid'], 'rs123')
+        self.assertEqual(annotation_updated_json['mainTranscriptId'], 'ENST00000258436')
+        self.assertEqual(len(annotation_updated_json['genotypes']), 3)
 
         self.mock_utils_logger.error.assert_not_called()
         self.mock_utils_logger.info.assert_has_calls([
