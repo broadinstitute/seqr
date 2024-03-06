@@ -304,14 +304,12 @@ class BaseHailTableQuery(object):
         return filtered_project_hts
 
     def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
-        if len(project_samples) > 1 and (kwargs.get('parsed_intervals') or kwargs.get('padded_interval')):
+        use_annotations_ht_first = len(project_samples) > 1 and (kwargs.get('parsed_intervals') or kwargs.get('padded_interval'))
+        if use_annotations_ht_first:
             # For multi-project interval search, faster to first read and filter the annotation table and then add entries
             ht = self._read_table('annotations.ht')
-            ht = self._filter_annotated_table(
-                ht, parsed_intervals=kwargs.get('parsed_intervals'), padded_interval=kwargs.get('padded_interval'),
-            )
+            ht = self._filter_annotated_table(ht, **kwargs, is_comp_het=self._has_comp_het_search)
             self._load_table_kwargs['variant_ht'] = ht.select()
-            kwargs.update({'parsed_intervals': None, 'padded_interval': None})
 
         if num_families == 1:
             family_sample_data = list(project_samples.values())[0]
@@ -346,13 +344,18 @@ class BaseHailTableQuery(object):
                 logger.info(f'Found {num_projects_added} {self.DATA_TYPE} projects with matched entries')
 
         if comp_het_families_ht is not None:
-            comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
-            self._comp_het_ht = self._filter_annotated_table(comp_het_ht, is_comp_het=True, **kwargs)
+            self._comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
+            if not use_annotations_ht_first:
+                self._comp_het_ht = self._filter_annotated_table(self._comp_het_ht, is_comp_het=True, **kwargs)
             self._comp_het_ht = self._filter_compound_hets()
 
         if families_ht is not None:
-            ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
-            self._ht = self._filter_annotated_table(ht, **kwargs)
+            self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
+            if not use_annotations_ht_first:
+                self._ht = self._filter_annotated_table(self._ht, **kwargs)
+            else:
+                # TODO handle self._has_comp_het_search filter annotations
+                pass
 
     def _add_project_ht(self, families_ht, project_ht, default, default_1=None):
         if default_1 is None:
