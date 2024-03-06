@@ -127,11 +127,11 @@ def get_single_variant(families, variant_id, return_all_queried_families=False, 
     return variants[0]
 
 
-def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
-    return _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=dataset_type)
+def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None, user_email=None):
+    return _get_variants_for_variant_ids(families, variant_ids, user, user_email, dataset_type=dataset_type)
 
 
-def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None, **kwargs):
+def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, dataset_type=None, **kwargs):
     parsed_variant_ids = {}
     for variant_id in variant_ids:
         parsed_variant_ids[variant_id] = _parse_variant_id(variant_id)
@@ -145,7 +145,7 @@ def _get_variants_for_variant_ids(families, variant_ids, user, dataset_type=None
     dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
 
     return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
-        *_get_families_search_data(families, dataset_type=dataset_type), parsed_variant_ids, user, **kwargs
+        *_get_families_search_data(families, dataset_type=dataset_type), parsed_variant_ids, user, user_email=user_email, **kwargs
     )
 
 
