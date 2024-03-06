@@ -81,26 +81,34 @@ class MultiDataTypeHailTableQuery(BaseHailTableQuery):
         variant_ch_ht = variant_ht.group_by('gene_ids').aggregate(v1=hl.agg.collect(variant_ht.row))
         sv_ch_ht = sv_ht.group_by('gene_ids').aggregate(v2=hl.agg.collect(sv_ht.row))
 
-        ch_ht = variant_ch_ht.join(sv_ch_ht)
-        ch_ht = ch_ht.explode(ch_ht.v1)
-        ch_ht = ch_ht.explode(ch_ht.v2)
-        ch_ht = ch_ht.annotate(comp_het_gene_ids=hl.set({ch_ht.gene_ids}))
-        return self._filter_grouped_compound_hets(ch_ht)
+        variants = variant_ch_ht.join(sv_ch_ht).collect(_localize=False)
+        variants = variants.flatmap(lambda gvs: hl.rbind(
+            hl.set({gvs.gene_ids}),
+            lambda comp_het_gene_ids: gvs.v1.flatmap(
+                lambda v1: gvs.v2.map(lambda v2: hl.struct(
+                    v1=v1.annotate(comp_het_gene_ids=comp_het_gene_ids),
+                    v2=v2.annotate(comp_het_gene_ids=comp_het_gene_ids),
+                ))
+            )
+        ))
+        variants = self._filter_comp_het_families(variants, set_secondary_annotations=False)
+        return hl.Table.parallelize(variants)
 
     @staticmethod
     def _family_filtered_ch_ht(ht, overlapped_families, families):
         family_indices = hl.array([families.index(family_guid) for family_guid in overlapped_families])
         return ht.annotate(family_entries=family_indices.map(lambda i: ht.family_entries[i]))
 
-    def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
-        is_valid = super()._is_valid_comp_het_family(ch_ht, entries_1, entries_2)
+    def _is_valid_comp_het_family(self, v1, v2, family_index):
+        is_valid = super()._is_valid_comp_het_family(v1, v2, family_index)
 
         # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
         # considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
+        entries_1 = v1.family_entries[family_index]
         is_allowed_hom_alt = entries_1.all(lambda g: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](g.GT)) | hl.all([
-            ch_ht.v2.sv_type_id == self._sv_type_del_id,
-            ch_ht.v2.start_locus.position <= ch_ht.v1.locus.position,
-            ch_ht.v1.locus.position <= ch_ht.v2.end_locus.position,
+            v2.sv_type_id == self._sv_type_del_id,
+            v2.start_locus.position <= v1.locus.position,
+            v1.locus.position <= v2.end_locus.position,
         ])
         return is_valid & is_allowed_hom_alt
 
