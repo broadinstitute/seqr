@@ -896,7 +896,7 @@
         "sample_id": "NA19675",
         "is_active": true,
         "elasticsearch_index": "test_index",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:12:55.397Z"
     }
 },
 {
@@ -915,7 +915,7 @@
         "sample_id": "NA19678",
         "is_active": true,
         "elasticsearch_index": "test_index_old",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:13:55.397Z"
     }
 },
 {
@@ -934,7 +934,7 @@
         "elasticsearch_index":null,
         "tissue_type": "F",
         "data_source": "fibs_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:14:55.397Z"
     }
 },
 {
@@ -953,7 +953,7 @@
         "tissue_type": "X",
         "individual": 3,
         "dataset_type": "SNV_INDEL",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:15:55.397Z"
     }
 },
 {
@@ -971,7 +971,7 @@
         "individual": 4,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:16:55.397Z"
     }
 },
 {
@@ -989,7 +989,7 @@
         "individual": 5,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:17:55.397Z"
     }
 },
 {
@@ -1007,7 +1007,7 @@
         "individual": 6,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:18:55.397Z"
     }
 },
 {
@@ -1025,7 +1025,7 @@
         "individual": 7,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:19:55.397Z"
     }
 },
 {
@@ -1044,7 +1044,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:20:55.397Z"
     }
 },
 {
@@ -1062,7 +1062,7 @@
         "individual": 9,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:21:55.397Z"
     }
 },
 {
@@ -1081,7 +1081,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:22:55.397Z"
     }
 },
 {
@@ -1100,7 +1100,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:23:55.397Z"
     }
 },
 {
@@ -1119,7 +1119,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:24:55.397Z"
     }
 },
 {
@@ -1138,7 +1138,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:25:55.397Z"
     }
 },
 {
@@ -1156,7 +1156,7 @@
         "individual": 15,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2020-02-05T06:42:55.397Z"
+        "loaded_date": "2020-02-05T06:26:55.397Z"
     }
 },
 {
@@ -1175,7 +1175,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:27:55.397Z"
     }
 },
 {
@@ -1195,7 +1195,7 @@
         "elasticsearch_index": "1kg.vcf.gz",
         "data_source": "auto__2023-08-08",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:28:55.397Z"
     }
 },
 {
@@ -1213,7 +1213,7 @@
         "individual": 4,
         "dataset_type": "SV",
         "tissue_type": "X",
-        "loaded_date": "2018-02-05T06:42:55.397Z"
+        "loaded_date": "2018-02-05T06:29:55.397Z"
     }
 },
 {
@@ -1231,7 +1231,7 @@
         "individual": 5,
         "dataset_type": "SV",
         "tissue_type": "X",
-        "loaded_date": "2018-02-05T06:42:55.397Z"
+        "loaded_date": "2018-02-05T06:30:55.397Z"
     }
 },
 {
@@ -1248,7 +1248,7 @@
         "is_active": true,
         "individual": 18,
         "dataset_type": "SV",
-        "loaded_date": "2018-02-05T06:42:55.397Z"
+        "loaded_date": "2018-02-05T06:31:55.397Z"
     }
 },
 {
@@ -1265,7 +1265,7 @@
         "is_active": true,
         "individual": 6,
         "dataset_type": "SV",
-        "loaded_date": "2018-02-05T06:42:55.397Z"
+        "loaded_date": "2018-02-05T06:32:55.397Z"
     }
 },
 {
@@ -1282,7 +1282,7 @@
         "is_active": true,
         "individual": 4,
         "dataset_type": "MITO",
-        "loaded_date": "2022-02-05T06:42:55.397Z"
+        "loaded_date": "2022-02-05T06:33:55.397Z"
     }
 },
 {
@@ -1301,7 +1301,7 @@
         "elasticsearch_index":null,
         "tissue_type": "F",
         "data_source": "muscle_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:34:55.397Z"
     }
 },
 {
@@ -1320,7 +1320,7 @@
         "elasticsearch_index":null,
         "tissue_type": "M",
         "data_source": "muscle_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:35:55.397Z"
     }
 },
 {
