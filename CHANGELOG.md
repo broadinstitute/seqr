@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add "Probably Solved" analysis status (REQUIRES DB MIGRATION)
 
 ## 3/1/24
 * Add subscribable project notifications (REQUIRES DB MIGRATION)
