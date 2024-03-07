@@ -173,11 +173,7 @@ def delete_individuals(project, individual_guids, user):
     Returns:
         list: Family objects for families with deleted individuals
     """
-
-    individuals_to_delete = Individual.objects.filter(
-        family__project=project, guid__in=individual_guids)
-
-    errors = backend_specific_call(_validate_no_submissions, _validate_no_sumissions_no_search_samples)(individuals_to_delete)
+    errors, individuals_to_delete = check_project_individuals_deletable(project.guid, individual_guids=individual_guids)
     if errors:
         raise ErrorsWarningsException(errors)
 
@@ -194,6 +190,15 @@ def delete_individuals(project, individual_guids, user):
     _remove_pedigree_images(families_with_deleted_individuals, user)
 
     return families_with_deleted_individuals
+
+
+def check_project_individuals_deletable(project_guid, individual_guids=None):
+    individuals_to_delete = Individual.objects.filter(family__project__guid=project_guid)
+    if individual_guids is not None:
+        individuals_to_delete = individuals_to_delete.filter(guid__in=individual_guids)
+
+    errors = backend_specific_call(_validate_no_submissions, _validate_no_sumissions_no_search_samples)(individuals_to_delete)
+    return errors, individuals_to_delete
 
 
 def _validate_delete_individuals(individuals_to_delete, error_type, query):

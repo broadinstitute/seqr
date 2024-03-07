@@ -55,7 +55,7 @@ const ProjectEllipsisMenu = React.memo((props) => {
       <Dropdown.Divider key="divider1" />,
     )
   }
-  if (props.project.userIsCreator) {
+  if (props.project.userCanDelete) {
     menuItems.push(
       <Dropdown.Divider key="divider2" />,
       <DeleteButton
