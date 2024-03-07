@@ -51,9 +51,9 @@ MULTIPLE_DATASET_PRODUCTS = {
 }
 
 SOLVE_STATUS_LOOKUP = {
-    **{s: 'Yes' for s in Family.SOLVED_ANALYSIS_STATUSES},
-    **{s: 'Likely' for s in Family.STRONG_CANDIDATE_ANALYSIS_STATUSES},
-    Family.ANALYSIS_STATUS_PARTIAL_SOLVE: 'Partial',
+    **{s: 'Solved' for s in Family.SOLVED_ANALYSIS_STATUSES},
+    Family.ANALYSIS_STATUS_PARTIAL_SOLVE: 'Partially solved',
+    Family.ANALYSIS_STATUS_PROBABLE_SOLVE: 'Probably solved',
 }
 
 MIM_INHERITANCE_MAP = {
@@ -103,7 +103,7 @@ def _get_family_metadata(family_filter, family_fields, include_metadata, include
     for f in family_data:
         family_id = f.pop('id')
         f.update({
-            'solve_status': SOLVE_STATUS_LOOKUP.get(f['analysisStatus'], 'No'),
+            'solve_status': SOLVE_STATUS_LOOKUP.get(f['analysisStatus'], 'Unsolved'),
             **{k: v['format'](f) for k, v in (family_fields or {}).items()},
         })
         if format_id:
@@ -201,6 +201,8 @@ def parse_anvil_metadata(
             if individual.id in matchmaker_individuals:
                 subject_row['MME'] = matchmaker_individuals[individual.id] if mme_values else 'Yes'
             subject_row.update(family_subject_row)
+            if individual.affected != Individual.AFFECTED_STATUS_AFFECTED:
+                subject_row['solve_status'] = 'Unaffected'
             add_row(subject_row, family_id, SUBJECT_ROW_TYPE)
 
             participant_id = subject_row['participant_id']

@@ -250,7 +250,7 @@ MOCK_DATA_MODEL = {
                 {'column': 'affected_status', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Affected', 'Unaffected', 'Unknown']},
                 {'column': 'phenotype_description'},
                 {'column': 'age_at_enrollment'},
-                {'column': 'solve_status', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Yes', 'Likely', 'No', 'Partial']},
+                {'column': 'solve_status', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Solved', 'Partially solved', 'Probably solved', 'Unsolved', 'Unaffected']},
                 {'column': 'missing_variant_case', 'required': True, 'data_type': 'enumeration', 'enumerations': ['Yes', 'No']},
             ],
         },
@@ -505,7 +505,7 @@ BASE_VARIANT_METADATA_ROW = {
     'phenotype_description': None,
     'pmid_id': None,
     'seqr_chosen_consequence': None,
-    'solve_status': 'No',
+    'solve_status': 'Unsolved',
     'svName': None,
     'svType': None,
     'sv_name': None,
@@ -589,7 +589,7 @@ class ReportAPITest(AirtableTest):
             'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', 'Middle Eastern or North African', '-', '-',
             '-', 'OMIM:615120', 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
             'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508',
-            'myopathy', 'No'], subject_file)
+            'myopathy', 'Unsolved'], subject_file)
 
         self.assertEqual(sample_file[0], [
             'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sequencing_center',
@@ -809,23 +809,23 @@ class ReportAPITest(AirtableTest):
         self.assertListEqual([
             'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
             '34415322', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
-            'Middle Eastern or North African', '', '', '21', 'Affected', 'myopathy', '18', 'No', 'No',
+            'Middle Eastern or North African', '', '', '21', 'Affected', 'myopathy', '18', 'Unsolved', 'No',
         ], row)
         hispanic_row = next(r for r in participant_file if r[0] == 'Broad_HG00731')
         self.assertListEqual([
             'Broad_HG00731', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_2', 'Broad_HG00732',
-            'Broad_HG00733', '', 'Self', '', 'Female', '', '', 'Hispanic or Latino', 'Other', '', 'Affected', '', '', 'No', 'No',
+            'Broad_HG00733', '', 'Self', '', 'Female', '', '', 'Hispanic or Latino', 'Other', '', 'Affected', '', '', 'Unsolved', 'No',
         ], hispanic_row)
         solved_row = next(r for r in participant_file if r[0] == 'Broad_NA20876')
         self.assertListEqual([
             'Broad_NA20876', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_7', '0',
-            '0', '', '', '', 'Male', '', '', '', '', '', 'Affected', '', '', 'Yes', 'No',
+            '0', '', '', '', 'Male', '', '', '', '', '', 'Affected', '', '', 'Solved', 'No',
         ], solved_row)
         multi_data_type_row = next(r for r in participant_file if r[0] == 'Broad_NA20888')
         self.assertListEqual([
             'Broad_NA20888', 'Broad_Test Reprocessed Project' if has_second_project else 'Broad_1kg project nme with unide',
             'BROAD', 'HMB', 'No', '', '', 'Broad_12' if has_second_project else 'Broad_8', '0', '0', '', '', '',
-            'Male' if has_second_project else 'Female', '', '', '', '', '', 'Affected', '', '', 'No', 'No',
+            'Male' if has_second_project else 'Female', '', '', '', '', '', 'Affected', '', '', 'Unsolved', 'No',
         ], multi_data_type_row)
 
         self.assertEqual(len(family_file), 11 if has_second_project else 10)
@@ -1076,7 +1076,7 @@ class ReportAPITest(AirtableTest):
             'familyGuid': 'F000012_12',
             'family_id': '12',
             'displayName': '12',
-            'solve_status': 'No',
+            'solve_status': 'Unsolved',
             'actual_inheritance': 'unknown',
             'date_data_generation': '2017-02-05',
             'data_type': 'WES',
@@ -1111,7 +1111,7 @@ class ReportAPITest(AirtableTest):
             'familyGuid': 'F000003_3',
             'family_id': '3',
             'displayName': '3',
-            'solve_status': 'No',
+            'solve_status': 'Unsolved',
             'actual_inheritance': '',
             'date_data_generation': '2017-02-05',
             'data_type': 'WES',
