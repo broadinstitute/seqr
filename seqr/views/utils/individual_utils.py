@@ -173,7 +173,7 @@ def delete_individuals(project, individual_guids, user):
     Returns:
         list: Family objects for families with deleted individuals
     """
-    errors, individuals_to_delete = check_project_individuals_deletable(project.guid, individual_guids=individual_guids)
+    errors, individuals_to_delete = check_project_individuals_deletable(project, individual_guids=individual_guids)
     if errors:
         raise ErrorsWarningsException(errors)
 
@@ -192,8 +192,8 @@ def delete_individuals(project, individual_guids, user):
     return families_with_deleted_individuals
 
 
-def check_project_individuals_deletable(project_guid, individual_guids=None):
-    individuals_to_delete = Individual.objects.filter(family__project__guid=project_guid)
+def check_project_individuals_deletable(project, individual_guids=None):
+    individuals_to_delete = Individual.objects.filter(family__project=project)
     if individual_guids is not None:
         individuals_to_delete = individuals_to_delete.filter(guid__in=individual_guids)
 
