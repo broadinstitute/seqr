@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import hail as hl
 
 from hail_search.constants import CLINVAR_KEY, CLINVAR_MITO_KEY, HGMD_KEY, HGMD_PATH_RANGES, \
@@ -73,6 +74,13 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         PATHOGENICTY_HGMD_SORT_KEY: lambda r: [MitoHailTableQuery.CLINVAR_SORT(CLINVAR_KEY, r), r.hgmd.class_id],
     }
 
+    FREQUENCY_PREFILTER_FIELDS = OrderedDict([
+        (True, PREFILTER_FREQ_CUTOFF),
+        ('is_gt_3_percent', 0.03),
+        ('is_gt_5_percent', 0.05),
+        ('is_gt_10_percent', 0.1),
+    ])
+
     def _prefilter_entries_table(self, ht, *args, num_projects=1, **kwargs):
         ht = super()._prefilter_entries_table(ht, *args, **kwargs)
         if num_projects > 1 or not self._load_table_kwargs.get('_filter_intervals'):
@@ -90,10 +98,25 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
         if af_cutoff is None:
             return False
 
-        if self._get_clinvar_path_filters(pathogenicity):
-            af_cutoff = max(af_cutoff, PATH_FREQ_OVERRIDE_CUTOFF)
+        af_cutoff_field = self._get_af_prefilter_field(af_cutoff)
+        if af_cutoff_field is None:
+            return False
 
-        return 'is_gt_10_percent' if af_cutoff > PREFILTER_FREQ_CUTOFF else True
+        af_filter = True if af_cutoff_field is True else lambda ht: ht[af_cutoff_field]
+
+        if af_cutoff < PATH_FREQ_OVERRIDE_CUTOFF:
+            clinvar_path_ht = self._get_loaded_clinvar_prefilter_ht(pathogenicity)
+            if clinvar_path_ht is not False:
+                path_cutoff_field = self._get_af_prefilter_field(PATH_FREQ_OVERRIDE_CUTOFF)
+                non_clinvar_filter = lambda ht: hl.is_missing(clinvar_path_ht[ht.key])
+                if af_filter is not True:
+                    non_clinvar_filter = lambda ht: non_clinvar_filter(ht) & af_filter(ht)
+                af_filter = lambda ht: ht[path_cutoff_field] | non_clinvar_filter(ht)
+
+        return af_filter
+
+    def _get_af_prefilter_field(self, af_cutoff):
+        return next((field for field, cutoff in self.FREQUENCY_PREFILTER_FIELDS.items() if af_cutoff <= cutoff), None)
 
     def _get_annotation_override_filters(self, ht, annotation_overrides):
         annotation_filters = super()._get_annotation_override_filters(ht, annotation_overrides)
