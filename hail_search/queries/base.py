@@ -354,7 +354,7 @@ class BaseHailTableQuery(object):
             if not use_annotations_ht_first:
                 self._ht = self._filter_annotated_table(self._ht, **kwargs)
             elif self._has_comp_het_search:
-                self._ht = self._filter_by_annotations(self._ht, **(kwargs.get(parsed_annotations) or {}))
+                self._ht = self._filter_by_annotations(self._ht, **(kwargs.get('parsed_annotations') or {}))
 
     def _add_project_ht(self, families_ht, project_ht, default, default_1=None):
         if default_1 is None:
