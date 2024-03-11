@@ -1,14 +1,15 @@
 from collections import defaultdict
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
 import json
 import logging
 
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Family, Sample
+from seqr.models import Family, Sample, Project
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
-from seqr.views.utils.variant_utils import reset_cached_search_results
+from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json
 
 logger = logging.getLogger(__name__)
 
@@ -88,4 +89,14 @@ class Command(BaseCommand):
                 project, dataset_type, sample_type, inactivated_sample_guids,
                 updated_samples=project_updated_samples, num_samples=len(sample_ids),
             )
+
+        # Reload saved variant JSON
+        updated_annotation_samples = Sample.objects.filter(is_active=True, dataset_type=dataset_type)
+        if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+            updated_annotation_samples = updated_annotation_samples.filter(sample_type=sample_type)
+        projects = Project.objects.filter(
+            genome_version=genome_version.replace('GRCh', ''), family__individual__sample__in=updated_annotation_samples,
+        ).annotate(families=ArrayAgg('family__family_id', distinct=True)).values_list('id', 'name', 'families')
+        update_projects_saved_variant_json(projects, user_email='manage_command', dataset_type=dataset_type)
+
         logger.info('DONE')

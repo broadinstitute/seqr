@@ -14,8 +14,8 @@ def _hail_backend_url(path):
     return f'{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'
 
 
-def _execute_search(search_body, user, path='search', exception_map=None):
-    response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user.email}, timeout=300)
+def _execute_search(search_body, user, path='search', exception_map=None, user_email=None):
+    response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user_email or user.email}, timeout=300)
 
     if response.status_code >= 400:
         error = (exception_map or {}).get(response.status_code) or response.text or response.reason
@@ -45,7 +45,6 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
         'frequencies': frequencies,
         'quality_filter': search_body.pop('qualityFilter', None),
         'custom_query': search_body.pop('customQuery', None),
-        'max_partitions': 8,
     })
     search_body.pop('skipped_samples', None)
 
@@ -63,13 +62,13 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     return response_json['results'][end_offset - num_results:end_offset]
 
 
-def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user, return_all_queried_families=False):
+def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user, user_email=None, return_all_queried_families=False):
     search = {
         'variant_ids': [parsed_id for parsed_id in parsed_variant_ids.values() if parsed_id],
         'variant_keys': [variant_id for variant_id, parsed_id in parsed_variant_ids.items() if not parsed_id],
     }
     search_body = _format_search_body(samples, genome_version, len(parsed_variant_ids), search)
-    response_json = _execute_search(search_body, user)
+    response_json = _execute_search(search_body, user, user_email=user_email)
 
     if return_all_queried_families:
         expected_family_guids = set(samples.values_list('individual__family__guid', flat=True))

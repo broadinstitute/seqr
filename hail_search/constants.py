@@ -74,7 +74,7 @@ CLINVAR_PATH_SIGNIFICANCES = {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
 CLINVAR_PATH_RANGES = [
     (CLINVAR_PATH_FILTER, 'Pathogenic', 'Pathogenic/Likely_risk_allele'),
     (CLINVAR_LIKELY_PATH_FILTER, 'Pathogenic/Likely_pathogenic', 'Likely_risk_allele'),
-    ('vus_or_conflicting', 'Conflicting_interpretations_of_pathogenicity', 'No_pathogenic_assertion'),
+    ('vus_or_conflicting', 'Conflicting_classifications_of_pathogenicity', 'No_pathogenic_assertion'),
     ('likely_benign', 'Likely_benign', 'Benign/Likely_benign'),
     ('benign', 'Benign/Likely_benign', 'Benign'),
 ]

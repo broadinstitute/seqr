@@ -109,7 +109,7 @@ VARIANT1 = {
        'goldStars': None,
        'pathogenicity': 'Likely_pathogenic',
        'assertions': None,
-       'version': '2023-07-10',
+       'version': '2024-02-21',
     },
     'hgmd': None,
     'screenRegionType': None,
@@ -178,9 +178,9 @@ VARIANT2 = {
            {'count': 5, 'pathogenicity': 'Benign'},
        ],
        'goldStars': 1,
-       'pathogenicity': 'Conflicting_interpretations_of_pathogenicity',
+       'pathogenicity': 'Conflicting_classifications_of_pathogenicity',
        'assertions': ['other'],
-       'version': '2023-07-10',
+       'version': '2024-02-21',
     },
     'hgmd': {'accession': 'CM981315', 'class': 'DFP'},
     'screenRegionType': None,
@@ -783,7 +783,7 @@ MITO_VARIANT1 = {
         'goldStars': 1,
         'pathogenicity': 'Uncertain_significance',
         'assertions': [],
-        'version': '2023-08-06',
+        'version': '2024-02-21',
     },
     'transcripts': {
         'ENSG00000210112': [
@@ -826,7 +826,7 @@ MITO_VARIANT2 = {
         'hmtvar': 0.75,
         'mitotip': None,
         'mut_taster': 'N',
-        'sift': 'D',
+        'sift': 0,
     },
     'commonLowHeteroplasmy': False,
     'highConstraintRegion': True,
@@ -884,7 +884,7 @@ MITO_VARIANT3 = {
         'goldStars': 0,
         'pathogenicity': 'Likely_pathogenic',
         'assertions': [],
-        'version': '2023-08-06',
+        'version': '2024-02-21',
     },
     'transcripts': {
         'ENSG00000198727': [
