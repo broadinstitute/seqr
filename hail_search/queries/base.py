@@ -281,7 +281,6 @@ class BaseHailTableQuery(object):
     def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
         filtered_project_hts = []
         exception_messages = set()
-        num_projects = len(project_samples)
         for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
             project_ht = self._read_table(
                 f'projects/{project_guid}.ht',
@@ -292,7 +291,7 @@ class BaseHailTableQuery(object):
                 continue
             try:
                 filtered_project_hts.append(
-                    (*self._filter_entries_table(project_ht, project_sample_data, num_projects=num_projects, **kwargs), len(project_sample_data))
+                    (*self._filter_entries_table(project_ht, project_sample_data, **kwargs), len(project_sample_data))
                 )
             except HTTPBadRequest as e:
                 exception_messages.add(e.reason)
@@ -305,6 +304,13 @@ class BaseHailTableQuery(object):
         return filtered_project_hts
 
     def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
+        use_annotations_ht_first = len(project_samples) > 1 and (kwargs.get('parsed_intervals') or kwargs.get('padded_interval'))
+        if use_annotations_ht_first:
+            # For multi-project interval search, faster to first read and filter the annotation table and then add entries
+            ht = self._read_table('annotations.ht')
+            ht = self._filter_annotated_table(ht, **kwargs, is_comp_het=self._has_comp_het_search)
+            self._load_table_kwargs['variant_ht'] = ht.select()
+
         if num_families == 1:
             family_sample_data = list(project_samples.values())[0]
             family_guid = list(family_sample_data.keys())[0]
@@ -338,13 +344,17 @@ class BaseHailTableQuery(object):
                 logger.info(f'Found {num_projects_added} {self.DATA_TYPE} projects with matched entries')
 
         if comp_het_families_ht is not None:
-            comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
-            self._comp_het_ht = self._filter_annotated_table(comp_het_ht, is_comp_het=True, **kwargs)
+            self._comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
+            if not use_annotations_ht_first:
+                self._comp_het_ht = self._filter_annotated_table(self._comp_het_ht, is_comp_het=True, **kwargs)
             self._comp_het_ht = self._filter_compound_hets()
 
         if families_ht is not None:
-            ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
-            self._ht = self._filter_annotated_table(ht, **kwargs)
+            self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
+            if not use_annotations_ht_first:
+                self._ht = self._filter_annotated_table(self._ht, **kwargs)
+            elif self._has_comp_het_search:
+                self._ht = self._filter_by_annotations(self._ht, **(kwargs.get('parsed_annotations') or {}))
 
     def _add_project_ht(self, families_ht, project_ht, default, default_1=None):
         if default_1 is None:
@@ -569,7 +579,7 @@ class BaseHailTableQuery(object):
 
         ht = self._filter_by_in_silico(ht, in_silico)
 
-        return self._filter_by_annotations(ht, is_comp_het, **(parsed_annotations or {}))
+        return self._filter_by_annotations(ht, is_comp_het=is_comp_het, **(parsed_annotations or {}))
 
     def _filter_by_gene_ids(self, ht, gene_ids):
         gene_ids = hl.set(gene_ids)
@@ -730,7 +740,7 @@ class BaseHailTableQuery(object):
         })
         return parsed_annotations
 
-    def _filter_by_annotations(self, ht, is_comp_het, consequence_ids=None, annotation_overrides=None,
+    def _filter_by_annotations(self, ht, is_comp_het=False, consequence_ids=None, annotation_overrides=None,
                                secondary_consequence_ids=None, secondary_annotation_overrides=None, **kwargs):
 
         annotation_exprs = {}
