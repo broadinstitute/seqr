@@ -40,6 +40,8 @@ class DashboardPageTest(object):
         self.assertSetEqual(
             set(next(iter(response_json['projectsByGuid'].values())).keys()), DASHBOARD_PROJECT_FIELDS
         )
+        self.assertSetEqual({p['userIsCreator'] for p in response_json['projectsByGuid'].values()}, {False})
+        self.assertFalse(any('userCanDelete' in p for p in response_json['projectsByGuid'].values()))
         mock_get_redis.assert_called_with('projects__test_user_collaborator')
         mock_set_redis.assert_called_with(
             'projects__test_user_collaborator', list(response_json['projectsByGuid'].keys()), expire=300)
@@ -49,6 +51,10 @@ class DashboardPageTest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertEqual(len(response_json['projectsByGuid']), 3)
+        self.assertSetEqual({p['userIsCreator'] for p in response_json['projectsByGuid'].values()}, {True})
+        self.assertTrue(response_json['projectsByGuid']['R0002_empty']['userCanDelete'])
+        self.assertFalse(response_json['projectsByGuid']['R0001_1kg']['userCanDelete'])
+        self.assertFalse(response_json['projectsByGuid']['R0003_test']['userCanDelete'])
         mock_get_redis.assert_called_with('projects__test_user')
         mock_set_redis.assert_called_with('projects__test_user', list(response_json['projectsByGuid'].keys()), expire=300)
 
