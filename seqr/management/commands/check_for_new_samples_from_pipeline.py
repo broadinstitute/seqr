@@ -1,6 +1,7 @@
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Q
 from django.db.models.functions import JSONObject
 import json
 import logging
@@ -116,9 +117,10 @@ class Command(BaseCommand):
     @staticmethod
     def _reload_shared_variant_annotations(updated_variants_by_id, updated_families, dataset_type, sample_type, genome_version):
         data_type = dataset_type
+        db_genome_version = genome_version.replace('GRCh', '')
         updated_annotation_samples = Sample.objects.filter(
             is_active=True, dataset_type=dataset_type,
-            individual__family__project__genome_version=genome_version.replace('GRCh', ''),
+            individual__family__project__genome_version=db_genome_version,
         ).exclude(individual__family__guid__in=updated_families)
         if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
             updated_annotation_samples = updated_annotation_samples.filter(sample_type=sample_type)
@@ -127,7 +129,8 @@ class Command(BaseCommand):
         variant_models = SavedVariant.objects.filter(
             family_id__in=updated_annotation_samples.values_list('individual__family', flat=True).distinct(),
             **saved_variants_dataset_type_filter(dataset_type),
-        )
+        ).filter(Q(saved_variant_json__genomeVersion__isnull=True) | Q(saved_variant_json__genomeVersion=db_genome_version))
+
         if not variant_models:
             logger.info('No additional saved variants to update')
             return

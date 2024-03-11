@@ -2084,7 +2084,7 @@
         "alt": "T",
         "variant_id": "12-48367227-TC-T",
         "saved_variant_json": {
-            "liftedOverGenomeVersion": "38",  "liftedOverPos": "", "genomeVersion": "37", "pos": 248367227,
+            "liftedOverGenomeVersion": "37",  "liftedOverPos": "", "genomeVersion": "38", "pos": 248367227,
             "transcripts": {}, "chrom": "1", "genotypes": {
                 "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}}},
         "family": 14

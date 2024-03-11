@@ -174,7 +174,11 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             str(ce.exception),
             'Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)')
 
+        # Update fixture data to allow testing edge cases
         Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
+        sv = SavedVariant.objects.get(guid='SV0000002_1248367227_r0390_100')
+        sv.saved_variant_json['genomeVersion'] = '38'
+        sv.save()
 
         with self.assertRaises(ValueError) as ce:
             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
@@ -199,7 +203,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234'},
             ]}},
         ], reload_annotations_logs=[
-            'Reloading shared annotations for 4 saved variants (4 unique)', 'Fetched 1 additional variants', 'Updated 2 saved variants',
+            'Reloading shared annotations for 3 saved variants (3 unique)', 'Fetched 1 additional variants', 'Updated 2 saved variants',
         ])
 
         old_data_sample_guid = 'S000143_na20885'
@@ -248,7 +252,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertDictEqual(json.loads(multi_lookup_request.body), {
             'genome_version': 'GRCh38',
             'data_type': 'SNV_INDEL',
-            'variant_ids': ['1-1562437-G-C', '1-46859832-G-A', '21-3343353-GAGA-G'],
+            'variant_ids': ['1-1562437-G-C', '1-46859832-G-A'],
         })
 
         updated_variants = SavedVariant.objects.filter(saved_variant_json__updated_field='updated_value')

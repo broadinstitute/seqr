@@ -151,7 +151,7 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'end-1': None,
     'ref-1': 'TC',
     'zygosity-1': 'Heterozygous',
-    'variant_reference_assembly-1': 'GRCh37',
+    'variant_reference_assembly-1': 'GRCh38',
     'allele_balance_or_heteroplasmy_percentage-1': None,
     'gene-1': None,
     'gene_id-1': None,
