@@ -135,7 +135,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             'total': 1,
         })
         responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/multi_lookup', status=200, json={
-            'results': [{'variantId': '21-3343353-GAGA-G', 'updated_new_field': 'updated_value', 'rsid': 'rs123'}],
+            'results': [{'variantId': '1-46859832-G-A', 'updated_new_field': 'updated_value', 'rsid': 'rs123'}],
         })
 
         # Test errors
@@ -264,11 +264,11 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(len(annotation_updated_variant.saved_variant_json), 18)
         self.assertListEqual(annotation_updated_variant.saved_variant_json['familyGuids'], ['F000001_1'])
 
-        annotation_updated_json = SavedVariant.objects.get(guid='SV0000001_2103343353_r0390_100').saved_variant_json
-        self.assertEqual(len(annotation_updated_json), 20)
+        annotation_updated_json = SavedVariant.objects.get(guid='SV0059956_11560662_f019313_1').saved_variant_json
+        self.assertEqual(len(annotation_updated_json), 18)
         self.assertEqual(annotation_updated_json['updated_new_field'], 'updated_value')
         self.assertEqual(annotation_updated_json['rsid'], 'rs123')
-        self.assertEqual(annotation_updated_json['mainTranscriptId'], 'ENST00000258436')
+        self.assertEqual(annotation_updated_json['mainTranscriptId'], 'ENST00000505820')
         self.assertEqual(len(annotation_updated_json['genotypes']), 3)
 
         self.mock_utils_logger.error.assert_not_called()

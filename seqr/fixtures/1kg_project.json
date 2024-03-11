@@ -1884,7 +1884,6 @@
             "genotypeFilters": "pass",
             "mainTranscriptId": "ENST00000505820",
             "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0}, "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 8.142526788913136e-06}, "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "topmed": {"ac": null, "an": null, "af": null}},
-            "genomeVersion": "37",
             "pos": 1560662,
             "predictions": {"eigen": null, "revel": null, "sift": "damaging", "cadd": "31", "metasvm": "D", "mpc": null, "splice_ai": null, "phastcons_100_vert": null, "mut_taster": "disease_causing", "fathmm": "tolerated", "polyphen": "probably_damaging", "dann": null, "primate_ai": null, "gerp_rs": null},
             "hgmd": {"accession": null, "class": null},
@@ -1970,7 +1969,7 @@
                     "hom": 10332
                     }
                 },
-            "genomeVersion": "37",
+            "genomeVersion": "38",
             "pos": 1562437,
             "hgmd": {"accession": null, "class": null},
             "rsid": null,
