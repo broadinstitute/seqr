@@ -284,8 +284,8 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
             mock.call().send(),
         ])
 
-        mock_logger.error.assert_called_with(
-            'Unable to create notification for incoming MME match request for 3 matches (NA19675_1_01, P0004515, P0004517): Email error')
+        mock_logger.error.assert_called_once_with(
+            'Unable to send notification email for incoming MME match with NA19675_1_01: Email error')
 
         # Test receive same request again
         mock_post_to_slack.reset_mock()
