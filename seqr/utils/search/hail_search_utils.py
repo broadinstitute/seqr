@@ -110,6 +110,12 @@ def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATA
     return variants
 
 
+def hail_variant_multi_lookup(user_email, variant_ids, data_type, genome_version):
+    body = {'genome_version': genome_version, 'data_type': data_type, 'variant_ids': variant_ids}
+    response_json = _execute_search(body, user=None, user_email=user_email, path='multi_lookup')
+    return response_json['results']
+
+
 def _format_search_body(samples, genome_version, num_results, search):
     search_body = {
         'genome_version': GENOME_VERSION_LOOKUP[genome_version],

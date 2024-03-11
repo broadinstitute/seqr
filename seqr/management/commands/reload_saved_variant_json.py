@@ -13,12 +13,12 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('projects', nargs="*", help='Project(s) to transfer. If not specified, defaults to all projects.')
-        parser.add_argument('--family-id', help='optional family to reload variants for')
+        parser.add_argument('--family-guid', help='optional family to reload variants for')
 
     def handle(self, *args, **options):
         """transfer project"""
         projects_to_process = options['projects']
-        family_id = options['family_id']
+        family_guid = options['family_guid']
 
         if projects_to_process:
             projects = Project.objects.filter(Q(name__in=projects_to_process) | Q(guid__in=projects_to_process))
@@ -27,7 +27,7 @@ class Command(BaseCommand):
             projects = Project.objects.all()
             logging.info("Processing all %s projects" % len(projects))
 
-        family_ids = [family_id] if family_id else None
+        family_ids = [family_guid] if family_guid else None
         project_list = [(*project, family_ids) for project in projects.values_list('id', 'name')]
         update_projects_saved_variant_json(project_list, user_email='manage_command')
         logger.info("Done")

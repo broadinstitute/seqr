@@ -33,16 +33,18 @@ def update_projects_saved_variant_json(projects, user_email, **kwargs):
     success = {}
     skipped = {}
     error = {}
+    updated_variants_by_id = {}
     logger.info(f'Reloading saved variants in {len(projects)} projects')
-    for project_id, project_name, family_ids in tqdm(projects, unit=' project'):
+    for project_id, project_name, family_guids in tqdm(projects, unit=' project'):
         try:
-            updated_saved_variant_guids = update_project_saved_variant_json(
-                project_id, user_email=user_email, family_ids=family_ids, **kwargs)
-            if updated_saved_variant_guids is None:
+            updated_saved_variants = update_project_saved_variant_json(
+                project_id, user_email=user_email, family_guids=family_guids, **kwargs)
+            if updated_saved_variants is None:
                 skipped[project_name] = True
             else:
-                success[project_name] = len(updated_saved_variant_guids)
-                logger.info(f'Updated {len(updated_saved_variant_guids)} variants for project {project_name}')
+                success[project_name] = len(updated_saved_variants)
+                logger.info(f'Updated {len(updated_saved_variants)} variants for project {project_name}')
+                updated_variants_by_id.update({v.variant_id: v.saved_variant_json for v in updated_saved_variants.values()})
         except Exception as e:
             traceback_message = traceback.format_exc()
             logger.error(traceback_message)
@@ -59,20 +61,16 @@ def update_projects_saved_variant_json(projects, user_email, **kwargs):
         logger.info(f'{len(error)} failed projects')
     for k, v in error.items():
         logger.info(f'  {k}: {v}')
+    return updated_variants_by_id
 
 
-def update_project_saved_variant_json(project_id, family_ids=None, dataset_type=None, user=None, user_email=None):
+def update_project_saved_variant_json(project_id, family_guids=None, dataset_type=None, user=None, user_email=None):
     saved_variants = SavedVariant.objects.filter(family__project_id=project_id).select_related('family')
-    if family_ids:
-        saved_variants = saved_variants.filter(family__family_id__in=family_ids)
+    if family_guids:
+        saved_variants = saved_variants.filter(family__guid__in=family_guids)
 
     if dataset_type:
-        xpos_filter_key = 'xpos__gte' if dataset_type == Sample.DATASET_TYPE_MITO_CALLS else 'xpos__lt'
-        dataset_filter = {
-            'alt__isnull': dataset_type == Sample.DATASET_TYPE_SV_CALLS,
-            xpos_filter_key: get_xpos('M', 1),
-        }
-        saved_variants = saved_variants.filter(**dataset_filter)
+        saved_variants = saved_variants.filter(**saved_variants_dataset_type_filter(dataset_type))
 
     if not saved_variants:
         return None
@@ -91,15 +89,23 @@ def update_project_saved_variant_json(project_id, family_ids=None, dataset_type=
     for sub_var_ids in [variant_ids[i:i+MAX_VARIANTS_FETCH] for i in range(0, len(variant_ids), MAX_VARIANTS_FETCH)]:
         variants_json += get_variants_for_variant_ids(families, sub_var_ids, user=user, user_email=user_email)
 
-    updated_saved_variant_guids = []
+    updated_saved_variants = {}
     for var in variants_json:
         for family_guid in var['familyGuids']:
             saved_variant = saved_variants_map.get((var['variantId'], family_guid))
             if saved_variant:
                 update_model_from_json(saved_variant, {'saved_variant_json': var}, user)
-                updated_saved_variant_guids.append(saved_variant.guid)
+                updated_saved_variants[saved_variant.guid] = saved_variant
 
-    return updated_saved_variant_guids
+    return updated_saved_variants
+
+
+def saved_variants_dataset_type_filter(dataset_type):
+    xpos_filter_key = 'xpos__gte' if dataset_type == Sample.DATASET_TYPE_MITO_CALLS else 'xpos__lt'
+    return {
+        'alt__isnull': dataset_type == Sample.DATASET_TYPE_SV_CALLS,
+        xpos_filter_key: get_xpos('M', 1),
+    }
 
 
 def parse_saved_variant_json(variant_json, family):
