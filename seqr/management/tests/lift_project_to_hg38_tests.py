@@ -59,11 +59,11 @@ class LiftProjectToHg38Test(TestCase):
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_new_index'),
-            mock.call('Lifting over 4 variants (skipping 0 that are already lifted)'),
+            mock.call('Lifting over 3 variants (skipping 1 that are already lifted)'),
             mock.call('Successfully lifted over 3 variants'),
             mock.call('Successfully updated 3 variants'),
             mock.call('---Done---'),
-            mock.call('Succesfully lifted over 3 variants. Skipped 3 failed variants. Family data not updated for 0 variants')
+            mock.call('Succesfully lifted over 3 variants. Skipped 2 failed variants. Family data not updated for 0 variants')
         ]
         mock_logger.info.assert_has_calls(calls)
 
@@ -72,7 +72,6 @@ class LiftProjectToHg38Test(TestCase):
 
         calls = [
             mock.call('chr21', 3343353),
-            mock.call('chr1', 1562437),
             mock.call('chr1', 248367227),
             mock.call('chr1', 1560662),
         ]
@@ -80,7 +79,7 @@ class LiftProjectToHg38Test(TestCase):
 
         families = {family for family in Family.objects.filter(pk__in = [1, 2])}
         self.assertSetEqual(families, mock_get_es_variants.call_args.args[0])
-        self.assertSetEqual({'1-1627057-G-C', '21-3343400-GAGA-G', '1-248203925-TC-T', '1-46394160-G-A'},
+        self.assertSetEqual({'21-3343400-GAGA-G', '1-248203925-TC-T', '1-46394160-G-A'},
                             set(mock_get_es_variants.call_args.args[1]))
 
         # Test discontinue on lifted variants
@@ -90,7 +89,7 @@ class LiftProjectToHg38Test(TestCase):
             call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
-        self.assertEqual(str(ce.exception), 'Error: found 1 saved variants already on Hg38')
+        self.assertEqual(str(ce.exception), 'Error: found 2 saved variants already on Hg38')
 
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
@@ -177,12 +176,19 @@ class LiftProjectToHg38Test(TestCase):
             call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
-        self.assertEqual(str(ce.exception), 'Error: unable to lift over 4 variants')
+        self.assertEqual(str(ce.exception), 'Error: found 1 saved variants already on Hg38')
+
+        mock_input.side_effect = ['y', 'n']
+        with self.assertRaises(CommandError) as ce:
+            call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
+                    '--es-index={}'.format(ELASTICSEARCH_INDEX))
+
+        self.assertEqual(str(ce.exception), 'Error: unable to lift over 3 variants')
 
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_new_index'),
-            mock.call('Lifting over 4 variants (skipping 0 that are already lifted)')
+            mock.call('Lifting over 3 variants (skipping 1 that are already lifted)')
         ]
         mock_logger.info.assert_has_calls(calls)
 
@@ -190,16 +196,17 @@ class LiftProjectToHg38Test(TestCase):
         mock_get_es_variants.return_value = VARIANTS
         mock_liftover_to_38.convert_coordinate.side_effect = mock_convert_coordinate
         mock_logger.reset_mock()
+        mock_input.side_effect = ['y', 'n', 'n']
         with self.assertRaises(CommandError) as ce:
             call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
-        self.assertEqual(str(ce.exception), 'Error: unable to find 3 lifted-over variants')
+        self.assertEqual(str(ce.exception), 'Error: unable to find 2 lifted-over variants')
 
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_new_index'),
-            mock.call('Lifting over 4 variants (skipping 0 that are already lifted)')
+            mock.call('Lifting over 3 variants (skipping 1 that are already lifted)')
         ]
         mock_logger.info.assert_has_calls(calls)
 
@@ -207,7 +214,7 @@ class LiftProjectToHg38Test(TestCase):
         self.assertSetEqual(mock_get_es_variants.call_args.args[0], families)
         self.assertSetEqual(
             set(mock_get_es_variants.call_args.args[1]),
-            {'1-1627057-G-C', '21-3343400-GAGA-G', '1-248203925-TC-T', '1-46394160-G-A'}
+            {'21-3343400-GAGA-G', '1-248203925-TC-T', '1-46394160-G-A'}
         )
 
         # Test discontinue on missing family data while updating the saved variants
@@ -215,7 +222,7 @@ class LiftProjectToHg38Test(TestCase):
         variants.append(SINGLE_VARIANT)
         mock_get_es_variants.return_value = variants
         mock_logger.reset_mock()
-        mock_input.side_effect = ['y', 'n']
+        mock_input.side_effect = ['y', 'y', 'n']
         with self.assertRaises(CommandError) as ce:
             call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
@@ -225,7 +232,7 @@ class LiftProjectToHg38Test(TestCase):
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_new_index'),
-            mock.call('Lifting over 4 variants (skipping 0 that are already lifted)'),
+            mock.call('Lifting over 3 variants (skipping 1 that are already lifted)'),
             mock.call('Successfully lifted over 4 variants')
         ]
         mock_logger.info.assert_has_calls(calls)
@@ -240,11 +247,11 @@ class LiftProjectToHg38Test(TestCase):
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_new_index'),
-            mock.call('Lifting over 3 variants (skipping 1 that are already lifted)'),
+            mock.call('Lifting over 2 variants (skipping 2 that are already lifted)'),
             mock.call('Successfully lifted over 4 variants'),
             mock.call('Successfully updated 4 variants'),
             mock.call('---Done---'),
-            mock.call('Succesfully lifted over 4 variants. Skipped 2 failed variants. Family data not updated for 1 variants')
+            mock.call('Succesfully lifted over 4 variants. Skipped 1 failed variants. Family data not updated for 1 variants')
         ]
         mock_logger.info.assert_has_calls(calls)
 

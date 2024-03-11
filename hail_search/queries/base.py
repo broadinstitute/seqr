@@ -1061,12 +1061,23 @@ class BaseHailTableQuery(object):
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
         ))
 
-    def lookup_variant(self, variant_id, sample_data=None):
-        self._parse_intervals(intervals=None, variant_ids=[variant_id], variant_keys=[variant_id])
+    def lookup_variants(self, variant_ids, annotation_fields=None):
+        self._parse_intervals(intervals=None, variant_ids=variant_ids, variant_keys=variant_ids)
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
         self._load_table_kwargs['_n_partitions'] = 1
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
+        if not annotation_fields:
+            annotation_fields = {
+                k: v for k, v in self.annotation_fields(include_genotype_overrides=False).items()
+                if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD, 'genotypeFilters'}
+            }
+
+        formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=False)
+
+        return formatted.aggregate(hl.agg.take(formatted.row, len(variant_ids)))
+
+    def lookup_variant(self, variant_id, sample_data=None):
         annotation_fields = self.annotation_fields(include_genotype_overrides=False)
         entry_annotations = {k: annotation_fields[k] for k in [FAMILY_GUID_FIELD, GENOTYPES_FIELD]}
         annotation_fields.update({
@@ -1075,9 +1086,7 @@ class BaseHailTableQuery(object):
             'genotypeFilters': lambda ht: hl.str(''),
         })
 
-        formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=False)
-
-        variants = formatted.aggregate(hl.agg.take(formatted.row, 1))
+        variants = self.lookup_variants([variant_id], annotation_fields=annotation_fields)
         if not variants:
             raise HTTPNotFound()
         variant = dict(variants[0])
