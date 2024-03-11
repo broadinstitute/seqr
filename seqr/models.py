@@ -278,6 +278,7 @@ class ProjectCategory(ModelWithGUID):
 class Family(ModelWithGUID):
     ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS='I'
     ANALYSIS_STATUS_PARTIAL_SOLVE = 'P'
+    ANALYSIS_STATUS_PROBABLE_SOLVE = 'PB'
     ANALYSIS_STATUS_WAITING_FOR_DATA='Q'
     SOLVED_ANALYSIS_STATUS_CHOICES = (
         ('S', 'Solved'),
@@ -297,6 +298,7 @@ class Family(ModelWithGUID):
         ('Rcpc', 'Reviewed, currently pursuing candidates'),
         ('Rncc', 'Reviewed, no clear candidate'),
         ('C', 'Closed, no longer under analysis'),
+        (ANALYSIS_STATUS_PROBABLE_SOLVE, 'Probably Solved'),
         (ANALYSIS_STATUS_PARTIAL_SOLVE, 'Partial Solve - Analysis in Progress'),
         (ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS, 'Analysis in Progress'),
         (ANALYSIS_STATUS_WAITING_FOR_DATA, 'Waiting for data'),
