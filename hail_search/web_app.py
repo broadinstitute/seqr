@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 JAVA_OPTS_XSS = os.environ.get('JAVA_OPTS_XSS')
 MACHINE_MEM = os.environ.get('MACHINE_MEM')
 JVM_MEMORY_FRACTION = 0.9
+QUERY_TIMEOUT_S = 300
 
 
 def _handle_exception(e, request):
@@ -46,8 +47,8 @@ def hl_json_dumps(obj):
 
 async def sync_to_async_hail_query(request: web.Request, query: Callable, *args, **kwargs):
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(request.app.pool, functools.partial(query, await request.json(), *args, **kwargs))
-
+    future = await loop.run_in_executor(request.app.pool, functools.partial(query, await request.json(), *args, **kwargs))
+    return await asyncio.wait_for(future, QUERY_TIMEOUT_S)
 
 async def gene_counts(request: web.Request) -> web.Response:
     hail_results = await sync_to_async_hail_query(request, search_hail_backend, gene_counts=True)
