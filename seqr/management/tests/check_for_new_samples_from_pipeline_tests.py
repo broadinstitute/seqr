@@ -252,7 +252,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertDictEqual(json.loads(multi_lookup_request.body), {
             'genome_version': 'GRCh38',
             'data_type': 'SNV_INDEL',
-            'variant_ids': ['1-1562437-G-C', '1-46859832-G-A'],
+            'variant_ids': [['1', 1562437, 'G', 'C'], ['1', 46859832, 'G', 'A']],
         })
 
         updated_variants = SavedVariant.objects.filter(saved_variant_json__updated_field='updated_value')

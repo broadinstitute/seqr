@@ -10,6 +10,7 @@ from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Family, Sample, SavedVariant
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
+from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
@@ -117,12 +118,13 @@ class Command(BaseCommand):
     @staticmethod
     def _reload_shared_variant_annotations(updated_variants_by_id, updated_families, dataset_type, sample_type, genome_version):
         data_type = dataset_type
+        is_sv = dataset_type == Sample.DATASET_TYPE_SV_CALLS
         db_genome_version = genome_version.replace('GRCh', '')
         updated_annotation_samples = Sample.objects.filter(
             is_active=True, dataset_type=dataset_type,
             individual__family__project__genome_version=db_genome_version,
         ).exclude(individual__family__guid__in=updated_families)
-        if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+        if is_sv:
             updated_annotation_samples = updated_annotation_samples.filter(sample_type=sample_type)
             data_type = f'{dataset_type}_{sample_type}'
 
@@ -147,6 +149,8 @@ class Command(BaseCommand):
         }
         fetch_variant_ids = set(variants_by_id.keys()) - set(updated_variants_by_id.keys())
         if fetch_variant_ids:
+            if not is_sv:
+                fetch_variant_ids = [parse_valid_variant_id(variant_id) for variant_id in fetch_variant_ids]
             updated_variants = hail_variant_multi_lookup(USER_EMAIL, sorted(fetch_variant_ids), data_type, genome_version)
             logger.info(f'Fetched {len(updated_variants)} additional variants')
             updated_variants_by_id.update({variant['variantId']: variant for variant in updated_variants})
