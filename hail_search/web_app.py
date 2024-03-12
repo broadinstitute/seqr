@@ -46,11 +46,11 @@ def _hl_json_default(o):
 def hl_json_dumps(obj):
     return json.dumps(obj, default=_hl_json_default)
 
-async def sync_to_async_hail_query(request: web.Request, query: Callable, *args, **kwargs):
+async def sync_to_async_hail_query(request: web.Request, query: Callable, timeout_s=QUERY_TIMEOUT_S, *args, **kwargs):
     loop = asyncio.get_running_loop()
     future = loop.run_in_executor(request.app.pool, functools.partial(query, await request.json(), *args, **kwargs))
     try:
-        return await asyncio.wait_for(future, QUERY_TIMEOUT_S)
+        return await asyncio.wait_for(future, timeout_s)
     except asyncio.TimeoutError:
         # Well documented issue with the "wait_for" approach.... the concurrent.Future is canceled but
         # the underlying thread is not, allowing the Hail Query under the hood to keep running.
@@ -70,7 +70,8 @@ async def sync_to_async_hail_query(request: web.Request, query: Callable, *args,
                 # "if it returns a number greater than one, you're in trouble,
                 # and you should call it again with exc=NULL to revert the effect"
                 ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(t.ident), None)
-                raise SystemExit("PyThreadState_SetAsyncExc failed")
+                raise SystemExit('PyThreadState_SetAsyncExc failed')
+        raise TimeoutError('Hail Query Timeout Exceeded')
 
 async def gene_counts(request: web.Request) -> web.Response:
     hail_results = await sync_to_async_hail_query(request, search_hail_backend, gene_counts=True)
