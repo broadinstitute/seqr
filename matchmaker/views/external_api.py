@@ -79,14 +79,7 @@ def mme_match_proxy(request, originating_node_name):
         patient_data=query_patient_data, origin_request_host=originating_node_name,
     )
 
-    try:
-        _generate_notification_for_incoming_match(results, incoming_query, originating_node_name, query_patient_data)
-    except Exception as e:
-        logger.error('Unable to create notification for incoming MME match request for {} matches{}: {}'.format(
-            len(results),
-            ' ({})'.format(', '.join(sorted([result.get('patient', {}).get('id') for result in results]))) if results else '',
-            str(e)),
-        )
+    _safe_generate_notification_for_incoming_match(results, incoming_query, originating_node_name, query_patient_data)
 
     return create_json_response({
         'results': sorted(results, key=lambda result: result['score']['patient'], reverse=True),
@@ -94,7 +87,7 @@ def mme_match_proxy(request, originating_node_name):
     })
 
 
-def _generate_notification_for_incoming_match(results, incoming_query, incoming_request_node, incoming_patient):
+def _safe_generate_notification_for_incoming_match(results, incoming_query, incoming_request_node, incoming_patient):
     """
     Generate a SLACK notifcation to say that a VALID match request came in and the following
     results were sent back. If Slack is not supported, a message is not sent, but details persisted.
