@@ -9,7 +9,7 @@ import logging
 import traceback
 from typing import Callable
 
-from hail_search.search import search_hail_backend, load_globals, lookup_variant
+from hail_search.search import search_hail_backend, load_globals, lookup_variant, lookup_variants
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +64,11 @@ async def lookup(request: web.Request) -> web.Response:
     return web.json_response(result, dumps=hl_json_dumps)
 
 
+async def multi_lookup(request: web.Request) -> web.Response:
+    result = await sync_to_async_hail_query(request, lookup_variants)
+    return web.json_response({'results': result}, dumps=hl_json_dumps)
+
+
 async def status(request: web.Request) -> web.Response:
     return web.json_response({'success': True})
 
@@ -84,6 +89,7 @@ async def init_web_app():
         web.post('/search', search),
         web.post('/gene_counts', gene_counts),
         web.post('/lookup', lookup),
+        web.post('/multi_lookup', multi_lookup),
     ])
     # The idea here is to run the hail queries off the main thread so that the
     # event loop stays live and the /status check is responsive.  We only
