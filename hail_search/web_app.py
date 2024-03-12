@@ -1,6 +1,7 @@
 from aiohttp import web
 import asyncio
 import concurrent.futures
+import ctypes
 import functools
 import json
 import os
@@ -47,8 +48,30 @@ def hl_json_dumps(obj):
 
 async def sync_to_async_hail_query(request: web.Request, query: Callable, *args, **kwargs):
     loop = asyncio.get_running_loop()
-    future = await loop.run_in_executor(request.app.pool, functools.partial(query, await request.json(), *args, **kwargs))
-    return await asyncio.wait_for(future, QUERY_TIMEOUT_S)
+    future = loop.run_in_executor(request.app.pool, functools.partial(query, await request.json(), *args, **kwargs))
+    try:
+        return await asyncio.wait_for(future, QUERY_TIMEOUT_S)
+    except asyncio.TimeoutError:
+        # NB: Changed in version 3.11: Raises TimeoutError instead of asyncio.TimeoutError.
+        # Well documented issue with the "wait_for" approach.... the concurrent.Future is canceled but
+        # the underlying thread is not, allowing the Hail Query under the hood to keep running.
+        # https://stackoverflow.com/questions/34452590/timeout-handling-while-using-run-in-executor-and-asyncio
+        # This unsafe approach is taken from:
+        # https://stackoverflow.com/questions/323972/is-there-any-way-to-kill-a-thread
+        #
+        # A few other thoughts:
+        # - A ProcessPoolExecutor instead of a ThreadPoolExecutor would allow for safe worker termination
+        # and would potentially be a safer option in general (some portion of a hail query is cpu bound in python!)
+        # - A "timeout" decorator applied to the query function, catching a SIGALARM would also potentially
+        # suffice... but threads don't play well with signals.
+        # - We could also just kill the service/pod (which is fine).
+        for t in request.app.pool._threads:
+            res = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(t.ident), ctypes.py_object(TimeoutError))
+            if res > 1:
+                # "if it returns a number greater than one, you're in trouble,
+                # and you should call it again with exc=NULL to revert the effect"
+                ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(t.ident), None)
+                raise SystemExit("PyThreadState_SetAsyncExc failed")
 
 async def gene_counts(request: web.Request) -> web.Response:
     hail_results = await sync_to_async_hail_query(request, search_hail_backend, gene_counts=True)
