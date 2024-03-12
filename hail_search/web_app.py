@@ -52,7 +52,6 @@ async def sync_to_async_hail_query(request: web.Request, query: Callable, *args,
     try:
         return await asyncio.wait_for(future, QUERY_TIMEOUT_S)
     except asyncio.TimeoutError:
-        # NB: Changed in version 3.11: Raises TimeoutError instead of asyncio.TimeoutError.
         # Well documented issue with the "wait_for" approach.... the concurrent.Future is canceled but
         # the underlying thread is not, allowing the Hail Query under the hood to keep running.
         # https://stackoverflow.com/questions/34452590/timeout-handling-while-using-run-in-executor-and-asyncio
