@@ -108,12 +108,12 @@ class SearchUtilsTests(SearchTestHelper):
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
     def test_get_variants_for_variant_ids(self, mock_get_variants_for_ids):
-        variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL', 'M-10195-C-A']
+        variant_ids = ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL', 'MT-10195-C-A']
         get_variants_for_variant_ids(self.families, variant_ids, user=self.user)
         mock_get_variants_for_ids.assert_called_with(mock.ANY, '37', {
             '2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G'),
             '1-248367227-TC-T': ('1', 248367227, 'TC', 'T'),
-            'M-10195-C-A': ('M', 10195, 'C', 'A'),
+            'MT-10195-C-A': ('M', 10195, 'C', 'A'),
             'prefix-938_DEL': None,
         }, self.user, user_email=None)
         self.assertSetEqual(set(mock_get_variants_for_ids.call_args.args[0]), set(self.search_samples))
@@ -123,7 +123,7 @@ class SearchUtilsTests(SearchTestHelper):
         mock_get_variants_for_ids.assert_called_with(mock.ANY, '37', {
             '2-103343353-GAGA-G': ('2', 103343353, 'GAGA', 'G'),
             '1-248367227-TC-T': ('1', 248367227, 'TC', 'T'),
-            'M-10195-C-A': ('M', 10195, 'C', 'A'),
+            'MT-10195-C-A': ('M', 10195, 'C', 'A'),
         }, self.user, user_email=None)
         skipped_samples = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
         expected_samples = {s for s in self.search_samples if s.guid not in skipped_samples}

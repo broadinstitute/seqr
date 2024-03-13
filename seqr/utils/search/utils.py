@@ -14,7 +14,7 @@ from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_
 from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend, \
     hail_variant_lookup, validate_hail_backend_no_location_search
 from seqr.utils.gene_utils import parse_locus_list_items
-from seqr.utils.xpos_utils import get_xpos
+from seqr.utils.xpos_utils import get_xpos, format_chrom
 
 
 class InvalidSearchException(Exception):
@@ -333,12 +333,17 @@ def _parse_variant_items(search_json):
 
 def _parse_variant_id(variant_id):
     try:
-        chrom, pos, ref, alt = variant_id.split('-')
-        pos = int(pos)
-        get_xpos(chrom, pos)
-        return chrom, pos, ref, alt
+        return parse_valid_variant_id(variant_id)
     except (KeyError, ValueError):
         return None
+
+
+def parse_valid_variant_id(variant_id):
+    chrom, pos, ref, alt = variant_id.split('-')
+    chrom = format_chrom(chrom)
+    pos = int(pos)
+    get_xpos(chrom, pos)
+    return chrom, pos, ref, alt
 
 
 def _validate_sort(sort, families):

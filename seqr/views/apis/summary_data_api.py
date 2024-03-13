@@ -158,8 +158,10 @@ def bulk_update_family_external_analysis(request):
     family_db_id_lookup = {
         (f['project__name'], f['family_id']): f['id'] for f in Family.objects.annotate(
             project_family=Concat('project__name', 'family_id', output_field=CharField())
-        ).filter(project_family__in=[f'{project}{family}' for project, family in requested_families])
-        .values('id', 'family_id', 'project__name')
+        ).filter(
+            project_family__in=[f'{project}{family}' for project, family in requested_families],
+            project__guid__in=get_project_guids_user_can_view(request.user),
+        ).values('id', 'family_id', 'project__name')
     }
 
     warnings = []

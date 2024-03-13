@@ -79,14 +79,7 @@ def mme_match_proxy(request, originating_node_name):
         patient_data=query_patient_data, origin_request_host=originating_node_name,
     )
 
-    try:
-        _generate_notification_for_incoming_match(results, incoming_query, originating_node_name, query_patient_data)
-    except Exception as e:
-        logger.error('Unable to create notification for incoming MME match request for {} matches{}: {}'.format(
-            len(results),
-            ' ({})'.format(', '.join(sorted([result.get('patient', {}).get('id') for result in results]))) if results else '',
-            str(e)),
-        )
+    _safe_generate_notification_for_incoming_match(results, incoming_query, originating_node_name, query_patient_data)
 
     return create_json_response({
         'results': sorted(results, key=lambda result: result['score']['patient'], reverse=True),
@@ -94,7 +87,7 @@ def mme_match_proxy(request, originating_node_name):
     })
 
 
-def _generate_notification_for_incoming_match(results, incoming_query, incoming_request_node, incoming_patient):
+def _safe_generate_notification_for_incoming_match(results, incoming_query, incoming_request_node, incoming_patient):
     """
     Generate a SLACK notifcation to say that a VALID match request came in and the following
     results were sent back. If Slack is not supported, a message is not sent, but details persisted.
@@ -151,7 +144,7 @@ matchbox on {insertion_date}, with seqr link
         emails = [email.strip() for email in submission.contact_href.replace('mailto:', '').split(',')]
         send_emails = emails if len(emails) < 2 else [email for email in emails if email!= MME_DEFAULT_CONTACT_EMAIL]
         all_emails.update(send_emails)
-        match_results.append((result_text, send_emails))
+        match_results.append((result_text, send_emails, submission.submission_id))
     match_results = sorted(match_results, key=lambda result_tuple: result_tuple[0])
 
     base_message = """Dear collaborators,
@@ -180,12 +173,11 @@ matchbox on {insertion_date}, with seqr link
     We sent this email alert to: {email_addresses_alert_sent_to}\n{footer}."""
 
     safe_post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
-        base_message=base_message, match_results='\n'.join([text for text, _ in match_results]),
+        base_message=base_message, match_results='\n'.join([result[0] for result in match_results]),
         email_addresses_alert_sent_to=', '.join(sorted(all_emails)), footer=MME_EMAIL_FOOTER
     ))
 
-    email_errors = []
-    for result_text, emails in match_results:
+    for result_text, emails, submission_id in match_results:
         try:
             email_message = EmailMessage(
                 subject='Received new MME match',
@@ -198,9 +190,7 @@ matchbox on {insertion_date}, with seqr link
             )
             email_message.send()
         except Exception as e:
-            email_errors.append(str(e))
-    if email_errors:
-        raise ValueError('\n'.join(email_errors))
+            logger.error(f'Unable to send notification email for incoming MME match with {submission_id}: {e}')
 
 
 MME_EMAIL_FOOTER = """

@@ -5,7 +5,7 @@
     "fields": {
         "guid": "R0001_1kg",
         "created_date": "2017-03-12T19:27:08.156Z",
-        "created_by": null,
+        "created_by": 10,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "1kg project n\u00e5me with uni\u00e7\u00f8de",
         "description": "1000 genomes project description with uni\u00e7\u00f8de",
@@ -29,7 +29,7 @@
     "fields": {
         "guid": "R0002_empty",
         "created_date": "2017-03-12T19:27:08.156Z",
-        "created_by": null,
+        "created_by": 10,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Empty Project",
         "description": "",
@@ -50,7 +50,7 @@
     "fields": {
         "guid": "R0003_test",
         "created_date": "2017-03-12T19:27:08.156Z",
-        "created_by": null,
+        "created_by": 10,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Test Reprocessed Project",
         "description": "",
@@ -1884,7 +1884,6 @@
             "genotypeFilters": "pass",
             "mainTranscriptId": "ENST00000505820",
             "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0}, "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 8.142526788913136e-06}, "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "topmed": {"ac": null, "an": null, "af": null}},
-            "genomeVersion": "37",
             "pos": 1560662,
             "predictions": {"eigen": null, "revel": null, "sift": "damaging", "cadd": "31", "metasvm": "D", "mpc": null, "splice_ai": null, "phastcons_100_vert": null, "mut_taster": "disease_causing", "fathmm": "tolerated", "polyphen": "probably_damaging", "dann": null, "primate_ai": null, "gerp_rs": null},
             "hgmd": {"accession": null, "class": null},
@@ -1970,7 +1969,7 @@
                     "hom": 10332
                     }
                 },
-            "genomeVersion": "37",
+            "genomeVersion": "38",
             "pos": 1562437,
             "hgmd": {"accession": null, "class": null},
             "rsid": null,
@@ -2085,7 +2084,7 @@
         "alt": "T",
         "variant_id": "12-48367227-TC-T",
         "saved_variant_json": {
-            "liftedOverGenomeVersion": "38",  "liftedOverPos": "", "genomeVersion": "37", "pos": 248367227,
+            "liftedOverGenomeVersion": "37",  "liftedOverPos": "", "genomeVersion": "38", "pos": 248367227,
             "transcripts": {}, "chrom": "1", "genotypes": {
                 "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}}},
         "family": 14
