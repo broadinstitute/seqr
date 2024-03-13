@@ -1143,6 +1143,7 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
     )
 
     rank = models.IntegerField()
+    p_value = models.FloatField()
     p_adjust = models.FloatField()
     chrom = models.CharField(max_length=2)
     start = models.IntegerField()

@@ -314,7 +314,7 @@ RNA_DATA_TYPE_CONFIGS = {
             'allow_missing_gene': True,
             'get_unique_key': _get_splice_id,
             'post_process': _add_splice_rank,
-            'warn_format_fields': [CHROM_COL],
+            # 'warn_format_fields': [CHROM_COL], TODO functionality still needed?
         },
     },
 }
