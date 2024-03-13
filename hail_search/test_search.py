@@ -2,7 +2,7 @@ from aiohttp.test_utils import AioHTTPTestCase
 import asyncio
 from copy import deepcopy
 import time
-from unittest.mock import Mock
+from unittest import mock
 
 from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE_DATA, FAMILY_2_MISSING_SAMPLE_DATA, \
     VARIANT1, VARIANT2, VARIANT3, VARIANT4, MULTI_PROJECT_SAMPLE_DATA, MULTI_PROJECT_MISSING_SAMPLE_DATA, \
@@ -197,13 +197,18 @@ class HailSearchTestCase(AioHTTPTestCase):
         return await init_web_app()
 
     async def test_sync_to_async_hail_query(self):
-        request = Mock()
+        request = mock.Mock()
         request.app = await self.get_application()
         # NB: request.json() is the first arg passed to the callable
         request.json.return_value = asyncio.Future()
         request.json.return_value.set_result(3)
         with self.assertRaises(TimeoutError):
             await sync_to_async_hail_query(request, time.sleep, timeout_s=1)
+
+        with mock.patch('hail_search.web_app.ctypes.pythonapi.PyThreadState_SetAsyncExc') as mock_set_async_exc:
+            mock_set_async_exc.return_value = 2
+            with self.assertRaises(SystemExit):
+                await sync_to_async_hail_query(request, time.sleep, timeout_s=1)
 
     async def test_status(self):
         async with self.client.request('GET', '/status') as resp:

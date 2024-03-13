@@ -46,7 +46,7 @@ def _hl_json_default(o):
 def hl_json_dumps(obj):
     return json.dumps(obj, default=_hl_json_default)
 
-async def sync_to_async_hail_query(request: web.Request, query: Callable, timeout_s=QUERY_TIMEOUT_S, *args, **kwargs):
+async def sync_to_async_hail_query(request: web.Request, query: Callable, *args, timeout_s=QUERY_TIMEOUT_S, **kwargs):
     loop = asyncio.get_running_loop()
     future = loop.run_in_executor(request.app.pool, functools.partial(query, await request.json(), *args, **kwargs))
     try:
