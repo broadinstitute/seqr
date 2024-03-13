@@ -1133,7 +1133,7 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
 
 
 class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
-    SIGNIFICANCE_THRESHOLD = 0.01
+    SIGNIFICANCE_THRESHOLD = 0.01  # TODO update logic multi field
     SIGNIFICANCE_FIELD = 'p_adjust'
     MAX_SIGNIFICANT_OUTLIER_NUM = 50
     STRAND_CHOICES = (
