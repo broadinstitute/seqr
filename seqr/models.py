@@ -1161,7 +1161,7 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
     class Meta:
         unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end', 'strand', 'type')
 
-        json_fields = ['gene_id', 'p_adjust', 'chrom', 'start', 'end', 'strand', 'counts', 'type',
+        json_fields = ['gene_id', 'p_value', 'p_adjust', 'chrom', 'start', 'end', 'strand', 'counts', 'type',
                        'rare_disease_samples_with_this_junction', 'rare_disease_samples_total',
                        'delta_intron_jaccard_index', 'mean_counts', 'total_counts', 'mean_total_counts']
 
