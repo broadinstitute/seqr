@@ -1,4 +1,6 @@
-from hail_search.constants import SCREEN_KEY, GENOME_VERSION_GRCh37
+from collections import OrderedDict
+
+from hail_search.constants import GENOME_VERSION_GRCh37, PREFILTER_FREQ_CUTOFF
 from hail_search.queries.snv_indel import SnvIndelHailTableQuery
 
 
@@ -7,10 +9,11 @@ class SnvIndelHailTableQuery37(SnvIndelHailTableQuery):
     GENOME_VERSION = GENOME_VERSION_GRCh37
     PREDICTION_FIELDS_CONFIG = SnvIndelHailTableQuery.PREDICTION_FIELDS_CONFIG_ALL_BUILDS
     LIFTOVER_ANNOTATION_FIELDS = {}
+    ANNOTATION_OVERRIDE_FIELDS = SnvIndelHailTableQuery.ANNOTATION_OVERRIDE_FIELDS[:-1]
+    FREQUENCY_PREFILTER_FIELDS = OrderedDict([
+        (True, PREFILTER_FREQ_CUTOFF),
+        ('is_gt_10_percent', 0.1),
+    ])
 
     def _should_add_chr_prefix(self):
         return False
-
-    def _get_annotation_override_filters(self, annotations, *args, **kwargs):
-        annotations = {k: v for k, v in annotations.items() if k != SCREEN_KEY}
-        return super()._get_annotation_override_filters(annotations, *args, **kwargs)

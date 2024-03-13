@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'guardian',
     'anymail',
+    'notifications',
     'seqr',
     'reference_data',
     'matchmaker',

@@ -263,7 +263,7 @@ def _get_es_indices(client):
     return indices, seqr_index_projects
 
 
-def get_es_variants_for_variant_ids(samples, genome_version, variants_by_id, user, return_all_queried_families=False):
+def get_es_variants_for_variant_ids(samples, genome_version, variants_by_id, user, return_all_queried_families=False, **kwargs):
     variants = EsSearch(
         samples, genome_version, user=user, return_all_queried_families=return_all_queried_families, sort=XPOS_SORT_KEY,
     ).filter_by_variant_ids(list(variants_by_id.keys()))

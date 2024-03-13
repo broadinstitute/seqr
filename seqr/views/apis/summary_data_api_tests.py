@@ -35,7 +35,7 @@ SAVED_VARIANT_RESPONSE_KEYS = {
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "projectGuid": "R0003_test",
     "num_saved_variants": 2,
-    "solve_status": "No",
+    "solve_status": "Unsolved",
     "sample_id": "NA20889",
     "gene_known_for_phenotype-1": "Known",
     "gene_known_for_phenotype-2": "Known",
@@ -143,7 +143,7 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'pmid_id': None,
     'proband_relationship': 'Self',
     'sex': 'Female',
-    'solve_status': 'No',
+    'solve_status': 'Unsolved',
     'alt-1': 'T',
     'chrom-1': '1',
     'gene_known_for_phenotype-1': 'Candidate',
@@ -151,7 +151,7 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'end-1': None,
     'ref-1': 'TC',
     'zygosity-1': 'Heterozygous',
-    'variant_reference_assembly-1': 'GRCh37',
+    'variant_reference_assembly-1': 'GRCh38',
     'allele_balance_or_heteroplasmy_percentage-1': None,
     'gene-1': None,
     'gene_id-1': None,
@@ -447,11 +447,12 @@ class SummaryDataAPITest(AirtableTest):
             ['Test Reprocessed Project', '12'],
             ['Test Reprocessed Project', 'not_a_family'],
             ['not_a_project', '2'],
+            ['Non-Analyst Project', '14'],
         ]
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertDictEqual(response.json(), {
             'warnings': [
-                'No match found for the following families: not_a_family (Test Reprocessed Project), 2 (not_a_project)'
+                'No match found for the following families: 14 (Non-Analyst Project), not_a_family (Test Reprocessed Project), 2 (not_a_project)'
             ],
             'info': ['Updated "analysed by" for 2 families'],
         })

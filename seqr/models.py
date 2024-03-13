@@ -5,7 +5,7 @@ import random
 
 from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import ArrayField
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
 from django.db.models import base, options, ForeignKey, JSONField, prefetch_related_objects
 from django.utils import timezone
@@ -182,6 +182,9 @@ class Project(ModelWithGUID):
     can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT, null=True, blank=True)
     can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT, null=True, blank=True)
 
+    # user group of users subscribed to project notifications
+    subscribers = models.ForeignKey(Group, related_name='+', on_delete=models.CASCADE)
+
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     consent_code = models.CharField(max_length=1, null=True, blank=True, choices=[
         (c[0], c) for c in ['HMB', 'GRU', 'Other']
@@ -214,25 +217,29 @@ class Project(ModelWithGUID):
         This could be done with signals, but seems cleaner to do it this way.
         """
         being_created = not self.pk
-        should_create_user_groups = being_created and not anvil_enabled()
+        anvil_disabled = not anvil_enabled()
 
-        if should_create_user_groups:
+        groups = []
+        if being_created:
             # create user groups
-            self.can_edit_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_edit', uuid.uuid4()))
-            self.can_view_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_view', uuid.uuid4()))
+            groups.append('subscribers')
+            if anvil_disabled:
+                groups += ['can_edit_group', 'can_view_group']
+        for group in groups:
+            setattr(self, group, Group.objects.create(name=f'{_slugify(self.name.strip())[:30]}_{group}_{uuid.uuid4()}'))
 
         super(Project, self).save(*args, **kwargs)
 
-        if should_create_user_groups:
+        if being_created:
+            if anvil_disabled:
+                assign_perm(user_or_group=self.can_edit_group, perm=CAN_EDIT, obj=self)
+                assign_perm(user_or_group=self.can_edit_group, perm=CAN_VIEW, obj=self)
 
-            assign_perm(user_or_group=self.can_edit_group, perm=CAN_EDIT, obj=self)
-            assign_perm(user_or_group=self.can_edit_group, perm=CAN_VIEW, obj=self)
-
-            assign_perm(user_or_group=self.can_view_group, perm=CAN_VIEW, obj=self)
+                assign_perm(user_or_group=self.can_view_group, perm=CAN_VIEW, obj=self)
 
             # add the user that created this Project to all permissions groups
             user = self.created_by
-            user.groups.add(self.can_edit_group, self.can_view_group)
+            user.groups.add(*[getattr(self, group) for group in groups])
 
     def delete(self, *args, **kwargs):
         """Override the delete method to also delete the project-specific user groups"""
@@ -271,6 +278,7 @@ class ProjectCategory(ModelWithGUID):
 class Family(ModelWithGUID):
     ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS='I'
     ANALYSIS_STATUS_PARTIAL_SOLVE = 'P'
+    ANALYSIS_STATUS_PROBABLE_SOLVE = 'PB'
     ANALYSIS_STATUS_WAITING_FOR_DATA='Q'
     SOLVED_ANALYSIS_STATUS_CHOICES = (
         ('S', 'Solved'),
@@ -290,6 +298,7 @@ class Family(ModelWithGUID):
         ('Rcpc', 'Reviewed, currently pursuing candidates'),
         ('Rncc', 'Reviewed, no clear candidate'),
         ('C', 'Closed, no longer under analysis'),
+        (ANALYSIS_STATUS_PROBABLE_SOLVE, 'Probably Solved'),
         (ANALYSIS_STATUS_PARTIAL_SOLVE, 'Partial Solve - Analysis in Progress'),
         (ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS, 'Analysis in Progress'),
         (ANALYSIS_STATUS_WAITING_FOR_DATA, 'Waiting for data'),
@@ -612,6 +621,11 @@ class Individual(ModelWithGUID):
 
     def _compute_guid(self):
         return 'I%07d_%s' % (self.id, _slugify(str(self)))
+
+    def save(self, *args, **kwargs):
+        if Individual.objects.filter(individual_id=self.individual_id, family__project_id=self.family.project_id).count() > 1:
+            raise ValidationError({'individual_id': 'Individual ID must be unique within a project'})
+        super().save(*args, **kwargs)
 
     class Meta:
         unique_together = ('family', 'individual_id')

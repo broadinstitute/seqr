@@ -5,11 +5,12 @@
     "fields": {
         "guid": "R0001_1kg",
         "created_date": "2017-03-12T19:27:08.156Z",
-        "created_by": null,
+        "created_by": 10,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "1kg project n\u00e5me with uni\u00e7\u00f8de",
         "description": "1000 genomes project description with uni\u00e7\u00f8de",
         "consent_code": "H",
+        "subscribers": 6,
 	"can_edit_group": 2,
 	"can_view_group": 3,
     "workspace_name": "anvil-1kg project n\u00e5me with uni\u00e7\u00f8de",
@@ -28,13 +29,14 @@
     "fields": {
         "guid": "R0002_empty",
         "created_date": "2017-03-12T19:27:08.156Z",
-        "created_by": null,
+        "created_by": 10,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Empty Project",
         "description": "",
         "consent_code": "H",
         "workspace_name": "empty",
         "workspace_namespace": "my-seqr-billing",
+        "subscribers": 6,
 	"can_edit_group": 2,
 	"can_view_group": 3,
 	"is_mme_enabled": false,
@@ -48,10 +50,11 @@
     "fields": {
         "guid": "R0003_test",
         "created_date": "2017-03-12T19:27:08.156Z",
-        "created_by": null,
+        "created_by": 10,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Test Reprocessed Project",
         "description": "",
+        "subscribers": 6,
 	"can_edit_group": 2,
 	"can_view_group": 3,
     "workspace_name": "anvil-project 1000 Genomes Demo",
@@ -72,6 +75,7 @@
         "created_by": 11,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Non-Analyst Project",
+        "subscribers": 7,
 	    "can_edit_group": 2,
 	    "can_view_group": 2,
 	    "last_accessed_date": "2017-09-15T18:15:50.827Z",
@@ -892,7 +896,7 @@
         "sample_id": "NA19675",
         "is_active": true,
         "elasticsearch_index": "test_index",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:12:55.397Z"
     }
 },
 {
@@ -911,7 +915,7 @@
         "sample_id": "NA19678",
         "is_active": true,
         "elasticsearch_index": "test_index_old",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:13:55.397Z"
     }
 },
 {
@@ -930,7 +934,7 @@
         "elasticsearch_index":null,
         "tissue_type": "F",
         "data_source": "fibs_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:14:55.397Z"
     }
 },
 {
@@ -949,7 +953,7 @@
         "tissue_type": "X",
         "individual": 3,
         "dataset_type": "SNV_INDEL",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:15:55.397Z"
     }
 },
 {
@@ -967,7 +971,7 @@
         "individual": 4,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:16:55.397Z"
     }
 },
 {
@@ -985,7 +989,7 @@
         "individual": 5,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:17:55.397Z"
     }
 },
 {
@@ -1003,7 +1007,7 @@
         "individual": 6,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:18:55.397Z"
     }
 },
 {
@@ -1021,7 +1025,7 @@
         "individual": 7,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:19:55.397Z"
     }
 },
 {
@@ -1040,7 +1044,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:20:55.397Z"
     }
 },
 {
@@ -1058,7 +1062,7 @@
         "individual": 9,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:21:55.397Z"
     }
 },
 {
@@ -1077,7 +1081,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:22:55.397Z"
     }
 },
 {
@@ -1096,7 +1100,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:23:55.397Z"
     }
 },
 {
@@ -1115,7 +1119,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:24:55.397Z"
     }
 },
 {
@@ -1134,7 +1138,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:25:55.397Z"
     }
 },
 {
@@ -1152,7 +1156,7 @@
         "individual": 15,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2020-02-05T06:42:55.397Z"
+        "loaded_date": "2020-02-05T06:26:55.397Z"
     }
 },
 {
@@ -1171,7 +1175,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:27:55.397Z"
     }
 },
 {
@@ -1191,7 +1195,7 @@
         "elasticsearch_index": "1kg.vcf.gz",
         "data_source": "auto__2023-08-08",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:28:55.397Z"
     }
 },
 {
@@ -1209,7 +1213,7 @@
         "individual": 4,
         "dataset_type": "SV",
         "tissue_type": "X",
-        "loaded_date": "2018-02-05T06:42:55.397Z"
+        "loaded_date": "2018-02-05T06:29:55.397Z"
     }
 },
 {
@@ -1227,7 +1231,7 @@
         "individual": 5,
         "dataset_type": "SV",
         "tissue_type": "X",
-        "loaded_date": "2018-02-05T06:42:55.397Z"
+        "loaded_date": "2018-02-05T06:30:55.397Z"
     }
 },
 {
@@ -1244,7 +1248,7 @@
         "is_active": true,
         "individual": 18,
         "dataset_type": "SV",
-        "loaded_date": "2018-02-05T06:42:55.397Z"
+        "loaded_date": "2018-02-05T06:31:55.397Z"
     }
 },
 {
@@ -1261,7 +1265,7 @@
         "is_active": true,
         "individual": 6,
         "dataset_type": "SV",
-        "loaded_date": "2018-02-05T06:42:55.397Z"
+        "loaded_date": "2018-02-05T06:32:55.397Z"
     }
 },
 {
@@ -1273,12 +1277,12 @@
         "created_by": null,
         "last_modified_date": "2022-03-13T09:07:49.937Z",
         "elasticsearch_index": "test_index_mito_wgs",
-        "sample_id": "HG00733",
-        "sample_type": "WGS",
+        "sample_id": "HG00731",
+        "sample_type": "WES",
         "is_active": true,
-        "individual": 6,
+        "individual": 4,
         "dataset_type": "MITO",
-        "loaded_date": "2022-02-05T06:42:55.397Z"
+        "loaded_date": "2022-02-05T06:33:55.397Z"
     }
 },
 {
@@ -1297,7 +1301,7 @@
         "elasticsearch_index":null,
         "tissue_type": "F",
         "data_source": "muscle_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:34:55.397Z"
     }
 },
 {
@@ -1316,7 +1320,7 @@
         "elasticsearch_index":null,
         "tissue_type": "M",
         "data_source": "muscle_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:35:55.397Z"
     }
 },
 {
@@ -1894,7 +1898,6 @@
             "genotypeFilters": "pass",
             "mainTranscriptId": "ENST00000505820",
             "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0}, "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 8.142526788913136e-06}, "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "topmed": {"ac": null, "an": null, "af": null}},
-            "genomeVersion": "37",
             "pos": 1560662,
             "predictions": {"eigen": null, "revel": null, "sift": "damaging", "cadd": "31", "metasvm": "D", "mpc": null, "splice_ai": null, "phastcons_100_vert": null, "mut_taster": "disease_causing", "fathmm": "tolerated", "polyphen": "probably_damaging", "dann": null, "primate_ai": null, "gerp_rs": null},
             "hgmd": {"accession": null, "class": null},
@@ -1980,7 +1983,7 @@
                     "hom": 10332
                     }
                 },
-            "genomeVersion": "37",
+            "genomeVersion": "38",
             "pos": 1562437,
             "hgmd": {"accession": null, "class": null},
             "rsid": null,
@@ -2095,7 +2098,7 @@
         "alt": "T",
         "variant_id": "12-48367227-TC-T",
         "saved_variant_json": {
-            "liftedOverGenomeVersion": "38",  "liftedOverPos": "", "genomeVersion": "37", "pos": 248367227,
+            "liftedOverGenomeVersion": "37",  "liftedOverPos": "", "genomeVersion": "38", "pos": 248367227,
             "transcripts": {}, "chrom": "1", "genotypes": {
                 "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}}},
         "family": 14
@@ -2737,5 +2740,67 @@
         "institution": "Broad Center for Mendelian Genomics",
         "patient_id": "NA19675"
     }
-}
-]
+}, {
+    "model": "notifications.notification",
+    "pk": 1,
+    "fields": {
+        "level": "info",
+        "recipient": 11,
+        "unread": true,
+        "actor_content_type": 40,
+        "actor_object_id": "1",
+        "verb": "Loaded 2 new WES SV samples",
+        "description": null,
+        "target_content_type": null,
+        "target_object_id": null,
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2023-12-17T22:14:44.568Z",
+        "public": true,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+}, {
+    "model": "notifications.notification",
+    "pk": 2,
+    "fields": {
+        "level": "info",
+        "recipient": 11,
+        "unread": false,
+        "actor_content_type": 10,
+        "actor_object_id": "1",
+        "verb": "Loaded 8 new WES samples",
+        "description": null,
+        "target_content_type": null,
+        "target_object_id": null,
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2023-08-27T22:14:44.568Z",
+        "public": true,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+}, {
+    "model": "notifications.notification",
+    "pk": 3,
+    "fields": {
+        "level": "info",
+        "recipient": 12,
+        "unread": true,
+        "actor_content_type": 10,
+        "actor_object_id": "1",
+        "verb": "Loaded 8 new WES samples",
+        "description": null,
+        "target_content_type": null,
+        "target_object_id": null,
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2023-08-27T22:14:44.568Z",
+        "public": true,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+}]

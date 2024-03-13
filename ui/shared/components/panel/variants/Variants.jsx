@@ -127,7 +127,7 @@ VariantLayout.propTypes = {
   children: PropTypes.node,
 }
 
-export const Variant = React.memo((
+const Variant = React.memo((
   { variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, updateReads, ...props },
 ) => {
   const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)
@@ -265,7 +265,7 @@ CompoundHets.propTypes = {
 
 const Variants = React.memo(({ variants, compoundHetToggle, ...props }) => (
   <Grid stackable divided="vertically">
-    {variants.map(variant => (Array.isArray(variant) ?
+    {(variants || []).map(variant => (Array.isArray(variant) ?
       <CompoundHets variants={variant} key={`${variant.map(v => v.variantId).join()}-${variant[0].familyGuids.join('-')}`} compoundHetToggle={compoundHetToggle} {...props} /> :
       <VariantWithReads variant={variant} key={`${variant.variantId}-${variant.familyGuids.join('-')}`} {...props} />
     ))}

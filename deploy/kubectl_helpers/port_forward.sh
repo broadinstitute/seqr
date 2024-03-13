@@ -7,15 +7,9 @@ set -x -e
 COMPONENT=$2
 
 case ${COMPONENT} in
-  elasticsearch)
-    PORT=9200
-    NAME='service/elasticsearch-es-http'
-    OPEN_BROWSER=true
-    ;;
-  kibana)
-    PORT=5601
-    NAME='service/kibana-kb-http'
-    OPEN_BROWSER=true
+  hail-search)
+    PORT=5000
+    NAME='service/seqr-hail-search'
     ;;
   redis)
     PORT=6379

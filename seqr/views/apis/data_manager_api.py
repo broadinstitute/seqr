@@ -26,7 +26,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 
-from seqr.models import Sample, Individual, Project, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, RnaSeqSpliceOutlier
+from seqr.models import Sample, Individual, Project, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
@@ -256,7 +256,7 @@ EXCLUDE_PROJECTS = [
     'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes', 'v02_loading_test_project',
 ]
 
-@data_manager_required
+@pm_or_data_manager_required
 def update_rna_seq(request):
     request_json = json.loads(request.body)
 
@@ -304,7 +304,7 @@ def _load_saved_sample_data(file_name_prefix, sample_guid):
     return None
 
 
-@data_manager_required
+@pm_or_data_manager_required
 def load_rna_seq_sample_data(request, sample_guid):
     sample = Sample.objects.get(guid=sample_guid)
     logger.info(f'Loading outlier data for {sample.sample_id}', request.user)

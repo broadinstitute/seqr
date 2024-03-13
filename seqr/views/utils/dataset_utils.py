@@ -355,7 +355,7 @@ def _load_rna_seq_file(
 
     loaded_samples = set()
     unmatched_samples = set()
-    missing_required_fields = defaultdict(list)
+    missing_required_fields = defaultdict(set)
     invalid_format_fields = defaultdict(set)
     gene_ids = set()
     current_sample = None
@@ -381,7 +381,7 @@ def _load_rna_seq_file(
         sample_id = row_dict.pop(SAMPLE_ID_COL) if SAMPLE_ID_COL in row_dict else row[SAMPLE_ID_COL]
         if missing_cols:
             for col in missing_cols:
-                missing_required_fields[col].append(sample_id)
+                missing_required_fields[col].add(sample_id)
         if missing_cols:
             continue
 

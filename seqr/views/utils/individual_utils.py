@@ -107,6 +107,9 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         individual_id = _get_record_individual_id(record)
         individual = individual_lookup[individual_id].get(family)
         if not individual:
+            # Individual is being moved to a different family
+            individual = next((iter(individual_lookup[individual_id].values())), None)
+        if not individual:
             individual = create_model_from_json(
                 Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I'}, user)
             updated_family_ids.add(family.id)
@@ -170,11 +173,7 @@ def delete_individuals(project, individual_guids, user):
     Returns:
         list: Family objects for families with deleted individuals
     """
-
-    individuals_to_delete = Individual.objects.filter(
-        family__project=project, guid__in=individual_guids)
-
-    errors = backend_specific_call(_validate_no_submissions, _validate_no_sumissions_no_search_samples)(individuals_to_delete)
+    errors, individuals_to_delete = check_project_individuals_deletable(project, individual_guids=individual_guids)
     if errors:
         raise ErrorsWarningsException(errors)
 
@@ -191,6 +190,15 @@ def delete_individuals(project, individual_guids, user):
     _remove_pedigree_images(families_with_deleted_individuals, user)
 
     return families_with_deleted_individuals
+
+
+def check_project_individuals_deletable(project, individual_guids=None):
+    individuals_to_delete = Individual.objects.filter(family__project=project)
+    if individual_guids is not None:
+        individuals_to_delete = individuals_to_delete.filter(guid__in=individual_guids)
+
+    errors = backend_specific_call(_validate_no_submissions, _validate_no_sumissions_no_search_samples)(individuals_to_delete)
+    return errors, individuals_to_delete
 
 
 def _validate_delete_individuals(individuals_to_delete, error_type, query):

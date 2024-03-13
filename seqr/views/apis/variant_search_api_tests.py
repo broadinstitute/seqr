@@ -404,7 +404,7 @@ class VariantSearchAPITest(object):
             ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
              '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
              '2.000999927520752', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000376585.6:c.1409A>C',
-             'ENSP00000365770.1:p.Glu470Ala', 'Conflicting_interpretations_of_pathogenicity', '1', '', '2', '', '', '', '', '', 'HG00731', '2', '99', '1.0',
+             'ENSP00000365770.1:p.Glu470Ala', 'Conflicting_classifications_of_pathogenicity', '1', '', '2', '', '', '', '', '', 'HG00731', '2', '99', '1.0',
              'HG00732', '1', '99', '0.625', 'HG00733', '0', '40', '0.0'],
             ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
              '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '', '',
@@ -438,7 +438,7 @@ class VariantSearchAPITest(object):
                 ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
                  '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
                  '2.000999927520752', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000376585.6:c.1409A>C',
-                 'ENSP00000365770.1:p.Glu470Ala', 'Conflicting_interpretations_of_pathogenicity', '1', '', '2', '', '', 'HG00731', '2', '99', '1.0',
+                 'ENSP00000365770.1:p.Glu470Ala', 'Conflicting_classifications_of_pathogenicity', '1', '', '2', '', '', 'HG00731', '2', '99', '1.0',
                  'HG00732', '1', '99', '0.625', 'HG00733', '0', '40', '0.0'],
                 ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
                  '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '',
@@ -761,7 +761,7 @@ class VariantSearchAPITest(object):
 
     @mock.patch('seqr.views.apis.variant_search_api.variant_lookup')
     def test_variant_lookup(self, mock_variant_lookup):
-        mock_variant_lookup.return_value = VARIANT_LOOKUP_VARIANT
+        mock_variant_lookup.return_value = [VARIANT_LOOKUP_VARIANT]
 
         url = f'{reverse(variant_lookup_handler)}?variantId=1-10439-AC-A&genomeVersion=38'
         self.check_require_login(url)
@@ -776,15 +776,15 @@ class VariantSearchAPITest(object):
             'rnaSeqData': {},
             'savedVariantsByGuid': {},
             'transcriptsById': {},
-            'variant': VARIANT_LOOKUP_VARIANT,
+            'variants': [VARIANT_LOOKUP_VARIANT],
         }
         self.assertDictEqual(response.json(), expected_body)
         mock_variant_lookup.assert_called_with(self.no_access_user, variant_id='1-10439-AC-A', genome_version='38', families=None)
 
         variant = {**VARIANTS[0], 'familyGuids': [], 'genotypes': {}}
-        mock_variant_lookup.return_value = variant
+        mock_variant_lookup.return_value = [variant]
         expected_body.update({
-            'variant': variant,
+            'variants': [variant],
             'genesById': {'ENSG00000227232': EXPECTED_GENE, 'ENSG00000268903': EXPECTED_GENE},
             'transcriptsById': EXPECTED_SEARCH_RESPONSE['transcriptsById'],
         })
@@ -794,11 +794,11 @@ class VariantSearchAPITest(object):
         self.assertDictEqual(response.json(), expected_body)
 
         self.login_collaborator()
-        mock_variant_lookup.return_value = SINGLE_FAMILY_VARIANT
+        mock_variant_lookup.return_value = [SINGLE_FAMILY_VARIANT]
         response = self.client.get(f'{url.replace("38", "37")}&include_genotypes=true')
         self.assertEqual(response.status_code, 200)
         self._assert_expected_single_variant_results_context(
-            response.json(), variant=SINGLE_FAMILY_VARIANT, omit_fields={'searchedVariants'},
+            response.json(), variants=[SINGLE_FAMILY_VARIANT], omit_fields={'searchedVariants'},
         )
         mock_variant_lookup.assert_called_with(
             self.collaborator_user, variant_id='1-10439-AC-A', genome_version='37', families=mock.ANY,

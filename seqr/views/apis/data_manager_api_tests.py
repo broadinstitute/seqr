@@ -386,6 +386,8 @@ EXPECTED_PEDIGREE_ROWS = [
     ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
 ]
 
+
+@mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class DataManagerAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
@@ -786,7 +788,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         },
     }
 
-    def _has_expected_file_loading_logs(self, file, info=None, warnings=None, additional_logs=None, additional_logs_offset=None):
+    def _has_expected_file_loading_logs(self, file, user, info=None, warnings=None, additional_logs=None, additional_logs_offset=None):
         expected_logs = [
             (f'==> gsutil ls {file}', None),
             (f'==> gsutil cat {file} | gunzip -c -q - ', None),
@@ -800,7 +802,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             else:
                 expected_logs += additional_logs
 
-        self.assert_json_logs(self.data_manager_user, expected_logs)
+        self.assert_json_logs(user, expected_logs)
 
     def _check_rna_sample_model(self, individual_id, data_source, tissue_type, is_active_sample=True):
         rna_samples = Sample.objects.filter(individual_id=individual_id, sample_type='RNA', tissue_type=tissue_type)
@@ -833,7 +835,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess, mock_load_uploaded_file,
                             mock_os, mock_datetime, mock_send_slack):
         url = reverse(update_rna_seq)
-        self.check_data_manager_login(url)
+        self.check_pm_login(url)
 
         params = self.RNA_DATA_TYPE_PARAMS[data_type]
         model_cls = params['model_cls']
@@ -922,7 +924,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         ]
         warnings = ['Skipped loading for 1 samples already loaded from this file']
         self.assertDictEqual(response.json(), {'info': info, 'warnings': warnings, 'sampleGuids': [], 'fileName': mock.ANY})
-        self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings)
+        self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.pm_user)
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
         mock_send_slack.assert_not_called()
 
@@ -952,7 +954,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [new_sample_guid],
             }})] + (additional_logs or [])
             self._has_expected_file_loading_logs(
-                'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings,
+                'gs://rna_data/new_muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.pm_user,
                 additional_logs=additional_logs, additional_logs_offset=2)
 
             return response_json, new_sample_guid
@@ -1055,7 +1057,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_os.path.exists.return_value = True
 
         url = reverse(load_rna_seq_sample_data, args=[RNA_MUSCLE_SAMPLE_GUID])
-        self.check_data_manager_login(url)
+        self.check_pm_login(url)
 
         for data_type, params in self.RNA_DATA_TYPE_PARAMS.items():
             with self.subTest(data_type):
@@ -1081,7 +1083,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
                 mock_open.assert_called_with(f'{file_name}__{sample_guid}.json.gz', 'rt')
 
-                self.assert_json_logs(self.data_manager_user, [
+                self.assert_json_logs(self.pm_user, [
                     (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
                     (f'create {model_cls.__name__}s', {'dbUpdate': {
                         'dbEntity': model_cls.__name__, 'numEntities': 2, 'parentEntityIds': [sample_guid],
@@ -1158,7 +1160,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'Project Test Reprocessed Project: loaded 1 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
-        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', additional_logs=[
+        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
             ('delete PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'numEntities': 1, 'updateType': 'bulk_delete',
                 'parentEntityIds': ['I000002_na19678'],
@@ -1183,7 +1185,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'Project 1kg project nåme with uniçøde: deleted 1 record(s), loaded 2 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
-        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', additional_logs=[
+        self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
             ('delete PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'numEntities': 1, 'updateType': 'bulk_delete',
                 'parentEntityIds': ['I000002_na19678'],
@@ -1267,7 +1269,6 @@ class DataManagerAPITest(AuthenticationTestCase):
         ]
         mock_subprocess.assert_has_calls(expected_calls)
 
-    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_validate_callset(self, mock_subprocess):
         url = reverse(validate_callset)
@@ -1297,7 +1298,6 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
 
-    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_get_loaded_projects(self):
         url = reverse(get_loaded_projects, args=['WGS', 'SV'])
         self.check_pm_login(url)
@@ -1305,8 +1305,13 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'projects': [
-            {'dataTypeLastLoaded': None, 'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg'},
-            {'dataTypeLastLoaded': '2018-02-05T06:42:55.397Z', 'name': 'Non-Analyst Project', 'projectGuid': 'R0004_non_analyst_project'},
+            {'dataTypeLastLoaded': '2018-02-05T06:31:55.397Z', 'name': 'Non-Analyst Project', 'projectGuid': 'R0004_non_analyst_project'},
+        ]})
+
+        response = self.client.get(url.replace('SV', 'MITO'))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'projects': [
+            {'dataTypeLastLoaded': None, 'name': 'Non-Analyst Project', 'projectGuid': 'R0004_non_analyst_project'},
         ]})
 
         # test data manager access
@@ -1315,32 +1320,24 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class LoadDataAPITest(object):
+@mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+class LoadDataAPITest(AirflowTestCase):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    DAG_NAME = 'v03_pipeline-MITO'
+    SECOND_DAG_NAME = 'v03_pipeline-GCNV'
     LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
     PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
 
-    SUCCESS_SLACK_TEMPLATE = """*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
-
-        Pedigree file(s) have been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/
-
-        Pedigree file(s) have been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project/
-
-        DAG {dag_id} is triggered with following:
-        ```{dag}```
-    """
-    ERROR_SLACK_TEMPLATE = """ERROR triggering internal WES SV loading: {error}
-        
-        DAG {dag_id} should be triggered with following: 
-        ```{dag}```
-        """
-
-    def patch_es(self, es_host):
-        patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', es_host)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+    @staticmethod
+    def _get_dag_variable_overrides(*args, **kwargs):
+        return {
+            'callset_path': 'mito_callset.mt',
+            'sample_source': 'Broad_Internal',
+            'sample_type': 'WGS',
+        }
 
     @responses.activate
-    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1366,15 +1363,28 @@ class LoadDataAPITest(object):
         self.assert_airflow_calls()
         self._has_expected_gs_calls(mock_subprocess, mock_open)
 
-        slack_message_data = [{'dag_name': self.V3_DAG_NAME, 'dag': self.V3_DAG_JSON}]
-        if self.V2_DAG_NAME:
-            slack_message_data.append({'dag_name': self.V2_DAG_NAME, 'dag': self.V2_DAG_JSON})
-        self.assertEqual(self.mock_slack.call_count, len(slack_message_data))
-        self.mock_slack.assert_has_calls([
-            mock.call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, self.SUCCESS_SLACK_TEMPLATE.format(
-                dag_id=self._get_dag_id(data['dag_name']), **data,
-            )) for data in slack_message_data],
-        )
+        dag_json = """{
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "callset_paths": [
+        "gs://test_bucket/mito_callset.mt"
+    ],
+    "sample_source": "Broad_Internal",
+    "sample_type": "WGS",
+    "reference_genome": "GRCh38"
+}"""
+        message = f"""*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
+
+        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/
+
+        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project/
+
+        DAG {self.DAG_NAME} is triggered with following:
+        ```{dag_json}```
+    """
+        self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message)
 
         # Test loading trigger error
         self.mock_slack.reset_mock()
@@ -1388,7 +1398,7 @@ class LoadDataAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
-        self.assert_airflow_calls(trigger_error=True, secondary_dag_names=self.SECOND_DAG_NAMES)
+        self.assert_airflow_calls(trigger_error=True, secondary_dag_name=self.SECOND_DAG_NAME)
         self._has_expected_gs_calls(mock_subprocess, mock_open, is_second_dag=True, sample_type='WES')
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
@@ -1396,51 +1406,14 @@ class LoadDataAPITest(object):
         for error in errors:
             self.assertRegex(error, 'Connection refused by Responses')
 
-        self.assertEqual(self.mock_slack.call_count, len(slack_message_data))
-        self.mock_slack.assert_has_calls([
-            mock.call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, self.ERROR_SLACK_TEMPLATE.format(
-                error=errors[i],
-                dag_name=self.SECOND_DAG_NAMES[data['dag_name']],
-                dag_id=self._get_dag_id(data['dag_name'], name_map=self.SECOND_DAG_NAMES),
-                dag=data['dag'].replace('mito_callset.mt', 'sv_callset.vcf').replace(
-                    'WGS', 'WES').replace('MITO', 'GCNV').replace('v01', 'v03'),
-            )) for i, data in enumerate(slack_message_data)
-        ])
-
-
-class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
-
-    V2_DAG_NAME = None
-    V3_DAG_NAME = 'v03_pipeline-MITO'
-    SECOND_DAG_NAMES = {V3_DAG_NAME: 'v03_pipeline-GCNV'}
-    INITIAL_DAG_RUNS = []
-    ES_HOST = ''
-    V3_DAG_JSON = """{
-    "projects_to_run": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "callset_paths": [
-        "gs://test_bucket/mito_callset.mt"
-    ],
-    "sample_source": "Broad_Internal",
-    "sample_type": "WGS",
-    "reference_genome": "GRCh38"
-}"""
-
-    def setUp(self):
-        self.patch_es(self.ES_HOST)
-        super().setUp()
-
-    def _get_v3_dag_variables(self, *args, **kwargs):
-        return {
-            'projects_to_run': self.PROJECTS,
-            'callset_paths': ['gs://test_bucket/mito_callset.mt'],
-            'sample_source': 'Broad_Internal',
-            'sample_type': 'WGS',
-            'reference_genome': 'GRCh38',
-        }
+        dag_json = dag_json.replace('mito_callset.mt', 'sv_callset.vcf').replace(
+            'WGS', 'WES').replace('MITO', 'GCNV').replace('v01', 'v03')
+        error_message = f"""ERROR triggering internal WES SV loading: {errors[0]}
+        
+        DAG {self.SECOND_DAG_NAME} should be triggered with following: 
+        ```{dag_json}```
+        """
+        self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
     def _has_expected_gs_calls(self, mock_subprocess, mock_open, sample_type='WGS', **kwargs):
         mock_open.assert_has_calls([
@@ -1466,36 +1439,3 @@ class LoadHailDataAPITest(AirflowTestCase, LoadDataAPITest):
                 stdout=-1, stderr=-2, shell=True,  # nosec
             ) for project in self.PROJECTS
         ], any_order=True)
-
-
-class LoadEsDataAPITest(LoadHailDataAPITest):
-    V2_DAG_NAME = 'RDG_WGS_Broad_Internal_MITO'
-    SECOND_DAG_NAMES = {V2_DAG_NAME: 'RDG_WES_Broad_Internal_GCNV', **LoadHailDataAPITest.SECOND_DAG_NAMES}
-    ES_HOST = 'testhost'
-    V2_DAG_JSON = """{
-    "active_projects": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "projects_to_run": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "vcf_path": "gs://test_bucket/mito_callset.mt",
-    "version_path": "gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01"
-}"""
-
-    def _get_v2_dag_variables(self, **kwargs):
-        return {
-            'active_projects': self.PROJECTS,
-            'projects_to_run': self.PROJECTS,
-            'vcf_path': 'gs://test_bucket/mito_callset.mt',
-            'version_path': 'gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_MITO/v01',
-        }
-
-    def _has_expected_gs_calls(self, mock_subprocess, mock_open, is_second_dag=False, **kwargs):
-        super()._has_expected_gs_calls(mock_subprocess, mock_open, **kwargs)
-
-        dag_name = self.SECOND_DAG_NAMES[self.V2_DAG_NAME] if is_second_dag else self.V2_DAG_NAME
-        mock_subprocess.assert_called_with(
-            f'gsutil ls gs://seqr-datasets/v02/GRCh38/{dag_name}', stdout=-1, stderr=-1, shell=True)  # nosec

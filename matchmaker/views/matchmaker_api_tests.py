@@ -306,7 +306,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                         'start': 248367227,
                         'referenceBases': 'TC',
                         'alternateBases': 'T',
-                        'assembly': 'GRCh37',
+                        'assembly': 'GRCh38',
                     },
                     'zygosity': 1,
                 }],
@@ -332,7 +332,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                         'ref': 'TC',
                         'alt': 'T',
                         'end': None,
-                        'genomeVersion': 'GRCh37',
+                        'genomeVersion': 'GRCh38',
                     }
                 }
             ],

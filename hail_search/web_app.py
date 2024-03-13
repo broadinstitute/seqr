@@ -1,11 +1,15 @@
 from aiohttp import web
+import asyncio
+import concurrent.futures
+import functools
 import json
 import os
 import hail as hl
 import logging
 import traceback
+from typing import Callable
 
-from hail_search.search import search_hail_backend, load_globals, lookup_variant
+from hail_search.search import search_hail_backend, load_globals, lookup_variant, lookup_variants
 
 logger = logging.getLogger(__name__)
 
@@ -40,18 +44,29 @@ def _hl_json_default(o):
 def hl_json_dumps(obj):
     return json.dumps(obj, default=_hl_json_default)
 
+async def sync_to_async_hail_query(request: web.Request, query: Callable, *args, **kwargs):
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(request.app.pool, functools.partial(query, await request.json(), *args, **kwargs))
+
 
 async def gene_counts(request: web.Request) -> web.Response:
-    return web.json_response(search_hail_backend(await request.json(), gene_counts=True), dumps=hl_json_dumps)
+    hail_results = await sync_to_async_hail_query(request, search_hail_backend, gene_counts=True)
+    return web.json_response(hail_results, dumps=hl_json_dumps)
 
 
 async def search(request: web.Request) -> web.Response:
-    hail_results, total_results = search_hail_backend(await request.json())
+    hail_results, total_results = await sync_to_async_hail_query(request, search_hail_backend)
     return web.json_response({'results': hail_results, 'total': total_results}, dumps=hl_json_dumps)
 
 
 async def lookup(request: web.Request) -> web.Response:
-    return web.json_response(lookup_variant(await request.json()), dumps=hl_json_dumps)
+    result = await sync_to_async_hail_query(request, lookup_variant)
+    return web.json_response(result, dumps=hl_json_dumps)
+
+
+async def multi_lookup(request: web.Request) -> web.Response:
+    result = await sync_to_async_hail_query(request, lookup_variants)
+    return web.json_response({'results': result}, dumps=hl_json_dumps)
 
 
 async def status(request: web.Request) -> web.Response:
@@ -66,6 +81,7 @@ async def init_web_app():
     if JAVA_OPTS_XSS:
         spark_conf.update({f'spark.{field}.extraJavaOptions': f'-Xss{JAVA_OPTS_XSS}' for field in ['driver', 'executor']})
     hl.init(idempotent=True, spark_conf=spark_conf or None)
+    hl._set_flags(use_new_shuffle='1')
     load_globals()
     app = web.Application(middlewares=[error_middleware], client_max_size=(1024**2)*10)
     app.add_routes([
@@ -73,5 +89,11 @@ async def init_web_app():
         web.post('/search', search),
         web.post('/gene_counts', gene_counts),
         web.post('/lookup', lookup),
+        web.post('/multi_lookup', multi_lookup),
     ])
+    # The idea here is to run the hail queries off the main thread so that the
+    # event loop stays live and the /status check is responsive.  We only
+    # run a single thread, though, so that hail queries block hail queries
+    # and we never run more than a single hail query at a time.
+    app.pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     return app

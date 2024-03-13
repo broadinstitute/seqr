@@ -1,5 +1,5 @@
 from seqr.models import Sample
-from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
+from seqr.utils.communication_utils import send_project_notification, safe_post_to_slack
 from seqr.utils.search.utils import backend_specific_call
 from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_and_get_samples
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
@@ -43,54 +43,50 @@ def add_new_es_search_samples(request_json, project, user, notify=False, expecte
 
     if notify:
         num_samples = len(sample_ids) - num_skipped
-        notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, updated_samples, num_samples)
+        updated_sample_data = updated_samples.values('sample_id', 'individual_id')
+        notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, updated_sample_data, num_samples)
 
     return inactivated_sample_guids, updated_family_guids, updated_samples
 
 
 def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, updated_samples, num_samples):
-    if not project_has_anvil(project):
-        return
-    is_internal = is_internal_anvil_project(project)
+    is_internal = not project_has_anvil(project) or is_internal_anvil_project(project)
 
     previous_loaded_individuals = set(Sample.objects.filter(guid__in=inactivated_sample_guids).values_list('individual_id', flat=True))
-    new_sample_ids = [sample.sample_id for sample in updated_samples if sample.individual_id not in previous_loaded_individuals]
+    new_sample_ids = [sample['sample_id'] for sample in updated_samples if sample['individual_id'] not in previous_loaded_individuals]
 
     url = f'{BASE_URL}project/{project.guid}/project_page'
     msg_dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
     sample_id_list = f'\n```{", ".join(sorted(new_sample_ids))}```' if is_internal else ''
-    summary_message = f'{len(new_sample_ids)} new {sample_type}{msg_dataset_type} samples are loaded in {url}{sample_id_list}'
+    num_new_samples = len(new_sample_ids)
+    sample_summary = f'{num_new_samples} new {sample_type}{msg_dataset_type} samples'
+    summary_message = f'{sample_summary} are loaded in {url}{sample_id_list}'
 
     safe_post_to_slack(
         SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL if is_internal else SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL,
         summary_message)
 
+    project_link = f'<a href={url}>{project.name}</a>'
     if is_internal:
-        return
+        email = f'This is to notify you that {sample_summary} have been loaded in seqr project {project_link}'
+    else:
+        AirtableSession(user=None, base=AirtableSession.ANVIL_BASE, no_auth=True).safe_patch_records(
+            ANVIL_REQUEST_TRACKING_TABLE, max_records=1,
+            record_or_filters={'Status': ['Loading', 'Loading Requested']},
+            record_and_filters={'AnVIL Project URL': url},
+            update={'Status': 'Available in Seqr'},
+        )
+        workspace_name = f'{project.workspace_namespace}/{project.workspace_name}'
+        reload_summary = f' and {num_samples - num_new_samples} re-loaded samples' if num_samples > num_new_samples else ''
+        email = '\n'.join([
+            f'We are following up on the request to load data from AnVIL on {project.created_date.date().strftime("%B %d, %Y")}.',
+            f'We have loaded {sample_summary}{reload_summary} from the AnVIL workspace <a href={ANVIL_UI_URL}#workspaces/{workspace_name}>{workspace_name}</a> to the corresponding seqr project {project_link}.',
+            'Let us know if you have any questions.',
+        ])
 
-    AirtableSession(user=None, base=AirtableSession.ANVIL_BASE, no_auth=True).safe_patch_records(
-        ANVIL_REQUEST_TRACKING_TABLE, max_records=1,
-        record_or_filters={'Status': ['Loading', 'Loading Requested']},
-        record_and_filters={'AnVIL Project URL': url},
-        update={'Status': 'Available in Seqr'},
-    )
-
-    user = project.created_by
-    send_html_email("""Hi {user},
-We are following up on your request to load data from AnVIL on {date}.
-We have loaded {num_sample} samples from the AnVIL workspace <a href={anvil_url}#workspaces/{namespace}/{name}>{namespace}/{name}</a> to the corresponding seqr project <a href={base_url}project/{guid}/project_page>{project_name}</a>. Let us know if you have any questions.
-- The seqr team
-""".format(
-        user=user.get_full_name() or user.email,
-        date=project.created_date.date().strftime('%B %d, %Y'),
-        anvil_url=ANVIL_UI_URL,
-        namespace=project.workspace_namespace,
-        name=project.workspace_name,
-        base_url=BASE_URL,
-        guid=project.guid,
-        project_name=project.name,
-        num_sample=num_samples,
-    ),
+    send_project_notification(
+        project,
+        notification=f'Loaded {sample_summary}',
+        email_body=f'Dear seqr user,\n\n{email}\n\nAll the best,\nThe seqr team',
         subject='New data available in seqr',
-        to=sorted([user.email]),
     )

@@ -145,6 +145,7 @@ const FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE = 'S_kgfp'
 const FAMILY_STATUS_SOLVED_KNOWN_GENE_DIFFERENT_PHENOTYPE = 'S_kgdp'
 const FAMILY_STATUS_SOLVED_NOVEL_GENE = 'S_ng'
 const FAMILY_STATUS_EXTERNAL_SOLVE = 'ES'
+const FAMILY_STATUS_PROBABLE_SOLVE = 'PB'
 const FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_KNOWN_PHENOTYPE = 'Sc_kgfp'
 const FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_DIFFERENT_PHENOTYPE = 'Sc_kgdp'
 const FAMILY_STATUS_STRONG_CANDIDATE_NOVEL_GENE = 'Sc_ng'
@@ -164,6 +165,7 @@ export const SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_SOLVED_KNOWN_GENE_DIFFERENT_PHENOTYPE, color: '#4CAF50', name: 'Solved - gene linked to different phenotype' },
   { value: FAMILY_STATUS_SOLVED_NOVEL_GENE, color: '#4CAF50', name: 'Solved - novel gene' },
   { value: FAMILY_STATUS_EXTERNAL_SOLVE, color: '#146917', name: 'External Solve' },
+  { value: FAMILY_STATUS_PROBABLE_SOLVE, color: '#ACD657', name: 'Probably Solved' },
   { value: FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_KNOWN_PHENOTYPE, color: '#CDDC39', name: 'Strong candidate - known gene for phenotype' },
   { value: FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_DIFFERENT_PHENOTYPE, color: '#CDDC39', name: 'Strong candidate - gene linked to different phenotype' },
   { value: FAMILY_STATUS_STRONG_CANDIDATE_NOVEL_GENE, color: '#CDDC39', name: 'Strong candidate - novel gene' },
@@ -380,14 +382,14 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
     label: 'Sex',
     format: sex => SEX_LOOKUP[sex],
     width: 3,
-    description: 'Male or Female, leave blank if unknown',
+    description: 'Male, Female, or Unknown',
     formFieldProps: { component: RadioGroup, options: SEX_OPTIONS },
   },
   [INDIVIDUAL_FIELD_AFFECTED]: {
     label: 'Affected Status',
     format: affected => AFFECTED_LOOKUP[affected],
     width: 4,
-    description: 'Affected or Unaffected, leave blank if unknown',
+    description: 'Affected, Unaffected, or Unknown',
     formFieldProps: { component: RadioGroup, options: AFFECTED_OPTIONS },
   },
   [INDIVIDUAL_FIELD_NOTES]: { label: 'Notes', format: stripMarkdown, description: 'free-text notes related to this individual' },
@@ -1328,7 +1330,7 @@ export const ORDERED_PREDICTOR_FIELDS = [
     infoTitle: 'Predicted Consequence',
     fieldTitle: 'SpliceAI',
     getHref: ({ chrom, pos, ref, alt, genomeVersion }) => (
-      `https://spliceailookup.broadinstitute.org/#variant=${chrom}-${pos}-${ref}-${alt}&hg=${genomeVersion}&distance=1000&mask=1`
+      `https://spliceailookup.broadinstitute.org/#variant=${chrom}-${pos}-${ref}-${alt}&hg=${genomeVersion}&distance=1000&mask=0`
     ),
   },
   { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.484, 0.79, 0.867, undefined], fieldTitle: 'PrimateAI', requiresCitation: true },

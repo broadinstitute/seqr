@@ -66,6 +66,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             file_data=[
                 'sample_id\tproject\tindividual_id\tgene_id\tTPM\ttissue\n',
                 'NA19675_D2\t1kg project nåme with uniçøde\t\tENSG00000240361\t12.6\t\n',
+                'NA19675_D2\t1kg project nåme with uniçøde\t\tENSG00000233750\t1.26\t\n',
                 'NA19678_D1\t1kg project nåme with uniçøde\t\tENSG00000233750\t 6.04\twhole_blood\n',
                 'GTEX-001\t1kg project nåme with uniçøde\t\tENSG00000240361\t3.1\tinvalid\n',
                 'NA19677\t1kg project nåme with uniçøde\t\tENSG00000233750\t5.31\tmuscle\n',
@@ -79,7 +80,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         self.mock_gzip_file_iter.return_value = [
             self.mock_gzip_file_iter.return_value[0],
             'NA19678_D1\t1kg project nåme with uniçøde\tNA19678\tENSG00000233750\t 6.04\twhole_blood\n',
-        ] + self.mock_gzip_file_iter.return_value[2:]
+        ] + self.mock_gzip_file_iter.return_value[3:]
         call_command('load_rna_seq', 'tpm', RNA_FILE_ID, '--ignore-extra-samples')
 
         # Existing outlier data should be unchanged

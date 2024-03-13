@@ -1,5 +1,6 @@
 from collections import defaultdict
 from django.db.models import F, Min, Count
+from urllib3.connectionpool import connection_from_url
 
 import requests
 from reference_data.models import Omim, GeneConstraint, GENOME_VERSION_LOOKUP
@@ -13,8 +14,8 @@ def _hail_backend_url(path):
     return f'{HAIL_BACKEND_SERVICE_HOSTNAME}:{HAIL_BACKEND_SERVICE_PORT}/{path}'
 
 
-def _execute_search(search_body, user, path='search', exception_map=None):
-    response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user.email}, timeout=300)
+def _execute_search(search_body, user, path='search', exception_map=None, user_email=None):
+    response = requests.post(_hail_backend_url(path), json=search_body, headers={'From': user_email or user.email}, timeout=300)
 
     if response.status_code >= 400:
         error = (exception_map or {}).get(response.status_code) or response.text or response.reason
@@ -24,7 +25,9 @@ def _execute_search(search_body, user, path='search', exception_map=None):
 
 
 def ping_hail_backend():
-    requests.get(_hail_backend_url('status'), timeout=5).raise_for_status()
+    response = connection_from_url(_hail_backend_url('status')).urlopen('HEAD', '/status', timeout=5, retries=3)
+    if response.status >= 400:
+        raise requests.HTTPError(f'{response.status}: {response.reason or response.text}', response=response)
 
 
 def get_hail_variants(samples, search, user, previous_search_results, genome_version, sort=None, page=1, num_results=100,
@@ -59,13 +62,13 @@ def get_hail_variants(samples, search, user, previous_search_results, genome_ver
     return response_json['results'][end_offset - num_results:end_offset]
 
 
-def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user, return_all_queried_families=False):
+def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_ids, user, user_email=None, return_all_queried_families=False):
     search = {
         'variant_ids': [parsed_id for parsed_id in parsed_variant_ids.values() if parsed_id],
         'variant_keys': [variant_id for variant_id, parsed_id in parsed_variant_ids.items() if not parsed_id],
     }
     search_body = _format_search_body(samples, genome_version, len(parsed_variant_ids), search)
-    response_json = _execute_search(search_body, user)
+    response_json = _execute_search(search_body, user, user_email=user_email)
 
     if return_all_queried_families:
         expected_family_guids = set(samples.values_list('individual__family__guid', flat=True))
@@ -74,14 +77,43 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     return response_json['results']
 
 
-def hail_variant_lookup(user, variant_id, samples=None, **kwargs):
+def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_type=None, **kwargs):
+    data_type = dataset_type.replace('_only', '')
+    is_sv = data_type == Sample.DATASET_TYPE_SV_CALLS
+    if is_sv:
+        if not sample_type:
+            from seqr.utils.search.utils import InvalidSearchException
+            raise InvalidSearchException('Sample type must be specified to look up a structural variant')
+        data_type = f'{data_type}_{sample_type}'
+
     body = {
         'variant_id': variant_id,
+        'data_type': data_type,
         **kwargs,
     }
+    sample_data = None
     if samples:
-        body['sample_data'] = _get_sample_data(samples)[Sample.DATASET_TYPE_VARIANT_CALLS]
-    return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
+        sample_data = _get_sample_data(samples)
+        body['sample_data'] = sample_data.pop(data_type)
+    variant = _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
+    variants = [variant]
+
+    if is_sv and sample_data and variant['svType'] in {'DEL', 'DUP'}:
+        del body['variant_id']
+        body.update({
+            'sample_data': sample_data,
+            'padded_interval': {'chrom': variant['chrom'], 'start': variant['pos'], 'end': variant['end'], 'padding': 0.2},
+            'annotations': {'structural': [variant['svType'], f"gCNV_{variant['svType']}"]}
+        })
+        variants += _execute_search(body, user)['results']
+
+    return variants
+
+
+def hail_variant_multi_lookup(user_email, variant_ids, data_type, genome_version):
+    body = {'genome_version': genome_version, 'data_type': data_type, 'variant_ids': variant_ids}
+    response_json = _execute_search(body, user=None, user_email=user_email, path='multi_lookup')
+    return response_json['results']
 
 
 def _format_search_body(samples, genome_version, num_results, search):
@@ -142,6 +174,7 @@ def _get_sort_metadata(sort, samples):
 def _parse_location_search(search):
     locus = search.pop('locus', None) or {}
     parsed_locus = search.pop('parsedLocus')
+    exclude_locations = locus.get('excludeLocations')
 
     genes = parsed_locus.get('genes') or {}
     intervals = parsed_locus.get('intervals')
@@ -153,8 +186,12 @@ def _parse_location_search(search):
         ]
         parsed_intervals = [_format_interval(**interval) for interval in intervals or []] + [
             '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
-
-    exclude_locations = locus.get('excludeLocations')
+        if Sample.DATASET_TYPE_MITO_CALLS in search['sample_data'] and not exclude_locations:
+            chromosomes = {gene['chrom'] for gene in gene_coords + (intervals or [])}
+            if 'M' not in chromosomes:
+                search['sample_data'].pop(Sample.DATASET_TYPE_MITO_CALLS)
+            elif chromosomes == {'M'}:
+                search['sample_data'] = {Sample.DATASET_TYPE_MITO_CALLS: search['sample_data'][Sample.DATASET_TYPE_MITO_CALLS]}
 
     search.update({
         'intervals': parsed_intervals,
