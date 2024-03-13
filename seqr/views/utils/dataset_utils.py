@@ -402,7 +402,8 @@ def _load_rna_seq_file(
         if existing_data and existing_data != row_dict:
             mismatches[sample_guid].add(gene_or_unique_id)
 
-        samples_by_guid[sample_guid][gene_or_unique_id] = row_dict
+        #samples_by_guid[sample_guid][gene_or_unique_id] = row_dict
+        save_sample_data(sample_guid, row_dict)
 
     errors, warnings = _process_rna_errors(
         gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
@@ -508,18 +509,18 @@ def _load_rna_seq(model_cls, file_path, save_data, load_saved_data, *args, user=
             update_sample_models()
             created_samples.update(samples_to_create.keys())
 
-        prev_data = load_saved_data(sample_guid) or {}
-        new_mismatches = {k for k, v in prev_data.items() if k in sample_data and v != sample_data[k]}
-        if new_mismatches:
-            mismatches[sample_guid].update(new_mismatches)
-        sample_data.update(prev_data)
+        # prev_data = load_saved_data(sample_guid) or {}
+        # new_mismatches = {k for k, v in prev_data.items() if k in sample_data and v != sample_data[k]}
+        # if new_mismatches:
+        #     mismatches[sample_guid].update(new_mismatches)
+        # sample_data.update(prev_data)
 
-        if post_process:
-            post_process(sample_data)
+        # if post_process:
+        #     post_process(sample_data)
 
         sample_guids_to_load.add(sample_guid)
         save_data(sample_guid, sample_data)
-        return new_mismatches
+        #return new_mismatches
 
     def get_matched_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping):
         if sample_key in potential_samples:
