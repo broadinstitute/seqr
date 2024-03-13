@@ -447,11 +447,12 @@ class SummaryDataAPITest(AirtableTest):
             ['Test Reprocessed Project', '12'],
             ['Test Reprocessed Project', 'not_a_family'],
             ['not_a_project', '2'],
+            ['Non-Analyst Project', '14'],
         ]
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertDictEqual(response.json(), {
             'warnings': [
-                'No match found for the following families: not_a_family (Test Reprocessed Project), 2 (not_a_project)'
+                'No match found for the following families: 14 (Non-Analyst Project), not_a_family (Test Reprocessed Project), 2 (not_a_project)'
             ],
             'info': ['Updated "analysed by" for 2 families'],
         })
