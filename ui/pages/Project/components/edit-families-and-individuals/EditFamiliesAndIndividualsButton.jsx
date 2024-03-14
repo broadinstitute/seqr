@@ -6,6 +6,7 @@ import { ButtonLink } from 'shared/components/StyledComponents'
 import { EditFamiliesBulkForm, EditIndividualsBulkForm, EditIndividualMetadataBulkForm } from './BulkEditForm'
 import EditIndividualsForm from './EditIndividualsForm'
 import EditFamiliesForm from './EditFamiliesForm'
+import ImportGregorMetadata from './ImportGregorMetadata'
 
 const TabPane = styled(Tab.Pane)`
   padding: 1em 0 !important;
@@ -32,6 +33,10 @@ const PANE_DETAILS = [
   {
     menuItem: 'Bulk Edit Individual Metadata',
     formClass: EditIndividualMetadataBulkForm,
+  },
+  {
+    menuItem: 'Import From Gregor Metadata',
+    formClass: ImportGregorMetadata,
   },
 ]
 const PANES = PANE_DETAILS.map(({ formClass, menuItem }) => ({
