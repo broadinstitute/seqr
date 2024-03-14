@@ -272,10 +272,13 @@ def update_rna_seq(request):
 
     file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
 
+    sample_files = {}
+
     def _save_sample_data(sample_guid, sample_data):
-        file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
-        with gzip.open(file_name, 'wt') as f:
-            json.dump(sample_data, f)
+        if sample_guid not in sample_files:
+            file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
+            sample_files[sample_guid] = gzip.open(file_name, 'wt')
+        sample_files[sample_guid].wirte(json.dumps(sample_data))
 
     try:
         sample_guids, info, warnings = load_rna_seq(
@@ -300,7 +303,7 @@ def _load_saved_sample_data(file_name_prefix, sample_guid):
     file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
     if os.path.exists(file_name):
         with gzip.open(file_name, 'rt') as f:
-            return json.load(f)
+            return [json.loads(line) for line in f.readlines()]
     return None
 
 
@@ -312,10 +315,10 @@ def load_rna_seq_sample_data(request, sample_guid):
     request_json = json.loads(request.body)
     file_name = request_json['fileName']
     data_type = request_json['dataType']
-    data_by_gene = _load_saved_sample_data(file_name, sample_guid)
+    data_rows = _load_saved_sample_data(file_name, sample_guid)
 
     model_cls = RNA_DATA_TYPE_CONFIGS[data_type]['model_class']
-    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_by_gene.values()])
+    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_rows])
     update_model_from_json(sample, {'is_active': True}, user=request.user)
 
     return create_json_response({'success': True})
