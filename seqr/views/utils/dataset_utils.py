@@ -537,14 +537,14 @@ def post_process_rna_data(sample_guid, data, get_unique_key=None, post_process=N
         existing_data = data_by_key.get(gene_or_unique_id)
         if existing_data and existing_data != row:
             mismatches.add(gene_or_unique_id)
+        data_by_key[gene_or_unique_id] = row
 
-    if mismatches:
-        raise ErrorsWarningsException([
-            f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {", ".join(mismatches)}'
-        ])
-
-    if post_process:
+    error = f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {", ".join(mismatches)}' if mismatches else None
+    data = data_by_key.values()
+    if post_process and not error:
         post_process(data)
+
+    return data, error
 
 
 RNA_MODEL_DISPLAY_NAME = {

@@ -278,8 +278,8 @@ def update_rna_seq(request):
     def _save_sample_data(sample_guid, sample_data):
         if sample_guid not in sample_files:
             file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
-            sample_files[sample_guid] = gzip.open(file_name, 'a')
-        sample_files[sample_guid].write(json.dumps(sample_data))
+            sample_files[sample_guid] = gzip.open(file_name, 'at')
+        sample_files[sample_guid].write(f'{json.dumps(sample_data)}\n')
 
     try:
         sample_guids, info, warnings = load_rna_seq(
@@ -319,7 +319,9 @@ def load_rna_seq_sample_data(request, sample_guid):
     config = RNA_DATA_TYPE_CONFIGS[data_type]
 
     data_rows = _load_saved_sample_data(file_name, sample_guid)
-    post_process_rna_data(sample_guid, data_rows, **config.get('post_process_kwargs', {}))
+    data_rows, error = post_process_rna_data(sample_guid, data_rows, **config.get('post_process_kwargs', {}))
+    if error:
+        return create_json_response({'error': error}, status=400)
 
     model_cls = config['model_class']
     model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_rows])
