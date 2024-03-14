@@ -278,7 +278,7 @@ def update_rna_seq(request):
         if sample_guid not in sample_files:
             file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
             sample_files[sample_guid] = gzip.open(file_name, 'wt')
-        sample_files[sample_guid].wirte(json.dumps(sample_data))
+        sample_files[sample_guid].write(json.dumps(sample_data))
 
     try:
         sample_guids, info, warnings = load_rna_seq(
