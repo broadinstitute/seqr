@@ -969,7 +969,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                    'parentEntityIds': [params['sample_guid']], 'updateType': 'bulk_delete'}}),
                 ('update 1 Samples', {'dbUpdate': {
                     'dbEntity': 'Sample', 'entityIds': [params['sample_guid']],
-                    'updateType': 'bulk_update', 'updateFields': ['data_source']}}),
+                    'updateType': 'bulk_update', 'updateFields': ['data_source', 'is_active']}}),
             ])
         self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
         self.assertEqual(mock_send_slack.call_count, 2)
@@ -987,7 +987,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         # test database models are correct
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
         sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz',
-                                                   tissue_type=params.get('sample_tissue_type'))
+                                                   tissue_type=params.get('sample_tissue_type'), is_active_sample=False)
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
         # test correct file interactions

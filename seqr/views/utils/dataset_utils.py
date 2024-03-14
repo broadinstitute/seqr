@@ -428,7 +428,7 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
     return errors, warnings
 
 
-def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, create_models_before_save=False, **kwargs):
+def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     projects = get_internal_projects()
     data_source = file_path.split('/')[-1].split('_-_')[-1]
 
@@ -447,13 +447,11 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, create_mode
     sample_guids_to_load = set()
     existing_samples_by_guid = {}
     samples_to_create = {}
-    created_samples = set()
 
     def update_sample_models():
-        remaining_samples_to_create = [s for key, s in samples_to_create.items() if key not in created_samples]
-        if remaining_samples_to_create:
+        if samples_to_create:
             _create_samples(
-                remaining_samples_to_create,
+                samples_to_create.values(),
                 user=user,
                 data_source=data_source,
                 sample_type=Sample.SAMPLE_TYPE_RNA,
@@ -470,17 +468,13 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, create_mode
         if to_delete:
             model_cls.bulk_delete(user, to_delete)
 
-        Sample.bulk_update(user, {'data_source': data_source}, guid__in=existing_samples_by_guid)
+        Sample.bulk_update(user, {'data_source': data_source, 'is_active': False}, guid__in=existing_samples_by_guid)
         for guid in to_delete_sample_individuals:
             existing_samples_by_guid[guid]['dataSource'] = data_source
 
     def save_sample_data(sample_guid, sample_data):
         if not sample_data:
             return
-
-        if create_models_before_save:
-            update_sample_models()
-            created_samples.update(samples_to_create.keys())
 
         sample_guids_to_load.add(sample_guid)
         save_data(sample_guid, sample_data)
