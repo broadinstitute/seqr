@@ -20,7 +20,8 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.vcf_utils import validate_vcf_exists
 
 from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
-from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS
+from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
+    post_process_rna_data
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -277,12 +278,12 @@ def update_rna_seq(request):
     def _save_sample_data(sample_guid, sample_data):
         if sample_guid not in sample_files:
             file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
-            sample_files[sample_guid] = gzip.open(file_name, 'wt')
+            sample_files[sample_guid] = gzip.open(file_name, 'a')
         sample_files[sample_guid].write(json.dumps(sample_data))
 
     try:
         sample_guids, info, warnings = load_rna_seq(
-            data_type, file_path, _save_sample_data, lambda sample_guid: _load_saved_sample_data(file_name_prefix, sample_guid),
+            data_type, file_path, _save_sample_data,
             user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
@@ -315,9 +316,12 @@ def load_rna_seq_sample_data(request, sample_guid):
     request_json = json.loads(request.body)
     file_name = request_json['fileName']
     data_type = request_json['dataType']
-    data_rows = _load_saved_sample_data(file_name, sample_guid)
+    config = RNA_DATA_TYPE_CONFIGS[data_type]
 
-    model_cls = RNA_DATA_TYPE_CONFIGS[data_type]['model_class']
+    data_rows = _load_saved_sample_data(file_name, sample_guid)
+    post_process_rna_data(sample_guid, data_rows, **config.get('post_process_kwargs', {}))
+
+    model_cls = config['model_class']
     model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_rows])
     update_model_from_json(sample, {'is_active': True}, user=request.user)
 
