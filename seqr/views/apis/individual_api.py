@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.db.models import prefetch_related_objects
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Individual, Family
+from seqr.models import Individual, Family, CAN_VIEW
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
@@ -19,7 +19,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_fo
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
-    is_internal_anvil_project
+    is_internal_anvil_project, pm_or_data_manager_required, check_workspace_perm
 from seqr.views.utils.individual_utils import delete_individuals, add_or_update_individuals_and_families
 
 
@@ -804,6 +804,20 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
         )}
 
     return create_json_response(response)
+
+
+@pm_or_data_manager_required
+def import_gregor_metadata(request, project_guid):
+    request_json = json.loads(request.body)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    # workspace_meta = check_workspace_perm(
+    #     request.user, CAN_VIEW, request_json['workspaceNamespace'], request_json['workspaceName'],
+    #     meta_fields=['workspace.bucketName']
+    # )
+    # bucket_name = workspace_meta['workspace']['bucketName']
+    bucket_name = 'fc-secure-b54cbe86-98a2-467a-9c16-0299fb0944e3'
+
+    return create_json_response({'importStats': {'gregorMetadata': {'info': [bucket_name]}}})
 
 
 @login_and_policies_required

@@ -22,8 +22,8 @@ const UploadFormPage = React.memo(({ fields, uploadStats, onSubmit, description 
     <Grid.Row>
       <Grid.Column width={4} />
       <Grid.Column width={8}>
-        {uploadStats.info?.length > 0 && <Message info list={uploadStats.info} />}
-        {uploadStats.warnings?.length > 0 && <Message warning list={uploadStats.warnings} />}
+        {uploadStats?.info?.length > 0 && <Message info list={uploadStats.info} />}
+        {uploadStats?.warnings?.length > 0 && <Message warning list={uploadStats.warnings} />}
       </Grid.Column>
       <Grid.Column width={4} />
     </Grid.Row>

@@ -3,12 +3,12 @@ import { connect } from 'react-redux'
 import UploadFormPage from 'shared/components/page/UploadFormPage'
 import { ANVIL_FIELDS } from 'shared/utils/constants'
 import { updateIndividuals } from '../../reducers'
-import { getImportStats } from '../../selectors'
+import { getGregorMetadataImportStats } from '../../selectors'
 
 const mapStateToProps = state => ({
   fields: ANVIL_FIELDS,
   description: 'Import individuals and their metadata from the specified workspace',
-  uploadStats: getImportStats(state),
+  uploadStats: getGregorMetadataImportStats(state),
 })
 
 const mapDispatchToProps = {
