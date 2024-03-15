@@ -828,19 +828,19 @@ def import_gregor_metadata(request, project_guid):
     # TODO share table names and column names with metadata report
     experiment_sample_lookup = {
         row['experiment_dna_short_read_id']: row['experiment_sample_id'] for row in _iter_metadata_table(
-            metadata_files_path, 'experiment_dna_short_read', lambda r: r['experiment_type'] == 'genome',
+            metadata_files_path, 'experiment_dna_short_read', request.user, lambda r: r['experiment_type'] == 'genome',
         )
     }
     participant_sample_lookup = {
         row['participant_id']: experiment_sample_lookup[row['id_in_table']] for row in _iter_metadata_table(
-            metadata_files_path, 'experiment',
+            metadata_files_path, 'experiment', request.user,
             lambda r: r['id_in_table'] in experiment_sample_lookup and r['table_name'] == 'experiment_dna_short_read',
         )
     }
     participant_feature_lookup = defaultdict(lambda: {FEATURES_COL: [], ABSENT_FEATURES_COL: []})
     for row in _iter_metadata_table(
-        metadata_files_path, 'phenotype',
-        lambda r: r['participant_id'] in participant_sample_lookup and r['ontology'] == 'HPO' and row['presence'] in {'Present', 'Absent'},
+        metadata_files_path, 'phenotype', request.user,
+        lambda r: r['participant_id'] in participant_sample_lookup and r['ontology'] == 'HPO' and r['presence'] in {'Present', 'Absent'},
     ):
         col = FEATURES_COL if row['presence'] == 'Present' else ABSENT_FEATURES_COL
         participant_feature_lookup[row['participant_id']][col].append(row['term_id'])
@@ -860,7 +860,7 @@ def import_gregor_metadata(request, project_guid):
         **dict([_parse_participant_val(k, v) for k, v in row.items()]),
         'population': _get_population(row, asian_populations),
     } for row in _iter_metadata_table(
-        metadata_files_path, 'participant', lambda r: r['participant_id'] in participant_sample_lookup,
+        metadata_files_path, 'participant', request.user, lambda r: r['participant_id'] in participant_sample_lookup,
     )]
 
     if population_map:
@@ -889,9 +889,9 @@ def import_gregor_metadata(request, project_guid):
     return create_json_response(response_json)
 
 
-def _iter_metadata_table(file_path, table_name, filter_row):
+def _iter_metadata_table(file_path, table_name, user, filter_row):
     file_name = f'{file_path}/{table_name}.tsv'
-    file_rows = parse_file(file_name, file_iter(file_name, user=request.user, no_project=True), iter_file=True)
+    file_rows = parse_file(file_name, file_iter(file_name, user=user, no_project=True), iter_file=True)
     header = next(file_rows)
     for row in file_rows:
         row_dict = dict(zip(header, row))
@@ -912,7 +912,7 @@ ETHNICITY_LOOKUP = {v: k for k, v in ETHNICITY_MAP.items()}
 
 def _parse_participant_val(column, value):
     column = GREGOR_PARTICIPANT_COLUMN_MAP.get(column, _to_camel_case(column))
-    return column, format_pedigree_value(value)
+    return column, format_pedigree_value(value, column)
 
 
 def _get_population(row, asian_populations):
