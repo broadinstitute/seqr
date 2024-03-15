@@ -827,7 +827,8 @@ def import_gregor_metadata(request, project_guid):
     # TODO share table names and column names with metadata report
     experiment_sample_lookup = {
         row['experiment_dna_short_read_id']: row['experiment_sample_id'] for row in _iter_metadata_table(
-            metadata_files_path, 'experiment_dna_short_read', request.user, lambda r: r['experiment_type'] == 'genome',
+            metadata_files_path, 'experiment_dna_short_read', request.user,
+            lambda r: r['experiment_type'] == 'genome' and r['experiment_sample_id'] != 'NA',
         )
     }
     participant_sample_lookup = {
@@ -852,22 +853,28 @@ def import_gregor_metadata(request, project_guid):
     if invalid_hpo_terms:
         warnings.append(f"Skipped the following unrecognized HPO terms: {', '.join(sorted(invalid_hpo_terms))}")
 
+    family_ids = set()
     asian_populations = set()
-    individuals = [{
-        JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup[row['participant_id']],
-        **{k: INDIVIDUAL_METADATA_FIELDS[k](v) for k, v in participant_feature_lookup[row['participant_id']].items()},
-        **dict([_parse_participant_val(k, v) for k, v in row.items()]),
-        'population': _get_population(row, asian_populations),
-    } for row in _iter_metadata_table(
-        metadata_files_path, 'participant', request.user, lambda r: r['participant_id'] in participant_sample_lookup,
-    )]
+    individuals = []
+    for row in _iter_metadata_table(
+        metadata_files_path, 'participant', request.user,
+        lambda r: r['participant_id'] in participant_sample_lookup or r['family_id'] in family_ids,
+    ):
+        family_ids.add(row['family_id'])
+        participant_id = row['participant_id']
+        individuals.append({
+            JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup.get(participant_id, participant_id),
+            **{k: INDIVIDUAL_METADATA_FIELDS[k](v) for k, v in participant_feature_lookup[participant_id].items()},
+            **dict([_parse_participant_val(k, v, participant_sample_lookup) for k, v in row.items()]),
+            'population': _get_population(row, asian_populations),
+        })
 
     if asian_populations:
         details = ','.join(sorted(asian_populations))
         warnings.append(
             f'Assigned individuals of "Asian" reported_race and the following ancestry_detail as "East Asian": {details}'
         )
-    warnings += validate_fam_file_records(project, individuals)
+    warnings += validate_fam_file_records(project, individuals, clear_invalid_values=True)
 
     response_json, num_created_families, num_created_individuals = add_or_update_individuals_and_families(
         project, individuals, request.user, get_created_counts=True, allow_features_update=True,
@@ -881,6 +888,11 @@ def import_gregor_metadata(request, project_guid):
         f'Updated {num_updated_families - num_created_families} existing families, {num_updated_individuals - num_created_individuals} existing individuals',
         f'Skipped {len(individuals) - num_updated_individuals} unchanged individuals',
     ]
+    # TODO not working:
+    # Imported 2101 individuals
+    # Created 914 new families, 2101 new individuals
+    # Updated 1187 existing families, -1187 existing individuals
+    # Skipped 1187 unchanged individuals
 
     # TODO add manual tags for genetics findings
 
@@ -900,7 +912,7 @@ def _iter_metadata_table(file_path, table_name, user, filter_row):
 
 # TODO shared?
 GREGOR_PARTICIPANT_COLUMN_MAP = {
-    'participant_id': 'displayName',
+    'participant_id': JsonConstants.INDIVIDUAL_ID_COLUMN,
     'affected_status': JsonConstants.AFFECTED_COLUMN,
     'phenotype_description': JsonConstants.CODED_PHENOTYPE_COLUMN,
 }
@@ -916,10 +928,17 @@ ANCESTRY_DETAIL_LOOKUP = {v: k for k, v in ANCESTRY_DETAIL_MAP.items() if v != '
 ETHNICITY_LOOKUP = {v: k for k, v in ETHNICITY_MAP.items()}
 
 
-def _parse_participant_val(column, value):
+def _parse_participant_val(column, value, participant_sample_lookup):
     column = GREGOR_PARTICIPANT_COLUMN_MAP.get(column, _to_camel_case(column))
     if column in ENUM_COLUMNS and value:
         value = ENUM_COLUMNS[column].get(value, 'U')
+    if column in {JsonConstants.MATERNAL_ID_COLUMN, JsonConstants.PATERNAL_ID_COLUMN}:
+        if value == '0':
+            value = None
+        elif value in participant_sample_lookup:
+            # TODO 1354508 is the father of UW_CRDR-sub-1354507 but is not included, but UW_CRDR-sub-1354508 does have a row
+            # Issue in family UW_CRDR-fam-1354507
+            value = participant_sample_lookup[value]
     return column, value
 
 
@@ -933,7 +952,7 @@ def _get_population(row, asian_populations):
     if not detail or race:
         return ''
     if race == 'Asian':
-        # seqr subdivides asian so need to determine which subpopulation to assin
+        # seqr subdivides asian so need to determine which subpopulation to assign
         is_south_asian = detail and ('south' in detail.lower() or 'india' in detail.lower())
         detail = 'South Asian' if is_south_asian else 'East Asian'
         if detail and not is_south_asian:
