@@ -18,8 +18,7 @@ from seqr.views.utils.json_to_orm_utils import update_individual_from_json, upda
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_individuals, add_individual_hpo_details, \
     _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException, \
-    format_pedigree_value
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
     is_internal_anvil_project, pm_or_data_manager_required, check_workspace_perm
@@ -863,7 +862,7 @@ def import_gregor_metadata(request, project_guid):
         metadata_files_path, 'participant', request.user, lambda r: r['participant_id'] in participant_sample_lookup,
     )]
 
-    if population_map:
+    if asian_populations:
         details = ','.join(sorted(asian_populations))
         warnings.append(
             f'Assigned individuals of "Asian" reported_race and the following ancestry_detail as "East Asian": {details}'
@@ -905,6 +904,13 @@ GREGOR_PARTICIPANT_COLUMN_MAP = {
     'affected_status': JsonConstants.AFFECTED_COLUMN,
     'phenotype_description': JsonConstants.CODED_PHENOTYPE_COLUMN,
 }
+ENUM_COLUMNS = {
+    column: {v: k for k, v in choices} for column, choices in [
+        (JsonConstants.SEX_COLUMN, Individual.SEX_CHOICES),
+        (JsonConstants.AFFECTED_COLUMN, Individual.AFFECTED_STATUS_CHOICES),
+        (JsonConstants.PROBAND_RELATIONSHIP, Individual.RELATIONSHIP_CHOICES),
+    ]
+}
 ANCESTRY_LOOKUP = {v: k for k, v in ANCESTRY_MAP.items() if k not in ANCESTRY_DETAIL_MAP}
 ANCESTRY_DETAIL_LOOKUP = {v: k for k, v in ANCESTRY_DETAIL_MAP.items() if v != 'Other'}
 ETHNICITY_LOOKUP = {v: k for k, v in ETHNICITY_MAP.items()}
@@ -912,7 +918,9 @@ ETHNICITY_LOOKUP = {v: k for k, v in ETHNICITY_MAP.items()}
 
 def _parse_participant_val(column, value):
     column = GREGOR_PARTICIPANT_COLUMN_MAP.get(column, _to_camel_case(column))
-    return column, format_pedigree_value(value, column)
+    if column in ENUM_COLUMNS and value:
+        value = ENUM_COLUMNS[column].get(value, 'U')
+    return column, value
 
 
 def _get_population(row, asian_populations):
