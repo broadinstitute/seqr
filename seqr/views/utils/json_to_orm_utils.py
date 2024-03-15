@@ -26,7 +26,7 @@ def update_family_from_json(family, json, user, allow_unknown_keys=False, immuta
     )
 
 
-def update_individual_from_json(individual, json, user, allow_unknown_keys=False):
+def update_individual_from_json(individual, json, user, allow_unknown_keys=False, allow_features_update=False):
     if json.get('displayName') and json['displayName'] == individual.individual_id:
         json['displayName'] = ''
 
@@ -34,9 +34,8 @@ def update_individual_from_json(individual, json, user, allow_unknown_keys=False
         individual, json, user=user, allow_unknown_keys=allow_unknown_keys,
         immutable_keys=[
             'filter_flags', 'pop_platform_filters', 'population', 'sv_flags',
-            'features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features',
             'case_review_status', 'case_review_discussion'
-        ],
+        ] + [] if allow_features_update else ['features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features'],
     )
 
 

@@ -29,7 +29,7 @@ def _get_record_individual_id(record):
     return record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
 
 
-def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_ids=False):
+def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_ids=False, allow_features_update=False):
     """
     Add or update individual and family records in the given project.
 
@@ -73,7 +73,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
 
     for record in individual_records:
         _update_from_record(
-            record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, parent_updates, updated_note_ids)
+            record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, parent_updates, updated_note_ids, allow_features_update)
 
     for update in parent_updates:
         individual = update.pop('individual')
@@ -96,7 +96,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     return pedigree_json
 
 
-def _update_from_record(record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, parent_updates, updated_note_ids):
+def _update_from_record(record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, parent_updates, updated_note_ids, allow_features_update):
     family_id = _get_record_family_id(record)
     family = families_by_id.get(family_id)
 
@@ -156,7 +156,7 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         if is_updated:
             updated_family_ids.add(family.id)
 
-    is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
+    is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True, allow_features_update=allow_features_update)
     if is_updated:
         updated_individuals.add(individual)
         if family.pedigree_image:

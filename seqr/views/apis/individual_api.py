@@ -623,12 +623,16 @@ def _has_same_features(individual, present_features, absent_features):
            {feature['id'] for feature in individual.absent_features or []} == set(absent_features or [])
 
 
-def _parse_individual_hpo_terms(json_records, project, user):
+def _get_valid_hpo_terms(json_records):
     all_hpo_terms = set()
     for record in json_records:
         all_hpo_terms.update(record.get(FEATURES_COL, []))
         all_hpo_terms.update(record.get(ABSENT_FEATURES_COL, []))
-    hpo_terms = set(HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms).values_list('hpo_id', flat=True))
+    return set(HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms).values_list('hpo_id', flat=True))
+
+
+def _parse_individual_hpo_terms(json_records, project, user):
+    hpo_terms = _get_valid_hpo_terms(json_records)
 
     individual_ids = [record[INDIVIDUAL_ID_COL] for record in json_records]
     individual_ids += ['{}_{}'.format(record[FAMILY_ID_COL], record[INDIVIDUAL_ID_COL])
@@ -832,31 +836,38 @@ def import_gregor_metadata(request, project_guid):
             lambda r: r['id_in_table'] in experiment_sample_lookup and r['table_name'] == 'experiment_dna_short_read',
         )
     }
-    participant_feature_lookup = defaultdict(list)
+    participant_feature_lookup = defaultdict(lambda: {FEATURES_COL: [], ABSENT_FEATURES_COL: []})
     for row in _iter_metadata_table(
         metadata_files_path, 'phenotype',
-        lambda r: r['participant_id'] in participant_sample_lookup and row['presence'] in {'Present', 'Absent'},
+        lambda r: r['participant_id'] in participant_sample_lookup and r['ontology'] == 'HPO' and row['presence'] in {'Present', 'Absent'},
     ):
-        participant_feature_lookup[row['participant_id']].append(row)
-    # TODO validate HPO terms, use nonstandard_features if invalid
-    # TODO reformat phenotype rows to individual fields
+        col = FEATURES_COL if row['presence'] == 'Present' else ABSENT_FEATURES_COL
+        participant_feature_lookup[row['participant_id']][col].append(row['term_id'])
+
+    warnings = []
+    hpo_terms = _get_valid_hpo_terms(participant_feature_lookup.values())
+    invalid_hpo_terms = set()
+    for row in participant_feature_lookup.values():
+        invalid_hpo_terms.update(_remove_invalid_hpo_terms(row, hpo_terms))
+    if invalid_hpo_terms:
+        warnings.append(f"Skipped the following unrecognized HPO terms: {', '.join(sorted(invalid_hpo_terms))}")
 
     individuals = [{
         JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup[row['participant_id']],
-        **participant_feature_lookup[row['participant_id']],
+        **{k: INDIVIDUAL_METADATA_FIELDS[k](v) for k, v in participant_feature_lookup[row['participant_id']].items()},
         **dict([_parse_participant_val(k, v) for k, v in row.items()]),
     } for row in _iter_metadata_table(
         metadata_files_path, 'participant', lambda r: r['participant_id'] in participant_sample_lookup,
     )]
 
     validate_fam_file_records(project, individuals)
-    # TODO will have to allow override to update_individual_from_json immutable_keys for features
-    response_json = add_or_update_individuals_and_families(project, individuals, request.user)
+    response_json = add_or_update_individuals_and_families(project, individuals, request.user, allow_features_update=True)
+    info = [f''] # TODO real info stats
 
     # TODO add manual tags for genetics findings
 
-    # TODO real response
-    return create_json_response({'importStats': {'gregorMetadata': {'info': [bucket_name]}}})
+    response_json['importStats'] = {'gregorMetadata': {'info': info, 'warnings': warnings}}
+    return create_json_response(response_json)
 
 
 def _iter_metadata_table(file_path, table_name, filter_row):
@@ -874,6 +885,7 @@ GREGOR_PARTICIPANT_COLUMN_MAP = {
     'participant_id': 'displayName',
     'affected_status': JsonConstants.AFFECTED_COLUMN,
     # TODO ancestry_detail, age_at_enrollment, age_at_last_observation, reported_race, prior_testing, reported_ethnicity, pmid_id, phenotype_description
+    # maybe use INDIVIDUAL_METADATA_FIELDS for formatting?
 }
 
 
