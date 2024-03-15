@@ -29,7 +29,7 @@ def _get_record_individual_id(record):
     return record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
 
 
-def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_ids=False, allow_features_update=False):
+def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_ids=False, get_created_counts=False, allow_features_update=False):
     """
     Add or update individual and family records in the given project.
 
@@ -47,6 +47,8 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     updated_individuals = set()
     updated_note_ids = []
     parent_updates = []
+    num_created_families = 0
+    num_created_individuals = 0
 
     family_ids = {_get_record_family_id(record) for record in individual_records}
     families_by_id = {f.family_id: f for f in Family.objects.filter(project=project, family_id__in=family_ids)}
@@ -54,6 +56,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     missing_family_ids = family_ids - set(families_by_id.keys())
     for family_id in sorted(missing_family_ids):
         family = create_model_from_json(Family, {'project': project, 'family_id': family_id}, user)
+        num_created_families += 1
         families_by_id[family_id] = family
         updated_family_ids.add(family.id)
 
@@ -72,8 +75,10 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
             individual_lookup[i.individual_id][i.family] = i
 
     for record in individual_records:
-        _update_from_record(
+        created_individual = _update_from_record(
             record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, parent_updates, updated_note_ids, allow_features_update)
+        if created_individual:
+            num_created_individuals += 1
 
     for update in parent_updates:
         individual = update.pop('individual')
@@ -93,12 +98,16 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     if get_updated_individual_ids:
         return pedigree_json, {i.individual_id for i in updated_individuals}
 
+    if get_created_counts:
+        return pedigree_json, num_created_families, num_created_individuals
+
     return pedigree_json
 
 
 def _update_from_record(record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, parent_updates, updated_note_ids, allow_features_update):
     family_id = _get_record_family_id(record)
     family = families_by_id.get(family_id)
+    created_individual = False
 
     if record.get('individualGuid'):
         individual = individual_lookup[record.pop('individualGuid')]
@@ -115,6 +124,7 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
             updated_family_ids.add(family.id)
             updated_individuals.add(individual)
             individual_lookup[individual_id][family] = individual
+            created_individual = True
 
     record['family'] = family
     record.pop('familyId', None)
@@ -161,6 +171,8 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         updated_individuals.add(individual)
         if family.pedigree_image:
             updated_family_ids.add(family.id)
+
+    return created_individual
 
 
 def delete_individuals(project, individual_guids, user):

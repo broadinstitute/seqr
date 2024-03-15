@@ -859,10 +859,20 @@ def import_gregor_metadata(request, project_guid):
     } for row in _iter_metadata_table(
         metadata_files_path, 'participant', lambda r: r['participant_id'] in participant_sample_lookup,
     )]
+    warnings += validate_fam_file_records(project, individuals)
 
-    validate_fam_file_records(project, individuals)
-    response_json = add_or_update_individuals_and_families(project, individuals, request.user, allow_features_update=True)
-    info = [f''] # TODO real info stats
+    response_json, num_created_families, num_created_individuals = add_or_update_individuals_and_families(
+        project, individuals, request.user, get_created_counts=True, allow_features_update=True,
+    )
+
+    num_updated_families = len(response_json['individualsByGuid'])
+    num_updated_individuals = len(response_json['familiesByGuid'])
+    info = [
+        f'Imported {len(individuals)} individuals',
+        f'Created {num_created_families} new families, {num_created_individuals} new individuals',
+        f'Updated {num_updated_families - num_created_families} existing families, {num_updated_individuals - num_created_individuals} existing individuals',
+        f'Skipped {len(individuals) - num_updated_individuals} unchanged individuals',
+    ]
 
     # TODO add manual tags for genetics findings
 
