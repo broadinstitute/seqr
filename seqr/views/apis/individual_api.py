@@ -10,13 +10,15 @@ from django.db.models import prefetch_related_objects
 
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual, Family, CAN_VIEW
+from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
-from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
+from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file, parse_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
-from seqr.views.utils.json_utils import create_json_response, _to_snake_case
+from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_individuals, add_individual_hpo_details, \
     _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException, \
+    format_pedigree_value
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
     is_internal_anvil_project, pm_or_data_manager_required, check_workspace_perm
@@ -816,8 +818,68 @@ def import_gregor_metadata(request, project_guid):
     # )
     # bucket_name = workspace_meta['workspace']['bucketName']
     bucket_name = 'fc-secure-b54cbe86-98a2-467a-9c16-0299fb0944e3'
+    metadata_files_path = f'gs://{bucket_name}/data_tables'
 
+    # TODO share table names and column names with metadata report
+    experiment_sample_lookup = {
+        row['experiment_dna_short_read_id']: row['experiment_sample_id'] for row in _iter_metadata_table(
+            metadata_files_path, 'experiment_dna_short_read', lambda r: r['experiment_type'] == 'genome',
+        )
+    }
+    participant_sample_lookup = {
+        row['participant_id']: experiment_sample_lookup[row['id_in_table']] for row in _iter_metadata_table(
+            metadata_files_path, 'experiment',
+            lambda r: r['id_in_table'] in experiment_sample_lookup and r['table_name'] == 'experiment_dna_short_read',
+        )
+    }
+    participant_feature_lookup = defaultdict(list)
+    for row in _iter_metadata_table(
+        metadata_files_path, 'phenotype',
+        lambda r: r['participant_id'] in participant_sample_lookup and row['presence'] in {'Present', 'Absent'},
+    ):
+        participant_feature_lookup[row['participant_id']].append(row)
+    # TODO validate HPO terms, use nonstandard_features if invalid
+    # TODO reformat phenotype rows to individual fields
+
+    individuals = [{
+        JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup[row['participant_id']],
+        **participant_feature_lookup[row['participant_id']],
+        **dict([_parse_participant_val(k, v) for k, v in row.items()]),
+    } for row in _iter_metadata_table(
+        metadata_files_path, 'participant', lambda r: r['participant_id'] in participant_sample_lookup,
+    )]
+
+    validate_fam_file_records(project, individuals)
+    # TODO will have to allow override to update_individual_from_json immutable_keys for features
+    response_json = add_or_update_individuals_and_families(project, individuals, request.user)
+
+    # TODO add manual tags for genetics findings
+
+    # TODO real response
     return create_json_response({'importStats': {'gregorMetadata': {'info': [bucket_name]}}})
+
+
+def _iter_metadata_table(file_path, table_name, filter_row):
+    file_name = f'{file_path}/{table_name}.tsv'
+    file_rows = parse_file(file_name, file_iter(file_name, user=request.user, no_project=True), iter_file=True)
+    header = next(file_rows)
+    for row in file_rows:
+        row_dict = dict(zip(header, row))
+        if filter_row(row_dict):
+            yield row_dict
+
+
+# TODO shared?
+GREGOR_PARTICIPANT_COLUMN_MAP = {
+    'participant_id': 'displayName',
+    'affected_status': JsonConstants.AFFECTED_COLUMN,
+    # TODO ancestry_detail, age_at_enrollment, age_at_last_observation, reported_race, prior_testing, reported_ethnicity, pmid_id, phenotype_description
+}
+
+
+def _parse_participant_val(column, value):
+    column = GREGOR_PARTICIPANT_COLUMN_MAP.get(column, _to_camel_case(column))
+    return column, format_pedigree_value(value)
 
 
 @login_and_policies_required
