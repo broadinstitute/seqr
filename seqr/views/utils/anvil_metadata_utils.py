@@ -28,6 +28,8 @@ ANCESTRY_MAP = {
   'MDE': 'Middle Eastern or North African',
   'NFE': 'White',
   'SAS': 'Asian',
+  'AmInd': 'American Indian or Alaska Native',
+  'PaIsl': 'Native Hawaiian or Other Pacific Islander',
 }
 ANCESTRY_DETAIL_MAP = {
   'ASJ': 'Ashkenazi Jewish',

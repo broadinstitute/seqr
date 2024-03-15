@@ -12,6 +12,7 @@ from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual, Family, CAN_VIEW
 from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
+from seqr.views.utils.anvil_metadata_utils import ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, ETHNICITY_MAP
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file, parse_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
@@ -852,13 +853,21 @@ def import_gregor_metadata(request, project_guid):
     if invalid_hpo_terms:
         warnings.append(f"Skipped the following unrecognized HPO terms: {', '.join(sorted(invalid_hpo_terms))}")
 
+    asian_populations = set()
     individuals = [{
         JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup[row['participant_id']],
         **{k: INDIVIDUAL_METADATA_FIELDS[k](v) for k, v in participant_feature_lookup[row['participant_id']].items()},
         **dict([_parse_participant_val(k, v) for k, v in row.items()]),
+        'population': _get_population(row, asian_populations),
     } for row in _iter_metadata_table(
         metadata_files_path, 'participant', lambda r: r['participant_id'] in participant_sample_lookup,
     )]
+
+    if population_map:
+        details = ','.join(sorted(asian_populations))
+        warnings.append(
+            f'Assigned individuals of "Asian" reported_race and the following ancestry_detail as "East Asian": {details}'
+        )
     warnings += validate_fam_file_records(project, individuals)
 
     response_json, num_created_families, num_created_individuals = add_or_update_individuals_and_families(
@@ -894,14 +903,38 @@ def _iter_metadata_table(file_path, table_name, filter_row):
 GREGOR_PARTICIPANT_COLUMN_MAP = {
     'participant_id': 'displayName',
     'affected_status': JsonConstants.AFFECTED_COLUMN,
-    # TODO ancestry_detail, age_at_enrollment, age_at_last_observation, reported_race, prior_testing, reported_ethnicity, pmid_id, phenotype_description
-    # maybe use INDIVIDUAL_METADATA_FIELDS for formatting?
+    'phenotype_description': JsonConstants.CODED_PHENOTYPE_COLUMN,
 }
+ANCESTRY_LOOKUP = {v: k for k, v in ANCESTRY_MAP.items() if k not in ANCESTRY_DETAIL_MAP}
+ANCESTRY_DETAIL_LOOKUP = {v: k for k, v in ANCESTRY_DETAIL_MAP.items() if v != 'Other'}
+ETHNICITY_LOOKUP = {v: k for k, v in ETHNICITY_MAP.items()}
 
 
 def _parse_participant_val(column, value):
     column = GREGOR_PARTICIPANT_COLUMN_MAP.get(column, _to_camel_case(column))
     return column, format_pedigree_value(value)
+
+
+def _get_population(row, asian_populations):
+    # TODO shared logic
+    if row['reported_ethnicity'] in ETHNICITY_LOOKUP:
+        return ETHNICITY_LOOKUP[row['reported_ethnicity']]
+
+    detail = row['ancestry_detail'].title()
+    race = row['reported_race']
+    if not detail or race:
+        return ''
+    if race == 'Asian':
+        # seqr subdivides asian so need to determine which subpopulation to assin
+        is_south_asian = detail and ('south' in detail.lower() or 'india' in detail.lower())
+        detail = 'South Asian' if is_south_asian else 'East Asian'
+        if detail and not is_south_asian:
+            asian_populations.add(detail)
+
+    if detail in ANCESTRY_DETAIL_LOOKUP:
+        return ANCESTRY_DETAIL_LOOKUP[detail]
+
+    return ANCESTRY_LOOKUP[race]
 
 
 @login_and_policies_required
