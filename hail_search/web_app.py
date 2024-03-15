@@ -1,6 +1,7 @@
 from aiohttp import web
 import asyncio
 import concurrent.futures
+import ctypes
 import functools
 import json
 import os
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 JAVA_OPTS_XSS = os.environ.get('JAVA_OPTS_XSS')
 MACHINE_MEM = os.environ.get('MACHINE_MEM')
 JVM_MEMORY_FRACTION = 0.9
+QUERY_TIMEOUT_S = 300
 
 
 def _handle_exception(e, request):
@@ -44,10 +46,32 @@ def _hl_json_default(o):
 def hl_json_dumps(obj):
     return json.dumps(obj, default=_hl_json_default)
 
-async def sync_to_async_hail_query(request: web.Request, query: Callable, *args, **kwargs):
+async def sync_to_async_hail_query(request: web.Request, query: Callable, *args, timeout_s=QUERY_TIMEOUT_S, **kwargs):
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(request.app.pool, functools.partial(query, await request.json(), *args, **kwargs))
-
+    future = loop.run_in_executor(request.app.pool, functools.partial(query, await request.json(), *args, **kwargs))
+    try:
+        return await asyncio.wait_for(future, timeout_s)
+    except asyncio.TimeoutError:
+        # Well documented issue with the "wait_for" approach.... the concurrent.Future is canceled but
+        # the underlying thread is not, allowing the Hail Query under the hood to keep running.
+        # https://stackoverflow.com/questions/34452590/timeout-handling-while-using-run-in-executor-and-asyncio
+        # This unsafe approach is taken from:
+        # https://stackoverflow.com/questions/323972/is-there-any-way-to-kill-a-thread
+        #
+        # A few other thoughts:
+        # - A ProcessPoolExecutor instead of a ThreadPoolExecutor would allow for safe worker termination
+        # and would potentially be a safer option in general (some portion of a hail query is cpu bound in python!)
+        # - A "timeout" decorator applied to the query function, catching a SIGALARM would also potentially
+        # suffice... but threads don't play well with signals.
+        # - We could also just kill the service/pod (which is fine).
+        for t in request.app.pool._threads:
+            res = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(t.ident), ctypes.py_object(TimeoutError))
+            if res > 1:
+                # "if it returns a number greater than one, you're in trouble,
+                # and you should call it again with exc=NULL to revert the effect"
+                ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(t.ident), None)
+                raise SystemExit('PyThreadState_SetAsyncExc failed')
+        raise TimeoutError('Hail Query Timeout Exceeded')
 
 async def gene_counts(request: web.Request) -> web.Response:
     hail_results = await sync_to_async_hail_query(request, search_hail_backend, gene_counts=True)
