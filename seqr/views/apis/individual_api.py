@@ -23,7 +23,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
     is_internal_anvil_project, pm_or_data_manager_required, check_workspace_perm
 from seqr.views.utils.individual_utils import delete_individuals, add_or_update_individuals_and_families
-
+from seqr.views.utils.variant_utils import bulk_create_tagged_variants
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
 _SEX_TO_EXPORTED_VALUE['U'] = ''
@@ -889,6 +889,7 @@ def import_gregor_metadata(request, project_guid):
     ):
         # TODO add manual tags for genetics findings
         pass
+    # bulk_create_tagged_variants
 
     response_json['importStats'] = {'gregorMetadata': {'info': info, 'warnings': warnings}}
     return create_json_response(response_json)
