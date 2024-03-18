@@ -20,9 +20,6 @@ from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL
 logger = SeqrLogger(__name__)
 
 
-MAX_UNSAVED_DATA_PER_SAMPLE = 5000
-
-
 def load_mapping_file(mapping_file_path, user):
     file_content = parse_file(mapping_file_path, file_iter(mapping_file_path, user=user))
     return load_mapping_file_content(file_content)
@@ -283,7 +280,7 @@ def _get_splice_id(row):
 
 
 def _add_splice_rank(sample_data_rows):
-    sorted_data_rows = sorted([data_row for data_row in sample_data_rows.values()], key=lambda d: d[P_VALUE_COL])
+    sorted_data_rows = sorted([data_row for data_row in sample_data_rows], key=lambda d: d[P_VALUE_COL])
     for i, data_row in enumerate(sorted_data_rows):
         data_row['rank'] = i
 
@@ -305,8 +302,10 @@ RNA_DATA_TYPE_CONFIGS = {
         'additional_kwargs': {
             'format_fields': SPLICE_OUTLIER_FORMATTER,
             'allow_missing_gene': True,
-            'get_unique_key': _get_splice_id,
+        },
+        'post_process_kwargs': {
             'post_process': _add_splice_rank,
+            'get_unique_key': _get_splice_id,
         },
     },
 }
@@ -330,8 +329,8 @@ def _validate_rna_header(header, column_map):
 
 
 def _load_rna_seq_file(
-        file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample, mismatches,
-        column_map, mapping_file=None, get_unique_key=None, allow_missing_gene=False, ignore_extra_samples=False,
+        file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample,
+        column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
         should_skip=None, format_fields=None,
 ):
 
@@ -339,7 +338,6 @@ def _load_rna_seq_file(
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
 
-    samples_by_guid = defaultdict(dict)
     f = file_iter(file_path, user=user)
     parsed_f = parse_file(file_path.replace('.gz', ''), f, iter_file=True)
     header = next(parsed_f)
@@ -349,7 +347,6 @@ def _load_rna_seq_file(
     unmatched_samples = set()
     missing_required_fields = defaultdict(set)
     gene_ids = set()
-    current_sample = None
     for line in tqdm(parsed_f, unit=' rows'):
         row = dict(zip(header, line))
         if should_skip and should_skip(row):
@@ -390,33 +387,11 @@ def _load_rna_seq_file(
             # If there are definite errors, do not process/save data, just continue to check for additional errors
             continue
 
-        if current_sample != sample_guid:
-            # If a large amount of data has been parsed for the previous sample, save and do not keep in memory
-            if len(samples_by_guid[current_sample]) > MAX_UNSAVED_DATA_PER_SAMPLE:
-                save_sample_data(current_sample, samples_by_guid[current_sample])
-                del samples_by_guid[current_sample]
-            current_sample = sample_guid
-
-        gene_or_unique_id = get_unique_key(row_dict) if get_unique_key else gene_id
-        existing_data = samples_by_guid[sample_guid].get(gene_or_unique_id)
-        if existing_data and existing_data != row_dict:
-            mismatches[sample_guid].add(gene_or_unique_id)
-
-        samples_by_guid[sample_guid][gene_or_unique_id] = row_dict
+        save_sample_data(sample_guid, row_dict)
 
     errors, warnings = _process_rna_errors(
         gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
     )
-
-    if not errors:
-        for sample_guid, sample_data in samples_by_guid.items():
-            save_sample_data(sample_guid, sample_data)
-
-    if mismatches:
-        errors = [
-            f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {", ".join(mismatch_ids)}'
-            for sample_guid, mismatch_ids in mismatches.items()
-        ] + errors
 
     if errors:
         raise ErrorsWarningsException(errors)
@@ -453,7 +428,7 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
     return errors, warnings
 
 
-def _load_rna_seq(model_cls, file_path, save_data, load_saved_data, *args, user=None, create_models_before_save=False, post_process=None, **kwargs):
+def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     projects = get_internal_projects()
     data_source = file_path.split('/')[-1].split('_-_')[-1]
 
@@ -472,14 +447,11 @@ def _load_rna_seq(model_cls, file_path, save_data, load_saved_data, *args, user=
     sample_guids_to_load = set()
     existing_samples_by_guid = {}
     samples_to_create = {}
-    created_samples = set()
-    mismatches = defaultdict(set)
 
     def update_sample_models():
-        remaining_samples_to_create = [s for key, s in samples_to_create.items() if key not in created_samples]
-        if remaining_samples_to_create:
+        if samples_to_create:
             _create_samples(
-                remaining_samples_to_create,
+                samples_to_create.values(),
                 user=user,
                 data_source=data_source,
                 sample_type=Sample.SAMPLE_TYPE_RNA,
@@ -496,7 +468,7 @@ def _load_rna_seq(model_cls, file_path, save_data, load_saved_data, *args, user=
         if to_delete:
             model_cls.bulk_delete(user, to_delete)
 
-        Sample.bulk_update(user, {'data_source': data_source}, guid__in=existing_samples_by_guid)
+        Sample.bulk_update(user, {'data_source': data_source, 'is_active': False}, guid__in=existing_samples_by_guid)
         for guid in to_delete_sample_individuals:
             existing_samples_by_guid[guid]['dataSource'] = data_source
 
@@ -504,22 +476,8 @@ def _load_rna_seq(model_cls, file_path, save_data, load_saved_data, *args, user=
         if not sample_data:
             return
 
-        if create_models_before_save:
-            update_sample_models()
-            created_samples.update(samples_to_create.keys())
-
-        prev_data = load_saved_data(sample_guid) or {}
-        new_mismatches = {k for k, v in prev_data.items() if k in sample_data and v != sample_data[k]}
-        if new_mismatches:
-            mismatches[sample_guid].update(new_mismatches)
-        sample_data.update(prev_data)
-
-        if post_process:
-            post_process(sample_data)
-
         sample_guids_to_load.add(sample_guid)
         save_data(sample_guid, sample_data)
-        return new_mismatches
 
     def get_matched_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping):
         if sample_key in potential_samples:
@@ -541,7 +499,7 @@ def _load_rna_seq(model_cls, file_path, save_data, load_saved_data, *args, user=
 
     warnings, not_loaded_count = _load_rna_seq_file(
         file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample,
-        mismatches, *args, **kwargs)
+        *args, **kwargs)
     message = f'Parsed {len(sample_guids_to_load) + not_loaded_count} RNA-seq samples'
     info = [message]
     logger.info(message, user)
@@ -562,6 +520,25 @@ def _load_rna_seq(model_cls, file_path, save_data, load_saved_data, *args, user=
         logger.warning(warning, user)
 
     return sample_guids_to_load, info, warnings
+
+
+def post_process_rna_data(sample_guid, data, get_unique_key=None, post_process=None):
+    mismatches = set()
+
+    data_by_key = {}
+    for row in data:
+        gene_or_unique_id = get_unique_key(row) if get_unique_key else row[GENE_ID_COL]
+        existing_data = data_by_key.get(gene_or_unique_id)
+        if existing_data and existing_data != row:
+            mismatches.add(gene_or_unique_id)
+        data_by_key[gene_or_unique_id] = row
+
+    error = f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {", ".join(mismatches)}' if mismatches else None
+    data = data_by_key.values()
+    if post_process and not error:
+        post_process(data)
+
+    return data, error
 
 
 RNA_MODEL_DISPLAY_NAME = {
