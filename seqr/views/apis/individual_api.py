@@ -912,7 +912,7 @@ def _iter_metadata_table(file_path, table_name, user, filter_row):
 
 # TODO shared?
 GREGOR_PARTICIPANT_COLUMN_MAP = {
-    'participant_id': JsonConstants.INDIVIDUAL_ID_COLUMN,
+    'participant_id': 'displayName',
     'affected_status': JsonConstants.AFFECTED_COLUMN,
     'phenotype_description': JsonConstants.CODED_PHENOTYPE_COLUMN,
 }
@@ -936,8 +936,6 @@ def _parse_participant_val(column, value, participant_sample_lookup):
         if value == '0':
             value = None
         elif value in participant_sample_lookup:
-            # TODO 1354508 is the father of UW_CRDR-sub-1354507 but is not included, but UW_CRDR-sub-1354508 does have a row
-            # Issue in family UW_CRDR-fam-1354507
             value = participant_sample_lookup[value]
     return column, value
 
