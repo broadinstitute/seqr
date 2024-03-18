@@ -26,7 +26,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissio
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required, get_project_and_check_permissions, get_internal_projects
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, DISCOVERY_ROW_TYPE
-from seqr.views.utils.variant_utils import get_variants_response, parse_saved_variant_json, DISCOVERY_CATEGORY
+from seqr.views.utils.variant_utils import get_variants_response, bulk_create_saved_variants, DISCOVERY_CATEGORY
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 MAX_SAVED_VARIANTS = 10000
@@ -269,10 +269,7 @@ def _search_new_saved_variants(family_variant_ids: list[FamilyVariantKey], user:
         for family_id in family_ids:
             family = families_by_id[family_id]
             if family.guid in variant['familyGuids']:
-                create_json, update_json = parse_saved_variant_json(variant, family)
-                variant_model = SavedVariant(**create_json, **update_json)
-                variant_model.guid = f'SV{str(variant_model)}'[:SavedVariant.MAX_GUID_SIZE]
-                new_variants.append(variant_model)
+                new_variants.append((variant, family))
             else:
                 missing[family.family_id].append(variant_id)
 
@@ -282,7 +279,7 @@ def _search_new_saved_variants(family_variant_ids: list[FamilyVariantKey], user:
             f"Unable to find the following family's AIP variants in the search backend: {', '.join(missing_summary)}",
         ])
 
-    saved_variants = SavedVariant.bulk_create(user, new_variants)
+    saved_variants = bulk_create_saved_variants(new_variants)
     return {(v.family_id, v.variant_id): v for v in saved_variants}
 
 

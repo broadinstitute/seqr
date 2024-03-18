@@ -126,6 +126,17 @@ def parse_saved_variant_json(variant_json, family):
     }, update_json
 
 
+def bulk_create_saved_variants(variant_families):
+    new_variants = []
+    for variant, family in variant_families:
+        create_json, update_json = parse_saved_variant_json(variant, family)
+        variant_model = SavedVariant(**create_json, **update_json)
+        variant_model.guid = f'SV{str(variant_model)}'[:SavedVariant.MAX_GUID_SIZE]
+        new_variants.append(variant_model)
+
+    return SavedVariant.bulk_create(user, new_variants)
+
+
 def reset_cached_search_results(project, reset_index_metadata=False):
     try:
         redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, port=REDIS_SERVICE_PORT, socket_connect_timeout=3)
