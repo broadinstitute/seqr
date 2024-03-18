@@ -853,21 +853,15 @@ def import_gregor_metadata(request, project_guid):
     if invalid_hpo_terms:
         warnings.append(f"Skipped the following unrecognized HPO terms: {', '.join(sorted(invalid_hpo_terms))}")
 
-    family_ids = set()
     asian_populations = set()
-    individuals = []
-    for row in _iter_metadata_table(
-        metadata_files_path, 'participant', request.user,
-        lambda r: r['participant_id'] in participant_sample_lookup or r['family_id'] in family_ids,
-    ):
-        family_ids.add(row['family_id'])
-        participant_id = row['participant_id']
-        individuals.append({
-            JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup.get(participant_id, participant_id),
-            **{k: INDIVIDUAL_METADATA_FIELDS[k](v) for k, v in participant_feature_lookup[participant_id].items()},
-            **dict([_parse_participant_val(k, v, participant_sample_lookup) for k, v in row.items()]),
-            'population': _get_population(row, asian_populations),
-        })
+    participant_rows = list(_iter_metadata_table(metadata_files_path, 'participant', request.user, lambda r: True))
+    family_ids = {row['family_id'] for row in participant_rows if row['participant_id'] in participant_sample_lookup}
+    individuals = [{
+        JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup.get(row['participant_id'], row['participant_id']),
+        **{k: INDIVIDUAL_METADATA_FIELDS[k](v) for k, v in participant_feature_lookup[row['participant_id']].items()},
+        **dict([_parse_participant_val(k, v, participant_sample_lookup) for k, v in row.items()]),
+        'population': _get_population(row, asian_populations),
+    } for row in participant_rows if row['family_id'] in family_ids]
 
     if asian_populations:
         details = ','.join(sorted(asian_populations))
@@ -880,19 +874,14 @@ def import_gregor_metadata(request, project_guid):
         project, individuals, request.user, get_created_counts=True, allow_features_update=True,
     )
 
-    num_updated_families = len(response_json['individualsByGuid'])
-    num_updated_individuals = len(response_json['familiesByGuid'])
+    num_updated_families = len(response_json['familiesByGuid'])
+    num_updated_individuals = len(response_json['individualsByGuid'])
     info = [
         f'Imported {len(individuals)} individuals',
         f'Created {num_created_families} new families, {num_created_individuals} new individuals',
         f'Updated {num_updated_families - num_created_families} existing families, {num_updated_individuals - num_created_individuals} existing individuals',
         f'Skipped {len(individuals) - num_updated_individuals} unchanged individuals',
     ]
-    # TODO not working:
-    # Imported 2101 individuals
-    # Created 914 new families, 2101 new individuals
-    # Updated 1187 existing families, -1187 existing individuals
-    # Skipped 1187 unchanged individuals
 
     # TODO add manual tags for genetics findings
 
