@@ -17,7 +17,7 @@ from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file, 
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_individuals, add_individual_hpo_details, \
-    _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
+    _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username, INDIVIDUAL_DISPLAY_NAME_EXPR
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
@@ -884,12 +884,34 @@ def import_gregor_metadata(request, project_guid):
         f'Skipped {len(individuals) - num_updated_individuals} unchanged individuals',
     ]
 
+    participant_family_id_map = dict(Individual.objects.annotate(participant_id=INDIVIDUAL_DISPLAY_NAME_EXPR).filter(
+        family__project=project, participant_id__in=individuals_by_participant,
+    ).values_list('participant_id', 'family_id'))
+
+    family_variant_data = {}
     for row in _iter_metadata_table(
-        metadata_files_path, 'genetic_findings', request.user, lambda r: r['participant_id'] in individuals_by_participant,
+        metadata_files_path, 'genetic_findings', request.user, lambda r: r['participant_id'] in participant_family_id_map,
     ):
-        # TODO add manual tags for genetics findings
-        pass
-    # bulk_create_tagged_variants
+        variant_id, variant = _format_gregor_variant(row)  # TODO support_vars, transcripts, genotypes, variant_type?
+        family_id = participant_family_id_map[row['participant_id']]
+        key = (family_id, variant_id)
+        if key in family_variant_data:
+            import pdb; pdb.set_trace()  # TODO
+        family_variant_data[key] = variant
+
+    tag_name = 'GREGoR findings'
+    num_new, num_updated = bulk_create_tagged_variants(
+        family_variant_data, tag_name=tag_name, user=request.user, project=project, get_metadata=lambda v: {k: v[k] for k in [
+            # TODO shared constants
+            'condition_id', 'known_condition_name', 'condition_inheritance', 'GREGoR_variant_classification', 'notes',
+        ]}
+    )
+    info.append(f'Loaded {num_new} new and {num_updated} updated findings tags')
+    # TODO tag response
+    response_json['projectsByGuid'] = {project_guid: {
+        'variantTagTypes': [],
+        'familyTagTypeCounts': {},
+    }}
 
     response_json['importStats'] = {'gregorMetadata': {'info': info, 'warnings': warnings}}
     return create_json_response(response_json)
