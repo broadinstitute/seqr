@@ -856,12 +856,13 @@ def import_gregor_metadata(request, project_guid):
     asian_populations = set()
     participant_rows = list(_iter_metadata_table(metadata_files_path, 'participant', request.user, lambda r: True))
     family_ids = {row['family_id'] for row in participant_rows if row['participant_id'] in participant_sample_lookup}
-    individuals = [{
+    individuals_by_participant = {row['participant_id']: {
         JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup.get(row['participant_id'], row['participant_id']),
         **{k: INDIVIDUAL_METADATA_FIELDS[k](v) for k, v in participant_feature_lookup[row['participant_id']].items()},
         **dict([_parse_participant_val(k, v, participant_sample_lookup) for k, v in row.items()]),
         'population': _get_population(row, asian_populations),
-    } for row in participant_rows if row['family_id'] in family_ids]
+    } for row in participant_rows if row['family_id'] in family_ids}
+    individuals = individuals_by_participant.values()
 
     if asian_populations:
         details = ','.join(sorted(asian_populations))
@@ -883,7 +884,11 @@ def import_gregor_metadata(request, project_guid):
         f'Skipped {len(individuals) - num_updated_individuals} unchanged individuals',
     ]
 
-    # TODO add manual tags for genetics findings
+    for row in _iter_metadata_table(
+        metadata_files_path, 'genetic_findings', request.user, lambda r: r['participant_id'] in individuals_by_participant,
+    ):
+        # TODO add manual tags for genetics findings
+        pass
 
     response_json['importStats'] = {'gregorMetadata': {'info': info, 'warnings': warnings}}
     return create_json_response(response_json)
