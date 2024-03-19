@@ -98,7 +98,8 @@ async def multi_lookup(request: web.Request) -> web.Response:
 
 
 async def status(request: web.Request) -> web.Response:
-    _ = await sync_to_async_hail_query(request, lambda _: hl.eval(1 + 1))
+    # Make sure the hail backend process is still alive.
+    await sync_to_async_hail_query(request, lambda _: hl.eval(1 + 1))
     return web.json_response({'success': True})
 
 
