@@ -47,8 +47,12 @@ def hl_json_dumps(obj):
     return json.dumps(obj, default=_hl_json_default)
 
 async def sync_to_async_hail_query(request: web.Request, query: Callable, *args, timeout_s=QUERY_TIMEOUT_S, **kwargs):
+    request_body = None
+    if request.body_exists:
+        request_body = await request.json()
+
     loop = asyncio.get_running_loop()
-    future = loop.run_in_executor(request.app.pool, functools.partial(query, await request.json(), *args, **kwargs))
+    future = loop.run_in_executor(request.app.pool, functools.partial(query, request_body, *args, **kwargs))
     try:
         return await asyncio.wait_for(future, timeout_s)
     except asyncio.TimeoutError:
@@ -94,6 +98,7 @@ async def multi_lookup(request: web.Request) -> web.Response:
 
 
 async def status(request: web.Request) -> web.Response:
+    _ = await sync_to_async_hail_query(request, lambda _: hl.eval(1 + 1))
     return web.json_response({'success': True})
 
 
