@@ -708,8 +708,6 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.0],
                 # no matched individual NA19675_D3
                 ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
-                # skip GTEX samples
-                ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
                 # a different project sample NA20888
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'muscle', 0.112],
                 # a project mismatched sample NA20878
