@@ -884,20 +884,41 @@ def import_gregor_metadata(request, project_guid):
         f'Skipped {len(individuals) - num_updated_individuals} unchanged individuals',
     ]
 
-    participant_family_id_map = dict(Individual.objects.annotate(participant_id=INDIVIDUAL_DISPLAY_NAME_EXPR).filter(
-        family__project=project, participant_id__in=individuals_by_participant,
-    ).values_list('participant_id', 'family_id'))
+    participant_individual_map = {
+        i['participant_id']: i for i in Individual.objects.annotate(
+            participant_id=INDIVIDUAL_DISPLAY_NAME_EXPR
+        ).filter(
+            family__project=project, participant_id__in=individuals_by_participant,
+        ).values('participant_id', 'guid', 'family_id')
+    }
 
     family_variant_data = {}
+    finding_id_map = {}
+    genes = set()
     for row in _iter_metadata_table(
-        metadata_files_path, 'genetic_findings', request.user, lambda r: r['participant_id'] in participant_family_id_map,
+        metadata_files_path, 'genetic_findings', request.user,
+            lambda r: r['participant_id'] in participant_individual_map and r['variant_type'] == 'SNV/INDEL',
     ):
-        variant_id, variant = _format_gregor_variant(row)  # TODO support_vars, transcripts, genotypes, variant_type?
-        family_id = participant_family_id_map[row['participant_id']]
-        key = (family_id, variant_id)
+        individual = participant_individual_map[row['participant_id']]
+        variant_id = '-'.join([row[col] for col in ['chrom', 'pos', 'ref', 'alt']])
+        key = (individual['family_id'], variant_id)
         if key in family_variant_data:
             import pdb; pdb.set_trace()  # TODO
-        family_variant_data[key] = variant
+        # TODO shared constants
+        family_variant_data[key] = {
+            **row,
+            'transcript': {'transcriptId': row['transcript'], 'hgvsc': row['hgvsc'], 'hgvsp': row['hgvsp']},
+            'genotypes': {individual['guid']: {'numAlt': 2 if row['zygosity'] == 'Homozygous' else 1}},
+            'support_vars': [],
+        }
+        genes.add(row['gene'])
+        finding_id_map[row['genetic_findings_id']] = variant_id
+
+    # TODO map gene ensembl id
+    for variant in family_variant_data.values():
+        variant['transcripts'] = {gene_id_map.get(variant['gene'], variant['gene']): variant.pop('transcript')}
+        if variant['linked_variant'] in finding_id_map:
+            variant['support_vars'].append(finding_id_map[variant['linked_variant']])
 
     tag_name = 'GREGoR findings'
     num_new, num_updated = bulk_create_tagged_variants(
