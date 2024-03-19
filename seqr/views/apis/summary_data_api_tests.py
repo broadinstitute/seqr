@@ -37,8 +37,8 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "num_saved_variants": 2,
     "solve_status": "Unsolved",
     "sample_id": "NA20889",
-    "gene_known_for_phenotype-1": "Known",
-    "gene_known_for_phenotype-2": "Known",
+    "gene_known_for_phenotype-1": "Candidate",
+    "gene_known_for_phenotype-2": "Candidate",
     "variant_inheritance-1": "unknown",
     "variant_inheritance-2": "unknown",
     'genetic_findings_id-1': 'NA20889_1_248367227',
@@ -105,6 +105,8 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'allele_balance_or_heteroplasmy_percentage-2': None,
     'notes-1': None,
     'notes-2': None,
+    'tags-1': ['Tier 1 - Novel gene and phenotype'],
+    'tags-2': ['Tier 1 - Novel gene and phenotype'],
 }
 EXPECTED_SAMPLE_METADATA_ROW = {
     "dbgap_submission": "No",
@@ -147,6 +149,7 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'alt-1': 'T',
     'chrom-1': '1',
     'gene_known_for_phenotype-1': 'Candidate',
+    'tags-1': ['Tier 1 - Novel gene and phenotype'],
     'pos-1': 248367227,
     'end-1': None,
     'ref-1': 'TC',
