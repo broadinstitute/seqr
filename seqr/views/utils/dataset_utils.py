@@ -294,7 +294,7 @@ RNA_DATA_TYPE_CONFIGS = {
     'tpm': {
         'model_class': RnaSeqTpm,
         'columns': TPM_HEADER_COLS,
-        'additional_kwargs': {'should_skip': lambda row: row[SAMPLE_ID_COL].startswith('GTEX')},
+        'additional_kwargs': {},
     },
     'splice_outlier': {
         'model_class': RnaSeqSpliceOutlier,
@@ -331,7 +331,7 @@ def _validate_rna_header(header, column_map):
 def _load_rna_seq_file(
         file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample,
         column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
-        should_skip=None, format_fields=None,
+        format_fields=None,
 ):
 
     sample_id_to_individual_id_mapping = {}
@@ -349,8 +349,6 @@ def _load_rna_seq_file(
     gene_ids = set()
     for line in tqdm(parsed_f, unit=' rows'):
         row = dict(zip(header, line))
-        if should_skip and should_skip(row):
-            continue
 
         row_dict = {mapped_key: row[col] for mapped_key, col in column_map.items()}
         for mapped_key, format_func in (format_fields or {}).items():
