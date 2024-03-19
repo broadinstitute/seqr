@@ -513,6 +513,7 @@ const CLINVAR_MIN_RISK_PATHOGENICITY = 'likely_risk_allele'
 const CLINVAR_PATHOGENICITIES = [
   'pathogenic',
   'pathogenic/likely_pathogenic',
+  'pathogenic/likely_pathogenic/established_risk_allele',
   'pathogenic/likely_pathogenic/likely_risk_allele',
   'pathogenic/likely_risk_allele',
   'likely_pathogenic',

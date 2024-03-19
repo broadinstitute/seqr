@@ -104,10 +104,13 @@ def update_project_saved_variant_json(project_id, family_guids=None, dataset_typ
 
 def saved_variants_dataset_type_filter(dataset_type):
     xpos_filter_key = 'xpos__gte' if dataset_type == Sample.DATASET_TYPE_MITO_CALLS else 'xpos__lt'
-    return {
-        'alt__isnull': dataset_type == Sample.DATASET_TYPE_SV_CALLS,
-        xpos_filter_key: get_xpos('M', 1),
-    }
+    dataset_filter = {xpos_filter_key: get_xpos('M', 1)}
+    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+        dataset_filter['alt__isnull'] = True
+    else:
+        # Filter out manual variants with invalid characters, such as those used for STRs
+        dataset_filter['alt__regex'] = '^[ACGT]$'
+    return dataset_filter
 
 
 def parse_saved_variant_json(variant_json, family, variant_id=None, use_family_id=False):

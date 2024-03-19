@@ -567,5 +567,5 @@ def _format_omim_conditions(conditions):
         'known_condition_name': '|'.join(sorted({o['phenotype_description'] for o in conditions if o.get('phenotype_description')})),
         'condition_inheritance': '|'.join(sorted({
             MIM_INHERITANCE_MAP.get(i, i) for o in conditions if o.get('phenotype_inheritance') for i in o['phenotype_inheritance'].split(', ')
-        }))
+        })) or 'Unknown',
     }
