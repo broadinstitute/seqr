@@ -1,6 +1,11 @@
 # _seqr_ Changes
 
 ## dev
+* Add ability to import project metadata from gregor metadata
+  * Only enabled for a project if tag is first created via 
+    ```
+    ./manage.py add_project_tag --name="GREGoR Finding" --order=0.5 --color=#d434d8 --project=<project>
+    ```
 
 ## 3/13/24
 * Add "Probably Solved" analysis status (REQUIRES DB MIGRATION)

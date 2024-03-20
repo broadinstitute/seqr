@@ -22,6 +22,7 @@ from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
     is_internal_anvil_project, pm_or_data_manager_required, check_workspace_perm
+from seqr.views.utils.project_context_utils import add_project_tag_types
 from seqr.views.utils.individual_utils import delete_individuals, add_or_update_individuals_and_families
 from seqr.views.utils.variant_utils import bulk_create_tagged_variants
 
@@ -920,9 +921,9 @@ def import_gregor_metadata(request, project_guid):
         if variant['linked_variant'] in finding_id_map:
             variant['support_vars'].append(finding_id_map[variant['linked_variant']])
 
-    tag_name = 'GREGoR findings'
     num_new, num_updated = bulk_create_tagged_variants(
-        family_variant_data, tag_name=tag_name, user=request.user, project=project, get_metadata=lambda v: {k: v[k] for k in [
+        family_variant_data, tag_name='GREGoR Finding', user=request.user, project=project,
+        get_metadata=lambda v: {k: v[k] for k in [
             # TODO shared constants
             'condition_id', 'known_condition_name', 'condition_inheritance', 'GREGoR_variant_classification', 'notes',
         ]}

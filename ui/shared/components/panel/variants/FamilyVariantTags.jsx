@@ -15,7 +15,7 @@ import {
   getMmeSubmissionsByGuid,
   getGenesById,
 } from 'redux/selectors'
-import { DISCOVERY_CATEGORY_NAME, MME_TAG_NAME } from 'shared/utils/constants'
+import { DISCOVERY_CATEGORY_NAME, MME_TAG_NAME, GREGOR_FINDING_TAG_NAME } from 'shared/utils/constants'
 import VariantClassify from './VariantClassify'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
@@ -58,7 +58,7 @@ const VARIANT_NOTE_FIELDS = [{
 }]
 
 const DEPRECATED_MME_TAG = 'seqr MME (old)'
-const AIP_TAG = 'AIP'
+const NO_EDIT_TAG_TYPES = ['AIP', GREGOR_FINDING_TAG_NAME]
 
 const aipCategoryRow = ([key, { name, date }]) => (
   <Table.Row key={key}>
@@ -277,7 +277,7 @@ const FamilyVariantTags = React.memo(({
               tagOptions={projectTagTypes}
               displayMetadata
               disabledTagType={DEPRECATED_MME_TAG}
-              noEditTagType={AIP_TAG}
+              noEditTagTypes={NO_EDIT_TAG_TYPES}
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
