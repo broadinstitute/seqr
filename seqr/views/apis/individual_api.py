@@ -818,12 +818,11 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 def import_gregor_metadata(request, project_guid):
     request_json = json.loads(request.body)
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
-    # workspace_meta = check_workspace_perm(
-    #     request.user, CAN_VIEW, request_json['workspaceNamespace'], request_json['workspaceName'],
-    #     meta_fields=['workspace.bucketName']
-    # )
-    # bucket_name = workspace_meta['workspace']['bucketName']
-    bucket_name = 'fc-secure-b54cbe86-98a2-467a-9c16-0299fb0944e3'
+    workspace_meta = check_workspace_perm(
+        request.user, CAN_VIEW, request_json['workspaceNamespace'], request_json['workspaceName'],
+        meta_fields=['workspace.bucketName']
+    )
+    bucket_name = workspace_meta['workspace']['bucketName']
     metadata_files_path = f'gs://{bucket_name}/data_tables'
 
     # TODO share table names and column names with metadata report
