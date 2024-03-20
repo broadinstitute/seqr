@@ -17,7 +17,8 @@ from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file, 
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_individuals, add_individual_hpo_details, \
-    _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username, INDIVIDUAL_DISPLAY_NAME_EXPR
+    _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username, INDIVIDUAL_DISPLAY_NAME_EXPR, \
+    GREGOR_FINDING_TAG_TYPE
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
@@ -937,7 +938,7 @@ def import_gregor_metadata(request, project_guid):
         warnings.append(f'The following unknown genes were omitted in the findings tags: {", ".join(sorted(missing_genes))}')
 
     num_new, num_updated = bulk_create_tagged_variants(
-        family_variant_data, tag_name='GREGoR Finding', user=request.user, project=project,
+        family_variant_data, tag_name=GREGOR_FINDING_TAG_TYPE, user=request.user, project=project,
         get_metadata=lambda v: {k: v[k] for k in [
             # TODO shared constants
             'condition_id', 'known_condition_name', 'condition_inheritance', 'GREGoR_variant_classification', 'notes',

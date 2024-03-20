@@ -16,6 +16,7 @@ import {
   getGenesById,
 } from 'redux/selectors'
 import { DISCOVERY_CATEGORY_NAME, MME_TAG_NAME, GREGOR_FINDING_TAG_NAME } from 'shared/utils/constants'
+import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import VariantClassify from './VariantClassify'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
@@ -58,12 +59,24 @@ const VARIANT_NOTE_FIELDS = [{
 }]
 
 const DEPRECATED_MME_TAG = 'seqr MME (old)'
-const NO_EDIT_TAG_TYPES = ['AIP', GREGOR_FINDING_TAG_NAME]
+const AIP_TAG_TYPE = 'AIP'
+const NO_EDIT_TAG_TYPES = [AIP_TAG_TYPE, GREGOR_FINDING_TAG_NAME]
+const TAG_TYPE_TILES = {
+  [AIP_TAG_TYPE]: 'Categories',
+  [GREGOR_FINDING_TAG_NAME]: 'Finding Detail',
+}
 
-const aipCategoryRow = ([key, { name, date }]) => (
+const aipCategoryContent = (key, { name, date }) => ([
+  <Table.HeaderCell key="name" content={`${key} - ${name} `} />,
+  <Table.Cell key="date" disabled content={`(${new Date(date).toLocaleDateString()})`} />,
+])
+
+const structuredMetadataRow = ([key, value]) => (
   <Table.Row key={key}>
-    <Table.HeaderCell content={`${key} - ${name} `} />
-    <Table.Cell disabled content={`(${new Date(date).toLocaleDateString()})`} />
+    {typeof value === 'string' ? [
+      <Table.HeaderCell key="key" textAlign="right" content={snakecaseToTitlecase(key)} />,
+      <Table.Cell key="value" content={value} />,
+    ] : aipCategoryContent(key, value)}
   </Table.Row>
 )
 
@@ -72,18 +85,18 @@ export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
     position="top right"
     size="tiny"
     trigger={trigger}
-    header={title || (tag.aipMetadata ? 'Categories' : 'Tagged by')}
+    header={title || TAG_TYPE_TILES[tag.name] || 'Tagged by'}
     hoverable
     flowing
     content={
       <div>
-        {tag.aipMetadata ? (
+        {tag.structuredMetadata ? (
           <NoBorderTable basic="very" compact="very">
             <Table.Body>
-              {Object.entries(tag.aipMetadata).filter(e => e[0] !== 'removed').map(aipCategoryRow)}
-              {tag.aipMetadata.removed && [
+              {Object.entries(tag.structuredMetadata).filter(e => e[0] !== 'removed').map(structuredMetadataRow)}
+              {tag.structuredMetadata.removed && [
                 <Table.Row key="removedHeader"><Table.HeaderCell colSpan={2} content="Removed Categories" /></Table.Row>,
-                ...Object.entries(tag.aipMetadata.removed).map(aipCategoryRow),
+                ...Object.entries(tag.structuredMetadata.removed).map(structuredMetadataRow),
               ]}
             </Table.Body>
           </NoBorderTable>
