@@ -11,7 +11,7 @@ from django.db.models import prefetch_related_objects
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual, Family, CAN_VIEW
 from seqr.utils.file_utils import file_iter
-from seqr.utils.gene_utils import get_genes
+from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from seqr.views.utils.anvil_metadata_utils import ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, ETHNICITY_MAP
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file, parse_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
@@ -886,8 +886,7 @@ def import_gregor_metadata(request, project_guid):
 
     participant_individual_map = {
         i['participant_id']: i for i in Individual.objects.annotate(
-            participant_id=INDIVIDUAL_DISPLAY_NAME_EXPR
-        ).filter(
+            participant_id=INDIVIDUAL_DISPLAY_NAME_EXPR).filter(
             family__project=project, participant_id__in=individuals_by_participant,
         ).values('participant_id', 'guid', 'family_id')
     }
@@ -914,9 +913,9 @@ def import_gregor_metadata(request, project_guid):
         genes.add(row['gene'])
         finding_id_map[row['genetic_findings_id']] = variant_id
 
-    # TODO map gene ensembl id
+    gene_symbols_to_ids = {k: v[0] for k, v in get_gene_ids_for_gene_symbols(genes).items()}
     for variant in family_variant_data.values():
-        variant['transcripts'] = {gene_id_map.get(variant['gene'], variant['gene']): variant.pop('transcript')}
+        variant['transcripts'] = {gene_symbols_to_ids.get(variant['gene'], variant['gene']): variant.pop('transcript')}
         if variant['linked_variant'] in finding_id_map:
             variant['support_vars'].append(finding_id_map[variant['linked_variant']])
 
