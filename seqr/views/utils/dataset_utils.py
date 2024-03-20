@@ -414,7 +414,7 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
         errors.append(f'Unknown Gene IDs: {", ".join(sorted(unknown_gene_ids))}')
 
     if unmatched_samples:
-        unmatched_sample_ids = ', '.join(sorted([sample_key[0] for sample_key in unmatched_samples]))
+        unmatched_sample_ids = ', '.join(sorted({f'{sample_key[0]} ({sample_key[1]})' for sample_key in unmatched_samples}))
         if ignore_extra_samples:
             warnings.append(f'Skipped loading for the following {len(unmatched_samples)} unmatched samples: {unmatched_sample_ids}')
         else:

@@ -128,7 +128,7 @@ def parse_anvil_metadata(
         variant_json_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
         include_no_individual_families: bool = False, omit_airtable: bool = False, include_metadata: bool = False,
         include_discovery_sample_id: bool = False, include_mondo: bool = False, include_parent_mnvs: bool = False,
-        proband_only_variants: bool = False, saved_variant_annotations: dict = None):
+        proband_only_variants: bool = False):
 
     individual_samples = individual_samples or (_get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
         if max_loaded_date else _get_all_project_individual_samples(projects))
@@ -149,7 +149,6 @@ def parse_anvil_metadata(
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(
         list(family_data_by_id.keys()), variant_filter=variant_filter, variant_json_fields=variant_json_fields,
-        saved_variant_annotations=saved_variant_annotations,
     )
 
     condition_map = _get_condition_map(family_data_by_id.values())
@@ -287,21 +286,14 @@ def _post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
 
 
 def _get_parsed_saved_discovery_variants_by_family(
-        families: Iterable[Family], variant_filter: dict, variant_json_fields: list[str], saved_variant_annotations: dict,
+        families: Iterable[Family], variant_filter: dict, variant_json_fields: list[str],
 ):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
-    annotations = {
-        'gene_known_for_phenotype': Case(When(
-            Q(family__post_discovery_omim_numbers__len=0, family__mondo_id__isnull=True),
-            then=Value('Candidate')), default=Value('Known')
-        ),
-        **(saved_variant_annotations or {}),
-    }
     project_saved_variants = SavedVariant.objects.filter(
         varianttag__variant_tag_type__in=tag_types, family__id__in=families,
         **(variant_filter or {}),
-    ).order_by('created_date').distinct().annotate(**annotations)
+    ).order_by('created_date').distinct().annotate(tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True))
 
     variants = []
     gene_ids = set()
@@ -323,8 +315,9 @@ def _get_parsed_saved_discovery_variants_by_family(
             'hgvsc': (main_transcript.get('hgvsc') or '').split(':')[-1],
             'hgvsp': (main_transcript.get('hgvsp') or '').split(':')[-1],
             'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
+            'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.tags else 'Candidate',
             **{k: variant_json.get(k) for k in ['genotypes', 'svType', 'svName', 'end'] + (variant_json_fields or [])},
-            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt', *annotations.keys()]},
+            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt', 'tags']},
         })
 
     genes_by_id = get_genes(gene_ids)
