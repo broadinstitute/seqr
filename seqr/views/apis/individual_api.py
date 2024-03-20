@@ -941,7 +941,8 @@ def import_gregor_metadata(request, project_guid):
         family_variant_data, tag_name=GREGOR_FINDING_TAG_TYPE, user=request.user, project=project,
         get_metadata=lambda v: {k: v[k] for k in [
             # TODO shared constants
-            'condition_id', 'known_condition_name', 'condition_inheritance', 'GREGoR_variant_classification', 'notes',
+            'gene_known_for_phenotype', 'condition_id', 'known_condition_name', 'condition_inheritance',
+            'GREGoR_variant_classification', 'notes',
         ] if k in v}
     )
     info.append(f'Loaded {num_new} new and {num_updated} updated findings tags')

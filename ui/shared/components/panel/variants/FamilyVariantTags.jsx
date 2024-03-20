@@ -85,7 +85,7 @@ export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
     position="top right"
     size="tiny"
     trigger={trigger}
-    header={title || TAG_TYPE_TILES[tag.name] || 'Tagged by'}
+    header={title || (tag.structuredMetadata ? TAG_TYPE_TILES[tag.name] : 'Tagged by')}
     hoverable
     flowing
     content={
