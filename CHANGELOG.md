@@ -4,7 +4,7 @@
 * Add ability to import project metadata from gregor metadata
   * Only enabled for a project if tag is first created via 
     ```
-    ./manage.py add_project_tag --name="GREGoR Finding" --order=0.5 --color=#d434d8 --project=<project>
+    ./manage.py add_project_tag --name="GREGoR Finding" --order=0.5 --color=#c25fc4 --project=<project>
     ```
 
 ## 3/13/24

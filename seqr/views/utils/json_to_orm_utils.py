@@ -33,9 +33,8 @@ def update_individual_from_json(individual, json, user, allow_unknown_keys=False
     return update_model_from_json(
         individual, json, user=user, allow_unknown_keys=allow_unknown_keys,
         immutable_keys=[
-            'filter_flags', 'pop_platform_filters', 'population', 'sv_flags',
-            'case_review_status', 'case_review_discussion'
-        ] + [] if allow_features_update else ['features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features'],
+            'filter_flags', 'pop_platform_filters', 'sv_flags', 'case_review_status', 'case_review_discussion'
+        ] + [] if allow_features_update else ['population', 'features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features'],
     )
 
 

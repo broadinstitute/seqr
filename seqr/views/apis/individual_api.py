@@ -902,31 +902,46 @@ def import_gregor_metadata(request, project_guid):
         individual = participant_individual_map[row['participant_id']]
         variant_id = '-'.join([row[col] for col in ['chrom', 'pos', 'ref', 'alt']])
         key = (individual['family_id'], variant_id)
-        if key in family_variant_data:
-            import pdb; pdb.set_trace()  # TODO
+        variant = {k: v for k, v in row.items() if v and v != 'NA'}
         # TODO shared constants
-        family_variant_data[key] = {
-            **row,
-            'pos': int(row['pos']),
-            'transcript': {'transcriptId': row['transcript'], 'hgvsc': row['hgvsc'], 'hgvsp': row['hgvsp']},
-            'genotypes': {individual['guid']: {'numAlt': 2 if row['zygosity'] == 'Homozygous' else 1}},
+        variant.update({
+            'pos': int(variant['pos']),
+            'genomeVersion': variant['variant_reference_assembly'].replace('GRCh', ''),
+            'transcripts': {},
+            'transcript': {
+                'transcriptId': variant.get('transcript'), 'hgvsc': variant.pop('hgvsc', None), 'hgvsp': variant.pop('hgvsp', None),
+            },
+            'genotypes': {individual['guid']: {'numAlt': 2 if variant['zygosity'] == 'Homozygous' else 1}},
             'support_vars': [],
-        }
-        genes.add(row['gene'])
-        finding_id_map[row['genetic_findings_id']] = variant_id
+        })
+        family_variant_data[key] = variant
+        genes.add(variant['gene'])
+        finding_id_map[variant['genetic_findings_id']] = variant_id
 
     gene_symbols_to_ids = {k: v[0] for k, v in get_gene_ids_for_gene_symbols(genes).items()}
+    missing_genes = set()
     for variant in family_variant_data.values():
-        variant['transcripts'] = {gene_symbols_to_ids.get(variant['gene'], variant['gene']): variant.pop('transcript')}
-        if variant['linked_variant'] in finding_id_map:
+        gene = variant['gene']
+        transcript = variant.pop('transcript')
+        if gene in gene_symbols_to_ids:
+            variant.update({
+                'transcripts': {gene_symbols_to_ids[gene]: [transcript]},
+                'mainTranscriptId': transcript['transcriptId'],
+            })
+        else:
+            missing_genes.add(gene)
+        if variant.get('linked_variant') in finding_id_map:
             variant['support_vars'].append(finding_id_map[variant['linked_variant']])
+
+    if missing_genes:
+        warnings.append(f'The following unknown genes were omitted in the findings tags: {", ".join(sorted(missing_genes))}')
 
     num_new, num_updated = bulk_create_tagged_variants(
         family_variant_data, tag_name='GREGoR Finding', user=request.user, project=project,
         get_metadata=lambda v: {k: v[k] for k in [
             # TODO shared constants
             'condition_id', 'known_condition_name', 'condition_inheritance', 'GREGoR_variant_classification', 'notes',
-        ]}
+        ] if k in v}
     )
     info.append(f'Loaded {num_new} new and {num_updated} updated findings tags')
 
