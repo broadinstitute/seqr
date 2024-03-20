@@ -68,12 +68,10 @@ class LoadRnaSeqTest(AuthenticationTestCase):
                 'NA19675_D2\t1kg project nåme with uniçøde\t\tENSG00000240361\t12.6\t\n',
                 'NA19675_D2\t1kg project nåme with uniçøde\t\tENSG00000233750\t1.26\t\n',
                 'NA19678_D1\t1kg project nåme with uniçøde\t\tENSG00000233750\t 6.04\twhole_blood\n',
-                'GTEX-001\t1kg project nåme with uniçøde\t\tENSG00000240361\t3.1\tinvalid\n',
                 'NA19677\t1kg project nåme with uniçøde\t\tENSG00000233750\t5.31\tmuscle\n',
-                'GTEX-001\t1kg project nåme with uniçøde\t\tENSG00000233750\t7.8\tmuscle\n',
                 'NA19678\tTest Reprocessed Project\t\tENSG00000240361\t0.2\twhole_blood\n',
             ],
-            unmatched_samples='NA19677, NA19678, NA19678_D1',
+            unmatched_samples='NA19677 (1kg project nåme with uniçøde), NA19678 (Test Reprocessed Project), NA19678_D1 (1kg project nåme with uniçøde)',
             additional_errors=['Samples missing required "tissue": NA19675_D2'],
         )
 
@@ -108,7 +106,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             mock.call('DONE'),
         ])
         mock_utils_logger.warning.assert_has_calls([
-            mock.call('Skipped loading for the following 2 unmatched samples: NA19677, NA19678', None),
+            mock.call('Skipped loading for the following 2 unmatched samples: NA19677 (1kg project nåme with uniçøde), NA19678 (Test Reprocessed Project)', None),
         ])
 
         # Test a new sample created for a mismatched tissue and a row with 0.0 tpm
@@ -136,13 +134,13 @@ class LoadRnaSeqTest(AuthenticationTestCase):
                 'NA19675_D3\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\tmuscle\n',
                 'NA19675_D4\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\tmuscle\n',
             ],
-            unmatched_samples='NA19675_D3, NA19675_D4',
+            unmatched_samples='NA19675_D3 (1kg project nåme with uniçøde), NA19675_D4 (1kg project nåme with uniçøde)',
         )
 
         self.mock_open.return_value.__enter__.return_value.__iter__.return_value = ['NA19675_D4\tNA19678']
         with self.assertRaises(ErrorsWarningsException) as e:
             call_command('load_rna_seq', 'outlier', RNA_FILE_ID, '--mapping-file', 'map.tsv')
-        self.assertEqual(e.exception.errors, ['Unable to find matches for the following samples: NA19675_D3'])
+        self.assertEqual(e.exception.errors, ['Unable to find matches for the following samples: NA19675_D3 (1kg project nåme with uniçøde)'])
 
         call_command('load_rna_seq', 'outlier', RNA_FILE_ID, '--ignore-extra-samples')
 

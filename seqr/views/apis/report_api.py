@@ -695,6 +695,24 @@ def _has_required_table(table, validator, tables):
     return tables.isdisjoint(validator)
 
 
+def _is_required_col(required_validator, row):
+    if not required_validator:
+        return False
+
+    if required_validator is True:
+        return True
+
+    match = re.match(r'CONDITIONAL \(([\w+(\s)?]+) = ([\w+(\s)?]+)\)', required_validator)
+    if not match:
+        return True
+
+    field, value = match.groups()
+    return row[field] == value
+
+
+
+
+
 def _validate_column_data(column, file_name, data, column_validator, warnings, errors):
     data_type = column_validator.get('data_type')
     data_type_validator = DATA_TYPE_VALIDATORS.get(data_type)
@@ -712,7 +730,7 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
     for row in data:
         value = row.get(column)
         if not value:
-            if required:
+            if _is_required_col(required, row):
                 missing.append(_get_row_id(row))
             elif recommended:
                 check_recommend_condition = WARN_MISSING_CONDITIONAL_COLUMNS.get(column)
@@ -875,7 +893,6 @@ def variant_metadata(request, project_guid):
         individual_data_types={i.individual_id: i.data_types for i in individuals},
         add_row=_add_row,
         variant_json_fields=['clinvar', 'variantId'],
-        saved_variant_annotations={'tags': ArrayAgg('varianttag__variant_tag_type__name', distinct=True)},
         mme_values={'variant_ids': ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId')},
         include_metadata=True,
         include_mondo=True,

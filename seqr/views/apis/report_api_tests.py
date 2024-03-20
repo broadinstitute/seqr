@@ -447,7 +447,7 @@ INVALID_MODEL_TABLES = {
     'participant': {
         'internal_project_id': {'data_type': 'reference'},
         'prior_testing': {'data_type': 'enumeration'},
-        'proband_relationship': {'required': True},
+        'proband_relationship': {'required': 'CONDITIONAL (sex = Male)'},
         'reported_race': {'enumerations': ['Asian', 'White', 'Black']},
         'age_at_enrollment': {'data_type': 'date'}
     },
@@ -616,7 +616,7 @@ class ReportAPITest(AirtableTest):
             '1_248367227_HG00731', 'HG00731', 'HG00731', 'RP11', 'Known', 'paternal',
             'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-'], discovery_file)
         self.assertIn([
-            '21_3343353_NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Known', 'de novo',
+            '21_3343353_NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
             '-', '-', '-', '-'], discovery_file)
         self.assertIn([
@@ -717,7 +717,7 @@ class ReportAPITest(AirtableTest):
         ] + [
             'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
         ] + [
-            'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
+            'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00732, Broad_NA19678, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
             'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
             'The following entries have invalid values for "age_at_enrollment" in the "participant" table. Allowed values have data type date. Invalid values: Broad_NA19675_1 (18)',
             'The following entries have invalid values for "reference_assembly" (from Airtable) in the "aligned_dna_short_read" table. Allowed values have data type integer. Invalid values: NA20888 (GRCh38), VCGS_FAM203_621_D2 (GRCh38)',
@@ -993,7 +993,7 @@ class ReportAPITest(AirtableTest):
         ])
         self.assertIn([
             'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'SNV/INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
-            'RP11', 'ENST00000258436', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '', 'Known',
+            'RP11', 'ENST00000258436', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '', 'Candidate',
             'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120', 'Autosomal recessive|X-linked',
             'Full', '', '', 'SR-ES', '',
         ], genetic_findings_file)
@@ -1006,12 +1006,12 @@ class ReportAPITest(AirtableTest):
             self.assertIn([
                 'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '248367227', 'TC', 'T',
                 '', 'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown',
-                'Broad_NA20889_1_249045487', '', 'Known', 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant',
+                'Broad_NA20889_1_249045487', '', 'Candidate', 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant',
                 'Full', '', '', 'SR-ES', '',
             ], genetic_findings_file)
             self.assertIn([
                 'Broad_NA20889_1_249045487', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '249045487', 'A', 'G', '',
-                'OR4G11P', '', '', '', 'Heterozygous', '', 'unknown', 'Broad_NA20889_1_248367227', '', 'Known',
+                'OR4G11P', '', '', '', 'Heterozygous', '', 'unknown', 'Broad_NA20889_1_248367227', '', 'Candidate',
                 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant', 'Full', '', '', 'SR-ES', '',
             ], genetic_findings_file)
 
@@ -1126,7 +1126,7 @@ class ReportAPITest(AirtableTest):
             'consanguinity': 'Unknown',
             'condition_id': 'OMIM:615123',
             'known_condition_name': '',
-            'condition_inheritance': '',
+            'condition_inheritance': 'Unknown',
         })
 
         # Test empty project
@@ -1225,7 +1225,7 @@ class ReportAPITest(AirtableTest):
             'family_history': 'Yes',
             'gene': 'OR4G11P',
             'gene_id': 'ENSG00000240361',
-            'gene_known_for_phenotype': 'Known',
+            'gene_known_for_phenotype': 'Candidate',
             'genetic_findings_id': 'NA20889_1_248367227',
             'hgvsc': 'c.3955G>A',
             'hgvsp': 'c.1586-17C>G',
@@ -1253,7 +1253,7 @@ class ReportAPITest(AirtableTest):
             'family_history': 'Yes',
             'gene': None,
             'gene_id': None,
-            'gene_known_for_phenotype': 'Known',
+            'gene_known_for_phenotype': 'Candidate',
             'genetic_findings_id': 'NA20889_1_249045487',
             'participant_id': 'NA20889',
             'pos': 249045487,
