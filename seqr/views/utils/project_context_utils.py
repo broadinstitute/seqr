@@ -1,8 +1,8 @@
 from collections import defaultdict
-from django.db.models import Q, prefetch_related_objects
+from django.db.models import Count, Q, prefetch_related_objects
 
 from seqr.models import Individual, IgvSample, AnalysisGroup, LocusList, VariantTagType,\
-    VariantFunctionalData, FamilyNote, SavedVariant
+    VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, _get_json_for_models, \
     get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, \
@@ -130,7 +130,7 @@ def families_discovery_tags(families):
 MME_TAG_NAME = 'MME Submission'
 
 
-def add_project_tag_types(projects_by_guid):
+def add_project_tag_types(projects_by_guid, add_counts=False):
     variant_tag_types_models = VariantTagType.objects.filter(Q(project__guid__in=projects_by_guid.keys()) | Q(project__isnull=True))
     variant_tag_types = _get_json_for_models(variant_tag_types_models)
 
@@ -154,6 +154,7 @@ def add_project_tag_types(projects_by_guid):
         'order': 99,
     })
 
+    family_counts = {}
     for project_guid, project_json in projects_by_guid.items():
         project_json.update({
             'variantTagTypes': sorted(
@@ -162,3 +163,42 @@ def add_project_tag_types(projects_by_guid):
             ),
             'variantFunctionalTagTypes': VariantFunctionalData.FUNCTIONAL_DATA_TAG_TYPES,
         })
+        if add_counts:
+            family_counts.update(_add_tag_type_counts(project_guid, project_json['variantTagTypes']))
+
+    return family_counts
+
+
+def _add_tag_type_counts(project_guid, project_variant_tags):
+    project_tags = VariantTag.objects.filter(saved_variants__family__project__guid=project_guid)
+    project_notes = VariantNote.objects.filter(saved_variants__family__project__guid=project_guid)
+
+    family_tag_type_counts = defaultdict(dict)
+    note_tag_type = {
+        'variantTagTypeGuid': 'notes',
+        'name': 'Has Notes',
+        'category': 'Notes',
+        'description': '',
+        'color': 'grey',
+        'order': 100,
+        'numTags': project_notes.aggregate(count=Count('saved_variants__guid', distinct=True))['count'],
+    }
+
+    mme_counts_by_family = project_tags.filter(saved_variants__matchmakersubmissiongenes__isnull=False) \
+        .values('saved_variants__family__guid').annotate(count=Count('saved_variants__guid', distinct=True))
+
+    tag_counts_by_type_and_family = project_tags.values(
+        'saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))
+    for tag_type in project_variant_tags:
+        current_tag_type_counts = mme_counts_by_family if tag_type['name'] == MME_TAG_NAME else [
+            counts for counts in tag_counts_by_type_and_family if counts['variant_tag_type__name'] == tag_type['name']
+        ]
+        num_tags = sum(count['count'] for count in current_tag_type_counts)
+        tag_type.update({
+            'numTags': num_tags,
+        })
+        for count in current_tag_type_counts:
+            family_tag_type_counts[count['saved_variants__family__guid']].update({tag_type['name']: count['count']})
+
+    project_variant_tags.append(note_tag_type)
+    return family_tag_type_counts

@@ -12,8 +12,7 @@ from django.utils import timezone
 from notifications.models import Notification
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, \
-    FamilyNote, CAN_EDIT
+from seqr.models import Project, Family, Individual, Sample, FamilyNote, CAN_EDIT
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
@@ -232,7 +231,7 @@ def project_overview(request, project_guid):
         'samplesByGuid': samples_by_guid,
     }
 
-    add_project_tag_types(response['projectsByGuid'])
+    response['familyTagTypeCounts'] = add_project_tag_types(response['projectsByGuid'], add_counts=True)
 
     project_mme_submissions = MatchmakerSubmission.objects.filter(individual__family__project=project)
 
@@ -241,8 +240,6 @@ def project_overview(request, project_guid):
         'mmeSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=True).count(),
         'mmeDeletedSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=False).count(),
     })
-
-    response['familyTagTypeCounts'] = _add_tag_type_counts(project, project_json['variantTagTypes'])
 
     return create_json_response(response)
 
@@ -377,41 +374,6 @@ def subscribe_project_notifications(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
     request.user.groups.add(project.subscribers)
     return create_json_response({'isSubscriber': True})
-
-
-def _add_tag_type_counts(project, project_variant_tags):
-    project_tags = VariantTag.objects.filter(saved_variants__family__project=project)
-    project_notes = VariantNote.objects.filter(saved_variants__family__project=project)
-
-    family_tag_type_counts = defaultdict(dict)
-    note_tag_type = {
-        'variantTagTypeGuid': 'notes',
-        'name': 'Has Notes',
-        'category': 'Notes',
-        'description': '',
-        'color': 'grey',
-        'order': 100,
-        'numTags': project_notes.aggregate(count=Count('saved_variants__guid', distinct=True))['count'],
-    }
-
-    mme_counts_by_family = project_tags.filter(saved_variants__matchmakersubmissiongenes__isnull=False) \
-        .values('saved_variants__family__guid').annotate(count=Count('saved_variants__guid', distinct=True))
-
-    tag_counts_by_type_and_family = project_tags.values(
-        'saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))
-    for tag_type in project_variant_tags:
-        current_tag_type_counts = mme_counts_by_family if tag_type['name'] == MME_TAG_NAME else [
-            counts for counts in tag_counts_by_type_and_family if counts['variant_tag_type__name'] == tag_type['name']
-        ]
-        num_tags = sum(count['count'] for count in current_tag_type_counts)
-        tag_type.update({
-            'numTags': num_tags,
-        })
-        for count in current_tag_type_counts:
-            family_tag_type_counts[count['saved_variants__family__guid']].update({tag_type['name']: count['count']})
-
-    project_variant_tags.append(note_tag_type)
-    return family_tag_type_counts
 
 
 def _delete_project(project_guid, user):

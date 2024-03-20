@@ -906,6 +906,7 @@ def import_gregor_metadata(request, project_guid):
         # TODO shared constants
         family_variant_data[key] = {
             **row,
+            'pos': int(row['pos']),
             'transcript': {'transcriptId': row['transcript'], 'hgvsc': row['hgvsc'], 'hgvsp': row['hgvsp']},
             'genotypes': {individual['guid']: {'numAlt': 2 if row['zygosity'] == 'Homozygous' else 1}},
             'support_vars': [],
@@ -927,11 +928,9 @@ def import_gregor_metadata(request, project_guid):
         ]}
     )
     info.append(f'Loaded {num_new} new and {num_updated} updated findings tags')
-    # TODO tag response
-    response_json['projectsByGuid'] = {project_guid: {
-        'variantTagTypes': [],
-        'familyTagTypeCounts': {},
-    }}
+
+    response_json['projectsByGuid'] = {project_guid: {}}
+    response_json['familyTagTypeCounts'] = add_project_tag_types(response_json['projectsByGuid'], add_counts=True)
 
     response_json['importStats'] = {'gregorMetadata': {'info': info, 'warnings': warnings}}
     return create_json_response(response_json)
