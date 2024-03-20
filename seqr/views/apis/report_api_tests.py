@@ -616,7 +616,7 @@ class ReportAPITest(AirtableTest):
             '1_248367227_HG00731', 'HG00731', 'HG00731', 'RP11', 'Known', 'paternal',
             'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-'], discovery_file)
         self.assertIn([
-            '21_3343353_NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Known', 'de novo',
+            '21_3343353_NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
             '-', '-', '-', '-'], discovery_file)
         self.assertIn([
@@ -993,7 +993,7 @@ class ReportAPITest(AirtableTest):
         ])
         self.assertIn([
             'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'SNV/INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
-            'RP11', 'ENST00000258436', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '', 'Known',
+            'RP11', 'ENST00000258436', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '', 'Candidate',
             'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120', 'Autosomal recessive|X-linked',
             'Full', '', '', 'SR-ES', '',
         ], genetic_findings_file)
@@ -1006,12 +1006,12 @@ class ReportAPITest(AirtableTest):
             self.assertIn([
                 'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '248367227', 'TC', 'T',
                 '', 'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown',
-                'Broad_NA20889_1_249045487', '', 'Known', 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant',
+                'Broad_NA20889_1_249045487', '', 'Candidate', 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant',
                 'Full', '', '', 'SR-ES', '',
             ], genetic_findings_file)
             self.assertIn([
                 'Broad_NA20889_1_249045487', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '249045487', 'A', 'G', '',
-                'OR4G11P', '', '', '', 'Heterozygous', '', 'unknown', 'Broad_NA20889_1_248367227', '', 'Known',
+                'OR4G11P', '', '', '', 'Heterozygous', '', 'unknown', 'Broad_NA20889_1_248367227', '', 'Candidate',
                 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant', 'Full', '', '', 'SR-ES', '',
             ], genetic_findings_file)
 
@@ -1225,7 +1225,7 @@ class ReportAPITest(AirtableTest):
             'family_history': 'Yes',
             'gene': 'OR4G11P',
             'gene_id': 'ENSG00000240361',
-            'gene_known_for_phenotype': 'Known',
+            'gene_known_for_phenotype': 'Candidate',
             'genetic_findings_id': 'NA20889_1_248367227',
             'hgvsc': 'c.3955G>A',
             'hgvsp': 'c.1586-17C>G',
@@ -1253,7 +1253,7 @@ class ReportAPITest(AirtableTest):
             'family_history': 'Yes',
             'gene': None,
             'gene_id': None,
-            'gene_known_for_phenotype': 'Known',
+            'gene_known_for_phenotype': 'Candidate',
             'genetic_findings_id': 'NA20889_1_249045487',
             'participant_id': 'NA20889',
             'pos': 249045487,
