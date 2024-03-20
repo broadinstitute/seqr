@@ -13,7 +13,8 @@ from seqr.models import Individual, Sample
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
-    get_hpo_terms, get_individual_rna_seq_data
+    get_hpo_terms, get_individual_rna_seq_data, import_gregor_metadata
+from seqr.views.apis.report_api_tests import PARTICIPANT_TABLE, PHENOTYPE_TABLE, EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, GENETIC_FINDINGS_TABLE
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, INDIVIDUAL_FIELDS, \
     INDIVIDUAL_CORE_FIELDS, CORE_INTERNAL_INDIVIDUAL_FIELDS
 
@@ -998,6 +999,48 @@ class IndividualAPITest(object):
         response = self.client.post(url, data={'f': f})
         self._is_expected_individuals_metadata_upload(response)
 
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_import_gregor_metadata(self, mock_subprocess):
+        mock_subprocess.return_value.wait.return_value = 1
+        mock_subprocess.return_value.stdout.__iter__.side_effect = [
+            iter(['\t'.join(row).encode() for row in file]) for file in [
+                EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, PHENOTYPE_TABLE, PARTICIPANT_TABLE, GENETIC_FINDINGS_TABLE,
+            ]
+        ]
+
+        url = reverse(import_gregor_metadata, args=[PM_REQUIRED_PROJECT_GUID])
+        self.check_pm_login(url)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'workspaceNamespace': 'my-seqr-billing', 'workspaceName': 'anvil-1kg project nåme with uniçøde',
+        }))
+        import pdb; pdb.set_trace()
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {
+            'importStats', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'familyTagTypeCounts',
+        })
+        self.assertDictEqual(response_json['importStats'], {
+            'warnings': [
+
+            ], 'info': [
+                '2 individuals will be updated',
+                '0 individuals will be added',
+            ],
+        })
+
+        # TODO test rest os response
+
+        # TODO test db models
+
+        # TODO test gsutil calls
+        # mock_subprocess.assert_has_calls([
+        #     mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
+        #     mock.call().wait(),
+        #     mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
+        #     mock.call().wait(),
+        # ])
+
     def test_get_hpo_terms(self):
         url = reverse(get_hpo_terms, args=['HP:0011458'])
         self.check_require_login(url)
@@ -1086,6 +1129,10 @@ class IndividualAPITest(object):
 class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
     HAS_EXTERNAL_PROJECT_ACCESS = False
+
+    def test_import_gregor_metadata(self, *args):
+        # Importing gregor metadata does not work in local environment
+        pass
 
 
 class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
