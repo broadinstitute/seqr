@@ -13,7 +13,7 @@ from seqr.models import Individual, Family, CAN_VIEW
 from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from seqr.views.utils.anvil_metadata_utils import PARTICIPANT_TABLE, PHENOTYPE_TABLE, EXPERIMENT_TABLE, \
-    EXPERIMENT_LOOKUP_TABLE, ANCESTRY_MAP, FINDINGS_TABLE, FINDING_METADATA_COLUMNS, ANCESTRY_DETAIL_MAP, ETHNICITY_MAP
+    EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, FINDING_METADATA_COLUMNS, TRANSCRIPT_FIELDS, parse_population
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file, parse_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
@@ -845,7 +845,7 @@ def import_gregor_metadata(request, project_guid):
     individuals_by_participant = {row['participant_id']: {
         JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup.get(row['participant_id'], row['participant_id']),
         **dict([_parse_participant_val(k, v, participant_sample_lookup) for k, v in row.items()]),
-        'population': _get_population(row),
+        'population': parse_population(row),
         FEATURES_COL: [],
         ABSENT_FEATURES_COL: [],
     } for row in participant_rows if row['family_id'] in family_ids}
@@ -898,13 +898,12 @@ def import_gregor_metadata(request, project_guid):
         variant_id = '-'.join([row[col] for col in ['chrom', 'pos', 'ref', 'alt']])
         key = (individual['family_id'], variant_id)
         variant = {k: v for k, v in row.items() if v and v != 'NA'}
-        # TODO shared constants
         variant.update({
             'pos': int(variant['pos']),
             'genomeVersion': variant['variant_reference_assembly'].replace('GRCh', ''),
             'transcripts': {},
             'transcript': {
-                'transcriptId': variant.get('transcript'), 'hgvsc': variant.pop('hgvsc', None), 'hgvsp': variant.pop('hgvsp', None),
+                config.get('seqr_field', k): variant.pop(k, None) for k, config in TRANSCRIPT_FIELDS.items()
             },
             'genotypes': {individual['guid']: {'numAlt': 2 if variant['zygosity'] == 'Homozygous' else 1}},
             'support_vars': [],
@@ -966,9 +965,6 @@ ENUM_COLUMNS = {
         (JsonConstants.PROBAND_RELATIONSHIP, Individual.RELATIONSHIP_CHOICES),
     ]
 }
-ANCESTRY_LOOKUP = {v: k for k, v in ANCESTRY_MAP.items() if k not in ANCESTRY_DETAIL_MAP}
-ANCESTRY_DETAIL_LOOKUP = {v: k for k, v in ANCESTRY_DETAIL_MAP.items() if v != 'Other'}
-ETHNICITY_LOOKUP = {v: k for k, v in ETHNICITY_MAP.items()}
 
 
 def _parse_participant_val(column, value, participant_sample_lookup):
@@ -981,26 +977,6 @@ def _parse_participant_val(column, value, participant_sample_lookup):
         elif value in participant_sample_lookup:
             value = participant_sample_lookup[value]
     return column, value
-
-
-def _get_population(row):
-    # TODO shared logic
-    if row['reported_ethnicity'] in ETHNICITY_LOOKUP:
-        return ETHNICITY_LOOKUP[row['reported_ethnicity']]
-
-    detail = row['ancestry_detail'].title()
-    race = row['reported_race']
-    if not (detail or race):
-        return ''
-    if race == 'Asian':
-        # seqr subdivides asian so need to determine which subpopulation to assign
-        is_south_asian = detail and ('south' in detail.lower() or 'india' in detail.lower())
-        detail = 'South Asian' if is_south_asian else 'East Asian'
-
-    if detail in ANCESTRY_DETAIL_LOOKUP:
-        return ANCESTRY_DETAIL_LOOKUP[detail]
-
-    return ANCESTRY_LOOKUP[race]
 
 
 @login_and_policies_required
