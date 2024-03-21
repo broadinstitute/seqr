@@ -948,7 +948,7 @@ VARIANTS = [
         'xpos': 1248367227,
         'genomeVersion': '37',
         'liftedOverGenomeVersion': '',
-        'variantId': '12-48367227-TC-T',
+        'variantId': '1-248367227-TC-T',
         'transcripts': {'ENSG00000233653': {}},
         'familyGuids': ['F000002_2'],
         'genotypes': {}
