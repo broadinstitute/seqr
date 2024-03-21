@@ -2,6 +2,11 @@ name: hail search dataset version release
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        type: choice
+        options: 
+        - dev
+        - prod
       reference_genome:
         type: choice
         description: Reference Genome
@@ -38,7 +43,7 @@ jobs:
         uses: mikefarah/yq@v4.22.1
         with:
           cmd: >
-            yq -i '.global.hail_search.datasetVersions.${{ inputs.reference_genome }}/${{ inputs.dataset_type }} = "${{ inputs.version }}"' charts/broad-seqr/values.yaml
+            yq -i '.global.hail_search.datasetVersions.${{ inputs.reference_genome }}/${{ inputs.dataset_type }} = "${{ inputs.version }}"' charts/broad-seqr/values-${{ inputs.environment }}.yaml
 
       - name: Commit and Push changes
         uses: Andro999b/push@v1.3
