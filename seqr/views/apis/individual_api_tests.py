@@ -86,6 +86,11 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
     "individualId": UPDATED_MATERNAL_ID,
 }
 
+SKIPPED_GENE_GENETIC_FINDINGS_TABLE = deepcopy(GENETIC_FINDINGS_TABLE)
+SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2] = SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2][:10] + [
+    'PPX123'] + SKIPPED_GENE_GENETIC_FINDINGS_TABLE[3][11:14] + SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2][14:]
+
+
 @mock.patch('seqr.utils.middleware.DEBUG', False)
 class IndividualAPITest(object):
 
@@ -1004,7 +1009,7 @@ class IndividualAPITest(object):
         mock_subprocess.return_value.wait.return_value = 1
         mock_subprocess.return_value.stdout.__iter__.side_effect = [
             iter(['\t'.join(row).encode() for row in file]) for file in [
-                EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, GENETIC_FINDINGS_TABLE,
+                EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, SKIPPED_GENE_GENETIC_FINDINGS_TABLE,
             ]
         ]
 
