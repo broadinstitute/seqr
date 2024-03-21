@@ -90,10 +90,6 @@ LOAD_PARTICIPANT_TABLE = deepcopy(PARTICIPANT_TABLE)
 for row in LOAD_PARTICIPANT_TABLE[4:]:
     row[7] = row[7].replace('Broad_', '')
 
-SKIPPED_GENE_GENETIC_FINDINGS_TABLE = deepcopy(GENETIC_FINDINGS_TABLE)
-SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2] = SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2][:11] + \
-    SKIPPED_GENE_GENETIC_FINDINGS_TABLE[3][11:14] + SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2][14:]
-
 
 @mock.patch('seqr.utils.middleware.DEBUG', False)
 class IndividualAPITest(object):
@@ -1008,34 +1004,42 @@ class IndividualAPITest(object):
         response = self.client.post(url, data={'f': f})
         self._is_expected_individuals_metadata_upload(response)
 
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_import_gregor_metadata(self, mock_subprocess):
-        mock_subprocess.return_value.wait.return_value = 1
+
+    def _set_metadata_file_iter(self, mock_subprocess, genetic_findings_table):
         mock_subprocess.return_value.stdout.__iter__.side_effect = [
             iter(['\t'.join(row).encode() for row in file]) for file in [
                 EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, LOAD_PARTICIPANT_TABLE, PHENOTYPE_TABLE,
-                SKIPPED_GENE_GENETIC_FINDINGS_TABLE,
+                genetic_findings_table,
             ]
         ]
+
+
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_import_gregor_metadata(self, mock_subprocess):
+        genetic_findings_table = deepcopy(GENETIC_FINDINGS_TABLE)
+        genetic_findings_table[2] = genetic_findings_table[2][:11] + genetic_findings_table[3][11:14] + \
+                                    genetic_findings_table[2][14:]
+        self._set_metadata_file_iter(mock_subprocess, genetic_findings_table)
 
         url = reverse(import_gregor_metadata, args=[PM_REQUIRED_PROJECT_GUID])
         self.check_pm_login(url)
 
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
+        body = {
             'workspaceNamespace': 'my-seqr-billing', 'workspaceName': 'anvil-1kg project nåme with uniçøde',
             'sampleType': 'exome',
-        }))
+        }
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
             'importStats', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'familyTagTypeCounts',
         })
-        self.maxDiff = None  # TODO
+        warnings = [
+            'Broad_HG00733 is the mother of VCGS_FAM203_621_D2 but is not included',
+            'Skipped the following unrecognized HPO terms: HP:0001509',
+        ]
         self.assertDictEqual(response_json['importStats'], {'gregorMetadata': {
-            'warnings': [
-                'Broad_HG00733 is the mother of VCGS_FAM203_621_D2 but is not included',
-                'Skipped the following unrecognized HPO terms: HP:0001509',
-            ], 'info': [
+            'warnings': warnings, 'info': [
                 'Imported 4 individuals',
                 'Created 1 new families, 3 new individuals',
                 'Updated 1 existing families, 1 existing individuals',
@@ -1172,6 +1176,7 @@ class IndividualAPITest(object):
             'saved_variant_json__mainTranscriptId': None,
             'saved_variant_json__hgvsc': None,
         })
+        new_family_genotypes = {new_family_individual_guid: {'numAlt': 2}}
         self.assertDictEqual(saved_variants[2], {
             'guid': mock.ANY,
             'variant_id': '1-248367227-TC-T',
@@ -1181,7 +1186,7 @@ class IndividualAPITest(object):
             'saved_variant_json__transcripts': {
                 'ENSG00000135953': [{'hgvsc': 'c.3955G>A', 'hgvsp': 'c.1586-17C>G', 'transcriptId': 'ENST00000505820'}]
             },
-            'saved_variant_json__genotypes':  {new_family_individual_guid: {'numAlt': 2}},
+            'saved_variant_json__genotypes': new_family_genotypes,
             'saved_variant_json__mainTranscriptId': 'ENST00000505820',
             'saved_variant_json__hgvsc': None,
         })
@@ -1211,18 +1216,43 @@ class IndividualAPITest(object):
             json.loads(new_family_tag.metadata), {'gene_known_for_phenotype': 'Known', 'condition_id': 'MONDO:0044970'},
         )
 
-        # TODO test gsutil calls
         mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
-            mock.call().wait(),
-            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
-            mock.call().wait(),
+            mock.call('gsutil cat gs://test_bucket/data_tables/experiment_dna_short_read.tsv', stdout=-1, stderr=-2, shell=True),
+            mock.call().stdout.__iter__(),
+            mock.call('gsutil cat gs://test_bucket/data_tables/experiment.tsv', stdout=-1, stderr=-2, shell=True),
+            mock.call().stdout.__iter__(),
+            mock.call('gsutil cat gs://test_bucket/data_tables/participant.tsv', stdout=-1, stderr=-2, shell=True),
+            mock.call().stdout.__iter__(),
+            mock.call('gsutil cat gs://test_bucket/data_tables/phenotype.tsv', stdout=-1, stderr=-2, shell=True),
+            mock.call().stdout.__iter__(),
+            mock.call('gsutil cat gs://test_bucket/data_tables/genetic_findings.tsv', stdout=-1, stderr=-2, shell=True),
+            mock.call().stdout.__iter__(),
         ])
 
-        # TODO test rerunning
-        # TODO invalid_gene_row = deepcopy(SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2])
-        # invalid_gene_row[11] = 'PPX123'
-        # 'The following unknown genes were omitted in the findings tags: PPX123',
+        # Test behavior on reload
+        SavedVariant.objects.get(guid=saved_variants[2]['guid']).delete()
+        genetic_findings_table[2][10] = 'PPX123'
+        self._set_metadata_file_iter(mock_subprocess, genetic_findings_table)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        warnings.append('The following unknown genes were omitted in the findings tags: PPX123')
+        self.assertDictEqual(response_json['importStats'], {'gregorMetadata': {
+            'warnings': warnings, 'info': [
+                'Imported 4 individuals',
+                'Created 0 new families, 0 new individuals',
+                'Updated 0 existing families, 0 existing individuals',
+                'Skipped 4 unchanged individuals',
+                'Loaded 1 new and 2 updated findings tags',
+            ],
+        }})
+        self.assertDictEqual(response_json['individualsByGuid'], {})
+
+        no_gene_saved_variant_json = SavedVariant.objects.get(family__guid=new_family_guid).saved_variant_json
+        self.assertDictEqual(no_gene_saved_variant_json['transcripts'], {})
+        self.assertDictEqual(no_gene_saved_variant_json['genotypes'], new_family_genotypes)
+        self.assertNotIn('mainTranscriptId', no_gene_saved_variant_json)
+        self.assertNotIn('hgvsc', no_gene_saved_variant_json)
 
     def test_get_hpo_terms(self):
         url = reverse(get_hpo_terms, args=['HP:0011458'])
