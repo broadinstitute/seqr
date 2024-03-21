@@ -113,7 +113,7 @@ def saved_variants_dataset_type_filter(dataset_type):
     return dataset_filter
 
 
-def parse_saved_variant_json(variant_json, family, variant_id=None, use_family_id=False):
+def parse_saved_variant_json(variant_json, family_id, variant_id=None,):
     if 'xpos' not in variant_json:
         variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
     xpos = variant_json['xpos']
@@ -126,7 +126,7 @@ def parse_saved_variant_json(variant_json, family, variant_id=None, use_family_i
         'xpos_end': xpos + var_length,
         'ref': ref,
         'alt': alt,
-        'family_id' if use_family_id else 'family': family,  # TODO clean up?
+        'family_id': family_id,
         'variant_id': variant_json.get('variantId', variant_id),
     }, update_json
 
@@ -147,8 +147,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
         }
         new_variant_models = []
         for (family_id, variant_id), variant in new_variant_data.items():
-            create_json, update_json = parse_saved_variant_json(
-                variant, family_id, variant_id=variant_id, use_family_id=True)
+            create_json, update_json = parse_saved_variant_json(variant, family_id, variant_id=variant_id)
             variant_model = SavedVariant(**create_json, **update_json)
             variant_model.guid = f'SV{str(variant_model)}'[:SavedVariant.MAX_GUID_SIZE]
             new_variant_models.append(variant_model)

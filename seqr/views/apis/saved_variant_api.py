@@ -62,7 +62,7 @@ def create_saved_variant_handler(request):
     saved_variant_guids = []
     for single_variant_json in variants_json:
         try:
-            create_json, update_json = parse_saved_variant_json(single_variant_json, family)
+            create_json, update_json = parse_saved_variant_json(single_variant_json, family.id)
         except ValueError as e:
             return create_json_response({'error': str(e)}, status=400)
         saved_variant, _ = get_or_create_model_from_json(
