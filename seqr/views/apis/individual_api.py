@@ -850,7 +850,6 @@ def import_gregor_metadata(request, project_guid):
         ABSENT_FEATURES_COL: [],
     } for row in participant_rows if row['family_id'] in family_ids}
     individuals = individuals_by_participant.values()
-    import pdb; pdb.set_trace()
 
     warnings = validate_fam_file_records(project, individuals, clear_invalid_values=True)
 
@@ -996,7 +995,7 @@ def _get_population(row):
 
     detail = row['ancestry_detail'].title()
     race = row['reported_race']
-    if not detail or race:
+    if not (detail or race):
         return ''
     if race == 'Asian':
         # seqr subdivides asian so need to determine which subpopulation to assign

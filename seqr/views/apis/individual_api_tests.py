@@ -1074,6 +1074,7 @@ class IndividualAPITest(object):
         self.assertIn('I000016_na20888', response_json['individualsByGuid'])
 
         # TODO test saved variant/ tag models
+        # TODO add a prent to test relationship, also test plain ancestry lookup
         self.maxDiff = None
         individual_db_data = Individual.objects.filter(
             guid__in=response_json['individualsByGuid']).order_by('individual_id').values(
@@ -1087,7 +1088,7 @@ class IndividualAPITest(object):
             'affected': 'A',
             'sex': 'F',
             'proband_relationship': 'S',
-            'population': '',  # TODO
+            'population': 'ASJ',
             'features': [{'id': 'HP:0011675'}],
             'absent_features': [],
             'case_review_status': 'I',
@@ -1099,7 +1100,7 @@ class IndividualAPITest(object):
             'affected': 'A',
             'sex': 'M',
             'proband_relationship': '',
-            'population': '', # TODO
+            'population': 'SAS',
             'features': [],
             'absent_features': [],
             'case_review_status': 'G',
