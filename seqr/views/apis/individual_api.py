@@ -839,39 +839,39 @@ def import_gregor_metadata(request, project_guid):
             lambda r: r['id_in_table'] in experiment_sample_lookup and r['table_name'] == 'experiment_dna_short_read',
         )
     }
-    participant_feature_lookup = defaultdict(lambda: {FEATURES_COL: [], ABSENT_FEATURES_COL: []})
-    for row in _iter_metadata_table(
-        metadata_files_path, 'phenotype', request.user,
-        lambda r: r['participant_id'] in participant_sample_lookup and r['ontology'] == 'HPO' and r['presence'] in {'Present', 'Absent'},
-    ):
-        col = FEATURES_COL if row['presence'] == 'Present' else ABSENT_FEATURES_COL
-        participant_feature_lookup[row['participant_id']][col].append(row['term_id'])
-
-    warnings = []
-    hpo_terms = _get_valid_hpo_terms(participant_feature_lookup.values())
-    invalid_hpo_terms = set()
-    for row in participant_feature_lookup.values():
-        invalid_hpo_terms.update(_remove_invalid_hpo_terms(row, hpo_terms))
-    if invalid_hpo_terms:
-        warnings.append(f"Skipped the following unrecognized HPO terms: {', '.join(sorted(invalid_hpo_terms))}")
 
     asian_populations = set()
     participant_rows = list(_iter_metadata_table(metadata_files_path, 'participant', request.user, lambda r: True))
     family_ids = {row['family_id'] for row in participant_rows if row['participant_id'] in participant_sample_lookup}
     individuals_by_participant = {row['participant_id']: {
         JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup.get(row['participant_id'], row['participant_id']),
-        **{k: INDIVIDUAL_METADATA_FIELDS[k](v) for k, v in participant_feature_lookup[row['participant_id']].items()},
         **dict([_parse_participant_val(k, v, participant_sample_lookup) for k, v in row.items()]),
         'population': _get_population(row, asian_populations),
+        FEATURES_COL: [],
+        ABSENT_FEATURES_COL: [],
     } for row in participant_rows if row['family_id'] in family_ids}
     individuals = individuals_by_participant.values()
 
+    warnings = validate_fam_file_records(project, individuals, clear_invalid_values=True)
     if asian_populations:
         details = ','.join(sorted(asian_populations))
         warnings.append(
             f'Assigned individuals of "Asian" reported_race and the following ancestry_detail as "East Asian": {details}'
         )
-    warnings += validate_fam_file_records(project, individuals, clear_invalid_values=True)
+
+    for row in _iter_metadata_table(
+        metadata_files_path, 'phenotype', request.user,
+        lambda r: r['participant_id'] in individuals_by_participant and r['ontology'] == 'HPO' and r['presence'] in {'Present', 'Absent'},
+    ):
+        col = FEATURES_COL if row['presence'] == 'Present' else ABSENT_FEATURES_COL
+        individuals_by_participant[row['participant_id']][col].append(row['term_id'])
+    hpo_terms = _get_valid_hpo_terms(individuals)
+    invalid_hpo_terms = set()
+    for row in individuals:
+        invalid_hpo_terms.update(_remove_invalid_hpo_terms(row, hpo_terms))
+        row.update({k: INDIVIDUAL_METADATA_FIELDS[k](v) for k, v in row.items() if k in [FEATURES_COL, ABSENT_FEATURES_COL]})
+    if invalid_hpo_terms:
+        warnings.append(f"Skipped the following unrecognized HPO terms: {', '.join(sorted(invalid_hpo_terms))}")
 
     response_json, num_created_families, num_created_individuals = add_or_update_individuals_and_families(
         project, individuals, request.user, get_created_counts=True, allow_features_update=True,

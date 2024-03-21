@@ -1004,7 +1004,7 @@ class IndividualAPITest(object):
         mock_subprocess.return_value.wait.return_value = 1
         mock_subprocess.return_value.stdout.__iter__.side_effect = [
             iter(['\t'.join(row).encode() for row in file]) for file in [
-                EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, PHENOTYPE_TABLE, PARTICIPANT_TABLE, GENETIC_FINDINGS_TABLE,
+                EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, GENETIC_FINDINGS_TABLE,
             ]
         ]
 
