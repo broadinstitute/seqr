@@ -531,7 +531,7 @@ PARTICIPANT_TABLE = [
         '0', '', '', '', 'Male', '', '', '', '', '', 'Affected', '', '', 'Solved', 'No',
     ], [
         'Broad_NA20888', 'Broad_Test Reprocessed Project', 'BROAD', 'HMB', 'No', '', '', 'Broad_12', '0', '0', '', '',
-        '', 'Male', '', '', '', '', '', 'Affected', '', '', 'Unsolved', 'No',
+        '', 'Male', '', 'Asian', '', 'South Asian', '', 'Affected', '', '', 'Unsolved', 'No',
     ], [
         'Broad_NA20889', 'Broad_Test Reprocessed Project', 'BROAD', 'HMB', '', '', '', 'Broad_12', '0', '0', '', 'Self',
         '', 'Female', '', 'White', '', 'Ashkenazi Jewish', '', 'Affected', '', '', 'Unsolved', 'No',
@@ -882,6 +882,7 @@ class ReportAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         expected_response['info'][0] = expected_response['info'][0].replace('9', '10')
         expected_response['warnings'][0] = expected_response['warnings'][0] + ', Broad_NA20885, Broad_NA20889'
+        expected_response['warnings'][1] = expected_response['warnings'][1].replace(', Broad_NA20888', '')
         expected_response['warnings'][2] = expected_response['warnings'][2].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
         expected_response['warnings'][3] = expected_response['warnings'][3].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
         self.assertDictEqual(response.json(), expected_response)
@@ -912,7 +913,7 @@ class ReportAPITest(AirtableTest):
         expected_row = PARTICIPANT_TABLE[4]
         if not has_second_project:
             expected_row = expected_row[:1] + ['Broad_1kg project nme with unide'] + expected_row[2:7] + [
-                'Broad_8'] + expected_row[8:13] + ['Female'] + expected_row[14:]
+                'Broad_8'] + expected_row[8:13] + ['Female', '', '', '', ''] + expected_row[18:]
         self.assertListEqual(expected_row, multi_data_type_row)
         self.assertEqual(PARTICIPANT_TABLE[5] in participant_file, has_second_project)
 

@@ -840,24 +840,18 @@ def import_gregor_metadata(request, project_guid):
         )
     }
 
-    asian_populations = set()
     participant_rows = list(_iter_metadata_table(metadata_files_path, 'participant', request.user, lambda r: True))
     family_ids = {row['family_id'] for row in participant_rows if row['participant_id'] in participant_sample_lookup}
     individuals_by_participant = {row['participant_id']: {
         JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup.get(row['participant_id'], row['participant_id']),
         **dict([_parse_participant_val(k, v, participant_sample_lookup) for k, v in row.items()]),
-        'population': _get_population(row, asian_populations),
+        'population': _get_population(row),
         FEATURES_COL: [],
         ABSENT_FEATURES_COL: [],
     } for row in participant_rows if row['family_id'] in family_ids}
     individuals = individuals_by_participant.values()
 
     warnings = validate_fam_file_records(project, individuals, clear_invalid_values=True)
-    if asian_populations:
-        details = ','.join(sorted(asian_populations))
-        warnings.append(
-            f'Assigned individuals of "Asian" reported_race and the following ancestry_detail as "East Asian": {details}'
-        )
 
     for row in _iter_metadata_table(
         metadata_files_path, 'phenotype', request.user,
@@ -994,7 +988,7 @@ def _parse_participant_val(column, value, participant_sample_lookup):
     return column, value
 
 
-def _get_population(row, asian_populations):
+def _get_population(row):
     # TODO shared logic
     if row['reported_ethnicity'] in ETHNICITY_LOOKUP:
         return ETHNICITY_LOOKUP[row['reported_ethnicity']]
@@ -1007,8 +1001,6 @@ def _get_population(row, asian_populations):
         # seqr subdivides asian so need to determine which subpopulation to assign
         is_south_asian = detail and ('south' in detail.lower() or 'india' in detail.lower())
         detail = 'South Asian' if is_south_asian else 'East Asian'
-        if detail and not is_south_asian:
-            asian_populations.add(detail)
 
     if detail in ANCESTRY_DETAIL_LOOKUP:
         return ANCESTRY_DETAIL_LOOKUP[detail]

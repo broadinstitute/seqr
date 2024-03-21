@@ -798,6 +798,7 @@
         "individual_id": "NA20888",
         "mother_id": null,
         "father_id": null,
+        "population": "SAS",
         "sex": "M",
         "affected": "A",
         "display_name": "",
