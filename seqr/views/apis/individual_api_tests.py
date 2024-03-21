@@ -1004,7 +1004,6 @@ class IndividualAPITest(object):
         response = self.client.post(url, data={'f': f})
         self._is_expected_individuals_metadata_upload(response)
 
-
     def _set_metadata_file_iter(self, mock_subprocess, genetic_findings_table):
         mock_subprocess.return_value.stdout.__iter__.side_effect = [
             iter(['\t'.join(row).encode() for row in file]) for file in [
@@ -1013,7 +1012,7 @@ class IndividualAPITest(object):
             ]
         ]
 
-
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_import_gregor_metadata(self, mock_subprocess):
         genetic_findings_table = deepcopy(GENETIC_FINDINGS_TABLE)
