@@ -86,6 +86,10 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
     "individualId": UPDATED_MATERNAL_ID,
 }
 
+LOAD_PARTICIPANT_TABLE = deepcopy(PARTICIPANT_TABLE)
+for row in LOAD_PARTICIPANT_TABLE[4:]:
+    row[7] = row[7].replace('Broad_', '')
+
 SKIPPED_GENE_GENETIC_FINDINGS_TABLE = deepcopy(GENETIC_FINDINGS_TABLE)
 SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2] = SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2][:10] + [
     'PPX123'] + SKIPPED_GENE_GENETIC_FINDINGS_TABLE[3][11:14] + SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2][14:]
@@ -1009,7 +1013,8 @@ class IndividualAPITest(object):
         mock_subprocess.return_value.wait.return_value = 1
         mock_subprocess.return_value.stdout.__iter__.side_effect = [
             iter(['\t'.join(row).encode() for row in file]) for file in [
-                EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, SKIPPED_GENE_GENETIC_FINDINGS_TABLE,
+                EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, LOAD_PARTICIPANT_TABLE, PHENOTYPE_TABLE,
+                SKIPPED_GENE_GENETIC_FINDINGS_TABLE,
             ]
         ]
 
@@ -1025,7 +1030,6 @@ class IndividualAPITest(object):
         self.assertSetEqual(set(response_json.keys()), {
             'importStats', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'familyTagTypeCounts',
         })
-        self.maxDiff = None  # TODO
         self.assertDictEqual(response_json['importStats'], {'gregorMetadata': {
             'warnings': [
                 'Broad_HG00732 is the father of VCGS_FAM203_621_D2 but is not included',
@@ -1034,15 +1038,12 @@ class IndividualAPITest(object):
                 'The following unknown genes were omitted in the findings tags: PPX123',
             ], 'info': [
                 'Imported 3 individuals',
-                'Created 2 new families, 2 new individuals',
+                'Created 1 new families, 2 new individuals',
                 'Updated 1 existing families, 1 existing individuals',
                 'Skipped 0 unchanged individuals',
                 'Loaded 3 new and 0 updated findings tags',
             ],
         }})
-
-        self.assertEqual(len(response_json['familiesByGuid']), 2)
-        self.assertEqual(len(response_json['individualsByGuid']), 3)
 
         self.assertDictEqual(response_json['projectsByGuid'], {
             PM_REQUIRED_PROJECT_GUID: {'variantTagTypes': mock.ANY, 'variantFunctionalTagTypes': mock.ANY},
@@ -1058,9 +1059,63 @@ class IndividualAPITest(object):
             'numTags': 4,
         })
 
-        # TODO test rest os response
+        self.assertEqual(len(response_json['familiesByGuid']), 2)
+        self.assertIn('F000012_12', response_json['familiesByGuid'])
+        new_family_guid = next(k for k in response_json['familiesByGuid'] if k != 'F000012_12')
+        self.assertEqual(response_json['familiesByGuid'][new_family_guid]['familyId'], 'Broad_2')
+        # TODO test family coded phenotype
 
-        # TODO test db models
+        self.assertDictEqual(response_json['familyTagTypeCounts'], {
+            'F000012_12': {'GREGoR Finding': 3, 'MME Submission': 2, 'Tier 1 - Novel gene and phenotype': 1},
+            new_family_guid: {'GREGoR Finding': 1},
+        })
+
+        self.assertEqual(len(response_json['individualsByGuid']), 3)
+        self.assertIn('I000016_na20888', response_json['individualsByGuid'])
+
+        # TODO test saved variant/ tag models
+        self.maxDiff = None
+        individual_db_data = Individual.objects.filter(
+            guid__in=response_json['individualsByGuid']).order_by('individual_id').values(
+            'individual_id', 'display_name', 'family__guid', 'affected', 'sex', 'proband_relationship',
+            'population', 'features', 'absent_features', 'case_review_status',
+        )
+        self.assertDictEqual(individual_db_data[0], {
+            'individual_id': 'Broad_NA20889',
+            'display_name': '',
+            'family__guid': 'F000012_12',
+            'affected': 'A',
+            'sex': 'F',
+            'proband_relationship': 'S',
+            'population': '',  # TODO
+            'features': [{'id': 'HP:0011675'}],
+            'absent_features': [],
+            'case_review_status': 'I',
+        })
+        self.assertDictEqual(individual_db_data[1], {
+            'individual_id': 'NA20888',
+            'display_name': 'Broad_NA20888',
+            'family__guid': 'F000012_12',
+            'affected': 'A',
+            'sex': 'M',
+            'proband_relationship': '',
+            'population': '', # TODO
+            'features': [],
+            'absent_features': [],
+            'case_review_status': 'G',
+        })
+        self.assertDictEqual(individual_db_data[2], {
+            'individual_id': 'VCGS_FAM203_621_D2',
+            'display_name': 'Broad_HG00731',
+            'family__guid': new_family_guid,
+            'affected': 'A',
+            'sex': 'F',
+            'proband_relationship': 'S',
+            'population': 'AMR',
+            'features': [{'id': 'HP:0011675'}],
+            'absent_features': [{'id': 'HP:0002017'}],
+            'case_review_status': 'I',
+        })
 
         # TODO test gsutil calls
         # mock_subprocess.assert_has_calls([
