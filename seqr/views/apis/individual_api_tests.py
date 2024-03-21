@@ -1030,15 +1030,15 @@ class IndividualAPITest(object):
         self.assertSetEqual(set(response_json.keys()), {
             'importStats', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'familyTagTypeCounts',
         })
+        self.maxDiff = None  # TODO
         self.assertDictEqual(response_json['importStats'], {'gregorMetadata': {
             'warnings': [
-                'Broad_HG00732 is the father of VCGS_FAM203_621_D2 but is not included',
                 'Broad_HG00733 is the mother of VCGS_FAM203_621_D2 but is not included',
                 'Skipped the following unrecognized HPO terms: HP:0001509',
                 'The following unknown genes were omitted in the findings tags: PPX123',
             ], 'info': [
-                'Imported 3 individuals',
-                'Created 1 new families, 2 new individuals',
+                'Imported 4 individuals',
+                'Created 1 new families, 3 new individuals',
                 'Updated 1 existing families, 1 existing individuals',
                 'Skipped 0 unchanged individuals',
                 'Loaded 3 new and 0 updated findings tags',
@@ -1063,55 +1063,73 @@ class IndividualAPITest(object):
         self.assertIn('F000012_12', response_json['familiesByGuid'])
         new_family_guid = next(k for k in response_json['familiesByGuid'] if k != 'F000012_12')
         self.assertEqual(response_json['familiesByGuid'][new_family_guid]['familyId'], 'Broad_2')
-        # TODO test family coded phenotype
+        self.assertEqual(response_json['familiesByGuid'][new_family_guid]['codedPhenotype'], 'microcephaly; seizures')
 
         self.assertDictEqual(response_json['familyTagTypeCounts'], {
             'F000012_12': {'GREGoR Finding': 3, 'MME Submission': 2, 'Tier 1 - Novel gene and phenotype': 1},
             new_family_guid: {'GREGoR Finding': 1},
         })
 
-        self.assertEqual(len(response_json['individualsByGuid']), 3)
+        self.assertEqual(len(response_json['individualsByGuid']), 4)
         self.assertIn('I000016_na20888', response_json['individualsByGuid'])
 
         # TODO test saved variant/ tag models
-        # TODO add a prent to test relationship, also test plain ancestry lookup
-        self.maxDiff = None
         individual_db_data = Individual.objects.filter(
             guid__in=response_json['individualsByGuid']).order_by('individual_id').values(
-            'individual_id', 'display_name', 'family__guid', 'affected', 'sex', 'proband_relationship',
-            'population', 'features', 'absent_features', 'case_review_status',
+            'individual_id', 'display_name', 'family__guid', 'affected', 'sex', 'proband_relationship', 'population',
+            'mother__individual_id', 'father__individual_id', 'features', 'absent_features', 'case_review_status',
         )
         self.assertDictEqual(individual_db_data[0], {
+            'individual_id': 'Broad_HG00732',
+            'display_name': '',
+            'family__guid': new_family_guid,
+            'affected': 'N',
+            'sex': 'M',
+            'proband_relationship': 'F',
+            'mother__individual_id': None,
+            'father__individual_id': None,
+            'population': 'NFE',
+            'features': [],
+            'absent_features': [],
+            'case_review_status': 'I',
+        })
+        self.assertDictEqual(individual_db_data[1], {
             'individual_id': 'Broad_NA20889',
             'display_name': '',
             'family__guid': 'F000012_12',
             'affected': 'A',
             'sex': 'F',
             'proband_relationship': 'S',
+            'mother__individual_id': None,
+            'father__individual_id': None,
             'population': 'ASJ',
             'features': [{'id': 'HP:0011675'}],
             'absent_features': [],
             'case_review_status': 'I',
         })
-        self.assertDictEqual(individual_db_data[1], {
+        self.assertDictEqual(individual_db_data[2], {
             'individual_id': 'NA20888',
             'display_name': 'Broad_NA20888',
             'family__guid': 'F000012_12',
             'affected': 'A',
             'sex': 'M',
             'proband_relationship': '',
+            'mother__individual_id': None,
+            'father__individual_id': None,
             'population': 'SAS',
             'features': [],
             'absent_features': [],
             'case_review_status': 'G',
         })
-        self.assertDictEqual(individual_db_data[2], {
+        self.assertDictEqual(individual_db_data[3], {
             'individual_id': 'VCGS_FAM203_621_D2',
             'display_name': 'Broad_HG00731',
             'family__guid': new_family_guid,
             'affected': 'A',
             'sex': 'F',
             'proband_relationship': 'S',
+            'mother__individual_id': None,
+            'father__individual_id': 'Broad_HG00732',
             'population': 'AMR',
             'features': [{'id': 'HP:0011675'}],
             'absent_features': [{'id': 'HP:0002017'}],

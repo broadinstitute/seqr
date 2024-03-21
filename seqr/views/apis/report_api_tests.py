@@ -525,7 +525,11 @@ PARTICIPANT_TABLE = [
         'Middle Eastern or North African', '', '', '21', 'Affected', 'myopathy', '18', 'Unsolved', 'No',
     ], [
         'Broad_HG00731', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_2', 'Broad_HG00732',
-        'Broad_HG00733', '', 'Self', '', 'Female', '', '', 'Hispanic or Latino', 'Other', '', 'Affected', '', '', 'Unsolved', 'No',
+        'Broad_HG00733', '', 'Self', '', 'Female', '', '', 'Hispanic or Latino', 'Other', '', 'Affected',
+        'microcephaly; seizures', '', 'Unsolved', 'No',
+    ], [
+        'Broad_HG00732', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_2', '0', '0', '',
+        'Father', '', 'Male', '', 'White', '', '', '', 'Unaffected', 'microcephaly; seizures', '', 'Unaffected', 'No',
     ], [
         'Broad_NA20876', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_7', '0',
         '0', '', '', '', 'Male', '', '', '', '', '', 'Affected', '', '', 'Solved', 'No',
@@ -805,8 +809,8 @@ class ReportAPITest(AirtableTest):
 
         recommended_warnings = [
             'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
-            'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
-            'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
+            'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
+            'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "known_condition_name" in the "genetic_findings" table: Broad_HG00731_19_1912632, Broad_HG00731_19_1912633, Broad_HG00731_19_1912634, Broad_HG00731_1_248367227',
         ]
@@ -820,7 +824,7 @@ class ReportAPITest(AirtableTest):
         ] + [
             'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
         ] + [
-            'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00732, Broad_NA19678, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
+            'The following entries are missing required "proband_relationship" in the "participant" table: Broad_NA19678, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
             'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
             'The following entries have invalid values for "age_at_enrollment" in the "participant" table. Allowed values have data type date. Invalid values: Broad_NA19675_1 (18)',
             'The following entries have invalid values for "reference_assembly" (from Airtable) in the "aligned_dna_short_read" table. Allowed values have data type integer. Invalid values: NA20888 (GRCh38), VCGS_FAM203_621_D2 (GRCh38)',
@@ -908,9 +912,10 @@ class ReportAPITest(AirtableTest):
         hispanic_row = next(r for r in participant_file if r[0] == 'Broad_HG00731')
         self.assertListEqual(PARTICIPANT_TABLE[2], hispanic_row)
         solved_row = next(r for r in participant_file if r[0] == 'Broad_NA20876')
-        self.assertListEqual(PARTICIPANT_TABLE[3], solved_row)
+        self.assertIn(PARTICIPANT_TABLE[3], participant_file)
+        self.assertListEqual(PARTICIPANT_TABLE[4], solved_row)
         multi_data_type_row = next(r for r in participant_file if r[0] == 'Broad_NA20888')
-        expected_row = PARTICIPANT_TABLE[4]
+        expected_row = PARTICIPANT_TABLE[5]
         if not has_second_project:
             expected_row = expected_row[:1] + ['Broad_1kg project nme with unide'] + expected_row[2:7] + [
                 'Broad_8'] + expected_row[8:13] + ['Female', '', '', '', ''] + expected_row[18:]
@@ -1197,6 +1202,7 @@ class ReportAPITest(AirtableTest):
             'known_condition_name': 'mitochondrial disease',
             'participant_id': 'HG00731',
             'phenotype_contribution': 'Full',
+            'phenotype_description': 'microcephaly; seizures',
             'pos': 248367227,
             'projectGuid': 'R0001_1kg',
             'internal_project_id': '1kg project nåme with uniçøde',
@@ -1224,6 +1230,7 @@ class ReportAPITest(AirtableTest):
             'known_condition_name': 'mitochondrial disease',
             'notes': 'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
             'participant_id': 'HG00731',
+            'phenotype_description': 'microcephaly; seizures',
             'pos': 1912634,
             'projectGuid': 'R0001_1kg',
             'internal_project_id': '1kg project nåme with uniçøde',

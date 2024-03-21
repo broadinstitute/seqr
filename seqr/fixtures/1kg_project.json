@@ -148,6 +148,7 @@
         "description": "",
         "pedigree_image": "ped_2.png",
         "analysis_status": "Q",
+        "coded_phenotype": "microcephaly, seizures",
         "mondo_id": "MONDO:0044970",
         "case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
         "case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
@@ -556,6 +557,8 @@
         "sex": "M",
         "affected": "N",
         "display_name": "",
+        "population": "NFE",
+        "proband_relationship": "F",
 	"notes": "",
         "case_review_status": "R",
         "case_review_status_last_modified_date": null,
