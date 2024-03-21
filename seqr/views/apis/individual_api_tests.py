@@ -9,7 +9,7 @@ from django.urls.base import reverse
 from io import BytesIO
 from openpyxl import load_workbook
 
-from seqr.models import Individual, Sample, VariantTag
+from seqr.models import Individual, Sample, SavedVariant, VariantTag
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
@@ -91,8 +91,8 @@ for row in LOAD_PARTICIPANT_TABLE[4:]:
     row[7] = row[7].replace('Broad_', '')
 
 SKIPPED_GENE_GENETIC_FINDINGS_TABLE = deepcopy(GENETIC_FINDINGS_TABLE)
-SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2] = SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2][:10] + [
-    'PPX123'] + SKIPPED_GENE_GENETIC_FINDINGS_TABLE[3][11:14] + SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2][14:]
+SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2] = SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2][:11] + \
+    SKIPPED_GENE_GENETIC_FINDINGS_TABLE[3][11:14] + SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2][14:]
 
 
 @mock.patch('seqr.utils.middleware.DEBUG', False)
@@ -1035,7 +1035,6 @@ class IndividualAPITest(object):
             'warnings': [
                 'Broad_HG00733 is the mother of VCGS_FAM203_621_D2 but is not included',
                 'Skipped the following unrecognized HPO terms: HP:0001509',
-                'The following unknown genes were omitted in the findings tags: PPX123',
             ], 'info': [
                 'Imported 4 individuals',
                 'Created 1 new families, 3 new individuals',
@@ -1072,6 +1071,10 @@ class IndividualAPITest(object):
 
         self.assertEqual(len(response_json['individualsByGuid']), 4)
         self.assertIn('I000016_na20888', response_json['individualsByGuid'])
+        created_individual_guid = next(
+            k for k, v in response_json['individualsByGuid'].items() if v['individualId'] == 'Broad_NA20889')
+        new_family_individual_guid = next(
+            k for k, v in response_json['individualsByGuid'].items() if v['individualId'] == 'VCGS_FAM203_621_D2')
 
         individual_db_data = Individual.objects.filter(
             guid__in=response_json['individualsByGuid']).order_by('individual_id').values(
@@ -1135,9 +1138,78 @@ class IndividualAPITest(object):
             'case_review_status': 'I',
         })
 
-        # TODO test saved variant/ tag models
-        tags = VariantTag.objects.filter(varaint_tag_type__name='GREGoR Finding')
-        import pdb; pdb.set_trace()
+        saved_variants = SavedVariant.objects.filter(
+            varianttag__variant_tag_type__name='GREGoR Finding'
+        ).order_by('family_id', 'variant_id').distinct().values(
+            'guid', 'variant_id', 'xpos', 'family__guid', 'saved_variant_json__genomeVersion',
+            'saved_variant_json__transcripts', 'saved_variant_json__genotypes', 'saved_variant_json__mainTranscriptId',
+            'saved_variant_json__hgvsc',
+        )
+        self.assertEqual(len(saved_variants), 3)
+        self.assertDictEqual(saved_variants[0], {
+            'guid': 'SV0000006_1248367227_r0003_tes',
+            'variant_id': '1-248367227-TC-T',
+            'xpos': 1248367227,
+            'family__guid': 'F000012_12',
+            'saved_variant_json__genomeVersion': '37',
+            'saved_variant_json__transcripts': mock.ANY,
+            'saved_variant_json__genotypes': mock.ANY,
+            'saved_variant_json__mainTranscriptId': 'ENST00000505820',
+            'saved_variant_json__hgvsc': None,
+        })
+        self.assertEqual(len(saved_variants[0]['saved_variant_json__transcripts']), 2)
+        self.assertEqual(len(saved_variants[0]['saved_variant_json__genotypes']), 2)
+        self.assertDictEqual(saved_variants[1], {
+            'guid': mock.ANY,
+            'variant_id': '1-249045487-A-G',
+            'xpos': 1249045487,
+            'family__guid': 'F000012_12',
+            'saved_variant_json__genomeVersion': '37',
+            'saved_variant_json__transcripts': {
+                'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
+            },
+            'saved_variant_json__genotypes': {created_individual_guid: {'numAlt': 1}},
+            'saved_variant_json__mainTranscriptId': None,
+            'saved_variant_json__hgvsc': None,
+        })
+        self.assertDictEqual(saved_variants[2], {
+            'guid': mock.ANY,
+            'variant_id': '1-248367227-TC-T',
+            'xpos': 1248367227,
+            'family__guid': new_family_guid,
+            'saved_variant_json__genomeVersion': '37',
+            'saved_variant_json__transcripts': {
+                'ENSG00000135953': [{'hgvsc': 'c.3955G>A', 'hgvsp': 'c.1586-17C>G', 'transcriptId': 'ENST00000505820'}]
+            },
+            'saved_variant_json__genotypes':  {new_family_individual_guid: {'numAlt': 2}},
+            'saved_variant_json__mainTranscriptId': 'ENST00000505820',
+            'saved_variant_json__hgvsc': None,
+        })
+
+        variant_tags = VariantTag.objects.filter(variant_tag_type__name='GREGoR Finding')
+        existing_variant_tags = variant_tags.filter(saved_variants__guid='SV0000006_1248367227_r0003_tes')
+        new_variant_tags = variant_tags.filter(saved_variants__guid=saved_variants[1]['guid'])
+        comp_het_tags = set(existing_variant_tags).intersection(new_variant_tags)
+        self.assertEqual(len(comp_het_tags), 1)
+        comp_het_tag = comp_het_tags.pop()
+        self.assertIsNone(comp_het_tag.metadata)
+        self.assertDictEqual(json.loads(next(t for t in existing_variant_tags if t != comp_het_tag).metadata), {
+            'gene_known_for_phenotype': 'Candidate',
+            'condition_id': 'MONDO:0008788',
+            'known_condition_name': 'IRIDA syndrome',
+            'condition_inheritance': 'Autosomal dominant',
+        })
+        self.assertDictEqual(json.loads(next(t for t in new_variant_tags if t != comp_het_tag).metadata), {
+            'gene_known_for_phenotype': 'Candidate',
+            'condition_id': 'MONDO:0008788',
+            'known_condition_name': 'IRIDA syndrome',
+            'condition_inheritance': 'Autosomal dominant',
+        })
+
+        new_family_tag = variant_tags.get(saved_variants__guid=saved_variants[2]['guid'])
+        self.assertDictEqual(
+            json.loads(new_family_tag.metadata), {'gene_known_for_phenotype': 'Known', 'condition_id': 'MONDO:0044970'},
+        )
 
         # TODO test gsutil calls
         # mock_subprocess.assert_has_calls([
@@ -1147,7 +1219,10 @@ class IndividualAPITest(object):
         #     mock.call().wait(),
         # ])
 
-        # TODO test rerunning no changes
+        # TODO test rerunning
+        # TODO invalid_gene_row = deepcopy(SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2])
+        # invalid_gene_row[11] = 'PPX123'
+        # 'The following unknown genes were omitted in the findings tags: PPX123',
 
     def test_get_hpo_terms(self):
         url = reverse(get_hpo_terms, args=['HP:0011458'])
