@@ -1217,15 +1217,15 @@ class IndividualAPITest(object):
         )
 
         mock_subprocess.assert_has_calls([
-            mock.call('gsutil cat gs://test_bucket/data_tables/experiment_dna_short_read.tsv', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil cat gs://test_bucket/data_tables/experiment_dna_short_read.tsv', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().stdout.__iter__(),
-            mock.call('gsutil cat gs://test_bucket/data_tables/experiment.tsv', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil cat gs://test_bucket/data_tables/experiment.tsv', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().stdout.__iter__(),
-            mock.call('gsutil cat gs://test_bucket/data_tables/participant.tsv', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil cat gs://test_bucket/data_tables/participant.tsv', stdout=-1, stderr=-2, shell=True), # nosec
             mock.call().stdout.__iter__(),
-            mock.call('gsutil cat gs://test_bucket/data_tables/phenotype.tsv', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil cat gs://test_bucket/data_tables/phenotype.tsv', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().stdout.__iter__(),
-            mock.call('gsutil cat gs://test_bucket/data_tables/genetic_findings.tsv', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil cat gs://test_bucket/data_tables/genetic_findings.tsv', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().stdout.__iter__(),
         ])
 
