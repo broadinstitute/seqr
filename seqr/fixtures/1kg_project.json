@@ -1715,6 +1715,22 @@
     }
 },
 {
+    "model": "seqr.varianttagtype",
+    "pk": 6,
+    "fields": {
+        "guid": "VTT_gregor_finding",
+        "created_date": "2021-11-14T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": 3,
+        "name": "GREGoR Finding",
+        "category": "",
+        "description": "",
+        "color": "#c25fc4",
+        "order": 0.5
+    }
+},
+{
     "model": "seqr.savedvariant",
     "pk": 1,
     "fields": {

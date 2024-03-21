@@ -1014,7 +1014,6 @@ class IndividualAPITest(object):
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'workspaceNamespace': 'my-seqr-billing', 'workspaceName': 'anvil-1kg project nåme with uniçøde',
         }))
-        import pdb; pdb.set_trace()
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
