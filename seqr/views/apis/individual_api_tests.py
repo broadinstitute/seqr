@@ -1212,12 +1212,12 @@ class IndividualAPITest(object):
         )
 
         # TODO test gsutil calls
-        # mock_subprocess.assert_has_calls([
-        #     mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
-        #     mock.call().wait(),
-        #     mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
-        #     mock.call().wait(),
-        # ])
+        mock_subprocess.assert_has_calls([
+            mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+        ])
 
         # TODO test rerunning
         # TODO invalid_gene_row = deepcopy(SKIPPED_GENE_GENETIC_FINDINGS_TABLE[2])
