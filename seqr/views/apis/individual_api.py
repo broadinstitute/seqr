@@ -12,7 +12,8 @@ from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual, Family, CAN_VIEW
 from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
-from seqr.views.utils.anvil_metadata_utils import ANCESTRY_MAP, ANCESTRY_DETAIL_MAP, ETHNICITY_MAP
+from seqr.views.utils.anvil_metadata_utils import PARTICIPANT_TABLE, PHENOTYPE_TABLE, EXPERIMENT_TABLE, \
+    EXPERIMENT_LOOKUP_TABLE, ANCESTRY_MAP, FINDINGS_TABLE, FINDING_METADATA_COLUMNS, ANCESTRY_DETAIL_MAP, ETHNICITY_MAP
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file, parse_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
@@ -826,21 +827,20 @@ def import_gregor_metadata(request, project_guid):
     bucket_name = workspace_meta['workspace']['bucketName']
     metadata_files_path = f'gs://{bucket_name}/data_tables'
 
-    # TODO share table names and column names with metadata report
     experiment_sample_lookup = {
         row['experiment_dna_short_read_id']: row['experiment_sample_id'] for row in _iter_metadata_table(
-            metadata_files_path, 'experiment_dna_short_read', request.user,
+            metadata_files_path, EXPERIMENT_TABLE, request.user,
             lambda r: r['experiment_type'] == sample_type and r['experiment_sample_id'] != 'NA',
         )
     }
     participant_sample_lookup = {
         row['participant_id']: experiment_sample_lookup[row['id_in_table']] for row in _iter_metadata_table(
-            metadata_files_path, 'experiment', request.user,
+            metadata_files_path, EXPERIMENT_LOOKUP_TABLE, request.user,
             lambda r: r['id_in_table'] in experiment_sample_lookup and r['table_name'] == 'experiment_dna_short_read',
         )
     }
 
-    participant_rows = list(_iter_metadata_table(metadata_files_path, 'participant', request.user, lambda r: True))
+    participant_rows = list(_iter_metadata_table(metadata_files_path, PARTICIPANT_TABLE, request.user, lambda r: True))
     family_ids = {row['family_id'] for row in participant_rows if row['participant_id'] in participant_sample_lookup}
     individuals_by_participant = {row['participant_id']: {
         JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup.get(row['participant_id'], row['participant_id']),
@@ -854,7 +854,7 @@ def import_gregor_metadata(request, project_guid):
     warnings = validate_fam_file_records(project, individuals, clear_invalid_values=True)
 
     for row in _iter_metadata_table(
-        metadata_files_path, 'phenotype', request.user,
+        metadata_files_path, PHENOTYPE_TABLE, request.user,
         lambda r: r['participant_id'] in individuals_by_participant and r['ontology'] == 'HPO' and r['presence'] in {'Present', 'Absent'},
     ):
         col = FEATURES_COL if row['presence'] == 'Present' else ABSENT_FEATURES_COL
@@ -891,7 +891,7 @@ def import_gregor_metadata(request, project_guid):
     finding_id_map = {}
     genes = set()
     for row in _iter_metadata_table(
-        metadata_files_path, 'genetic_findings', request.user,
+        metadata_files_path, FINDINGS_TABLE, request.user,
             lambda r: r['participant_id'] in participant_individual_map and r['variant_type'] == 'SNV/INDEL',
     ):
         individual = participant_individual_map[row['participant_id']]
@@ -933,11 +933,7 @@ def import_gregor_metadata(request, project_guid):
 
     num_new, num_updated = bulk_create_tagged_variants(
         family_variant_data, tag_name=GREGOR_FINDING_TAG_TYPE, user=request.user, project=project,
-        get_metadata=lambda v: {k: v[k] for k in [
-            # TODO shared constants
-            'gene_known_for_phenotype', 'condition_id', 'known_condition_name', 'condition_inheritance',
-            'GREGoR_variant_classification', 'notes',
-        ] if k in v}
+        get_metadata=lambda v: {k: v[k] for k in FINDING_METADATA_COLUMNS if k in v}
     )
     info.append(f'Loaded {num_new} new and {num_updated} updated findings tags')
 
@@ -958,7 +954,6 @@ def _iter_metadata_table(file_path, table_name, user, filter_row):
             yield row_dict
 
 
-# TODO shared?
 GREGOR_PARTICIPANT_COLUMN_MAP = {
     'participant_id': 'displayName',
     'affected_status': JsonConstants.AFFECTED_COLUMN,

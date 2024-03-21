@@ -19,6 +19,17 @@ from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
 MONDO_BASE_URL = 'https://monarchinitiative.org/v3/api/entity'
 
+PARTICIPANT_TABLE = 'participant'
+PHENOTYPE_TABLE = 'phenotype'
+EXPERIMENT_TABLE = 'experiment_dna_short_read'
+EXPERIMENT_LOOKUP_TABLE = 'experiment'
+FINDINGS_TABLE = 'genetic_findings'
+
+FINDING_METADATA_COLUMNS = [
+    'gene_known_for_phenotype', 'known_condition_name', 'condition_id', 'condition_inheritance',
+    'GREGoR_variant_classification', 'notes',
+]
+
 HISPANIC = 'AMR'
 ANCESTRY_MAP = {
   'AFR': 'Black or African American',
