@@ -850,6 +850,7 @@ def import_gregor_metadata(request, project_guid):
         ABSENT_FEATURES_COL: [],
     } for row in participant_rows if row['family_id'] in family_ids}
     individuals = individuals_by_participant.values()
+    import pdb; pdb.set_trace()
 
     warnings = validate_fam_file_records(project, individuals, clear_invalid_values=True)
 
