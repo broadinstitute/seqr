@@ -1013,12 +1013,14 @@ class IndividualAPITest(object):
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'workspaceNamespace': 'my-seqr-billing', 'workspaceName': 'anvil-1kg project nåme with uniçøde',
+            'sampleType': 'exome',
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
             'importStats', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'familyTagTypeCounts',
         })
+        self.maxDiff = None  # TODO
         self.assertDictEqual(response_json['importStats'], {
             'warnings': [
 
@@ -1039,6 +1041,8 @@ class IndividualAPITest(object):
         #     mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
         #     mock.call().wait(),
         # ])
+
+        # TODO test rerunning no changes
 
     def test_get_hpo_terms(self):
         url = reverse(get_hpo_terms, args=['HP:0011458'])

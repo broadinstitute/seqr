@@ -817,6 +817,7 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 @pm_or_data_manager_required
 def import_gregor_metadata(request, project_guid):
     request_json = json.loads(request.body)
+    sample_type = request_json.get('sampleType', 'genome')
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     workspace_meta = check_workspace_perm(
         request.user, CAN_VIEW, request_json['workspaceNamespace'], request_json['workspaceName'],
@@ -829,7 +830,7 @@ def import_gregor_metadata(request, project_guid):
     experiment_sample_lookup = {
         row['experiment_dna_short_read_id']: row['experiment_sample_id'] for row in _iter_metadata_table(
             metadata_files_path, 'experiment_dna_short_read', request.user,
-            lambda r: r['experiment_type'] == 'genome' and r['experiment_sample_id'] != 'NA',
+            lambda r: r['experiment_type'] == sample_type and r['experiment_sample_id'] != 'NA',
         )
     }
     participant_sample_lookup = {

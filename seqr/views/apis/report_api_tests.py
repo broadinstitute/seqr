@@ -530,9 +530,11 @@ PARTICIPANT_TABLE = [
         'Broad_NA20876', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', '', 'Broad_7', '0',
         '0', '', '', '', 'Male', '', '', '', '', '', 'Affected', '', '', 'Solved', 'No',
     ], [
-        'Broad_NA20888', 'Broad_Test Reprocessed Project',
-        'BROAD', 'HMB', 'No', '', '', 'Broad_12', '0', '0', '', '', '',
-        'Male', '', '', '', '', '', 'Affected', '', '', 'Unsolved', 'No',
+        'Broad_NA20888', 'Broad_Test Reprocessed Project', 'BROAD', 'HMB', 'No', '', '', 'Broad_12', '0', '0', '', '',
+        '', 'Male', '', '', '', '', '', 'Affected', '', '', 'Unsolved', 'No',
+    ], [
+        'Broad_NA20889', 'Broad_Test Reprocessed Project', 'BROAD', 'HMB', '', '', '', 'Broad_12', '0', '0', '', 'Self',
+        '', 'Female', '', 'White', '', 'Ashkenazi Jewish', '', 'Affected', '', '', 'Unsolved', 'No',
     ],
 ]
 
@@ -540,11 +542,13 @@ PHENOTYPE_TABLE = [
     [
         'phenotype_id', 'participant_id', 'term_id', 'presence', 'ontology', 'additional_details',
         'onset_age_range', 'additional_modifiers',
-    ], [
-        '', 'Broad_NA19675_1', 'HP:0002011', 'Present', 'HPO', '', 'HP:0003593', 'HP:0012825|HP:0003680',
-    ], [
-        '', 'Broad_NA19675_1', 'HP:0001674', 'Absent', 'HPO', 'originally indicated', '', '',
     ],
+    ['', 'Broad_NA19675_1', 'HP:0002011', 'Present', 'HPO', '', 'HP:0003593', 'HP:0012825|HP:0003680'],
+    ['', 'Broad_NA19675_1', 'HP:0001674', 'Absent', 'HPO', 'originally indicated', '', ''],
+    ['', 'Broad_HG00731', 'HP:0011675', 'Present', 'HPO', '', '', ''],
+    ['', 'Broad_HG00731', 'HP:0002017', 'Absent', 'HPO', '', '', ''],
+    ['', 'Broad_NA20889', 'HP:0011675', 'Present', 'HPO', '', '', ''],
+    ['', 'Broad_NA20889', 'HP:0001509', 'Present', 'HPO', '', '', ''],
 ]
 
 EXPERIMENT_TABLE = [
@@ -910,6 +914,7 @@ class ReportAPITest(AirtableTest):
             expected_row = expected_row[:1] + ['Broad_1kg project nme with unide'] + expected_row[2:7] + [
                 'Broad_8'] + expected_row[8:13] + ['Female'] + expected_row[14:]
         self.assertListEqual(expected_row, multi_data_type_row)
+        self.assertEqual(PARTICIPANT_TABLE[5] in participant_file, has_second_project)
 
         self.assertEqual(len(family_file), 11 if has_second_project else 10)
         self.assertEqual(family_file[0], [
@@ -927,8 +932,10 @@ class ReportAPITest(AirtableTest):
 
         self.assertEqual(len(phenotype_file), 14 if has_second_project else 10)
         self.assertEqual(phenotype_file[0], PHENOTYPE_TABLE[0])
-        self.assertIn(PHENOTYPE_TABLE[1], phenotype_file)
-        self.assertIn(PHENOTYPE_TABLE[2], phenotype_file)
+        for row in PHENOTYPE_TABLE[1:5]:
+            self.assertIn(row, phenotype_file)
+        for row in PHENOTYPE_TABLE[5:]:
+            self.assertEqual(row in phenotype_file, has_second_project)
 
         self.assertEqual(len(analyte_file), 6 if has_second_project else 5)
         self.assertEqual(analyte_file[0], [
