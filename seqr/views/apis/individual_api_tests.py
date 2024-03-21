@@ -9,7 +9,7 @@ from django.urls.base import reverse
 from io import BytesIO
 from openpyxl import load_workbook
 
-from seqr.models import Individual, Sample
+from seqr.models import Individual, Sample, VariantTag
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
@@ -1073,7 +1073,6 @@ class IndividualAPITest(object):
         self.assertEqual(len(response_json['individualsByGuid']), 4)
         self.assertIn('I000016_na20888', response_json['individualsByGuid'])
 
-        # TODO test saved variant/ tag models
         individual_db_data = Individual.objects.filter(
             guid__in=response_json['individualsByGuid']).order_by('individual_id').values(
             'individual_id', 'display_name', 'family__guid', 'affected', 'sex', 'proband_relationship', 'population',
@@ -1135,6 +1134,10 @@ class IndividualAPITest(object):
             'absent_features': [{'id': 'HP:0002017'}],
             'case_review_status': 'I',
         })
+
+        # TODO test saved variant/ tag models
+        tags = VariantTag.objects.filter(varaint_tag_type__name='GREGoR Finding')
+        import pdb; pdb.set_trace()
 
         # TODO test gsutil calls
         # mock_subprocess.assert_has_calls([
