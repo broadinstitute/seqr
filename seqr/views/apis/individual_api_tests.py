@@ -1026,13 +1026,36 @@ class IndividualAPITest(object):
             'importStats', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'familyTagTypeCounts',
         })
         self.maxDiff = None  # TODO
-        self.assertDictEqual(response_json['importStats'], {
+        self.assertDictEqual(response_json['importStats'], {'gregorMetadata': {
             'warnings': [
-
+                'Broad_HG00732 is the father of VCGS_FAM203_621_D2 but is not included',
+                'Broad_HG00733 is the mother of VCGS_FAM203_621_D2 but is not included',
+                'Skipped the following unrecognized HPO terms: HP:0001509',
+                'The following unknown genes were omitted in the findings tags: PPX123',
             ], 'info': [
-                '2 individuals will be updated',
-                '0 individuals will be added',
+                'Imported 3 individuals',
+                'Created 2 new families, 2 new individuals',
+                'Updated 1 existing families, 1 existing individuals',
+                'Skipped 0 unchanged individuals',
+                'Loaded 3 new and 0 updated findings tags',
             ],
+        }})
+
+        self.assertEqual(len(response_json['familiesByGuid']), 2)
+        self.assertEqual(len(response_json['individualsByGuid']), 3)
+
+        self.assertDictEqual(response_json['projectsByGuid'], {
+            PM_REQUIRED_PROJECT_GUID: {'variantTagTypes': mock.ANY, 'variantFunctionalTagTypes': mock.ANY},
+        })
+        self.assertDictEqual(response_json['projectsByGuid'][PM_REQUIRED_PROJECT_GUID]['variantTagTypes'][1], {
+            'variantTagTypeGuid': 'VTT_gregor_finding',
+            'name': 'GREGoR Finding',
+            'category': '',
+            'description': '',
+            'metadataTitle': None,
+            'color': '#c25fc4',
+            'order': 0.5,
+            'numTags': 4,
         })
 
         # TODO test rest os response
