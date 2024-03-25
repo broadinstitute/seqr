@@ -164,10 +164,13 @@ export const updateFamilies = values => (dispatch, getState) => {
 export const updateIndividuals = values => (dispatch, getState) => {
   let action = 'edit_individuals'
   if (values.uploadedFileId) {
+    // Triggered by submitting EditIndividualsBulkForm
     action = `save_individuals_table/${values.uploadedFileId}`
   } else if (values.delete) {
+    // Triggered by selecting "delete" in the EditIndividualsForm or directly on the IndividualRow
     action = 'delete_individuals'
   } else if (values.workspaceName) {
+    // Triggered by submitting ImportGregorMetadata
     action = 'import_gregor_metadata'
   }
 
