@@ -9,8 +9,15 @@ import { setPassword } from '../reducers'
 import { getNewUser } from '../selectors'
 import UserFormLayout from './UserFormLayout'
 
-const minLengthValidate = value => ((value && value.length > 7) ? undefined : 'Password must be at least 8 characters')
-const maxLengthValidate = value => ((value && value.length < 128) ? undefined : 'Password must be no longer than 128 characters')
+const passwordLengthValidate = (value) => {
+  if (value && value.length < 8) {
+    return 'Password must be at least 8 characters'
+  }
+  if (value && value.length > 128) {
+    return 'Password must be no longer than 128 characters'
+  }
+  return undefined
+}
 
 const samePasswordValidate = (value, allValues) => (value === allValues.password ? undefined : 'Passwords do not match')
 
@@ -18,7 +25,7 @@ const PASSWORD_FIELDS = [
   {
     name: 'password',
     label: 'Password',
-    validate: [minLengthValidate, maxLengthValidate],
+    validate: passwordLengthValidate,
     type: 'password',
     width: 16,
     inline: true,
