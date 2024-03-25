@@ -310,12 +310,12 @@ RNA_DATA_TYPE_CONFIGS = {
         'model_class': RnaSeqSpliceOutlier,
         'columns': SPLICE_OUTLIER_HEADER_COLS,
         'additional_kwargs': {
-            'format_fields': SPLICE_OUTLIER_FORMATTER,
             'allow_missing_gene': True,
         },
         'post_process_kwargs': {
             'post_process': _add_splice_rank,
             'get_unique_key': _get_splice_id,
+            'format_fields': SPLICE_OUTLIER_FORMATTER,
             # 'warn_format_fields': [CHROM_COL], TODO functionality still needed?
         },
     },
@@ -342,7 +342,7 @@ def _validate_rna_header(header, column_map):
 def _load_rna_seq_file(
         file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample,
         column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
-        should_skip=None, format_fields=None, warn_format_fields=None,
+        should_skip=None,
 ):
 
     sample_id_to_individual_id_mapping = {}
@@ -353,11 +353,12 @@ def _load_rna_seq_file(
     parsed_f = parse_file(file_path.replace('.gz', ''), f, iter_file=True)
     header = next(parsed_f)
     required_column_map = _validate_rna_header(header, column_map)
+    if allow_missing_gene:
+        required_column_map = {k: v for k, v in required_column_map.items() if v != GENE_ID_COL}
 
     loaded_samples = set()
     unmatched_samples = set()
     missing_required_fields = defaultdict(set)
-    invalid_format_fields = defaultdict(set)
     gene_ids = set()
     for line in tqdm(parsed_f, unit=' rows'):
         row = dict(zip(header, line))
@@ -365,19 +366,8 @@ def _load_rna_seq_file(
             continue
 
         row_dict = {mapped_key: row[col] for mapped_key, col in column_map.items()}
-        is_valid = True
-        for mapped_key, format_func in (format_fields or {}).items():
-            try:
-                row_dict[mapped_key] = format_func(row_dict[mapped_key])
-            except Exception as e:
-                is_valid = False
-                invalid_format_fields[column_map[mapped_key]].add(row_dict[mapped_key])
-        if not is_valid:
-            continue
 
         missing_cols = {col_id for col, col_id in required_column_map.items() if not row.get(col)}
-        if allow_missing_gene:
-            missing_cols.discard(GENE_ID_COL)
         sample_id = row_dict.pop(SAMPLE_ID_COL) if SAMPLE_ID_COL in row_dict else row[SAMPLE_ID_COL]
         if missing_cols:
             for col in missing_cols:
@@ -412,7 +402,6 @@ def _load_rna_seq_file(
 
     errors, warnings = _process_rna_errors(
         gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
-        invalid_format_fields, warn_format_fields,
     )
 
     if errors:
@@ -423,8 +412,7 @@ def _load_rna_seq_file(
     return warnings, len(loaded_samples) + len(unmatched_samples)
 
 
-def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
-                        invalid_format_fields, warn_format_fields):
+def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples):
     errors = []
     warnings = []
 
@@ -444,15 +432,6 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
             warnings.append(f'Skipped loading for the following {len(unmatched_samples)} unmatched samples: {unmatched_sample_ids}')
         else:
             errors.append(f'Unable to find matches for the following samples: {unmatched_sample_ids}')
-
-    warnings += [
-        f'Skipped loading for all rows with the following invalid {col} values: {", ".join(invalid_format_fields.pop(col))}'
-        for col in (warn_format_fields or []) if col in invalid_format_fields
-    ]
-    errors += [
-        f'Invalid "{col}" values: {", ".join(sorted(values))}'
-        for col, values in invalid_format_fields.items()
-    ]
 
     if errors:
         raise ErrorsWarningsException(errors)
@@ -557,23 +536,45 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     return sample_guids_to_load, info, warnings
 
 
-def post_process_rna_data(sample_guid, data, get_unique_key=None, post_process=None):
+def post_process_rna_data(sample_guid, data, get_unique_key=None, post_process=None, format_fields=None, warn_format_fields=None):
     mismatches = set()
+    invalid_format_fields = defaultdict(set)
 
     data_by_key = {}
     for row in data:
+        is_valid = True
+        for key, format_func in (format_fields or {}).items():
+            try:
+                row[key] = format_func(row[key])
+            except Exception as e:
+                is_valid = False
+                invalid_format_fields[key].add(row[key])
+        if not is_valid:
+            continue
+
         gene_or_unique_id = get_unique_key(row) if get_unique_key else row[GENE_ID_COL]
         existing_data = data_by_key.get(gene_or_unique_id)
         if existing_data and existing_data != row:
             mismatches.add(gene_or_unique_id)
         data_by_key[gene_or_unique_id] = row
 
-    error = f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {", ".join(mismatches)}' if mismatches else None
+    # TODO needed?
+    # warnings = [
+    #     f'Skipped loading for all rows with the following invalid {col} values: {", ".join(invalid_format_fields.pop(col))}'
+    #     for col in (warn_format_fields or []) if col in invalid_format_fields
+    # ]
+    errors = [
+        f'Invalid "{col}" values: {", ".join(sorted(values))}'
+        for col, values in invalid_format_fields.items()
+    ]
+    if mismatches:
+        errors.append(f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {", ".join(mismatches)}')
+
     data = data_by_key.values()
-    if post_process and not error:
+    if post_process and not errors:
         post_process(data)
 
-    return data, error
+    return data, '; '.join(errors)
 
 
 RNA_MODEL_DISPLAY_NAME = {
