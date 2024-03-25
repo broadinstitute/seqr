@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(clear_splice_outlier_data, reverse_code=migrations.RunPython.noop),
+        migrations.RunPython(clear_splice_outlier_data, reverse_code=clear_splice_outlier_data),
         migrations.RenameField(
             model_name='rnaseqspliceoutlier',
             old_name='read_count',
