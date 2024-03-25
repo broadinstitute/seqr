@@ -52,8 +52,6 @@ class RnaSeqOutliersGraph extends React.PureComponent {
     const dataPoints = svg.append('g').selectAll('dot').data(dataArray).enter()
       .append('g')
 
-    console.debug('genesById', genesById)
-
     dataPoints.append('circle')
       .attr('cx', d => x(d.zScore))
       .attr('cy', d => y(d.pValue))
