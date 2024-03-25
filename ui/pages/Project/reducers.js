@@ -164,9 +164,14 @@ export const updateFamilies = values => (dispatch, getState) => {
 export const updateIndividuals = values => (dispatch, getState) => {
   let action = 'edit_individuals'
   if (values.uploadedFileId) {
+    // Triggered by submitting EditIndividualsBulkForm
     action = `save_individuals_table/${values.uploadedFileId}`
   } else if (values.delete) {
+    // Triggered by selecting "delete" in the EditIndividualsForm or directly on the IndividualRow
     action = 'delete_individuals'
+  } else if (values.workspaceName) {
+    // Triggered by submitting ImportGregorMetadata
+    action = 'import_gregor_metadata'
   }
 
   return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}`,
@@ -389,6 +394,7 @@ export const reducers = {
   rnaSeqDataLoading: loadingReducer(REQUEST_RNA_SEQ_DATA, RECEIVE_DATA),
   phenotypeDataLoading: loadingReducer(REQUEST_PHENOTYPE_GENE_SCORES, RECEIVE_DATA),
   familyTagTypeCounts: createObjectsByIdReducer(RECEIVE_DATA, 'familyTagTypeCounts'),
+  importStats: createObjectsByIdReducer(RECEIVE_DATA, 'importStats'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_FAMILIES),
   familyVariantSummaryLoading: loadingReducer(REQUEST_FAMILY_VARIANT_SUMMARY, RECEIVE_DATA),

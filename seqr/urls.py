@@ -37,6 +37,7 @@ from seqr.views.apis.individual_api import \
     update_individual_handler, \
     edit_individuals_handler, \
     delete_individuals_handler, \
+    import_gregor_metadata, \
     receive_individuals_table_handler, \
     save_individuals_table_handler, \
     receive_individuals_metadata_handler, \
@@ -226,6 +227,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/delete_families': delete_families_handler,
     'project/(?P<project_guid>[^/]+)/edit_individuals': edit_individuals_handler,
     'project/(?P<project_guid>[^/]+)/delete_individuals': delete_individuals_handler,
+    'project/(?P<project_guid>[^/]+)/import_gregor_metadata': import_gregor_metadata,
     'project/(?P<project_guid>[^/]+)/upload_families_table': receive_families_table_handler,
 
     'project/(?P<project_guid>[^/]+)/upload_individuals_table': receive_individuals_table_handler,

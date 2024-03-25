@@ -52,7 +52,7 @@ PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'genomeVersion', 'variantTagTypes', 'v
 EXPECTED_TAG = {k: mock.ANY for k in TAG_FIELDS}
 expected_functional_tag = {k: mock.ANY for k in FUNCTIONAL_FIELDS}
 expected_aip_tag = {
-    'aipMetadata': {
+    'structuredMetadata': {
         '4': {'date': '2023-11-15', 'name': 'de Novo'},
         'support': {'date': '2023-11-15', 'name': 'High in Silico Scores'},
     },
