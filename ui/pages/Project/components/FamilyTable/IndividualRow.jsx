@@ -72,6 +72,8 @@ const POPULATION_MAP = {
   NFE: 'European (non-Finnish)',
   OTH: 'Other',
   SAS: 'South Asian',
+  AmInd: 'American Indian',
+  PaIsl: 'Pacific Islander',
 }
 
 const ETHNICITY_OPTIONS = [
