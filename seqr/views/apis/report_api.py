@@ -13,7 +13,8 @@ from seqr.utils.middleware import ErrorsWarningsException
 
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, \
-    FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE
+    FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, \
+    EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, FINDING_METADATA_COLUMNS
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
@@ -239,7 +240,7 @@ CALLED_TABLE_COLUMNS = {
 }
 GENETIC_FINDINGS_TABLE_COLUMNS = {
     'chrom', 'pos', 'ref', 'alt', 'variant_type', 'variant_reference_assembly', 'gene', 'transcript', 'hgvsc', 'hgvsp',
-    'gene_known_for_phenotype', 'known_condition_name', 'condition_id', 'condition_inheritance', 'phenotype_contribution',
+    *FINDING_METADATA_COLUMNS[:4], 'phenotype_contribution',
     'genetic_findings_id', 'participant_id', 'experiment_id', 'zygosity', 'allele_balance_or_heteroplasmy_percentage',
     'variant_inheritance', 'linked_variant', 'additional_family_members_with_variant', 'method_of_discovery',
 }
@@ -270,8 +271,8 @@ for data_type in GREGOR_DATA_TYPES:
     AIRTABLE_QUERY_COLUMNS.update({f'{field}_{data_type}' for field in data_type_columns})
 
 WARN_MISSING_TABLE_COLUMNS = {
-    'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
-    'genetic_findings': ['known_condition_name'],
+    PARTICIPANT_TABLE: ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
+    FINDINGS_TABLE: ['known_condition_name'],
 }
 WARN_MISSING_CONDITIONAL_COLUMNS = {
     'reported_race': lambda row: not row['ancestry_detail'],
@@ -453,11 +454,11 @@ def gregor_export(request):
         variant['experiment_id'] = experiment_ids_by_participant.get(variant['participant_id'])
 
     file_data = [
-        ('participant', PARTICIPANT_TABLE_COLUMNS, participant_rows),
+        (PARTICIPANT_TABLE, PARTICIPANT_TABLE_COLUMNS, participant_rows),
         ('family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())),
-        ('phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows),
+        (PHENOTYPE_TABLE, PHENOTYPE_TABLE_COLUMNS, phenotype_rows),
         ('analyte', ANALYTE_TABLE_COLUMNS, analyte_rows),
-        ('experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, airtable_rows),
+        (EXPERIMENT_TABLE, EXPERIMENT_TABLE_COLUMNS, airtable_rows),
         ('aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows),
         ('aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows),
         ('called_variants_dna_short_read', CALLED_TABLE_COLUMNS, [
@@ -465,8 +466,8 @@ def gregor_export(request):
         ]),
         ('experiment_rna_short_read', EXPERIMENT_RNA_TABLE_COLUMNS, airtable_rna_rows),
         ('aligned_rna_short_read', READ_RNA_TABLE_COLUMNS, airtable_rna_rows),
-        ('experiment', EXPERIMENT_LOOKUP_TABLE_COLUMNS, experiment_lookup_rows),
-        ('genetic_findings', GENETIC_FINDINGS_TABLE_COLUMNS, genetic_findings_rows),
+        (EXPERIMENT_LOOKUP_TABLE, EXPERIMENT_LOOKUP_TABLE_COLUMNS, experiment_lookup_rows),
+        (FINDINGS_TABLE, GENETIC_FINDINGS_TABLE_COLUMNS, genetic_findings_rows),
     ]
 
     files, warnings = _populate_gregor_files(file_data)
@@ -695,6 +696,24 @@ def _has_required_table(table, validator, tables):
     return tables.isdisjoint(validator)
 
 
+def _is_required_col(required_validator, row):
+    if not required_validator:
+        return False
+
+    if required_validator is True:
+        return True
+
+    match = re.match(r'CONDITIONAL \(([\w+(\s)?]+) = ([\w+(\s)?]+)\)', required_validator)
+    if not match:
+        return True
+
+    field, value = match.groups()
+    return row[field] == value
+
+
+
+
+
 def _validate_column_data(column, file_name, data, column_validator, warnings, errors):
     data_type = column_validator.get('data_type')
     data_type_validator = DATA_TYPE_VALIDATORS.get(data_type)
@@ -712,7 +731,7 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
     for row in data:
         value = row.get(column)
         if not value:
-            if required:
+            if _is_required_col(required, row):
                 missing.append(_get_row_id(row))
             elif recommended:
                 check_recommend_condition = WARN_MISSING_CONDITIONAL_COLUMNS.get(column)
@@ -875,7 +894,6 @@ def variant_metadata(request, project_guid):
         individual_data_types={i.individual_id: i.data_types for i in individuals},
         add_row=_add_row,
         variant_json_fields=['clinvar', 'variantId'],
-        saved_variant_annotations={'tags': ArrayAgg('varianttag__variant_tag_type__name', distinct=True)},
         mme_values={'variant_ids': ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId')},
         include_metadata=True,
         include_mondo=True,

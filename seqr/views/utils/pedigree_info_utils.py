@@ -238,7 +238,7 @@ def _format_value(value, column):
     return value
 
 
-def validate_fam_file_records(project, records, fail_on_warnings=False, errors=None):
+def validate_fam_file_records(project, records, fail_on_warnings=False, errors=None, clear_invalid_values=False):
     """Basic validation such as checking that parents have the same family id as the child, etc.
 
     Args:
@@ -280,19 +280,23 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
             elif r[JsonConstants.SEX_COLUMN] == Individual.SEX_FEMALE:
                 invalid_choices = Individual.MALE_RELATIONSHIP_CHOICES
             if invalid_choices and r[JsonConstants.PROBAND_RELATIONSHIP] in invalid_choices:
-                errors.append(
-                    'Invalid proband relationship "{relationship}" for {individual_id} with given gender {sex}'.format(
-                        relationship=Individual.RELATIONSHIP_LOOKUP[r[JsonConstants.PROBAND_RELATIONSHIP]],
-                        individual_id=individual_id,
-                        sex=dict(Individual.SEX_CHOICES)[r[JsonConstants.SEX_COLUMN]]
-                    ))
+                message = 'Invalid proband relationship "{relationship}" for {individual_id} with given gender {sex}'.format(
+                    relationship=Individual.RELATIONSHIP_LOOKUP[r[JsonConstants.PROBAND_RELATIONSHIP]],
+                    individual_id=individual_id,
+                    sex=dict(Individual.SEX_CHOICES)[r[JsonConstants.SEX_COLUMN]]
+                )
+                if clear_invalid_values:
+                    r[JsonConstants.PROBAND_RELATIONSHIP] = None
+                    warnings.append(f'Skipped {message}')
+                else:
+                    errors.append(message)
 
         # check maternal and paternal ids for consistency
         for parent in [
-            ('father', r.get(JsonConstants.PATERNAL_ID_COLUMN), 'M'),
-            ('mother', r.get(JsonConstants.MATERNAL_ID_COLUMN), 'F')
+            ('father', JsonConstants.PATERNAL_ID_COLUMN, 'M'),
+            ('mother', JsonConstants.MATERNAL_ID_COLUMN, 'F')
         ]:
-            _validate_parent(*parent, individual_id, family_id, records_by_id, warnings, errors)
+            _validate_parent(r, *parent, individual_id, family_id, records_by_id, warnings, errors, clear_invalid_values)
 
     errors += [
         f'{individual_id} is included as {count} separate records, but must be unique within the project'
@@ -307,15 +311,19 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
     return warnings
 
 
-def _validate_parent(parent_id_type, parent_id, expected_sex, individual_id, family_id, records_by_id, warnings, errors):
+def _validate_parent(row, parent_id_type, parent_id_field, expected_sex, individual_id, family_id, records_by_id, warnings, errors, clear_invalid_values):
+    parent_id = row.get(parent_id_field)
     if not parent_id:
         return
 
     # is there a separate record for the parent id?
     if parent_id not in records_by_id:
-        warnings.append(
-            f'{parent_id} is the {parent_id_type} of {individual_id} but is not included. '
-            f'Make sure to create an additional record with {parent_id} as the Individual ID')
+        warning = f'{parent_id} is the {parent_id_type} of {individual_id} but is not included'
+        if clear_invalid_values:
+            row[parent_id_field] = None
+        else:
+            warning += f'. Make sure to create an additional record with {parent_id} as the Individual ID'
+        warnings.append(warning)
         return
 
     # is the parent the same individuals

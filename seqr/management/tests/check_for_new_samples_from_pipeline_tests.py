@@ -131,7 +131,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
             json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
         responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
-            'results': [{'variantId': '12-48367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
+            'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
             'total': 1,
         })
         responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/multi_lookup', status=200, json={
@@ -190,7 +190,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.mock_logger.reset_mock()
         self.mock_subprocess.reset_mock()
         search_body = {
-            'genome_version': 'GRCh38', 'num_results': 1, 'variant_ids': [['12', 48367227, 'TC', 'T']], 'variant_keys': [],
+            'genome_version': 'GRCh38', 'num_results': 1, 'variant_ids': [['1', 248367227, 'TC', 'T']], 'variant_keys': [],
         }
         self._test_success('GRCh38/SNV_INDEL', metadata, dataset_type='SNV_INDEL', sample_guids={
             EXISTING_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4,

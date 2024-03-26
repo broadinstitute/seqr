@@ -1,6 +1,5 @@
 from collections import defaultdict
 from datetime import datetime
-from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.models import User
 from django.db.models import CharField, F, Value
@@ -12,7 +11,7 @@ from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissio
     get_mme_metrics, get_hpo_terms_by_id
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Project, Family, Individual, VariantTag, VariantTagType, SavedVariant, FamilyAnalysedBy
+from seqr.models import Project, Family, Individual, VariantTagType, SavedVariant, FamilyAnalysedBy
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.communication_utils import safe_post_to_slack
@@ -20,13 +19,12 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions, get_json_for_saved_variants,\
     add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR, AIP_TAG_TYPE
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required, get_project_and_check_permissions, get_internal_projects
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, DISCOVERY_ROW_TYPE
-from seqr.views.utils.variant_utils import get_variants_response, parse_saved_variant_json, DISCOVERY_CATEGORY
+from seqr.views.utils.variant_utils import get_variants_response, bulk_create_tagged_variants, DISCOVERY_CATEGORY
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 MAX_SAVED_VARIANTS = 10000
@@ -195,46 +193,19 @@ def _load_aip_data(data: dict, user: User):
     if missing_individuals:
         raise ErrorsWarningsException([f'Unable to find the following individuals: {", ".join(sorted(missing_individuals))}'])
 
-    all_variant_ids = set()
     family_variant_data = {}
     for family_id, variant_pred in results.items():
         family_variant_data.update({
             (family_id_map[family_id], variant_id): pred for variant_id, pred in variant_pred.items()
         })
-        all_variant_ids.update(variant_pred.keys())
-
-    saved_variant_map = {
-        (v.family_id, v.variant_id): v
-        for v in SavedVariant.objects.filter(family_id__in=family_id_map.values(), variant_id__in=all_variant_ids)
-    }
-
-    new_variants = set(family_variant_data.keys()) - set(saved_variant_map.keys())
-    if new_variants:
-        saved_variant_map.update(_search_new_saved_variants(new_variants, user))
-
-    aip_tag_type = VariantTagType.objects.get(name=AIP_TAG_TYPE, project=None)
-    existing_tags = {
-        tuple(t.saved_variant_ids): t for t in VariantTag.objects.filter(
-            variant_tag_type=aip_tag_type, saved_variants__in=saved_variant_map.values(),
-        ).annotate(saved_variant_ids=ArrayAgg('saved_variants__id', ordering='id'))
-    }
 
     today = datetime.now().strftime('%Y-%m-%d')
-    update_tags = []
-    num_new = 0
-    for key, pred in family_variant_data.items():
-        metadata = {category: {'name': category_map[category], 'date': today} for category in pred['categories']}
-        updated_tag = _set_aip_tags(
-            key, metadata, pred['support_vars'], saved_variant_map, existing_tags, aip_tag_type, user,
-        )
-        if updated_tag:
-            update_tags.append(updated_tag)
-        else:
-            num_new += 1
+    num_new, num_updated = bulk_create_tagged_variants(
+        family_variant_data, tag_name=AIP_TAG_TYPE, user=user, load_new_variant_data=_search_new_saved_variants,
+        get_metadata=lambda pred:  {category: {'name': category_map[category], 'date': today} for category in pred['categories']},
+    )
 
-    VariantTag.bulk_update_models(user, update_tags, ['metadata'])
-
-    summary_message = f'Loaded {num_new} new and {len(update_tags)} updated AIP tags for {len(family_id_map)} families'
+    summary_message = f'Loaded {num_new} new and {num_updated} updated AIP tags for {len(family_id_map)} families'
     safe_post_to_slack(
         SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
         f'{summary_message}:\n```{", ".join(sorted(family_id_map.keys()))}```',
@@ -262,17 +233,14 @@ def _search_new_saved_variants(family_variant_ids: list[FamilyVariantKey], user:
         )
     }
 
-    new_variants = []
+    new_variants = {}
     missing = defaultdict(list)
     for variant_id, family_ids in variant_families.items():
         variant = search_variants_by_id.get(variant_id) or {'familyGuids': []}
         for family_id in family_ids:
             family = families_by_id[family_id]
             if family.guid in variant['familyGuids']:
-                create_json, update_json = parse_saved_variant_json(variant, family)
-                variant_model = SavedVariant(**create_json, **update_json)
-                variant_model.guid = f'SV{str(variant_model)}'[:SavedVariant.MAX_GUID_SIZE]
-                new_variants.append(variant_model)
+                new_variants[(family_id, variant_id)] = variant
             else:
                 missing[family.family_id].append(variant_id)
 
@@ -282,45 +250,7 @@ def _search_new_saved_variants(family_variant_ids: list[FamilyVariantKey], user:
             f"Unable to find the following family's AIP variants in the search backend: {', '.join(missing_summary)}",
         ])
 
-    saved_variants = SavedVariant.bulk_create(user, new_variants)
-    return {(v.family_id, v.variant_id): v for v in saved_variants}
-
-
-def _set_aip_tags(key: FamilyVariantKey, metadata: dict[str, dict], support_var_ids: list[str],
-                  saved_variant_map: dict[FamilyVariantKey, SavedVariant], existing_tags: dict[tuple[int, ...], VariantTag],
-                  aip_tag_type: VariantTagType, user: User):
-    variant = saved_variant_map[key]
-    existing_tag = existing_tags.get(tuple([variant.id]))
-    updated_tag = None
-    if existing_tag:
-        existing_metadata = json.loads(existing_tag.metadata or '{}')
-        metadata = {k: existing_metadata.get(k, v) for k, v in metadata.items()}
-        removed = {k: v for k, v in existing_metadata.get('removed', {}).items() if k not in metadata}
-        removed.update({k: v for k, v in existing_metadata.items() if k not in metadata})
-        if removed:
-            metadata['removed'] = removed
-        existing_tag.metadata = json.dumps(metadata)
-        updated_tag = existing_tag
-    else:
-        tag = create_model_from_json(
-            VariantTag, {'variant_tag_type': aip_tag_type, 'metadata': json.dumps(metadata)}, user)
-        tag.saved_variants.add(variant)
-
-    variant_genes = set(variant.saved_variant_json['transcripts'].keys())
-    support_vars = []
-    for support_id in support_var_ids:
-        support_v = saved_variant_map[(key[0], support_id)]
-        if variant_genes.intersection(set(support_v.saved_variant_json['transcripts'].keys())):
-            support_vars.append(support_v)
-    if support_vars:
-        variants = [variant] + support_vars
-        variant_id_key = tuple(sorted([v.id for v in variants]))
-        if variant_id_key not in existing_tags:
-            tag = create_model_from_json(VariantTag, {'variant_tag_type': aip_tag_type}, user)
-            tag.saved_variants.set(variants)
-            existing_tags[variant_id_key] = True
-
-    return updated_tag
+    return new_variants
 
 
 ALL_PROJECTS = 'all'

@@ -19,6 +19,17 @@ from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
 MONDO_BASE_URL = 'https://monarchinitiative.org/v3/api/entity'
 
+PARTICIPANT_TABLE = 'participant'
+PHENOTYPE_TABLE = 'phenotype'
+EXPERIMENT_TABLE = 'experiment_dna_short_read'
+EXPERIMENT_LOOKUP_TABLE = 'experiment'
+FINDINGS_TABLE = 'genetic_findings'
+
+FINDING_METADATA_COLUMNS = [
+    'gene_known_for_phenotype', 'known_condition_name', 'condition_id', 'condition_inheritance',
+    'GREGoR_variant_classification', 'notes',
+]
+
 HISPANIC = 'AMR'
 ANCESTRY_MAP = {
   'AFR': 'Black or African American',
@@ -28,6 +39,8 @@ ANCESTRY_MAP = {
   'MDE': 'Middle Eastern or North African',
   'NFE': 'White',
   'SAS': 'Asian',
+  'AmInd': 'American Indian or Alaska Native',
+  'PaIsl': 'Native Hawaiian or Other Pacific Islander',
 }
 ANCESTRY_DETAIL_MAP = {
   'ASJ': 'Ashkenazi Jewish',
@@ -40,6 +53,9 @@ ANCESTRY_DETAIL_MAP = {
 ETHNICITY_MAP = {
     HISPANIC: 'Hispanic or Latino',
 }
+ANCESTRY_LOOKUP = {v: k for k, v in ANCESTRY_MAP.items() if k not in ANCESTRY_DETAIL_MAP}
+ANCESTRY_DETAIL_LOOKUP = {v: k for k, v in ANCESTRY_DETAIL_MAP.items() if v != 'Other'}
+ETHNICITY_LOOKUP = {v: k for k, v in ETHNICITY_MAP.items()}
 
 MULTIPLE_DATASET_PRODUCTS = {
     'G4L WES + Array v1',
@@ -81,6 +97,12 @@ METADATA_FAMILY_VALUES = {
 METHOD_MAP = {
     Sample.SAMPLE_TYPE_WES: 'SR-ES',
     Sample.SAMPLE_TYPE_WGS: 'SR-GS',
+}
+
+TRANSCRIPT_FIELDS = {
+    'transcript': {'seqr_field': 'transcriptId'},
+    'hgvsc': {'format': lambda hgvs: (hgvs or '').split(':')[-1]},
+    'hgvsp': {'format': lambda hgvs: (hgvs or '').split(':')[-1]},
 }
 
 
@@ -126,7 +148,7 @@ def parse_anvil_metadata(
         variant_json_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
         include_no_individual_families: bool = False, omit_airtable: bool = False, include_metadata: bool = False,
         include_discovery_sample_id: bool = False, include_mondo: bool = False, include_parent_mnvs: bool = False,
-        proband_only_variants: bool = False, saved_variant_annotations: dict = None):
+        proband_only_variants: bool = False):
 
     individual_samples = individual_samples or (_get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
         if max_loaded_date else _get_all_project_individual_samples(projects))
@@ -147,7 +169,6 @@ def parse_anvil_metadata(
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(
         list(family_data_by_id.keys()), variant_filter=variant_filter, variant_json_fields=variant_json_fields,
-        saved_variant_annotations=saved_variant_annotations,
     )
 
     condition_map = _get_condition_map(family_data_by_id.values())
@@ -285,21 +306,14 @@ def _post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
 
 
 def _get_parsed_saved_discovery_variants_by_family(
-        families: Iterable[Family], variant_filter: dict, variant_json_fields: list[str], saved_variant_annotations: dict,
+        families: Iterable[Family], variant_filter: dict, variant_json_fields: list[str],
 ):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
-    annotations = {
-        'gene_known_for_phenotype': Case(When(
-            Q(family__post_discovery_omim_numbers__len=0, family__mondo_id__isnull=True),
-            then=Value('Candidate')), default=Value('Known')
-        ),
-        **(saved_variant_annotations or {}),
-    }
     project_saved_variants = SavedVariant.objects.filter(
         varianttag__variant_tag_type__in=tag_types, family__id__in=families,
         **(variant_filter or {}),
-    ).order_by('created_date').distinct().annotate(**annotations)
+    ).order_by('created_date').distinct().annotate(tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True))
 
     variants = []
     gene_ids = set()
@@ -317,12 +331,11 @@ def _get_parsed_saved_discovery_variants_by_family(
             'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
             'gene_id': gene_id,
             'gene_ids': [gene_id] if gene_id else variant_json.get('transcripts', {}).keys(),
-            'transcript': main_transcript.get('transcriptId'),
-            'hgvsc': (main_transcript.get('hgvsc') or '').split(':')[-1],
-            'hgvsp': (main_transcript.get('hgvsp') or '').split(':')[-1],
             'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
+            'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.tags else 'Candidate',
+            **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
             **{k: variant_json.get(k) for k in ['genotypes', 'svType', 'svName', 'end'] + (variant_json_fields or [])},
-            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt', *annotations.keys()]},
+            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt', 'tags']},
         })
 
     genes_by_id = get_genes(gene_ids)
@@ -352,6 +365,13 @@ def _get_variant_main_transcript(variant_model):
         if variant['transcripts'][gene_id] == []:
             return {'geneId': gene_id}
     return {}
+
+
+def _get_transcript_field(field, config, transcript):
+    value = transcript.get(config.get('seqr_field', field))
+    if config.get('format'):
+        value = config['format'](value)
+    return value
 
 
 def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields, format_id):
@@ -565,5 +585,24 @@ def _format_omim_conditions(conditions):
         'known_condition_name': '|'.join(sorted({o['phenotype_description'] for o in conditions if o.get('phenotype_description')})),
         'condition_inheritance': '|'.join(sorted({
             MIM_INHERITANCE_MAP.get(i, i) for o in conditions if o.get('phenotype_inheritance') for i in o['phenotype_inheritance'].split(', ')
-        }))
+        })) or 'Unknown',
     }
+
+
+def parse_population(row):
+    if row['reported_ethnicity'] in ETHNICITY_LOOKUP:
+        return ETHNICITY_LOOKUP[row['reported_ethnicity']]
+
+    detail = row['ancestry_detail'].title()
+    race = row['reported_race']
+    if not (detail or race):
+        return ''
+    if race == 'Asian':
+        # seqr subdivides asian so need to determine which subpopulation to assign
+        is_south_asian = detail and ('south' in detail.lower() or 'india' in detail.lower())
+        detail = 'South Asian' if is_south_asian else 'East Asian'
+
+    if detail in ANCESTRY_DETAIL_LOOKUP:
+        return ANCESTRY_DETAIL_LOOKUP[detail]
+
+    return ANCESTRY_LOOKUP[race]

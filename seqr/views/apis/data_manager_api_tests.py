@@ -678,7 +678,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D3', 'Test Reprocessed Project', 'ENSG00000233750', 'muscle', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'muscle', '', 0.04, 0.112, 1.9],
             ],
-            'skipped_samples': 'NA19675_D3',
+            'skipped_samples': 'NA19675_D3 (Test Reprocessed Project)',
             'sample_tissue_type': 'M',
             'num_parsed_samples': 3,
             'initial_model_count': 3,
@@ -708,14 +708,12 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.0],
                 # no matched individual NA19675_D3
                 ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
-                # skip GTEX samples
-                ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
                 # a different project sample NA20888
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'muscle', 0.112],
                 # a project mismatched sample NA20878
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
             ],
-            'skipped_samples': 'NA19675_D3, NA20878',
+            'skipped_samples': 'NA19675_D3 (1kg project nåme with uniçøde), NA20878 (Test Reprocessed Project)',
             'sample_tissue_type': 'M',
             'num_parsed_samples': 4,
             'initial_model_count': 4,
@@ -768,7 +766,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'chr2', 167258096, 167258349, '*', 'XIRP2', 'psi3',
                  1.56E-25, 6.33, 0.45, 143, 'fibroblasts', 0.03454739, 1, 20],
             ],
-            'skipped_samples': 'NA19675_D3, NA20878',
+            'skipped_samples': 'NA19675_D3 (1kg project nåme with uniçøde), NA20878 (Test Reprocessed Project)',
             'sample_tissue_type': 'F',
             'num_parsed_samples': 4,
             'initial_model_count': 7,
@@ -879,7 +877,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Unable to find matches for the following samples: NA19675_D3'], 'warnings': None})
+        self.assertDictEqual(response.json(), {'errors': ['Unable to find matches for the following samples: NA19675_D3 (1kg project nåme with uniçøde)'], 'warnings': None})
 
         unknown_gene_id_row1 = loaded_data_row[:2] + ['NOT_A_GENE_ID1'] + loaded_data_row[3:]
         unknown_gene_id_row2 = loaded_data_row[:2] + ['NOT_A_GENE_ID2'] + loaded_data_row[3:]

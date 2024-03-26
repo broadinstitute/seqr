@@ -1,6 +1,8 @@
 from collections import defaultdict
+from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Q
+import json
 import logging
 import redis
 from tqdm import tqdm
@@ -9,11 +11,11 @@ import traceback
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqTpm, PhenotypePrioritization, Project, Sample
+    RnaSeqTpm, PhenotypePrioritization, Project, Sample, VariantTag, VariantTagType
 from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.utils.xpos_utils import get_xpos
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
     get_json_for_matchmaker_submissions
@@ -102,13 +104,16 @@ def update_project_saved_variant_json(project_id, family_guids=None, dataset_typ
 
 def saved_variants_dataset_type_filter(dataset_type):
     xpos_filter_key = 'xpos__gte' if dataset_type == Sample.DATASET_TYPE_MITO_CALLS else 'xpos__lt'
-    return {
-        'alt__isnull': dataset_type == Sample.DATASET_TYPE_SV_CALLS,
-        xpos_filter_key: get_xpos('M', 1),
-    }
+    dataset_filter = {xpos_filter_key: get_xpos('M', 1)}
+    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+        dataset_filter['alt__isnull'] = True
+    else:
+        # Filter out manual variants with invalid characters, such as those used for STRs
+        dataset_filter['alt__regex'] = '^[ACGT]$'
+    return dataset_filter
 
 
-def parse_saved_variant_json(variant_json, family):
+def parse_saved_variant_json(variant_json, family_id, variant_id=None,):
     if 'xpos' not in variant_json:
         variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
     xpos = variant_json['xpos']
@@ -121,9 +126,93 @@ def parse_saved_variant_json(variant_json, family):
         'xpos_end': xpos + var_length,
         'ref': ref,
         'alt': alt,
-        'family': family,
-        'variant_id': variant_json['variantId']
+        'family_id': family_id,
+        'variant_id': variant_json.get('variantId', variant_id),
     }, update_json
+
+
+def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, user, project=None, load_new_variant_data=None):
+    all_family_ids = {family_id for family_id, _ in family_variant_data.keys()}
+    all_variant_ids = {variant_id for _, variant_id in family_variant_data.keys()}
+
+    saved_variant_map = {
+        (v.family_id, v.variant_id): v
+        for v in SavedVariant.objects.filter(family_id__in=all_family_ids, variant_id__in=all_variant_ids)
+    }
+
+    new_variant_keys = set(family_variant_data.keys()) - set(saved_variant_map.keys())
+    if new_variant_keys:
+        new_variant_data = load_new_variant_data(new_variant_keys, user) if load_new_variant_data else {
+            k: v for k, v in family_variant_data.items() if k in new_variant_keys
+        }
+        new_variant_models = []
+        for (family_id, variant_id), variant in new_variant_data.items():
+            create_json, update_json = parse_saved_variant_json(variant, family_id, variant_id=variant_id)
+            variant_model = SavedVariant(**create_json, **update_json)
+            variant_model.guid = f'SV{str(variant_model)}'[:SavedVariant.MAX_GUID_SIZE]
+            new_variant_models.append(variant_model)
+
+        saved_variant_map.update({
+            (v.family_id, v.variant_id): v for v in SavedVariant.bulk_create(user, new_variant_models)
+        })
+
+    tag_type = VariantTagType.objects.get(name=tag_name, project=project)
+    existing_tags = {
+        tuple(t.saved_variant_ids): t for t in VariantTag.objects.filter(
+            variant_tag_type=tag_type, saved_variants__in=saved_variant_map.values(),
+        ).annotate(saved_variant_ids=ArrayAgg('saved_variants__id', ordering='id'))
+    }
+
+    update_tags = []
+    num_new = 0
+    for key, variant in family_variant_data.items():
+        updated_tag = _set_updated_tags(
+            key, get_metadata(variant), variant['support_vars'], saved_variant_map, existing_tags, tag_type, user,
+        )
+        if updated_tag:
+            update_tags.append(updated_tag)
+        else:
+            num_new += 1
+
+    VariantTag.bulk_update_models(user, update_tags, ['metadata'])
+    return num_new, len(update_tags)
+
+
+def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], support_var_ids: list[str],
+                      saved_variant_map: dict[tuple[int, str], SavedVariant], existing_tags: dict[tuple[int, ...], VariantTag],
+                      tag_type: VariantTagType, user: User):
+    variant = saved_variant_map[key]
+    existing_tag = existing_tags.get(tuple([variant.id]))
+    updated_tag = None
+    if existing_tag:
+        existing_metadata = json.loads(existing_tag.metadata or '{}')
+        metadata = {k: existing_metadata.get(k, v) for k, v in metadata.items()}
+        removed = {k: v for k, v in existing_metadata.get('removed', {}).items() if k not in metadata}
+        removed.update({k: v for k, v in existing_metadata.items() if k not in metadata})
+        if removed:
+            metadata['removed'] = removed
+        existing_tag.metadata = json.dumps(metadata)
+        updated_tag = existing_tag
+    else:
+        tag = create_model_from_json(
+            VariantTag, {'variant_tag_type': tag_type, 'metadata': json.dumps(metadata)}, user)
+        tag.saved_variants.add(variant)
+
+    variant_genes = set(variant.saved_variant_json['transcripts'].keys())
+    support_vars = []
+    for support_id in support_var_ids:
+        support_v = saved_variant_map[(key[0], support_id)]
+        if variant_genes.intersection(set(support_v.saved_variant_json['transcripts'].keys())):
+            support_vars.append(support_v)
+    if support_vars:
+        variants = [variant] + support_vars
+        variant_id_key = tuple(sorted([v.id for v in variants]))
+        if variant_id_key not in existing_tags:
+            tag = create_model_from_json(VariantTag, {'variant_tag_type': tag_type}, user)
+            tag.saved_variants.set(variants)
+            existing_tags[variant_id_key] = True
+
+    return updated_tag
 
 
 def reset_cached_search_results(project, reset_index_metadata=False):

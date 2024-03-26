@@ -304,7 +304,7 @@ RNA_DATA_TYPE_CONFIGS = {
     'tpm': {
         'model_class': RnaSeqTpm,
         'columns': TPM_HEADER_COLS,
-        'additional_kwargs': {'should_skip': lambda row: row[SAMPLE_ID_COL].startswith('GTEX')},
+        'additional_kwargs': {},
     },
     'splice_outlier': {
         'model_class': RnaSeqSpliceOutlier,
@@ -342,7 +342,6 @@ def _validate_rna_header(header, column_map):
 def _load_rna_seq_file(
         file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample,
         column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
-        should_skip=None,
 ):
 
     sample_id_to_individual_id_mapping = {}
@@ -362,8 +361,6 @@ def _load_rna_seq_file(
     gene_ids = set()
     for line in tqdm(parsed_f, unit=' rows'):
         row = dict(zip(header, line))
-        if should_skip and should_skip(row):
-            continue
 
         row_dict = {mapped_key: row[col] for mapped_key, col in column_map.items()}
 
@@ -427,14 +424,11 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
         errors.append(f'Unknown Gene IDs: {", ".join(sorted(unknown_gene_ids))}')
 
     if unmatched_samples:
-        unmatched_sample_ids = ', '.join(sorted([sample_key[0] for sample_key in unmatched_samples]))
+        unmatched_sample_ids = ', '.join(sorted({f'{sample_key[0]} ({sample_key[1]})' for sample_key in unmatched_samples}))
         if ignore_extra_samples:
             warnings.append(f'Skipped loading for the following {len(unmatched_samples)} unmatched samples: {unmatched_sample_ids}')
         else:
             errors.append(f'Unable to find matches for the following samples: {unmatched_sample_ids}')
-
-    if errors:
-        raise ErrorsWarningsException(errors)
 
     if loaded_samples:
         warnings.append(f'Skipped loading for {len(loaded_samples)} samples already loaded from this file')

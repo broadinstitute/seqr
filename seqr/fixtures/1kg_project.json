@@ -148,6 +148,7 @@
         "description": "",
         "pedigree_image": "ped_2.png",
         "analysis_status": "Q",
+        "coded_phenotype": "microcephaly, seizures",
         "mondo_id": "MONDO:0044970",
         "case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
         "case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
@@ -556,6 +557,8 @@
         "sex": "M",
         "affected": "N",
         "display_name": "",
+        "population": "NFE",
+        "proband_relationship": "F",
 	"notes": "",
         "case_review_status": "R",
         "case_review_status_last_modified_date": null,
@@ -798,6 +801,7 @@
         "individual_id": "NA20888",
         "mother_id": null,
         "father_id": null,
+        "population": "SAS",
         "sex": "M",
         "affected": "A",
         "display_name": "",
@@ -1736,6 +1740,22 @@
     }
 },
 {
+    "model": "seqr.varianttagtype",
+    "pk": 6,
+    "fields": {
+        "guid": "VTT_gregor_finding",
+        "created_date": "2021-11-14T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": 3,
+        "name": "GREGoR Finding",
+        "category": "",
+        "description": "",
+        "color": "#c25fc4",
+        "order": 0.5
+    }
+},
+{
     "model": "seqr.savedvariant",
     "pk": 1,
     "fields": {
@@ -1789,7 +1809,7 @@
         "xpos_end": 1248367228,
         "ref": "TC",
         "alt": "T",
-        "variant_id": "12-48367227-TC-T",
+        "variant_id": "1-248367227-TC-T",
         "saved_variant_json": {
             "clinvar": {
                 "clinicalSignificance": "",
@@ -2023,7 +2043,7 @@
         "xpos_end": 1248367228,
         "ref": "TC",
         "alt": "T",
-        "variant_id": "12-48367227-TC-T",
+        "variant_id": "1-248367227-TC-T",
         "saved_variant_json": {
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
             "liftedOverGenomeVersion": "38",  "liftedOverPos": "", "genotypeFilters": "pass",
@@ -2103,7 +2123,7 @@
         "xpos_end": 1248367228,
         "ref": "TC",
         "alt": "T",
-        "variant_id": "12-48367227-TC-T",
+        "variant_id": "1-248367227-TC-T",
         "saved_variant_json": {
             "liftedOverGenomeVersion": "37",  "liftedOverPos": "", "genomeVersion": "38", "pos": 248367227,
             "transcripts": {}, "chrom": "1", "genotypes": {

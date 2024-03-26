@@ -150,7 +150,7 @@ class JSONUtilsTest(object):
         self.assertSetEqual(set(var_1['tagGuids']), v1_tag_guids)
         self.assertSetEqual(set(var_1['functionalDataGuids']), v1_functional_guids)
         var_2 = json['savedVariantsByGuid'][variant_guid_2]
-        self.assertEqual(var_2['variantId'], '12-48367227-TC-T')
+        self.assertEqual(var_2['variantId'], '1-248367227-TC-T')
         self.assertSetEqual(set(var_2['tagGuids']), v2_tag_guids)
         self.assertSetEqual(set(var_2['noteGuids']), set(v2_note_guids))
 

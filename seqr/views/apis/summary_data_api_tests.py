@@ -37,8 +37,8 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "num_saved_variants": 2,
     "solve_status": "Unsolved",
     "sample_id": "NA20889",
-    "gene_known_for_phenotype-1": "Known",
-    "gene_known_for_phenotype-2": "Known",
+    "gene_known_for_phenotype-1": "Candidate",
+    "gene_known_for_phenotype-2": "Candidate",
     "variant_inheritance-1": "unknown",
     "variant_inheritance-2": "unknown",
     'genetic_findings_id-1': 'NA20889_1_248367227',
@@ -105,6 +105,8 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'allele_balance_or_heteroplasmy_percentage-2': None,
     'notes-1': None,
     'notes-2': None,
+    'tags-1': ['Tier 1 - Novel gene and phenotype'],
+    'tags-2': ['Tier 1 - Novel gene and phenotype'],
 }
 EXPECTED_SAMPLE_METADATA_ROW = {
     "dbgap_submission": "No",
@@ -147,6 +149,7 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'alt-1': 'T',
     'chrom-1': '1',
     'gene_known_for_phenotype-1': 'Candidate',
+    'tags-1': ['Tier 1 - Novel gene and phenotype'],
     'pos-1': 248367227,
     'end-1': None,
     'ref-1': 'TC',
@@ -476,11 +479,11 @@ class SummaryDataAPITest(AirtableTest):
             },
             'results': {
                 'HG00731': {
-                    '12-48367227-TC-T': {'categories': ['3', '4'], 'support_vars': ['2-103343353-GAGA-G']},
-                    '1-248367227-TC-T': {'categories': ['1'], 'support_vars': ['12-48367227-TC-T']},
+                    '1-248367227-TC-T': {'categories': ['3', '4'], 'support_vars': ['2-103343353-GAGA-G']},
+                    '12-48367227-TC-T': {'categories': ['1'], 'support_vars': ['1-248367227-TC-T']},
                 },
                 'SAM_123': {
-                    '12-48367227-TC-T': {'categories': ['4', 'support'], 'support_vars': []},
+                    '1-248367227-TC-T': {'categories': ['4', 'support'], 'support_vars': []},
                 },
             }
         }
@@ -495,10 +498,10 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'], [
-            "Unable to find the following family's AIP variants in the search backend: 2 (1-248367227-TC-T)",
+            "Unable to find the following family's AIP variants in the search backend: 2 (12-48367227-TC-T)",
         ])
 
-        aip_upload['results']['HG00731']['2-103343353-GAGA-G'] = aip_upload['results']['HG00731'].pop('1-248367227-TC-T')
+        aip_upload['results']['HG00731']['2-103343353-GAGA-G'] = aip_upload['results']['HG00731'].pop('12-48367227-TC-T')
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'info': ['Loaded 2 new and 1 updated AIP tags for 2 families']})

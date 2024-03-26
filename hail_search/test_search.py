@@ -1,5 +1,8 @@
 from aiohttp.test_utils import AioHTTPTestCase
+import asyncio
 from copy import deepcopy
+import time
+from unittest import mock
 
 from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE_DATA, FAMILY_2_MISSING_SAMPLE_DATA, \
     VARIANT1, VARIANT2, VARIANT3, VARIANT4, MULTI_PROJECT_SAMPLE_DATA, MULTI_PROJECT_MISSING_SAMPLE_DATA, \
@@ -8,7 +11,7 @@ from hail_search.test_utils import get_hail_search_body, FAMILY_2_VARIANT_SAMPLE
     GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, SV_WES_SAMPLE_DATA, EXPECTED_SAMPLE_DATA, \
     FAMILY_2_MITO_SAMPLE_DATA, FAMILY_2_ALL_SAMPLE_DATA, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
     EXPECTED_SAMPLE_DATA_WITH_SEX, SV_WGS_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT
-from hail_search.web_app import init_web_app
+from hail_search.web_app import init_web_app, sync_to_async_hail_query
 
 PROJECT_2_VARIANT = {
     'variantId': '1-10146-ACC-A',
@@ -192,6 +195,20 @@ class HailSearchTestCase(AioHTTPTestCase):
 
     async def get_application(self):
         return await init_web_app()
+
+    async def test_sync_to_async_hail_query(self):
+        request = mock.Mock()
+        request.app = await self.get_application()
+        # NB: request.json() is the first arg passed to the callable
+        request.json.return_value = asyncio.Future()
+        request.json.return_value.set_result(3)
+        with self.assertRaises(TimeoutError):
+            await sync_to_async_hail_query(request, time.sleep, timeout_s=1)
+
+        with mock.patch('hail_search.web_app.ctypes.pythonapi.PyThreadState_SetAsyncExc') as mock_set_async_exc:
+            mock_set_async_exc.return_value = 2
+            with self.assertRaises(SystemExit):
+                await sync_to_async_hail_query(request, time.sleep, timeout_s=1)
 
     async def test_status(self):
         async with self.client.request('GET', '/status') as resp:

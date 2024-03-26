@@ -45,10 +45,10 @@ class ReloadSavedVariantJsonTest(TestCase):
         family_2 = Family.objects.get(id=2)
         mock_get_variants.assert_has_calls([
             mock.call(
-                [family_1, family_2], ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G'], user=None, user_email='manage_command',
+                [family_1, family_2], ['1-1562437-G-C', '1-248367227-TC-T', '1-46859832-G-A', '21-3343353-GAGA-G'], user=None, user_email='manage_command',
             ),
-            mock.call([Family.objects.get(id=12)], ['12-48367227-TC-T', 'prefix_19107_DEL'], user=None, user_email='manage_command'),
-            mock.call([Family.objects.get(id=14)], ['12-48367227-TC-T'], user=None, user_email='manage_command')
+            mock.call([Family.objects.get(id=12)], ['1-248367227-TC-T', 'prefix_19107_DEL'], user=None, user_email='manage_command'),
+            mock.call([Family.objects.get(id=14)], ['1-248367227-TC-T'], user=None, user_email='manage_command')
         ], any_order=True)
 
         logger_info_calls = [
