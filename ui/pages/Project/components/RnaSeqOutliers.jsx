@@ -54,8 +54,10 @@ class RnaSeqOutliersGraph extends React.PureComponent {
       .attr('cx', d => x(d.zScore))
       .attr('cy', d => y(d.pValue))
       .attr('r', d => (d.deltaPsi === undefined ? 3 : r(Math.abs(d.deltaPsi))))
-      .style('fill', 'None')
+      .style('fill-opacity', '0%')
       .style('stroke', d => (d.isSignificant ? 'red' : 'lightgrey'))
+      .append('svg:title')
+      .text(d => `${genesById[d.geneId] ? genesById[d.geneId].geneSymbol : d.geneId}\nZ = ${d.zScore.toPrecision(2)}\n${'P-value = 10^-'}${(-Math.log10(d.pValue)).toPrecision(2)}`)
 
     dataPoints.append('text')
       .text(d => (d.isSignificant ? (genesById[d.geneId] || {}).geneSymbol : null))
