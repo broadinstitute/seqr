@@ -25,7 +25,8 @@ class Command(BaseCommand):
                 mapping_file = parse_file(options['mapping_file'], f)
 
         data_type = options['data_type']
-        model_cls = RNA_DATA_TYPE_CONFIGS[data_type]['model_class']
+        config = RNA_DATA_TYPE_CONFIGS[data_type]
+        model_cls = config['model_class']
 
         sample_data_by_guid = defaultdict(list)
 
@@ -42,7 +43,7 @@ class Command(BaseCommand):
         errors = []
         sample_guids = []
         for sample_guid in possible_sample_guids:
-            data_rows, error = post_process_rna_data(sample_guid, sample_data_by_guid[sample_guid])
+            data_rows, error = post_process_rna_data(sample_guid, sample_data_by_guid[sample_guid], **config.get('post_process_kwargs', {}))
             if error:
                 errors.append(error)
                 continue
