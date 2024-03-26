@@ -316,7 +316,6 @@ RNA_DATA_TYPE_CONFIGS = {
             'post_process': _add_splice_rank,
             'get_unique_key': _get_splice_id,
             'format_fields': SPLICE_OUTLIER_FORMATTER,
-            # 'warn_format_fields': [CHROM_COL], TODO functionality still needed?
         },
     },
 }
@@ -530,7 +529,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     return sample_guids_to_load, info, warnings
 
 
-def post_process_rna_data(sample_guid, data, get_unique_key=None, post_process=None, format_fields=None, warn_format_fields=None):
+def post_process_rna_data(sample_guid, data, get_unique_key=None, post_process=None, format_fields=None):
     mismatches = set()
     invalid_format_fields = defaultdict(set)
 
@@ -552,14 +551,8 @@ def post_process_rna_data(sample_guid, data, get_unique_key=None, post_process=N
             mismatches.add(gene_or_unique_id)
         data_by_key[gene_or_unique_id] = row
 
-    # TODO needed?
-    # warnings = [
-    #     f'Skipped loading for all rows with the following invalid {col} values: {", ".join(invalid_format_fields.pop(col))}'
-    #     for col in (warn_format_fields or []) if col in invalid_format_fields
-    # ]
     errors = [
-        f'Invalid "{col}" values: {", ".join(sorted(values))}'
-        for col, values in invalid_format_fields.items()
+        f'Invalid "{col}" values: {", ".join(sorted(values))}' for col, values in invalid_format_fields.items()
     ]
     if mismatches:
         errors.append(f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {", ".join(mismatches)}')
