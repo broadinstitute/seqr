@@ -11,7 +11,7 @@ import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { getLocus } from 'shared/components/panel/variants/VariantUtils'
 
-const RNA_SEQ_SPLICE_NUM_FIELDS = ['pAdjust', 'deltaIntronJaccardIndex']
+const RNA_SEQ_SPLICE_NUM_FIELDS = ['pValue', 'pAdjust', 'deltaIntronJaccardIndex']
 const RNA_SEQ_SPLICE_DETAIL_FIELDS = ['type']
 
 const openReads = (updateReads, row) => () => {

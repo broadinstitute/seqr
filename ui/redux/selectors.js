@@ -433,7 +433,7 @@ export const getRnaSeqSignificantJunctionData = createSelector(
     (acc, [individualGuid, rnaSeqData]) => {
       const individualData = Object.values(rnaSeqData.spliceOutliers || {}).flat()
         .filter(({ isSignificant }) => isSignificant)
-        .sort((a, b) => a.pAdjust - b.pAdjust)
+        .sort((a, b) => a.pValue - b.pValue)
         .map(({ geneId, chrom, start, end, strand, type, ...cols }) => ({
           geneSymbol: (genesById[geneId] || {}).geneSymbol || geneId,
           idField: `${geneId}-${chrom}-${start}-${end}-${strand}-${type}`,

@@ -20,7 +20,7 @@ class RnaSeqOutliersGraph extends React.PureComponent {
     data: PropTypes.arrayOf(PropTypes.object),
     genesById: PropTypes.object,
     xField: PropTypes.string.isRequired,
-    yField: PropTypes.string.isRequired,
+    yField: PropTypes.string,
   }
 
   componentDidMount() {
@@ -36,7 +36,7 @@ class RnaSeqOutliersGraph extends React.PureComponent {
   }
 
   initPlot = () => {
-    const { data: dataArray, genesById, xField, yField } = this.props
+    const { data: dataArray, genesById, xField, yField = 'pValue' } = this.props
 
     const x = scaleLinear().domain(extent(dataArray.map(d => d[xField]))).range([0, GRAPH_WIDTH])
     const y = scaleLog().domain(extent(dataArray.map(d => d[yField]))).range([0, GRAPH_HEIGHT])

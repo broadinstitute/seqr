@@ -25,7 +25,6 @@ const OUTLIER_VOLCANO_PLOT_CONFIGS = [
     searchType: 'genes',
     title: 'Expression Outliers',
     xField: 'zScore',
-    yField: 'pValue',
   },
   {
     key: 'spliceOutliers',
@@ -33,7 +32,6 @@ const OUTLIER_VOLCANO_PLOT_CONFIGS = [
     searchType: 'regions',
     title: 'Splice Junction Outliers',
     xField: 'deltaIntronJaccardIndex',
-    yField: 'pAdjust',
   },
 ]
 
@@ -109,7 +107,7 @@ class BaseRnaSeqResultPage extends React.PureComponent {
             layout={RnaSeqJunctionOutliersTable}
             noTriggerButton
             data={tableData}
-            defaultSortColumn="pAdjust"
+            defaultSortColumn="pValue"
             maxHeight="600px"
           />
         )}

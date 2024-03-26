@@ -50,6 +50,7 @@ class Command(BaseCommand):
 
             sample_guids.append(sample_guid)
             sample_model = sample_models_by_guid[sample_guid]
+            logger.info(f'creating {len(data_rows)} {model_cls.__name__} for {sample_model["sample_id"]}')
             models = model_cls.objects.bulk_create(
                 [model_cls(sample_id=sample_model['id'], **data) for data in data_rows], batch_size=1000)
             logger.info(f'create {len(models)} {model_cls.__name__} for {sample_model["sample_id"]}')
