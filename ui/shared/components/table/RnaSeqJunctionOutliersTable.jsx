@@ -11,8 +11,8 @@ import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { getLocus } from 'shared/components/panel/variants/VariantUtils'
 
-const RNA_SEQ_SPLICE_NUM_FIELDS = ['zScore', 'pValue', 'deltaPsi']
-const RNA_SEQ_SPLICE_DETAIL_FIELDS = ['type', 'readCount']
+const RNA_SEQ_SPLICE_NUM_FIELDS = ['pValue', 'pAdjust', 'deltaIntronJaccardIndex']
+const RNA_SEQ_SPLICE_DETAIL_FIELDS = ['type']
 
 const openReads = (updateReads, row) => () => {
   const { chrom, start, end, tissueType, familyGuid } = row
@@ -72,7 +72,26 @@ const OTHER_SPLICE_COLUMNS = [
     }
   )),
   {
-    name: 'rareDiseaseSamplesWithJunction',
+    name: 'counts',
+    content: 'Counts',
+    format: row => (
+      <Popup
+        content={['meanCounts', 'totalCounts', 'meanTotalCounts'].map(k => (
+          <div key={k}>{`${camelcaseToTitlecase(k)}: ${row[k]}`}</div>
+        ))}
+        position="top center"
+        trigger={
+          <span>
+            <Icon name="info" />
+            &nbsp;
+            {row.counts}
+          </span>
+        }
+      />
+    ),
+  },
+  {
+    name: 'rareDiseaseSamplesWithThisJunction',
     content: (
       <Popup
         content="Rare-Disease Samples With Junction"

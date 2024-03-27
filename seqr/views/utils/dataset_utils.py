@@ -231,10 +231,12 @@ def _parse_tsv_row(row):
 PROJECT_COL = 'project'
 TISSUE_COL = 'tissue'
 SAMPLE_ID_COL = 'sample_id'
+SAMPLE_ID_HEADER_COL = 'sampleID'
 INDIV_ID_COL = 'individual_id'
 GENE_ID_COL = 'gene_id'
-RNA_OUTLIER_COLUMNS = {GENE_ID_COL: 'geneID', 'p_value': 'pValue', 'p_adjust': 'padjust', 'z_score': 'zScore',
-                       SAMPLE_ID_COL: 'sampleID'}
+GENE_ID_HEADER_COL = 'geneID'
+RNA_OUTLIER_COLUMNS = {GENE_ID_COL: GENE_ID_HEADER_COL, 'p_value': 'pValue', 'p_adjust': 'padjust', 'z_score': 'zScore',
+                       SAMPLE_ID_COL: SAMPLE_ID_HEADER_COL}
 
 TPM_COL = 'TPM'
 TPM_HEADER_COLS = {col.lower(): col for col in [GENE_ID_COL, TPM_COL]}
@@ -243,32 +245,40 @@ CHROM_COL = 'chrom'
 START_COL = 'start'
 END_COL = 'end'
 STRAND_COL = 'strand'
-READ_COUNT_COL = 'read_count'
+COUNTS_COL = 'counts'
+MEAN_COUNTS_COL = 'mean_counts'
+TOTAL_COUNTS_COL = 'total_counts'
+MEAN_TITAL_COUNTS_COL = 'mean_total_counts'
 SPLICE_TYPE_COL = 'type'
 P_VALUE_COL ='p_value'
-Z_SCORE_COL = 'z_score'
-DELTA_PSI_COL = 'delta_psi'
-RARE_DISEASE_SAMPLES_WITH_JUNCTION = 'rare_disease_samples_with_junction'
+P_ADJUST_COL ='p_adjust'
+DELTA_INDEX_COL = 'delta_intron_jaccard_index'
+RARE_DISEASE_SAMPLES_WITH_JUNCTION = 'rare_disease_samples_with_this_junction'
 RARE_DISEASE_SAMPLES_TOTAL = 'rare_disease_samples_total'
 SPLICE_OUTLIER_COLS = [
-    CHROM_COL, START_COL, END_COL, STRAND_COL, INDIV_ID_COL, SPLICE_TYPE_COL, P_VALUE_COL, Z_SCORE_COL,
-    DELTA_PSI_COL, READ_COUNT_COL, GENE_ID_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION,
+    CHROM_COL, START_COL, END_COL, STRAND_COL, SPLICE_TYPE_COL, P_VALUE_COL, P_ADJUST_COL, DELTA_INDEX_COL, COUNTS_COL,
+    MEAN_COUNTS_COL, TOTAL_COUNTS_COL, MEAN_TITAL_COUNTS_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION,
     RARE_DISEASE_SAMPLES_TOTAL,
 ]
 SPLICE_OUTLIER_FORMATTER = {
     CHROM_COL: format_chrom,
     START_COL: int,
     END_COL: int,
-    READ_COUNT_COL: int,
+    COUNTS_COL: int,
+    MEAN_COUNTS_COL: float,
+    TOTAL_COUNTS_COL: int,
+    MEAN_TITAL_COUNTS_COL: float,
     RARE_DISEASE_SAMPLES_WITH_JUNCTION: int,
     RARE_DISEASE_SAMPLES_TOTAL: int,
     P_VALUE_COL: float,
-    Z_SCORE_COL: float,
-    DELTA_PSI_COL: float,
+    P_ADJUST_COL: float,
+    DELTA_INDEX_COL: float,
 }
 
 SPLICE_OUTLIER_HEADER_COLS = {col: _to_camel_case(col) for col in SPLICE_OUTLIER_COLS}
-SPLICE_OUTLIER_HEADER_COLS[SAMPLE_ID_COL] = SPLICE_OUTLIER_HEADER_COLS.pop(INDIV_ID_COL)
+SPLICE_OUTLIER_HEADER_COLS.update({
+    PROJECT_COL: 'projectName', SAMPLE_ID_COL: SAMPLE_ID_HEADER_COL, GENE_ID_COL: GENE_ID_HEADER_COL,
+})
 
 REVERSE_TISSUE_TYPE = dict(Sample.TISSUE_TYPE_CHOICES)
 TISSUE_TYPE_MAP = {v: k for k, v in REVERSE_TISSUE_TYPE.items() if k != Sample.NO_TISSUE_TYPE}
@@ -277,12 +287,6 @@ TISSUE_TYPE_MAP = {v: k for k, v in REVERSE_TISSUE_TYPE.items() if k != Sample.N
 def _get_splice_id(row):
     return '-'.join([row[GENE_ID_COL], row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[STRAND_COL],
                     row[SPLICE_TYPE_COL]])
-
-
-def _add_splice_rank(sample_data_rows):
-    sorted_data_rows = sorted([data_row for data_row in sample_data_rows], key=lambda d: d[P_VALUE_COL])
-    for i, data_row in enumerate(sorted_data_rows):
-        data_row['rank'] = i
 
 
 RNA_DATA_TYPE_CONFIGS = {
@@ -300,12 +304,11 @@ RNA_DATA_TYPE_CONFIGS = {
         'model_class': RnaSeqSpliceOutlier,
         'columns': SPLICE_OUTLIER_HEADER_COLS,
         'additional_kwargs': {
-            'format_fields': SPLICE_OUTLIER_FORMATTER,
             'allow_missing_gene': True,
         },
         'post_process_kwargs': {
-            'post_process': _add_splice_rank,
             'get_unique_key': _get_splice_id,
+            'format_fields': SPLICE_OUTLIER_FORMATTER,
         },
     },
 }
@@ -331,7 +334,6 @@ def _validate_rna_header(header, column_map):
 def _load_rna_seq_file(
         file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample,
         column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
-        format_fields=None,
 ):
 
     sample_id_to_individual_id_mapping = {}
@@ -342,6 +344,8 @@ def _load_rna_seq_file(
     parsed_f = parse_file(file_path.replace('.gz', ''), f, iter_file=True)
     header = next(parsed_f)
     required_column_map = _validate_rna_header(header, column_map)
+    if allow_missing_gene:
+        required_column_map = {k: v for k, v in required_column_map.items() if v != GENE_ID_COL}
 
     loaded_samples = set()
     unmatched_samples = set()
@@ -351,12 +355,8 @@ def _load_rna_seq_file(
         row = dict(zip(header, line))
 
         row_dict = {mapped_key: row[col] for mapped_key, col in column_map.items()}
-        for mapped_key, format_func in (format_fields or {}).items():
-            row_dict[mapped_key] = format_func(row_dict[mapped_key])
 
         missing_cols = {col_id for col, col_id in required_column_map.items() if not row.get(col)}
-        if allow_missing_gene:
-            missing_cols.discard(GENE_ID_COL)
         sample_id = row_dict.pop(SAMPLE_ID_COL) if SAMPLE_ID_COL in row_dict else row[SAMPLE_ID_COL]
         if missing_cols:
             for col in missing_cols:
@@ -365,7 +365,7 @@ def _load_rna_seq_file(
             continue
 
         tissue_type = TISSUE_TYPE_MAP[row[TISSUE_COL]]
-        project = row[PROJECT_COL]
+        project = row_dict.pop(PROJECT_COL, None) or row[PROJECT_COL]
         sample_key = (sample_id, project, tissue_type)
 
         if sample_key in potential_loaded_samples:
@@ -375,9 +375,9 @@ def _load_rna_seq_file(
         if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
             sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
 
-        gene_id = row_dict[GENE_ID_COL]
-        if gene_id:
-            gene_ids.add(gene_id)
+        row_gene_ids = row_dict[GENE_ID_COL].split(';')
+        if any(row_gene_ids):
+            gene_ids.update(row_gene_ids)
 
         sample_guid = get_matched_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping)
 
@@ -385,7 +385,9 @@ def _load_rna_seq_file(
             # If there are definite errors, do not process/save data, just continue to check for additional errors
             continue
 
-        save_sample_data(sample_guid, row_dict)
+        for gene_id in row_gene_ids:
+            row_dict = {**row_dict, GENE_ID_COL: gene_id}
+            save_sample_data(sample_guid, row_dict)
 
     errors, warnings = _process_rna_errors(
         gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
@@ -520,23 +522,35 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     return sample_guids_to_load, info, warnings
 
 
-def post_process_rna_data(sample_guid, data, get_unique_key=None, post_process=None):
+def post_process_rna_data(sample_guid, data, get_unique_key=None, format_fields=None):
     mismatches = set()
+    invalid_format_fields = defaultdict(set)
 
     data_by_key = {}
     for row in data:
+        is_valid = True
+        for key, format_func in (format_fields or {}).items():
+            try:
+                row[key] = format_func(row[key])
+            except Exception:
+                is_valid = False
+                invalid_format_fields[key].add(row[key])
+        if not is_valid:
+            continue
+
         gene_or_unique_id = get_unique_key(row) if get_unique_key else row[GENE_ID_COL]
         existing_data = data_by_key.get(gene_or_unique_id)
         if existing_data and existing_data != row:
             mismatches.add(gene_or_unique_id)
         data_by_key[gene_or_unique_id] = row
 
-    error = f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {", ".join(mismatches)}' if mismatches else None
-    data = data_by_key.values()
-    if post_process and not error:
-        post_process(data)
+    errors = [
+        f'Invalid "{col}" values: {", ".join(sorted(values))}' for col, values in invalid_format_fields.items()
+    ]
+    if mismatches:
+        errors.append(f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {", ".join(mismatches)}')
 
-    return data, error
+    return data_by_key.values(), '; '.join(errors)
 
 
 RNA_MODEL_DISPLAY_NAME = {

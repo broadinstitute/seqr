@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand
 from seqr.models import Sample
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.dataset_utils import load_rna_seq, post_process_rna_data, RNA_DATA_TYPE_CONFIGS
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,8 @@ class Command(BaseCommand):
                 mapping_file = parse_file(options['mapping_file'], f)
 
         data_type = options['data_type']
-        model_cls = RNA_DATA_TYPE_CONFIGS[data_type]['model_class']
+        config = RNA_DATA_TYPE_CONFIGS[data_type]
+        model_cls = config['model_class']
 
         sample_data_by_guid = defaultdict(list)
 
@@ -37,12 +39,12 @@ class Command(BaseCommand):
             mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
 
         sample_models_by_guid = {
-            s['guid']: s for s in Sample.objects.filter(guid__in=sample_data_by_guid).values('guid', 'id', 'sample_id')
+            s.guid: s for s in Sample.objects.filter(guid__in=sample_data_by_guid)
         }
         errors = []
         sample_guids = []
         for sample_guid in possible_sample_guids:
-            data_rows, error = post_process_rna_data(sample_guid, sample_data_by_guid[sample_guid])
+            data_rows, error = post_process_rna_data(sample_guid, sample_data_by_guid[sample_guid], **config.get('post_process_kwargs', {}))
             if error:
                 errors.append(error)
                 continue
@@ -50,10 +52,9 @@ class Command(BaseCommand):
             sample_guids.append(sample_guid)
             sample_model = sample_models_by_guid[sample_guid]
             models = model_cls.objects.bulk_create(
-                [model_cls(sample_id=sample_model['id'], **data) for data in data_rows], batch_size=1000)
-            logger.info(f'create {len(models)} {model_cls.__name__} for {sample_model["sample_id"]}')
-
-        Sample.bulk_update(user=None, update_json={'is_active': True}, guid__in=sample_guids)
+                [model_cls(sample_id=sample_model.id, **data) for data in data_rows], batch_size=1000)
+            logger.info(f'create {len(models)} {model_cls.__name__} for {sample_model.sample_id}')
+            update_model_from_json(sample_model, {'is_active': True}, user=None)
 
         for error in errors:
             logger.info(error)
