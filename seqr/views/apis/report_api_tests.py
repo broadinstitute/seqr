@@ -727,13 +727,13 @@ class ReportAPITest(AirtableTest):
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
             '-', '-', '-', '-'], discovery_file)
         self.assertIn([
-            '19_1912633_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'de novo', 'Heterozygous', 'GRCh38', '19',
+            '19_1912633_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'unknown', 'Heterozygous', 'GRCh38', '19',
             '1912633', 'G', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
             'The following variants are part of the multinucleotide variant 19-1912632-GC-TT '
             '(c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
         self.assertIn([
-            '19_1912634_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'de novo', 'Heterozygous', 'GRCh38', '19',
+            '19_1912634_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'unknown', 'Heterozygous', 'GRCh38', '19',
             '1912634', 'C', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
             'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, '
             'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
@@ -1237,7 +1237,7 @@ class ReportAPITest(AirtableTest):
             'ref': 'C',
             'tags': ['Known gene for phenotype'],
             'transcript': 'ENST00000371839',
-            'variant_inheritance': 'de novo',
+            'variant_inheritance': 'unknown',
             'variant_reference_assembly': 'GRCh38',
             'zygosity': 'Heterozygous',
         }

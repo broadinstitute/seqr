@@ -476,7 +476,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, partici
 
 def _get_variant_inheritance(individual, genotypes):
     parental_inheritance = tuple(
-        None if parent is None else genotypes.get(parent.guid, {}).get('numAlt', -1) > 0
+        None if parent is None or parent.guid not in genotypes else genotypes[parent.guid].get('numAlt', -1) > 0
         for parent in [individual.mother, individual.father]
     )
     return {
