@@ -39,7 +39,7 @@ class Command(BaseCommand):
             mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
 
         sample_models_by_guid = {
-            s['guid']: s for s in Sample.objects.filter(guid__in=sample_data_by_guid).values('guid', 'id', 'sample_id')
+            s.guid: s for s in Sample.objects.filter(guid__in=sample_data_by_guid)
         }
         errors = []
         sample_guids = []
@@ -52,8 +52,8 @@ class Command(BaseCommand):
             sample_guids.append(sample_guid)
             sample_model = sample_models_by_guid[sample_guid]
             models = model_cls.objects.bulk_create(
-                [model_cls(sample_id=sample_model['id'], **data) for data in data_rows], batch_size=1000)
-            logger.info(f'create {len(models)} {model_cls.__name__} for {sample_model["sample_id"]}')
+                [model_cls(sample_id=sample_model.id, **data) for data in data_rows], batch_size=1000)
+            logger.info(f'create {len(models)} {model_cls.__name__} for {sample_model.sample_id}')
             update_model_from_json(sample_model, {'is_active': True}, user=None)
 
         for error in errors:
