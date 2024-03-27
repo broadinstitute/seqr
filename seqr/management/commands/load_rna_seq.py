@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand
 from seqr.models import Sample
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.dataset_utils import load_rna_seq, post_process_rna_data, RNA_DATA_TYPE_CONFIGS
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +51,10 @@ class Command(BaseCommand):
 
             sample_guids.append(sample_guid)
             sample_model = sample_models_by_guid[sample_guid]
-            logger.info(f'creating {len(data_rows)} {model_cls.__name__} for {sample_model["sample_id"]}')
             models = model_cls.objects.bulk_create(
                 [model_cls(sample_id=sample_model['id'], **data) for data in data_rows], batch_size=1000)
             logger.info(f'create {len(models)} {model_cls.__name__} for {sample_model["sample_id"]}')
-
-        Sample.bulk_update(user=None, update_json={'is_active': True}, guid__in=sample_guids)
+            update_model_from_json(sample_model, {'is_active': True}, user=None)
 
         for error in errors:
             logger.info(error)

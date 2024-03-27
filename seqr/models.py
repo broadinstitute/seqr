@@ -1106,8 +1106,7 @@ class DeletableSampleMetadataModel(BulkOperationBase):
 
 
 class RnaSeqOutlier(DeletableSampleMetadataModel):
-    SIGNIFICANCE_THRESHOLD = 0.05
-    SIGNIFICANCE_FIELD = 'p_adjust'
+    MAX_SIGNIFICANT_P_ADJUST = 0.05
 
     p_value = models.FloatField()
     p_adjust = models.FloatField()
@@ -1133,9 +1132,8 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
 
 
 class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
-    SIGNIFICANCE_THRESHOLD = 0.01  # TODO update logic multi field
-    SIGNIFICANCE_FIELD = 'p_adjust'
-    MAX_SIGNIFICANT_OUTLIER_NUM = 50
+    MAX_SIGNIFICANT_P_ADJUST = 0.3
+    SIGNIFICANCE_ABS_VALUE_THRESHOLDS = {'delta_intron_jaccard_index': 0.1}
     STRAND_CHOICES = (
         ('+', '5′ to 3′ direction'),
         ('-', '3′ to 5′ direction'),
