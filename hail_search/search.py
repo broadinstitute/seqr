@@ -1,7 +1,7 @@
 from hail_search.queries.multi_data_types import QUERY_CLASS_MAP, SNV_INDEL_DATA_TYPE, MultiDataTypeHailTableQuery
 
 
-def search_hail_backend(request, gene_counts=False):
+async def search_hail_backend(request, gene_counts=False):
     sample_data = request.pop('sample_data', {})
     genome_version = request.pop('genome_version')
 
@@ -16,20 +16,20 @@ def search_hail_backend(request, gene_counts=False):
 
     query = query_cls(sample_data, **request)
     if gene_counts:
-        return query.gene_counts()
+        return await query.gene_counts()
     else:
-        return query.search()
+        return await query.search()
 
 
-def lookup_variant(request):
+async def lookup_variant(request):
     data_type = request.get('data_type', SNV_INDEL_DATA_TYPE)
     query = QUERY_CLASS_MAP[(data_type, request['genome_version'])](sample_data=None)
-    return query.lookup_variant(request['variant_id'], sample_data=request.get('sample_data'))
+    return await query.lookup_variant(request['variant_id'], sample_data=request.get('sample_data'))
 
 
-def lookup_variants(request):
+async def lookup_variants(request):
     query = QUERY_CLASS_MAP[(request['data_type'], request['genome_version'])](sample_data=None)
-    return query.lookup_variants(request['variant_ids'])
+    return await query.lookup_variants(request['variant_ids'])
 
 
 def load_globals():
