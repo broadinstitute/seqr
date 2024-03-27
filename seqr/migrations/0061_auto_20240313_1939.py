@@ -52,4 +52,8 @@ class Migration(migrations.Migration):
             name='total_counts',
             field=models.IntegerField(),
         ),
+        migrations.RemoveField(
+            model_name='rnaseqspliceoutlier',
+            name='rank',
+        ),
     ]

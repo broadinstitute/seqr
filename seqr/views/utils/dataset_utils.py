@@ -289,12 +289,6 @@ def _get_splice_id(row):
                     row[SPLICE_TYPE_COL]])
 
 
-def _add_splice_rank(sample_data_rows):
-    sorted_data_rows = sorted([data_row for data_row in sample_data_rows], key=lambda d: d[P_VALUE_COL])
-    for i, data_row in enumerate(sorted_data_rows):
-        data_row['rank'] = i
-
-
 RNA_DATA_TYPE_CONFIGS = {
     'outlier': {
         'model_class': RnaSeqOutlier,
@@ -313,7 +307,6 @@ RNA_DATA_TYPE_CONFIGS = {
             'allow_missing_gene': True,
         },
         'post_process_kwargs': {
-            'post_process': _add_splice_rank,
             'get_unique_key': _get_splice_id,
             'format_fields': SPLICE_OUTLIER_FORMATTER,
         },
@@ -529,7 +522,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     return sample_guids_to_load, info, warnings
 
 
-def post_process_rna_data(sample_guid, data, get_unique_key=None, post_process=None, format_fields=None):
+def post_process_rna_data(sample_guid, data, get_unique_key=None, format_fields=None):
     mismatches = set()
     invalid_format_fields = defaultdict(set)
 
@@ -557,11 +550,7 @@ def post_process_rna_data(sample_guid, data, get_unique_key=None, post_process=N
     if mismatches:
         errors.append(f'Error in {sample_guid.split("_", 1)[-1].upper()}: mismatched entries for {", ".join(mismatches)}')
 
-    data = data_by_key.values()
-    if post_process and not errors:
-        post_process(data)
-
-    return data, '; '.join(errors)
+    return data_by_key.values(), '; '.join(errors)
 
 
 RNA_MODEL_DISPLAY_NAME = {

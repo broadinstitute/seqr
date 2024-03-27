@@ -792,11 +792,6 @@ def get_json_for_rna_seq_outliers(filters, significant_only=True, individual_gui
         if significant_only:
             models = models.filter(significance_q)
 
-        # # TODO remove?
-        # if hasattr(model, 'MAX_SIGNIFICANT_OUTLIER_NUM'):
-        #     # TODO remove rank from model entirely?
-        #     significant_filter['rank__lt'] = model.MAX_SIGNIFICANT_OUTLIER_NUM
-
         outliers = get_json_for_queryset(
             models,
             nested_fields=[
