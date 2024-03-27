@@ -1399,7 +1399,6 @@
     "pk": 1,
     "fields": {
         "sample": 151,
-        "rank": 0,
         "gene_id": "ENSG00000268903",
         "p_value": 1.08E-56,
         "p_adjust": 3.08E-56,
@@ -1422,7 +1421,6 @@
     "pk": 2,
     "fields": {
         "sample": 153,
-        "rank": 0,
         "gene_id": "ENSG00000268903",
         "p_value": 1.08E-56,
         "p_adjust": 3.08E-56,
@@ -1445,7 +1443,6 @@
     "pk": 3,
     "fields": {
         "sample": 151,
-        "rank": 3,
         "gene_id": "ENSG00000268903",
         "p_value": 0.1,
         "p_adjust": 0.3,
@@ -1468,7 +1465,6 @@
     "pk": 4,
     "fields": {
         "sample": 151,
-        "rank": 1,
         "gene_id": "ENSG00000268903",
         "p_value": 0.0001,
         "p_adjust": 0.0003,
@@ -1491,7 +1487,6 @@
     "pk": 5,
     "fields": {
         "sample": 151,
-        "rank": 2,
         "gene_id": "ENSG00000268903",
         "p_value": 0.0001,
         "p_adjust": 0.0003,
@@ -1515,7 +1510,6 @@
     "fields": {
         "sample": 152,
         "gene_id": "ENSG00000268903",
-        "rank": 0,
         "p_value": 0.001,
         "p_adjust": 0.003,
         "delta_intron_jaccard_index": 12.34,
@@ -1537,7 +1531,6 @@
     "pk": 7,
     "fields": {
         "sample": 152,
-        "rank": 1,
         "gene_id": "ENSG00000268903",
         "p_value": 0.2,
         "p_adjust": 0.1,
