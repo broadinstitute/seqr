@@ -51,10 +51,9 @@ async def sync_to_async_hail_query(request: web.Request, query: Callable, *args,
     if request.body_exists:
         request_body = await request.json()
 
-    loop = asyncio.get_running_loop()
-    future = loop.run_in_executor(request.app.pool, functools.partial(query, request_body, *args, **kwargs))
+    future = request.app.pool.submit(query, request_body, *args, **kwargs)
     try:
-        return await asyncio.wait_for(future, timeout_s)
+        return await future.result(timeout=timeout_s)
     except asyncio.TimeoutError:
         # Well documented issue with the "wait_for" approach.... the concurrent.Future is canceled but
         # the underlying thread is not, allowing the Hail Query under the hood to keep running.
@@ -125,5 +124,5 @@ async def init_web_app():
     # event loop stays live and the /status check is responsive.  We only
     # run a single thread, though, so that hail queries block hail queries
     # and we never run more than a single hail query at a time.
-    app.pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    app.pool = concurrent.futures.ThreadPoolExecutor(max_workers=10)
     return app

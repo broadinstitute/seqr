@@ -1,4 +1,5 @@
 from aiohttp.web import HTTPBadRequest, HTTPNotFound
+import asyncio
 from collections import defaultdict, namedtuple
 import hail as hl
 import logging
@@ -225,8 +226,9 @@ class BaseHailTableQuery(object):
         self._load_table_kwargs = {'_n_partitions': min(MAX_PARTITIONS, (os.cpu_count() or 2)-1)}
         self.entry_samples_by_family_guid = {}
 
+        self._loading_task = None
         if sample_data:
-            self._load_filtered_table(sample_data, **kwargs)
+            self._loading_task = self._load_filtered_table(sample_data, **kwargs)
 
     @property
     def _has_comp_het_search(self):
@@ -240,10 +242,10 @@ class BaseHailTableQuery(object):
     def _enums(self):
         return self._globals['enums']
 
-    def _load_filtered_table(self, sample_data, intervals=None, annotations=None, annotations_secondary=None, **kwargs):
+    async def _load_filtered_table(self, sample_data, intervals=None, annotations=None, annotations_secondary=None, **kwargs):
         parsed_intervals = self._parse_intervals(intervals, **kwargs)
         parsed_annotations = self._parse_annotations(annotations, annotations_secondary, **kwargs)
-        self.import_filtered_table(
+        await self.import_filtered_table(
             *self._parse_sample_data(sample_data), parsed_intervals=parsed_intervals, parsed_annotations=parsed_annotations, **kwargs)
 
     @classmethod
@@ -278,32 +280,36 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {num_families} families in {len(project_samples)} projects')
         return project_samples, num_families
 
-    def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
-        filtered_project_hts = []
-        exception_messages = set()
-        for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
-            project_ht = self._read_table(
-                f'projects/{project_guid}.ht',
-                use_ssd_dir=True,
-                skip_missing_field='family_entries' if skip_all_missing or i > 0 else None,
-            )
-            if project_ht is None:
-                continue
-            try:
-                filtered_project_hts.append(
-                    (*self._filter_entries_table(project_ht, project_sample_data, **kwargs), len(project_sample_data))
-                )
-            except HTTPBadRequest as e:
-                exception_messages.add(e.reason)
+    async def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
+        filtered_project_hts = await asyncio.gather(*[
+            self._read_project_table(project_guid, project_sample_data, skip_missing=skip_all_missing or i > 0)
+            for i, (project_guid, project_sample_data) in enumerate(project_samples.items())
+        ], return_exceptions=True)
 
+        exception_messages = {
+            e.reason if isinstance(e, HTTPBadRequest) else str(e)
+            for e in filtered_project_hts if isinstance(e, Exception)
+        }
         if exception_messages:
             raise HTTPBadRequest(reason='; '.join(exception_messages))
+
+        filtered_project_hts = [ht for ht in filtered_project_hts if ht is not None]
 
         if len(project_samples) > len(filtered_project_hts):
             logger.info(f'Found {len(filtered_project_hts)} {self.DATA_TYPE} projects with matched entries')
         return filtered_project_hts
 
-    def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
+    async def _read_project_table(self, project_guid, project_sample_data, skip_missing):
+        project_ht = self._read_table(
+            f'projects/{project_guid}.ht',
+            use_ssd_dir=True,
+            skip_missing_field='family_entries' if skip_missing else None,
+        )
+        if project_ht is None:
+            return None
+        return *self._filter_entries_table(project_ht, project_sample_data, **kwargs), len(project_sample_data)
+
+    async def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
         use_annotations_ht_first = len(project_samples) > 1 and (kwargs.get('parsed_intervals') or kwargs.get('padded_interval'))
         if use_annotations_ht_first:
             # For multi-project interval search, faster to first read and filter the annotation table and then add entries
@@ -321,7 +327,7 @@ class BaseHailTableQuery(object):
             )
             families_ht, comp_het_families_ht = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
-            filtered_project_hts = self._load_filtered_project_hts(project_samples, **kwargs)
+            filtered_project_hts = await self._load_filtered_project_hts(project_samples, **kwargs)
             families_ht, comp_het_families_ht, num_families = filtered_project_hts[0]
             main_ht = comp_het_families_ht if families_ht is None else families_ht
             entry_type = main_ht.family_entries.dtype.element_type
@@ -986,7 +992,8 @@ class BaseHailTableQuery(object):
             ht = ch_ht
         return ht
 
-    def search(self):
+    async def search(self):
+        await self._loading_task
         ht = self.format_search_ht()
 
         (total_results, collected) = ht.aggregate((hl.agg.count(), hl.agg.take(ht.row, self._num_results, ordering=ht._sort)))
@@ -1050,7 +1057,8 @@ class BaseHailTableQuery(object):
             hts.append(self._ht.select(**{k: v(self._ht) for k, v in selects.items()}))
         return hts
 
-    def gene_counts(self):
+    async def gene_counts(self):
+        await self._loading_task
         hts = self.format_gene_count_hts()
         ht = hts[0].key_by()
         for sub_ht in hts[1:]:
@@ -1077,7 +1085,7 @@ class BaseHailTableQuery(object):
 
         return formatted.aggregate(hl.agg.take(formatted.row, len(variant_ids)))
 
-    def lookup_variant(self, variant_id, sample_data=None):
+    async def lookup_variant(self, variant_id, sample_data=None):
         annotation_fields = self.annotation_fields(include_genotype_overrides=False)
         entry_annotations = {k: annotation_fields[k] for k in [FAMILY_GUID_FIELD, GENOTYPES_FIELD]}
         annotation_fields.update({
@@ -1093,7 +1101,7 @@ class BaseHailTableQuery(object):
 
         if sample_data:
             project_samples, _ = self._parse_sample_data(sample_data)
-            for pht, _, _ in self._load_filtered_project_hts(project_samples, skip_all_missing=True):
+            for pht, _, _ in await self._load_filtered_project_hts(project_samples, skip_all_missing=True):
                 project_entries = pht.aggregate(hl.agg.take(hl.struct(**{k: v(pht) for k, v in entry_annotations.items()}), 1))
                 variant[FAMILY_GUID_FIELD] += project_entries[0][FAMILY_GUID_FIELD]
                 variant[GENOTYPES_FIELD].update(project_entries[0][GENOTYPES_FIELD])
