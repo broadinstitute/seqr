@@ -304,6 +304,8 @@ class BaseHailTableQuery(object):
             if comp_het_ht is not None:
                 filtered_comp_het_project_hts.append(comp_het_ht)
 
+        # TODO repartition for better performance? 328 seconds for current search
+
         ht = self._merge_project_hts(filtered_project_hts) if filtered_project_hts else None
         comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts) if filtered_comp_het_project_hts else None
 
@@ -311,7 +313,7 @@ class BaseHailTableQuery(object):
 
     def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
         use_annotations_ht_first = len(project_samples) > 1 and (kwargs.get('parsed_intervals') or kwargs.get('padded_interval'))
-        use_annotations_ht_first = False  # TODO confirm which works better
+        use_annotations_ht_first = False  # TODO confirm which works better - note if not needed for SNV_INDEL need to revert for GCNV
         if use_annotations_ht_first:
             # For multi-project interval search, faster to first read and filter the annotation table and then add entries
             ht = self._read_table('annotations.ht')
