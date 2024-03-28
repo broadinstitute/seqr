@@ -1306,16 +1306,16 @@ class IndividualAPITest(object):
                            response_json['rnaSeqData'][INDIVIDUAL_GUID]['spliceOutliers']['ENSG00000268903']}
         self.assertDictEqual(
             {
-                'chrom': '7', 'deltaPsi': 0.85, 'end': 132886973, 'geneId': 'ENSG00000268903', 'isSignificant': True,
-                'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1,
-                'readCount': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'zScore': 12.34,
+                'chrom': '7', 'counts': 1297, 'end': 132886973, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+                'meanCounts': 0.85,  'meanTotalCounts': 0.85, 'pAdjust': 3.08e-56,
+                'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1,
+                'totalCounts': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34,
                 'tissueType': 'F',
             },
             outliers_by_pos[132885746]
         )
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
-    @mock.patch('seqr.views.utils.orm_to_json_utils.RnaSeqSpliceOutlier.MAX_SIGNIFICANT_OUTLIER_NUM', 2)
     def test_get_individual_rna_seq_data_is_significant(self):
         url = reverse(get_individual_rna_seq_data, args=[INDIVIDUAL_GUID])
         self.check_collaborator_login(url)
@@ -1327,14 +1327,14 @@ class IndividualAPITest(object):
         significant_outliers = [outlier for outlier in response_rnaseq_data['outliers'].values() if outlier[0]['isSignificant']]
         self.assertEqual(2, len(significant_outliers))
         self.assertListEqual(
-            sorted([{field: outlier[field] for field in ['start', 'end', 'pValue', 'tissueType', 'isSignificant']}
+            sorted([{field: outlier[field] for field in ['start', 'end', 'pAdjust', 'deltaIntronJaccardIndex', 'tissueType', 'isSignificant']}
                     for outlier in response_rnaseq_data['spliceOutliers']['ENSG00000268903']], key=lambda r: r['start']),
-            [{'start': 1001, 'end': 2001, 'pValue': 0.1, 'tissueType': 'F', 'isSignificant': False},
-             {'start': 3000, 'end': 4000, 'pValue': 0.0001, 'tissueType': 'F', 'isSignificant': True},
-             {'start': 5000, 'end': 6000, 'pValue': 0.0001, 'tissueType': 'F', 'isSignificant': False},
-             {'start': 7000, 'end': 8000, 'pValue': 0.001, 'tissueType': 'M', 'isSignificant': True},
-             {'start': 9000, 'end': 9100, 'pValue': 0.2, 'tissueType': 'M', 'isSignificant': False},
-             {'start': 132885746, 'end': 132886973, 'pValue': 1.08e-56, 'tissueType': 'F', 'isSignificant': True}],
+            [{'start': 1001, 'end': 2001, 'pAdjust': 0.3, 'deltaIntronJaccardIndex': 12.34, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 3000, 'end': 4000, 'pAdjust': 0.0003, 'deltaIntronJaccardIndex': -12.34, 'tissueType': 'F', 'isSignificant': True},
+             {'start': 5000, 'end': 6000, 'pAdjust': 0.0003, 'deltaIntronJaccardIndex': 0.05, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 7000, 'end': 8000, 'pAdjust': 0.003, 'deltaIntronJaccardIndex': 12.34, 'tissueType': 'M', 'isSignificant': True},
+             {'start': 9000, 'end': 9100, 'pAdjust': 0.1, 'deltaIntronJaccardIndex': -0.01, 'tissueType': 'M', 'isSignificant': False},
+             {'start': 132885746, 'end': 132886973, 'pAdjust': 3.08e-56, 'deltaIntronJaccardIndex': 12.34, 'tissueType': 'F', 'isSignificant': True}],
         )
 
 
