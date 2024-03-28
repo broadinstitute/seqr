@@ -279,6 +279,34 @@ class BaseHailTableQuery(object):
         return project_samples, num_families
 
     def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
+        project_hts = []
+        sample_data = {}
+        for project_guid, project_sample_data in project_samples.items():
+            project_ht = self._read_table(
+                f'projects/{project_guid}.ht',
+                use_ssd_dir=True,
+            ).select_globals('sample_type', 'family_guids', 'family_samples')
+            project_hts.append(project_ht)
+            sample_data.update(project_sample_data)
+
+        ht = hl.Table.multi_way_zip_join(project_hts, 'project_entries', 'project_globals')
+        # TODO possible performance improvement if filter out project_entries where all undefined
+        ht = ht.transmute(
+            filters=ht.project_entries.fold(lambda f, x: f.union(x.filters), hl.empty_set(hl.tstr)),
+            family_entries=hl.enumerate(ht.project_entries).starmap(lambda i, x: hl.or_else(
+                x.family_entries,
+                ht.project_globals[i].family_guids.map(lambda f: hl.missing(x.family_entries.dtype.element_type)),
+            )),
+        )
+        ht = ht.transmute_globals(
+            sample_type=ht.project_globals[0].sample_type,  # TODO handle sample_type assignment
+            family_guids=ht.project_globals.flatmap(lambda x: x.family_guids),
+            family_samples=hl.dict(ht.project_globals.flatmap(lambda x: x.family_samples.items()))
+        )
+
+        return self._filter_entries_table(ht, sample_data, **kwargs)
+
+    def _load_filtered_project_hts_old(self, project_samples, skip_all_missing=False, **kwargs):
         filtered_project_hts = []
         exception_messages = set()
         for i, (project_guid, project_sample_data) in enumerate(project_samples.items()):
@@ -305,6 +333,7 @@ class BaseHailTableQuery(object):
 
     def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
         use_annotations_ht_first = len(project_samples) > 1 and (kwargs.get('parsed_intervals') or kwargs.get('padded_interval'))
+        use_annotations_ht_first = False  # TODO confirm which works better
         if use_annotations_ht_first:
             # For multi-project interval search, faster to first read and filter the annotation table and then add entries
             ht = self._read_table('annotations.ht')
@@ -321,27 +350,29 @@ class BaseHailTableQuery(object):
             )
             families_ht, comp_het_families_ht = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
-            filtered_project_hts = self._load_filtered_project_hts(project_samples, **kwargs)
-            families_ht, comp_het_families_ht, num_families = filtered_project_hts[0]
-            main_ht = comp_het_families_ht if families_ht is None else families_ht
-            entry_type = main_ht.family_entries.dtype.element_type
-            num_projects_added = 1
-            for project_ht, comp_het_project_ht, num_project_families in filtered_project_hts[1:]:
-                ht_added = False
-                if families_ht is not None:
-                    families_ht, ht_added = self._add_project_ht(families_ht, project_ht, default=hl.empty_array(entry_type))
-                if comp_het_families_ht is not None:
-                    comp_het_families_ht, ht_added = self._add_project_ht(
-                        comp_het_families_ht, comp_het_project_ht,
-                        default=hl.range(num_families).map(lambda i: hl.missing(entry_type)),
-                        default_1=hl.range(num_project_families).map(lambda i: hl.missing(entry_type)),
-                    )
-                if ht_added:
-                    num_families += num_project_families
-                    num_projects_added += 1
-
-            if len(filtered_project_hts) > num_projects_added:
-                logger.info(f'Found {num_projects_added} {self.DATA_TYPE} projects with matched entries')
+            families_ht, comp_het_families_ht = self._load_filtered_project_hts(project_samples, **kwargs)
+            # TODO clean up
+            # filtered_project_hts = self._load_filtered_project_hts(project_samples, **kwargs)
+            # families_ht, comp_het_families_ht, num_families = filtered_project_hts[0]
+            # main_ht = comp_het_families_ht if families_ht is None else families_ht
+            # entry_type = main_ht.family_entries.dtype.element_type
+            # num_projects_added = 1
+            # for project_ht, comp_het_project_ht, num_project_families in filtered_project_hts[1:]:
+            #     ht_added = False
+            #     if families_ht is not None:
+            #         families_ht, ht_added = self._add_project_ht(families_ht, project_ht, default=hl.empty_array(entry_type))
+            #     if comp_het_families_ht is not None:
+            #         comp_het_families_ht, ht_added = self._add_project_ht(
+            #             comp_het_families_ht, comp_het_project_ht,
+            #             default=hl.range(num_families).map(lambda i: hl.missing(entry_type)),
+            #             default_1=hl.range(num_project_families).map(lambda i: hl.missing(entry_type)),
+            #         )
+            #     if ht_added:
+            #         num_families += num_project_families
+            #         num_projects_added += 1
+            #
+            # if len(filtered_project_hts) > num_projects_added:
+            #     logger.info(f'Found {num_projects_added} {self.DATA_TYPE} projects with matched entries')
 
         if comp_het_families_ht is not None:
             self._comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
