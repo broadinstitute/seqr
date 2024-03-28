@@ -12,7 +12,7 @@ from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.file_utils import does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
-from settings import AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, SERVICE_ACCOUNT_CREDENTIALS
+from settings import AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, SERVICE_ACCOUNT_CREDENTIALS
 
 logger = SeqrLogger(__name__)
 
