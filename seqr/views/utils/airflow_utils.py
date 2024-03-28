@@ -3,8 +3,7 @@ from django.contrib.auth.models import User
 from django.db.models import F
 import itertools
 import json
-from google.auth.transport.requests import Request
-from google.oauth2 import id_token
+from google.auth.transport.requests import AuthorizedSession
 import requests
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
@@ -13,7 +12,7 @@ from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.file_utils import does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
-from settings import AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
+from settings import AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, SERVICE_ACCOUNT_CREDENTIALS
 
 logger = SeqrLogger(__name__)
 
@@ -172,13 +171,12 @@ def _trigger_dag(dag_id):
 def _make_airflow_api_request(endpoint, method='GET', timeout=90, **kwargs):
     # Obtain an OpenID Connect (OIDC) token from metadata server or using service
     # account.
-    google_open_id_connect_token = id_token.fetch_id_token(Request(), AIRFLOW_API_AUDIENCE)
-
     webserver_url = f'{AIRFLOW_WEBSERVER_URL}/api/v1/{endpoint}'
-    resp = requests.request(
-        method, webserver_url,
-        headers={'Authorization': 'Bearer {}'.format(
-            google_open_id_connect_token)}, **kwargs)
-
+    authed_session = AuthorizedSession(SERVICE_ACCOUNT_CREDENTIALS)
+    resp = authed_session.request(
+        method,
+        webserver_url,
+        **kwargs
+    )
     resp.raise_for_status()
     return resp.json()
