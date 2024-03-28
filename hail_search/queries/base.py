@@ -279,32 +279,56 @@ class BaseHailTableQuery(object):
         return project_samples, num_families
 
     def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
-        project_hts = []
-        sample_data = {}
-        for project_guid, project_sample_data in project_samples.items():
-            project_ht = self._read_table(
-                f'projects/{project_guid}.ht',
-                use_ssd_dir=True,
-            ).select_globals('sample_type', 'family_guids', 'family_samples')
-            project_hts.append(project_ht)
-            sample_data.update(project_sample_data)
+        # TODO support skip_all_missing?
+        # TODO will not work for lookup
 
+        # Need to chunk tables or else evaluating table globals throws LineTooLong exception
+        # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
+        # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
+        chunk_size = 64
+        project_sample_items = list(project_samples.items())
+        filtered_project_hts = []
+        filtered_comp_het_project_hts = []
+        for i in range(0, len(project_sample_items), chunk_size):
+            project_hts = []
+            sample_data = {}
+            for project_guid, project_sample_data in project_sample_items[i:i + chunk_size]:
+                project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True)
+                project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
+                sample_data.update(project_sample_data)
+
+            ht = self._merge_project_hts(project_hts, include_all_globals=True)
+            ht, comp_het_ht = self._filter_entries_table(ht, sample_data, **kwargs)
+            if ht is not None:
+                filtered_project_hts.append(ht)
+            if comp_het_ht is not None:
+                filtered_comp_het_project_hts.append(comp_het_ht)
+
+        ht = self._merge_project_hts(filtered_project_hts) if filtered_project_hts else None
+        comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts) if filtered_comp_het_project_hts else None
+
+        return ht, comp_het_ht
+
+    @staticmethod
+    def _merge_project_hts(project_hts, include_all_globals=False):
         ht = hl.Table.multi_way_zip_join(project_hts, 'project_entries', 'project_globals')
-        # TODO possible performance improvement if filter out project_entries where all undefined
         ht = ht.transmute(
             filters=ht.project_entries.fold(lambda f, x: f.union(x.filters), hl.empty_set(hl.tstr)),
             family_entries=hl.enumerate(ht.project_entries).starmap(lambda i, x: hl.or_else(
                 x.family_entries,
                 ht.project_globals[i].family_guids.map(lambda f: hl.missing(x.family_entries.dtype.element_type)),
-            )),
+            )).flatmap(lambda x: x),
         )
-        ht = ht.transmute_globals(
-            sample_type=ht.project_globals[0].sample_type,  # TODO handle sample_type assignment
-            family_guids=ht.project_globals.flatmap(lambda x: x.family_guids),
-            family_samples=hl.dict(ht.project_globals.flatmap(lambda x: x.family_samples.items()))
-        )
+        global_expressions = {
+            'family_guids': ht.project_globals.flatmap(lambda x: x.family_guids),
+        }
+        if include_all_globals:
+            global_expressions.update({
+                'sample_type': ht.project_globals[0].sample_type,  # TODO handle sample_type assignment
+                'family_samples': hl.dict(ht.project_globals.flatmap(lambda x: x.family_samples.items())),
+            })
 
-        return self._filter_entries_table(ht, sample_data, **kwargs)
+        return ht.transmute_globals(**global_expressions)
 
     def _load_filtered_project_hts_old(self, project_samples, skip_all_missing=False, **kwargs):
         filtered_project_hts = []
