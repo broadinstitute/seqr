@@ -592,7 +592,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         patcher = mock.patch('seqr.views.utils.airflow_utils.google.auth.default', lambda **kwargs: (None, None))
         patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.AuthorizedSession')
+        patcher = mock.patch('seqr.views.utils.airflow_utils.AuthorizedSession', lambda *args: requests)
         self.mock_authorized_session = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
