@@ -1382,6 +1382,7 @@ class LoadDataAPITest(AirflowTestCase):
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message)
 
         # Test loading trigger error
+        self.mock_authorized_session.reset_mock()
         self.mock_slack.reset_mock()
         mock_open.reset_mock()
         responses.calls.reset()
