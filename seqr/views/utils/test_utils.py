@@ -589,6 +589,9 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         # get task id again if the response of the previous request didn't include the updated guid
         self.add_dag_tasks_response([self.LOADING_PROJECT_GUID, PROJECT_GUID])
 
+        patcher = mock.patch('seqr.views.utils.airflow_utils.google.auth.default', lambda **kwargs: (None, None))
+        self.mock_google_auth = patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airflow_utils.AuthorizedSession', lambda *args: requests)
         patcher.start()
         self.addCleanup(patcher.stop)
