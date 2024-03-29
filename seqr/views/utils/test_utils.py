@@ -590,10 +590,10 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         self.add_dag_tasks_response([self.LOADING_PROJECT_GUID, PROJECT_GUID])
 
         patcher = mock.patch('seqr.views.utils.airflow_utils.google.auth.default', lambda **kwargs: (None, None))
-        self.mock_google_auth = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.AuthorizedSession', lambda *args: requests)
         patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.AuthorizedSession')
+        self.mock_authorized_session = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
         patcher.start()
@@ -642,6 +642,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         if trigger_error:
             call_count = 1
         self.assertEqual(len(responses.calls), call_count + self.ADDITIONAL_REQUEST_COUNT)
+        self.assertEqual(len(self.mock_authorized_session.calls), call_count + self.ADDITIONAL_REQUEST_COUNT)
 
         dag_variable_overrides = self._get_dag_variable_overrides(additional_tasks_check)
         dag_variables = {
