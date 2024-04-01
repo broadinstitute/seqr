@@ -542,11 +542,15 @@ class Individual(ModelWithGUID):
         ('U', 'urine'),
     ]
 
+    SOLVED = 'S'
+    PARTIALLY_SOLVED = 'P'
+    PROBABLY_SOLVED = 'B'
+    UNSOLVED = 'U'
     SOLVE_STATUS_CHOICES = [
-        ('S', 'Solved'),
-        ('P', 'Partially solved'),
-        ('B', 'Probably solved'),
-        ('U', 'Unsolved'),
+        (SOLVED, 'Solved'),
+        (PARTIALLY_SOLVED, 'Partially solved'),
+        (PROBABLY_SOLVED, 'Probably solved'),
+        (UNSOLVED, 'Unsolved'),
     ]
 
     SEX_LOOKUP = dict(SEX_CHOICES)
