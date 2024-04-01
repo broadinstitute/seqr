@@ -546,6 +546,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
 
         # Test valid operation
         responses.calls.reset()
+        self.mock_authorized_session.reset_mock()
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
@@ -788,6 +789,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
     def _test_mv_file_and_triggering_dag_exception(self, url, workspace, sample_data, genome_version, request_body, num_samples=None):
         # Test saving ID file exception
         responses.calls.reset()
+        self.mock_authorized_session.reset_mock()
         self.mock_mv_file.side_effect = Exception('Something wrong while moving the file.')
         # Test triggering dag exception
         self.set_dag_trigger_error_response()
