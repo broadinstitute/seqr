@@ -538,7 +538,7 @@ PARTICIPANT_TABLE = [
         '', 'Male', '', 'Asian', '', 'South Asian', '', 'Affected', '', '', 'Unsolved', 'No',
     ], [
         'Broad_NA20889', 'Broad_Test Reprocessed Project', 'BROAD', 'HMB', '', '', '', 'Broad_12', '0', '0', '', 'Self',
-        '', 'Female', '', 'White', '', 'Ashkenazi Jewish', '', 'Affected', '', '', 'Unsolved', 'No',
+        '', 'Female', '', 'White', '', 'Ashkenazi Jewish', '', 'Affected', '', '', 'Partially solved', 'No',
     ],
 ]
 

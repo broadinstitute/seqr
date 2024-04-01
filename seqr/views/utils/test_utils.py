@@ -765,7 +765,7 @@ CASE_REVIEW_INDIVIDUAL_FIELDS = {
     'caseReviewStatus', 'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
 }
 CORE_INTERNAL_INDIVIDUAL_FIELDS = {
-    'probandRelationship', 'analyteType', 'primaryBiosample', 'tissueAffectedStatus',
+    'probandRelationship', 'analyteType', 'primaryBiosample', 'tissueAffectedStatus', 'solveStatus',
 }
 
 NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS = deepcopy(INDIVIDUAL_FIELDS)
