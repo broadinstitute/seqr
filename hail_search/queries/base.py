@@ -256,10 +256,10 @@ class BaseHailTableQuery(object):
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
             if skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field])):
                 return None
-            ht_globals = hl.read_table(table_path).globals
+            ht_globals = hl.read_table(table_path).index_globals()
             if drop_globals:
                 ht_globals = ht_globals.drop(*drop_globals)
-            return ht.annotate_globals(**hl.eval(ht_globals))
+            return ht.annotate_globals(**ht_globals)
         return hl.read_table(table_path, **self._load_table_kwargs)
 
     @staticmethod
@@ -313,7 +313,7 @@ class BaseHailTableQuery(object):
 
     def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
         use_annotations_ht_first = len(project_samples) > 1 and (kwargs.get('parsed_intervals') or kwargs.get('padded_interval'))
-        use_annotations_ht_first = False  # TODO confirm which works better - note if not needed for SNV_INDEL need to revert for GCNV
+        use_annotations_ht_first = False  # TODO OOMs for SNV_INDEL, see if need to revert for GCNV
         if use_annotations_ht_first:
             # For multi-project interval search, faster to first read and filter the annotation table and then add entries
             ht = self._read_table('annotations.ht')
