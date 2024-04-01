@@ -1,4 +1,4 @@
-name: hail search persistent volumen snapshot release
+name: hail search persistent volume snapshot release
 on:
   workflow_dispatch:
     inputs:
