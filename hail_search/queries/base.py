@@ -359,7 +359,7 @@ class BaseHailTableQuery(object):
         }
         if include_all_globals:
             global_expressions.update({
-                'sample_type': ht.project_globals[0].sample_type,  # TODO handle sample_type assignment
+                'sample_types':  ht.project_globals.flatmap(lambda x: x.family_guids.map(lambda _: x.sample_type)),
                 'family_samples': hl.dict(ht.project_globals.flatmap(lambda x: x.family_samples.items())),
             })
 
@@ -400,13 +400,16 @@ class BaseHailTableQuery(object):
             if missing_family_samples:
                 missing_samples.update(missing_family_samples)
             else:
+                family_index = ht_globals.family_guids.index(family_guid)
+                family_entry_data = {
+                    'sampleType': self._get_sample_type(family_index, ht_globals),
+                    'familyGuid': family_guid,
+                }
                 sample_index_data = [
-                    (ht_family_samples.index(s['sample_id']), self._sample_entry_data(s, family_guid, ht_globals))
+                    (ht_family_samples.index(s['sample_id']), {**family_entry_data, **self._sample_entry_data(s)})
                     for s in samples
                 ]
-                family_sample_index_data.append(
-                    (ht_globals.family_guids.index(family_guid), sample_index_data)
-                )
+                family_sample_index_data.append((family_index, sample_index_data))
                 self.entry_samples_by_family_guid[family_guid] = [s['sampleId'] for _, s in sample_index_data]
 
         if missing_samples:
@@ -426,18 +429,18 @@ class BaseHailTableQuery(object):
         return ht, sorted_family_sample_data
 
     @classmethod
-    def _sample_entry_data(cls, sample, family_guid, ht_globals):
+    def _sample_entry_data(cls, sample):
         return dict(
             sampleId=sample['sample_id'],
-            sampleType=cls._get_sample_type(ht_globals),
             individualGuid=sample['individual_guid'],
-            familyGuid=family_guid,
             affected_id=AFFECTED_ID_MAP.get(sample['affected']),
             is_male='sex' in sample and sample['sex'] == MALE,
         )
 
     @classmethod
-    def _get_sample_type(cls, ht_globals):
+    def _get_sample_type(cls, family_index, ht_globals):
+        if 'sample_types' in ht_globals:
+            return ht_globals.sample_types[family_index]
         return ht_globals.sample_type
 
     def _filter_inheritance(self, ht, inheritance_filter, sorted_family_sample_data):
