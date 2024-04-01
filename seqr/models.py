@@ -544,9 +544,9 @@ class Individual(ModelWithGUID):
 
     SOLVE_STATUS_CHOICES = [
         ('S', 'Solved'),
-        ('R', 'Partially solved'),
+        ('P', 'Partially solved'),
         ('B', 'Probably solved'),
-        ('F', 'Unsolved'),
+        ('U', 'Unsolved'),
     ]
 
     SEX_LOOKUP = dict(SEX_CHOICES)
