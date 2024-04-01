@@ -542,10 +542,18 @@ class Individual(ModelWithGUID):
         ('U', 'urine'),
     ]
 
+    SOLVE_STATUS_CHOICES = [
+        ('S', 'Solved'),
+        ('R', 'Partially solved'),
+        ('B', 'Probably solved'),
+        ('F', 'Unsolved'),
+    ]
+
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
     CASE_REVIEW_STATUS_REVERSE_LOOKUP = {name.lower(): key for key, name in CASE_REVIEW_STATUS_CHOICES}
+    SOLVE_STATUS_LOOKUP = dict(SOLVE_STATUS_CHOICES)
     ONSET_AGE_LOOKUP = dict(ONSET_AGE_CHOICES)
     ONSET_AGE_REVERSE_LOOKUP = {name: key for key, name in ONSET_AGE_CHOICES}
     INHERITANCE_LOOKUP = dict(INHERITANCE_CHOICES)
@@ -571,6 +579,7 @@ class Individual(ModelWithGUID):
 
     case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, default=CASE_REVIEW_STATUS_IN_REVIEW)
     case_review_discussion = models.TextField(null=True, blank=True)
+    solve_status = models.CharField(max_length=1, choices=SOLVE_STATUS_CHOICES, null=True, blank=True)
 
     proband_relationship = models.CharField(max_length=1, choices=RELATIONSHIP_CHOICES, null=True)
 
@@ -638,7 +647,7 @@ class Individual(ModelWithGUID):
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
         ]
         internal_json_fields = [
-            'proband_relationship', 'primary_biosample', 'tissue_affected_status', 'analyte_type',
+            'proband_relationship', 'primary_biosample', 'tissue_affected_status', 'analyte_type', 'solve_status',
         ]
         audit_fields = {'case_review_status'}
 
