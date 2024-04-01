@@ -304,8 +304,6 @@ class BaseHailTableQuery(object):
             if comp_het_ht is not None:
                 filtered_comp_het_project_hts.append(comp_het_ht)
 
-        # TODO repartition for better performance? 328 seconds for current search
-
         ht = self._merge_project_hts(filtered_project_hts) if filtered_project_hts else None
         comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts) if filtered_comp_het_project_hts else None
 
@@ -346,8 +344,9 @@ class BaseHailTableQuery(object):
                 self._ht = self._filter_by_annotations(self._ht, **(kwargs.get('parsed_annotations') or {}))
 
     @staticmethod
-    def _merge_project_hts(project_hts, include_all_globals=False):
+    def _merge_project_hts(project_hts, include_all_globals=False, num_partitions=None):
         ht = hl.Table.multi_way_zip_join(project_hts, 'project_entries', 'project_globals')
+        ht = ht.repartition(MAX_PARTITIONS)
         ht = ht.transmute(
             filters=ht.project_entries.fold(lambda f, x: f.union(x.filters), hl.empty_set(hl.tstr)),
             family_entries=hl.enumerate(ht.project_entries).starmap(lambda i, x: hl.or_else(
