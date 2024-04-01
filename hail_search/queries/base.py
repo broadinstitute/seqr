@@ -344,7 +344,7 @@ class BaseHailTableQuery(object):
                 self._ht = self._filter_by_annotations(self._ht, **(kwargs.get('parsed_annotations') or {}))
 
     @staticmethod
-    def _merge_project_hts(project_hts, include_all_globals=False, num_partitions=None):
+    def _merge_project_hts(project_hts, include_all_globals=False):
         ht = hl.Table.multi_way_zip_join(project_hts, 'project_entries', 'project_globals')
         ht = ht.repartition(MAX_PARTITIONS)
         ht = ht.transmute(
