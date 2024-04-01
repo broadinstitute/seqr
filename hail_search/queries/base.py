@@ -278,9 +278,8 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {num_families} families in {len(project_samples)} projects')
         return project_samples, num_families
 
-    def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, **kwargs):
+    def _load_filtered_project_hts(self, project_samples, skip_missing_field=None, n_partitions=MAX_PARTITIONS, **kwargs):
         # TODO support skip_all_missing?
-        # TODO will not work for lookup
 
         if len(project_samples) == 1:
             project_guid = list(project_samples.keys())[0]
@@ -291,28 +290,42 @@ class BaseHailTableQuery(object):
         # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
         # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
         chunk_size = 64
-        project_sample_items = list(project_samples.items())
         filtered_project_hts = []
         filtered_comp_het_project_hts = []
-        for i in range(0, len(project_sample_items), chunk_size):
-            project_hts = []
-            sample_data = {}
-            for project_guid, project_sample_data in project_sample_items[i:i + chunk_size]:
-                project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True)
-                project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
-                sample_data.update(project_sample_data)
+        project_hts = []
+        sample_data = {}
+        for project_guid, project_sample_data in project_samples.items():
+            project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True, skip_missing_field=skip_missing_field)
+            if project_ht is None:
+                continue
+            project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
+            sample_data.update(project_sample_data)
 
-            ht = self._merge_project_hts(project_hts, include_all_globals=True)
-            ht, comp_het_ht = self._filter_entries_table(ht, sample_data, **kwargs)
-            if ht is not None:
-                filtered_project_hts.append(ht)
-            if comp_het_ht is not None:
-                filtered_comp_het_project_hts.append(comp_het_ht)
+            if len(project_hts) >= chunk_size:
+                self._filter_merged_project_hts(
+                    project_hts, sample_data, filtered_project_hts, filtered_comp_het_project_hts, n_partitions, **kwargs,
+                )
+                project_hts = []
+                sample_data = {}
 
-        ht = self._merge_project_hts(filtered_project_hts) if filtered_project_hts else None
-        comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts) if filtered_comp_het_project_hts else None
+        self._filter_merged_project_hts(
+            project_hts, sample_data, filtered_project_hts, filtered_comp_het_project_hts, n_partitions, **kwargs,
+        )
+
+        ht = self._merge_project_hts(filtered_project_hts, n_partitions)
+        comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
 
         return ht, comp_het_ht
+
+    def _filter_merged_project_hts(self, project_hts, sample_data, filtered_project_hts, filtered_comp_het_project_hts, n_partitions, **kwargs):
+        if not project_hts:
+            return
+        ht = self._merge_project_hts(project_hts, n_partitions, include_all_globals=True)
+        ht, comp_het_ht = self._filter_entries_table(ht, sample_data, **kwargs)
+        if ht is not None:
+            filtered_project_hts.append(ht)
+        if comp_het_ht is not None:
+            filtered_comp_het_project_hts.append(comp_het_ht)
 
     def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
         if num_families == 1:
@@ -337,9 +350,11 @@ class BaseHailTableQuery(object):
             self._ht = self._filter_annotated_table(self._ht, **kwargs)
 
     @staticmethod
-    def _merge_project_hts(project_hts, include_all_globals=False):
+    def _merge_project_hts(project_hts, n_partitions, include_all_globals=False):
+        if not project_hts:
+            return None
         ht = hl.Table.multi_way_zip_join(project_hts, 'project_entries', 'project_globals')
-        ht = ht.repartition(MAX_PARTITIONS)
+        ht = ht.repartition(n_partitions)
         ht = ht.transmute(
             filters=ht.project_entries.fold(lambda f, x: f.union(x.filters), hl.empty_set(hl.tstr)),
             family_entries=hl.enumerate(ht.project_entries).starmap(lambda i, x: hl.or_else(
@@ -1046,15 +1061,22 @@ class BaseHailTableQuery(object):
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
         ))
 
-    def lookup_variants(self, variant_ids, annotation_fields=None):
+    def lookup_variants(self, variant_ids, project_samples=None, annotation_overrides=None):
         self._parse_intervals(intervals=None, variant_ids=variant_ids, variant_keys=variant_ids)
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
-        self._load_table_kwargs['_n_partitions'] = 1
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
-        if not annotation_fields:
+        annotation_fields = self.annotation_fields(include_genotype_overrides=False)
+        if project_samples:
+            projects_ht, _ = self._load_filtered_project_hts(
+                project_samples, skip_missing_field='family_entries', n_partitions=1,
+            )
+            ht = ht.annotate(**projects_ht[ht.key])
+        elif annotation_overrides:
+            annotation_fields.update(annotation_overrides)
+        else:
             annotation_fields = {
-                k: v for k, v in self.annotation_fields(include_genotype_overrides=False).items()
+                k: v for k, v in annotation_fields.items()
                 if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD, 'genotypeFilters'}
             }
 
@@ -1063,24 +1085,17 @@ class BaseHailTableQuery(object):
         return formatted.aggregate(hl.agg.take(formatted.row, len(variant_ids)))
 
     def lookup_variant(self, variant_id, sample_data=None):
-        annotation_fields = self.annotation_fields(include_genotype_overrides=False)
-        entry_annotations = {k: annotation_fields[k] for k in [FAMILY_GUID_FIELD, GENOTYPES_FIELD]}
-        annotation_fields.update({
+        annotation_overrides = {
             FAMILY_GUID_FIELD: lambda ht: hl.empty_array(hl.tstr),
             GENOTYPES_FIELD: lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
             'genotypeFilters': lambda ht: hl.str(''),
-        })
+        }
 
-        variants = self.lookup_variants([variant_id], annotation_fields=annotation_fields)
-        if not variants:
-            raise HTTPNotFound()
-        variant = dict(variants[0])
-
+        project_samples = None
         if sample_data:
             project_samples, _ = self._parse_sample_data(sample_data)
-            for pht, _, _ in self._load_filtered_project_hts(project_samples, skip_all_missing=True):
-                project_entries = pht.aggregate(hl.agg.take(hl.struct(**{k: v(pht) for k, v in entry_annotations.items()}), 1))
-                variant[FAMILY_GUID_FIELD] += project_entries[0][FAMILY_GUID_FIELD]
-                variant[GENOTYPES_FIELD].update(project_entries[0][GENOTYPES_FIELD])
 
-        return variant
+        variants = self.lookup_variants([variant_id], project_samples=project_samples, annotation_overrides=annotation_overrides)
+        if not variants:
+            raise HTTPNotFound()
+        return dict(variants[0])
