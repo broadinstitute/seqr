@@ -282,6 +282,11 @@ class BaseHailTableQuery(object):
         # TODO support skip_all_missing?
         # TODO will not work for lookup
 
+        if len(project_samples) == 1:
+            project_guid = list(project_samples.keys())[0]
+            project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True)
+            return self._filter_entries_table(project_ht, project_samples[project_guid], **kwargs)
+
         # Need to chunk tables or else evaluating table globals throws LineTooLong exception
         # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
         # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
@@ -310,14 +315,6 @@ class BaseHailTableQuery(object):
         return ht, comp_het_ht
 
     def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
-        use_annotations_ht_first = len(project_samples) > 1 and (kwargs.get('parsed_intervals') or kwargs.get('padded_interval'))
-        use_annotations_ht_first = False  # TODO OOMs for SNV_INDEL, see if need to revert for GCNV
-        if use_annotations_ht_first:
-            # For multi-project interval search, faster to first read and filter the annotation table and then add entries
-            ht = self._read_table('annotations.ht')
-            ht = self._filter_annotated_table(ht, **kwargs, is_comp_het=self._has_comp_het_search)
-            self._load_table_kwargs['variant_ht'] = ht.select()
-
         if num_families == 1:
             family_sample_data = list(project_samples.values())[0]
             family_guid = list(family_sample_data.keys())[0]
@@ -332,16 +329,12 @@ class BaseHailTableQuery(object):
 
         if comp_het_families_ht is not None:
             self._comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
-            if not use_annotations_ht_first:
-                self._comp_het_ht = self._filter_annotated_table(self._comp_het_ht, is_comp_het=True, **kwargs)
+            self._comp_het_ht = self._filter_annotated_table(self._comp_het_ht, is_comp_het=True, **kwargs)
             self._comp_het_ht = self._filter_compound_hets()
 
         if families_ht is not None:
             self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
-            if not use_annotations_ht_first:
-                self._ht = self._filter_annotated_table(self._ht, **kwargs)
-            elif self._has_comp_het_search:
-                self._ht = self._filter_by_annotations(self._ht, **(kwargs.get('parsed_annotations') or {}))
+            self._ht = self._filter_annotated_table(self._ht, **kwargs)
 
     @staticmethod
     def _merge_project_hts(project_hts, include_all_globals=False):
