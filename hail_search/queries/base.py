@@ -278,9 +278,7 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading {self.DATA_TYPE} data for {num_families} families in {len(project_samples)} projects')
         return project_samples, num_families
 
-    def _load_filtered_project_hts(self, project_samples, skip_missing_field=None, n_partitions=MAX_PARTITIONS, **kwargs):
-        # TODO support skip_all_missing?
-
+    def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, n_partitions=MAX_PARTITIONS, **kwargs):
         if len(project_samples) == 1:
             project_guid = list(project_samples.keys())[0]
             project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True)
@@ -295,7 +293,11 @@ class BaseHailTableQuery(object):
         project_hts = []
         sample_data = {}
         for project_guid, project_sample_data in project_samples.items():
-            project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True, skip_missing_field=skip_missing_field)
+            project_ht = self._read_table(
+                f'projects/{project_guid}.ht',
+                use_ssd_dir=True,
+                skip_missing_field='family_entries' if skip_all_missing else None,
+            )
             if project_ht is None:
                 continue
             project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
@@ -316,16 +318,6 @@ class BaseHailTableQuery(object):
         comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
 
         return ht, comp_het_ht
-
-    def _filter_merged_project_hts(self, project_hts, sample_data, filtered_project_hts, filtered_comp_het_project_hts, n_partitions, **kwargs):
-        if not project_hts:
-            return
-        ht = self._merge_project_hts(project_hts, n_partitions, include_all_globals=True)
-        ht, comp_het_ht = self._filter_entries_table(ht, sample_data, **kwargs)
-        if ht is not None:
-            filtered_project_hts.append(ht)
-        if comp_het_ht is not None:
-            filtered_comp_het_project_hts.append(comp_het_ht)
 
     def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
         if num_families == 1:
@@ -348,6 +340,16 @@ class BaseHailTableQuery(object):
         if families_ht is not None:
             self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
             self._ht = self._filter_annotated_table(self._ht, **kwargs)
+
+    def _filter_merged_project_hts(self, project_hts, sample_data, filtered_project_hts, filtered_comp_het_project_hts, n_partitions, **kwargs):
+        if not project_hts:
+            return
+        ht = self._merge_project_hts(project_hts, n_partitions, include_all_globals=True)
+        ht, comp_het_ht = self._filter_entries_table(ht, sample_data, **kwargs)
+        if ht is not None:
+            filtered_project_hts.append(ht)
+        if comp_het_ht is not None:
+            filtered_comp_het_project_hts.append(comp_het_ht)
 
     @staticmethod
     def _merge_project_hts(project_hts, n_partitions, include_all_globals=False):
@@ -1068,9 +1070,7 @@ class BaseHailTableQuery(object):
 
         annotation_fields = self.annotation_fields(include_genotype_overrides=False)
         if project_samples:
-            projects_ht, _ = self._load_filtered_project_hts(
-                project_samples, skip_missing_field='family_entries', n_partitions=1,
-            )
+            projects_ht, _ = self._load_filtered_project_hts(project_samples, skip_all_missing=True, n_partitions=1)
             ht = ht.annotate(**projects_ht[ht.key])
         elif annotation_overrides:
             annotation_fields.update(annotation_overrides)
