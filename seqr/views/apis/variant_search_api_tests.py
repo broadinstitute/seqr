@@ -810,6 +810,8 @@ class VariantSearchAPITest(object):
             'F000009_9', 'F000010_10', 'F000013_13',
         }, {f.guid for f in mock_variant_lookup.call_args.kwargs['families']})
 
+        # TODO test SVs
+
     def test_saved_search(self):
         get_saved_search_url = reverse(get_saved_search_handler)
         self.check_require_login(get_saved_search_url)

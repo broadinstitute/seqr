@@ -534,7 +534,8 @@ def _flatten_variants(variants):
 @login_and_policies_required
 def variant_lookup_handler(request):
     kwargs = {_to_snake_case(k): v for k, v in request.GET.items()}
-    include_genotypes = kwargs.pop('include_genotypes', False)
+    # TODO for svs only - handle differently?
+    include_genotypes = kwargs.pop('include_genotypes', False)  # TODO remove param from UI and all references
     families = None
     if include_genotypes:
         families = _all_genome_version_families(
@@ -542,11 +543,46 @@ def variant_lookup_handler(request):
         )
 
     variants = variant_lookup(request.user, families=families, **kwargs)
-    saved_variants, _ = _get_saved_variant_models(variants, families) if families else (None, None)
+    # TODO SVs handled differently
+    variant = variants[0]
+    families = Family.objects.filter(guid__in=variant['familyGenotypes'])
+    from settings import INTERNAL_NAMESPACES
+    can_view_families = families.filter(
+        project__guid__in=get_project_guids_user_can_view(request.user, limit_data_manager=True),
+        # TODO testing only, remove for production
+        project__workspace_namespace__in=INTERNAL_NAMESPACES,
+    )
+    variant['familyGuids'] = list(can_view_families.values_list('guid', flat=True))
+
+    saved_variants, _ = _get_saved_variant_models(variants, can_view_families)
     response = get_variants_response(
         request, saved_variants=saved_variants, response_variants=variants,
         add_all_context=include_genotypes, add_locus_list_detail=include_genotypes,
     )
     response['variants'] = variants
+
+    individual_guid_map = {
+        (i['familyGuid'], i['individualId']): i['individualGuid']
+        for i in response['individualsByGuid'].values()
+    }
+    individual_summary_map = {
+        (i.pop('family__guid'), i.pop('individual_id')): i
+        for i in Individual.objects.filter(family__in=families).exclude(family__guid__in=variant['familyGuids']).values(
+            'family__guid', 'individual_id', 'affected', 'sex',  # TODO add features
+        )
+    }
+    variant['genotypes'] = {}
+    variant['genotypeSummaries'] = []
+    for family_guid, genotypes in variant.pop('familyGenotypes').items():
+        if family_guid in variant['familyGuids']:
+            variant['genotypes'].update({
+                individual_guid_map[(family_guid, genotype['sampleId'])]: genotype
+                for genotype in genotypes
+            })
+        else:
+            variant['genotypeSummaries'].append([{
+                **individual_summary_map[(genotype.pop('familyGuid'), genotype.pop('sampleId'))],
+                **genotype,
+            } for genotype in genotypes])
 
     return create_json_response(response)
