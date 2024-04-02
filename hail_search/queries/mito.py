@@ -1,4 +1,5 @@
 import hail as hl
+import logging
 
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
@@ -6,6 +7,9 @@ from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
 MAX_LOAD_INTERVALS = 1000
+
+logger = logging.getLogger(__name__)
+
 
 def _clinvar_sort(clinvar_field, r):
     return hl.or_else(r[clinvar_field].pathogenicity_id, ABSENT_PATH_SORT_OFFSET)
@@ -298,18 +302,32 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _gene_rank_sort(cls, r, gene_ranks):
         return [gene_ranks.get(r.selected_transcript.gene_id)] + super()._gene_rank_sort(r, gene_ranks)
 
-    def _add_project_lookup_data(self, *args, annotation_fields, **kwargs):
-        annotation_fields.update(self.VARIANT_LOOKUP_ANNOTATIONS_FIELDS)  # TODO
+    def _add_project_lookup_data(self, ht, annotation_fields, **kwargs):
+        # Get all the project-families for the looked up variant formatted as a dict of dicts:
+        # {<project_guid>: {<family_guid>: True, <family_guid_2>: True}, <project_guid_2>: ...}
         lookup_ht = self._read_table('lookup.ht', use_ssd_dir=True)
-        variant_projects = lookup_ht.aggregate(
-            hl.agg.take(hl.enumerate(lookup_ht.project_stats).starmap(
-                lambda i, ps: hl.or_missing(ps.any(hl.is_defined), vht.project_guids[i])
-            ).filter(hl.is_defined), 1),
+        variant_projects = lookup_ht.aggregate(hl.agg.take(
+            hl.dict(hl.enumerate(lookup_ht.project_stats).starmap(lambda i, ps: (
+                lookup_ht.project_guids[i],
+                hl.enumerate(ps).starmap(
+                    lambda j, s: hl.or_missing((s.het_samples > 0) | (s.hom_samples > 0), j)
+                ).filter(hl.is_defined),
+            )).filter(
+                lambda x: x[1].any(hl.is_defined)
+            ).starmap(lambda project_guid, family_indices: (
+                project_guid,
+                hl.dict(family_indices.map(lambda j: (lookup_ht.project_families[project_guid][j], True))),
+            ))), 1),
         )
         if not variant_projects:
             raise HTTPNotFound()
 
-        # TODO project_samples is flat project array, not a dict
-        return super()._add_project_lookup_data(
-            *args, annotation_fields, project_samples=variant_projects[0], **kwargs,
-        )
+        annotation_fields.update({
+            'familyGenotypes': lambda r: hl.dict(r.family_entries.map(
+                lambda entries: (entries.first().familyGuid, entries.map(self._get_sample_genotype))
+            )),
+        })
+
+        logger.info(f'Looking up {self.DATA_TYPE} variant in {len(variant_projects[0])} projects')
+
+        return super()._add_project_lookup_data(ht, annotation_fields, project_samples=variant_projects[0], **kwargs)
