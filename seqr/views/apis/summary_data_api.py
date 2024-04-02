@@ -330,7 +330,7 @@ def individual_metadata(request, project_guid):
 
     hpo_name_map = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_features)}
     for row_key, row in rows_by_subject_family_id.items():
-        row.update(family_rows_by_id[row_key[1]])
+        row.update({k: v for k, v in family_rows_by_id[row_key[1]].items() if k not in row})
         row['num_saved_variants'] = row.get('num_saved_variants', 0)
         for hpo_key in ['hpo_present', 'hpo_absent']:
             features = row.pop(hpo_key)

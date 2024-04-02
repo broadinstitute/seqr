@@ -66,10 +66,10 @@ MULTIPLE_DATASET_PRODUCTS = {
     'Standard Germline Exome v6 Plus GSA Array',
 }
 
-SOLVE_STATUS_LOOKUP = {
-    **{s: 'Solved' for s in Family.SOLVED_ANALYSIS_STATUSES},
-    Family.ANALYSIS_STATUS_PARTIAL_SOLVE: 'Partially solved',
-    Family.ANALYSIS_STATUS_PROBABLE_SOLVE: 'Probably solved',
+ANALYSIS_SOLVE_STATUS_LOOKUP = {
+    **{s: Individual.SOLVED for s in Family.SOLVED_ANALYSIS_STATUSES},
+    Family.ANALYSIS_STATUS_PARTIAL_SOLVE: Individual.PARTIALLY_SOLVED,
+    Family.ANALYSIS_STATUS_PROBABLE_SOLVE: Individual.PROBABLY_SOLVED,
 }
 
 MIM_INHERITANCE_MAP = {
@@ -124,8 +124,9 @@ def _get_family_metadata(family_filter, family_fields, include_metadata, include
     family_data_by_id = {}
     for f in family_data:
         family_id = f.pop('id')
+        solve_status = ANALYSIS_SOLVE_STATUS_LOOKUP.get(f['analysisStatus'], Individual.UNSOLVED)
         f.update({
-            'solve_status': SOLVE_STATUS_LOOKUP.get(f['analysisStatus'], 'Unsolved'),
+            'solve_status': Individual.SOLVE_STATUS_LOOKUP[solve_status],
             **{k: v['format'](f) for k, v in (family_fields or {}).items()},
         })
         if format_id:
@@ -222,7 +223,9 @@ def parse_anvil_metadata(
             if individual.id in matchmaker_individuals:
                 subject_row['MME'] = matchmaker_individuals[individual.id] if mme_values else 'Yes'
             subject_row.update(family_subject_row)
-            if individual.affected != Individual.AFFECTED_STATUS_AFFECTED:
+            if individual.solve_status:
+                subject_row['solve_status'] = Individual.SOLVE_STATUS_LOOKUP[individual.solve_status]
+            elif individual.affected != Individual.AFFECTED_STATUS_AFFECTED:
                 subject_row['solve_status'] = 'Unaffected'
             add_row(subject_row, family_id, SUBJECT_ROW_TYPE)
 

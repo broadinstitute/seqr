@@ -473,6 +473,19 @@ const NON_CASE_REVIEW_FIELDS = [
     isPrivate: true,
     component: NullableBoolFieldView,
   },
+  {
+    field: 'solveStatus',
+    fieldName: 'Participant Solve Status',
+    isEditable: true,
+    isPrivate: true,
+    component: OptionFieldView,
+    tagOptions: [
+      { value: 'S', text: 'Solved' },
+      { value: 'P', text: 'Partially solved' },
+      { value: 'B', text: 'Probably solved' },
+      { value: 'U', text: 'Unsolved' },
+    ],
+  },
   ...INDIVIDUAL_FIELDS,
 ]
 const EMPTY_FIELDS = [{ id: 'blank', colWidth: 10, component: () => null }]
