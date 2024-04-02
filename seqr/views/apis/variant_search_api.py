@@ -534,7 +534,6 @@ def _flatten_variants(variants):
 @login_and_policies_required
 def variant_lookup_handler(request):
     kwargs = {_to_snake_case(k): v for k, v in request.GET.items()}
-    include_genotypes = kwargs.pop('include_genotypes', False)  # TODO remove param from UI and all references
 
     variant, families = variant_lookup(request.user, get_families=_all_genome_version_families, **kwargs)
     is_lookup = not families

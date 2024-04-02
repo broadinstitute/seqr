@@ -150,25 +150,23 @@ def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, 
 
 
 def variant_lookup(user, get_families, variant_id, genome_version=None, **kwargs):
-    parsed_variant_id = _parse_variant_id(variant_id)
-    is_sv = not parsed_variant_id
     genome_version = genome_version or GENOME_VERSION_GRCh38
-
     cache_key = f'variant_lookup_results__{variant_id}__{genome_version}'
-    if is_sv:
-        cache_key += f'__{user}'
-    variant = safe_redis_get_json(cache_key)
-    if variant:
-        return variant
 
-    if is_sv:
+    parsed_variant_id = _parse_variant_id(variant_id)
+    if parsed_variant_id:
+        lookup_func = hail_variant_lookup
+        families = None
+    else:
+        cache_key += f'__{user}'
         lookup_func = hail_sv_variant_lookup
         families = get_families(genome_version, user)
         samples, _ = _get_families_search_data(families, dataset_type=Sample.DATASET_TYPE_SV_CALLS)
         kwargs['samples'] = samples
-    else:
-        lookup_func = hail_variant_lookup
-        families = None
+
+    variant = safe_redis_get_json(cache_key)
+    if variant:
+        return variant, families
 
     lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), lookup_func)
     variant = lookup_func(user, parsed_variant_id or variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], **kwargs)
