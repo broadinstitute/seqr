@@ -10,3 +10,6 @@ class OntSnvIndelHailTableQuery(SnvIndelHailTableQuery):
 
     def _get_loaded_filter_ht(self, *args, **kwargs):
         return None
+
+    def _add_project_lookup_data(self, *args, **kwargs):
+        raise HTTPBadRequest(reason='Variant lookup is not supported for ONT data')

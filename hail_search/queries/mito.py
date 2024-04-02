@@ -297,3 +297,19 @@ class MitoHailTableQuery(BaseHailTableQuery):
     @classmethod
     def _gene_rank_sort(cls, r, gene_ranks):
         return [gene_ranks.get(r.selected_transcript.gene_id)] + super()._gene_rank_sort(r, gene_ranks)
+
+    def _add_project_lookup_data(self, *args, annotation_fields, **kwargs):
+        annotation_fields.update(self.VARIANT_LOOKUP_ANNOTATIONS_FIELDS)  # TODO
+        lookup_ht = self._read_table('lookup.ht', use_ssd_dir=True)
+        variant_projects = lookup_ht.aggregate(
+            hl.agg.take(hl.enumerate(lookup_ht.project_stats).starmap(
+                lambda i, ps: hl.or_missing(ps.any(hl.is_defined), vht.project_guids[i])
+            ).filter(hl.is_defined), 1),
+        )
+        if not variant_projects:
+            raise HTTPNotFound()
+
+        # TODO project_samples is flat project array, not a dict
+        return super()._add_project_lookup_data(
+            *args, annotation_fields, project_samples=variant_projects[0], **kwargs,
+        )

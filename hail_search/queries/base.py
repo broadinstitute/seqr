@@ -293,6 +293,9 @@ class BaseHailTableQuery(object):
         project_hts = []
         sample_data = {}
         for project_guid, project_sample_data in project_samples.items():
+            if not hl.utils.hadoop_exists(self._get_table_path(f'projects/{project_guid}.ht', use_ssd_dir=True)):
+                # TODO remove, for testing only
+                continue
             project_ht = self._read_table(
                 f'projects/{project_guid}.ht',
                 use_ssd_dir=True,
@@ -1063,18 +1066,16 @@ class BaseHailTableQuery(object):
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
         ))
 
-    def lookup_variants(self, variant_ids, project_samples=None, annotation_overrides=None):
+    def lookup_variants(self, variant_ids, include_project_data=False, **kwargs):
         self._parse_intervals(intervals=None, variant_ids=variant_ids, variant_keys=variant_ids)
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         annotation_fields = self.annotation_fields(include_genotype_overrides=False)
-        if project_samples:
-            projects_ht, _ = self._load_filtered_project_hts(project_samples, skip_all_missing=True, n_partitions=1)
-            ht = ht.annotate(**projects_ht[ht.key])
-        elif annotation_overrides:
-            annotation_fields.update(annotation_overrides)
-        else:
+        include_sample_annotations = False
+        if include_project_data:
+            ht, include_sample_annotations = self._add_project_lookup_data(ht, annotation_fields, **kwargs)
+        if not include_sample_annotations:
             annotation_fields = {
                 k: v for k, v in annotation_fields.items()
                 if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD, 'genotypeFilters'}
@@ -1084,18 +1085,15 @@ class BaseHailTableQuery(object):
 
         return formatted.aggregate(hl.agg.take(formatted.row, len(variant_ids)))
 
-    def lookup_variant(self, variant_id, sample_data=None):
-        annotation_overrides = {
-            FAMILY_GUID_FIELD: lambda ht: hl.empty_array(hl.tstr),
-            GENOTYPES_FIELD: lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
-            'genotypeFilters': lambda ht: hl.str(''),
-        }
+    def _add_project_lookup_data(self, ht, annotation_fields, include_sample_annotations=False, project_samples=None, **kwargs):
+        if project_samples:
+            projects_ht, _ = self._load_filtered_project_hts(project_samples, skip_all_missing=True, n_partitions=1)
+            ht = ht.annotate(**projects_ht[ht.key])
 
-        project_samples = None
-        if sample_data:
-            project_samples, _ = self._parse_sample_data(sample_data)
+        return ht, include_sample_annotations
 
-        variants = self.lookup_variants([variant_id], project_samples=project_samples, annotation_overrides=annotation_overrides)
+    def lookup_variant(self, variant_id, **kwargs):
+        variants = self.lookup_variants([variant_id], include_project_data=True, **kwargs)
         if not variants:
             raise HTTPNotFound()
         return dict(variants[0])

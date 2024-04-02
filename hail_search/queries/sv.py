@@ -127,3 +127,9 @@ class SvHailTableQuery(BaseHailTableQuery):
                 get_end_chrom(r),
             )),
         }
+
+    def _add_project_lookup_data(self, *args, sample_data=None, **kwargs):
+        project_samples, _ = self._parse_sample_data(sample_data)
+        return super()._add_project_lookup_data(
+            *args, include_sample_annotations=True, project_samples=project_samples, **kwargs,
+        )
