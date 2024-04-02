@@ -77,28 +77,20 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     return response_json['results']
 
 
-def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_type=None, **kwargs):
-    data_type = dataset_type.replace('_only', '')
-    is_sv = data_type == Sample.DATASET_TYPE_SV_CALLS
-    if is_sv:
-        if not sample_type:
-            from seqr.utils.search.utils import InvalidSearchException
-            raise InvalidSearchException('Sample type must be specified to look up a structural variant')
-        data_type = f'{data_type}_{sample_type}'
+def hail_variant_lookup(user, variant_id, **kwargs):
+    return _execute_lookup(variant_id, Sample.DATASET_TYPE_VARIANT_CALLS, user, **kwargs)
 
-    body = {
-        'variant_id': variant_id,
-        'data_type': data_type,
-        **kwargs,
-    }
-    sample_data = None
-    if samples:
-        sample_data = _get_sample_data(samples)
-        body['sample_data'] = sample_data.pop(data_type)
-    variant = _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
+
+def hail_sv_variant_lookup(user, variant_id, samples, sample_type=None, **kwargs):
+    if not sample_type:
+        from seqr.utils.search.utils import InvalidSearchException
+        raise InvalidSearchException('Sample type must be specified to look up a structural variant')
+    data_type = f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
+
+    variant = _execute_lookup(variant_id, data_type, user, sample_data=_get_sample_data(samples).pop(data_type), **kwargs)
     variants = [variant]
 
-    if is_sv and sample_data and variant['svType'] in {'DEL', 'DUP'}:
+    if variant['svType'] in {'DEL', 'DUP'}:
         del body['variant_id']
         body.update({
             'sample_data': sample_data,
@@ -109,6 +101,14 @@ def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATA
 
     return variants
 
+
+def _execute_lookup(variant_id, data_type,  user, **kwargs):
+    body = {
+        'variant_id': variant_id,
+        'data_type': data_type,
+        **kwargs,
+    }
+    return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
 
 def hail_variant_multi_lookup(user_email, variant_ids, data_type, genome_version):
     body = {'genome_version': genome_version, 'data_type': data_type, 'variant_ids': variant_ids}

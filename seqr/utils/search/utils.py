@@ -149,24 +149,29 @@ def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, 
     )
 
 
-def variant_lookup(user, variant_id, families=None, genome_version=None, **kwargs):
+def variant_lookup(user, get_families, variant_id, genome_version=None, **kwargs):
     genome_version = genome_version or GENOME_VERSION_GRCh38
+    # TODO user not needed in key for variant lookup (still needed for SVs)
     cache_key = f'variant_lookup_results__{variant_id}__{genome_version}__{user}'
     variant = safe_redis_get_json(cache_key)
     if variant:
         return variant
 
     parsed_variant_id = _parse_variant_id(variant_id)
-    dataset_type = DATASET_TYPE_SNP_INDEL_ONLY if parsed_variant_id else Sample.DATASET_TYPE_SV_CALLS
-
-    if families:
-        samples, _ = _get_families_search_data(families, dataset_type=dataset_type)
+    if parsed_variant_id:
+        lookup_func = hail_variant_lookup
+        families = None
+    else:
+        lookup_func = hail_sv_variant_lookup
+        parsed_variant_id = variant_id
+        families = get_families(genome_version, user)
+        samples, _ = _get_families_search_data(families, dataset_type=Sample.DATASET_TYPE_SV_CALLS)
         kwargs['samples'] = samples
 
-    lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), hail_variant_lookup)
-    variant = lookup_func(user, parsed_variant_id or variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], dataset_type=dataset_type, **kwargs)
+    lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), lookup_func)
+    variant = lookup_func(user, parsed_variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], **kwargs)
     safe_redis_set_json(cache_key, variant, expire=timedelta(weeks=2))
-    return variant
+    return variant, families
 
 
 def _get_search_cache_key(search_model, sort=None):

@@ -534,43 +534,45 @@ def _flatten_variants(variants):
 @login_and_policies_required
 def variant_lookup_handler(request):
     kwargs = {_to_snake_case(k): v for k, v in request.GET.items()}
-    # TODO for svs only - handle differently?
     include_genotypes = kwargs.pop('include_genotypes', False)  # TODO remove param from UI and all references
-    families = None
-    if include_genotypes:
-        families = _all_genome_version_families(
-            kwargs.get('genome_version', GENOME_VERSION_GRCh38), request.user,
+
+    variant, families = variant_lookup(request.user, get_families=_all_genome_version_families, **kwargs)
+    is_sv = bool(families)
+    if is_sv:
+        variants = variant
+    else:
+        variants = [variant]
+        from settings import INTERNAL_NAMESPACES
+        families = Family.objects.filter(
+            guid__in=variant['familyGenotypes'],
+            project__guid__in=get_project_guids_user_can_view(request.user, limit_data_manager=True),
+            # TODO testing only, remove for production
+            project__workspace_namespace__in=INTERNAL_NAMESPACES,
         )
+        variant['familyGuids'] = list(families.values_list('guid', flat=True))
 
-    variants = variant_lookup(request.user, families=families, **kwargs)
-    # TODO SVs handled differently
-    variant = variants[0]
-    families = Family.objects.filter(guid__in=variant['familyGenotypes'])
-    from settings import INTERNAL_NAMESPACES
-    can_view_families = families.filter(
-        project__guid__in=get_project_guids_user_can_view(request.user, limit_data_manager=True),
-        # TODO testing only, remove for production
-        project__workspace_namespace__in=INTERNAL_NAMESPACES,
-    )
-    variant['familyGuids'] = list(can_view_families.values_list('guid', flat=True))
-
-    saved_variants, _ = _get_saved_variant_models(variants, can_view_families)
+    saved_variants, _ = _get_saved_variant_models(variants, families)
     response = get_variants_response(
         request, saved_variants=saved_variants, response_variants=variants,
-        add_all_context=include_genotypes, add_locus_list_detail=include_genotypes,
+        add_all_context=True, add_locus_list_detail=True,
     )
     response['variants'] = variants
 
+    if is_sv:
+        return create_json_response(response)
+
     individual_guid_map = {
-        (i['familyGuid'], i['individualId']): i['individualGuid']
-        for i in response['individualsByGuid'].values()
+        (i['familyGuid'], i['individualId']): i['individualGuid'] for i in response['individualsByGuid'].values()
     }
+
+    no_access_families = set(variant['familyGenotypes']) - set(variant['familyGuids'])
     individual_summary_map = {
         (i.pop('family__guid'), i.pop('individual_id')): i
-        for i in Individual.objects.filter(family__in=families).exclude(family__guid__in=variant['familyGuids']).values(
+        for i in Individual.objects.filter(family__guid__in=no_access_families).values(
             'family__guid', 'individual_id', 'affected', 'sex',  # TODO add features
         )
     }
+
     variant['genotypes'] = {}
     variant['genotypeSummaries'] = []
     for family_guid, genotypes in variant.pop('familyGenotypes').items():
