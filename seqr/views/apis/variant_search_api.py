@@ -537,10 +537,8 @@ def variant_lookup_handler(request):
     include_genotypes = kwargs.pop('include_genotypes', False)  # TODO remove param from UI and all references
 
     variant, families = variant_lookup(request.user, get_families=_all_genome_version_families, **kwargs)
-    is_sv = bool(families)
-    if is_sv:
-        variants = variant
-    else:
+    is_lookup = not families
+    if is_lookup:
         variants = [variant]
         from settings import INTERNAL_NAMESPACES
         families = Family.objects.filter(
@@ -550,6 +548,8 @@ def variant_lookup_handler(request):
             project__workspace_namespace__in=INTERNAL_NAMESPACES,
         )
         variant['familyGuids'] = list(families.values_list('guid', flat=True))
+    else:
+        variants = variant
 
     saved_variants, _ = _get_saved_variant_models(variants, families)
     response = get_variants_response(
@@ -558,7 +558,7 @@ def variant_lookup_handler(request):
     )
     response['variants'] = variants
 
-    if is_sv:
+    if not is_lookup:
         return create_json_response(response)
 
     individual_guid_map = {

@@ -12,7 +12,7 @@ from seqr.utils.search.elasticsearch.es_utils import ping_elasticsearch, delete_
     get_es_variants, get_es_variants_for_variant_ids, process_es_previously_loaded_results, process_es_previously_loaded_gene_aggs, \
     es_backend_enabled, ping_kibana, ES_EXCEPTION_ERROR_MAP, ES_EXCEPTION_MESSAGE_MAP, ES_ERROR_LOG_EXCEPTIONS
 from seqr.utils.search.hail_search_utils import get_hail_variants, get_hail_variants_for_variant_ids, ping_hail_backend, \
-    hail_variant_lookup, validate_hail_backend_no_location_search
+    hail_variant_lookup, hail_sv_variant_lookup, validate_hail_backend_no_location_search
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom
 
@@ -150,26 +150,28 @@ def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, 
 
 
 def variant_lookup(user, get_families, variant_id, genome_version=None, **kwargs):
+    parsed_variant_id = _parse_variant_id(variant_id)
+    is_sv = not parsed_variant_id
     genome_version = genome_version or GENOME_VERSION_GRCh38
-    # TODO user not needed in key for variant lookup (still needed for SVs)
-    cache_key = f'variant_lookup_results__{variant_id}__{genome_version}__{user}'
+
+    cache_key = f'variant_lookup_results__{variant_id}__{genome_version}'
+    if is_sv:
+        cache_key += f'__{user}'
     variant = safe_redis_get_json(cache_key)
     if variant:
         return variant
 
-    parsed_variant_id = _parse_variant_id(variant_id)
-    if parsed_variant_id:
-        lookup_func = hail_variant_lookup
-        families = None
-    else:
+    if is_sv:
         lookup_func = hail_sv_variant_lookup
-        parsed_variant_id = variant_id
         families = get_families(genome_version, user)
         samples, _ = _get_families_search_data(families, dataset_type=Sample.DATASET_TYPE_SV_CALLS)
         kwargs['samples'] = samples
+    else:
+        lookup_func = hail_variant_lookup
+        families = None
 
     lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), lookup_func)
-    variant = lookup_func(user, parsed_variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], **kwargs)
+    variant = lookup_func(user, parsed_variant_id or variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], **kwargs)
     safe_redis_set_json(cache_key, variant, expire=timedelta(weeks=2))
     return variant, families
 
