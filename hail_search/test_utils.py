@@ -362,7 +362,20 @@ VARIANT4 = {
     '_sort': [1091511686],
 }
 
-VARIANT_LOOKUP_VARIANT = {**VARIANT1, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''}
+VARIANT_LOOKUP_VARIANT = {
+    **VARIANT1,
+    'familyGenotypes': {
+        VARIANT1['familyGuids'][0]: sorted([
+            {k: v for k, v in g.items() if k != 'individualGuid'} for g in VARIANT1['genotypes'].values()
+        ], key=lambda x: x['sampleId'], reverse=True),
+        'F000011_11': [{
+            'sampleId': 'NA20885', 'sampleType': 'WGS', 'familyGuid': 'F000011_11',
+            'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0,
+        }],
+    }
+}
+for k in {'familyGuids', 'genotypes', 'genotypeFilters'}:
+    VARIANT_LOOKUP_VARIANT.pop(k)
 
 FAMILY_3_VARIANT = deepcopy(VARIANT3)
 FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']

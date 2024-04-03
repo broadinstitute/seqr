@@ -107,7 +107,7 @@ class BaseHailTableQuery(object):
             GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
                 lambda gt: hl.is_defined(gt.individualGuid)
             ).group_by(lambda x: x.individualGuid).map_values(lambda x: self._get_sample_genotype(
-                x[0], select_fields=['individualGuid'], include_genotype_overrides=include_genotype_overrides,
+                x[0], r, select_fields=['individualGuid'], include_genotype_overrides=include_genotype_overrides,
             )),
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
@@ -130,7 +130,7 @@ class BaseHailTableQuery(object):
 
         return annotation_fields
 
-    def _get_sample_genotype(self, sample, include_genotype_overrides=False, select_fields=None):
+    def _get_sample_genotype(self, sample, r=None, include_genotype_overrides=False, select_fields=None):
         return sample.select(
             'sampleId', 'sampleType', 'familyGuid', *(select_fields or []),
             numAlt=hl.if_else(hl.is_defined(sample.GT), sample.GT.n_alt_alleles(), self.MISSING_NUM_ALT),
