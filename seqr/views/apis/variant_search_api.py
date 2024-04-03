@@ -21,7 +21,7 @@ from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
-    get_json_for_saved_searches, FAMILY_DISPLAY_NAME_EXPR
+    get_json_for_saved_searches, add_individual_hpo_details, FAMILY_DISPLAY_NAME_EXPR
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     user_is_analyst, login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission
 from seqr.views.utils.project_context_utils import get_projects_child_entities
@@ -568,9 +568,10 @@ def variant_lookup_handler(request):
     individual_summary_map = {
         (i.pop('family__guid'), i.pop('individual_id')): i
         for i in Individual.objects.filter(family__guid__in=no_access_families).values(
-            'family__guid', 'individual_id', 'affected', 'sex',  # TODO add features
+            'family__guid', 'individual_id', 'affected', 'sex', 'features',
         )
     }
+    add_individual_hpo_details(individual_summary_map.values())
 
     variant['genotypes'] = {}
     variant['lookupFamilyGuids'] = variant.pop('familyGuids')
@@ -586,10 +587,18 @@ def variant_lookup_handler(request):
         variant['lookupFamilyGuids'].append(family_guid)
         for j, genotype in enumerate(genotypes):
             individual_guid = f'I{j}_{family_guid}'
+            individual = individual_summary_map[(genotype.pop('familyGuid'), genotype.pop('sampleId'))]
+            feature_category_count = defaultdict(int)
+            for feature in individual['features'] or []:
+                feature_category_count[feature['category']] += 1
             response['individualsByGuid'][individual_guid] = {
-                **individual_summary_map[(genotype.pop('familyGuid'), genotype.pop('sampleId'))],
+                **individual,
                 'familyGuid': family_guid,
                 'individualGuid': individual_guid,
+                'features': [
+                    {'category': category, 'label': f'{count} terms'}
+                    for category, count in feature_category_count.items()
+                ],
             }
             variant['genotypes'][individual_guid] = genotype
 
