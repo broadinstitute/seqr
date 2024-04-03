@@ -9,6 +9,7 @@ import StateDataLoader from 'shared/components/StateDataLoader'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { helpLabel } from 'shared/components/form/FormHelpers'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
+import FamilyVariantTags from 'shared/components/panel/variants/FamilyVariantTags'
 import Variants, { Variant, StyledVariantRow } from 'shared/components/panel/variants/Variants'
 import { FamilyVariantIndividuals } from 'shared/components/panel/variants/VariantIndividuals'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
@@ -35,9 +36,12 @@ const FIELDS = [
 const LookupVariant = ({ variant }) => (
   <Grid stackable divided="vertically">
     <Variant variant={variant} />
-    {/* TODO show IGV, Tags */}
+    {/* TODO show IGV */}
     {variant.lookupFamilyGuids.map(familyGuid => (
       <StyledVariantRow key={familyGuid}>
+        <Grid.Column key={familyGuid} width={16}>
+          <FamilyVariantTags familyGuid={familyGuid} variant={variant} linkToSavedVariants />
+        </Grid.Column>
         <Grid.Column width={4} />
         <Grid.Column width={12}>
           <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
