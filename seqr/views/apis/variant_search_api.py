@@ -573,17 +573,24 @@ def variant_lookup_handler(request):
     }
 
     variant['genotypes'] = {}
-    variant['genotypeSummaries'] = []
-    for family_guid, genotypes in variant.pop('familyGenotypes').items():
-        if family_guid in variant['familyGuids']:
-            variant['genotypes'].update({
-                individual_guid_map[(family_guid, genotype['sampleId'])]: genotype
-                for genotype in genotypes
-            })
-        else:
-            variant['genotypeSummaries'].append([{
+    variant['lookupFamilyGuids'] = variant.pop('familyGuids')
+    variant['familyGuids'] = []
+    for family_guid in variant['lookupFamilyGuids']:
+        variant['genotypes'].update({
+            individual_guid_map[(family_guid, genotype['sampleId'])]: genotype
+            for genotype in variant['familyGenotypes'].pop(family_guid)
+        })
+
+    for i, genotypes in enumerate(variant.pop('familyGenotypes').values()):
+        family_guid = f'F{i}_{variant["variantId"]}'
+        variant['lookupFamilyGuids'].append(family_guid)
+        for j, genotype in enumerate(genotypes):
+            individual_guid = f'I{j}_{family_guid}'
+            response['individualsByGuid'][individual_guid] = {
                 **individual_summary_map[(genotype.pop('familyGuid'), genotype.pop('sampleId'))],
-                **genotype,
-            } for genotype in genotypes])
+                'familyGuid': family_guid,
+                'individualGuid': individual_guid,
+            }
+            variant['genotypes'][individual_guid] = genotype
 
     return create_json_response(response)
