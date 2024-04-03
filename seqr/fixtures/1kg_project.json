@@ -829,6 +829,7 @@
         "sex": "F",
         "affected": "A",
         "proband_relationship": "S",
+        "solve_status": "P",
         "display_name": ""
     }
 },

@@ -35,7 +35,7 @@ SAVED_VARIANT_RESPONSE_KEYS = {
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "projectGuid": "R0003_test",
     "num_saved_variants": 2,
-    "solve_status": "Unsolved",
+    "solve_status": "Partially solved",
     "sample_id": "NA20889",
     "gene_known_for_phenotype-1": "Candidate",
     "gene_known_for_phenotype-2": "Candidate",

@@ -957,6 +957,7 @@ GREGOR_PARTICIPANT_COLUMN_MAP = {
     'participant_id': 'displayName',
     'affected_status': JsonConstants.AFFECTED_COLUMN,
     'phenotype_description': JsonConstants.CODED_PHENOTYPE_COLUMN,
+    'solve_status': 'untrackedSolveStatus',
 }
 ENUM_COLUMNS = {
     column: {v: k for k, v in choices} for column, choices in [

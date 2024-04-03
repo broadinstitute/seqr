@@ -1,4 +1,4 @@
-name: hail search dataset version release
+name: hail search persistent volume snapshot release
 on:
   workflow_dispatch:
     inputs:
@@ -8,12 +8,12 @@ on:
         - dev
         - prod
       reference_genome:
-        type: choice
-        description: Reference Genome
-        options: 
-        - GRCh37
-        - GRCh38
-        required: true
+         type: choice
+         description: Reference Genome
+         options: 
+         - GRCh37
+         - GRCh38
+         required: true
       dataset_type:
         type: choice
         description: Dataset Type
@@ -24,6 +24,8 @@ on:
         - SV
         required: true
       version:
+        required: true
+      volume_handle:
         required: true
 
 jobs:
@@ -45,6 +47,12 @@ jobs:
           cmd: >
             yq -i '.global.hail_search.datasetVersions.${{ inputs.reference_genome }}/${{ inputs.dataset_type }} = "${{ inputs.version }}"' charts/broad-seqr/values-${{ inputs.environment }}.yaml
 
+      - name: update volume handle in the broad-seqr chart
+        uses: mikefarah/yq@v4.22.1
+        with:
+          cmd: >
+            yq -i '.hail-search.persistentVolume.volumeHandle = "${{ inputs.volume_handle }}"' charts/broad-seqr/values-${{ inputs.environment }}.yaml
+
       - name: Commit and Push changes
         uses: Andro999b/push@v1.3
         with:
@@ -53,4 +61,4 @@ jobs:
           github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
           author_email: ${{ github.actor }}@users.noreply.github.com
           author_name: tgg-automation
-          message: "Updating ${{ inputs.reference_genome }}/${{ inputs.dataset_type }} dataset version to ${{ inputs.version }}"
+          message: "Updating ${{ inputs.environment }} ${{ inputs.reference_genome }}/${{ inputs.dataset_type }} dataset version to ${{ inputs.version }} and volume handle to ${{ inputs.volume_handle }} "
