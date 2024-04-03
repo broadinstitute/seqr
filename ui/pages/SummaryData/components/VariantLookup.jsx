@@ -9,7 +9,8 @@ import StateDataLoader from 'shared/components/StateDataLoader'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { helpLabel } from 'shared/components/form/FormHelpers'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
-import Variants from 'shared/components/panel/variants/Variants'
+import Variants, { Variant } from 'shared/components/panel/variants/Variants'
+import { BaseVariantIndividuals } from 'shared/components/panel/variants/VariantIndividuals'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
 
 const FIELDS = [
@@ -31,7 +32,28 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
-const VariantDisplay = ({ variants }) => <Variants variants={variants} />
+const LookupVariant = ({ variant }) => (
+  <Grid stackable divided="vertically">
+    <Variant variant={variant} />
+    {/* TODO display access families in line with IGV */}
+    {variant.genotypeSummaries.map((familyGenotypes, i) => (
+      <Grid.Row key={i}>
+        <Grid.Column width={4} />
+        <Grid.Column width={12}>
+          <BaseVariantIndividuals individuals={familyGenotypes} variant={variant} />
+        </Grid.Column>
+      </Grid.Row>
+    ))}
+  </Grid>
+)
+
+LookupVariant.propTypes = {
+  variant: PropTypes.object,
+}
+
+const VariantDisplay = ({ variants }) => (
+  (variants || [])[0]?.genotypeSummaries ? <LookupVariant variant={variants[0]} /> : <Variants variants={variants} />
+)
 
 VariantDisplay.propTypes = {
   variants: PropTypes.arrayOf(PropTypes.object),

@@ -407,7 +407,7 @@ IndividualDetailField.propTypes = {
   field: PropTypes.string,
 }
 
-const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet, genesById }) => (
+export const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet, genesById }) => (
   <IndividualsContainer>
     {(individuals || []).map(individual => (
       <IndividualCell key={individual.individualGuid} numIndividuals={individuals.length}>
