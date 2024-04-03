@@ -676,10 +676,9 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, VARIANT_LOOKUP_VARIANT)
 
-        # TODO fix
-        # body['variant_id'] = VARIANT_ID_SEARCH['variant_ids'][1]
-        # async with self.client.request('POST', '/lookup', json=body) as resp:
-        #     self.assertEqual(resp.status, 404)
+        body['variant_id'] = VARIANT_ID_SEARCH['variant_ids'][1]
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 404)
 
         body.update({'genome_version': 'GRCh37', 'variant_id': ['7', 143270172, 'A', 'G']})
         async with self.client.request('POST', '/lookup', json=body) as resp:
@@ -719,6 +718,10 @@ class HailSearchTestCase(AioHTTPTestCase):
                 for individual, genotype in GCNV_VARIANT4['genotypes'].items()
             }
         })
+
+        body['variant_id'] = 'suffix_140608_DEL'
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 404)
 
     async def test_multi_variant_lookup(self):
         await self._test_multi_lookup(VARIANT_ID_SEARCH['variant_ids'], 'SNV_INDEL', [VARIANT1])

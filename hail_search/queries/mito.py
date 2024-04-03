@@ -1,3 +1,4 @@
+from aiohttp.web import HTTPNotFound
 import hail as hl
 import logging
 
@@ -319,7 +320,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 hl.dict(family_indices.map(lambda j: (lookup_ht.project_families[project_guid][j], True))),
             ))), 1),
         )
-        if not variant_projects:
+        if not (variant_projects and variant_projects[0]):
             raise HTTPNotFound()
 
         annotation_fields.update({
