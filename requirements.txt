@@ -99,7 +99,7 @@ oauthlib==3.2.2
     #   social-auth-core
 openpyxl==3.1.1
     # via -r requirements.in
-pillow==10.2.0
+pillow==10.3.0
     # via -r requirements.in
 protobuf==3.20.2
     # via
