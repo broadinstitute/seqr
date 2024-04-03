@@ -134,7 +134,7 @@ def get_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=
 def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, dataset_type=None, **kwargs):
     parsed_variant_ids = {}
     for variant_id in variant_ids:
-        parsed_variant_ids[variant_id] = _parse_variant_id(variant_id)
+        parsed_variant_ids[variant_id] = parse_variant_id(variant_id)
 
     if dataset_type:
         parsed_variant_ids = {
@@ -149,29 +149,29 @@ def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, 
     )
 
 
-def variant_lookup(user, get_families, variant_id, genome_version=None, **kwargs):
+def _variant_lookup(lookup_func, user, variant_id, genome_version=None, cache_key_suffix='', **kwargs):
     genome_version = genome_version or GENOME_VERSION_GRCh38
-    cache_key = f'variant_lookup_results__{variant_id}__{genome_version}'
-
-    parsed_variant_id = _parse_variant_id(variant_id)
-    if parsed_variant_id:
-        lookup_func = hail_variant_lookup
-        families = None
-    else:
-        cache_key += f'__{user}'
-        lookup_func = hail_sv_variant_lookup
-        families = get_families(genome_version, user)
-        samples, _ = _get_families_search_data(families, dataset_type=Sample.DATASET_TYPE_SV_CALLS)
-        kwargs['samples'] = samples
+    cache_key = f'variant_lookup_results__{variant_id}__{genome_version}__{cache_key_suffix}'
 
     variant = safe_redis_get_json(cache_key)
     if variant:
-        return variant, families
+        return variant
 
     lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), lookup_func)
-    variant = lookup_func(user, parsed_variant_id or variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], **kwargs)
+    variant = lookup_func(user, variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], **kwargs)
     safe_redis_set_json(cache_key, variant, expire=timedelta(weeks=2))
-    return variant, families
+    return variant
+
+
+def variant_lookup(*args, **kwargs):
+    return _variant_lookup(hail_variant_lookup, *args, **kwargs)
+
+
+def sv_variant_lookup(user, variant_id, families, **kwargs):
+    samples, _ = _get_families_search_data(families, dataset_type=Sample.DATASET_TYPE_SV_CALLS)
+    return _variant_lookup(
+        hail_sv_variant_lookup, user, variant_id **kwargs, samples=samples, cache_key_suffix=user,
+    )
 
 
 def _get_search_cache_key(search_model, sort=None):
@@ -326,7 +326,7 @@ def _parse_variant_items(search_json):
             rs_ids.append(item)
         else:
             variant_id = item.lstrip('chr')
-            parsed_variant_id = _parse_variant_id(variant_id)
+            parsed_variant_id = parse_variant_id(variant_id)
             if parsed_variant_id:
                 parsed_variant_ids.append(parsed_variant_id)
                 variant_ids.append(variant_id)
@@ -336,7 +336,7 @@ def _parse_variant_items(search_json):
     return rs_ids, variant_ids, parsed_variant_ids, invalid_items
 
 
-def _parse_variant_id(variant_id):
+def parse_variant_id(variant_id):
     try:
         return parse_valid_variant_id(variant_id)
     except (KeyError, ValueError):

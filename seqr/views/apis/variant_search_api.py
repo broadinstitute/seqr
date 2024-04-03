@@ -12,7 +12,7 @@ from math import ceil
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples, \
-    variant_lookup
+    variant_lookup, sv_variant_lookup, parse_variant_id
 from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.export_utils import export_table
@@ -535,9 +535,16 @@ def _flatten_variants(variants):
 def variant_lookup_handler(request):
     kwargs = {_to_snake_case(k): v for k, v in request.GET.items()}
 
-    variant, families = variant_lookup(request.user, get_families=_all_genome_version_families, **kwargs)
-    is_lookup = not families
-    if is_lookup:
+    variant_id = kwargs.pop('variant_id')
+    parsed_variant_id = parse_variant_id(variant_id)
+    is_sv = not parsed_variant_id
+    if is_sv:
+        families = _all_genome_version_families(
+            kwargs.get('genome_version', GENOME_VERSION_GRCh38), request.user,
+        )
+        variants = sv_variant_lookup(request.user, variant_id, families, **kwargs)
+    else:
+        variant = variant_lookup(request.user, parsed_variant_id, **kwargs)
         variants = [variant]
         from settings import INTERNAL_NAMESPACES
         families = Family.objects.filter(
@@ -547,8 +554,6 @@ def variant_lookup_handler(request):
             project__workspace_namespace__in=INTERNAL_NAMESPACES,
         )
         variant['familyGuids'] = list(families.values_list('guid', flat=True))
-    else:
-        variants = variant
 
     saved_variants, _ = _get_saved_variant_models(variants, families)
     response = get_variants_response(
@@ -557,9 +562,13 @@ def variant_lookup_handler(request):
     )
     response['variants'] = variants
 
-    if not is_lookup:
-        return create_json_response(response)
+    if not is_sv:
+        _update_lookup_variant(variant, response)
 
+    return create_json_response(response)
+
+
+def _update_lookup_variant(variant, response):
     individual_guid_map = {
         (i['familyGuid'], i['individualId']): i['individualGuid'] for i in response['individualsByGuid'].values()
     }
@@ -601,5 +610,3 @@ def variant_lookup_handler(request):
                 ],
             }
             variant['genotypes'][individual_guid] = genotype
-
-    return create_json_response(response)
