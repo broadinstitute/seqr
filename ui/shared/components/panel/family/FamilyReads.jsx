@@ -140,7 +140,7 @@ ShowIgvButton.propTypes = {
 const ReadButtons = React.memo((
   { variant, familyGuid, igvSamplesByFamilySampleIndividual, familiesByGuid, buttonProps, showReads },
 ) => {
-  const familyGuids = variant ? variant.familyGuids : [familyGuid]
+  const familyGuids = familyGuid ? [familyGuid] : (variant?.familyGuids || [])
 
   const sampleTypeFamilies = familyGuids.reduce(
     (acc, fGuid) => {
@@ -500,7 +500,9 @@ class FamilyReads extends React.PureComponent {
       </Segment.Group>
     ) : null
 
-    return React.createElement(layout, { variant, reads, showReads, updateReads: this.updateReads, ...props })
+    return React.createElement(layout, {
+      variant, reads, showReads, familyGuid, updateReads: this.updateReads, ...props,
+    })
   }
 
 }
