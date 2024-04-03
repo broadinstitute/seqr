@@ -670,7 +670,6 @@ class HailSearchTestCase(AioHTTPTestCase):
         ])
 
     async def test_variant_lookup(self):
-        self.maxDiff = None # TODO
         body = {'genome_version': 'GRCh38', 'variant_id': VARIANT_ID_SEARCH['variant_ids'][0]}
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 200)
@@ -688,7 +687,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {
             **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}},
-            'familyGenotypes': { GRCH37_VARIANT['familyGuids'][0]: [
+            'familyGenotypes': {GRCH37_VARIANT['familyGuids'][0]: [
                 {k: v for k, v in g.items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
             ]},
         })

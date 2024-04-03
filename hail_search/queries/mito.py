@@ -310,7 +310,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             hl.dict(hl.enumerate(lookup_ht.project_stats).starmap(lambda i, ps: (
                 lookup_ht.project_guids[i],
                 hl.enumerate(ps).starmap(
-                    lambda j, s: hl.or_missing((s.het_samples > 0) | (s.hom_samples > 0), j)
+                    lambda j, s: hl.or_missing(self._stat_has_non_ref(s), j)
                 ).filter(hl.is_defined),
             )).filter(
                 lambda x: x[1].any(hl.is_defined)
@@ -331,3 +331,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         logger.info(f'Looking up {self.DATA_TYPE} variant in {len(variant_projects[0])} projects')
 
         return super()._add_project_lookup_data(ht, annotation_fields, project_samples=variant_projects[0], **kwargs)
+
+    @staticmethod
+    def _stat_has_non_ref(s):
+        return (s.heteroplasmic_samples > 0) | (s.homoplasmic_samples > 0)
