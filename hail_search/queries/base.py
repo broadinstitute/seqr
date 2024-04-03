@@ -298,9 +298,6 @@ class BaseHailTableQuery(object):
         project_hts = []
         sample_data = {}
         for project_guid, project_sample_data in project_samples.items():
-            if not hl.utils.hadoop_exists(self._get_table_path(f'projects/{project_guid}.ht', use_ssd_dir=True)):
-                # TODO remove, for testing only
-                continue
             project_ht = self._read_table(
                 f'projects/{project_guid}.ht',
                 use_ssd_dir=True,
