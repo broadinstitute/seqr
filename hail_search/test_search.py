@@ -693,17 +693,16 @@ class HailSearchTestCase(AioHTTPTestCase):
             ]},
         })
 
-        # TODO fix
         body.update({'variant_id': ['M', 4429, 'G', 'A'], 'data_type': 'MITO', 'genome_version': 'GRCh38'})
-        # async with self.client.request('POST', '/lookup', json=body) as resp:
-        #     self.assertEqual(resp.status, 200)
-        #     resp_json = await resp.json()
-        # self.assertDictEqual(resp_json, {
-        #     **{k: v for k, v in MITO_VARIANT1.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}},
-        #     'familyGenotypes': {MITO_VARIANT1['familyGuids'][0]: [
-        #         {k: v for k, v in g.items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
-        #     ]},
-        # })
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, {
+            **{k: v for k, v in MITO_VARIANT1.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}},
+            'familyGenotypes': {MITO_VARIANT1['familyGuids'][0]: [
+                {k: v for k, v in g.items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
+            ]},
+        })
 
         body.update({'variant_id': 'phase2_DEL_chr14_4640', 'data_type': 'SV_WGS', 'sample_data': SV_WGS_SAMPLE_DATA['SV_WGS']})
         async with self.client.request('POST', '/lookup', json=body) as resp:
