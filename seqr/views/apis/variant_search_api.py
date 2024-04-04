@@ -497,7 +497,7 @@ def _get_saved_searches(user):
 
 
 def _get_saved_variant_models(variants, families):
-    hg37_family_guids = families.filter(project__genome_version=GENOME_VERSION_GRCh37).values_list('guid', flat=True)
+    hg37_family_guids = families.filter(project__genome_version=GENOME_VERSION_GRCh37).values_list('guid', flat=True) if families else []
 
     variant_q = Q()
     variants_by_id = {}
@@ -542,6 +542,8 @@ def variant_lookup_handler(request):
         families = _all_genome_version_families(
             kwargs.get('genome_version', GENOME_VERSION_GRCh38), request.user,
         )
+        if not families:
+            raise PermissionDenied()
         variants = sv_variant_lookup(request.user, variant_id, families, **kwargs)
     else:
         variant = variant_lookup(request.user, parsed_variant_id, **kwargs)
@@ -552,7 +554,7 @@ def variant_lookup_handler(request):
         )
         variant['familyGuids'] = list(families.values_list('guid', flat=True))
 
-    saved_variants, _ = _get_saved_variant_models(variants, families) if families else (None, None)
+    saved_variants, _ = _get_saved_variant_models(variants, None) if families else (None, None)
     response = get_variants_response(
         request, saved_variants=saved_variants, response_variants=variants,
         add_all_context=True, add_locus_list_detail=True,
