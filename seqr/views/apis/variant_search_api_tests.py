@@ -763,6 +763,116 @@ class VariantSearchAPITest(object):
 
     @mock.patch('seqr.views.apis.variant_search_api.variant_lookup')
     def test_variant_lookup(self, mock_variant_lookup):
+        response_variant = deepcopy(VARIANT_LOOKUP_VARIANT)
+        mock_variant_lookup.side_effect = lambda *args, **kwargs: deepcopy(response_variant)
+
+        url = f'{reverse(variant_lookup_handler)}?variantId=1-10439-AC-A&genomeVersion=38'
+        self.check_require_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        expected_variant = {
+            **VARIANT_LOOKUP_VARIANT,
+            'familyGuids': [],
+            'lookupFamilyGuids': ['F0_1-10439-AC-A', 'F1_1-10439-AC-A'],
+            'genotypes': {
+                'I0_F0_1-10439-AC-A': {'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'sampleType': 'WES'},
+                'I1_F0_1-10439-AC-A': {'ab': 0.0, 'dp': 24, 'gq': 0, 'numAlt': 0, 'sampleType': 'WES'},
+                'I2_F0_1-10439-AC-A': {'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 1, 'sampleType': 'WES'},
+                'I0_F1_1-10439-AC-A': {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'sampleType': 'WGS'},
+            },
+        }
+        del expected_variant['familyGenotypes']
+        expected_body = {
+            **{k: {} for k in EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE if k not in {
+                'searchedVariants', 'search', 'variantNotesByGuid', 'variantTagsByGuid', 'variantFunctionalDataByGuid',
+
+            }},
+            'projectsByGuid': {},
+            'individualsByGuid': {
+                'I0_F0_1-10439-AC-A': {
+                    'affected': 'N', 'familyGuid': 'F0_1-10439-AC-A', 'features': [],
+                    'individualGuid': 'I0_F0_1-10439-AC-A', 'sex': 'F',
+                },
+                'I0_F1_1-10439-AC-A': {
+                    'affected': 'A', 'familyGuid': 'F1_1-10439-AC-A', 'individualGuid': 'I0_F1_1-10439-AC-A', 'sex': 'M',
+                    'features': [{'category': 'HP:0001626', 'label': '1 terms'}, {'category': 'Other', 'label': '1 terms'}],
+                },
+                'I1_F0_1-10439-AC-A': {
+                    'affected': 'N', 'familyGuid': 'F0_1-10439-AC-A', 'features': [],
+                    'individualGuid': 'I1_F0_1-10439-AC-A', 'sex': 'M',
+                },
+                'I2_F0_1-10439-AC-A': {
+                    'affected': 'A', 'familyGuid': 'F0_1-10439-AC-A', 'individualGuid': 'I2_F0_1-10439-AC-A', 'sex': 'F',
+                    'features': [{'category': 'HP:0000707', 'label': '1 terms'}, {'category': 'HP:0001626', 'label': '1 terms'}],
+                },
+            },
+            'variants': [expected_variant],
+        }
+        self.assertDictEqual(response.json(), expected_body)
+        mock_variant_lookup.assert_called_with(self.no_access_user,  ('1', 10439, 'AC', 'A'), genome_version='38')
+
+        response_variant['transcripts'] = VARIANTS[0]['transcripts']
+        expected_variant['transcripts'] = VARIANTS[0]['transcripts']
+        expected_body.update({
+            'genesById': {'ENSG00000227232': EXPECTED_GENE, 'ENSG00000268903': EXPECTED_GENE},
+            'transcriptsById': EXPECTED_SEARCH_RESPONSE['transcriptsById'],
+        })
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), expected_body)
+
+        response_variant['variantId'] = '1-248367227-TC-T'
+        self.login_collaborator()
+        response = self.client.get(url.replace("38", "37"))
+        self.assertEqual(response.status_code, 200)
+
+        individual_guid_map = [
+            ('I000006_hg00733', 'I0_F0_1-10439-AC-A', {'sampleId': 'HG00733', 'familyGuid': 'F000002_2'}),
+            ('I000005_hg00732', 'I1_F0_1-10439-AC-A', {'sampleId': 'HG00732', 'familyGuid': 'F000002_2'}),
+            ('I000004_hg00731', 'I2_F0_1-10439-AC-A', {'sampleId': 'HG00731', 'familyGuid': 'F000002_2'}),
+            ('I000015_na20885', 'I0_F1_1-10439-AC-A', {'sampleId': 'NA20885', 'familyGuid': 'F000011_11'}),
+        ]
+        expected_variant.update({
+            'lookupFamilyGuids': ['F000002_2', 'F000011_11'],
+            'genotypes': {
+                individual_guid: {**expected_variant['genotypes'][anon_individual_guid], **genotype}
+                for individual_guid, anon_individual_guid, genotype in individual_guid_map
+            },
+            'variantId': '1-248367227-TC-T',
+        })
+        expected_body.update({
+            **{k: {**EXPECTED_SEARCH_RESPONSE[k]} for k in {
+                'savedVariantsByGuid', 'variantTagsByGuid', 'variantNotesByGuid',
+            }},
+            'variantFunctionalDataByGuid': {},
+            'locusListsByGuid': EXPECTED_SEARCH_CONTEXT_RESPONSE['locusListsByGuid'],
+            'projectsByGuid': {
+                p: {k: mock.ANY for k in PROJECT_TAG_TYPE_FIELDS}
+                for p in [PROJECT_GUID, 'R0003_test']
+            },
+            'familiesByGuid': {
+                f: {k: mock.ANY for k in [*FAMILY_FIELDS, 'individualGuids']}
+                for f in ['F000002_2', 'F000011_11']
+            },
+            'individualsByGuid': {
+                i[0]: {k: mock.ANY for k in [*INDIVIDUAL_FIELDS, 'igvSampleGuids']}
+                for i in individual_guid_map
+            },
+        })
+        expected_body['genesById']['ENSG00000227232'] = expected_pa_gene
+        del expected_body['savedVariantsByGuid']['SV0000001_2103343353_r0390_100']
+        for k in ['VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100']:
+            del expected_body['variantTagsByGuid'][k]
+
+        self.assertDictEqual(response.json(), expected_body)
+        mock_variant_lookup.assert_called_with(
+            self.collaborator_user, ('1', 10439, 'AC', 'A'), genome_version='37',
+        )
+
+    @mock.patch('seqr.views.apis.variant_search_api.sv_variant_lookup')
+    def test_sv_variant_lookup(self, mock_variant_lookup):
         mock_variant_lookup.return_value = [VARIANT_LOOKUP_VARIANT]
 
         url = f'{reverse(variant_lookup_handler)}?variantId=1-10439-AC-A&genomeVersion=38'
@@ -781,7 +891,8 @@ class VariantSearchAPITest(object):
             'variants': [VARIANT_LOOKUP_VARIANT],
         }
         self.assertDictEqual(response.json(), expected_body)
-        mock_variant_lookup.assert_called_with(self.no_access_user, variant_id='1-10439-AC-A', genome_version='38', families=None)
+        mock_variant_lookup.assert_called_with(self.no_access_user, variant_id='1-10439-AC-A', genome_version='38',
+                                               families=None)
 
         variant = {**VARIANTS[0], 'familyGuids': [], 'genotypes': {}}
         mock_variant_lookup.return_value = [variant]
@@ -809,8 +920,6 @@ class VariantSearchAPITest(object):
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
             'F000009_9', 'F000010_10', 'F000013_13',
         }, {f.guid for f in mock_variant_lookup.call_args.kwargs['families']})
-
-        # TODO test SVs
 
     def test_saved_search(self):
         get_saved_search_url = reverse(get_saved_search_handler)

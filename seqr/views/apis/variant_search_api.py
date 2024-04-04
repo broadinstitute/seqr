@@ -552,7 +552,7 @@ def variant_lookup_handler(request):
         )
         variant['familyGuids'] = list(families.values_list('guid', flat=True))
 
-    saved_variants, _ = _get_saved_variant_models(variants, families)
+    saved_variants, _ = _get_saved_variant_models(variants, families) if families else (None, None)
     response = get_variants_response(
         request, saved_variants=saved_variants, response_variants=variants,
         add_all_context=True, add_locus_list_detail=True,
@@ -596,7 +596,7 @@ def _update_lookup_variant(variant, response):
             individual = individual_summary_map[(genotype.pop('familyGuid'), genotype.pop('sampleId'))]
             feature_category_count = defaultdict(int)
             for feature in individual['features'] or []:
-                feature_category_count[feature['category']] += 1
+                feature_category_count[feature.get('category', 'Other')] += 1
             response['individualsByGuid'][individual_guid] = {
                 **individual,
                 'familyGuid': family_guid,
