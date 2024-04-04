@@ -246,7 +246,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     @responses.activate
     def test_variant_lookup(self):
         responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=200, json=VARIANT_LOOKUP_VARIANT)
-        variant = variant_lookup(self.user, ['1', 10439, 'AC', 'A'], genome_version='37', foo='bar')
+        variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'), genome_version='37', foo='bar')
         self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
         self._test_minimal_search_call(url_path='lookup', expected_search_body={
             'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37', 'foo': 'bar', 'data_type': 'SNV_INDEL',
@@ -254,7 +254,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=404)
         with self.assertRaises(HTTPError) as cm:
-            variant_lookup(self.user, ['1', 10439, 'AC', 'A'])
+            variant_lookup(self.user, ('1', 10439, 'AC', 'A'))
         self.assertEqual(cm.exception.response.status_code, 404)
         self.assertEqual(str(cm.exception), 'Variant not present in seqr')
         self._test_minimal_search_call(url_path='lookup', expected_search_body={
