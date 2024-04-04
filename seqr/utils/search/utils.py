@@ -170,7 +170,7 @@ def variant_lookup(*args, **kwargs):
 def sv_variant_lookup(user, variant_id, families, **kwargs):
     samples, _ = _get_families_search_data(families, dataset_type=Sample.DATASET_TYPE_SV_CALLS)
     return _variant_lookup(
-        hail_sv_variant_lookup, user, variant_id **kwargs, samples=samples, cache_key_suffix=user,
+        hail_sv_variant_lookup, user, variant_id, **kwargs, samples=samples, cache_key_suffix=user,
     )
 
 
