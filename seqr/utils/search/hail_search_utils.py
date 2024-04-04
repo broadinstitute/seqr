@@ -77,6 +77,15 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     return response_json['results']
 
 
+def _execute_lookup(variant_id, data_type,  user, **kwargs):
+    body = {
+        'variant_id': variant_id,
+        'data_type': data_type,
+        **kwargs,
+    }
+    return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'}), body
+
+
 def hail_variant_lookup(user, variant_id, **kwargs):
     variant, _ = _execute_lookup(variant_id, Sample.DATASET_TYPE_VARIANT_CALLS, user, **kwargs)
     return variant
@@ -102,15 +111,6 @@ def hail_sv_variant_lookup(user, variant_id, samples, sample_type=None, **kwargs
         variants += _execute_search(body, user)['results']
 
     return variants
-
-
-def _execute_lookup(variant_id, data_type,  user, **kwargs):
-    body = {
-        'variant_id': variant_id,
-        'data_type': data_type,
-        **kwargs,
-    }
-    return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'}), body
 
 
 def hail_variant_multi_lookup(user_email, variant_ids, data_type, genome_version):

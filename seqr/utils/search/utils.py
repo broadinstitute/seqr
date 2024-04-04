@@ -152,7 +152,6 @@ def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, 
 def _variant_lookup(lookup_func, user, variant_id, genome_version=None, cache_key_suffix='', **kwargs):
     genome_version = genome_version or GENOME_VERSION_GRCh38
     cache_key = f'variant_lookup_results__{variant_id}__{genome_version}__{cache_key_suffix}'
-
     variant = safe_redis_get_json(cache_key)
     if variant:
         return variant
