@@ -438,10 +438,12 @@ def _format_functional_tags(tags):
 
 
 AIP_TAG_TYPE = 'AIP'
+GREGOR_FINDING_TAG_TYPE = 'GREGoR Finding'
+STRUCTURED_METADATA_TAG_TYPES = [AIP_TAG_TYPE, GREGOR_FINDING_TAG_TYPE]
 def _format_variant_tags(tags):
     for tag in tags:
-        if tag['name'] == AIP_TAG_TYPE and tag['metadata']:
-            tag['aipMetadata'] = json.loads(tag.pop('metadata'))
+        if tag['name'] in STRUCTURED_METADATA_TAG_TYPES and tag['metadata']:
+            tag['structuredMetadata'] = json.loads(tag.pop('metadata'))
     return tags
 
 
@@ -781,18 +783,23 @@ def get_json_for_rna_seq_outliers(filters, significant_only=True, individual_gui
     data_by_individual_gene = defaultdict(lambda: {EXPRESSION_OUTLIERS: defaultdict(list), SPLICE_OUTLIERS: defaultdict(list)})
 
     for model, outlier_type in [(RnaSeqOutlier, EXPRESSION_OUTLIERS), (RnaSeqSpliceOutlier, SPLICE_OUTLIERS)]:
-        significant_filter = {f'{model.SIGNIFICANCE_FIELD}__lt': model.SIGNIFICANCE_THRESHOLD}
-        if hasattr(model, 'MAX_SIGNIFICANT_OUTLIER_NUM'):
-            significant_filter['rank__lt'] = model.MAX_SIGNIFICANT_OUTLIER_NUM
+        significance_q = Q(p_adjust__lt=model.MAX_SIGNIFICANT_P_ADJUST)
+        if hasattr(model, 'SIGNIFICANCE_ABS_VALUE_THRESHOLDS'):
+            for field, threshold in model.SIGNIFICANCE_ABS_VALUE_THRESHOLDS.items():
+                significance_q &= (Q(**{f'{field}__gt': threshold}) | Q(**{f'{field}__lt': -threshold}))
+
+        models = model.objects.filter(**filters)
+        if significant_only:
+            models = models.filter(significance_q)
 
         outliers = get_json_for_queryset(
-            model.objects.filter(**filters, **(significant_filter if significant_only else {})),
+            models,
             nested_fields=[
                 {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'},
                 {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid', 'value': individual_guid},
             ],
             additional_values={'isSignificant': Value(True)} if significant_only else {
-                'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))},
+                'isSignificant': Case(When(significance_q, then=Value(True)), default=Value(False))},
         )
 
         for data in outliers:

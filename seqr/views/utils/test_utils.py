@@ -9,6 +9,7 @@ import json
 import logging
 import mock
 import re
+import requests
 import responses
 from urllib.parse import quote_plus, urlparse
 
@@ -554,7 +555,6 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_group_members.assert_not_called()
 
 
-MOCK_TOKEN = 'mock_openid_bearer'  # nosec
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
 PROJECT_GUID = 'R0001_1kg'
 
@@ -564,11 +564,9 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
 
     def setUp(self):
         self._dag_url = f'{MOCK_AIRFLOW_URL}/api/v1/dags/{self.DAG_NAME}'
-        self.auth_header = f'Bearer {MOCK_TOKEN}'
-        headers = {'Authorization': self.auth_header}
 
         # check dag running state
-        responses.add(responses.GET, f'{self._dag_url}/dagRuns', headers=headers, json={
+        responses.add(responses.GET, f'{self._dag_url}/dagRuns', json={
             'dag_runs': [{
                 'conf': {},
                 'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1',
@@ -578,10 +576,10 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
                 'state': 'success'}
             ]})
         # trigger dag
-        responses.add(responses.POST, f'{self._dag_url}/dagRuns', headers=headers, json={})
+        responses.add(responses.POST, f'{self._dag_url}/dagRuns', json={})
         # update variables
         responses.add(
-            responses.PATCH, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}', headers=headers,
+            responses.PATCH, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}',
             json={'key': self.DAG_NAME, 'value': 'updated variables'},
         )
         # get task id
@@ -591,8 +589,11 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         # get task id again if the response of the previous request didn't include the updated guid
         self.add_dag_tasks_response([self.LOADING_PROJECT_GUID, PROJECT_GUID])
 
-        patcher = mock.patch('seqr.views.utils.airflow_utils.id_token.fetch_id_token', lambda *args: MOCK_TOKEN)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.google.auth.default', lambda **kwargs: (None, None))
         patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.AuthorizedSession', mock.Mock(return_value=requests))
+        self.mock_authorized_session = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airflow_utils.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
         patcher.start()
@@ -617,7 +618,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
                 {'task_id': 'scale_dataproc_cluster'},
                 {'task_id': f'skip_compute_project_subset_{project}'}
             ]
-        responses.add(responses.GET, f'{self._dag_url}/tasks', headers={'Authorization': self.auth_header}, json={
+        responses.add(responses.GET, f'{self._dag_url}/tasks', json={
             'tasks': tasks, 'total_entries': len(tasks),
         })
 
@@ -641,6 +642,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         if trigger_error:
             call_count = 1
         self.assertEqual(len(responses.calls), call_count + self.ADDITIONAL_REQUEST_COUNT)
+        self.assertEqual(self.mock_authorized_session.call_count, call_count)
 
         dag_variable_overrides = self._get_dag_variable_overrides(additional_tasks_check)
         dag_variables = {
@@ -659,7 +661,6 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         dag_url = self._dag_url.replace(dag_name, secondary_dag_name) if secondary_dag_name else dag_url
         self.assertEqual(responses.calls[offset].request.url, f'{dag_url}/dagRuns')
         self.assertEqual(responses.calls[offset].request.method, "GET")
-        self.assertEqual(responses.calls[offset].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
 
         if call_count < 2:
             return
@@ -671,28 +672,23 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'key': dag_name,
             'value': json.dumps(dag_variables),
         })
-        self.assertEqual(responses.calls[offset+1].request.headers['Authorization'], self.auth_header)
 
         # get task id
         self.assertEqual(responses.calls[offset+2].request.url, f'{dag_url}/tasks')
         self.assertEqual(responses.calls[offset+2].request.method, 'GET')
-        self.assertEqual(responses.calls[offset+2].request.headers['Authorization'], self.auth_header)
 
         self.assertEqual(responses.calls[offset+3].request.url, f'{dag_url}/tasks')
         self.assertEqual(responses.calls[offset+3].request.method, 'GET')
-        self.assertEqual(responses.calls[offset+3].request.headers['Authorization'], self.auth_header)
 
         call_cnt = call_count - 1
         if call_count > 5:
             self.assertEqual(responses.calls[offset+4].request.url, f'{dag_url}/tasks')
             self.assertEqual(responses.calls[offset+4].request.method, 'GET')
-            self.assertEqual(responses.calls[offset+4].request.headers['Authorization'], self.auth_header)
 
         # trigger dag
         self.assertEqual(responses.calls[offset+call_cnt].request.url, f'{dag_url}/dagRuns')
         self.assertEqual(responses.calls[offset+call_cnt].request.method, 'POST')
         self.assertDictEqual(json.loads(responses.calls[offset+call_cnt].request.body), {})
-        self.assertEqual(responses.calls[offset+call_cnt].request.headers['Authorization'], self.auth_header)
 
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_not_called()
@@ -769,7 +765,7 @@ CASE_REVIEW_INDIVIDUAL_FIELDS = {
     'caseReviewStatus', 'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
 }
 CORE_INTERNAL_INDIVIDUAL_FIELDS = {
-    'probandRelationship', 'analyteType', 'primaryBiosample', 'tissueAffectedStatus',
+    'probandRelationship', 'analyteType', 'primaryBiosample', 'tissueAffectedStatus', 'solveStatus',
 }
 
 NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS = deepcopy(INDIVIDUAL_FIELDS)
@@ -948,7 +944,7 @@ VARIANTS = [
         'xpos': 1248367227,
         'genomeVersion': '37',
         'liftedOverGenomeVersion': '',
-        'variantId': '12-48367227-TC-T',
+        'variantId': '1-248367227-TC-T',
         'transcripts': {'ENSG00000233653': {}},
         'familyGuids': ['F000002_2'],
         'genotypes': {}

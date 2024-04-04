@@ -542,10 +542,22 @@ class Individual(ModelWithGUID):
         ('U', 'urine'),
     ]
 
+    SOLVED = 'S'
+    PARTIALLY_SOLVED = 'P'
+    PROBABLY_SOLVED = 'B'
+    UNSOLVED = 'U'
+    SOLVE_STATUS_CHOICES = [
+        (SOLVED, 'Solved'),
+        (PARTIALLY_SOLVED, 'Partially solved'),
+        (PROBABLY_SOLVED, 'Probably solved'),
+        (UNSOLVED, 'Unsolved'),
+    ]
+
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
     CASE_REVIEW_STATUS_REVERSE_LOOKUP = {name.lower(): key for key, name in CASE_REVIEW_STATUS_CHOICES}
+    SOLVE_STATUS_LOOKUP = dict(SOLVE_STATUS_CHOICES)
     ONSET_AGE_LOOKUP = dict(ONSET_AGE_CHOICES)
     ONSET_AGE_REVERSE_LOOKUP = {name: key for key, name in ONSET_AGE_CHOICES}
     INHERITANCE_LOOKUP = dict(INHERITANCE_CHOICES)
@@ -571,6 +583,7 @@ class Individual(ModelWithGUID):
 
     case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, default=CASE_REVIEW_STATUS_IN_REVIEW)
     case_review_discussion = models.TextField(null=True, blank=True)
+    solve_status = models.CharField(max_length=1, choices=SOLVE_STATUS_CHOICES, null=True, blank=True)
 
     proband_relationship = models.CharField(max_length=1, choices=RELATIONSHIP_CHOICES, null=True)
 
@@ -638,7 +651,7 @@ class Individual(ModelWithGUID):
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
         ]
         internal_json_fields = [
-            'proband_relationship', 'primary_biosample', 'tissue_affected_status', 'analyte_type',
+            'proband_relationship', 'primary_biosample', 'tissue_affected_status', 'analyte_type', 'solve_status',
         ]
         audit_fields = {'case_review_status'}
 
@@ -1106,8 +1119,7 @@ class DeletableSampleMetadataModel(BulkOperationBase):
 
 
 class RnaSeqOutlier(DeletableSampleMetadataModel):
-    SIGNIFICANCE_THRESHOLD = 0.05
-    SIGNIFICANCE_FIELD = 'p_adjust'
+    MAX_SIGNIFICANT_P_ADJUST = 0.05
 
     p_value = models.FloatField()
     p_adjust = models.FloatField()
@@ -1133,33 +1145,35 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
 
 
 class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
-    SIGNIFICANCE_THRESHOLD = 0.01
-    SIGNIFICANCE_FIELD = 'p_value'
-    MAX_SIGNIFICANT_OUTLIER_NUM = 50
+    MAX_SIGNIFICANT_P_ADJUST = 0.3
+    SIGNIFICANCE_ABS_VALUE_THRESHOLDS = {'delta_intron_jaccard_index': 0.1}
     STRAND_CHOICES = (
         ('+', '5′ to 3′ direction'),
         ('-', '3′ to 5′ direction'),
         ('*', 'Any direction'),
     )
 
-    rank = models.IntegerField()
     p_value = models.FloatField()
-    z_score = models.FloatField()
+    p_adjust = models.FloatField()
     chrom = models.CharField(max_length=2)
     start = models.IntegerField()
     end = models.IntegerField()
     strand = models.CharField(max_length=1, choices=STRAND_CHOICES)  # "+", "-", or "*"
     type = models.CharField(max_length=12)
-    delta_psi = models.FloatField()
-    read_count = models.IntegerField()  # RNA-seq reads that span the splice junction
-    rare_disease_samples_with_junction = models.IntegerField()
+    delta_intron_jaccard_index = models.FloatField()
+    counts = models.IntegerField()
+    mean_counts = models.FloatField()
+    total_counts = models.IntegerField()
+    mean_total_counts = models.FloatField()
+    rare_disease_samples_with_this_junction = models.IntegerField()
     rare_disease_samples_total = models.IntegerField()
 
     class Meta:
         unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end', 'strand', 'type')
 
-        json_fields = ['gene_id', 'p_value', 'z_score', 'chrom', 'start', 'end', 'strand', 'read_count', 'type',
-                       'delta_psi', 'rare_disease_samples_with_junction', 'rare_disease_samples_total']
+        json_fields = ['gene_id', 'p_value', 'p_adjust', 'chrom', 'start', 'end', 'strand', 'counts', 'type',
+                       'rare_disease_samples_with_this_junction', 'rare_disease_samples_total',
+                       'delta_intron_jaccard_index', 'mean_counts', 'total_counts', 'mean_total_counts']
 
 
 class PhenotypePrioritization(BulkOperationBase):

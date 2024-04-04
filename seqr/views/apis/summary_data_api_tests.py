@@ -35,7 +35,7 @@ SAVED_VARIANT_RESPONSE_KEYS = {
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "projectGuid": "R0003_test",
     "num_saved_variants": 2,
-    "solve_status": "Unsolved",
+    "solve_status": "Partially solved",
     "sample_id": "NA20889",
     "gene_known_for_phenotype-1": "Candidate",
     "gene_known_for_phenotype-2": "Candidate",
@@ -479,11 +479,11 @@ class SummaryDataAPITest(AirtableTest):
             },
             'results': {
                 'HG00731': {
-                    '12-48367227-TC-T': {'categories': ['3', '4'], 'support_vars': ['2-103343353-GAGA-G']},
-                    '1-248367227-TC-T': {'categories': ['1'], 'support_vars': ['12-48367227-TC-T']},
+                    '1-248367227-TC-T': {'categories': ['3', '4'], 'support_vars': ['2-103343353-GAGA-G']},
+                    '12-48367227-TC-T': {'categories': ['1'], 'support_vars': ['1-248367227-TC-T']},
                 },
                 'SAM_123': {
-                    '12-48367227-TC-T': {'categories': ['4', 'support'], 'support_vars': []},
+                    '1-248367227-TC-T': {'categories': ['4', 'support'], 'support_vars': []},
                 },
             }
         }
@@ -498,10 +498,10 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'], [
-            "Unable to find the following family's AIP variants in the search backend: 2 (1-248367227-TC-T)",
+            "Unable to find the following family's AIP variants in the search backend: 2 (12-48367227-TC-T)",
         ])
 
-        aip_upload['results']['HG00731']['2-103343353-GAGA-G'] = aip_upload['results']['HG00731'].pop('1-248367227-TC-T')
+        aip_upload['results']['HG00731']['2-103343353-GAGA-G'] = aip_upload['results']['HG00731'].pop('12-48367227-TC-T')
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'info': ['Loaded 2 new and 1 updated AIP tags for 2 families']})

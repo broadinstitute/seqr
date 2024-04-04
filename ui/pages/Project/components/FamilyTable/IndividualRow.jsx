@@ -72,6 +72,8 @@ const POPULATION_MAP = {
   NFE: 'European (non-Finnish)',
   OTH: 'Other',
   SAS: 'South Asian',
+  AmInd: 'American Indian',
+  PaIsl: 'Pacific Islander',
 }
 
 const ETHNICITY_OPTIONS = [
@@ -470,6 +472,19 @@ const NON_CASE_REVIEW_FIELDS = [
     isEditable: true,
     isPrivate: true,
     component: NullableBoolFieldView,
+  },
+  {
+    field: 'solveStatus',
+    fieldName: 'Participant Solve Status',
+    isEditable: true,
+    isPrivate: true,
+    component: OptionFieldView,
+    tagOptions: [
+      { value: 'S', text: 'Solved' },
+      { value: 'P', text: 'Partially solved' },
+      { value: 'B', text: 'Probably solved' },
+      { value: 'U', text: 'Unsolved' },
+    ],
   },
   ...INDIVIDUAL_FIELDS,
 ]

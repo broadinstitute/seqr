@@ -928,7 +928,7 @@ class SavedVariantAPITest(object):
 
         families = [Family.objects.get(guid='F000001_1'), Family.objects.get(guid='F000002_2')]
         mock_get_variants.assert_has_calls([
-            mock.call(families, ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T'], user=self.manager_user, user_email=None),
+            mock.call(families, ['1-1562437-G-C', '1-248367227-TC-T', '1-46859832-G-A'], user=self.manager_user, user_email=None),
             mock.call(families, ['21-3343353-GAGA-G'], user=self.manager_user, user_email=None),
         ])
         mock_logger.error.assert_not_called()

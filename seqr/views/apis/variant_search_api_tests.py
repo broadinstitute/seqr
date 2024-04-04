@@ -52,7 +52,7 @@ PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'genomeVersion', 'variantTagTypes', 'v
 EXPECTED_TAG = {k: mock.ANY for k in TAG_FIELDS}
 expected_functional_tag = {k: mock.ANY for k in FUNCTIONAL_FIELDS}
 expected_aip_tag = {
-    'aipMetadata': {
+    'structuredMetadata': {
         '4': {'date': '2023-11-15', 'name': 'de Novo'},
         'support': {'date': '2023-11-15', 'name': 'High in Silico Scores'},
     },
@@ -162,7 +162,6 @@ def _get_compound_het_es_variants(results_model, **kwargs):
     return deepcopy(COMP_HET_VARAINTS), 1
 
 
-@mock.patch('seqr.views.utils.orm_to_json_utils.RnaSeqSpliceOutlier.MAX_SIGNIFICANT_OUTLIER_NUM', 2)
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class VariantSearchAPITest(object):
 
@@ -193,15 +192,18 @@ class VariantSearchAPITest(object):
         )
         self.assertListEqual(
             sorted(response_json['rnaSeqData']['I000001_na19675']['spliceOutliers']['ENSG00000268903'], key=lambda d: d['start']),
-            [{'chrom': '7', 'deltaPsi': 0.85, 'end': 4000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
-              'pValue': 0.0001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1, 'readCount': 1297,
-              'start': 3000, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'zScore': 12.34},
-             {'chrom': '7', 'deltaPsi': 0.85, 'end': 8000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
-              'pValue': 0.001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1, 'readCount': 1297,
-              'start': 7000, 'strand': '*', 'tissueType': 'M', 'type': 'psi5', 'zScore': 12.34},
-             {'chrom': '7', 'deltaPsi': 0.85, 'end': 132886973, 'geneId': 'ENSG00000268903', 'isSignificant': True,
-              'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1, 'readCount': 1297,
-              'start': 132885746, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'zScore': 12.34}]
+            [{'chrom': '7', 'counts': 1297, 'end': 4000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+              'meanCounts': 0.85,  'meanTotalCounts': 0.85, 'pAdjust': 0.0003,
+              'pValue': 0.0001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1, 'totalCounts': 1297,
+              'start': 3000, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'deltaIntronJaccardIndex': -12.34},
+             {'chrom': '7', 'counts': 1297, 'end': 8000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+              'meanCounts': 0.85, 'meanTotalCounts': 0.85, 'pAdjust': 0.003,
+              'pValue': 0.001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1, 'totalCounts': 1297,
+              'start': 7000, 'strand': '*', 'tissueType': 'M', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34},
+             {'chrom': '7', 'counts': 1297, 'end': 132886973, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+              'meanCounts': 0.85, 'meanTotalCounts': 0.85, 'pAdjust': 3.08e-56,
+              'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1, 'totalCounts': 1297,
+              'start': 132885746, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34}]
         )
 
     def _assert_expected_results_family_context(self, response_json, locus_list_detail=False):
