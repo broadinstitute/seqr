@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def save_temp_file(request):
 
     try:
-        uploaded_file_id, filename, json_records = save_uploaded_file(request)
+        uploaded_file_id, filename, json_records = save_uploaded_file(request, allow_json=True)
     except Exception as e:
         return create_json_response({'errors': [str(e)]}, status=400)
 
@@ -38,7 +38,7 @@ def _parsed_file_iter(stream, parse_line=lambda l: l):
         yield parse_line(line)
 
 
-def parse_file(filename, stream, iter_file=False):
+def parse_file(filename, stream, iter_file=False, allow_json=False):
     if filename.endswith('.tsv') or filename.endswith('.fam') or filename.endswith('.ped'):
         parse_line = lambda line: [s.strip().strip('"') for s in line.rstrip('\n').split('\t')]
         if iter_file:
@@ -65,7 +65,7 @@ def parse_file(filename, stream, iter_file=False):
 
         return rows
 
-    elif filename.endswith('.json') and not iter_file:
+    elif filename.endswith('.json') and allow_json:
         return json.loads(stream.read())
 
     raise ValueError(f"Unexpected{' iterated' if iter_file else ''} file type: {filename}")
@@ -92,7 +92,7 @@ def _compute_serialized_file_path(uploaded_file_id):
     return os.path.join(upload_directory, "temp_upload_{}.json.gz".format(uploaded_file_id))
 
 
-def save_uploaded_file(request, process_records=None):
+def save_uploaded_file(request, process_records=None, allow_json=False):
 
     if len(request.FILES) != 1:
         raise ValueError("Received %s files instead of 1" % len(request.FILES))
@@ -104,7 +104,7 @@ def save_uploaded_file(request, process_records=None):
     if not filename.endswith('.xls') and not filename.endswith('.xlsx'):
         stream = TextIOWrapper(stream.file, encoding = 'utf-8')
 
-    json_records = parse_file(filename, stream)
+    json_records = parse_file(filename, stream, allow_json=allow_json)
     if process_records:
         json_records = process_records(json_records, filename=filename)
 
