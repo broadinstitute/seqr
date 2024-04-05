@@ -303,7 +303,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _gene_rank_sort(cls, r, gene_ranks):
         return [gene_ranks.get(r.selected_transcript.gene_id)] + super()._gene_rank_sort(r, gene_ranks)
 
-    def _add_project_lookup_data(self, ht, annotation_fields, **kwargs):
+    def _add_project_lookup_data(self, ht, annotation_fields, *args, **kwargs):
         # Get all the project-families for the looked up variant formatted as a dict of dicts:
         # {<project_guid>: {<family_guid>: True, <family_guid_2>: True}, <project_guid_2>: ...}
         lookup_ht = self._read_table('lookup.ht', use_ssd_dir=True)
