@@ -110,16 +110,13 @@ class Command(BaseCommand):
             updated_project_families.append((project.id, project.name, project_families))
 
         # Send failure notifications
-        failure_checks = ['relatedness_check', 'sex_check']
         failed_family_samples = metadata.get('failed_family_samples', {})
         failed_families_by_guid = {f['guid']: f for f in Family.objects.filter(
-            guid__in={family for check in failure_checks for family in failed_family_samples.get(check, {}).keys()}
+            guid__in={family for families in failed_family_samples.values() for family in families}
         ).values('guid', 'family_id', 'project__name')}
-        for check in failure_checks:
-            if not failed_family_samples.get(check):
-                continue
+        for check, check_failures in failed_family_samples.items():
             failures_by_project = defaultdict(list)
-            for family_guid, failure_data in failed_family_samples[check].items():
+            for family_guid, failure_data in check_failures.items():
                 family = failed_families_by_guid[family_guid]
                 failures_by_project[family['project__name']].append(
                     f'- {family["family_id"]}: {"; ".join(failure_data["reasons"])}'

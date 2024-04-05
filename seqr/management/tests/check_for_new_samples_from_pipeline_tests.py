@@ -166,7 +166,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                     'F000001_1': {'reasons': ['Sample NA19679 has pedigree sex F but imputed sex M']},
                     'F000014_14': {'reasons': ['Sample NA21987 has pedigree sex M but imputed sex F']},
                 },
-                'missing_samples': {'F000002_2': {'reasons': ["Missing samples: {'HG00732', 'HG00733'}"]}},
+                'missing_samples': {
+                    'F000002_2': {'reasons': ["Missing samples: {'HG00732', 'HG00733'}"]},
+                    'F000003_3': {'reasons': ["Missing samples: {'NA20870'}"]},
+                },
             }
         }
         self.mock_subprocess.return_value.wait.return_value = 1
@@ -297,7 +300,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         ])
 
         # Test notifications
-        self.assertEqual(self.mock_send_slack.call_count, 5)
+        self.assertEqual(self.mock_send_slack.call_count, 6)
         self.mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
@@ -321,6 +324,12 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 'seqr_loading_notifications',
                 """The following 1 families failed sex check in Non-Analyst Project:
 - 14: Sample NA21987 has pedigree sex M but imputed sex F""",
+            ),
+            mock.call(
+                'seqr_loading_notifications',
+                """The following 2 families failed missing samples in 1kg project nåme with uniçøde:
+- 2: Missing samples: {'HG00732', 'HG00733'}
+- 3: Missing samples: {'NA20870'}""",
             ),
         ])
 
