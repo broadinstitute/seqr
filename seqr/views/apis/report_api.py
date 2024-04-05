@@ -718,7 +718,7 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
     data_type = column_validator.get('data_type')
     data_type_validator = DATA_TYPE_VALIDATORS.get(data_type)
     data_type_formatter = DATA_TYPE_FORMATTERS.get(data_type)
-    unique = column_validator.get('is_unique')
+    unique = column_validator.get('is_unique') or column_validator.get('primary_key')
     required = column_validator.get('required')
     recommended = column in WARN_MISSING_TABLE_COLUMNS.get(file_name, [])
     if not (required or unique or recommended or data_type_validator):
