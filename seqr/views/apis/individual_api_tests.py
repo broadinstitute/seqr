@@ -89,6 +89,8 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
 LOAD_PARTICIPANT_TABLE = deepcopy(PARTICIPANT_TABLE)
 for row in LOAD_PARTICIPANT_TABLE[4:]:
     row[7] = row[7].replace('Broad_', '')
+LOAD_PARTICIPANT_TABLE[6][15] += '|Asian'
+LOAD_PARTICIPANT_TABLE[6][17] = ''
 
 
 @mock.patch('seqr.utils.middleware.DEBUG', False)
@@ -1107,7 +1109,7 @@ class IndividualAPITest(object):
             'proband_relationship': 'S',
             'mother__individual_id': None,
             'father__individual_id': None,
-            'population': 'ASJ',
+            'population': 'OTH',
             'features': [{'id': 'HP:0011675'}],
             'absent_features': [],
             'case_review_status': 'I',
