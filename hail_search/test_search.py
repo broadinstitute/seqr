@@ -669,15 +669,18 @@ class HailSearchTestCase(AioHTTPTestCase):
             'cohort_2911.chr1.final_cleanup_INS_chr1_160', 'phase2_DEL_chr14_4640',
         ])
 
-    async def test_snv_indel_variant_lookup(self):
+    async def test_variant_lookup(self):
         body = {'genome_version': 'GRCh38', 'variant_id': VARIANT_ID_SEARCH['variant_ids'][0]}
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, VARIANT_LOOKUP_VARIANT)
 
-    async def test_grch37_variant_lookup(self):
-        body = {'genome_version': 'GRCh37', 'variant_id': ['7', 143270172, 'A', 'G']}
+        body['variant_id'] = VARIANT_ID_SEARCH['variant_ids'][1]
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 404)
+
+        body.update({'genome_version': 'GRCh37', 'variant_id': ['7', 143270172, 'A', 'G']})
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
@@ -688,8 +691,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             ]},
         })
 
-    async def test_mito_variant_lookup(self):
-        body = {'variant_id': ['M', 4429, 'G', 'A'], 'data_type': 'MITO', 'genome_version': 'GRCh38'}
+        body.update({'variant_id': ['M', 4429, 'G', 'A'], 'data_type': 'MITO', 'genome_version': 'GRCh38'})
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
@@ -700,8 +702,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             ]},
         })
 
-    async def test_sv_variant_lookup(self):
-        body = {'variant_id': 'phase2_DEL_chr14_4640', 'data_type': 'SV_WGS', 'sample_data': SV_WGS_SAMPLE_DATA['SV_WGS'], 'genome_version': 'GRCh38'}
+        body.update({'variant_id': 'phase2_DEL_chr14_4640', 'data_type': 'SV_WGS', 'sample_data': SV_WGS_SAMPLE_DATA['SV_WGS']})
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
@@ -718,12 +719,7 @@ class HailSearchTestCase(AioHTTPTestCase):
             }
         })
 
-    async def test_missing_variant_lookup(self):
-        body = {'genome_version': 'GRCh38', 'variant_id': VARIANT_ID_SEARCH['variant_ids'][1]}
-        async with self.client.request('POST', '/lookup', json=body) as resp:
-            self.assertEqual(resp.status, 404)
-
-        body.update({'variant_id': 'suffix_140608_DEL', 'data_type': 'SV_WES', 'sample_data': EXPECTED_SAMPLE_DATA['SV_WES']})
+        body['variant_id'] = 'suffix_140608_DEL'
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 404)
 
