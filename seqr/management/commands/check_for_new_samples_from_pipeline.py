@@ -111,18 +111,18 @@ class Command(BaseCommand):
 
         # Send failure notifications
         failure_checks = ['relatedness_check', 'sex_check']
-        failures = metadata.get('failed_family_samples', {})
+        failed_family_samples = metadata.get('failed_family_samples', {})
         failed_families_by_guid = {f['guid']: f for f in Family.objects.filter(
-            guid__in={family for check in failure_checks for family in failures.get(check, {}).keys()}
+            guid__in={family for check in failure_checks for family in failed_family_samples.get(check, {}).keys()}
         ).values('guid', 'family_id', 'project__name')}
         for check in failure_checks:
-            if not failures.get(check):
+            if not failed_family_samples.get(check):
                 continue
             failures_by_project = defaultdict(list)
-            for family_guid, failure_data in failures[check].items():
+            for family_guid, failure_data in failed_family_samples[check].items():
                 family = failed_families_by_guid[family_guid]
                 failures_by_project[family['project__name']].append(
-                    f'- {family["family_id"]}: {", ".join(failure_data["reasons"])}'
+                    f'- {family["family_id"]}: {"; ".join(failure_data["reasons"])}'
                 )
             for project, failures in failures_by_project.items():
                 summary = '\n'.join(sorted(failures))

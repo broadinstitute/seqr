@@ -64,7 +64,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         patcher = mock.patch('seqr.views.utils.variant_utils.logger')
         self.mock_utils_logger = patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
+        patcher = mock.patch('seqr.utils.communication_utils._post_to_slack')
         self.mock_send_slack = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -155,6 +155,19 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 'F000012_12': ['NA20888', 'NA20889'],
                 'F000014_14': ['NA21234'],
             },
+            'failed_family_samples': {
+                'relatedness_check': {
+                    'F000001_1': {'reasons': [
+                        'Sample NA19679 has expected relation "parent" to NA19675 but has coefficients [0.0, 0.8505002045292791, 0.14949979547072176, 0.5747498977353613]',
+                        'Sample NA19678 has expected relation "sibling" to NA19675 but has coefficients [0.17424888135104177, 0.6041745754450025, 0.22157654320395614, 0.5236638309264574]',
+                    ]},
+                },
+                'sex_check': {
+                    'F000001_1': {'reasons': ['Sample NA19679 has pedigree sex F but imputed sex M']},
+                    'F000014_14': {'reasons': ['Sample NA21987 has pedigree sex M but imputed sex F']},
+                },
+                'missing_samples': {'F000002_2': {'reasons': ["Missing samples: {'HG00732', 'HG00733'}"]}},
+            }
         }
         self.mock_subprocess.return_value.wait.return_value = 1
         self.mock_subprocess.return_value.stdout = [json.dumps(metadata).encode()]
@@ -284,7 +297,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         ])
 
         # Test notifications
-        self.assertEqual(self.mock_send_slack.call_count, 2)
+        self.assertEqual(self.mock_send_slack.call_count, 5)
         self.mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
@@ -293,6 +306,21 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             mock.call(
                 'anvil-data-loading',
                 f'1 new WES samples are loaded in {SEQR_URL}project/{EXTERNAL_PROJECT_GUID}/project_page',
+            ),
+            mock.call(
+                'seqr_loading_notifications',
+                """The following 1 families failed relatedness check in 1kg project nåme with uniçøde:
+- 1: Sample NA19679 has expected relation "parent" to NA19675 but has coefficients [0.0, 0.8505002045292791, 0.14949979547072176, 0.5747498977353613]; Sample NA19678 has expected relation "sibling" to NA19675 but has coefficients [0.17424888135104177, 0.6041745754450025, 0.22157654320395614, 0.5236638309264574]""",
+            ),
+            mock.call(
+                'seqr_loading_notifications',
+                """The following 1 families failed sex check in 1kg project nåme with uniçøde:
+- 1: Sample NA19679 has pedigree sex F but imputed sex M""",
+            ),
+            mock.call(
+                'seqr_loading_notifications',
+                """The following 1 families failed sex check in Non-Analyst Project:
+- 14: Sample NA21987 has pedigree sex M but imputed sex F""",
             ),
         ])
 
