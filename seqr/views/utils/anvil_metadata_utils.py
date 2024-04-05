@@ -31,6 +31,7 @@ FINDING_METADATA_COLUMNS = [
 ]
 
 HISPANIC = 'AMR'
+OTHER = 'OTH'
 ANCESTRY_MAP = {
   'AFR': 'Black or African American',
   'ASJ': 'White',
@@ -46,7 +47,7 @@ ANCESTRY_DETAIL_MAP = {
   'ASJ': 'Ashkenazi Jewish',
   'EAS': 'East Asian',
   'FIN': 'Finnish',
-  'OTH': 'Other',
+  OTHER: 'Other',
   HISPANIC: 'Other',
   'SAS': 'South Asian',
 }
@@ -598,7 +599,7 @@ def parse_population(row):
 
     detail = row['ancestry_detail'].title()
     race = row['reported_race']
-    if not (detail or race):
+    if race == 'NA' or not (detail or race):
         return ''
     if race == 'Asian':
         # seqr subdivides asian so need to determine which subpopulation to assign
@@ -607,5 +608,8 @@ def parse_population(row):
 
     if detail in ANCESTRY_DETAIL_LOOKUP:
         return ANCESTRY_DETAIL_LOOKUP[detail]
+
+    if '|' in race:
+        return OTHER
 
     return ANCESTRY_LOOKUP[race]
