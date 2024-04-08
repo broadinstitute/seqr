@@ -41,6 +41,7 @@ def get_projects_child_entities(projects, project_guid, user):
 
 
 def get_project_analysis_groups(projects, project_guid):
+    # TODO also needs to include dynamic groups, must include familyGuids
     analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
     analysis_groups = get_json_for_analysis_groups(
         analysis_group_models, project_guid=project_guid, skip_nested=True, is_analyst=False)

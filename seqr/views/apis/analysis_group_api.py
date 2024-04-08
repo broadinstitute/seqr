@@ -60,3 +60,5 @@ def delete_analysis_group_handler(request, project_guid, analysis_group_guid):
     AnalysisGroup.objects.get(guid=analysis_group_guid, project=project).delete_model(request.user, user_can_delete=True)
 
     return create_json_response({'analysisGroupsByGuid': {analysis_group_guid: None}})
+
+# TODO add dynamic group endpoints
