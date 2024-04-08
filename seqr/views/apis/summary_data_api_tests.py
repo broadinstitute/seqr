@@ -703,8 +703,7 @@ class SummaryDataAPITest(AirtableTest):
 
     def test_family_metadata(self):
         url = reverse(family_metadata, args=['R0003_test'])
-        self.check_require_login(url)
-        self.login_analyst_user()  # TODO test less access
+        self.check_collaborator_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -743,9 +742,10 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertListEqual(sorted([r['familyGuid'] for r in response_json['rows']]), [
+        all_project_families = [
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
-            'F000009_9', 'F000010_10', 'F000011_11', 'F000012_12', 'F000013_13'] + self.ADDITIONAL_FAMILIES)
+            'F000009_9', 'F000010_10', 'F000011_11', 'F000012_12', 'F000013_13']
+        self.assertListEqual(sorted([r['familyGuid'] for r in response_json['rows']]), all_project_families)
         test_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000003_3')
         self.assertDictEqual(test_row, {
             'projectGuid': 'R0001_1kg',
@@ -771,6 +771,13 @@ class SummaryDataAPITest(AirtableTest):
             'condition_inheritance': 'Unknown',
         })
 
+        # Test analyst access
+        self.login_analyst_user()
+        response = self.client.get(all_projects_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(
+            sorted([r['familyGuid'] for r in response.json()['rows']]), all_project_families + self.ADDITIONAL_FAMILIES)
+
         # Test empty project
         empty_project_url = reverse(family_metadata, args=['R0002_empty'])
         response = self.client.get(empty_project_url)
@@ -779,7 +786,7 @@ class SummaryDataAPITest(AirtableTest):
 
     def test_variant_metadata(self):
         url = reverse(variant_metadata, args=[PROJECT_GUID])
-        self.check_require_login(url)
+        self.check_collaborator_login(url)
         self.login_analyst_user()  # TODO test less access
 
         response = self.client.get(url)
