@@ -34,7 +34,7 @@ const FamilyMetadata = props => (
   <LoadReportTable
     columns={COLUMNS}
     viewAllPages={VIEW_ALL_PAGES}
-    urlBase="report/family_metadata"
+    urlBase="summary_data/family_metadata"
     idField="family_id"
     fileName="Family_Metadata"
     {...props}
