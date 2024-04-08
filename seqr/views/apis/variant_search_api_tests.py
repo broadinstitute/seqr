@@ -601,6 +601,18 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
 
+        VariantSearchResults.objects.get(search_hash=SEARCH_HASH).delete()
+        body['trioFamiliesOnly'] = True
+        expected_searched_families = {'F000001_1', 'F000002_2'}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
+        self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
+        self._assert_expected_results_context(response_json)
+        self.assertSetEqual(
+            set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
+
     @mock.patch('seqr.views.apis.variant_search_api.query_variants')
     def test_query_all_project_families_variants(self, mock_get_variants):
         url = reverse(query_variants_handler, args=['abc'])
@@ -944,7 +956,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
-        assert_no_al_has_list_ws(self, group_count=2)
+        assert_no_al_has_list_ws(self, group_count=3)
 
     def test_query_all_project_families_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
