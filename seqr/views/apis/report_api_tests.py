@@ -459,7 +459,7 @@ INVALID_MODEL_TABLES = {
     },
     'aligned_dna_short_read_set': {},
     'experiment_rna_short_read': {'date_data_generation': {'data_type': 'float'}},
-    'genetic_findings': {'experiment_id': {'required': True}},
+    'genetic_findings': {'experiment_id': {'required': True, 'primary_key': True}},
 }
 INVALID_TABLES = [
     {**t, 'columns': [{**c, **(INVALID_MODEL_TABLES[t['table']].get(c['column'], {}))} for c in t['columns']]}
@@ -833,6 +833,7 @@ class ReportAPITest(AirtableTest):
             'The following entries have invalid values for "analysis_details" (from Airtable) in the "aligned_dna_short_read" table. Allowed values are a google bucket path starting with gs://. Invalid values: VCGS_FAM203_621_D2 (DOI:10.5281/zenodo.4469317)',
             'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)',
             'The following entries are missing required "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_NA19675_1_21_3343353',
+            'The following entries have non-unique values for "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_exome_VCGS_FAM203_621_D2 (Broad_HG00731_19_1912632, Broad_HG00731_19_1912633, Broad_HG00731_19_1912634, Broad_HG00731_1_248367227)',
         ])
 
         responses.calls.reset()
