@@ -3,8 +3,6 @@ import React from 'react'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 import LoadReportTable from './LoadReportTable'
 
-const VIEW_ALL_PAGES = [{ name: 'Broad', downloadName: 'All', path: 'all' }]
-
 const COLUMNS = [
   { name: 'data_type' },
   { name: 'date_data_generation', format: ({ date_data_generation: date }) => date && new Date(date).toLocaleDateString() },
@@ -33,7 +31,6 @@ const COLUMNS = [
 const FamilyMetadata = props => (
   <LoadReportTable
     columns={COLUMNS}
-    viewAllPages={VIEW_ALL_PAGES}
     urlPath="family_metadata"
     idField="family_id"
     {...props}
