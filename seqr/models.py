@@ -1040,6 +1040,23 @@ class AnalysisGroup(ModelWithGUID):
         json_fields = ['guid', 'name', 'description']
 
 
+class DynamicAnalysisGroup(ModelWithGUID):
+    project = models.ForeignKey('Project', on_delete=models.CASCADE, null=True, blank=True)
+    name = models.TextField()
+    criteria = JSONField()
+
+    def __unicode__(self):
+        return self.name.strip()
+
+    def _compute_guid(self):
+        return 'AG%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        unique_together = ('project', 'name')
+
+        json_fields = ['guid', 'name', 'criteria']
+
+
 class VariantSearch(ModelWithGUID):
     name = models.CharField(max_length=200, null=True)
     order = models.FloatField(null=True, blank=True)
