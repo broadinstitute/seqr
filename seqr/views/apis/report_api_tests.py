@@ -487,31 +487,6 @@ MOCK_INVALID_DATA_MODEL = {
     ] + INVALID_TABLES
 }
 
-BASE_VARIANT_METADATA_ROW = {
-    'MME': False,
-    'additional_family_members_with_variant': '',
-    'allele_balance_or_heteroplasmy_percentage': None,
-    'analysisStatus': 'Q',
-    'analysis_groups': '',
-    'clinvar': None,
-    'condition_id': None,
-    'consanguinity': 'Unknown',
-    'end': None,
-    'hgvsc': '',
-    'hgvsp': '',
-    'method_of_discovery': 'SR-ES',
-    'notes': None,
-    'phenotype_contribution': 'Full',
-    'phenotype_description': None,
-    'pmid_id': None,
-    'seqr_chosen_consequence': None,
-    'solve_status': 'Unsolved',
-    'svName': None,
-    'svType': None,
-    'sv_name': None,
-    'transcript': None,
-}
-
 PARTICIPANT_TABLE = [
     [
         'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',

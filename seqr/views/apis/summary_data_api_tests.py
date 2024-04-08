@@ -250,6 +250,32 @@ AIRTABLE_COLLABORATOR_RECORDS = {
 }
 
 
+BASE_VARIANT_METADATA_ROW = {
+    'MME': False,
+    'additional_family_members_with_variant': '',
+    'allele_balance_or_heteroplasmy_percentage': None,
+    'analysisStatus': 'Q',
+    'analysis_groups': '',
+    'clinvar': None,
+    'condition_id': None,
+    'consanguinity': 'Unknown',
+    'end': None,
+    'hgvsc': '',
+    'hgvsp': '',
+    'method_of_discovery': 'SR-ES',
+    'notes': None,
+    'phenotype_contribution': 'Full',
+    'phenotype_description': None,
+    'pmid_id': None,
+    'seqr_chosen_consequence': None,
+    'solve_status': 'Unsolved',
+    'svName': None,
+    'svType': None,
+    'sv_name': None,
+    'transcript': None,
+}
+
+
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class SummaryDataAPITest(AirtableTest):
 
@@ -348,6 +374,10 @@ class SummaryDataAPITest(AirtableTest):
         all_tag_url = reverse(saved_variants_page, args=['ALL'])
         response = self.client.get('{}?gene=ENSG00000135953'.format(all_tag_url))
         self.assertEqual(response.status_code, 200)
+        report_variant_guids = {
+            'SV0027168_191912632_r0384_rare', 'SV0027167_191912633_r0384_rare', 'SV0027166_191912634_r0384_rare',
+        }
+        expected_variant_guids.update(report_variant_guids)
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
 
@@ -366,7 +396,7 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {
             'SV0000001_2103343353_r0390_100', 'SV0000002_1248367227_r0390_100', 'SV0000007_prefix_19107_DEL_r00',
-            'SV0000006_1248367227_r0003_tes',
+            'SV0000006_1248367227_r0003_tes', *report_variant_guids,
         })
 
         multi_discovery_tag_url = reverse(saved_variants_page, args=['CMG Discovery Tags;Review'])
@@ -787,7 +817,6 @@ class SummaryDataAPITest(AirtableTest):
     def test_variant_metadata(self):
         url = reverse(variant_metadata, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
-        self.login_analyst_user()  # TODO test less access
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -856,6 +885,10 @@ class SummaryDataAPITest(AirtableTest):
 
         # Test gregor projects
         gregor_projects_url = reverse(variant_metadata, args=['gregor'])
+        response = self.client.get(gregor_projects_url)
+        self.assertEqual(response.status_code, 403)
+
+        self.login_analyst_user()
         response = self.client.get(gregor_projects_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -940,7 +973,7 @@ class SummaryDataAPITest(AirtableTest):
 
 # Tests for AnVIL access disabled
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data']
+    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = ['NA21234', 'NA21987']
     ADDITIONAL_FAMILIES = ['F000014_14']
@@ -958,7 +991,7 @@ def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
 
 # Test for permissions from AnVIL only
 class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = []
     ADDITIONAL_FAMILIES = []
