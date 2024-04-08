@@ -24,9 +24,6 @@ import {
   getProjectAnalysisGroupIndividualsByGuid,
 } from '../../selectors'
 
-const ALL_UPLOAD_FORMATS = FILE_FORMATS.concat([
-  { title: 'Phenotips Export', formatLinks: [{ href: 'https://phenotips.org/', linkExt: 'json' }] },
-])
 const FAM_UPLOAD_FORMATS = [].concat(FILE_FORMATS)
 FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_FORMATS[1].formatLinks, { href: 'https://www.cog-genomics.org/plink2/formats#fam', linkExt: 'fam' }] }
 
@@ -153,7 +150,7 @@ const IndividualMetadataBulkForm = React.memo(({ load, loading, ...props }) => (
       details="Alternately, the table can have a single row per HPO term"
       requiredFields={INDIVIDUAL_ID_EXPORT_DATA}
       optionalFields={INDIVIDUAL_DETAIL_EXPORT_DATA}
-      uploadFormats={ALL_UPLOAD_FORMATS}
+      uploadFormats={FILE_FORMATS}
       {...props}
     />
   </DataLoader>
