@@ -56,8 +56,8 @@ class SvHailTableQuery(BaseHailTableQuery):
     def _get_sample_type(cls, *args):
         return cls.DATA_TYPE.split('_')[-1]
 
-    def _filter_annotated_table(self, ht, *args, parsed_intervals=None, exclude_intervals=False, padded_interval=None, **kwargs):
-        if parsed_intervals:
+    def _filter_annotated_table(self, ht, *args, parsed_intervals=None, exclude_intervals=False, padded_interval=None, gene_ids=None, **kwargs):
+        if parsed_intervals and len(parsed_intervals) != len(gene_ids or []):
             interval_filter = hl.array(parsed_intervals).any(lambda interval: hl.if_else(
                 ht.start_locus.contig == ht.end_locus.contig,
                 interval.overlaps(hl.interval(ht.start_locus, ht.end_locus)),
@@ -74,7 +74,7 @@ class SvHailTableQuery(BaseHailTableQuery):
                 self._locus_in_range(ht.end_locus, chrom, padded_interval['end'], padding)
             ]))
 
-        return super()._filter_annotated_table(ht, *args, **kwargs)
+        return super()._filter_annotated_table(ht, *args, gene_ids=gene_ids, **kwargs)
 
     def _locus_in_range(self, locus, chrom, position, padding):
         window = hl.locus(chrom, position, reference_genome=self.GENOME_VERSION).window(padding, padding)
