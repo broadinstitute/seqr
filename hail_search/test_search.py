@@ -647,6 +647,16 @@ class HailSearchTestCase(AioHTTPTestCase):
             sample_data=SV_WGS_SAMPLE_DATA,
         )
 
+        # For gene search, return SVs annotated in gene even if they fall outside the gene interval
+        nearest_tss_gene_intervals = ['1:9292894-9369532']
+        await self._assert_expected_search(
+            [SV_VARIANT1], sample_data=SV_WGS_SAMPLE_DATA, intervals=nearest_tss_gene_intervals,
+        )
+        await self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2], sample_data=SV_WGS_SAMPLE_DATA, intervals=nearest_tss_gene_intervals,
+            gene_ids=['ENSG00000171621'],
+        )
+
     async def test_variant_id_search(self):
         await self._assert_expected_search([VARIANT2], omit_sample_type='SV_WES', **RSID_SEARCH)
 
