@@ -686,11 +686,6 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, VARIANT_LOOKUP_VARIANT)
 
-        async with self.client.request('POST', '/lookup', json={**body, 'sample_data': MULTI_PROJECT_SAMPLE_DATA['SNV_INDEL']}) as resp:
-            self.assertEqual(resp.status, 200)
-            resp_json = await resp.json()
-        self.assertDictEqual(resp_json, MULTI_PROJECT_VARIANT1)
-
         body['variant_id'] = VARIANT_ID_SEARCH['variant_ids'][1]
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 404)
@@ -699,34 +694,32 @@ class HailSearchTestCase(AioHTTPTestCase):
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
-        self.assertDictEqual(resp_json, {**GRCH37_VARIANT, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''})
+        self.assertDictEqual(resp_json, {
+            **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}},
+            'familyGenotypes': {GRCH37_VARIANT['familyGuids'][0]: [
+                {k: v for k, v in g.items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
+            ]},
+        })
 
         body.update({'variant_id': ['M', 4429, 'G', 'A'], 'data_type': 'MITO', 'genome_version': 'GRCh38'})
         async with self.client.request('POST', '/lookup', json=body) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
-        self.assertDictEqual(resp_json, {**MITO_VARIANT1, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''})
+        self.assertDictEqual(resp_json, {
+            **{k: v for k, v in MITO_VARIANT1.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}},
+            'familyGenotypes': {MITO_VARIANT1['familyGuids'][0]: [
+                {k: v for k, v in g.items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
+            ]},
+        })
 
-        body.update({'variant_id': 'phase2_DEL_chr14_4640', 'data_type': 'SV_WGS'})
+        body.update({'variant_id': 'phase2_DEL_chr14_4640', 'data_type': 'SV_WGS', 'sample_data': SV_WGS_SAMPLE_DATA['SV_WGS']})
         async with self.client.request('POST', '/lookup', json=body) as resp:
-            self.assertEqual(resp.status, 200)
-            resp_json = await resp.json()
-        self.assertDictEqual(resp_json, {**SV_VARIANT4, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''})
-
-        async with self.client.request('POST', '/lookup', json={**body, 'sample_data': SV_WGS_SAMPLE_DATA['SV_WGS']}) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, SV_VARIANT4)
 
-        body.update({'variant_id': 'suffix_140608_DUP', 'data_type': 'SV_WES'})
+        body.update({'variant_id': 'suffix_140608_DUP', 'data_type': 'SV_WES', 'sample_data': EXPECTED_SAMPLE_DATA['SV_WES']})
         async with self.client.request('POST', '/lookup', json=body) as resp:
-            self.assertEqual(resp.status, 200)
-            resp_json = await resp.json()
-        self.assertDictEqual(resp_json, {
-            **NO_GENOTYPE_GCNV_VARIANT, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': '',
-        })
-
-        async with self.client.request('POST', '/lookup', json={**body, 'sample_data': EXPECTED_SAMPLE_DATA['SV_WES']}) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {
@@ -735,6 +728,10 @@ class HailSearchTestCase(AioHTTPTestCase):
                 for individual, genotype in GCNV_VARIANT4['genotypes'].items()
             }
         })
+
+        body['variant_id'] = 'suffix_140608_DEL'
+        async with self.client.request('POST', '/lookup', json=body) as resp:
+            self.assertEqual(resp.status, 404)
 
     async def test_multi_variant_lookup(self):
         await self._test_multi_lookup(VARIANT_ID_SEARCH['variant_ids'], 'SNV_INDEL', [VARIANT1])

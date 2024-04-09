@@ -106,12 +106,8 @@ class BaseHailTableQuery(object):
         annotation_fields = {
             GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
                 lambda gt: hl.is_defined(gt.individualGuid)
-            ).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0].select(
-                'sampleId', 'sampleType', 'individualGuid', 'familyGuid',
-                numAlt=hl.if_else(hl.is_defined(x[0].GT), x[0].GT.n_alt_alleles(), self.MISSING_NUM_ALT),
-                **{k: x[0][field] for k, field in self.GENOTYPE_FIELDS.items()},
-                **{_to_camel_case(k): v(x[0], k, r) for k, v in self.COMPUTED_GENOTYPE_FIELDS.items()
-                   if include_genotype_overrides or k not in self.GENOTYPE_OVERRIDE_FIELDS},
+            ).group_by(lambda x: x.individualGuid).map_values(lambda x: self._get_sample_genotype(
+                x[0], r, select_fields=['individualGuid'], include_genotype_overrides=include_genotype_overrides,
             )),
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
@@ -133,6 +129,15 @@ class BaseHailTableQuery(object):
         ])
 
         return annotation_fields
+
+    def _get_sample_genotype(self, sample, r=None, include_genotype_overrides=False, select_fields=None):
+        return sample.select(
+            'sampleId', 'sampleType', 'familyGuid', *(select_fields or []),
+            numAlt=hl.if_else(hl.is_defined(sample.GT), sample.GT.n_alt_alleles(), self.MISSING_NUM_ALT),
+            **{k: sample[field] for k, field in self.GENOTYPE_FIELDS.items()},
+            **{_to_camel_case(k): v(sample, k, r) for k, v in self.COMPUTED_GENOTYPE_FIELDS.items()
+               if include_genotype_overrides or k not in self.GENOTYPE_OVERRIDE_FIELDS},
+        )
 
     def _additional_annotation_fields(self):
         return {}
@@ -402,11 +407,18 @@ class BaseHailTableQuery(object):
 
         missing_samples = set()
         family_sample_index_data = []
+        sorted_family_sample_data = []
         family_guids = sorted(sample_data.keys())
         for family_guid in family_guids:
-            samples = sample_data[family_guid]
             ht_family_samples = ht_globals.family_samples[family_guid]
-            missing_family_samples = [s['sample_id'] for s in samples if s['sample_id'] not in ht_family_samples]
+            samples = sample_data[family_guid]
+            if samples is True:
+                samples = ht_family_samples
+                get_sample_data = lambda s: {'sampleId': s}
+                missing_family_samples = []
+            else:
+                get_sample_data = self._sample_entry_data
+                missing_family_samples = [s['sample_id'] for s in samples if s['sample_id'] not in ht_family_samples]
             if missing_family_samples:
                 missing_samples.update(missing_family_samples)
             else:
@@ -415,25 +427,23 @@ class BaseHailTableQuery(object):
                     'sampleType': self._get_sample_type(family_index, ht_globals),
                     'familyGuid': family_guid,
                 }
-                sample_index_data = [
-                    (ht_family_samples.index(s['sample_id']), {**family_entry_data, **self._sample_entry_data(s)})
-                    for s in samples
-                ]
+                formatted_samples = [{**family_entry_data, **get_sample_data(s)} for s in samples]
+                sample_index_data = [(ht_family_samples.index(s['sampleId']), hl.struct(**s)) for s in formatted_samples]
                 family_sample_index_data.append((family_index, sample_index_data))
-                self.entry_samples_by_family_guid[family_guid] = [s['sampleId'] for _, s in sample_index_data]
+                sorted_family_sample_data.append(formatted_samples)
+                self.entry_samples_by_family_guid[family_guid] = [s['sampleId'] for s in formatted_samples]
 
         if missing_samples:
             raise HTTPBadRequest(
                 reason=f'The following samples are available in seqr but missing the loaded data: {", ".join(sorted(missing_samples))}'
             )
 
-        sorted_family_sample_data = [[sample for _, sample in samples] for _, samples in family_sample_index_data]
         family_sample_index_data = hl.array(family_sample_index_data)
 
         ht = ht.annotate_globals(family_guids=family_guids)
 
         ht = ht.transmute(family_entries=family_sample_index_data.map(lambda family_tuple: family_tuple[1].map(
-            lambda sample_tuple: ht.family_entries[family_tuple[0]][sample_tuple[0]].annotate(**hl.struct(**sample_tuple[1]))
+            lambda sample_tuple: ht.family_entries[family_tuple[0]][sample_tuple[0]].annotate(**sample_tuple[1])
         )))
 
         return ht, sorted_family_sample_data
@@ -1063,18 +1073,16 @@ class BaseHailTableQuery(object):
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
         ))
 
-    def lookup_variants(self, variant_ids, project_samples=None, annotation_overrides=None):
+    def lookup_variants(self, variant_ids, include_project_data=False, **kwargs):
         self._parse_intervals(intervals=None, variant_ids=variant_ids, variant_keys=variant_ids)
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         annotation_fields = self.annotation_fields(include_genotype_overrides=False)
-        if project_samples:
-            projects_ht, _ = self._load_filtered_project_hts(project_samples, skip_all_missing=True, n_partitions=1)
-            ht = ht.annotate(**projects_ht[ht.key])
-        elif annotation_overrides:
-            annotation_fields.update(annotation_overrides)
-        else:
+        include_sample_annotations = False
+        if include_project_data:
+            ht, include_sample_annotations = self._add_project_lookup_data(ht, annotation_fields, **kwargs)
+        if not include_sample_annotations:
             annotation_fields = {
                 k: v for k, v in annotation_fields.items()
                 if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD, 'genotypeFilters'}
@@ -1084,18 +1092,15 @@ class BaseHailTableQuery(object):
 
         return formatted.aggregate(hl.agg.take(formatted.row, len(variant_ids)))
 
-    def lookup_variant(self, variant_id, sample_data=None):
-        annotation_overrides = {
-            FAMILY_GUID_FIELD: lambda ht: hl.empty_array(hl.tstr),
-            GENOTYPES_FIELD: lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
-            'genotypeFilters': lambda ht: hl.str(''),
-        }
+    def _add_project_lookup_data(self, ht, annotation_fields, include_sample_annotations=False, project_samples=None, **kwargs):
+        if project_samples:
+            projects_ht, _ = self._load_filtered_project_hts(project_samples, skip_all_missing=True, n_partitions=1)
+            ht = ht.annotate(**projects_ht[ht.key])
 
-        project_samples = None
-        if sample_data:
-            project_samples, _ = self._parse_sample_data(sample_data)
+        return ht, include_sample_annotations
 
-        variants = self.lookup_variants([variant_id], project_samples=project_samples, annotation_overrides=annotation_overrides)
+    def lookup_variant(self, variant_id, **kwargs):
+        variants = self.lookup_variants([variant_id], include_project_data=True, **kwargs)
         if not variants:
             raise HTTPNotFound()
         return dict(variants[0])

@@ -16,7 +16,7 @@ import VariantGenes, { VariantGene } from './VariantGene'
 import VariantIndividuals from './VariantIndividuals'
 import { compHetGene, has37Coords } from './VariantUtils'
 
-const StyledVariantRow = styled(({ isSV, severity, ...props }) => <Grid.Row {...props} />)`  
+export const StyledVariantRow = styled(({ isSV, severity, ...props }) => <Grid.Row {...props} />)`  
   .column {
     margin-top: 0em !important;
     margin-bottom: 0em !important;
@@ -127,7 +127,7 @@ VariantLayout.propTypes = {
   children: PropTypes.node,
 }
 
-const Variant = React.memo((
+export const Variant = React.memo((
   { variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, updateReads, ...props },
 ) => {
   const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)

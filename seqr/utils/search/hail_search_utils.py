@@ -77,28 +77,31 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     return response_json['results']
 
 
-def hail_variant_lookup(user, variant_id, samples=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_type=None, **kwargs):
-    data_type = dataset_type.replace('_only', '')
-    is_sv = data_type == Sample.DATASET_TYPE_SV_CALLS
-    if is_sv:
-        if not sample_type:
-            from seqr.utils.search.utils import InvalidSearchException
-            raise InvalidSearchException('Sample type must be specified to look up a structural variant')
-        data_type = f'{data_type}_{sample_type}'
-
+def _execute_lookup(variant_id, data_type,  user, **kwargs):
     body = {
         'variant_id': variant_id,
         'data_type': data_type,
         **kwargs,
     }
-    sample_data = None
-    if samples:
-        sample_data = _get_sample_data(samples)
-        body['sample_data'] = sample_data.pop(data_type)
-    variant = _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'})
+    return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'}), body
+
+
+def hail_variant_lookup(user, variant_id, **kwargs):
+    variant, _ = _execute_lookup(variant_id, Sample.DATASET_TYPE_VARIANT_CALLS, user, **kwargs)
+    return variant
+
+
+def hail_sv_variant_lookup(user, variant_id, samples, sample_type=None, **kwargs):
+    if not sample_type:
+        from seqr.utils.search.utils import InvalidSearchException
+        raise InvalidSearchException('Sample type must be specified to look up a structural variant')
+    data_type = f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
+
+    sample_data = _get_sample_data(samples)
+    variant, body = _execute_lookup(variant_id, data_type, user, sample_data=sample_data.pop(data_type), **kwargs)
     variants = [variant]
 
-    if is_sv and sample_data and variant['svType'] in {'DEL', 'DUP'}:
+    if variant['svType'] in {'DEL', 'DUP'}:
         del body['variant_id']
         body.update({
             'sample_data': sample_data,
