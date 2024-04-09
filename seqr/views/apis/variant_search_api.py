@@ -12,7 +12,7 @@ from math import ceil
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples, \
-    variant_lookup
+    variant_lookup, sv_variant_lookup, parse_variant_id
 from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.export_utils import export_table
@@ -21,7 +21,7 @@ from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
-    get_json_for_saved_searches, FAMILY_DISPLAY_NAME_EXPR
+    get_json_for_saved_searches, add_individual_hpo_details, FAMILY_DISPLAY_NAME_EXPR
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     user_is_analyst, login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission
 from seqr.views.utils.project_context_utils import get_projects_child_entities
@@ -102,6 +102,8 @@ def _get_or_create_results_model(search_hash, search_context, user):
 
         if search_context.get('unsolvedFamiliesOnly'):
             families = families.exclude(analysis_status__in=Family.SOLVED_ANALYSIS_STATUSES)
+        if search_context.get('trioFamiliesOnly'):
+            families = families.filter(individual__mother__isnull=False, individual__father__isnull=False).distinct()
 
         search_dict = search_context.get('search', {})
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
@@ -497,7 +499,7 @@ def _get_saved_searches(user):
 
 
 def _get_saved_variant_models(variants, families):
-    hg37_family_guids = families.filter(project__genome_version=GENOME_VERSION_GRCh37).values_list('guid', flat=True)
+    hg37_family_guids = families.filter(project__genome_version=GENOME_VERSION_GRCh37).values_list('guid', flat=True) if families else []
 
     variant_q = Q()
     variants_by_id = {}
@@ -534,19 +536,78 @@ def _flatten_variants(variants):
 @login_and_policies_required
 def variant_lookup_handler(request):
     kwargs = {_to_snake_case(k): v for k, v in request.GET.items()}
-    include_genotypes = kwargs.pop('include_genotypes', False)
-    families = None
-    if include_genotypes:
+
+    variant_id = kwargs.pop('variant_id')
+    parsed_variant_id = parse_variant_id(variant_id)
+    is_sv = not parsed_variant_id
+    if is_sv:
         families = _all_genome_version_families(
             kwargs.get('genome_version', GENOME_VERSION_GRCh38), request.user,
         )
+        if not families:
+            raise PermissionDenied()
+        variants = sv_variant_lookup(request.user, variant_id, families, **kwargs)
+    else:
+        variant = variant_lookup(request.user, parsed_variant_id, **kwargs)
+        variants = [variant]
+        families = Family.objects.filter(
+            guid__in=variant['familyGenotypes'],
+            project__guid__in=get_project_guids_user_can_view(request.user, limit_data_manager=True),
+        )
+        variant['familyGuids'] = list(families.values_list('guid', flat=True))
 
-    variants = variant_lookup(request.user, families=families, **kwargs)
-    saved_variants, _ = _get_saved_variant_models(variants, families) if families else (None, None)
+    saved_variants, _ = _get_saved_variant_models(variants, None) if families else (None, None)
     response = get_variants_response(
         request, saved_variants=saved_variants, response_variants=variants,
-        add_all_context=include_genotypes, add_locus_list_detail=include_genotypes,
+        add_all_context=True, add_locus_list_detail=True,
     )
     response['variants'] = variants
 
+    if not is_sv:
+        _update_lookup_variant(variant, response)
+
     return create_json_response(response)
+
+
+def _update_lookup_variant(variant, response):
+    individual_guid_map = {
+        (i['familyGuid'], i['individualId']): i['individualGuid'] for i in response['individualsByGuid'].values()
+    }
+
+    no_access_families = set(variant['familyGenotypes']) - set(variant['familyGuids'])
+    individual_summary_map = {
+        (i.pop('family__guid'), i.pop('individual_id')): i
+        for i in Individual.objects.filter(family__guid__in=no_access_families).values(
+            'family__guid', 'individual_id', 'affected', 'sex', 'features',
+        )
+    }
+    add_individual_hpo_details(individual_summary_map.values())
+
+    variant['genotypes'] = {}
+    variant['lookupFamilyGuids'] = variant.pop('familyGuids')
+    variant['familyGuids'] = []
+    for family_guid in variant['lookupFamilyGuids']:
+        variant['genotypes'].update({
+            individual_guid_map[(family_guid, genotype['sampleId'])]: genotype
+            for genotype in variant['familyGenotypes'].pop(family_guid)
+        })
+
+    for i, genotypes in enumerate(variant.pop('familyGenotypes').values()):
+        family_guid = f'F{i}_{variant["variantId"]}'
+        variant['lookupFamilyGuids'].append(family_guid)
+        for j, genotype in enumerate(genotypes):
+            individual_guid = f'I{j}_{family_guid}'
+            individual = individual_summary_map[(genotype.pop('familyGuid'), genotype.pop('sampleId'))]
+            feature_category_count = defaultdict(int)
+            for feature in individual['features'] or []:
+                feature_category_count[feature.get('category', 'Other')] += 1
+            response['individualsByGuid'][individual_guid] = {
+                **individual,
+                'familyGuid': family_guid,
+                'individualGuid': individual_guid,
+                'features': [
+                    {'category': category, 'label': f'{count} terms'}
+                    for category, count in feature_category_count.items()
+                ],
+            }
+            variant['genotypes'][individual_guid] = genotype

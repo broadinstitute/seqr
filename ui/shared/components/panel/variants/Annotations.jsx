@@ -347,7 +347,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById, user, elasticsea
     />
   ) : (
     <NavLink
-      to={`/summary_data/variant_lookup?variantId=${variantId}&genomeVersion=${genomeVersion}&sampleType=${getSampleType(genotypes)}&include_genotypes=true`}
+      to={`/summary_data/variant_lookup?variantId=${variantId}&genomeVersion=${genomeVersion}&sampleType=${getSampleType(genotypes)}`}
       target="_blank"
     >
       seqr

@@ -124,12 +124,10 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
     validate_callset, get_loaded_projects, load_data
 from seqr.views.apis.report_api import \
     anvil_export, \
-    family_metadata, \
-    variant_metadata, \
     gregor_export, \
     seqr_stats
 from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, hpo_summary_data, \
-    bulk_update_family_external_analysis, individual_metadata
+    bulk_update_family_external_analysis, individual_metadata, family_metadata, variant_metadata
 from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -316,8 +314,6 @@ api_endpoints = {
     'upload_temp_file': save_temp_file,
 
     'report/anvil/(?P<project_guid>[^/]+)': anvil_export,
-    'report/family_metadata/(?P<project_guid>[^/]+)': family_metadata,
-    'report/variant_metadata/(?P<project_guid>[^/]+)': variant_metadata,
     'report/gregor': gregor_export,
     'report/seqr_stats': seqr_stats,
 
@@ -340,6 +336,8 @@ api_endpoints = {
     'summary_data/matchmaker': mme_details,
     'summary_data/update_external_analysis': bulk_update_family_external_analysis,
     'summary_data/individual_metadata/(?P<project_guid>[^/]+)': individual_metadata,
+    'summary_data/family_metadata/(?P<project_guid>[^/]+)': family_metadata,
+    'summary_data/variant_metadata/(?P<project_guid>[^/]+)': variant_metadata,
 
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/grant_access': grant_workspace_access,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/validate_vcf': validate_anvil_vcf,

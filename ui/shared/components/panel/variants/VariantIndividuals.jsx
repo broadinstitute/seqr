@@ -444,7 +444,7 @@ const mapStateToProps = (state, ownProps) => ({
   genesById: getGenesById(state),
 })
 
-const FamilyVariantIndividuals = connect(mapStateToProps)(BaseVariantIndividuals)
+export const FamilyVariantIndividuals = connect(mapStateToProps)(BaseVariantIndividuals)
 
 const VariantIndividuals = React.memo(({ variant, isCompoundHet }) => (
   <span>

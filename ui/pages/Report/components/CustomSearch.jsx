@@ -58,6 +58,13 @@ const UNSOLVED_ONLY_FIELD = {
   inline: true,
 }
 
+const TRIO_ONLY_FIELD = {
+  name: 'trioFamiliesOnly',
+  component: BooleanCheckbox,
+  label: 'Trio+ Families Only',
+  inline: true,
+}
+
 const getParsedJson = (value) => {
   try {
     return JSON.parse(value)
@@ -120,6 +127,8 @@ const CustomSearch = React.memo(({ match, history, loadContext, loading, searchP
             {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
             <HorizontalSpacer width={20} />
             {configuredField(UNSOLVED_ONLY_FIELD)}
+            <HorizontalSpacer width={20} />
+            {configuredField(TRIO_ONLY_FIELD)}
             <FormSpy subscription={SUBSCRIPTION}>
               {({ values }) => (values[INCLUDE_ALL_PROJECTS] ? null : configuredField(PROJECT_FAMILIES_FIELD))}
             </FormSpy>

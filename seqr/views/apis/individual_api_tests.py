@@ -89,6 +89,8 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
 LOAD_PARTICIPANT_TABLE = deepcopy(PARTICIPANT_TABLE)
 for row in LOAD_PARTICIPANT_TABLE[4:]:
     row[7] = row[7].replace('Broad_', '')
+LOAD_PARTICIPANT_TABLE[6][15] += '|Asian'
+LOAD_PARTICIPANT_TABLE[6][17] = ''
 
 
 @mock.patch('seqr.utils.middleware.DEBUG', False)
@@ -961,29 +963,6 @@ class IndividualAPITest(object):
         response = self.client.post(url, data={'f': f})
         self._is_expected_individuals_metadata_upload(response, expected_families=True, has_non_hpo_update=True)
 
-    def test_individuals_metadata_json_table_handler(self):
-        url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
-        self.check_collaborator_login(url)
-
-        f = SimpleUploadedFile('updates.json', json.dumps([
-            {'external_id': 'NA19675_1', 'sex': 'F', 'date_of_birth': '2000-01-01', 'features': [
-                {'id': 'HP:0002017', 'observed': 'yes'},
-                {'id': 'HP:0002017', 'observed': 'yes'},
-                {'id': 'HP:0012469', 'observed': 'no'},
-                {'id': 'HP:0004322', 'observed': 'no'},
-            ], 'family_history': {'affectedRelatives': True}, 'global_age_of_onset': [{'label': 'Juvenile onset'}],
-             'global_mode_of_inheritance': [{'label': 'Autosomal dominant inheritance'}, {'label': 'Sporadic'}],
-             'ethnicity': {'maternal_ethnicity': ['Finnish', 'Irish']}, 'genes': [
-                 {'gene': 'IKBKAP', 'comments': 'multiple panels, no confirm'}, {'gene': 'EHBP1L1'},
-             ]},
-            {'external_id': 'NA19678', 'features': [], 'notes': {'family_history': 'history note'}},
-            {'external_id': 'NA19679', 'features': [{'id': 'HP:0100258', 'observed': 'yes'}]},
-            {'family_id': '1', 'external_id': 'HG00731', 'features': [
-                {'id': 'HP:0002017', 'observed': 'yes'}, {'id': 'HP:0011675', 'observed': 'no'}]},
-        ]).encode('utf-8'))
-        response = self.client.post(url, data={'f': f})
-        self._is_expected_individuals_metadata_upload(response)
-
     def test_individuals_metadata_hpo_term_number_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
         self.check_collaborator_login(url)
@@ -1107,7 +1086,7 @@ class IndividualAPITest(object):
             'proband_relationship': 'S',
             'mother__individual_id': None,
             'father__individual_id': None,
-            'population': 'ASJ',
+            'population': 'OTH',
             'features': [{'id': 'HP:0011675'}],
             'absent_features': [],
             'case_review_status': 'I',

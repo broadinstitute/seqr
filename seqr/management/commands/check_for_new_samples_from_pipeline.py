@@ -8,6 +8,7 @@ import logging
 
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Family, Sample, SavedVariant
+from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.utils.search.utils import parse_valid_variant_id
@@ -15,6 +16,7 @@ from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     saved_variants_dataset_type_filter
+from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +108,25 @@ class Command(BaseCommand):
             project_families = project_sample_data['family_guids']
             updated_families.update(project_families)
             updated_project_families.append((project.id, project.name, project_families))
+
+        # Send failure notifications
+        failed_family_samples = metadata.get('failed_family_samples', {})
+        failed_families_by_guid = {f['guid']: f for f in Family.objects.filter(
+            guid__in={family for families in failed_family_samples.values() for family in families}
+        ).values('guid', 'family_id', 'project__name')}
+        for check, check_failures in failed_family_samples.items():
+            failures_by_project = defaultdict(list)
+            for family_guid, failure_data in check_failures.items():
+                family = failed_families_by_guid[family_guid]
+                failures_by_project[family['project__name']].append(
+                    f'- {family["family_id"]}: {"; ".join(failure_data["reasons"])}'
+                )
+            for project, failures in failures_by_project.items():
+                summary = '\n'.join(sorted(failures))
+                safe_post_to_slack(
+                    SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL,
+                    f'The following {len(failures)} families failed {check.replace("_", " ")} in {project}:\n{summary}'
+                )
 
         # Reload saved variant JSON
         updated_variants_by_id = update_projects_saved_variant_json(

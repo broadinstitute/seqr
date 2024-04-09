@@ -20,7 +20,6 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
     get_project_guids_user_can_view, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
-from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
 from seqr.models import Project, Family, Sample, Individual
 from settings import GREGOR_DATA_MODEL_URL
@@ -718,7 +717,7 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
     data_type = column_validator.get('data_type')
     data_type_validator = DATA_TYPE_VALIDATORS.get(data_type)
     data_type_formatter = DATA_TYPE_FORMATTERS.get(data_type)
-    unique = column_validator.get('is_unique')
+    unique = column_validator.get('is_unique') or column_validator.get('primary_key')
     required = column_validator.get('required')
     recommended = column in WARN_MISSING_TABLE_COLUMNS.get(file_name, [])
     if not (required or unique or recommended or data_type_validator):
@@ -776,130 +775,3 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
 def _get_row_id(row):
     id_col = next(col for col in ['genetic_findings_id', 'participant_id', 'experiment_sample_id', 'family_id'] if col in row)
     return row[id_col]
-
-
-@analyst_required
-def family_metadata(request, project_guid):
-    projects = _get_metadata_projects(project_guid, request.user)
-
-    families_by_id = {}
-    family_individuals = defaultdict(dict)
-
-    def _add_row(row, family_id, row_type):
-        if row_type == FAMILY_ROW_TYPE:
-            families_by_id[family_id] = row
-        elif row_type == SUBJECT_ROW_TYPE:
-            family_individuals[family_id][row['participant_id']] = row
-        elif row_type == SAMPLE_ROW_TYPE:
-            family_individuals[family_id][row['participant_id']].update(row)
-        elif row_type == DISCOVERY_ROW_TYPE:
-            family = families_by_id[family_id]
-            if 'inheritance_models' not in family:
-                family.update({'genes': set(), 'inheritance_models': set()})
-            family['genes'].update({v.get('gene') or v.get('sv_name') or v.get('gene_id') or '' for v in row})
-            family['inheritance_models'].update({v['variant_inheritance'] for v in row})
-
-    parse_anvil_metadata(
-        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_metadata=True, include_no_individual_families=True)
-
-    for family_id, f in families_by_id.items():
-        individuals_by_id = family_individuals[family_id]
-        proband = next((i for i in individuals_by_id.values() if i['proband_relationship'] == 'Self'), None)
-        individuals_ids = set(individuals_by_id.keys())
-        known_ids = {}
-        if proband:
-            known_ids = {
-                'proband_id': proband['participant_id'],
-                'paternal_id': proband['paternal_id'],
-                'maternal_id': proband['maternal_id'],
-            }
-            f.update(known_ids)
-            individuals_ids -= set(known_ids.values())
-
-        sorted_samples = sorted(individuals_by_id.values(), key=lambda x: x.get('date_data_generation', ''))
-        earliest_sample = next((s for s in [proband or {}] + sorted_samples if s.get('date_data_generation')), {})
-
-        inheritance_models = f.pop('inheritance_models', [])
-        f.update({
-            'individual_count': len(individuals_by_id),
-            'other_individual_ids':  '; '.join(sorted(individuals_ids)),
-            'family_structure': _get_family_structure(len(individuals_by_id), sum(1 for id in known_ids.values() if id)),
-            'data_type': earliest_sample.get('data_type'),
-            'date_data_generation': earliest_sample.get('date_data_generation'),
-            'genes': '; '.join(sorted(f.get('genes', []))),
-            'actual_inheritance': 'unknown' if inheritance_models == {'unknown'} else ';'.join(
-                sorted([i for i in inheritance_models if i != 'unknown'])),
-        })
-
-    return create_json_response({'rows': list(families_by_id.values())})
-
-
-def _get_metadata_projects(project_guid, user):
-    if project_guid == 'all':
-        return get_internal_projects()
-    if project_guid == GREGOR_CATEGORY.lower():
-        return Project.objects.filter(projectcategory__name=GREGOR_CATEGORY)
-    return [get_project_and_check_permissions(project_guid, user)]
-
-
-FAMILY_STRUCTURES = {
-    1: 'singleton',
-    2: 'duo',
-    3: 'trio',
-    4: 'quad',
-}
-
-
-def _get_family_structure(num_individuals, num_known_individuals):
-    if (num_individuals and num_known_individuals == num_individuals) or (
-            num_known_individuals in {0, 3} and num_individuals == num_known_individuals + 1):
-        return FAMILY_STRUCTURES[num_individuals]
-    return 'other'
-
-
-@analyst_required
-def variant_metadata(request, project_guid):
-    projects = _get_metadata_projects(project_guid, request.user)
-
-    individuals = Individual.objects.filter(
-        family__project__in=projects, family__savedvariant__varianttag__variant_tag_type__category=DISCOVERY_CATEGORY,
-    ).distinct().annotate(
-        data_types=ArrayAgg('sample__sample_type', distinct=True, filter=Q(sample__isnull=False))
-    )
-
-    families_by_id = {}
-    participant_mme = {}
-    variant_rows = []
-
-    def _add_row(row, family_id, row_type):
-        if row_type == FAMILY_ROW_TYPE:
-            families_by_id[family_id] = row
-        elif row_type == SUBJECT_ROW_TYPE:
-            participant_mme[row['participant_id']] = row.get('MME', {})
-        elif row_type == DISCOVERY_ROW_TYPE:
-            family = families_by_id[family_id]
-            for variant in row:
-                del variant['gene_ids']
-                variant_rows.append({
-                    'MME': variant.pop('variantId') in participant_mme[variant['participant_id']].get('variant_ids', []),
-                    'phenotype_contribution': 'Full',
-                    **family,
-                    **variant,
-                })
-
-    parse_anvil_metadata(
-        projects,
-        user=request.user,
-        individual_samples={i: None for i in individuals},
-        individual_data_types={i.individual_id: i.data_types for i in individuals},
-        add_row=_add_row,
-        variant_json_fields=['clinvar', 'variantId'],
-        mme_values={'variant_ids': ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId')},
-        include_metadata=True,
-        include_mondo=True,
-        omit_airtable=True,
-        proband_only_variants=True,
-        include_parent_mnvs=True,
-    )
-
-    return create_json_response({'rows': variant_rows})
