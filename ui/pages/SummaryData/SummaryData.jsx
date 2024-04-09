@@ -15,6 +15,8 @@ import GeneInfoSearch from './components/GeneInfoSearch'
 import LocusLists from './components/LocusLists'
 import ExternalAnalysis from './components/ExternalAnalysis'
 import Hpo from './components/Hpo'
+import FamilyMetadata from './components/FamilyMetadata'
+import VariantMetadata from './components/VariantMetadata'
 import IndividualMetadata from './components/IndividualMetadata'
 import VariantLookup from './components/VariantLookup'
 
@@ -31,6 +33,8 @@ const SUMMARY_DATA_PAGES = [
   { path: 'gene_lists', component: LocusLists },
   { path: 'saved_variants', component: SavedVariants },
   { path: 'individual_metadata', params: '/:projectGuid?', component: IndividualMetadata },
+  { path: 'family_metadata', params: '/:projectGuid?', component: FamilyMetadata },
+  { path: 'variant_metadata', params: '/:projectGuid?', component: VariantMetadata },
   { path: 'hpo_terms', component: Hpo },
   { path: 'matchmaker', component: Matchmaker },
 ]
