@@ -102,6 +102,8 @@ def _get_or_create_results_model(search_hash, search_context, user):
 
         if search_context.get('unsolvedFamiliesOnly'):
             families = families.exclude(analysis_status__in=Family.SOLVED_ANALYSIS_STATUSES)
+        if search_context.get('trioFamiliesOnly'):
+            families = families.filter(individual__mother__isnull=False, individual__father__isnull=False).distinct()
 
         search_dict = search_context.get('search', {})
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
