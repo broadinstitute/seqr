@@ -108,13 +108,14 @@ const FORM_FIELDS = [
 
 const DYNAMIC_FORM_FIELDS = [
   ...BASE_FORM_FIELDS,
-  ...[FAMILY_FIELD_ANALYSIS_STATUS, FAMILY_FIELD_ANALYSED_BY, FAMILY_FIELD_FIRST_SAMPLE].map(category => ({
+  ...[FAMILY_FIELD_ANALYSIS_STATUS, FAMILY_FIELD_ANALYSED_BY, FAMILY_FIELD_FIRST_SAMPLE].map((category, i) => ({
     name: `criteria.${category}`,
     label: `Criteria: ${FAMILY_FIELD_NAME_LOOKUP[category]}`,
     component: Multiselect,
     options: CATEGORY_FAMILY_FILTERS[category],
     includeCategories: true,
     color: 'blue',
+    validate: i === 0 ? (value, allValues) => (allValues.criteria ? undefined : 'At least one criteria is required') : null,
   })),
 ]
 
