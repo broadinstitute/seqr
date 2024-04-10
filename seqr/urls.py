@@ -134,7 +134,8 @@ from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, login_view, logout_view, policies_required_error
 from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
     igv_genomes_proxy, receive_bulk_igv_table_handler
-from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
+from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler, \
+    update_dynamic_analysis_group_handler, delete_dynamic_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
     project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists, \
@@ -240,6 +241,9 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/analysis_groups/create': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/delete': delete_analysis_group_handler,
+    'project/(?P<project_guid>[^/]+)/dynamic_analysis_groups/create': update_dynamic_analysis_group_handler,
+    'project/(?P<project_guid>[^/]+)/dynamic_analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_dynamic_analysis_group_handler,
+    'project/(?P<project_guid>[^/]+)/dynamic_analysis_groups/(?P<analysis_group_guid>[^/]+)/delete': delete_dynamic_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/update_saved_variant_json': update_saved_variant_json,
     'project/(?P<project_guid>[^/]+)/add_workspace_data': add_workspace_data,
 
