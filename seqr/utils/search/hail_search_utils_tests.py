@@ -7,13 +7,13 @@ import responses
 
 from seqr.models import Family, Project
 from seqr.utils.search.utils import get_variant_query_gene_counts, query_variants, get_single_variant, \
-    get_variants_for_variant_ids, variant_lookup, InvalidSearchException
+    get_variants_for_variant_ids, variant_lookup, sv_variant_lookup, InvalidSearchException
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
     FAMILY_2_ALL_SAMPLE_DATA, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
     LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS, FAMILY_2_VARIANT_SAMPLE_DATA, \
     FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, MULTI_PROJECT_SAMPLE_DATA, \
-    GCNV_VARIANT4, SV_VARIANT2
+    GCNV_VARIANT4, SV_VARIANT2, SV_VARIANT4
 MOCK_HOST = 'http://test-hail-host'
 
 SV_WGS_SAMPLE_DATA = [{
@@ -246,30 +246,31 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
     @responses.activate
     def test_variant_lookup(self):
         responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=200, json=VARIANT_LOOKUP_VARIANT)
-        variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='37', foo='bar')
-        self.assertListEqual(variant, [VARIANT_LOOKUP_VARIANT])
+        variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'), genome_version='37', foo='bar')
+        self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
         self._test_minimal_search_call(url_path='lookup', expected_search_body={
             'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37', 'foo': 'bar', 'data_type': 'SNV_INDEL',
         })
 
-        variant_lookup(self.user, '1-10439-AC-A', genome_version='37', families=self.families)
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=404)
+        with self.assertRaises(HTTPError) as cm:
+            variant_lookup(self.user, ('1', 10439, 'AC', 'A'))
+        self.assertEqual(cm.exception.response.status_code, 404)
+        self.assertEqual(str(cm.exception), 'Variant not present in seqr')
         self._test_minimal_search_call(url_path='lookup', expected_search_body={
-            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh37',
-            'sample_data': ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL'], 'data_type': 'SNV_INDEL',
+            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh38', 'data_type': 'SNV_INDEL',
         })
 
+    @responses.activate
+    def test_sv_variant_lookup(self):
+        sv_families = Family.objects.filter(id__in=[2, 14])
         with self.assertRaises(InvalidSearchException) as cm:
-            variant_lookup(self.user, 'suffix_140608_DUP')
+            sv_variant_lookup(self.user, 'suffix_140608_DUP', sv_families)
         self.assertEqual(str(cm.exception), 'Sample type must be specified to look up a structural variant')
 
         responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=200, json=GCNV_VARIANT4)
-        variant_lookup(self.user, 'suffix_140608_DUP', sample_type='WES')
-        self._test_minimal_search_call(url_path='lookup', expected_search_body={
-            'variant_id': 'suffix_140608_DUP', 'genome_version': 'GRCh38', 'data_type': 'SV_WES',
-        })
-
-        sv_families = Family.objects.filter(id__in=[2, 14])
-        variant_lookup(self.user, 'suffix_140608_DUP', sample_type='WES', families=sv_families)
+        variants = sv_variant_lookup(self.user, 'suffix_140608_DUP', sv_families, sample_type='WES')
+        self.assertListEqual(variants, [GCNV_VARIANT4] + HAIL_BACKEND_VARIANTS)
         self._test_minimal_search_call(url_path='lookup', call_offset=-2, expected_search_body={
             'variant_id': 'suffix_140608_DUP', 'genome_version': 'GRCh38', 'data_type': 'SV_WES',
             'sample_data': ALL_AFFECTED_SAMPLE_DATA['SV_WES']
@@ -282,20 +283,18 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         # No second lookup call is made for non DELs/DUPs
         responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=200, json=SV_VARIANT2)
-        variant_lookup(self.user, 'cohort_2911.chr1.final_cleanup_INS_chr1_160', sample_type='WGS', families=sv_families)
+        variants = sv_variant_lookup(self.user, 'cohort_2911.chr1.final_cleanup_INS_chr1_160', sv_families, sample_type='WGS')
         self._test_minimal_search_call(url_path='lookup', expected_search_body={
             'variant_id': 'cohort_2911.chr1.final_cleanup_INS_chr1_160', 'genome_version': 'GRCh38', 'data_type': 'SV_WGS',
             'sample_data': SV_WGS_SAMPLE_DATA
         })
+        self.assertListEqual(variants, [SV_VARIANT2])
 
         responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=404)
         with self.assertRaises(HTTPError) as cm:
-            variant_lookup(self.user, '1-10439-AC-A')
+            sv_variant_lookup(self.user, 'suffix_140608_DUP', sv_families, sample_type='WES')
         self.assertEqual(cm.exception.response.status_code, 404)
         self.assertEqual(str(cm.exception), 'Variant not present in seqr')
-        self._test_minimal_search_call(url_path='lookup', expected_search_body={
-            'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh38', 'data_type': 'SNV_INDEL',
-        })
 
     @responses.activate
     def test_get_single_variant(self):

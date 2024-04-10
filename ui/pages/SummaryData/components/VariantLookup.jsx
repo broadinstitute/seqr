@@ -9,7 +9,10 @@ import StateDataLoader from 'shared/components/StateDataLoader'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { helpLabel } from 'shared/components/form/FormHelpers'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
-import Variants from 'shared/components/panel/variants/Variants'
+import FamilyReads from 'shared/components/panel/family/FamilyReads'
+import FamilyVariantTags from 'shared/components/panel/variants/FamilyVariantTags'
+import Variants, { Variant, StyledVariantRow } from 'shared/components/panel/variants/Variants'
+import { FamilyVariantIndividuals } from 'shared/components/panel/variants/VariantIndividuals'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
 
 const FIELDS = [
@@ -31,7 +34,43 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
-const VariantDisplay = ({ variants }) => <Variants variants={variants} />
+const LookupFamily = ({ familyGuid, variant, reads, showReads }) => (
+  <StyledVariantRow>
+    <Grid.Column width={16}>
+      <FamilyVariantTags familyGuid={familyGuid} variant={variant} linkToSavedVariants />
+    </Grid.Column>
+    <Grid.Column width={4} />
+    <Grid.Column width={12}>
+      <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
+      {showReads}
+    </Grid.Column>
+    <Grid.Column width={16}>{reads}</Grid.Column>
+  </StyledVariantRow>
+)
+
+LookupFamily.propTypes = {
+  familyGuid: PropTypes.string.isRequired,
+  variant: PropTypes.object.isRequired,
+  reads: PropTypes.object,
+  showReads: PropTypes.object,
+}
+
+const LookupVariant = ({ variant }) => (
+  <Grid stackable divided="vertically">
+    <Variant variant={variant} />
+    {variant.lookupFamilyGuids.map(familyGuid => (
+      <FamilyReads key={familyGuid} layout={LookupFamily} familyGuid={familyGuid} variant={variant} />
+    ))}
+  </Grid>
+)
+
+LookupVariant.propTypes = {
+  variant: PropTypes.object,
+}
+
+const VariantDisplay = ({ variants }) => (
+  (variants || [])[0]?.lookupFamilyGuids ? <LookupVariant variant={variants[0]} /> : <Variants variants={variants} />
+)
 
 VariantDisplay.propTypes = {
   variants: PropTypes.arrayOf(PropTypes.object),
@@ -44,16 +83,14 @@ const onSubmit = updateQueryParams => (data) => {
 
 const VariantLookup = ({ queryParams, receiveData, updateQueryParams }) => (
   <Grid divided="vertically" centered>
-    {!queryParams.include_genotypes && (
-      <Grid.Row>
-        <Grid.Column width={5} />
-        <Grid.Column width={6}>
-          <Header dividing size="medium" content="Lookup Variant" />
-          <FormWrapper noModal fields={FIELDS} initialValues={queryParams} onSubmit={onSubmit(updateQueryParams)} />
-        </Grid.Column>
-        <Grid.Column width={5} />
-      </Grid.Row>
-    )}
+    <Grid.Row>
+      <Grid.Column width={5} />
+      <Grid.Column width={6}>
+        <Header dividing size="medium" content="Lookup Variant" />
+        <FormWrapper noModal fields={FIELDS} initialValues={queryParams} onSubmit={onSubmit(updateQueryParams)} />
+      </Grid.Column>
+      <Grid.Column width={5} />
+    </Grid.Row>
     <Grid.Row>
       <Grid.Column width={16}>
         <StateDataLoader

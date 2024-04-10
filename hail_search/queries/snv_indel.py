@@ -129,3 +129,7 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
             annotation_filters.append(score_filter)
 
         return annotation_filters
+
+    @staticmethod
+    def _stat_has_non_ref(s):
+        return (s.het_samples > 0) | (s.hom_samples > 0)

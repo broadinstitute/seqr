@@ -4,10 +4,10 @@ from django.test import TestCase
 import json
 import mock
 
-from hail_search.test_utils import GENE_COUNTS, VARIANT_LOOKUP_VARIANT
+from hail_search.test_utils import GENE_COUNTS, VARIANT_LOOKUP_VARIANT, SV_VARIANT4, SV_VARIANT1
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.search.utils import get_single_variant, get_variants_for_variant_ids, get_variant_query_gene_counts, \
-    query_variants, variant_lookup, InvalidSearchException
+    query_variants, variant_lookup, sv_variant_lookup, InvalidSearchException
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, GENE_FIELDS
 
 SV_SAMPLES = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
@@ -54,25 +54,36 @@ class SearchUtilsTests(SearchTestHelper):
     @mock.patch('seqr.utils.search.utils.hail_variant_lookup')
     def test_variant_lookup(self, mock_variant_lookup):
         mock_variant_lookup.return_value = VARIANT_LOOKUP_VARIANT
-        variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='38')
+        variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'), genome_version='38')
         self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
-        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh38',
-                                               dataset_type='SNV_INDEL_only')
-        cache_key = 'variant_lookup_results__1-10439-AC-A__38__test_user'
+        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh38')
+        cache_key = "variant_lookup_results__('1', 10439, 'AC', 'A')__38__"
         self.assert_cached_results(variant, cache_key=cache_key)
-
-        variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='37', families=self.families)
-        self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
-        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh37', samples=mock.ANY,
-                                               dataset_type='SNV_INDEL_only')
-        expected_samples = {s for s in self.search_samples if s.guid not in NON_SNP_INDEL_SAMPLES}
-        self.assertSetEqual(set(mock_variant_lookup.call_args.kwargs['samples']), expected_samples)
 
         mock_variant_lookup.reset_mock()
         self.set_cache(variant)
-        cached_variant = variant_lookup(self.user, '1-10439-AC-A', genome_version='38')
+        cached_variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'), genome_version='38')
         self.assertDictEqual(variant, cached_variant)
         mock_variant_lookup.assert_not_called()
+        self.mock_redis.get.assert_called_with(cache_key)
+
+    @mock.patch('seqr.utils.search.utils.hail_sv_variant_lookup')
+    def test_sv_variant_lookup(self, mock_sv_variant_lookup):
+        mock_sv_variant_lookup.return_value = [SV_VARIANT4, SV_VARIANT1]
+        variants = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', self.families, genome_version='38', sample_type='WGS')
+        self.assertListEqual(variants, [SV_VARIANT4, SV_VARIANT1])
+        mock_sv_variant_lookup.assert_called_with(
+            self.user, 'phase2_DEL_chr14_4640', genome_version='GRCh38', samples=mock.ANY, sample_type='WGS')
+        cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38__test_user'
+        self.assert_cached_results(variants, cache_key=cache_key)
+        expected_samples = {s for s in self.search_samples if s.guid in SV_SAMPLES}
+        self.assertSetEqual(set(mock_sv_variant_lookup.call_args.kwargs['samples']), expected_samples)
+
+        mock_sv_variant_lookup.reset_mock()
+        self.set_cache(variants)
+        cached_variant = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', self.families, genome_version='38')
+        self.assertListEqual(variants, cached_variant)
+        mock_sv_variant_lookup.assert_not_called()
         self.mock_redis.get.assert_called_with(cache_key)
 
     def test_get_single_variant(self, mock_get_variants_for_ids):
@@ -435,6 +446,11 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
     def test_variant_lookup(self, *args, **kwargs):
         with self.assertRaises(InvalidSearchException) as cm:
             super().test_variant_lookup(*args, **kwargs)
+        self.assertEqual(str(cm.exception), 'Hail backend is disabled')
+
+    def test_sv_variant_lookup(self, *args, **kwargs):
+        with self.assertRaises(InvalidSearchException) as cm:
+            super().test_sv_variant_lookup(*args, **kwargs)
         self.assertEqual(str(cm.exception), 'Hail backend is disabled')
 
     @mock.patch('seqr.utils.search.utils.get_es_variants_for_variant_ids')

@@ -287,6 +287,13 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                                                          TEST_NO_PROJECT_WORKSPACE_NAME,
                                                          meta_fields=['workspace.bucketName'])
 
+        # Test pending loading project
+        response = self.client.post(url, content_type='application/json', data=json.dumps({**VALIDATE_VCF_BODY, 'genomeVersion': '37'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Project "Empty Project" is awaiting loading. Please wait for loading to complete before requesting additional data loading'
+        ])
+
         # Test bad data path
         mock_subprocess.return_value.wait.return_value = -1
         mock_subprocess.return_value.stdout = [b'File not found']
