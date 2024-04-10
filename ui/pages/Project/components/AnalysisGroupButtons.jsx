@@ -6,6 +6,7 @@ import { connect } from 'react-redux'
 
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
+import { Multiselect } from 'shared/components/form/Inputs'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import { SelectableTableFormInput } from 'shared/components/table/DataTable'
@@ -13,8 +14,13 @@ import {
   FAMILY_DISPLAY_NAME,
   FAMILY_FIELD_PEDIGREE,
   FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_ANALYSIS_STATUS,
+  FAMILY_FIELD_ANALYSED_BY,
+  FAMILY_FIELD_FIRST_SAMPLE,
+  FAMILY_FIELD_NAME_LOOKUP,
 } from 'shared/utils/constants'
 
+import { CATEGORY_FAMILY_FILTERS } from '../constants'
 import { updateAnalysisGroup } from '../reducers'
 import { getProjectFamiliesByGuid, getCurrentProject } from '../selectors'
 
@@ -75,9 +81,13 @@ const mapTableInputStateToProps = state => ({
   data: Object.values(getProjectFamiliesByGuid(state)),
 })
 
-const FORM_FIELDS = [
+const BASE_FORM_FIELDS = [
   { name: 'name', label: 'Name', validate: value => (value ? undefined : 'Name is required') },
   { name: 'description', label: 'Description' },
+]
+
+const FORM_FIELDS = [
+  ...BASE_FORM_FIELDS,
   {
     name: UPLOADED_FAMILIES_FIELD,
     key: 'familyUpload',
@@ -96,6 +106,18 @@ const FORM_FIELDS = [
   },
 ]
 
+const DYNAMIC_FORM_FIELDS = [
+  ...BASE_FORM_FIELDS,
+  ...[FAMILY_FIELD_ANALYSIS_STATUS, FAMILY_FIELD_ANALYSED_BY, FAMILY_FIELD_FIRST_SAMPLE].map(category => ({
+    name: `criteria.${category}`,
+    label: `Criteria: ${FAMILY_FIELD_NAME_LOOKUP[category]}`,
+    component: Multiselect,
+    options: CATEGORY_FAMILY_FILTERS[category],
+    includeCategories: true,
+    color: 'blue',
+  })),
+]
+
 const DECORATORS = [
   createDecorator({
     field: UPLOADED_FAMILIES_FIELD,
@@ -107,25 +129,26 @@ const DECORATORS = [
   }),
 ]
 
-export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, iconOnly }) => {
+export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, iconOnly, isDynamic }) => {
   if (!project.canEdit) {
     return null
   }
-  const title = `${analysisGroup ? 'Edit' : 'Create New'} Analysis Group`
+  const title = `${analysisGroup ? 'Edit' : 'Create New'} ${isDynamic ? 'Dynamic ' : ''}Analysis Group`
+  const entityName = `${isDynamic ? 'Dynamic' : ''}AnalysisGroup`
   return (
     <UpdateButton
       modalTitle={title}
       modalId={
-        analysisGroup ? `editAnalysisGroup-${analysisGroup.analysisGroupGuid}` :
-          `createAnalysisGroup-${project.projectGuid}`
+        analysisGroup ? `edit${entityName}-${analysisGroup.analysisGroupGuid}` :
+          `create${entityName}-${project.projectGuid}`
       }
       editIconName={analysisGroup ? null : 'plus'}
       buttonText={iconOnly ? null : title}
       onSubmit={onSubmit}
-      formFields={FORM_FIELDS}
+      formFields={isDynamic ? DYNAMIC_FORM_FIELDS : FORM_FIELDS}
       showErrorPanel
       initialValues={analysisGroup}
-      decorators={DECORATORS}
+      decorators={isDynamic ? null : DECORATORS}
     />
   )
 })
@@ -134,6 +157,7 @@ UpdateAnalysisGroup.propTypes = {
   project: PropTypes.object,
   analysisGroup: PropTypes.object,
   iconOnly: PropTypes.bool,
+  isDynamic: PropTypes.bool,
   onSubmit: PropTypes.func,
 }
 

@@ -26,6 +26,11 @@ import { GeneLists, AddGeneListsButton } from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
 
+const CreateAnalysisGroupButtons = () => ([
+  <UpdateAnalysisGroupButton key="create" />,
+  <UpdateAnalysisGroupButton key="dynamic" isDynamic />,
+])
+
 const ProjectSectionComponent = React.memo((
   { loading, label, children, editButton, linkPath, linkText, project, collaboratorEdit },
 ) => ([
@@ -79,7 +84,7 @@ const ProjectPageUI = React.memo(({ analysisGroupGuid, load, loading, familiesLo
       <Grid.Row>
         <Grid.Column width={4}>
           {analysisGroupGuid ? null : (
-            <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
+            <ProjectSection label="Analysis Groups" editButton={<CreateAnalysisGroupButtons />}>
               <AnalysisGroups />
             </ProjectSection>
           )}
