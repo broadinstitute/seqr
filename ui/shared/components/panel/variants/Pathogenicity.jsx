@@ -65,6 +65,24 @@ PathogenicityLink.propTypes = {
   popup: PropTypes.string,
 }
 
+const SubmissionLabel = React.memo(({ submitter }) => (
+  <Label color="grey" size="medium" horizontal basic>
+    {submitter}
+  </Label>
+))
+
+SubmissionLabel.propTypes = {
+  submitter: PropTypes.string.isRequired,
+}
+
+const Submissions = React.memo(({ submissions }) => submissions.map(([submitter, condition]) => (
+  <Popup trigger={<SubmissionLabel submitter={submitter} />} content={condition} />
+)))
+
+Submissions.propTypes = {
+  submissions: PropTypes.object.isRequired,
+}
+
 const clinvarUrl = (clinvar) => {
   const baseUrl = 'http://www.ncbi.nlm.nih.gov/clinvar'
   const variantPath = clinvar.alleleId ? `?term=${clinvar.alleleId}[alleleid]` : `/variation/${clinvar.variationId}`
@@ -85,8 +103,13 @@ const clinvarLabel = (pathogenicity, assertions, conflictingPathogenicities) => 
   return label
 }
 
+const clinvarSubmissions = (submitters, conditions) => submitters.map((submitter, index) => (
+  [submitter, conditions[index]]
+))
+
 const Pathogenicity = React.memo(({ variant, showHgmd }) => {
   const clinvar = variant.clinvar || {}
+  console.log(clinvar)
   const pathogenicity = []
   if ((clinvar.clinicalSignificance || clinvar.pathogenicity) && (clinvar.variationId || clinvar.alleleId)) {
     const { pathogenicity: clinvarPathogenicity, assertions, severity } = clinvarSignificance(clinvar)
@@ -96,6 +119,7 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
       href: clinvarUrl(clinvar),
       goldStars: clinvar.goldStars,
       popup: clinvar.version && `Last Updated: ${new Date(clinvar.version).toLocaleDateString()}`,
+      submissions: clinvarSubmissions(clinvar.submitters, clinvar.conditions),
     }])
   }
   if (showHgmd) {
@@ -117,6 +141,14 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
       <b>{`${title}:`}</b>
       <HorizontalSpacer width={5} />
       <PathogenicityLink {...linkProps} />
+      {
+        title === 'ClinVar' && (
+          <div>
+            <HorizontalSpacer width={5} />
+            <Submissions {...linkProps} />
+          </div>
+        )
+      }
     </span>
   ))
 })
