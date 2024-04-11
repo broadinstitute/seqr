@@ -81,13 +81,11 @@ const mapTableInputStateToProps = state => ({
   data: Object.values(getProjectFamiliesByGuid(state)),
 })
 
-const BASE_FORM_FIELDS = [
-  { name: 'name', label: 'Name', validate: value => (value ? undefined : 'Name is required') },
-  { name: 'description', label: 'Description' },
-]
+const NAME_FIELD = { name: 'name', label: 'Name', validate: value => (value ? undefined : 'Name is required') }
 
 const FORM_FIELDS = [
-  ...BASE_FORM_FIELDS,
+  NAME_FIELD,
+  { name: 'description', label: 'Description' },
   {
     name: UPLOADED_FAMILIES_FIELD,
     key: 'familyUpload',
@@ -107,7 +105,7 @@ const FORM_FIELDS = [
 ]
 
 const DYNAMIC_FORM_FIELDS = [
-  ...BASE_FORM_FIELDS,
+  NAME_FIELD,
   ...[FAMILY_FIELD_ANALYSIS_STATUS, FAMILY_FIELD_ANALYSED_BY, FAMILY_FIELD_FIRST_SAMPLE].map((category, i) => ({
     name: `criteria.${category}`,
     label: `Criteria: ${FAMILY_FIELD_NAME_LOOKUP[category]}`,
@@ -130,8 +128,12 @@ const DECORATORS = [
   }),
 ]
 
+const canUpdateGroup = (project, analysisGroup) => (
+  project.canEdit && (!analysisGroup?.analysisGroupGuid || analysisGroup.projectGuid)
+)
+
 export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, iconOnly, isDynamic }) => {
-  if (!project.canEdit) {
+  if (!canUpdateGroup(project, analysisGroup)) {
     return null
   }
   const title = `${analysisGroup ? 'Edit' : 'Create New'} ${isDynamic ? 'Dynamic ' : ''}Analysis Group`
@@ -175,7 +177,7 @@ export const UpdateAnalysisGroupButton = connect(mapUpdateStateToProps, mapDispa
 const navigateProjectPage = (history, projectGuid) => () => history.push(`/project/${projectGuid}/project_page`)
 
 export const DeleteAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, size, iconOnly, history }) => (
-  project.canEdit ? (
+  canUpdateGroup(project, analysisGroup) ? (
     <DeleteButton
       initialValues={analysisGroup}
       onSubmit={onSubmit}
