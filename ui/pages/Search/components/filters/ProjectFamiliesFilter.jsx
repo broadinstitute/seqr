@@ -57,6 +57,7 @@ class ProjectFamiliesFilterInput extends React.PureComponent {
   }
 
   selectedAnalysisGroups = () => {
+    // TODO correctly show selected dynamic groups, depndingon how familyGuids is populated
     const { projectAnalysisGroupsByGuid, value } = this.props
 
     return this.multiFamiliesSelected() ? [] :

@@ -383,7 +383,7 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested
         prefetch_related_objects(analysis_groups, 'families')
 
     if project_guid or not skip_nested:
-        additional_kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]}
+        additional_kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': None if is_dynamic else project_guid}]}
     else:
         additional_kwargs = {'additional_model_fields': ['project_id']}
 

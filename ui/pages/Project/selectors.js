@@ -77,7 +77,12 @@ export const getProjectFamiliesByGuid = createSelector(
   getFamiliesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid,
 )
 export const getProjectAnalysisGroupsByGuid = createSelector(
-  getAnalysisGroupsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid,
+  getAnalysisGroupsGroupedByProjectGuid,
+  getProjectGuid,
+  (groupedAnalysisGroups, projectGuid) => ({
+    ...selectEntitiesForProjectGuid(groupedAnalysisGroups, projectGuid),
+    ...selectEntitiesForProjectGuid(groupedAnalysisGroups, null),
+  }),
 )
 
 const getAnalysisGroupGuid = (state, props) => (

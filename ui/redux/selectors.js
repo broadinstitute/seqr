@@ -89,7 +89,6 @@ export const getNotesByFamilyType = createSelector(
 
 export const getProjectAnalysisGroupOptions = createSelector(
   getAnalysisGroupsGroupedByProjectGuid,
-  // TODO cannot include dynamic groups
   analysisGroupsByProject => Object.entries(analysisGroupsByProject).reduce(
     (acc, [projectGuid, analysisGroupsByGuid]) => ({
       ...acc,

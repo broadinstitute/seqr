@@ -181,7 +181,8 @@ export const getFamilyOptions = createSelector(
 export const getAnalysisGroupOptions = createSelector(
   getAnalysisGroupsGroupedByProjectGuid,
   (state, props) => props.value.projectGuid,
-  (analysisGroupsGroupedByProjectGuid, projectGuid) => Object.values(
-    analysisGroupsGroupedByProjectGuid[projectGuid] || {},
-  ).map(group => ({ value: group.analysisGroupGuid, text: group.name })),
+  (analysisGroupsGroupedByProjectGuid, projectGuid) => Object.values({
+    ...(analysisGroupsGroupedByProjectGuid[projectGuid] || {}),
+    ...(analysisGroupsGroupedByProjectGuid.null || {}),
+  }).map(group => ({ value: group.analysisGroupGuid, text: group.name })),
 )
