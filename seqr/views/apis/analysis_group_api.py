@@ -11,7 +11,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 REQUIRED_FIELDS = {'name': 'Name', 'familyGuids': 'Families'}
 
 
-def _update_analysis_group(request, project_guid, analysis_group_guid, model_cls, required_fields,
+def _update_analysis_group(request, project_guid, analysis_group_guid, model_cls, required_fields, is_dynamic=False,
                            validate_body=lambda x: None, post_process_model=lambda x: None):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
@@ -46,7 +46,7 @@ def _update_analysis_group(request, project_guid, analysis_group_guid, model_cls
 
     return create_json_response({
         'analysisGroupsByGuid': {
-            analysis_group.guid: get_json_for_analysis_group(analysis_group, project_guid=project_guid)
+            analysis_group.guid: get_json_for_analysis_group(analysis_group, project_guid=project_guid, is_dynamic=is_dynamic)
         },
     })
 
@@ -72,7 +72,7 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
 @login_and_policies_required
 def update_dynamic_analysis_group_handler(request, project_guid, analysis_group_guid=None):
     return _update_analysis_group(
-        request, project_guid, analysis_group_guid, DynamicAnalysisGroup,
+        request, project_guid, analysis_group_guid, DynamicAnalysisGroup, is_dynamic=True,
         required_fields={f: f.title() for f in ['name', 'criteria']},
     )
 

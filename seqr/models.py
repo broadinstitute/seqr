@@ -1049,7 +1049,7 @@ class DynamicAnalysisGroup(ModelWithGUID):
         return self.name.strip()
 
     def _compute_guid(self):
-        return 'AG%07d_%s' % (self.id, _slugify(str(self)))
+        return 'DAG%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('project', 'name')

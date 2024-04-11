@@ -364,7 +364,7 @@ def get_json_for_sample(sample, **kwargs):
     return _get_json_for_model(sample, **_get_sample_json_kwargs(**kwargs))
 
 
-def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False, **kwargs):
+def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False, is_dynamic=False, **kwargs):
     """Returns a JSON representation of the given list of AnalysisGroups.
 
     Args:
@@ -373,20 +373,23 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested
     Returns:
         array: array of json objects
     """
-
+    # TODO familyGuids needed for dynamic groups? Either populate or remove
     def _process_result(result, group):
         result.update({
-            'familyGuids': [f.guid for f in group.families.all()]
+            'familyGuids': [] if is_dynamic else [f.guid for f in group.families.all()],
         })
 
-    prefetch_related_objects(analysis_groups, 'families')
+    if not is_dynamic:
+        prefetch_related_objects(analysis_groups, 'families')
 
     if project_guid or not skip_nested:
         additional_kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]}
     else:
         additional_kwargs = {'additional_model_fields': ['project_id']}
 
-    return _get_json_for_models(analysis_groups, process_result=_process_result, **additional_kwargs, **kwargs)
+    return _get_json_for_models(
+        analysis_groups, process_result=_process_result, guid_key='analysisGroupGuid', **additional_kwargs, **kwargs,
+    )
 
 
 def get_json_for_analysis_group(analysis_group, **kwargs):
