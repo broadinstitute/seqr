@@ -260,7 +260,7 @@ const getFamilyCaseReviewStatuses  = (family, individualsByGuid) => {
   return statuses.length ? statuses : family.caseReviewStatuses
 }
 
-const caseReviewStatusFilter = status => individualsByGuid => family => getFamilyCaseReviewStatuses(
+const caseReviewStatusFilter = status => (family, individualsByGuid) => getFamilyCaseReviewStatuses(
   family, individualsByGuid,
 ).some(caseReviewStatus => caseReviewStatus === status)
 
@@ -288,7 +288,7 @@ const ALL_FAMILIES_FILTER = { value: SHOW_ALL, name: 'All', createFilter: () => 
 const IN_REVIEW_FAMILIES_FILTER = {
   value: SHOW_IN_REVIEW,
   name: 'In Review',
-  createFilter: individualsByGuid => family => familyIsInReview(family, individualsByGuid),
+  createFilter: familyIsInReview,
 }
 const ACCEPTED_FILTER = {
   value: SHOW_ACCEPTED,
@@ -298,18 +298,18 @@ const ACCEPTED_FILTER = {
 const ASSIGNED_TO_ME_FILTER = {
   value: SHOW_ASSIGNED_TO_ME,
   name: 'Assigned To Me',
-  createFilter: (individualsByGuid, user) => family => familyIsAssignedToMe(family, user),
+  createFilter: (family, individualsByGuid, user) => familyIsAssignedToMe(family, user),
 }
 const ANALYST_HIGH_PRIORITY_TAG = 'Analyst high priority'
 
-const hasMatchingSampleFilter = isMatchingSample => (individualsByGuid, user, samplesByFamily) => family => (
+const hasMatchingSampleFilter = isMatchingSample => (family, individualsByGuid, user, samplesByFamily) => (
   (samplesByFamily[family.familyGuid] || []).some(sample => sample.isActive && isMatchingSample(sample)))
 
 export const CATEGORY_FAMILY_FILTERS = {
   [FAMILY_FIELD_ANALYSIS_STATUS]: [
     ...SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS.map(option => ({
       ...option,
-      createFilter: () => family => family.analysisStatus === option.value,
+      createFilter: family => family.analysisStatus === option.value,
     })),
     ...[ACCEPTED_FILTER, IN_REVIEW_FAMILIES_FILTER].map(filter => ({ ...filter, category: 'Case Review Status' })),
   ],
@@ -318,31 +318,31 @@ export const CATEGORY_FAMILY_FILTERS = {
     {
       value: SHOW_ANALYSED_BY_ME,
       name: 'Analysed By Me',
-      analysedByFilter: (individualsByGuid, user) => ({ createdBy }) => createdBy === (user.displayName || user.email),
+      analysedByFilter: ({ createdBy }, user) => createdBy === (user.displayName || user.email),
     },
     {
       value: SHOW_ANALYSED,
       name: 'Analysed',
-      analysedByFilter: () => () => true,
+      analysedByFilter: () => true,
     },
     {
       value: SHOW_NOT_ANALYSED,
       name: 'Not Analysed',
       requireNoAnalysedBy: true,
-      analysedByFilter: () => () => true,
+      analysedByFilter: () => true,
     },
     ...FAMILY_ANALYSED_BY_DATA_TYPES.map(([type, typeDisplay]) => ({
       value: type,
       name: typeDisplay,
       category: 'Data Type',
-      analysedByFilter: () => ({ dataType }) => dataType === type,
+      analysedByFilter: ({ dataType }) => dataType === type,
     })),
     {
       value: 'yearSinceAnalysed',
       name: '>1 Year',
       category: 'Analysis Date',
       requireNoAnalysedBy: true,
-      analysedByFilter: () => ({ lastModifiedDate }) => (
+      analysedByFilter: ({ lastModifiedDate }) => (
         (new Date()).setFullYear(new Date().getFullYear() - 1) < new Date(lastModifiedDate)
       ),
     },
@@ -368,20 +368,17 @@ export const CATEGORY_FAMILY_FILTERS = {
     {
       value: SHOW_PHENOTYPES_ENTERED,
       name: 'Required Metadata Entered',
-      createFilter: individualsByGuid => family => familyHasRequiredMetadata(family, individualsByGuid),
+      createFilter: familyHasRequiredMetadata,
     },
     {
       value: SHOW_NO_PHENOTYPES_ENTERED,
       name: 'Required Metadata Missing',
-      createFilter: individualsByGuid => family => !familyHasRequiredMetadata(family, individualsByGuid),
+      createFilter: (family, individualsByGuid) => !familyHasRequiredMetadata(family, individualsByGuid),
     },
   ],
   [FAMILY_FIELD_SAVED_VARIANTS]: [MME_TAG_NAME, ANALYST_HIGH_PRIORITY_TAG].map(tagName => ({
     value: tagName,
     name: tagName,
-    createFilter: (individualsByGuid, user, samplesByFamily, familyTagTypeCounts) => ({ familyGuid }) => (
-      (familyTagTypeCounts[familyGuid] || {})[tagName]
-    ),
   })),
 }
 
@@ -399,7 +396,7 @@ export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
   {
     value: SHOW_ASSIGNED_TO_ME_IN_REVIEW,
     name: 'Assigned To Me - In Review',
-    createFilter: (individualsByGuid, user) => family => familyIsAssignedToMe(
+    createFilter: (family, individualsByGuid, user) => familyIsAssignedToMe(
       family, user,
     ) && familyIsInReview(family, individualsByGuid),
   },
