@@ -28,7 +28,7 @@ import VariantTags from './VariantTags'
 
 const CreateAnalysisGroupButtons = () => ([
   <UpdateAnalysisGroupButton key="create" />,
-  <UpdateAnalysisGroupButton key="dynamic" isDynamic />,
+  <UpdateAnalysisGroupButton key="dynamic" createDynamic />,
 ])
 
 const ProjectSectionComponent = React.memo((

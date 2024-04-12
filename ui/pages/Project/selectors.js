@@ -89,21 +89,21 @@ const getAnalysisGroupGuid = (state, props) => (
   (props || {}).match ? props.match.params.analysisGroupGuid : (props || {}).analysisGroupGuid
 )
 
-const getCurrentAnalysisGroup = createSelector(
+export const getCurrentAnalysisGroupFamilyGuids = createSelector(
   getProjectAnalysisGroupsByGuid,
   getAnalysisGroupGuid,
   (projectAnalysisGroupsByGuid, analysisGroupGuid) => analysisGroupGuid &&
-    projectAnalysisGroupsByGuid[analysisGroupGuid],
+    projectAnalysisGroupsByGuid[analysisGroupGuid]?.familyGuids, // TODO work with dynamic group
 )
 
 export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
   getProjectFamiliesByGuid,
-  getCurrentAnalysisGroup,
-  (projectFamiliesByGuid, analysisGroup) => {
-    if (!analysisGroup) {
+  getCurrentAnalysisGroupFamilyGuids,
+  (projectFamiliesByGuid, analysisGroupFamilyGuids) => {
+    if (!analysisGroupFamilyGuids) {
       return projectFamiliesByGuid
     }
-    return analysisGroup.familyGuids.reduce(
+    return analysisGroupFamilyGuids.reduce(
       (acc, familyGuid) => ({ ...acc, [familyGuid]: projectFamiliesByGuid[familyGuid] }), {},
     )
   },
@@ -148,12 +148,12 @@ export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
 
 export const getProjectAnalysisGroupSamplesByTypes = createSelector(
   getCurrentProject,
-  getCurrentAnalysisGroup,
-  (project, analysisGroup) => Object.entries(project.sampleCounts || {}).map(
+  getCurrentAnalysisGroupFamilyGuids,
+  (project, analysisGroupFamilyGuids) => Object.entries(project.sampleCounts || {}).map(
     ([key, typeCounts]) => ([key, typeCounts.map(({ familyCounts, ...data }) => ({
       ...data,
       count: Object.entries(familyCounts).reduce((total, [familyGuid, count]) => (
-        (!analysisGroup || analysisGroup.familyGuids.includes(familyGuid)) ? total + count : total
+        (!analysisGroupFamilyGuids || analysisGroupFamilyGuids.includes(familyGuid)) ? total + count : total
       ), 0),
     })).filter(({ count }) => count > 0)]),
   ),
@@ -252,9 +252,9 @@ export const getSavedVariantTagTypeCounts = createSelector(
 )
 
 export const getAnalysisGroupTagTypeCounts = createSelector(
-  getCurrentAnalysisGroup,
+  getCurrentAnalysisGroupFamilyGuids,
   getFamilyTagTypeCounts,
-  (analysisGroup, familyTagTypeCounts) => (analysisGroup ? analysisGroup.familyGuids.reduce(
+  (analysisGroupFamilyGuids, familyTagTypeCounts) => (analysisGroupFamilyGuids ? analysisGroupFamilyGuids.reduce(
     (acc, familyGuid) => Object.entries(familyTagTypeCounts[familyGuid] || {}).reduce((acc2, [tagType, count]) => (
       { ...acc2, [tagType]: count + (acc2[tagType] || 0) }
     ), acc), {},
@@ -407,7 +407,7 @@ const analysedByFilters = (filter, analysedByOptions) => {
   let requireNoAnalysedBy = false
   const analsedByGroups = Object.values(filter.reduce(
     (acc, val) => {
-      const optFilter = analysedByOptions.has(val) ? () => ({ createdBy }) => createdBy === val :
+      const optFilter = analysedByOptions?.has(val) ? () => ({ createdBy }) => createdBy === val :
         ANALYSED_BY_FILTER_LOOKUP[val]
       if (optFilter) {
         const category = ANALYSED_BY_CATEGORY_OPTION_LOOKUP[val]

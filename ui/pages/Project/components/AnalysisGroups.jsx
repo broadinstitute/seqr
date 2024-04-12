@@ -42,7 +42,7 @@ const AnalysisGroups = React.memo(({ projectGuid, load, loading, analysisGroupsB
           )}
           size="tiny"
         />
-        <UpdateAnalysisGroupButton analysisGroup={ag} isDynamic={!!ag.criteria} iconOnly />
+        <UpdateAnalysisGroupButton analysisGroup={ag} iconOnly />
         <DeleteAnalysisGroupButton analysisGroup={ag} iconOnly size="tiny" />
       </div>
     ))}

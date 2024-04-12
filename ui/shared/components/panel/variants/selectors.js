@@ -84,6 +84,7 @@ const getProjectSavedVariantsSelection = createSelector(
     if (variantGuid) {
       variantFilter = o => variantGuid.split(',').includes(o.variantGuid)
     } else if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {
+      // TODO work with dynamic groups
       const analysisGroupFamilyGuids = analysisGroupsByGuid[analysisGroupGuid].familyGuids
       variantFilter = o => o.familyGuids.some(fg => analysisGroupFamilyGuids.includes(fg))
     } else if (familyGuid) {

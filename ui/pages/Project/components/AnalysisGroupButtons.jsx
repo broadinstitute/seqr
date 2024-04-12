@@ -132,10 +132,11 @@ const canUpdateGroup = (project, analysisGroup) => (
   project.canEdit && (!analysisGroup?.analysisGroupGuid || analysisGroup.projectGuid)
 )
 
-export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, iconOnly, isDynamic }) => {
+export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, iconOnly, createDynamic }) => {
   if (!canUpdateGroup(project, analysisGroup)) {
     return null
   }
+  const isDynamic = !!analysisGroup?.criteria || createDynamic
   const title = `${analysisGroup ? 'Edit' : 'Create New'} ${isDynamic ? 'Dynamic ' : ''}Analysis Group`
   const entityName = `${isDynamic ? 'Dynamic' : ''}AnalysisGroup`
   return (
@@ -160,7 +161,7 @@ UpdateAnalysisGroup.propTypes = {
   project: PropTypes.object,
   analysisGroup: PropTypes.object,
   iconOnly: PropTypes.bool,
-  isDynamic: PropTypes.bool,
+  createDynamic: PropTypes.bool,
   onSubmit: PropTypes.func,
 }
 

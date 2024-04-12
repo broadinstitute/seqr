@@ -100,7 +100,7 @@ export const getProjectAnalysisGroupOptions = createSelector(
 export const getAnalysisGroupsByFamily = createSelector(
   getAnalysisGroupsByGuid,
   analysisGroupsByGuid => Object.values(analysisGroupsByGuid).reduce(
-    (acc, analysisGroup) => analysisGroup.familyGuids.reduce(
+    (acc, analysisGroup) => (analysisGroup.familyGuids || []).reduce(
       (familyAcc, familyGuid) => ({ ...familyAcc, [familyGuid]: [...(familyAcc[familyGuid] || []), analysisGroup] }),
       acc,
     ), {},

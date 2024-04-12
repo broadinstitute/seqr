@@ -3,6 +3,7 @@ import {
   DE_NOVO_FILTER, ANY_AFFECTED, INHERITANCE_FILTER_OPTIONS,
 } from 'shared/utils/constants'
 
+// TODO work with dynamic groups?
 export const getSelectedAnalysisGroups = (analysisGroupsByGuid, familyGuids) => Object.values(
   analysisGroupsByGuid,
 ).filter(group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)))

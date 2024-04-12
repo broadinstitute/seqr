@@ -40,6 +40,7 @@ export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid
   }
   if (params.analysisGroupGuid) {
     const analysisGroup = analysisGroupByGuid[params.analysisGroupGuid]
+    // TODO work with dynamic groups
     return analysisGroup ? {
       projectGuid: analysisGroup.projectGuid,
       familyGuids: analysisGroup.familyGuids,
