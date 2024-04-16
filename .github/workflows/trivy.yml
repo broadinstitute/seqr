@@ -17,11 +17,12 @@ jobs:
 
     steps:
       # - uses: actions/checkout@v2
-      - name: gcloud setup
-        uses: google-github-actions/setup-gcloud@master
+      - id: "google-cloud-auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v2"
         with:
-          project_id: seqr-308602
-          service_account_key: ${{ secrets.GCP_DEPLOY_KEY }}
+          workload_identity_provider: "projects/1021400127367/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+          service_account: "trivy-scanner@seqr-308602.iam.gserviceaccount.com"
 
       - name: gcloud docker auth
         run: |

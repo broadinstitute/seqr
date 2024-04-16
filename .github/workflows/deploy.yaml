@@ -6,6 +6,7 @@ on:
       - main
       - staging
       - reanalysis-dev
+      - environment-lock
 
 jobs:
   docker:
@@ -20,11 +21,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: gcloud setup
-        uses: google-github-actions/setup-gcloud@v0
+      - id: "google-cloud-auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v2"
         with:
-          project_id: seqr-308602
-          service_account_key: ${{ secrets.GCP_DEPLOY_KEY }}
+          workload_identity_provider: "projects/1021400127367/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+          service_account: "deploy@seqr-308602.iam.gserviceaccount.com"
 
       - name: gcloud docker auth
         run: |
@@ -38,6 +40,8 @@ jobs:
             echo DEPLOY_TARGET=staging >> $GITHUB_ENV
           elif [[ $GITHUB_REF == 'refs/heads/reanalysis-dev' ]]; then
             echo DEPLOY_TARGET=reanalysis-dev >> $GITHUB_ENV
+          elif [[ $GITHUB_REF == 'refs/heads/environment-lock' ]]; then
+            echo DEPLOY_TARGET=environment-lock >> $GITHUB_ENV
           fi
 
       - uses: actions/setup-node@v4
