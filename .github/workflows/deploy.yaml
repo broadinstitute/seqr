@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   docker:
-    # environment: production
+    environment: production
     runs-on: ubuntu-latest
 
     env:
