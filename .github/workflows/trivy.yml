@@ -26,7 +26,7 @@ jobs:
         uses: "google-github-actions/auth@v2"
         with:
           workload_identity_provider: "projects/1021400127367/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
-          service_account: "trivy-scanner@seqr-308602.iam.gserviceaccount.com"
+          service_account: "github-trivy-workflow@seqr-308602.iam.gserviceaccount.com"
 
       - name: gcloud docker auth
         run: |
@@ -69,7 +69,7 @@ jobs:
         uses: "google-github-actions/auth@v2"
         with:
           workload_identity_provider: "projects/1021400127367/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
-          service_account: "trivy-scanner@seqr-308602.iam.gserviceaccount.com"
+          service_account: "github-trivy-workflow@seqr-308602.iam.gserviceaccount.com"
 
       - name: gcloud docker auth
         run: |
