@@ -75,11 +75,13 @@ SubmissionLabel.propTypes = {
   submitter: PropTypes.string.isRequired,
 }
 
-const Submissions = React.memo(({ submissions }) => submissions.map(([submitter, condition]) => (
-  <Popup trigger={<SubmissionLabel submitter={submitter} />} content={condition} />
-)))
+const ClinvarSubmissions = React.memo(({ submissions }) => submissions != null &&
+  submissions.map(([submitter, condition]) => (
+    submitter === 'Broad Center for Mendelian Genomics, Broad Institute of MIT and Harvard' &&
+    <Popup trigger={<SubmissionLabel submitter="Broad RDG" />} content={condition} />
+  )))
 
-Submissions.propTypes = {
+ClinvarSubmissions.propTypes = {
   submissions: PropTypes.object.isRequired,
 }
 
@@ -109,7 +111,6 @@ const clinvarSubmissions = (submitters, conditions) => submitters.map((submitter
 
 const Pathogenicity = React.memo(({ variant, showHgmd }) => {
   const clinvar = variant.clinvar || {}
-  console.log(clinvar)
   const pathogenicity = []
   if ((clinvar.clinicalSignificance || clinvar.pathogenicity) && (clinvar.variationId || clinvar.alleleId)) {
     const { pathogenicity: clinvarPathogenicity, assertions, severity } = clinvarSignificance(clinvar)
@@ -143,10 +144,10 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
       <PathogenicityLink {...linkProps} />
       {
         title === 'ClinVar' && (
-          <div>
+          <span>
             <HorizontalSpacer width={5} />
-            <Submissions {...linkProps} />
-          </div>
+            <ClinvarSubmissions {...linkProps} />
+          </span>
         )
       }
     </span>
