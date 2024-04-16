@@ -65,20 +65,10 @@ PathogenicityLink.propTypes = {
   popup: PropTypes.string,
 }
 
-const SubmissionLabel = React.memo(({ submitter }) => (
-  <Label color="grey" size="medium" horizontal basic>
-    {submitter}
-  </Label>
-))
-
-SubmissionLabel.propTypes = {
-  submitter: PropTypes.string.isRequired,
-}
-
 const ClinvarSubmissions = React.memo(({ submissions }) => submissions != null &&
   submissions.map(([submitter, condition]) => (
     submitter === 'Broad Center for Mendelian Genomics, Broad Institute of MIT and Harvard' &&
-    <Popup trigger={<SubmissionLabel submitter="Broad RDG" />} content={condition} />
+    <Popup trigger={<Label color="grey" size="medium" content="Broad RDG" horizontal basic />} content={condition} />
   )))
 
 ClinvarSubmissions.propTypes = {
