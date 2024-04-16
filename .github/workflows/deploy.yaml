@@ -8,6 +8,10 @@ on:
       - reanalysis-dev
       - environment-lock
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   docker:
     runs-on: ubuntu-latest
