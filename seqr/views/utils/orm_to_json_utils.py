@@ -434,10 +434,10 @@ def _format_functional_tags(tags):
     return tags
 
 
-AIP_TAG_TYPE = 'AIP'
+AIP_TAG_TYPES = ['AIP', 'AIP-permissive', 'AIP-restrictive']
 def _format_variant_tags(tags):
     for tag in tags:
-        if tag['name'] == AIP_TAG_TYPE and tag['metadata']:
+        if tag['name'] in AIP_TAG_TYPES and tag['metadata']:
             tag['aipMetadata'] = json.loads(tag.pop('metadata'))
     return tags
 

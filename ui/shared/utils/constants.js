@@ -1060,6 +1060,8 @@ const SORT_BY_EIGEN = 'EIGEN'
 const SORT_BY_MPC = 'MPC'
 const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
+const SORT_BY_AIP_DATE = 'AIP_CATEGORY_DATE'
+const SORT_BY_AIP_FIRST_TAGGED = 'AIP_FIRST_TAGGED'
 const SORT_BY_SIZE = 'SIZE'
 
 export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectByGuid) => (
@@ -1215,8 +1217,36 @@ const VARIANT_SORT_OPTONS = [
       a.tagGuids.map(tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[a.tagGuids.length - 1] || '',
     ),
   },
+  {
+    value: SORT_BY_AIP_FIRST_TAGGED,
+    text: 'AIP: Last Tagged',
+    comparator: (a, b, genesById, tagsByGuid) => {
+      const getAipFirstTaggedDate = (variant) => {
+        const aipMetadata = variant.tagGuids.map(tagGuid => tagsByGuid[tagGuid]?.aipMetadata)
+        const dates = (aipMetadata || []).map(metadata => metadata?.first_tagged || '')
+        return dates.filter(date => date !== null).sort().reverse()[0] || ''
+      }
+
+      return getAipFirstTaggedDate(b).localeCompare(getAipFirstTaggedDate(a))
+    },
+  },
+  {
+    value: SORT_BY_AIP_DATE,
+    text: 'AIP: Evidence Last Updated',
+    comparator: (a, b, genesById, tagsByGuid) => {
+      const getLatestAipCatagoryDate = (variant) => {
+        const aipMetadata = variant.tagGuids.map(tagGuid => tagsByGuid[tagGuid]?.aipMetadata)
+        const dates = (aipMetadata || []).map(metadata => Object.values(metadata?.categories || {})
+          .map(data => data.date)).flat()
+        return dates.filter(date => date !== null).sort().reverse()[0] || ''
+      }
+
+      return getLatestAipCatagoryDate(b).localeCompare(getLatestAipCatagoryDate(a))
+    },
+  },
 ]
-const VARIANT_SEARCH_SORT_OPTONS = VARIANT_SORT_OPTONS.slice(1, VARIANT_SORT_OPTONS.length - 1)
+// CPG: AIP related sorting must be excluded from VARIANT_SEARCH_SORT_OPTONS
+const VARIANT_SEARCH_SORT_OPTONS = VARIANT_SORT_OPTONS.slice(1, VARIANT_SORT_OPTONS.length - 3)
 
 export const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(
   (acc, opt) => ({

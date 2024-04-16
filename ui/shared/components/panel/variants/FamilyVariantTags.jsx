@@ -61,32 +61,111 @@ const DEPRECATED_MME_TAG = 'seqr MME (old)'
 const AIP_TAG = 'AIP'
 
 const aipCategoryRow = ([key, { name, date }]) => (
-  <Table.Row key={key}>
-    <Table.HeaderCell content={`${key} - ${name} `} />
-    <Table.Cell disabled content={`(${new Date(date).toLocaleDateString()})`} />
-  </Table.Row>
+  <li key={key}>
+    {`${key} - ${name}`}
+    <HorizontalSpacer width={5} />
+    {`(${new Date(date).toLocaleDateString()})`}
+  </li>
 )
+
+const aipMetaList = (key, name, value) => {
+  if (value.length === 0) {
+    return null
+  }
+
+  return (
+    <div key={key}>
+      <b>{name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</b>
+      {value.map(item => (
+        <li key={item}>{item}</li>
+      ))}
+    </div>
+  )
+}
+
+const aipHpoList = (panels) => {
+  if (Object.values(panels).every(array => array.length === 0)) {
+    return null
+  }
+
+  return (
+    <div>
+      <b>Phenotype Matches:</b>
+      {Object.entries(panels).map(([matchClass, matches]) => {
+        if (matches.matches === 0) {
+          return null
+        }
+
+        let label
+        switch (matchClass) {
+          case 'matched':
+            label = 'Matched Panel'
+            break
+          case 'forced':
+            label = 'Cohort Panel'
+            break
+          case 'gene_level':
+            label = 'Gene Specific Match'
+            break
+          default:
+            label = ''
+        }
+
+        return (
+          matches.map(match => (
+            <li key={match}>
+              {label}
+              :
+              <HorizontalSpacer width={5} />
+              {match}
+            </li>
+          ))
+        )
+      })}
+    </div>
+  )
+}
 
 export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
   <Popup
     position="top right"
     size="tiny"
     trigger={trigger}
-    header={title || (tag.aipMetadata ? 'Categories' : 'Tagged by')}
+    header={title || (tag.aipMetadata ? 'AIP results' : 'Tagged by')}
     hoverable
     flowing
     content={
       <div>
         {tag.aipMetadata ? (
-          <NoBorderTable basic="very" compact="very">
-            <Table.Body>
-              {Object.entries(tag.aipMetadata).filter(e => e[0] !== 'removed').map(aipCategoryRow)}
-              {tag.aipMetadata.removed && [
-                <Table.Row key="removedHeader"><Table.HeaderCell colSpan={2} content="Removed Categories" /></Table.Row>,
-                ...Object.entries(tag.aipMetadata.removed).map(aipCategoryRow),
-              ]}
-            </Table.Body>
-          </NoBorderTable>
+          <div>
+            <div>
+              <b>First Tagged:</b>
+              <HorizontalSpacer width={5} />
+              {tag.aipMetadata.first_tagged}
+            </div>
+            <div>
+              <b>Categories:</b>
+              {Object.entries(tag.aipMetadata.categories).map(aipCategoryRow)}
+            </div>
+            {tag.aipMetadata && tag.aipMetadata.removed && (
+              <div>
+                <b>Removed Categories:</b>
+                {Object.entries(tag.aipMetadata.removed).map(aipCategoryRow)}
+              </div>
+            )}
+            {tag.aipMetadata.reasons && (
+              aipMetaList('moi', 'Tagged MOI', tag.aipMetadata.reasons)
+            )}
+            {tag.aipMetadata.support_vars && (
+              aipMetaList('support_vars', 'Supporting Variants', tag.aipMetadata.support_vars)
+            )}
+            {tag.aipMetadata.labels && (
+              aipMetaList('labels', 'Labels', tag.aipMetadata.labels)
+            )}
+            {tag.aipMetadata.labels && (
+              aipHpoList(tag.aipMetadata.panels)
+            )}
+          </div>
         ) : `${tag.createdBy || 'unknown user'}${tag.lastModifiedDate ? ` on ${new Date(tag.lastModifiedDate).toLocaleDateString()}` : ''}`}
         {tag.metadata && !hideMetadata && (
           <div>
