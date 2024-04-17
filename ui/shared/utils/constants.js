@@ -299,6 +299,86 @@ export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_PMIDS },
 ]
 
+const SHOW_DATA_LOADED = 'SHOW_DATA_LOADED'
+const SHOW_ASSIGNED_TO_ME = 'SHOW_ASSIGNED_TO_ME'
+const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
+const SHOW_ANALYSED = 'SHOW_ANALYSED'
+const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
+
+const hasMatchingSampleFilter = isMatchingSample => (family, individualsByGuid, user, samplesByFamily) => (
+  (samplesByFamily[family.familyGuid] || []).some(sample => sample.isActive && isMatchingSample(sample)))
+
+const familyIsAssignedToMe = (family, user) => (
+  family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null)
+
+export const ASSIGNED_TO_ME_FILTER = {
+  value: SHOW_ASSIGNED_TO_ME,
+  name: 'Assigned To Me',
+  createFilter: (family, individualsByGuid, user) => familyIsAssignedToMe(family, user),
+}
+
+export const CATEGORY_FAMILY_FILTERS = {
+  [FAMILY_FIELD_ANALYSIS_STATUS]: [
+    ...SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS.map(option => ({
+      ...option,
+      createFilter: family => family.analysisStatus === option.value,
+    })),
+  ],
+  [FAMILY_FIELD_ANALYSED_BY]: [
+    ASSIGNED_TO_ME_FILTER,
+    {
+      value: SHOW_ANALYSED_BY_ME,
+      name: 'Analysed By Me',
+      analysedByFilter: ({ createdBy }, user) => createdBy === (user.displayName || user.email),
+    },
+    {
+      value: SHOW_ANALYSED,
+      name: 'Analysed',
+      analysedByFilter: () => true,
+    },
+    {
+      value: SHOW_NOT_ANALYSED,
+      name: 'Not Analysed',
+      requireNoAnalysedBy: true,
+      analysedByFilter: () => true,
+    },
+    ...FAMILY_ANALYSED_BY_DATA_TYPES.map(([type, typeDisplay]) => ({
+      value: type,
+      name: typeDisplay,
+      category: 'Data Type',
+      analysedByFilter: ({ dataType }) => dataType === type,
+    })),
+    {
+      value: 'yearSinceAnalysed',
+      name: '>1 Year',
+      category: 'Analysis Date',
+      requireNoAnalysedBy: true,
+      analysedByFilter: ({ lastModifiedDate }) => (
+        (new Date()).setFullYear(new Date().getFullYear() - 1) < new Date(lastModifiedDate)
+      ),
+    },
+  ],
+  [FAMILY_FIELD_FIRST_SAMPLE]: [
+    {
+      value: SHOW_DATA_LOADED,
+      name: 'Data Loaded',
+      createFilter: hasMatchingSampleFilter(() => true),
+    },
+    {
+      value: `${SHOW_DATA_LOADED}_RNA`,
+      name: 'Data Loaded - RNA',
+      createFilter: hasMatchingSampleFilter(({ sampleType }) => sampleType === SAMPLE_TYPE_RNA),
+    },
+    ...[DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS].map(dataType => ({
+      value: `${SHOW_DATA_LOADED}_${dataType}`,
+      name: `Data Loaded -${DATASET_TITLE_LOOKUP[dataType]}`,
+      createFilter: hasMatchingSampleFilter(
+        ({ sampleType, datasetType }) => sampleType !== SAMPLE_TYPE_RNA && datasetType === dataType,
+      ),
+    })),
+  ],
+}
+
 // INDIVIDUAL FIELDS
 
 export const SEX_OPTIONS = [
