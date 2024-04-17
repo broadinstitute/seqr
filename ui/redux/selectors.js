@@ -454,15 +454,6 @@ export const getSpliceOutliersByChromFamily = createSelector(
   ),
 )
 
-const FAMILY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
-  (acc, options) => {
-    options.forEach((opt) => {
-      acc[opt.value] = opt.createFilter
-    })
-    return acc
-  }, {},
-)
-
 const ANALYSED_BY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
   (acc, options) => {
     options.forEach((opt) => {
@@ -518,13 +509,15 @@ export const familyPassesFilters = createSelector(
   getIndividualsByGuid,
   getUser,
   getSamplesByFamily,
-  (individualsByGuid, user, samplesByFamily) => (family, groupedFilters, analysedByOptions) => {
+  (individualsByGuid, user, samplesByFamily) => (
+    family, groupedFilters, analysedByOptions, categoryFilters = CATEGORY_FAMILY_FILTERS,
+  ) => {
     if (groupedFilters.analysedBy && !isAnalysedBy(family, groupedFilters.analysedBy, user, analysedByOptions)) {
       return false
     }
-    return Object.values(groupedFilters).every((groupVals) => {
-      const filters = (groupVals || []).map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val)
-      return !filters.length || filters.some(filter => filter(family, individualsByGuid, user, samplesByFamily))
+    return Object.entries(groupedFilters).every(([key, groupVals]) => {
+      const filters = categoryFilters[key]?.filter(opt => groupVals.includes(opt.value)).map(opt => opt.createFilter)
+      return !filters?.length || filters.some(filter => filter(family, individualsByGuid, user, samplesByFamily))
     })
   },
 )

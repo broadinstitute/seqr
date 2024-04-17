@@ -397,7 +397,7 @@ const familyPassesTableFilters = createSelector(
     )) {
       return false
     }
-    return passesFilterFunc(family, tableFilters, analysedByOptions)
+    return passesFilterFunc(family, tableFilters, analysedByOptions, PROJECT_CATEGORY_FAMILY_FILTERS)
   },
 )
 
