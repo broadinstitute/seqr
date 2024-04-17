@@ -83,7 +83,7 @@ google-resumable-media==2.4.1
     # via google-cloud-storage
 googleapis-common-protos==1.58.0
     # via google-api-core
-gunicorn==20.1.0
+gunicorn==22.0.0
     # via -r requirements.in
 idna==3.7
     # via requests
@@ -99,6 +99,8 @@ oauthlib==3.2.2
     #   social-auth-core
 openpyxl==3.1.1
     # via -r requirements.in
+packaging==24.0
+    # via gunicorn
 pillow==10.3.0
     # via -r requirements.in
 protobuf==3.20.2
@@ -177,6 +179,3 @@ urllib3==1.26.18
     #   requests
 whitenoise==6.3.0
     # via -r requirements.in
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools
