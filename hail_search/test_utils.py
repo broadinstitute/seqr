@@ -109,6 +109,8 @@ VARIANT1 = {
        'goldStars': None,
        'pathogenicity': 'Likely_pathogenic',
        'assertions': None,
+       'submitters': None,
+       'conditions': None,
        'version': '2024-02-21',
     },
     'hgmd': None,
@@ -181,6 +183,18 @@ VARIANT2 = {
        'pathogenicity': 'Conflicting_classifications_of_pathogenicity',
        'assertions': ['other'],
        'version': '2024-02-21',
+       'submitters': [
+           'Broad Center for Mendelian Genomics, Broad Institute of MIT and Harvard',
+           'Illumina Laboratory Services, Illumina',
+           'Blueprint Genetics',
+           'GenomeConnect, ClinGen'
+       ],
+       'conditions': [
+           'ABCA4-Related Disorders',
+           'Severe early-childhood-onset retinal dystrophy',
+           'not specified',
+           'not provided'
+       ],
     },
     'hgmd': {'accession': 'CM981315', 'class': 'DFP'},
     'screenRegionType': None,
@@ -256,7 +270,16 @@ VARIANT3 = {
         },
     },
     'genotypeFilters': '',
-    'clinvar': None,
+    'clinvar': {
+        'alleleId': None,
+        'conflictingPathogenicities': None,
+        'goldStars': None,
+        'submitters': None,
+        'conditions': None,
+        'pathogenicity': None,
+        'assertions': None,
+        'version': '2024-02-21',
+     },
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
@@ -324,7 +347,16 @@ VARIANT4 = {
         },
     },
     'genotypeFilters': 'VQSRTrancheSNP99.95to100.00',
-    'clinvar': None,
+    'clinvar': {
+        'alleleId': None,
+        'conflictingPathogenicities': None,
+        'goldStars': None,
+        'submitters': None,
+        'conditions': None,
+        'pathogenicity': None,
+        'assertions': None,
+        'version': '2024-02-21',
+     },
     'hgmd': None,
     'screenRegionType': 'CTCF-only',
     'populations': {
