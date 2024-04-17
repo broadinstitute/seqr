@@ -33,7 +33,7 @@ django-compressor==4.3.1
     # via -r requirements-dev.in
 django-debug-toolbar==3.2.4
     # via -r requirements-dev.in
-idna==3.4
+idna==3.7
     # via
     #   -c requirements.txt
     #   requests
@@ -59,7 +59,7 @@ responses==0.22.0
     # via -r requirements-dev.in
 rjsmin==1.2.1
     # via django-compressor
-sqlparse==0.4.4
+sqlparse==0.5.0
     # via
     #   -c requirements.txt
     #   django

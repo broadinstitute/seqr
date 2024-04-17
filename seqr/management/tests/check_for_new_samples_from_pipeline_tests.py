@@ -102,7 +102,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         ])
 
         # Test reload saved variants
-        self.assertEqual(len(responses.calls), len(reload_calls) + (2 if has_additional_requests else 0))
+        self.assertEqual(len(responses.calls), len(reload_calls) + (3 if has_additional_requests else 0))
         for i, call in enumerate(reload_calls):
             resp = responses.calls[i+(1 if has_additional_requests else 0)]
             self.assertEqual(resp.request.url, f'{MOCK_HAIL_HOST}:5000/search')
@@ -122,6 +122,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             {date.strftime('%Y-%m-%d') for date in updated_sample_models.values_list('loaded_date', flat=True)}
         )
 
+    @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.MAX_LOOKUP_VARIANTS', 1)
     @mock.patch('seqr.views.utils.airtable_utils.logger')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     @responses.activate
@@ -219,7 +220,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234'},
             ]}},
         ], reload_annotations_logs=[
-            'Reloading shared annotations for 3 saved variants (3 unique)', 'Fetched 1 additional variants', 'Updated 2 saved variants',
+            'Reloading shared annotations for 3 saved variants (3 unique)', 'Fetched 1 additional variants', 'Fetched 1 additional variants', 'Updated 2 saved variants',
         ])
 
         old_data_sample_guid = 'S000143_na20885'
@@ -262,14 +263,15 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
 
         # Test SavedVariant model updated
-        multi_lookup_request = responses.calls[3].request
-        self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_HOST}:5000/multi_lookup')
-        self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
-        self.assertDictEqual(json.loads(multi_lookup_request.body), {
-            'genome_version': 'GRCh38',
-            'data_type': 'SNV_INDEL',
-            'variant_ids': [['1', 1562437, 'G', 'C'], ['1', 46859832, 'G', 'A']],
-        })
+        for i, variant_id in enumerate([['1', 1562437, 'G', 'C'], ['1', 46859832, 'G', 'A']]):
+            multi_lookup_request = responses.calls[3+i].request
+            self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_HOST}:5000/multi_lookup')
+            self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
+            self.assertDictEqual(json.loads(multi_lookup_request.body), {
+                'genome_version': 'GRCh38',
+                'data_type': 'SNV_INDEL',
+                'variant_ids': [variant_id],
+            })
 
         updated_variants = SavedVariant.objects.filter(saved_variant_json__updated_field='updated_value')
         self.assertEqual(len(updated_variants), 2)
