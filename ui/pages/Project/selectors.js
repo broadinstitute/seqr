@@ -379,16 +379,14 @@ const familyPassesTableFilters = createSelector(
   state => state.caseReviewTableState.familiesFilter,
   getFamiliesTableFilters,
   getFamilyAnalysers,
-  getIndividualsByGuid,
   getUser,
   getFamilyTagTypeCounts,
   familyPassesFilters,
   (
-    isCaseReview, caseReviewFilter, familyTableFilters, analysedByOptions, individualsByGuid, user,
-    familyTagTypeCounts, passesFilterFunc,
+    isCaseReview, caseReviewFilter, familyTableFilters, analysedByOptions, user, familyTagTypeCounts, passesFilterFunc,
   ) => (family) => {
     if (isCaseReview) {
-      return CASE_REVIEW_FILTER_LOOKUP[caseReviewFilter](family, individualsByGuid, user)
+      return CASE_REVIEW_FILTER_LOOKUP[caseReviewFilter](family, user)
     }
 
     const { savedVariants, ...tableFilters } = familyTableFilters || {}
@@ -403,16 +401,19 @@ const familyPassesTableFilters = createSelector(
 
 export const getVisibleFamilies = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
+  getIndividualsByGuid,
   getFamiliesBySearchString,
   getFamiliesSearch,
   familyPassesTableFilters,
-  (familiesByGuid, familiesBySearchString, familiesSearch, familyFilter) => {
+  (familiesByGuid, individualsByGuid, familiesBySearchString, familiesSearch, familyFilter) => {
     const searchedFamilies = familiesBySearchString ? Object.keys(familiesBySearchString).filter(
       familySearchString => familySearchString.includes(familiesSearch),
     ).map(familySearchString => familiesBySearchString[familySearchString]) : Object.values(familiesByGuid)
     return familyFilter ?
-      searchedFamilies.filter(familyFilter) :
-      searchedFamilies
+      searchedFamilies.filter(family => familyFilter({
+        ...family,
+        individuals: family.individualGuids.map(individualGuid => (individualsByGuid[individualGuid])),
+      })) : searchedFamilies
   },
 )
 

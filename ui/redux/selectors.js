@@ -506,18 +506,19 @@ const isAnalysedBy = (family, analysedByFilter, user, analysedByOptions) => {
 }
 
 export const familyPassesFilters = createSelector(
-  getIndividualsByGuid,
   getUser,
   getSamplesByFamily,
-  (individualsByGuid, user, samplesByFamily) => (
+  (user, samplesByFamily) => (
     family, groupedFilters, analysedByOptions, categoryFilters = CATEGORY_FAMILY_FILTERS,
   ) => {
     if (groupedFilters.analysedBy && !isAnalysedBy(family, groupedFilters.analysedBy, user, analysedByOptions)) {
       return false
     }
     return Object.entries(groupedFilters).every(([key, groupVals]) => {
-      const filters = categoryFilters[key]?.filter(opt => groupVals.includes(opt.value)).map(opt => opt.createFilter)
-      return !filters?.length || filters.some(filter => filter(family, individualsByGuid, user, samplesByFamily))
+      const filters = categoryFilters[key]?.filter(
+        opt => groupVals.includes(opt.value) && opt.createFilter,
+      ).map(opt => opt.createFilter)
+      return !filters?.length || filters.some(filter => filter(family, user, samplesByFamily))
     })
   },
 )

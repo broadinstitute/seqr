@@ -244,18 +244,18 @@ const SHOW_NO_PHENOTYPES_ENTERED = 'SHOW_NO_PHENOTYPES_ENTERED'
 
 const SHOW_ASSIGNED_TO_ME_IN_REVIEW = 'SHOW_ASSIGNED_TO_ME_IN_REVIEW'
 
-const getFamilyCaseReviewStatuses  = (family, individualsByGuid) => {
-  const statuses = family.individualGuids.map(
-    individualGuid => (individualsByGuid[individualGuid] || {}).caseReviewStatus,
+const getFamilyCaseReviewStatuses  = (family) => {
+  const statuses = family.individuals.map(
+    individual => (individual || {}).caseReviewStatus,
   ).filter(status => status)
   return statuses.length ? statuses : family.caseReviewStatuses
 }
 
-const caseReviewStatusFilter = status => (family, individualsByGuid) => getFamilyCaseReviewStatuses(
-  family, individualsByGuid,
+const caseReviewStatusFilter = status => family => getFamilyCaseReviewStatuses(
+  family,
 ).some(caseReviewStatus => caseReviewStatus === status)
 
-const familyIsInReview = (family, individualsByGuid) => getFamilyCaseReviewStatuses(family, individualsByGuid).every(
+const familyIsInReview = family => getFamilyCaseReviewStatuses(family).every(
   status => status === CASE_REVIEW_STATUS_IN_REVIEW,
 )
 
@@ -263,10 +263,8 @@ const REQUIRED_METADATA_FIELDS = INDIVIDUAL_DETAIL_FIELDS.filter(
   ({ isRequiredInternal }) => isRequiredInternal,
 ).map(({ field, subFields }) => (subFields ? subFields[0].field : field))
 
-const familyHasRequiredMetadata = (family, individualsByGuid) => {
-  const individuals = family.individualGuids.map(
-    individualGuid => individualsByGuid[individualGuid],
-  ).filter(individual => individual)
+const familyHasRequiredMetadata = (family) => {
+  const individuals = family.individuals.filter(individual => individual)
   return individuals.length ? individuals.some(individual => REQUIRED_METADATA_FIELDS.every(
     field => individual[field] || individual[field] === false,
   ) && individual.features.length > 0) : family.hasRequiredMetadata
@@ -302,7 +300,7 @@ export const PROJECT_CATEGORY_FAMILY_FILTERS = {
     {
       value: SHOW_NO_PHENOTYPES_ENTERED,
       name: 'Required Metadata Missing',
-      createFilter: (family, individualsByGuid) => !familyHasRequiredMetadata(family, individualsByGuid),
+      createFilter: family => !familyHasRequiredMetadata(family),
     },
   ],
   [FAMILY_FIELD_SAVED_VARIANTS]: [MME_TAG_NAME, ANALYST_HIGH_PRIORITY_TAG].map(tagName => ({
@@ -316,9 +314,7 @@ export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
   {
     value: SHOW_ASSIGNED_TO_ME_IN_REVIEW,
     name: 'Assigned To Me - In Review',
-    createFilter: (family, individualsByGuid, user) => ASSIGNED_TO_ME_FILTER.createFilter(
-      family, individualsByGuid, user,
-    ) && familyIsInReview(family, individualsByGuid),
+    createFilter: (family, user) => ASSIGNED_TO_ME_FILTER.createFilter(family, user) && familyIsInReview(family),
   },
   { ...ASSIGNED_TO_ME_FILTER, name: 'Assigned To Me - All' },
   { ...IN_REVIEW_FAMILIES_FILTER, category: 'Case Review Status:' },

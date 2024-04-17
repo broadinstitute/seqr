@@ -305,16 +305,14 @@ const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
 const SHOW_ANALYSED = 'SHOW_ANALYSED'
 const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
 
-const hasMatchingSampleFilter = isMatchingSample => (family, individualsByGuid, user, samplesByFamily) => (
+const hasMatchingSampleFilter = isMatchingSample => (family, user, samplesByFamily) => (
   (samplesByFamily[family.familyGuid] || []).some(sample => sample.isActive && isMatchingSample(sample)))
-
-const familyIsAssignedToMe = (family, user) => (
-  family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null)
 
 export const ASSIGNED_TO_ME_FILTER = {
   value: SHOW_ASSIGNED_TO_ME,
   name: 'Assigned To Me',
-  createFilter: (family, individualsByGuid, user) => familyIsAssignedToMe(family, user),
+  createFilter: (family, user) => (
+    family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null),
 }
 
 export const CATEGORY_FAMILY_FILTERS = {
