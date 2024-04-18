@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 GS_PATH_TEMPLATE = 'gs://seqr-hail-search-data/v03/{path}/runs/{version}/'
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 USER_EMAIL = 'manage_command'
+MAX_LOOKUP_VARIANTS = 4000
 
 
 class Command(BaseCommand):
@@ -168,13 +169,14 @@ class Command(BaseCommand):
             variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}}
             for variant_id, variant in updated_variants_by_id.items()
         }
-        fetch_variant_ids = set(variants_by_id.keys()) - set(updated_variants_by_id.keys())
+        fetch_variant_ids = sorted(set(variants_by_id.keys()) - set(updated_variants_by_id.keys()))
         if fetch_variant_ids:
             if not is_sv:
                 fetch_variant_ids = [parse_valid_variant_id(variant_id) for variant_id in fetch_variant_ids]
-            updated_variants = hail_variant_multi_lookup(USER_EMAIL, sorted(fetch_variant_ids), data_type, genome_version)
-            logger.info(f'Fetched {len(updated_variants)} additional variants')
-            updated_variants_by_id.update({variant['variantId']: variant for variant in updated_variants})
+            for i in range(0, len(fetch_variant_ids), MAX_LOOKUP_VARIANTS):
+                updated_variants = hail_variant_multi_lookup(USER_EMAIL, fetch_variant_ids[i:i+MAX_LOOKUP_VARIANTS], data_type, genome_version)
+                logger.info(f'Fetched {len(updated_variants)} additional variants')
+                updated_variants_by_id.update({variant['variantId']: variant for variant in updated_variants})
 
         updated_variant_models = []
         for variant_id, variant in updated_variants_by_id.items():
