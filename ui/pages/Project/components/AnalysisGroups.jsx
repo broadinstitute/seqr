@@ -14,9 +14,9 @@ import { loadCurrentProjectAnalysisGroups } from '../reducers'
 import { getProjectAnalysisGroupsByGuid, getProjectGuid } from '../selectors'
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
-const AnalysisGroups = React.memo(({ projectGuid, load, loading, analysisGroupsByGuid }) => (
+const AnalysisGroups = React.memo(({ projectGuid, load, loading, analysisGroupsByGuid, analysisGroupGuid }) => (
   <DataLoader load={load} loading={loading} content={analysisGroupsByGuid}>
-    {Object.values(analysisGroupsByGuid).sort(compareObjects('name')).map(ag => (
+    {(analysisGroupsByGuid[analysisGroupGuid] ? [analysisGroupsByGuid[analysisGroupGuid]] : Object.values(analysisGroupsByGuid).sort(compareObjects('name'))).map(ag => (
       <div key={ag.name}>
         {ag.criteria && <Icon name="sync" size="small" />}
         <Link to={`/project/${projectGuid}/analysis_group/${ag.analysisGroupGuid}`}>{ag.name}</Link>
@@ -49,6 +49,7 @@ const AnalysisGroups = React.memo(({ projectGuid, load, loading, analysisGroupsB
 ))
 
 AnalysisGroups.propTypes = {
+  analysisGroupGuid: PropTypes.string,
   projectGuid: PropTypes.string,
   analysisGroupsByGuid: PropTypes.object.isRequired,
   loading: PropTypes.bool,

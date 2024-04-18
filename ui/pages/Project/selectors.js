@@ -98,9 +98,9 @@ export const getCurrentAnalysisGroupFamilyGuids = createSelector(
     if (!analysisGroup) {
       return null
     }
-    return analysisGroup.familyGuids || Object.values(projectFamiliesByGuid).filter(
+    return analysisGroup.criteria ? Object.values(projectFamiliesByGuid).filter(
       family => passesFilterFunc(family, analysisGroup.criteria),
-    ).map(family => family.familyGuid)
+    ).map(family => family.familyGuid) : analysisGroup.familyGuids
   },
 )
 
@@ -426,7 +426,7 @@ export const getVisibleFamilies = createSelector(
     return familyFilter ?
       searchedFamilies.filter(family => familyFilter({
         ...family,
-        individuals: family.individualGuids.map(individualGuid => (individualsByGuid[individualGuid])),
+        individuals: family?.individualGuids.map(individualGuid => (individualsByGuid[individualGuid])),
       })) : searchedFamilies
   },
 )

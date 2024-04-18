@@ -83,11 +83,9 @@ const ProjectPageUI = React.memo(({ analysisGroupGuid, load, loading, familiesLo
     <DataLoader load={load} loading={false} content>
       <Grid.Row>
         <Grid.Column width={4}>
-          {analysisGroupGuid ? null : (
-            <ProjectSection label="Analysis Groups" editButton={<CreateAnalysisGroupButtons />}>
-              <AnalysisGroups />
-            </ProjectSection>
-          )}
+          <ProjectSection label={`Analysis Group${analysisGroupGuid ? '' : 's'}`} editButton={!analysisGroupGuid && <CreateAnalysisGroupButtons />}>
+            <AnalysisGroups analysisGroupGuid={analysisGroupGuid} />
+          </ProjectSection>
           <VerticalSpacer height={10} />
           <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton />} collaboratorEdit>
             <GeneLists />
