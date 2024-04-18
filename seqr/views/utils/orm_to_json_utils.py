@@ -373,9 +373,10 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested
     Returns:
         array: array of json objects
     """
+
     def _process_result(result, group):
         result.update({
-            'familyGuids': [f.guid for f in group.families.all()],
+            'familyGuids': [f.guid for f in group.families.all()]
         })
 
     if not is_dynamic:
