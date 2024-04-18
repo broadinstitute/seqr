@@ -89,10 +89,19 @@ const getAnalysisGroupGuid = (state, props) => (
 )
 
 export const getCurrentAnalysisGroupFamilyGuids = createSelector(
-  getProjectAnalysisGroupsByGuid,
   getAnalysisGroupGuid,
-  (projectAnalysisGroupsByGuid, analysisGroupGuid) => analysisGroupGuid &&
-    projectAnalysisGroupsByGuid[analysisGroupGuid]?.familyGuids, // TODO work with dynamic group
+  getProjectAnalysisGroupsByGuid,
+  getProjectFamiliesByGuid,
+  familyPassesFilters,
+  (analysisGroupGuid, analysisGroupsByGuid, projectFamiliesByGuid, passesFilterFunc) => {
+    const analysisGroup = analysisGroupsByGuid[analysisGroupGuid]
+    if (!analysisGroup) {
+      return null
+    }
+    return analysisGroup.familyGuids || Object.values(projectFamiliesByGuid).filter(
+      family => passesFilterFunc(family, analysisGroup.criteria),
+    ).map(family => family.familyGuid)
+  },
 )
 
 export const getProjectAnalysisGroupFamiliesByGuid = createSelector(

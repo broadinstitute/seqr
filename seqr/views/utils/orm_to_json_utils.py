@@ -373,10 +373,9 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested
     Returns:
         array: array of json objects
     """
-    # TODO familyGuids needed for dynamic groups? Either populate or remove
     def _process_result(result, group):
         result.update({
-            'familyGuids': [] if is_dynamic else [f.guid for f in group.families.all()],
+            'familyGuids': [f.guid for f in group.families.all()],
         })
 
     if not is_dynamic:
@@ -388,7 +387,8 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested
         additional_kwargs = {'additional_model_fields': ['project_id']}
 
     return _get_json_for_models(
-        analysis_groups, process_result=_process_result, guid_key='analysisGroupGuid', **additional_kwargs, **kwargs,
+        analysis_groups, process_result=None if is_dynamic else _process_result, guid_key='analysisGroupGuid',
+        **additional_kwargs, **kwargs,
     )
 
 
