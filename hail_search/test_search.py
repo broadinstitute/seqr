@@ -33,16 +33,7 @@ PROJECT_2_VARIANT = {
         }
     },
     'genotypeFilters': '',
-    'clinvar': {
-       'alleleId': None,
-       'conflictingPathogenicities': None,
-       'goldStars': None,
-       'pathogenicity': None,
-       'assertions': None,
-       'submitters': None,
-       'conditions': None,
-       'version': '2024-02-21',
-    },
+    'clinvar': None,
     'hgmd': None,
     'screenRegionType': None,
     'populations': {
