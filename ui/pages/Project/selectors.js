@@ -22,7 +22,7 @@ import {
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchableSampleByFamily, getSelectableTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
   getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual,
-  getRnaSeqDataByIndividual, familyPassesFilters,
+  getRnaSeqDataByIndividual, familyPassesFilters, getAnalysisGroupGuid, getCurrentAnalysisGroupFamilyGuids,
 } from 'redux/selectors'
 
 import {
@@ -82,26 +82,6 @@ export const getProjectAnalysisGroupsByGuid = createSelector(
     ...selectEntitiesForProjectGuid(groupedAnalysisGroups, projectGuid),
     ...selectEntitiesForProjectGuid(groupedAnalysisGroups, null),
   }),
-)
-
-const getAnalysisGroupGuid = (state, props) => (
-  (props || {}).match ? props.match.params.analysisGroupGuid : (props || {}).analysisGroupGuid
-)
-
-export const getCurrentAnalysisGroupFamilyGuids = createSelector(
-  getAnalysisGroupGuid,
-  getProjectAnalysisGroupsByGuid,
-  getProjectFamiliesByGuid,
-  familyPassesFilters,
-  (analysisGroupGuid, analysisGroupsByGuid, projectFamiliesByGuid, passesFilterFunc) => {
-    const analysisGroup = analysisGroupsByGuid[analysisGroupGuid]
-    if (!analysisGroup) {
-      return null
-    }
-    return analysisGroup.criteria ? Object.values(projectFamiliesByGuid).filter(
-      family => passesFilterFunc(family, analysisGroup.criteria),
-    ).map(family => family.familyGuid) : analysisGroup.familyGuids
-  },
 )
 
 export const getProjectAnalysisGroupFamiliesByGuid = createSelector(

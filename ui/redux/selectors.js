@@ -522,3 +522,25 @@ export const familyPassesFilters = createSelector(
     })
   },
 )
+
+export const getAnalysisGroupGuid = (state, props) => (
+  (props || {}).match ? props.match.params.analysisGroupGuid : (props || {}).analysisGroupGuid
+)
+
+export const getCurrentAnalysisGroupFamilyGuids = createSelector(
+  getAnalysisGroupGuid,
+  getAnalysisGroupsByGuid,
+  getFamiliesGroupedByProjectGuid,
+  familyPassesFilters,
+  state => state.currentProjectGuid,
+  (analysisGroupGuid, analysisGroupsByGuid, familiesByProjectGuid, passesFilterFunc, projectGuid) => {
+    const analysisGroup = analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]
+    if (!analysisGroup) {
+      return null
+    }
+    return analysisGroup.criteria ? Object.values(
+      familiesByProjectGuid[analysisGroup.projectGuid || projectGuid] || {},
+    ).filter(family => passesFilterFunc(family, analysisGroup.criteria)).map(family => family.familyGuid) :
+      analysisGroup.familyGuids
+  },
+)

@@ -6,6 +6,7 @@ import { Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateVariantTags } from 'redux/rootReducer'
+import { getCurrentAnalysisGroupFamilyGuids } from 'redux/selectors'
 import {
   VARIANT_SORT_FIELD,
   VARIANT_HIDE_EXCLUDED_FIELD,
@@ -26,7 +27,6 @@ import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
 import {
   getCurrentProject, getProjectTagTypeOptions, getTaggedVariantsByFamily, getProjectVariantSavedByOptions,
   getSavedVariantTagTypeCounts, getSavedVariantTagTypeCountsByFamily, getSavedVariantTableState,
-  getCurrentAnalysisGroupFamilyGuids,
 } from '../selectors'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
 import SelectSavedVariantsTable, { TAG_COLUMN, VARIANT_POS_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
