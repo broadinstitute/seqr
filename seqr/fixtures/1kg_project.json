@@ -2449,6 +2449,32 @@
     }
 },
 {
+    "model": "seqr.dynamicanalysisgroup",
+    "pk": 1,
+    "fields": {
+        "guid": "DAG0000001_unsolved",
+        "created_date": "2024-02-09T18:53:24.207Z",
+        "created_by": null,
+        "last_modified_date": "2024-02-09T18:53:24.207Z",
+        "name": "Unsolved",
+        "project": null,
+        "criteria":  {"firstSample": ["SHOW_DATA_LOADED"], "analysisStatus": ["I", "P", "C", "Rncc", "Rcpc"]}
+    }
+},
+{
+    "model": "seqr.dynamicanalysisgroup",
+    "pk": 2,
+    "fields": {
+        "guid": "DAG0000002_my_new_cases",
+        "created_date": "2024-02-09T18:53:24.207Z",
+        "created_by": null,
+        "last_modified_date": "2024-03-09T18:53:24.207Z",
+        "name": "My New Cases",
+        "project": 1,
+        "criteria": {"analysedBy": ["SHOW_ASSIGNED_TO_ME", "SHOW_NOT_ANALYSED"], "analysisStatus": ["I"]}
+    }
+},
+{
     "model": "matchmaker.matchmakersubmission",
     "pk": 1,
     "fields": {

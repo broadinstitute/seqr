@@ -730,6 +730,7 @@ PROJECT_FIELDS = {
 }
 
 ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
+DYNAMIC_ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'criteria', 'name', 'projectGuid'}
 
 FAMILY_FIELDS = {
     'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
