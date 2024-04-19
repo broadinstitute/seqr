@@ -78,20 +78,13 @@ def update_dynamic_analysis_group_handler(request, project_guid, analysis_group_
 
 
 @login_and_policies_required
-def delete_analysis_group_handler(request, project_guid, analysis_group_guid, model_cls=AnalysisGroup, validate_can_delete=lambda x: None):
+def delete_analysis_group_handler(request, project_guid, analysis_group_guid, model_cls=AnalysisGroup):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
-    analysis_group = model_cls.objects.get(guid=analysis_group_guid, project=project)
-    error = validate_can_delete(analysis_group)
-    if error:
-        raise error
-    analysis_group.delete_model(request.user, user_can_delete=True)
+    model_cls.objects.get(guid=analysis_group_guid, project=project).delete_model(request.user, user_can_delete=True)
 
     return create_json_response({'analysisGroupsByGuid': {analysis_group_guid: None}})
 
 
 @login_and_policies_required
 def delete_dynamic_analysis_group_handler(request, project_guid, analysis_group_guid):
-    return delete_analysis_group_handler(
-        request, project_guid, analysis_group_guid, model_cls=DynamicAnalysisGroup,
-        validate_can_delete=lambda analysis_group: None if analysis_group.project_id else 'Cannot delete shared analysis group',
-    )
+    return delete_analysis_group_handler(request, project_guid, analysis_group_guid, model_cls=DynamicAnalysisGroup)
