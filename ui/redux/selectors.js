@@ -529,6 +529,7 @@ export const getProjectAnalysisGroupFamilyGuidsByGuid = createSelector(
   familyPassesFilters,
   (state, props) => (
     state.currentProjectGuid ||
+    props.projectGuid ||
     props.value?.projectGuid ||
     props.match?.params?.projectGuid ||
     props.match?.params?.entityGuid
