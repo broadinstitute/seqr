@@ -4,7 +4,7 @@ import {
   getProjectsByGuid,
   getFamiliesByGuid,
   getFamiliesGroupedByProjectGuid,
-  getAnalysisGroupsByGuid,
+  getCurrentAnalysisGroupFamilyGuids,
   getLocusListsByGuid,
   getAnalysisGroupsGroupedByProjectGuid,
   getCurrentSearchParams,
@@ -29,28 +29,26 @@ export const getInhertanceFilterMode = createSelector(
 export const getProjectFamilies = createSelector(
   getFamiliesByGuid,
   getFamiliesGroupedByProjectGuid,
-  getAnalysisGroupsByGuid,
-  (familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => (
+  getCurrentAnalysisGroupFamilyGuids,
+  (familiesByGuid, familiesByProjectGuid, analysisGroupFamilyGuids) => (
     { projectGuid, familyGuids, familyGuid, analysisGroupGuid, searchHash, ...params },
   ) => {
     if (projectGuid && familyGuids) {
       return { projectGuid, familyGuids }
     }
 
+    if (analysisGroupGuid) {
+      return analysisGroupFamilyGuids ? {
+        projectGuid,
+        familyGuids: analysisGroupFamilyGuids,
+      } : { projectGuid, analysisGroupGuid }
+    }
     if (projectGuid) {
       const loadedProjectFamilies = familiesByProjectGuid[projectGuid]
       return {
         projectGuid,
         familyGuids: loadedProjectFamilies ? Object.keys(loadedProjectFamilies) : null,
       }
-    }
-    if (analysisGroupGuid) {
-      const analysisGroup = analysisGroupByGuid[analysisGroupGuid]
-      // TODO work with dynamic groups
-      return analysisGroup ? {
-        projectGuid: analysisGroup.projectGuid,
-        familyGuids: analysisGroup.familyGuids,
-      } : { analysisGroupGuid }
     }
     if (familyGuid || familyGuids) {
       const singleFamilyGuid = familyGuid || familyGuids[0]

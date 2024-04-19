@@ -6,7 +6,7 @@ import {
 // TODO work with dynamic groups?
 export const getSelectedAnalysisGroups = (analysisGroupsByGuid, familyGuids) => Object.values(
   analysisGroupsByGuid,
-).filter(group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)))
+).filter(group => group.familyGuids?.every(familyGuid => familyGuids.includes(familyGuid)))
 
 const REF_REF = 'ref_ref'
 const HAS_REF = 'has_ref'
