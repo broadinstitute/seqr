@@ -16,7 +16,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
     PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
     SAMPLE_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
     CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
-    EXT_WORKSPACE_NAMESPACE, EXT_WORKSPACE_NAME
+    EXT_WORKSPACE_NAMESPACE, EXT_WORKSPACE_NAME, DYNAMIC_ANALYSIS_GROUP_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
@@ -485,10 +485,20 @@ class ProjectAPITest(object):
         response_json = response.json()
         response_keys = {'analysisGroupsByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
-        self.assertEqual(len(response_json['analysisGroupsByGuid']), 2)
+        self.assertEqual(len(response_json['analysisGroupsByGuid']), 4)
         self.assertSetEqual(
-            set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()), ANALYSIS_GROUP_FIELDS
+            set(response_json['analysisGroupsByGuid']['AG0000183_test_group'].keys()), ANALYSIS_GROUP_FIELDS
         )
+        self.assertSetEqual(
+            set(response_json['analysisGroupsByGuid']['DAG0000002_my_new_cases'].keys()), DYNAMIC_ANALYSIS_GROUP_FIELDS
+        )
+
+        response = self.client.get(url.replace(PROJECT_GUID, DEMO_PROJECT_GUID))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'analysisGroupsByGuid': {'DAG0000001_unsolved': {
+            'analysisGroupGuid': 'DAG0000001_unsolved', 'projectGuid': None, 'name': 'Unsolved',
+            'criteria': {'firstSample': ['SHOW_DATA_LOADED'], 'analysisStatus': ['I', 'P', 'C', 'Rncc', 'Rcpc']},
+        }}})
 
     def test_project_locus_lists(self):
         url = reverse(project_locus_lists, args=[PROJECT_GUID])
