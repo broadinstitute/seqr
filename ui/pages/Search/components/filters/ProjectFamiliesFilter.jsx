@@ -149,7 +149,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   const onLoadSuccess = (state) => {
-    const newVal = getProjectFamilies(state)(ownProps.value)
+    const newVal = getProjectFamilies(state, ownProps.value)(ownProps.value)
     if (newVal && newVal !== ownProps.value) {
       ownProps.onChange(newVal)
     }

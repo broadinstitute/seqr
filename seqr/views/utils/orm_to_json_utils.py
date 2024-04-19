@@ -215,23 +215,26 @@ def _get_case_review_fields(model_cls, has_case_review_perm):
 
 
 FAMILY_DISPLAY_NAME_EXPR = Coalesce(NullIf('display_name', Value('')), 'family_id')
+FAMILY_ADDITIONAL_VALUES = {
+    'analysedBy': ArrayAgg(JSONObject(
+        createdBy=_user_expr('familyanalysedby__created_by'),
+        dataType='familyanalysedby__data_type',
+        lastModifiedDate='familyanalysedby__last_modified_date',
+    ), filter=Q(familyanalysedby__isnull=False)),
+    'assignedAnalyst': Case(
+        When(assigned_analyst__isnull=False, then=JSONObject(
+            fullName=_full_name_expr('assigned_analyst'), email=F('assigned_analyst__email'),
+        )), default=Value(None),
+    ),
+    'displayName': FAMILY_DISPLAY_NAME_EXPR,
+}
 
 
 def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None,
                            has_case_review_perm=False, additional_values=None):
 
     family_additional_values = {
-        'analysedBy': ArrayAgg(JSONObject(
-            createdBy=_user_expr('familyanalysedby__created_by'),
-            dataType='familyanalysedby__data_type',
-            lastModifiedDate='familyanalysedby__last_modified_date',
-        ), filter=Q(familyanalysedby__isnull=False)),
-        'assignedAnalyst': Case(
-            When(assigned_analyst__isnull=False, then=JSONObject(
-                fullName=_full_name_expr('assigned_analyst'), email=F('assigned_analyst__email'),
-            )), default=Value(None),
-        ),
-        'displayName': FAMILY_DISPLAY_NAME_EXPR,
+        **FAMILY_ADDITIONAL_VALUES,
         'pedigreeImage': NullIf(Concat(Value(MEDIA_URL), 'pedigree_image', output_field=CharField()), Value(MEDIA_URL)),
     }
     if additional_values:
