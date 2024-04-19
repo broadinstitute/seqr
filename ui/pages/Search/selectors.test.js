@@ -27,7 +27,7 @@ test('getIntitialSearch', () => {
   )
 
   expect(getIntitialSearch(
-    NO_SEARCH_STATE, { match: { params: { analysisGroupGuid: ANALYSIS_GROUP_GUID } } })
+    NO_SEARCH_STATE, { match: { params: { projectGuid: PROJECT_GUID, analysisGroupGuid: ANALYSIS_GROUP_GUID } } })
   ).toEqual(EXPECTED_INITAL_SEARCH)
   expect(getIntitialSearch(NO_SEARCH_STATE, { match: { params: { analysisGroupGuid: 'foo' } } })).toEqual(
     { projectFamilies: [{ analysisGroupGuid: 'foo' }] }
