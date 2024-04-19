@@ -1,4 +1,3 @@
-from django.core.exceptions import PermissionDenied
 import json
 
 from seqr.models import AnalysisGroup, DynamicAnalysisGroup, Family
