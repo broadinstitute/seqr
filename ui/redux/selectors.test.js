@@ -8,8 +8,9 @@ import {
   getUserOptions,
   getLocusListIntervalsByChromProject,
   getSpliceOutliersByChromFamily,
+  getProjectAnalysisGroupFamilyGuidsByGuid,
 } from './selectors'
-import {FAMILY_GUID, GENE_ID, SEARCH, SEARCH_HASH, STATE} from "../pages/Search/fixtures";
+import {DYNAMIC_ANALYSIS_GROUP_GUID, FAMILY_GUID, GENE_ID, SEARCH, SEARCH_HASH, STATE} from "../pages/Search/fixtures";
 
 test('getVariantTagNotesByByFamilyVariants', () => {
   const tagsNotesByGuid = getVariantTagNotesByFamilyVariants(
@@ -83,5 +84,16 @@ test('getSpliceOutliersByChromFamily', () => {
         },
       ],
     }
+  })
+})
+
+test('getProjectAnalysisGroupFamilyGuidsByGuid', () => {
+  expect(getProjectAnalysisGroupFamilyGuidsByGuid(STATE, { projectGuid: 'R0237_1000_genomes_demo' })).toEqual({
+    AG0000183_test_group: ['F011652_1'],
+    DAG0000183_test: ['F011652_1'],
+    DAG0000184_test_2: [],
+  })
+  expect(getProjectAnalysisGroupFamilyGuidsByGuid(STATE, {})).toEqual({
+    DAG0000183_test: [],
   })
 })

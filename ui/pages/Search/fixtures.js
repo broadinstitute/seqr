@@ -3,6 +3,7 @@
 export const PROJECT_GUID = 'R0237_1000_genomes_demo'
 export const FAMILY_GUID = 'F011652_1'
 export const ANALYSIS_GROUP_GUID = 'AG0000183_test_group'
+export const DYNAMIC_ANALYSIS_GROUP_GUID = 'DAG0000183_test'
 export const SEARCH_HASH = 'd380ed0fd28c3127d07a64ea2ba907d7'
 export const GENE_ID = 'ENSG00000228198'
 export const SEARCH = { projectFamilies: [{ projectGuid: PROJECT_GUID, familyGuid: FAMILY_GUID}], search: {} }
@@ -214,6 +215,20 @@ export const STATE = {
       familyGuids: [FAMILY_GUID],
       name: "Test Group",
       projectGuid:PROJECT_GUID,
+    },
+    [DYNAMIC_ANALYSIS_GROUP_GUID]: {
+      analysisGroupGuid: DYNAMIC_ANALYSIS_GROUP_GUID,
+      createdDate: '2018-08-09T18:53:24.207Z',
+      name: 'Test Dynamic Group',
+      projectGuid: null,
+      criteria: { analysisStatus: ['Rncc', 'Rcpc'], analysedBy: ['SHOW_NOT_ANALYSED'] },
+    },
+    DAG0000184_test_2: {
+      analysisGroupGuid: 'DAG0000184_test_2',
+      createdDate: '2018-08-09T18:53:24.207Z',
+      name: 'Test Dynamic Group',
+      projectGuid: PROJECT_GUID,
+      criteria: { firstSample: ['SHOW_DATA_LOADED'], analysisStatus: ['I', 'P', 'C'] },
     },
   },
   locusListsByGuid: { [LOCUS_LIST_GUID]: LOCUS_LIST },
