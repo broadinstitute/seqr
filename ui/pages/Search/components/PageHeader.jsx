@@ -62,14 +62,15 @@ const PAGE_CONFIGS = {
 }
 
 const getPageHeaderProps = ({ projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash, match }) => {
-  const { pageType, entityGuid } = match.params
+  const { pageType, entityGuid, subPageType, subEntityGuid } = match.params
 
   const breadcrumbIdSections = []
-  const { entity, entityUrlPath, actualPageType, description } =
-    PAGE_CONFIGS[pageType](entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash)
+  const { entity, entityUrlPath, actualPageType, description } = PAGE_CONFIGS[subPageType || pageType](
+    subEntityGuid || entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash,
+  )
   if (entity) {
-    const project = projectsByGuid[entity.projectGuid]
-    breadcrumbIdSections.push({ content: snakecaseToTitlecase(actualPageType || pageType) })
+    const project = projectsByGuid[entity.projectGuid || entityGuid]
+    breadcrumbIdSections.push({ content: snakecaseToTitlecase(actualPageType || subPageType || pageType) })
     breadcrumbIdSections.push({
       content: entity.displayName || entity.name,
       link: project && `/project/${project.projectGuid}/${entityUrlPath}`,

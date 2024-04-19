@@ -775,7 +775,7 @@ export const getPageHeaderEntityLinks = createSelector(
       familyGuid => !(hasActiveSearchableSampleByFamilyGuid[familyGuid] || {}).isSearchable,
     )
     const entityLinks = [{
-      to: `/variant_search/${searchType}/${searchId}`,
+      to: `/variant_search/${searchType === 'analysis_group' ? `project/${project.projectGuid}/` : ''}${searchType}/${searchId}`,
       content: `${snakecaseToTitlecase(searchType)} Variant Search`,
       disabled,
       popup: disabled ?

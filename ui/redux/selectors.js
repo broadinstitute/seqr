@@ -532,7 +532,7 @@ export const getCurrentAnalysisGroupFamilyGuids = createSelector(
   getAnalysisGroupsByGuid,
   getFamiliesGroupedByProjectGuid,
   familyPassesFilters,
-  state => state.currentProjectGuid,
+  (state, props) => state.currentProjectGuid || props.match?.params?.projectGuid,
   (analysisGroupGuid, analysisGroupsByGuid, familiesByProjectGuid, passesFilterFunc, projectGuid) => {
     const analysisGroup = analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]
     if (!analysisGroup) {
