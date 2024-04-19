@@ -2,12 +2,12 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
-import { Label, Icon, Popup } from 'semantic-ui-react'
+import { Label, Icon, Popup, List, ListItem } from 'semantic-ui-react'
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 
 import { getUser, getFamiliesByGuid, getProjectsByGuid } from 'redux/selectors'
 import { clinvarSignificance, clinvarColor, getPermissionedHgmdClass } from '../../../utils/constants'
 import { snakecaseToTitlecase } from '../../../utils/stringUtils'
-import { HorizontalSpacer } from '../../Spacers'
 
 const StarsContainer = styled.span`
   margin-left: 10px;
@@ -27,6 +27,8 @@ const HGMD_CLASS_NAMES = {
   DP: 'Disease-associated polymorphism (DP)',
 }
 
+const BROAD_CLINVAR_SUBMITTER = 'Broad Center for Mendelian Genomics, Broad Institute of MIT and Harvard'
+
 const ClinvarStars = React.memo(({ goldStars }) => goldStars != null && (
   <StarsContainer>
     {Array.from(Array(4).keys()).map(i => (i < goldStars ? <StarIcon key={i} goldstar="yes" /> : <StarIcon key={i} />))}
@@ -37,10 +39,11 @@ ClinvarStars.propTypes = {
   goldStars: PropTypes.number,
 }
 
-const PathogenicityLabel = React.memo(({ label, color, goldStars }) => (
+const PathogenicityLabel = React.memo(({ label, color, goldStars, submitters }) => (
   <Label color={color || 'grey'} size="medium" horizontal basic>
     {label}
     <ClinvarStars goldStars={goldStars} />
+    {submitters && submitters.includes(BROAD_CLINVAR_SUBMITTER) && ' | Broad RDG'}
   </Label>
 ))
 
@@ -48,6 +51,7 @@ PathogenicityLabel.propTypes = {
   label: PropTypes.string.isRequired,
   color: PropTypes.string,
   goldStars: PropTypes.number,
+  submitters: PropTypes.arrayOf(PropTypes.string),
 }
 
 const PathogenicityLink = React.memo(({ href, popup, ...labelProps }) => {
@@ -62,17 +66,7 @@ const PathogenicityLink = React.memo(({ href, popup, ...labelProps }) => {
 
 PathogenicityLink.propTypes = {
   href: PropTypes.string.isRequired,
-  popup: PropTypes.string,
-}
-
-const ClinvarSubmissions = React.memo(({ submissions }) => submissions != null &&
-  submissions.map(([submitter, condition]) => (
-    submitter === 'Broad Center for Mendelian Genomics, Broad Institute of MIT and Harvard' &&
-    <Popup trigger={<Label color="grey" size="medium" content="Broad RDG" horizontal basic />} content={condition} />
-  )))
-
-ClinvarSubmissions.propTypes = {
-  submissions: PropTypes.object.isRequired,
+  popup: PropTypes.object,
 }
 
 const clinvarUrl = (clinvar) => {
@@ -95,9 +89,32 @@ const clinvarLabel = (pathogenicity, assertions, conflictingPathogenicities) => 
   return label
 }
 
-const clinvarSubmissions = (submitters, conditions) => submitters.map((submitter, index) => (
-  [submitter, conditions[index]]
-))
+const clinvarPopup = (clinvar) => {
+  const lastUpdated = (
+    <div>{clinvar.version && `Last Updated: ${new Date(clinvar.version).toLocaleDateString()}`}</div>
+  )
+  const conditions = clinvar.conditions && (
+    <div>
+      Conditions:
+      <List bulleted>
+        {[...new Set(clinvar.conditions)].map(condition => (
+          <ListItem key={condition}>{condition}</ListItem>
+        ))}
+      </List>
+    </div>
+  )
+  return (
+    <div>
+      {lastUpdated}
+      {conditions && (
+      <div>
+        <VerticalSpacer height={10} />
+        {conditions}
+      </div>
+      )}
+    </div>
+  )
+}
 
 const Pathogenicity = React.memo(({ variant, showHgmd }) => {
   const clinvar = variant.clinvar || {}
@@ -109,8 +126,8 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
       color: clinvarColor(severity, 'red', 'orange', 'green'),
       href: clinvarUrl(clinvar),
       goldStars: clinvar.goldStars,
-      popup: clinvar.version && `Last Updated: ${new Date(clinvar.version).toLocaleDateString()}`,
-      submissions: clinvarSubmissions(clinvar.submitters, clinvar.conditions),
+      popup: clinvarPopup(clinvar),
+      submitters: clinvar.submitters,
     }])
   }
   if (showHgmd) {
@@ -132,14 +149,6 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
       <b>{`${title}:`}</b>
       <HorizontalSpacer width={5} />
       <PathogenicityLink {...linkProps} />
-      {
-        title === 'ClinVar' && (
-          <span>
-            <HorizontalSpacer width={5} />
-            <ClinvarSubmissions {...linkProps} />
-          </span>
-        )
-      }
     </span>
   ))
 })

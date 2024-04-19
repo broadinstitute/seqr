@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 GS_PATH_TEMPLATE = 'gs://seqr-hail-search-data/v03/{path}/runs/{version}/'
 DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
 USER_EMAIL = 'manage_command'
-MAX_LOOKUP_VARIANTS = 4000
+MAX_LOOKUP_VARIANTS = 5000
 
 
 class Command(BaseCommand):
@@ -184,5 +184,5 @@ class Command(BaseCommand):
                 variant_model.saved_variant_json.update(variant)
                 updated_variant_models.append(variant_model)
 
-        SavedVariant.objects.bulk_update(updated_variant_models, ['saved_variant_json'])
+        SavedVariant.objects.bulk_update(updated_variant_models, ['saved_variant_json'], batch_size=10000)
         logger.info(f'Updated {len(updated_variant_models)} saved variants')
