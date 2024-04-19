@@ -188,5 +188,5 @@ export const getAnalysisGroupOptions = createSelector(
   (analysisGroupsGroupedByProjectGuid, projectGuid) => Object.values({
     ...(analysisGroupsGroupedByProjectGuid[projectGuid] || {}),
     ...(analysisGroupsGroupedByProjectGuid.null || {}),
-  }).map(group => ({ value: group.analysisGroupGuid, text: group.name })),
+  }).map(group => ({ value: group.analysisGroupGuid, text: group.name, icon: group.criteria ? 'sync' : null })),
 )

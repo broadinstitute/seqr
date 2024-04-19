@@ -523,24 +523,37 @@ export const familyPassesFilters = createSelector(
   },
 )
 
+export const getProjectAnalysisGroupFamilyGuidsByGuid = createSelector(
+  getAnalysisGroupsGroupedByProjectGuid,
+  getFamiliesGroupedByProjectGuid,
+  familyPassesFilters,
+  (state, props) => (
+    state.currentProjectGuid ||
+    props.value?.projectGuid ||
+    props.match?.params?.projectGuid ||
+    props.match?.params?.entityGuid
+  ),
+  (projectAnalysisGroupsByGuid, familiesByProjectGuid, passesFilterFunc, projectGuid) => (
+    [
+      ...Object.values(projectAnalysisGroupsByGuid[projectGuid] || {}),
+      ...Object.values(projectAnalysisGroupsByGuid.null || {}),
+    ].reduce((acc, analysisGroup) => ({
+      ...acc,
+      [analysisGroup.analysisGroupGuid]: analysisGroup.criteria ?
+        Object.values(familiesByProjectGuid[projectGuid] || {}).filter(
+          family => passesFilterFunc(family, analysisGroup.criteria),
+        ).map(family => family.familyGuid) : analysisGroup.familyGuids,
+    }), {})
+  ),
+)
+
 export const getAnalysisGroupGuid = (state, props) => (
   (props || {}).match ? props.match.params.analysisGroupGuid : (props || {}).analysisGroupGuid
 )
 
 export const getCurrentAnalysisGroupFamilyGuids = createSelector(
   getAnalysisGroupGuid,
-  getAnalysisGroupsByGuid,
-  getFamiliesGroupedByProjectGuid,
-  familyPassesFilters,
+  getProjectAnalysisGroupFamilyGuidsByGuid,
   (state, props) => state.currentProjectGuid || props.match?.params?.projectGuid,
-  (analysisGroupGuid, analysisGroupsByGuid, familiesByProjectGuid, passesFilterFunc, projectGuid) => {
-    const analysisGroup = analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]
-    if (!analysisGroup) {
-      return null
-    }
-    return analysisGroup.criteria ? Object.values(
-      familiesByProjectGuid[analysisGroup.projectGuid || projectGuid] || {},
-    ).filter(family => passesFilterFunc(family, analysisGroup.criteria)).map(family => family.familyGuid) :
-      analysisGroup.familyGuids
-  },
+  (analysisGroupGuid, analysisGroupFamilyGuidsByGuid) => analysisGroupFamilyGuidsByGuid[analysisGroupGuid],
 )
