@@ -26,38 +26,45 @@ export const getInhertanceFilterMode = createSelector(
   searchParams => (((searchParams || {}).search || {}).inheritance || {}).mode,
 )
 
-export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
-  if (params.projectGuid && params.familyGuids) {
-    return params
-  }
+export const getProjectFamilies = createSelector(
+  getFamiliesByGuid,
+  getFamiliesGroupedByProjectGuid,
+  getAnalysisGroupsByGuid,
+  (familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => (
+    { projectGuid, familyGuids, familyGuid, analysisGroupGuid, searchHash, ...params },
+  ) => {
+    if (projectGuid && familyGuids) {
+      return { projectGuid, familyGuids }
+    }
 
-  if (params.projectGuid) {
-    const loadedProjectFamilies = familiesByProjectGuid[params.projectGuid]
-    return {
-      projectGuid: params.projectGuid,
-      familyGuids: loadedProjectFamilies ? Object.keys(loadedProjectFamilies) : null,
+    if (projectGuid) {
+      const loadedProjectFamilies = familiesByProjectGuid[projectGuid]
+      return {
+        projectGuid,
+        familyGuids: loadedProjectFamilies ? Object.keys(loadedProjectFamilies) : null,
+      }
     }
-  }
-  if (params.analysisGroupGuid) {
-    const analysisGroup = analysisGroupByGuid[params.analysisGroupGuid]
-    // TODO work with dynamic groups
-    return analysisGroup ? {
-      projectGuid: analysisGroup.projectGuid,
-      familyGuids: analysisGroup.familyGuids,
-    } : { analysisGroupGuid: params.analysisGroupGuid }
-  }
-  if (params.familyGuid || params.familyGuids) {
-    const familyGuid = params.familyGuid || params.familyGuids[0]
-    return {
-      projectGuid: (familiesByGuid[familyGuid] || {}).projectGuid,
-      familyGuids: [familyGuid],
+    if (analysisGroupGuid) {
+      const analysisGroup = analysisGroupByGuid[analysisGroupGuid]
+      // TODO work with dynamic groups
+      return analysisGroup ? {
+        projectGuid: analysisGroup.projectGuid,
+        familyGuids: analysisGroup.familyGuids,
+      } : { analysisGroupGuid }
     }
-  }
-  if (params.searchHash) {
-    return params
-  }
-  return null
-}
+    if (familyGuid || familyGuids) {
+      const singleFamilyGuid = familyGuid || familyGuids[0]
+      return {
+        projectGuid: (familiesByGuid[singleFamilyGuid] || {}).projectGuid,
+        familyGuids: [singleFamilyGuid],
+      }
+    }
+    if (searchHash) {
+      return { projectGuid, familyGuids, familyGuid, analysisGroupGuid, searchHash, ...params }
+    }
+    return null
+  },
+)
 
 export const getMultiProjectFamilies = createSelector(
   (state, props) => props.match.params,
@@ -75,10 +82,8 @@ const createProjectFamiliesSelector = createSelectorCreator(
 
 const getIntitialProjectFamilies = createProjectFamiliesSelector(
   (state, props) => props.match.params,
-  getFamiliesByGuid,
-  getFamiliesGroupedByProjectGuid,
-  getAnalysisGroupsByGuid,
   getProjectFamilies,
+  (params, getProjectFamiliesFunc) => getProjectFamiliesFunc(params),
 )
 
 export const getIntitialSearch = createSelector(

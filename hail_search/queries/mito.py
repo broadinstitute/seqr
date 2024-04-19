@@ -321,7 +321,10 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 project_guid,
                 hl.dict(family_indices.map(lambda j: (lookup_ht.project_families[project_guid][j], True))),
             ))), 1),
-        )
+        )[0]
+        # Variant can be present in the lookup table with only ref calls, so is still not present in any projects
+        if not variant_projects:
+            raise HTTPNotFound()
 
         annotation_fields.update({
             'familyGenotypes': lambda r: hl.dict(r.family_entries.map(
@@ -329,9 +332,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
             )),
         })
 
-        logger.info(f'Looking up {self.DATA_TYPE} variant in {len(variant_projects[0])} projects')
+        logger.info(f'Looking up {self.DATA_TYPE} variant in {len(variant_projects)} projects')
 
-        return super()._add_project_lookup_data(ht, annotation_fields, project_samples=variant_projects[0], **kwargs)
+        return super()._add_project_lookup_data(ht, annotation_fields, project_samples=variant_projects, **kwargs)
 
     @staticmethod
     def _stat_has_non_ref(s):
