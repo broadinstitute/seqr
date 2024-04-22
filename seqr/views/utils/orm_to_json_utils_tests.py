@@ -150,18 +150,12 @@ class JSONUtilsTest(object):
         self.assertSetEqual(set(var_1['tagGuids']), v1_tag_guids)
         self.assertSetEqual(set(var_1['functionalDataGuids']), v1_functional_guids)
         var_2 = json['savedVariantsByGuid'][variant_guid_2]
-        self.assertEqual(var_2['variantId'], '12-48367227-TC-T')
+        self.assertEqual(var_2['variantId'], '1-248367227-TC-T')
         self.assertSetEqual(set(var_2['tagGuids']), v2_tag_guids)
         self.assertSetEqual(set(var_2['noteGuids']), set(v2_note_guids))
 
         self.assertSetEqual(set(json['variantTagsByGuid'].keys()), v1_tag_guids | v2_tag_guids)
-        # mfranklin: the original code here does a next(iter(<dictionary>)) has an
-        #   inderministic order, so this occasionally returns the variantTag for an
-        #   AIP variant, which gets transformed with a different key, causing this test
-        #   to intermittently fail. For this reason, we'll hard select the 
-        #   the variant VT1726961_2103343353_r0390_100 to look at the keys for
         self.assertSetEqual(set(json['variantTagsByGuid']['VT1726961_2103343353_r0390_100'].keys()), TAG_FIELDS)
-        
         for tag_guid in v1_tag_guids:
             self.assertListEqual(json['variantTagsByGuid'][tag_guid]['variantGuids'], [variant_guid_1])
         for tag_guid in v2_tag_guids:

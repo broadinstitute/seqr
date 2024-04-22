@@ -19,10 +19,10 @@ class CopyProjectTagsTest(TestCase):
                 'Error: the following arguments are required: --source, --target'])
 
         # Test user did confirm.
-        call_command('copy_project_tags', '--source=R0001_1kg', '--target=R0003_test')
-        mock_logger.info.assert_called_with('Saved tag Excluded (new id = 6)')
+        call_command('copy_project_tags', '--source=R0001_1kg', '--target=R0002_empty')
+        mock_logger.info.assert_called_with('Saved tag Excluded (new id = 7)')
 
         src_tags = VariantTagType.objects.filter(project__guid = 'R0001_1kg')
-        target_tags = VariantTagType.objects.filter(project__guid = 'R0003_test')
+        target_tags = VariantTagType.objects.filter(project__guid = 'R0002_empty')
         self.assertEqual(src_tags.count(), target_tags.count())
         self.assertEqual(target_tags.all()[0].name, 'Excluded')

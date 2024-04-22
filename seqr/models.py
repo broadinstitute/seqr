@@ -5,7 +5,7 @@ import random
 
 from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import ArrayField
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
 from django.db.models import base, options, ForeignKey, JSONField, prefetch_related_objects
 from django.utils import timezone
@@ -182,6 +182,9 @@ class Project(ModelWithGUID):
     can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT, null=True, blank=True)
     can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT, null=True, blank=True)
 
+    # user group of users subscribed to project notifications
+    subscribers = models.ForeignKey(Group, related_name='+', on_delete=models.CASCADE)
+
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     consent_code = models.CharField(max_length=1, null=True, blank=True, choices=[
         (c[0], c) for c in ['HMB', 'GRU', 'Other']
@@ -214,25 +217,29 @@ class Project(ModelWithGUID):
         This could be done with signals, but seems cleaner to do it this way.
         """
         being_created = not self.pk
-        should_create_user_groups = being_created and not anvil_enabled()
+        anvil_disabled = not anvil_enabled()
 
-        if should_create_user_groups:
+        groups = []
+        if being_created:
             # create user groups
-            self.can_edit_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_edit', uuid.uuid4()))
-            self.can_view_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_view', uuid.uuid4()))
+            groups.append('subscribers')
+            if anvil_disabled:
+                groups += ['can_edit_group', 'can_view_group']
+        for group in groups:
+            setattr(self, group, Group.objects.create(name=f'{_slugify(self.name.strip())[:30]}_{group}_{uuid.uuid4()}'))
 
         super(Project, self).save(*args, **kwargs)
 
-        if should_create_user_groups:
+        if being_created:
+            if anvil_disabled:
+                assign_perm(user_or_group=self.can_edit_group, perm=CAN_EDIT, obj=self)
+                assign_perm(user_or_group=self.can_edit_group, perm=CAN_VIEW, obj=self)
 
-            assign_perm(user_or_group=self.can_edit_group, perm=CAN_EDIT, obj=self)
-            assign_perm(user_or_group=self.can_edit_group, perm=CAN_VIEW, obj=self)
-
-            assign_perm(user_or_group=self.can_view_group, perm=CAN_VIEW, obj=self)
+                assign_perm(user_or_group=self.can_view_group, perm=CAN_VIEW, obj=self)
 
             # add the user that created this Project to all permissions groups
             user = self.created_by
-            user.groups.add(self.can_edit_group, self.can_view_group)
+            user.groups.add(*[getattr(self, group) for group in groups])
 
     def delete(self, *args, **kwargs):
         """Override the delete method to also delete the project-specific user groups"""
@@ -271,6 +278,7 @@ class ProjectCategory(ModelWithGUID):
 class Family(ModelWithGUID):
     ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS='I'
     ANALYSIS_STATUS_PARTIAL_SOLVE = 'P'
+    ANALYSIS_STATUS_PROBABLE_SOLVE = 'PB'
     ANALYSIS_STATUS_WAITING_FOR_DATA='Q'
     SOLVED_ANALYSIS_STATUS_CHOICES = (
         ('S', 'Solved'),
@@ -290,6 +298,7 @@ class Family(ModelWithGUID):
         ('Rcpc', 'Reviewed, currently pursuing candidates'),
         ('Rncc', 'Reviewed, no clear candidate'),
         ('C', 'Closed, no longer under analysis'),
+        (ANALYSIS_STATUS_PROBABLE_SOLVE, 'Probably Solved'),
         (ANALYSIS_STATUS_PARTIAL_SOLVE, 'Partial Solve - Analysis in Progress'),
         (ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS, 'Analysis in Progress'),
         (ANALYSIS_STATUS_WAITING_FOR_DATA, 'Waiting for data'),
@@ -533,10 +542,22 @@ class Individual(ModelWithGUID):
         ('U', 'urine'),
     ]
 
+    SOLVED = 'S'
+    PARTIALLY_SOLVED = 'P'
+    PROBABLY_SOLVED = 'B'
+    UNSOLVED = 'U'
+    SOLVE_STATUS_CHOICES = [
+        (SOLVED, 'Solved'),
+        (PARTIALLY_SOLVED, 'Partially solved'),
+        (PROBABLY_SOLVED, 'Probably solved'),
+        (UNSOLVED, 'Unsolved'),
+    ]
+
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
     CASE_REVIEW_STATUS_REVERSE_LOOKUP = {name.lower(): key for key, name in CASE_REVIEW_STATUS_CHOICES}
+    SOLVE_STATUS_LOOKUP = dict(SOLVE_STATUS_CHOICES)
     ONSET_AGE_LOOKUP = dict(ONSET_AGE_CHOICES)
     ONSET_AGE_REVERSE_LOOKUP = {name: key for key, name in ONSET_AGE_CHOICES}
     INHERITANCE_LOOKUP = dict(INHERITANCE_CHOICES)
@@ -562,6 +583,7 @@ class Individual(ModelWithGUID):
 
     case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, default=CASE_REVIEW_STATUS_IN_REVIEW)
     case_review_discussion = models.TextField(null=True, blank=True)
+    solve_status = models.CharField(max_length=1, choices=SOLVE_STATUS_CHOICES, null=True, blank=True)
 
     proband_relationship = models.CharField(max_length=1, choices=RELATIONSHIP_CHOICES, null=True)
 
@@ -613,6 +635,11 @@ class Individual(ModelWithGUID):
     def _compute_guid(self):
         return 'I%07d_%s' % (self.id, _slugify(str(self)))
 
+    def save(self, *args, **kwargs):
+        if Individual.objects.filter(individual_id=self.individual_id, family__project_id=self.family.project_id).count() > 1:
+            raise ValidationError({'individual_id': 'Individual ID must be unique within a project'})
+        super().save(*args, **kwargs)
+
     class Meta:
         unique_together = ('family', 'individual_id')
 
@@ -624,7 +651,7 @@ class Individual(ModelWithGUID):
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
         ]
         internal_json_fields = [
-            'proband_relationship', 'primary_biosample', 'tissue_affected_status', 'analyte_type',
+            'proband_relationship', 'primary_biosample', 'tissue_affected_status', 'analyte_type', 'solve_status',
         ]
         audit_fields = {'case_review_status'}
 
@@ -1092,8 +1119,7 @@ class DeletableSampleMetadataModel(BulkOperationBase):
 
 
 class RnaSeqOutlier(DeletableSampleMetadataModel):
-    SIGNIFICANCE_THRESHOLD = 0.05
-    SIGNIFICANCE_FIELD = 'p_adjust'
+    MAX_SIGNIFICANT_P_ADJUST = 0.05
 
     p_value = models.FloatField()
     p_adjust = models.FloatField()
@@ -1119,33 +1145,35 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
 
 
 class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
-    SIGNIFICANCE_THRESHOLD = 0.01
-    SIGNIFICANCE_FIELD = 'p_value'
-    MAX_SIGNIFICANT_OUTLIER_NUM = 50
+    MAX_SIGNIFICANT_P_ADJUST = 0.3
+    SIGNIFICANCE_ABS_VALUE_THRESHOLDS = {'delta_intron_jaccard_index': 0.1}
     STRAND_CHOICES = (
         ('+', '5′ to 3′ direction'),
         ('-', '3′ to 5′ direction'),
         ('*', 'Any direction'),
     )
 
-    rank = models.IntegerField()
     p_value = models.FloatField()
-    z_score = models.FloatField()
+    p_adjust = models.FloatField()
     chrom = models.CharField(max_length=2)
     start = models.IntegerField()
     end = models.IntegerField()
     strand = models.CharField(max_length=1, choices=STRAND_CHOICES)  # "+", "-", or "*"
     type = models.CharField(max_length=12)
-    delta_psi = models.FloatField()
-    read_count = models.IntegerField()  # RNA-seq reads that span the splice junction
-    rare_disease_samples_with_junction = models.IntegerField()
+    delta_intron_jaccard_index = models.FloatField()
+    counts = models.IntegerField()
+    mean_counts = models.FloatField()
+    total_counts = models.IntegerField()
+    mean_total_counts = models.FloatField()
+    rare_disease_samples_with_this_junction = models.IntegerField()
     rare_disease_samples_total = models.IntegerField()
 
     class Meta:
         unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end', 'strand', 'type')
 
-        json_fields = ['gene_id', 'p_value', 'z_score', 'chrom', 'start', 'end', 'strand', 'read_count', 'type',
-                       'delta_psi', 'rare_disease_samples_with_junction', 'rare_disease_samples_total']
+        json_fields = ['gene_id', 'p_value', 'p_adjust', 'chrom', 'start', 'end', 'strand', 'counts', 'type',
+                       'rare_disease_samples_with_this_junction', 'rare_disease_samples_total',
+                       'delta_intron_jaccard_index', 'mean_counts', 'total_counts', 'mean_total_counts']
 
 
 class PhenotypePrioritization(BulkOperationBase):

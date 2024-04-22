@@ -77,7 +77,7 @@ class Command(BaseCommand):
             len(es_variants), len(missing_variants) + len(lift_failed), missing_family_count))
 
 def _get_variants_to_lift(saved_variants):
-    saved_variants_to_lift = [v for v in saved_variants if v['genomeVersion'] != GENOME_VERSION_GRCh38]
+    saved_variants_to_lift = [v for v in saved_variants if v.get('genomeVersion') != GENOME_VERSION_GRCh38]
     num_already_lifted = len(saved_variants) - len(saved_variants_to_lift)
     if num_already_lifted:
         if input('Found {} saved variants already on Hg38. Continue with liftover (y/n)? '.format(

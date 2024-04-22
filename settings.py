@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'guardian',
     'anymail',
+    'notifications',
     'seqr',
     'reference_data',
     'matchmaker',
@@ -427,7 +428,6 @@ TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_WORKSPACE_CACHE_EXP
 SERVICE_ACCOUNT_FOR_ANVIL = None
 SERVICE_ACCOUNT_CREDENTIALS = None
 
-AIRFLOW_API_AUDIENCE = os.environ.get('AIRFLOW_API_AUDIENCE')
 AIRFLOW_WEBSERVER_URL = os.environ.get('AIRFLOW_WEBSERVER_URL')
 AIRFLOW_DAG_VERSION = os.environ.get('AIRFLOW_DAG_VERSION', '0.0.1')
 

@@ -128,6 +128,15 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
+    # Validate no pending loading projects
+    pending_project = Project.objects.filter(
+        created_by=request.user, genome_version=body['genomeVersion'],
+    ).exclude(family__individual__sample__is_active=True).first()
+    if pending_project:
+        raise ErrorsWarningsException([
+            f'Project "{pending_project.name}" is awaiting loading. Please wait for loading to complete before requesting additional data loading'
+        ])
+
     # Validate the data path
     path = body['dataPath']
     bucket_name = workspace_meta['workspace']['bucketName']
@@ -204,7 +213,7 @@ def add_workspace_data(request, project_guid):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records = _parse_uploaded_pedigree(request_json)
+    pedigree_records = _parse_uploaded_pedigree(request_json, project=project)
 
     previous_samples = get_search_samples([project]).filter(
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS).prefetch_related('individual')
@@ -229,11 +238,11 @@ def add_workspace_data(request, project_guid):
     return create_json_response(pedigree_json)
 
 
-def _parse_uploaded_pedigree(request_json):
+def _parse_uploaded_pedigree(request_json, project=None):
     # Parse families/individuals in the uploaded pedigree file
     json_records = load_uploaded_file(request_json['uploadedFileId'])
     pedigree_records, _ = parse_basic_pedigree_table(
-        json_records, 'uploaded pedigree file', required_columns=[
+        project, json_records, 'uploaded pedigree file', required_columns=[
             JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN,
         ])
 

@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def save_temp_file(request):
 
     try:
-        uploaded_file_id, filename, json_records = save_uploaded_file(request)
+        uploaded_file_id, filename, json_records = save_uploaded_file(request, allow_json=True)
     except Exception as e:
         return create_json_response({'errors': [str(e)]}, status=400)
 
@@ -33,14 +33,25 @@ def save_temp_file(request):
     return create_json_response(response)
 
 
-def parse_file(filename, stream):
+def _parsed_file_iter(stream, parse_line=lambda l: l):
+    for line in stream:
+        yield parse_line(line)
+
+
+def parse_file(filename, stream, iter_file=False, allow_json=False):
     if filename.endswith('.tsv') or filename.endswith('.fam') or filename.endswith('.ped'):
-        return [[s.strip().strip('"') for s in line.rstrip('\n').split('\t')] for line in stream]
+        parse_line = lambda line: [s.strip().strip('"') for s in line.rstrip('\n').split('\t')]
+        if iter_file:
+            return _parsed_file_iter(stream, parse_line)
+        return [parse_line(line) for line in stream]
 
     elif filename.endswith('.csv'):
-        return [row for row in csv.reader(stream)]
+        reader = csv.reader(stream)
+        if iter_file:
+            return _parsed_file_iter(reader)
+        return [row for row in reader]
 
-    elif filename.endswith('.xls') or filename.endswith('.xlsx'):
+    elif filename.endswith('.xls') or filename.endswith('.xlsx') and not iter_file:
         wb = xl.load_workbook(stream, read_only=True)
         ws = wb[wb.sheetnames[0]]
         rows = [[_parse_excel_string_cell(cell) for cell in row] for row in ws.iter_rows()]
@@ -54,10 +65,10 @@ def parse_file(filename, stream):
 
         return rows
 
-    elif filename.endswith('.json'):
+    elif filename.endswith('.json') and allow_json:
         return json.loads(stream.read())
 
-    raise ValueError("Unexpected file type: {}".format(filename))
+    raise ValueError(f"Unexpected{' iterated' if iter_file else ''} file type: {filename}")
 
 
 def _parse_excel_string_cell(cell):
@@ -81,7 +92,7 @@ def _compute_serialized_file_path(uploaded_file_id):
     return os.path.join(upload_directory, "temp_upload_{}.json.gz".format(uploaded_file_id))
 
 
-def save_uploaded_file(request, process_records=None):
+def save_uploaded_file(request, process_records=None, allow_json=False):
 
     if len(request.FILES) != 1:
         raise ValueError("Received %s files instead of 1" % len(request.FILES))
@@ -93,7 +104,7 @@ def save_uploaded_file(request, process_records=None):
     if not filename.endswith('.xls') and not filename.endswith('.xlsx'):
         stream = TextIOWrapper(stream.file, encoding = 'utf-8')
 
-    json_records = parse_file(filename, stream)
+    json_records = parse_file(filename, stream, allow_json=allow_json)
     if process_records:
         json_records = process_records(json_records, filename=filename)
 

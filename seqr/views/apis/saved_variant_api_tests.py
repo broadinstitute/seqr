@@ -905,9 +905,11 @@ class SavedVariantAPITest(object):
         self.assertDictEqual(response.json(), {'error': 'Unable to find the following variant(s): not_variant'})
 
     @mock.patch('seqr.views.utils.variant_utils.MAX_VARIANTS_FETCH', 3)
+    @mock.patch('seqr.utils.search.utils.es_backend_enabled')
     @mock.patch('seqr.views.apis.saved_variant_api.logger')
     @mock.patch('seqr.views.utils.variant_utils.get_variants_for_variant_ids')
-    def test_update_saved_variant_json(self, mock_get_variants, mock_logger):
+    def test_update_saved_variant_json(self, mock_get_variants, mock_logger, mock_es_enabled):
+        mock_es_enabled.return_value = True
         mock_get_variants.side_effect = lambda families, variant_ids, **kwargs: \
             [{'variantId': variant_id, 'familyGuids': [family.guid for family in families]}
              for variant_id in variant_ids]
@@ -926,8 +928,8 @@ class SavedVariantAPITest(object):
 
         families = [Family.objects.get(guid='F000001_1'), Family.objects.get(guid='F000002_2')]
         mock_get_variants.assert_has_calls([
-            mock.call(families, ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T'], user=self.manager_user),
-            mock.call(families, ['21-3343353-GAGA-G'], user=self.manager_user),
+            mock.call(families, ['1-1562437-G-C', '1-248367227-TC-T', '1-46859832-G-A'], user=self.manager_user, user_email=None),
+            mock.call(families, ['21-3343353-GAGA-G'], user=self.manager_user, user_email=None),
         ])
         mock_logger.error.assert_not_called()
 
@@ -936,6 +938,10 @@ class SavedVariantAPITest(object):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
         mock_logger.error.assert_called_with('Unable to reset saved variant json for R0001_1kg: Unable to fetch variants')
+
+        mock_es_enabled.return_value = False
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 500)
 
     def test_update_variant_main_transcript(self):
         transcript_id = 'ENST00000438943'

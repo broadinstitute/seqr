@@ -1,9 +1,15 @@
+from aiohttp.web import HTTPNotFound
 import hail as hl
+import logging
 
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
     PATHOGENICTY_HGMD_SORT_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
+
+MAX_LOAD_INTERVALS = 1000
+
+logger = logging.getLogger(__name__)
 
 
 def _clinvar_sort(clinvar_field, r):
@@ -45,7 +51,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         'hmtvar': PredictionPath('hmtvar', 'score'),
         'mitotip': PredictionPath('mitotip', 'trna_prediction'),
         'mut_taster': PredictionPath('dbnsfp_mito', 'MutationTaster_pred'),
-        'sift': PredictionPath('dbnsfp_mito', 'SIFT_pred'),
+        'sift': PredictionPath('dbnsfp_mito', 'SIFT_score'),
     }
 
     PATHOGENICITY_FILTERS = {
@@ -57,7 +63,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid']
     MITO_ANNOTATION_FIELDS = {
         'commonLowHeteroplasmy': lambda r: r.common_low_heteroplasmy,
-        'highConstraintRegion': lambda r: r.high_constraint_region,
+        'highConstraintRegion': (
+            lambda r: r.high_constraint_region if hasattr(r, 'high_constraint_region') else r.high_constraint_region_mito
+        ),
         'mitomapPathogenic': lambda r: r.mitomap.pathogenic,
     }
     BASE_ANNOTATION_FIELDS = {
@@ -135,14 +143,13 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def _parse_intervals(self, intervals, exclude_intervals=False, **kwargs):
         parsed_intervals = super()._parse_intervals(intervals,**kwargs)
-        if parsed_intervals and not exclude_intervals:
+        if parsed_intervals and not exclude_intervals and len(parsed_intervals) < MAX_LOAD_INTERVALS:
             self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
         return parsed_intervals
 
     def _get_family_passes_quality_filter(self, quality_filter, ht=None, pathogenicity=None, **kwargs):
         passes_quality = super()._get_family_passes_quality_filter(quality_filter)
-        clinvar_path_ht = False if passes_quality is None else self._get_loaded_filter_ht(
-            CLINVAR_KEY, 'clinvar_path_variants.ht', self._get_clinvar_prefilter, pathogenicity=pathogenicity)
+        clinvar_path_ht = False if passes_quality is None else self._get_loaded_clinvar_prefilter_ht(pathogenicity)
         if not clinvar_path_ht:
             return passes_quality
 
@@ -156,10 +163,14 @@ class MitoHailTableQuery(BaseHailTableQuery):
             else:
                 ht = self._read_table(table_path)
                 if ht_filter is not True:
-                    ht = ht.filter(ht[ht_filter])
+                    ht = ht.filter(ht_filter(ht))
                 self._filter_hts[key] = ht
 
         return self._filter_hts[key]
+
+    def _get_loaded_clinvar_prefilter_ht(self, pathogenicity):
+        return self._get_loaded_filter_ht(
+            CLINVAR_KEY, 'clinvar_path_variants.ht', self._get_clinvar_prefilter, pathogenicity=pathogenicity)
 
     def _get_clinvar_prefilter(self, pathogenicity=None):
         clinvar_path_filters = self._get_clinvar_path_filters(pathogenicity)
@@ -167,9 +178,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
             return False
 
         if CLINVAR_LIKELY_PATH_FILTER not in clinvar_path_filters:
-            return 'is_pathogenic'
+            return lambda ht: ht.is_pathogenic
         elif CLINVAR_PATH_FILTER not in clinvar_path_filters:
-            return 'is_likely_pathogenic'
+            return lambda ht: ht.is_likely_pathogenic
         return True
 
     def _filter_variant_ids(self, ht, variant_ids):
@@ -177,7 +188,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             variant_id_q = ht.alleles == [variant_ids[0][2], variant_ids[0][3]]
         else:
             variant_id_q = hl.any([
-                (ht.locus == hl.locus(chrom, pos, reference_genome=self._genome_version)) &
+                (ht.locus == hl.locus(chrom, pos, reference_genome=self.GENOME_VERSION)) &
                 (ht.alleles == [ref, alt])
                 for chrom, pos, ref, alt in variant_ids
             ])
@@ -189,7 +200,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         return [
             hl.struct(
-                locus=hl.locus(f'chr{chrom}' if self._should_add_chr_prefix() else chrom, pos, reference_genome=self._genome_version),
+                locus=hl.locus(f'chr{chrom}' if self._should_add_chr_prefix() else chrom, pos, reference_genome=self.GENOME_VERSION),
                 alleles=[ref, alt],
             ) for chrom, pos, ref, alt in variant_ids
         ]
@@ -197,41 +208,62 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _prefilter_entries_table(self, ht, parsed_intervals=None, exclude_intervals=False, **kwargs):
         if exclude_intervals and parsed_intervals:
             ht = hl.filter_intervals(ht, parsed_intervals, keep=False)
+        elif len(parsed_intervals or []) >= MAX_LOAD_INTERVALS:
+            ht = hl.filter_intervals(ht, parsed_intervals)
         return ht
 
-    def _get_transcript_consequence_filter(self, allowed_consequence_ids, allowed_consequences):
+    def _get_allowed_consequence_ids(self, annotations):
+        consequence_ids = super()._get_allowed_consequence_ids(annotations)
         canonical_consequences = {
-            c.replace('__canonical', '') for c in allowed_consequences if c.endswith('__canonical')
+            c.replace('__canonical', '') for consequences in annotations.values()
+            if consequences for c in consequences if c.endswith('__canonical')
         }
-        canonical_consequences -= allowed_consequences
+        if canonical_consequences:
+            canonical_consequence_ids = super()._get_allowed_consequence_ids({'canonical': canonical_consequences})
+            canonical_consequence_ids -= consequence_ids
+            consequence_ids.update({f'{cid}__canonical' for cid in canonical_consequence_ids})
+        return consequence_ids
+
+    @staticmethod
+    def _get_allowed_transcripts_filter(allowed_consequence_ids):
+        canonical_consequences = set()
+        any_consequences = set()
+        for c in allowed_consequence_ids:
+            if str(c).endswith('__canonical'):
+                canonical_consequences.add(int(c.replace('__canonical', '')))
+            else:
+                any_consequences.add(c)
 
         all_consequence_ids = None
         if canonical_consequences:
-            all_consequence_ids = hl.set({
-                *self._get_allowed_consequence_ids(canonical_consequences), *allowed_consequence_ids,
-            })
-        elif not allowed_consequence_ids:
-            return None
+            all_consequence_ids = hl.set({*canonical_consequences, *any_consequences})
 
-        allowed_consequence_ids = hl.set(allowed_consequence_ids) if allowed_consequence_ids else hl.empty_set(hl.tint)
+        allowed_consequence_ids = hl.set(any_consequences) if any_consequences else hl.empty_set(hl.tint)
         return lambda tc: tc.consequence_term_ids.any(
             (hl.if_else(hl.is_defined(tc.canonical), all_consequence_ids, allowed_consequence_ids)
              if canonical_consequences else allowed_consequence_ids
         ).contains)
 
-    def _get_annotation_override_filters(self, annotations, pathogenicity=None, **kwargs):
-        annotation_filters = []
-
+    def _get_annotation_override_fields(self, annotations, pathogenicity=None, **kwargs):
+        annotation_overrides = super()._get_annotation_override_fields(annotations, **kwargs)
         for key in self.PATHOGENICITY_FILTERS.keys():
             path_terms = (pathogenicity or {}).get(key)
             if path_terms:
-                annotation_filters.append(self._has_path_expr(path_terms, key))
+                annotation_overrides[key] = path_terms
+        return annotation_overrides
+
+    def _get_annotation_override_filters(self, ht, annotation_overrides):
+        annotation_filters = []
+
+        for key in self.PATHOGENICITY_FILTERS.keys():
+            if key in annotation_overrides:
+                annotation_filters.append(self._has_path_expr(ht, annotation_overrides[key], key))
 
         return annotation_filters
 
-    def _frequency_override_filter(self, pathogenicity):
+    def _frequency_override_filter(self, ht, pathogenicity):
         path_terms = self._get_clinvar_path_filters(pathogenicity)
-        return self._has_path_expr(path_terms, CLINVAR_KEY) if path_terms else None
+        return self._has_path_expr(ht, path_terms, CLINVAR_KEY) if path_terms else None
 
     @staticmethod
     def _get_clinvar_path_filters(pathogenicity):
@@ -239,7 +271,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             f for f in (pathogenicity or {}).get(CLINVAR_KEY) or [] if f in CLINVAR_PATH_SIGNIFICANCES
         }
 
-    def _has_path_expr(self, terms, field):
+    def _has_path_expr(self, ht, terms, field):
         subfield, range_configs = self.PATHOGENICITY_FILTERS[field]
         field_name = self.PATHOGENICITY_FIELD_MAP.get(field, field)
         enum_lookup = self._get_enum_lookup(field_name, subfield)
@@ -254,7 +286,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ranges.append([None, None])
 
         ranges = [r for r in ranges if r[0] is not None]
-        value = self._ht[field_name][f'{subfield}_id']
+        value = ht[field_name][f'{subfield}_id']
         return hl.any(lambda r: (value >= r[0]) & (value <= r[1]), ranges)
 
     def _format_results(self, ht, *args, **kwargs):
@@ -270,3 +302,40 @@ class MitoHailTableQuery(BaseHailTableQuery):
     @classmethod
     def _gene_rank_sort(cls, r, gene_ranks):
         return [gene_ranks.get(r.selected_transcript.gene_id)] + super()._gene_rank_sort(r, gene_ranks)
+
+    def _add_project_lookup_data(self, ht, annotation_fields, *args, **kwargs):
+        # Get all the project-families for the looked up variant formatted as a dict of dicts:
+        # {<project_guid>: {<family_guid>: True, <family_guid_2>: True}, <project_guid_2>: ...}
+        lookup_ht = self._read_table('lookup.ht', use_ssd_dir=True, skip_missing_field='project_stats')
+        if lookup_ht is None:
+            raise HTTPNotFound()
+        variant_projects = lookup_ht.aggregate(hl.agg.take(
+            hl.dict(hl.enumerate(lookup_ht.project_stats).starmap(lambda i, ps: (
+                lookup_ht.project_guids[i],
+                hl.enumerate(ps).starmap(
+                    lambda j, s: hl.or_missing(self._stat_has_non_ref(s), j)
+                ).filter(hl.is_defined),
+            )).filter(
+                lambda x: x[1].any(hl.is_defined)
+            ).starmap(lambda project_guid, family_indices: (
+                project_guid,
+                hl.dict(family_indices.map(lambda j: (lookup_ht.project_families[project_guid][j], True))),
+            ))), 1),
+        )[0]
+        # Variant can be present in the lookup table with only ref calls, so is still not present in any projects
+        if not variant_projects:
+            raise HTTPNotFound()
+
+        annotation_fields.update({
+            'familyGenotypes': lambda r: hl.dict(r.family_entries.map(
+                lambda entries: (entries.first().familyGuid, entries.map(self._get_sample_genotype))
+            )),
+        })
+
+        logger.info(f'Looking up {self.DATA_TYPE} variant in {len(variant_projects)} projects')
+
+        return super()._add_project_lookup_data(ht, annotation_fields, project_samples=variant_projects, **kwargs)
+
+    @staticmethod
+    def _stat_has_non_ref(s):
+        return (s.heteroplasmic_samples > 0) | (s.homoplasmic_samples > 0)

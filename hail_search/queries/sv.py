@@ -41,6 +41,8 @@ class SvHailTableQuery(BaseHailTableQuery):
     PREDICTION_FIELDS_CONFIG = {
         'strvctvre': PredictionPath('strvctvre', 'score'),
     }
+    ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD]
+    SECONDARY_ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD]
 
     SORTS = {
         **BaseHailTableQuery.SORTS,
@@ -54,22 +56,38 @@ class SvHailTableQuery(BaseHailTableQuery):
     def _get_sample_type(cls, *args):
         return cls.DATA_TYPE.split('_')[-1]
 
-    def _filter_annotated_table(self, *args, parsed_intervals=None, exclude_intervals=False, **kwargs):
-        if parsed_intervals:
+    def _filter_annotated_table(self, ht, *args, parsed_intervals=None, exclude_intervals=False, padded_interval=None, gene_ids=None, **kwargs):
+        if parsed_intervals and len(parsed_intervals) != len(gene_ids or []):
             interval_filter = hl.array(parsed_intervals).any(lambda interval: hl.if_else(
-                self._ht.start_locus.contig == self._ht.end_locus.contig,
-                interval.overlaps(hl.interval(self._ht.start_locus, self._ht.end_locus)),
-                interval.contains(self._ht.start_locus) | interval.contains(self._ht.end_locus),
+                ht.start_locus.contig == ht.end_locus.contig,
+                interval.overlaps(hl.interval(ht.start_locus, ht.end_locus)),
+                interval.contains(ht.start_locus) | interval.contains(ht.end_locus),
             ))
             if exclude_intervals:
                 interval_filter = ~interval_filter
-            self._ht = self._ht.filter(interval_filter)
+            ht = ht.filter(interval_filter)
+        if padded_interval:
+            padding = int((padded_interval['end'] - padded_interval['start']) * padded_interval['padding'])
+            chrom = f"chr{padded_interval['chrom']}"
+            ht = ht.filter(hl.all([
+                self._locus_in_range(ht.start_locus, chrom, padded_interval['start'], padding),
+                self._locus_in_range(ht.end_locus, chrom, padded_interval['end'], padding)
+            ]))
 
-        return super()._filter_annotated_table(*args, **kwargs)
+        return super()._filter_annotated_table(ht, *args, gene_ids=gene_ids, **kwargs)
 
-    def _get_family_passes_quality_filter(self, quality_filter, annotations=None, **kwargs):
+    def _locus_in_range(self, locus, chrom, position, padding):
+        window = hl.locus(chrom, position, reference_genome=self.GENOME_VERSION).window(padding, padding)
+        return window.contains(locus)
+
+    def _parse_annotations(self, annotations, *args, **kwargs):
+        parsed_annotations = super()._parse_annotations(annotations, *args, **kwargs)
+        parsed_annotations[NEW_SV_FIELD] = (annotations or {}).get(NEW_SV_FIELD)
+        return parsed_annotations
+
+    def _get_family_passes_quality_filter(self, quality_filter, parsed_annotations=None, **kwargs):
         passes_quality = super()._get_family_passes_quality_filter(quality_filter)
-        if not (annotations or {}).get(NEW_SV_FIELD):
+        if not (parsed_annotations or {}).get(NEW_SV_FIELD):
             return passes_quality
 
         entries_has_new_call = lambda entries: entries.any(lambda x: x.concordance.new_call)
@@ -78,18 +96,12 @@ class SvHailTableQuery(BaseHailTableQuery):
 
         return lambda entries: entries_has_new_call(entries) & passes_quality(entries)
 
-    def _get_allowed_consequences_annotations(self, annotations, annotation_filters, is_secondary=False):
-        if is_secondary:
-            # SV search can specify secondary SV types, as well as secondary consequences
-            annotation_filters = self._get_annotation_override_filters(annotations)
-        return super()._get_allowed_consequences_annotations(annotations, annotation_filters)
-
-    def _get_annotation_override_filters(self, annotations, **kwargs):
+    def _get_annotation_override_filters(self, ht, annotation_overrides):
         annotation_filters = []
-        if annotations.get(STRUCTURAL_ANNOTATION_FIELD):
-            allowed_type_ids = self.get_allowed_sv_type_ids(annotations[STRUCTURAL_ANNOTATION_FIELD])
+        if annotation_overrides.get(STRUCTURAL_ANNOTATION_FIELD):
+            allowed_type_ids = self.get_allowed_sv_type_ids(annotation_overrides[STRUCTURAL_ANNOTATION_FIELD])
             if allowed_type_ids:
-                annotation_filters.append(hl.set(allowed_type_ids).contains(self._ht.sv_type_id))
+                annotation_filters.append(hl.set(allowed_type_ids).contains(ht.sv_type_id))
 
         return annotation_filters
 
@@ -115,3 +127,9 @@ class SvHailTableQuery(BaseHailTableQuery):
                 get_end_chrom(r),
             )),
         }
+
+    def _add_project_lookup_data(self, *args, sample_data=None, **kwargs):
+        project_samples, _ = self._parse_sample_data(sample_data)
+        return super()._add_project_lookup_data(
+            *args, include_sample_annotations=True, project_samples=project_samples, **kwargs,
+        )

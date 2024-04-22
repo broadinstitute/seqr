@@ -64,6 +64,7 @@ export const getSamplesLoading = state => state.samplesLoading.isLoading
 export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
 export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
 export const getSavedVariantTableState = state => state.savedVariantTableState
+export const getGregorMetadataImportStats = state => state.importStats.gregorMetadata
 const getFamiliesTableFiltersByProject = state => state.familyTableFilterState
 
 export const getCurrentProject = createSelector(

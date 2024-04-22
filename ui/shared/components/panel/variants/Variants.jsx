@@ -16,7 +16,7 @@ import VariantGenes, { VariantGene } from './VariantGene'
 import VariantIndividuals from './VariantIndividuals'
 import { compHetGene, has37Coords } from './VariantUtils'
 
-const StyledVariantRow = styled(({ isSV, severity, ...props }) => <Grid.Row {...props} />)`  
+export const StyledVariantRow = styled(({ isSV, severity, ...props }) => <Grid.Row {...props} />)`  
   .column {
     margin-top: 0em !important;
     margin-bottom: 0em !important;
@@ -265,7 +265,7 @@ CompoundHets.propTypes = {
 
 const Variants = React.memo(({ variants, compoundHetToggle, ...props }) => (
   <Grid stackable divided="vertically">
-    {variants.map(variant => (Array.isArray(variant) ?
+    {(variants || []).map(variant => (Array.isArray(variant) ?
       <CompoundHets variants={variant} key={`${variant.map(v => v.variantId).join()}-${variant[0].familyGuids.join('-')}`} compoundHetToggle={compoundHetToggle} {...props} /> :
       <VariantWithReads variant={variant} key={`${variant.variantId}-${variant.familyGuids.join('-')}`} {...props} />
     ))}

@@ -29,7 +29,7 @@ def _get_record_individual_id(record):
     return record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
 
 
-def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_ids=False):
+def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_ids=False, get_created_counts=False, allow_features_update=False):
     """
     Add or update individual and family records in the given project.
 
@@ -47,6 +47,8 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     updated_individuals = set()
     updated_note_ids = []
     parent_updates = []
+    num_created_families = 0
+    num_created_individuals = 0
 
     family_ids = {_get_record_family_id(record) for record in individual_records}
     families_by_id = {f.family_id: f for f in Family.objects.filter(project=project, family_id__in=family_ids)}
@@ -54,6 +56,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     missing_family_ids = family_ids - set(families_by_id.keys())
     for family_id in sorted(missing_family_ids):
         family = create_model_from_json(Family, {'project': project, 'family_id': family_id}, user)
+        num_created_families += 1
         families_by_id[family_id] = family
         updated_family_ids.add(family.id)
 
@@ -72,8 +75,10 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
             individual_lookup[i.individual_id][i.family] = i
 
     for record in individual_records:
-        _update_from_record(
-            record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, parent_updates, updated_note_ids)
+        created_individual = _update_from_record(
+            record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, parent_updates, updated_note_ids, allow_features_update)
+        if created_individual:
+            num_created_individuals += 1
 
     for update in parent_updates:
         individual = update.pop('individual')
@@ -93,12 +98,16 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     if get_updated_individual_ids:
         return pedigree_json, {i.individual_id for i in updated_individuals}
 
+    if get_created_counts:
+        return pedigree_json, num_created_families, num_created_individuals
+
     return pedigree_json
 
 
-def _update_from_record(record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, parent_updates, updated_note_ids):
+def _update_from_record(record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, parent_updates, updated_note_ids, allow_features_update):
     family_id = _get_record_family_id(record)
     family = families_by_id.get(family_id)
+    created_individual = False
 
     if record.get('individualGuid'):
         individual = individual_lookup[record.pop('individualGuid')]
@@ -107,11 +116,15 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         individual_id = _get_record_individual_id(record)
         individual = individual_lookup[individual_id].get(family)
         if not individual:
+            # Individual is being moved to a different family
+            individual = next((iter(individual_lookup[individual_id].values())), None)
+        if not individual:
             individual = create_model_from_json(
                 Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I'}, user)
             updated_family_ids.add(family.id)
             updated_individuals.add(individual)
             individual_lookup[individual_id][family] = individual
+            created_individual = True
 
     record['family'] = family
     record.pop('familyId', None)
@@ -153,11 +166,13 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         if is_updated:
             updated_family_ids.add(family.id)
 
-    is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
+    is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True, allow_features_update=allow_features_update)
     if is_updated:
         updated_individuals.add(individual)
         if family.pedigree_image:
             updated_family_ids.add(family.id)
+
+    return created_individual
 
 
 def delete_individuals(project, individual_guids, user):
@@ -170,11 +185,7 @@ def delete_individuals(project, individual_guids, user):
     Returns:
         list: Family objects for families with deleted individuals
     """
-
-    individuals_to_delete = Individual.objects.filter(
-        family__project=project, guid__in=individual_guids)
-
-    errors = backend_specific_call(_validate_no_submissions, _validate_no_sumissions_no_search_samples)(individuals_to_delete)
+    errors, individuals_to_delete = check_project_individuals_deletable(project, individual_guids=individual_guids)
     if errors:
         raise ErrorsWarningsException(errors)
 
@@ -191,6 +202,15 @@ def delete_individuals(project, individual_guids, user):
     _remove_pedigree_images(families_with_deleted_individuals, user)
 
     return families_with_deleted_individuals
+
+
+def check_project_individuals_deletable(project, individual_guids=None):
+    individuals_to_delete = Individual.objects.filter(family__project=project)
+    if individual_guids is not None:
+        individuals_to_delete = individuals_to_delete.filter(guid__in=individual_guids)
+
+    errors = backend_specific_call(_validate_no_submissions, _validate_no_sumissions_no_search_samples)(individuals_to_delete)
+    return errors, individuals_to_delete
 
 
 def _validate_delete_individuals(individuals_to_delete, error_type, query):
