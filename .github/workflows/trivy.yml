@@ -13,6 +13,7 @@ jobs:
   trivy-prod:
     name: Trivy check
     runs-on: ubuntu-latest
+    environment: trivy
     env:
       # BUILDKIT_PROGRESS: plain
       CLOUDSDK_CORE_DISABLE_PROMPTS: 1
@@ -55,10 +56,11 @@ jobs:
   trivy-dev:
     name: Trivy DEV check
     runs-on: ubuntu-latest
+    environment: trivy
     env:
       # BUILDKIT_PROGRESS: plain
       CLOUDSDK_CORE_DISABLE_PROMPTS: 1
-      DOCKER_IMAGE: australia-southeast1-docker.pkg.dev/seqr-308602/seqr-project/seqr:gcloud-dev
+      DOCKER_IMAGE: australia-southeast1-docker.pkg.dev/seqr-308602/seqr-project/seqr:gcloud-staging
 
     steps:
       # - uses: actions/checkout@v2
