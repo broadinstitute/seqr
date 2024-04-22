@@ -66,40 +66,112 @@ const TAG_TYPE_TILES = {
   [GREGOR_FINDING_TAG_NAME]: 'Finding Detail',
 }
 
-const aipCategoryContent = (key, { name, date }) => ([
-  <Table.HeaderCell key="name" content={`${key} - ${name} `} />,
-  <Table.Cell key="date" disabled content={`(${new Date(date).toLocaleDateString()})`} />,
-])
-
-const structuredMetadataRow = ([key, value]) => (
-  <Table.Row key={key}>
-    {typeof value === 'string' ? [
-      <Table.HeaderCell key="key" textAlign="right" content={snakecaseToTitlecase(key)} />,
-      <Table.Cell key="value" content={value} />,
-    ] : aipCategoryContent(key, value)}
-  </Table.Row>
+const aipCategoryRow = ([key, { name, date }]) => (
+  <li key={key}>
+    {`${key} - ${name}`}
+    <HorizontalSpacer width={5} />
+    {`(${new Date(date).toLocaleDateString()})`}
+  </li>
 )
+
+const aipMetaList = (key, name, value) => {
+  if (value.length === 0) {
+    return null
+  }
+
+  return (
+    <div key={key}>
+      <b>{name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</b>
+      {value.map(item => (
+        <li key={item}>{item}</li>
+      ))}
+    </div>
+  )
+}
+
+const aipHpoList = (panels) => {
+  if (Object.values(panels).every(array => array.length === 0)) {
+    return null
+  }
+
+  return (
+    <div>
+      <b>Phenotype Matches:</b>
+      {Object.entries(panels).map(([matchClass, matches]) => {
+        if (matches.matches === 0) {
+          return null
+        }
+
+        let label
+        switch (matchClass) {
+          case 'matched':
+            label = 'Matched Panel'
+            break
+          case 'forced':
+            label = 'Cohort Panel'
+            break
+          case 'gene_level':
+            label = 'Gene Specific Match'
+            break
+          default:
+            label = ''
+        }
+
+        return (
+          matches.map(match => (
+            <li key={match}>
+              {label}
+              :
+              <HorizontalSpacer width={5} />
+              {match}
+            </li>
+          ))
+        )
+      })}
+    </div>
+  )
+}
 
 export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
   <Popup
     position="top right"
     size="tiny"
     trigger={trigger}
-    header={title || (tag.structuredMetadata ? TAG_TYPE_TILES[tag.name] : 'Tagged by')}
+    header={title || (tag.aipMetadata ? 'AIP results' : 'Tagged by')}
     hoverable
     flowing
     content={
       <div>
-        {tag.structuredMetadata ? (
-          <NoBorderTable basic="very" compact="very">
-            <Table.Body>
-              {Object.entries(tag.structuredMetadata).filter(e => e[0] !== 'removed').map(structuredMetadataRow)}
-              {tag.structuredMetadata.removed && [
-                <Table.Row key="removedHeader"><Table.HeaderCell colSpan={2} content="Removed Categories" /></Table.Row>,
-                ...Object.entries(tag.structuredMetadata.removed).map(structuredMetadataRow),
-              ]}
-            </Table.Body>
-          </NoBorderTable>
+        {tag.aipMetadata ? (
+          <div>
+            <div>
+              <b>First Tagged:</b>
+              <HorizontalSpacer width={5} />
+              {tag.aipMetadata.first_tagged}
+            </div>
+            <div>
+              <b>Categories:</b>
+              {Object.entries(tag.aipMetadata.categories).map(aipCategoryRow)}
+            </div>
+            {tag.aipMetadata && tag.aipMetadata.removed && (
+              <div>
+                <b>Removed Categories:</b>
+                {Object.entries(tag.aipMetadata.removed).map(aipCategoryRow)}
+              </div>
+            )}
+            {tag.aipMetadata.reasons && (
+              aipMetaList('moi', 'Tagged MOI', tag.aipMetadata.reasons)
+            )}
+            {tag.aipMetadata.support_vars && (
+              aipMetaList('support_vars', 'Supporting Variants', tag.aipMetadata.support_vars)
+            )}
+            {tag.aipMetadata.labels && (
+              aipMetaList('labels', 'Labels', tag.aipMetadata.labels)
+            )}
+            {tag.aipMetadata.labels && (
+              aipHpoList(tag.aipMetadata.panels)
+            )}
+          </div>
         ) : `${tag.createdBy || 'unknown user'}${tag.lastModifiedDate ? ` on ${new Date(tag.lastModifiedDate).toLocaleDateString()}` : ''}`}
         {tag.metadata && !hideMetadata && (
           <div>

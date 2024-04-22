@@ -437,13 +437,13 @@ def _format_functional_tags(tags):
     return tags
 
 
-AIP_TAG_TYPE = 'AIP'
+AIP_TAG_TYPES = ['AIP', 'AIP-permissive', 'AIP-restrictive']
 GREGOR_FINDING_TAG_TYPE = 'GREGoR Finding'
-STRUCTURED_METADATA_TAG_TYPES = [AIP_TAG_TYPE, GREGOR_FINDING_TAG_TYPE]
+STRUCTURED_METADATA_TAG_TYPES = AIP_TAG_TYPES + [GREGOR_FINDING_TAG_TYPE,]
 def _format_variant_tags(tags):
     for tag in tags:
-        if tag['name'] in STRUCTURED_METADATA_TAG_TYPES and tag['metadata']:
-            tag['structuredMetadata'] = json.loads(tag.pop('metadata'))
+        if tag['name'] in AIP_TAG_TYPES and tag['metadata']:
+            tag['aipMetadata'] = json.loads(tag.pop('metadata'))
     return tags
 
 

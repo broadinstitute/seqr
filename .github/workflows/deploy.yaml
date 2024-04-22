@@ -7,8 +7,13 @@ on:
       - staging
       - reanalysis-dev
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   docker:
+    environment: production
     runs-on: ubuntu-latest
 
     env:
@@ -18,13 +23,14 @@ jobs:
       DOCKER_IMAGE: australia-southeast1-docker.pkg.dev/seqr-308602/seqr-project/seqr
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: gcloud setup
-        uses: google-github-actions/setup-gcloud@v0
+      - id: "google-cloud-auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v2"
         with:
-          project_id: seqr-308602
-          service_account_key: ${{ secrets.GCP_DEPLOY_KEY }}
+          workload_identity_provider: "projects/1021400127367/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+          service_account: "deploy@seqr-308602.iam.gserviceaccount.com"
 
       - name: gcloud docker auth
         run: |
@@ -40,7 +46,7 @@ jobs:
             echo DEPLOY_TARGET=reanalysis-dev >> $GITHUB_ENV
           fi
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 16
       - name: build UI
@@ -85,6 +91,7 @@ jobs:
             --max-surge 3
 
       - name: apply schema
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
         run: |
           gcloud beta run jobs execute --wait \
             --region australia-southeast1 \
