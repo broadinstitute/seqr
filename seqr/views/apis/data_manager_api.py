@@ -424,9 +424,14 @@ def validate_callset(request):
 
 @pm_or_data_manager_required
 def get_loaded_projects(request, sample_type, dataset_type):
-    projects = get_internal_projects().filter(
-        family__individual__sample__sample_type=sample_type, is_demo=False,
-    ).distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
+    projects = get_internal_projects().filter(is_demo=False)
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+        exclude_sample_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
+        projects = projects.exclude(family__individual__sample__sample_type=exclude_sample_type)
+        # TODO filter for loadable projects from airtable
+    else:
+        projects = projects.filter(family__individual__sample__sample_type=sample_type)
+    projects = projects.distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
         'family__individual__sample__loaded_date', filter=Q(family__individual__sample__dataset_type=dataset_type),
     ))
     return create_json_response({'projects': list(projects)})
