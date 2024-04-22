@@ -2,6 +2,7 @@
 name: trivy
 on:
   # runs on default branch
+  workflow_dispatch:
   schedule:
     - cron:  '0 22 * * 0' # each Monday at 9am AEST+10 / 10am AEDT+11
 
