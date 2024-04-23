@@ -62,4 +62,4 @@ jobs:
           github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
           author_email: ${{ github.actor }}@users.noreply.github.com
           author_name: tgg-automation
-          message: "Updating ${{ inputs.environment }} ${{ inputs.reference_genome }}/${{ inputs.dataset_type }} ${{ inputs.version != '' && ('dataset version to ' + inputs.version + ' and ') || '' }} volume handle to ${{ inputs.volume_handle }} "
+          message: "Updating ${{ inputs.environment }} ${{ inputs.reference_genome }}/${{ inputs.dataset_type }} ${{ inputs.version != '' && format('{0} {1} {2}', 'dataset version to', inputs.version, 'and') || ''}} volume handle to ${{ inputs.volume_handle }} "
