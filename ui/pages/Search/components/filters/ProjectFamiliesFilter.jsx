@@ -5,10 +5,7 @@ import { Form, Button } from 'semantic-ui-react'
 
 import {
   getProjectsByGuid,
-  getFamiliesGroupedByProjectGuid,
   getAnalysisGroupsGroupedByProjectGuid,
-  getFamiliesByGuid,
-  getAnalysisGroupsByGuid,
   getProjectDatasetTypes,
 } from 'redux/selectors'
 import { Multiselect, ButtonRadioGroup } from 'shared/components/form/Inputs'
@@ -147,9 +144,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   const onLoadSuccess = (state) => {
-    const newVal = getProjectFamilies(
-      ownProps.value, getFamiliesByGuid(state), getFamiliesGroupedByProjectGuid(state), getAnalysisGroupsByGuid(state),
-    )
+    const newVal = getProjectFamilies(state)(ownProps.value)
     if (newVal && newVal !== ownProps.value) {
       ownProps.onChange(newVal)
     }
