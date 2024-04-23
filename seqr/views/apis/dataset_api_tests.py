@@ -12,6 +12,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 
 SEQR_URL = 'https://seqr.populationgenomics.org.au'
+# SEQR_URL = ''
 PROJECT_GUID = 'R0001_1kg'
 NON_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
 INDEX_NAME = 'test_index'
@@ -54,6 +55,7 @@ class DatasetAPITest(object):
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
     @mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
     @mock.patch('seqr.utils.communication_utils.send_html_email')
+    @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL + '/')
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', MOCK_AIRTABLE_URL)
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
     @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
