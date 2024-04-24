@@ -1,9 +1,6 @@
 import requests
 from django.db import transaction
 from django.utils import timezone
-from urllib3.util import Retry
-from requests import Session
-from requests.adapters import HTTPAdapter
 
 from panelapp.models import PaLocusList, PaLocusListGene
 from seqr.models import LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
