@@ -38,6 +38,7 @@ django==3.2.25
     #   django-notifications-hq
     #   django-storages
     #   jsonfield
+    #   social-auth-app-django
 django-anymail==9.0
     # via -r requirements.in
 django-cors-headers==3.13.0
@@ -159,9 +160,9 @@ slacker==0.14.0
     # via -r requirements.in
 slugify==0.0.1
     # via -r requirements.in
-social-auth-app-django==5.0.0
+social-auth-app-django==5.4.1
     # via -r requirements.in
-social-auth-core==4.3.0
+social-auth-core==4.4.2
     # via
     #   -r requirements.in
     #   social-auth-app-django
@@ -179,6 +180,3 @@ urllib3==1.26.18
     #   requests
 whitenoise==6.3.0
     # via -r requirements.in
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools
