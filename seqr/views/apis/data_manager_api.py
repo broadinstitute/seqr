@@ -473,17 +473,18 @@ def load_data(request):
     sample_type = request_json['sampleType']
     dataset_type = request_json['datasetType']
     projects = [json.loads(project) for project in request_json['projects']]
+    project_samples = {p['projectGuid']: p.get('sampleIds') for p in projects}
 
-    project_models = Project.objects.filter(guid__in=[p['projectGuid'] for p in projects])
+    project_models = Project.objects.filter(guid__in=project_samples)
     if len(project_models) < len(projects):
-        missing = sorted(set(projects) - {p.guid for p in project_models})
+        missing = sorted(set(project_samples.keys()) - {p.guid for p in project_models})
         return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
 
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
     trigger_data_loading(
         project_models, sample_type, dataset_type, request_json['filePath'], request.user, success_message,
         SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
-        is_internal=True,
+        is_internal=True, project_samples=project_samples if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else None,
     )
 
     return create_json_response({'success': True})
