@@ -10,6 +10,8 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_mo
 
 logger = SeqrLogger(__name__)
 
+REQUEST_TIMEOUT_S = 300
+
 
 def import_all_panels(user, panel_app_api_url, label=None):
     def _extract_ensembl_id_from_json(raw_gene_json):
@@ -108,7 +110,7 @@ def _get_all_panels(panels_url, all_results):
 
 
 def _get_all_genes(genes_url: str, results_by_panel_id: dict):
-    resp = requests.get(genes_url)
+    resp = requests.get(genes_url, timeout=REQUEST_TIMEOUT_S)
     resp_json = resp.json()
 
     for result in resp_json.get('results', []):
