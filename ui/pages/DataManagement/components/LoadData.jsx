@@ -13,11 +13,11 @@ import {
   DATASET_TYPE_SNV_INDEL_CALLS,
 } from 'shared/utils/constants'
 
-const formatProjectOption = ({ name, projectGuid, dataTypeLastLoaded }) => ({
-  value: projectGuid,
-  text: name,
-  description: dataTypeLastLoaded && `Last Loaded: ${new Date(dataTypeLastLoaded).toLocaleDateString()}`,
-  color: dataTypeLastLoaded ? 'teal' : 'orange',
+const formatProjectOption = opt => ({
+  value: JSON.stringify(opt),
+  text: opt.name,
+  description: opt.dataTypeLastLoaded && `Last Loaded: ${new Date(opt.dataTypeLastLoaded).toLocaleDateString()}`,
+  color: opt.dataTypeLastLoaded ? 'teal' : 'orange',
 })
 
 const renderLabel = ({ color, text }) => ({ color, content: text })

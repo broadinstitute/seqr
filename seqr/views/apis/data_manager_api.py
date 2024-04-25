@@ -442,9 +442,9 @@ def load_data(request):
     request_json = json.loads(request.body)
     sample_type = request_json['sampleType']
     dataset_type = request_json['datasetType']
-    projects = request_json['projects']
+    projects = [json.loads(project) for project in request_json['projects']]
 
-    project_models = Project.objects.filter(guid__in=projects)
+    project_models = Project.objects.filter(guid__in=[p['projectGuid'] for p in projects])
     if len(project_models) < len(projects):
         missing = sorted(set(projects) - {p.guid for p in project_models})
         return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
