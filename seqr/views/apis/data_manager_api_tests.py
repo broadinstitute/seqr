@@ -394,6 +394,7 @@ EXPECTED_PEDIGREE_ROWS = [
     ['R0001_1kg', 'F000002_2', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
 ]
 
+PROJECT_OPTION = {'dataTypeLastLoaded': '2018-02-05T06:31:55.397Z', 'name': 'Non-Analyst Project', 'projectGuid': 'R0004_non_analyst_project'}
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class DataManagerAPITest(AuthenticationTestCase):
@@ -1315,15 +1316,11 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'projects': [
-            {'dataTypeLastLoaded': '2018-02-05T06:31:55.397Z', 'name': 'Non-Analyst Project', 'projectGuid': 'R0004_non_analyst_project'},
-        ]})
+        self.assertDictEqual(response.json(), {'projects': [PROJECT_OPTION]})
 
         response = self.client.get(url.replace('SV', 'MITO'))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'projects': [
-            {'dataTypeLastLoaded': None, 'name': 'Non-Analyst Project', 'projectGuid': 'R0004_non_analyst_project'},
-        ]})
+        self.assertDictEqual(response.json(), {'projects': [{**PROJECT_OPTION, 'dataTypeLastLoaded': None}]})
 
         # test data manager access
         self.login_data_manager_user()
@@ -1360,7 +1357,7 @@ class LoadDataAPITest(AirflowTestCase):
         mock_subprocess.return_value.wait.return_value = 0
         mock_subprocess.return_value.communicate.return_value = b'', b'File not found'
         body = {'filePath': 'gs://test_bucket/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'projects': [
-            'R0001_1kg', 'R0004_non_analyst_project', 'R0005_not_project',
+            json.dumps({'projectGuid': 'R0001_1kg'}), json.dumps(PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
         ]}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
