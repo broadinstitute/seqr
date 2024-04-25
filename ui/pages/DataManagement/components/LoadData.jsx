@@ -16,7 +16,10 @@ import {
 const formatProjectOption = opt => ({
   value: JSON.stringify(opt),
   text: opt.name,
-  description: opt.dataTypeLastLoaded && `Last Loaded: ${new Date(opt.dataTypeLastLoaded).toLocaleDateString()}`,
+  description: [
+    opt.sampleIds && `${opt.sampleIds.length} Samples to Load`,
+    opt.dataTypeLastLoaded && `Last Loaded: ${new Date(opt.dataTypeLastLoaded).toLocaleDateString()}`,
+  ].filter(val => val).join('; '),
   color: opt.dataTypeLastLoaded ? 'teal' : 'orange',
 })
 
