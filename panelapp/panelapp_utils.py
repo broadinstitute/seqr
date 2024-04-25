@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import requests
 from django.db import transaction
 from django.utils import timezone
@@ -28,7 +30,7 @@ def import_all_panels(user, panel_app_api_url, label=None):
     all_panels = _get_all_panels(panels_url, [])
 
     genes_url = '{}/genes/?page=1'.format(panel_app_api_url)
-    genes_by_panel_id = _get_all_genes(genes_url, {})
+    genes_by_panel_id = _get_all_genes(genes_url, defaultdict(list))
 
     for panel in all_panels:
         panel_app_id = panel.get('id')
@@ -116,8 +118,6 @@ def _get_all_genes(genes_url: str, results_by_panel_id: dict):
     for result in resp_json.get('results', []):
         if result.get('panel'):
             panel_id = result['panel']['id']
-            if panel_id not in results_by_panel_id:
-                results_by_panel_id[panel_id] = []
             results_by_panel_id[panel_id].append(result)
 
     next_page = resp_json.get('next', None)
