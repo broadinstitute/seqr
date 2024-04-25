@@ -5,7 +5,6 @@ import { connect } from 'react-redux'
 import { getProjectsByGuid, getFamiliesByGuid, getAnalysisGroupsByGuid, getSearchesByHash } from 'redux/selectors'
 import PageHeaderLayout from 'shared/components/page/PageHeaderLayout'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
-import { getSelectedAnalysisGroups } from '../constants'
 
 const PAGE_CONFIGS = {
   project: (entityGuid, projectsByGuid) => ({
@@ -33,7 +32,9 @@ const PAGE_CONFIGS = {
           pageType = 'family'
           specificEntityGuid = familyGuids[0] // eslint-disable-line prefer-destructuring
         } else {
-          const analysisGroups = getSelectedAnalysisGroups(analysisGroupsByGuid, familyGuids)
+          const analysisGroups = Object.values(analysisGroupsByGuid).filter(
+            group => group.familyGuids?.every(familyGuid => familyGuids.includes(familyGuid)),
+          )
           if (analysisGroups.length === 1 && analysisGroups[0].familyGuids.length === familyGuids.length) {
             pageType = 'analysis_group'
             specificEntityGuid = analysisGroups[0].analysisGroupGuid
