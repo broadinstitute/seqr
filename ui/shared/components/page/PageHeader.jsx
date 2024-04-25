@@ -80,7 +80,7 @@ export default () => (
     <Route path="/project/:projectGuid/saved_variants/:variantPage?/:breadcrumbId?/:tag?" component={ProjectSavedVariantsPageHeader} />
     <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId?/:breadcrumbIdSection?/:breadcrumbIdSubsection*" component={ProjectPageHeader} />
     <Route path="/summary_data/:subPage?" component={SummaryDataPageHeader} />
-    <Route path="/variant_search/:pageType/:entityGuid" component={VariantSearchPageHeader} />
+    <Route path="/variant_search/:pageType/:entityGuid/:subPageType?/:subEntityGuid?" component={VariantSearchPageHeader} />
     <Route path="/:entity/:entityGuid?/:breadcrumb?/:breadcrumbId*" component={DefaultPageHeaderLayout} />
   </Switch>
 )

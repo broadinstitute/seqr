@@ -16,7 +16,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
     GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     PA_LOCUS_LIST_FIELDS, INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
-    VARIANT_NOTE_FIELDS, TAG_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, SAVED_VARIANT_DETAIL_FIELDS
+    VARIANT_NOTE_FIELDS, TAG_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, SAVED_VARIANT_DETAIL_FIELDS, DYNAMIC_ANALYSIS_GROUP_FIELDS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
@@ -133,7 +133,7 @@ EXPECTED_SEARCH_CONTEXT_RESPONSE = {
     },
     'projectsByGuid': {PROJECT_GUID: mock.ANY},
     'familiesByGuid': mock.ANY,
-    'analysisGroupsByGuid': {'AG0000183_test_group': mock.ANY, 'AG0000185_accepted': mock.ANY},
+    'analysisGroupsByGuid': {'AG0000183_test_group': mock.ANY, 'AG0000185_accepted': mock.ANY, 'DAG0000001_unsolved': mock.ANY, 'DAG0000002_my_new_cases': mock.ANY},
     'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY, 'LL00005_retina_proteome': mock.ANY},
 }
 
@@ -178,11 +178,17 @@ class VariantSearchAPITest(object):
         locus_list_fields.remove('canEdit')
         self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
         self.assertSetEqual(set(response_json['analysisGroupsByGuid']['AG0000183_test_group'].keys()), ANALYSIS_GROUP_FIELDS)
+        self.assertSetEqual(set(response_json['analysisGroupsByGuid']['DAG0000001_unsolved'].keys()), DYNAMIC_ANALYSIS_GROUP_FIELDS)
 
         self.assertEqual(len(response_json['familiesByGuid']), 11)
-        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), {'projectGuid', 'familyGuid', 'displayName', 'analysisStatus'})
-        self.assertEqual(response_json['familiesByGuid']['F000001_1']['displayName'], '1')
-        self.assertEqual(response_json['familiesByGuid']['F000001_1']['analysisStatus'], 'Q')
+        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), {
+            'projectGuid', 'familyGuid', 'displayName', 'analysisStatus', 'analysedBy', 'assignedAnalyst', 'sampleTypes',
+        })
+        self.assertDictEqual(response_json['familiesByGuid']['F000001_1'], {
+            'projectGuid': PROJECT_GUID, 'familyGuid': 'F000001_1', 'displayName': '1', 'analysisStatus': 'Q',
+            'assignedAnalyst': None, 'sampleTypes': [{'datasetType': 'SNV_INDEL', 'sampleType': 'WES', 'isActive': True}],
+            'analysedBy': [{'createdBy': 'Test No Access User', 'dataType': 'SNP', 'lastModifiedDate': '2022-07-22T19:27:08.563+00:00'}],
+        })
 
     def _assert_expected_rnaseq_response(self, response_json):
         self.assertDictEqual(

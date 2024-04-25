@@ -100,7 +100,7 @@ export const getProjectAnalysisGroupOptions = createSelector(
 export const getAnalysisGroupsByFamily = createSelector(
   getAnalysisGroupsByGuid,
   analysisGroupsByGuid => Object.values(analysisGroupsByGuid).reduce(
-    (acc, analysisGroup) => analysisGroup.familyGuids.reduce(
+    (acc, analysisGroup) => (analysisGroup.familyGuids || []).reduce(
       (familyAcc, familyGuid) => ({ ...familyAcc, [familyGuid]: [...(familyAcc[familyGuid] || []), analysisGroup] }),
       acc,
     ), {},
@@ -521,4 +521,40 @@ export const familyPassesFilters = createSelector(
       return !filters?.length || filters.some(filter => filter(family, user, samplesByFamily))
     })
   },
+)
+
+export const getProjectAnalysisGroupFamilyGuidsByGuid = createSelector(
+  getAnalysisGroupsGroupedByProjectGuid,
+  getFamiliesGroupedByProjectGuid,
+  familyPassesFilters,
+  (state, props) => (
+    state.currentProjectGuid ||
+    props.projectGuid ||
+    props.value?.projectGuid ||
+    props.match?.params?.projectGuid ||
+    props.match?.params?.entityGuid
+  ),
+  (projectAnalysisGroupsByGuid, familiesByProjectGuid, passesFilterFunc, projectGuid) => (
+    [
+      ...Object.values(projectAnalysisGroupsByGuid[projectGuid] || {}),
+      ...Object.values(projectAnalysisGroupsByGuid.null || {}),
+    ].reduce((acc, analysisGroup) => ({
+      ...acc,
+      [analysisGroup.analysisGroupGuid]: analysisGroup.criteria ?
+        Object.values(familiesByProjectGuid[projectGuid] || {}).filter(
+          family => passesFilterFunc(family, analysisGroup.criteria),
+        ).map(family => family.familyGuid) : analysisGroup.familyGuids,
+    }), {})
+  ),
+)
+
+export const getAnalysisGroupGuid = (state, props) => (
+  (props || {}).match ? props.match.params.analysisGroupGuid : (props || {}).analysisGroupGuid
+)
+
+export const getCurrentAnalysisGroupFamilyGuids = createSelector(
+  getAnalysisGroupGuid,
+  getProjectAnalysisGroupFamilyGuidsByGuid,
+  (state, props) => state.currentProjectGuid || props.match?.params?.projectGuid,
+  (analysisGroupGuid, analysisGroupFamilyGuidsByGuid) => analysisGroupFamilyGuidsByGuid[analysisGroupGuid],
 )

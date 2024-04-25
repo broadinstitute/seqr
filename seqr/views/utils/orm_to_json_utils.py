@@ -215,23 +215,26 @@ def _get_case_review_fields(model_cls, has_case_review_perm):
 
 
 FAMILY_DISPLAY_NAME_EXPR = Coalesce(NullIf('display_name', Value('')), 'family_id')
+FAMILY_ADDITIONAL_VALUES = {
+    'analysedBy': ArrayAgg(JSONObject(
+        createdBy=_user_expr('familyanalysedby__created_by'),
+        dataType='familyanalysedby__data_type',
+        lastModifiedDate='familyanalysedby__last_modified_date',
+    ), filter=Q(familyanalysedby__isnull=False)),
+    'assignedAnalyst': Case(
+        When(assigned_analyst__isnull=False, then=JSONObject(
+            fullName=_full_name_expr('assigned_analyst'), email=F('assigned_analyst__email'),
+        )), default=Value(None),
+    ),
+    'displayName': FAMILY_DISPLAY_NAME_EXPR,
+}
 
 
 def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None,
                            has_case_review_perm=False, additional_values=None):
 
     family_additional_values = {
-        'analysedBy': ArrayAgg(JSONObject(
-            createdBy=_user_expr('familyanalysedby__created_by'),
-            dataType='familyanalysedby__data_type',
-            lastModifiedDate='familyanalysedby__last_modified_date',
-        ), filter=Q(familyanalysedby__isnull=False)),
-        'assignedAnalyst': Case(
-            When(assigned_analyst__isnull=False, then=JSONObject(
-                fullName=_full_name_expr('assigned_analyst'), email=F('assigned_analyst__email'),
-            )), default=Value(None),
-        ),
-        'displayName': FAMILY_DISPLAY_NAME_EXPR,
+        **FAMILY_ADDITIONAL_VALUES,
         'pedigreeImage': NullIf(Concat(Value(MEDIA_URL), 'pedigree_image', output_field=CharField()), Value(MEDIA_URL)),
     }
     if additional_values:
@@ -364,7 +367,7 @@ def get_json_for_sample(sample, **kwargs):
     return _get_json_for_model(sample, **_get_sample_json_kwargs(**kwargs))
 
 
-def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False, **kwargs):
+def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False, is_dynamic=False, **kwargs):
     """Returns a JSON representation of the given list of AnalysisGroups.
 
     Args:
@@ -379,14 +382,18 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested
             'familyGuids': [f.guid for f in group.families.all()]
         })
 
-    prefetch_related_objects(analysis_groups, 'families')
+    if not is_dynamic:
+        prefetch_related_objects(analysis_groups, 'families')
 
     if project_guid or not skip_nested:
-        additional_kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]}
+        additional_kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': None if is_dynamic else project_guid}]}
     else:
         additional_kwargs = {'additional_model_fields': ['project_id']}
 
-    return _get_json_for_models(analysis_groups, process_result=_process_result, **additional_kwargs, **kwargs)
+    return _get_json_for_models(
+        analysis_groups, process_result=None if is_dynamic else _process_result, guid_key='analysisGroupGuid',
+        **additional_kwargs, **kwargs,
+    )
 
 
 def get_json_for_analysis_group(analysis_group, **kwargs):

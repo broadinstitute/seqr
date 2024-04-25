@@ -1,7 +1,7 @@
 from collections import defaultdict
 from django.db.models import Count, Q, prefetch_related_objects
 
-from seqr.models import Individual, IgvSample, AnalysisGroup, LocusList, VariantTagType,\
+from seqr.models import Individual, IgvSample, AnalysisGroup, DynamicAnalysisGroup, LocusList, VariantTagType,\
     VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, _get_json_for_models, \
@@ -26,7 +26,7 @@ def get_projects_child_entities(projects, project_guid, user):
     else:
         project_id_to_guid = {project.id: project.guid for project in projects}
         for group in response['analysisGroupsByGuid'].values():
-            group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
+            group['projectGuid'] = project_id_to_guid.get(group.pop('projectId'))
 
         for project in response['projectsByGuid'].values():
             project['locusListGuids'] = []
@@ -42,9 +42,11 @@ def get_projects_child_entities(projects, project_guid, user):
 
 def get_project_analysis_groups(projects, project_guid):
     analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
-    analysis_groups = get_json_for_analysis_groups(
-        analysis_group_models, project_guid=project_guid, skip_nested=True, is_analyst=False)
-    return {ag['analysisGroupGuid']: ag for ag in analysis_groups}
+    get_json_kwargs = dict(project_guid=project_guid, skip_nested=True, is_analyst=False)
+    analysis_groups = get_json_for_analysis_groups(analysis_group_models, **get_json_kwargs)
+    dynamic_analysis_group_models = DynamicAnalysisGroup.objects.filter(Q(project__in=projects) | Q(project__isnull=True))
+    dynamic_analysis_groups = get_json_for_analysis_groups(dynamic_analysis_group_models, **get_json_kwargs, is_dynamic=True)
+    return {ag['analysisGroupGuid']: ag for ag in analysis_groups + dynamic_analysis_groups}
 
 
 def get_project_locus_lists(projects, user, include_metadata=False):

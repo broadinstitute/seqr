@@ -7,6 +7,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import MultipleObjectsReturned, PermissionDenied
 from django.db.utils import IntegrityError
 from django.db.models import Q, F, Value
+from django.db.models.functions import JSONObject
 from math import ceil
 
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
@@ -21,7 +22,7 @@ from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
-    get_json_for_saved_searches, add_individual_hpo_details, FAMILY_DISPLAY_NAME_EXPR
+    get_json_for_saved_searches, add_individual_hpo_details, FAMILY_ADDITIONAL_VALUES
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     user_is_analyst, login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission
 from seqr.views.utils.project_context_utils import get_projects_child_entities
@@ -382,14 +383,19 @@ def search_context_handler(request):
     response['familiesByGuid'] = {f['familyGuid']: f for f in Family.objects.filter(project__in=projects).values(
         projectGuid=Value(project_guid) if project_guid else F('project__guid'),
         familyGuid=F('guid'),
-        displayName=FAMILY_DISPLAY_NAME_EXPR,
         analysisStatus=F('analysis_status'),
+        **FAMILY_ADDITIONAL_VALUES,
     )}
 
-    project_dataset_types = get_search_samples(projects).values('individual__family__project__guid').annotate(
-        dataset_types=ArrayAgg('dataset_type', distinct=True))
-    for agg in project_dataset_types:
-        response['projectsByGuid'][agg['individual__family__project__guid']]['datasetTypes'] = agg['dataset_types']
+    family_sample_types = get_search_samples(projects).values('individual__family__guid').annotate(
+        samples=ArrayAgg(JSONObject(sampleType='sample_type', datasetType='dataset_type', isActive=Value(True)), distinct=True))
+    project_dataset_types = defaultdict(set)
+    for agg in family_sample_types:
+        family = response['familiesByGuid'][agg['individual__family__guid']]
+        family['sampleTypes'] = agg['samples']
+        project_dataset_types[family['projectGuid']].update([s['datasetType'] for s in agg['samples']])
+    for project_guid, dataset_types in project_dataset_types.items():
+        response['projectsByGuid'][project_guid]['datasetTypes'] = list(dataset_types)
 
     project_category_guid = context.get('projectCategoryGuid')
     if project_category_guid:

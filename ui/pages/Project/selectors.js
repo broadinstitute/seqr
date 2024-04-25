@@ -22,7 +22,7 @@ import {
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchableSampleByFamily, getSelectableTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
   getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual,
-  getRnaSeqDataByIndividual, familyPassesFilters,
+  getRnaSeqDataByIndividual, familyPassesFilters, getAnalysisGroupGuid, getCurrentAnalysisGroupFamilyGuids,
 } from 'redux/selectors'
 
 import {
@@ -76,28 +76,22 @@ export const getProjectFamiliesByGuid = createSelector(
   getFamiliesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid,
 )
 export const getProjectAnalysisGroupsByGuid = createSelector(
-  getAnalysisGroupsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid,
-)
-
-const getAnalysisGroupGuid = (state, props) => (
-  (props || {}).match ? props.match.params.analysisGroupGuid : (props || {}).analysisGroupGuid
-)
-
-const getCurrentAnalysisGroup = createSelector(
-  getProjectAnalysisGroupsByGuid,
-  getAnalysisGroupGuid,
-  (projectAnalysisGroupsByGuid, analysisGroupGuid) => analysisGroupGuid &&
-    projectAnalysisGroupsByGuid[analysisGroupGuid],
+  getAnalysisGroupsGroupedByProjectGuid,
+  getProjectGuid,
+  (groupedAnalysisGroups, projectGuid) => ({
+    ...selectEntitiesForProjectGuid(groupedAnalysisGroups, projectGuid),
+    ...selectEntitiesForProjectGuid(groupedAnalysisGroups, null),
+  }),
 )
 
 export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
   getProjectFamiliesByGuid,
-  getCurrentAnalysisGroup,
-  (projectFamiliesByGuid, analysisGroup) => {
-    if (!analysisGroup) {
+  getCurrentAnalysisGroupFamilyGuids,
+  (projectFamiliesByGuid, analysisGroupFamilyGuids) => {
+    if (!analysisGroupFamilyGuids) {
       return projectFamiliesByGuid
     }
-    return analysisGroup.familyGuids.reduce(
+    return analysisGroupFamilyGuids.reduce(
       (acc, familyGuid) => ({ ...acc, [familyGuid]: projectFamiliesByGuid[familyGuid] }), {},
     )
   },
@@ -142,12 +136,12 @@ export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
 
 export const getProjectAnalysisGroupSamplesByTypes = createSelector(
   getCurrentProject,
-  getCurrentAnalysisGroup,
-  (project, analysisGroup) => Object.entries(project.sampleCounts || {}).map(
+  getCurrentAnalysisGroupFamilyGuids,
+  (project, analysisGroupFamilyGuids) => Object.entries(project.sampleCounts || {}).map(
     ([key, typeCounts]) => ([key, typeCounts.map(({ familyCounts, ...data }) => ({
       ...data,
       count: Object.entries(familyCounts).reduce((total, [familyGuid, count]) => (
-        (!analysisGroup || analysisGroup.familyGuids.includes(familyGuid)) ? total + count : total
+        (!analysisGroupFamilyGuids || analysisGroupFamilyGuids.includes(familyGuid)) ? total + count : total
       ), 0),
     })).filter(({ count }) => count > 0)]),
   ),
@@ -246,9 +240,9 @@ export const getSavedVariantTagTypeCounts = createSelector(
 )
 
 export const getAnalysisGroupTagTypeCounts = createSelector(
-  getCurrentAnalysisGroup,
+  getCurrentAnalysisGroupFamilyGuids,
   getFamilyTagTypeCounts,
-  (analysisGroup, familyTagTypeCounts) => (analysisGroup ? analysisGroup.familyGuids.reduce(
+  (analysisGroupFamilyGuids, familyTagTypeCounts) => (analysisGroupFamilyGuids ? analysisGroupFamilyGuids.reduce(
     (acc, familyGuid) => Object.entries(familyTagTypeCounts[familyGuid] || {}).reduce((acc2, [tagType, count]) => (
       { ...acc2, [tagType]: count + (acc2[tagType] || 0) }
     ), acc), {},
@@ -412,7 +406,7 @@ export const getVisibleFamilies = createSelector(
     return familyFilter ?
       searchedFamilies.filter(family => familyFilter({
         ...family,
-        individuals: family.individualGuids.map(individualGuid => (individualsByGuid[individualGuid])),
+        individuals: family?.individualGuids.map(individualGuid => (individualsByGuid[individualGuid])),
       })) : searchedFamilies
   },
 )
@@ -781,7 +775,7 @@ export const getPageHeaderEntityLinks = createSelector(
       familyGuid => !(hasActiveSearchableSampleByFamilyGuid[familyGuid] || {}).isSearchable,
     )
     const entityLinks = [{
-      to: `/variant_search/${searchType}/${searchId}`,
+      to: `/variant_search/${searchType === 'analysis_group' ? `project/${project.projectGuid}/` : ''}${searchType}/${searchId}`,
       content: `${snakecaseToTitlecase(searchType)} Variant Search`,
       disabled,
       popup: disabled ?

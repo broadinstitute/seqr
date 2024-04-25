@@ -306,7 +306,9 @@ const SHOW_ANALYSED = 'SHOW_ANALYSED'
 const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
 
 const hasMatchingSampleFilter = isMatchingSample => (family, user, samplesByFamily) => (
-  (samplesByFamily[family.familyGuid] || []).some(sample => sample.isActive && isMatchingSample(sample)))
+  (family.sampleTypes || samplesByFamily[family.familyGuid] || []).some(
+    sample => sample.isActive && isMatchingSample(sample),
+  ))
 
 export const ASSIGNED_TO_ME_FILTER = {
   value: SHOW_ASSIGNED_TO_ME,
