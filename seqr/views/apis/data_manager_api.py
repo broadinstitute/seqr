@@ -446,14 +446,14 @@ def get_loaded_projects(request, sample_type, dataset_type):
 
     if project_samples:
         for project in projects:
-            project['sampleIds'] = project_samples[project['projectGuid']]
+            project['sampleIds'] = sorted(project_samples[project['projectGuid']])
 
     return create_json_response({'projects': list(projects)})
 
 
 def _fetch_airtable_loadable_project_samples(user):
     pdos = AirtableSession(user).fetch_records(
-        'PDO', fields=['PassingCollaboratorSampleIDs', 'SeqrIDs', 'PDOName', 'PDOStatus', 'SeqrProjectURL'],
+        'PDO', fields=['PassingCollaboratorSampleIDs', 'SeqrIDs', 'SeqrProjectURL'],
         or_filters={'PDOStatus': LOADABLE_PDO_STATUSES}
     )
     project_samples = defaultdict(set)
