@@ -1485,19 +1485,51 @@ class LoadDataAPITest(AirflowTestCase):
         """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
-    def _has_expected_gs_calls(self, mock_subprocess, mock_open, sample_type='WGS', **kwargs):
+        # Test loading with sample subset
+        mock_open.reset_mock()
+        mock_subprocess.reset_mock()
+        body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(PROJECT_SAMPLES_OPTION)]})
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'warnings': None,
+            'errors': ['The following samples are included in airtable but missing from seqr: NA21988'],
+        })
+
+        sample_ids = PROJECT_SAMPLES_OPTION['sampleIds']
+        body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [sample_ids[1]]})]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'warnings': None,
+            'errors': ['The following families have previously loaded samples absent from airtable: 14 (NA21234)'],
+        })
+
+        body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': sample_ids[:2]})]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+        self._has_expected_gs_calls(mock_subprocess, mock_open, has_project_subset=True)
+
+    def _has_expected_gs_calls(self, mock_subprocess, mock_open, sample_type='WGS', has_project_subset=False, **kwargs):
+        projects = self.PROJECTS[1:] if has_project_subset else self.PROJECTS
         mock_open.assert_has_calls([
-            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in self.PROJECTS
+            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in projects
         ], any_order=True)
         files = [
             [row.split('\t') for row in write_call.args[0].split('\n')]
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
         ]
         self.assertEqual(len(files), 2)
-        self.assertEqual(len(files[0]), 15)
-        self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS)
-        self.assertEqual(len(files[1]), 3)
-        self.assertListEqual(files[1], [
+        if has_project_subset:
+            self.assertEqual(len(files[1]), 3)
+            self.assertListEqual(files[1], [['s'], ['NA21234'], ['NA21987']])
+        else:
+            self.assertEqual(len(files[0]), 15)
+            self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS)
+        ped_file = files[0 if has_project_subset else 1]
+        self.assertEqual(len(ped_file), 3)
+        self.assertListEqual(ped_file, [
             PEDIGREE_HEADER,
             ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'],
             ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
@@ -1507,5 +1539,5 @@ class LoadDataAPITest(AirflowTestCase):
             mock.call(
                 f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/',
                 stdout=-1, stderr=-2, shell=True,  # nosec
-            ) for project in self.PROJECTS
+            ) for project in projects
         ], any_order=True)
