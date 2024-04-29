@@ -1205,8 +1205,11 @@ class PhenotypePrioritization(BulkOperationBase):
     disease_name = models.TextField()
     scores = models.JSONField()
 
+    created_date = models.DateTimeField(default=timezone.now, db_index=True)
+    created_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
+
     def __unicode__(self):
         return "%s:%s:%s" % (self.individual.individual_id, self.gene_id, self.disease_id)
 
     class Meta:
-        json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'disease_name', 'scores']
+        json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'disease_name', 'scores', 'created_date', 'created_by']

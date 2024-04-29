@@ -14,6 +14,7 @@ from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
+from seqr.utils.search.add_data_utils import notify_phenotype_prioritization_loaded
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
@@ -356,7 +357,7 @@ def load_phenotype_prioritization_data(request):
     if missing_info or conflict_info:
         return create_json_response({'error': missing_info + conflict_info}, status=400)
 
-    all_records = []
+    all_records_by_project_name = {}
     to_delete = PhenotypePrioritization.objects.none()
     error = None
     for project_name, records_by_indiv in data_by_project_indiv_id.items():
@@ -380,7 +381,7 @@ def load_phenotype_prioritization_data(request):
         info.append(f'Project {project_name}: {delete_info}loaded {len(indiv_records)} record(s)')
 
         to_delete |= exist_records
-        all_records += indiv_records
+        all_records_by_project_name[project_name] = indiv_records
 
     if error:
         return create_json_response({'error': error}, status=400)
@@ -388,7 +389,13 @@ def load_phenotype_prioritization_data(request):
     if to_delete:
         PhenotypePrioritization.bulk_delete(request.user, to_delete)
 
-    PhenotypePrioritization.bulk_create(request.user, [PhenotypePrioritization(**data) for data in all_records])
+    all_records = [record for indiv_records in all_records_by_project_name.values() for record in indiv_records]
+    PhenotypePrioritization.bulk_create(request.user, [PhenotypePrioritization(**data, created_by=user) for data in all_records])
+
+    for project_name, indiv_records in all_records_by_project_name.items():
+        project = projects_by_name[project_name][0]
+        num_samples = len(indiv_records)
+        notify_phenotype_prioritization_loaded(project, tool, num_samples, file_path, request.user)
 
     return create_json_response({
         'info': info,
