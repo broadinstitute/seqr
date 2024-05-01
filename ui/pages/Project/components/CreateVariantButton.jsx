@@ -148,7 +148,13 @@ const validateHasTranscriptId = (value, allValues, props, name) => {
   return allValues[TRANSCRIPT_ID_FIELD_NAME] ? undefined : `Transcript ID is required to include ${name}`
 }
 
-const formatField = field => ({ inline: true, width: 16, ...field })
+const formatField = (field) => {
+  let formattedField = { inline: true, width: 16, ...field }
+  if (field.validate && field.validate !== validateHasTranscriptId) {
+    formattedField = { ...formattedField, label: `${field.label}*` }
+  }
+  return formattedField
+}
 
 const SNV_FIELDS = [
   CHROM_FIELD,
@@ -173,9 +179,7 @@ const SNV_FIELDS = [
       format: value => (value || {}).numAlt,
     },
   },
-].map(formatField).map(field => (
-  field.validate && field.validate !== validateHasTranscriptId ? { ...field, label: `${field.label}*` } : field
-))
+].map(formatField)
 
 const SV_FIELDS = [
   CHROM_FIELD,
@@ -206,7 +210,7 @@ const SV_FIELDS = [
       max: 12,
     },
   },
-].map(formatField).map(field => (field.validate ? { ...field, label: `${field.label}*` } : field))
+].map(formatField)
 
 const BaseCreateVariantButton = React.memo(({ variantType, family, user, ...props }) => (
   user.isAnalyst ? (
