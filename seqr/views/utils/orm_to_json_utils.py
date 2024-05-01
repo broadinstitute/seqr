@@ -296,6 +296,10 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         'maternalId': F('mother__individual_id'),
         'paternalId': F('father__individual_id'),
         'displayName': INDIVIDUAL_DISPLAY_NAME_EXPR,
+        # 'phenotypePrioritizationTools':  ArrayAgg(
+        #     'phenotypeprioritization__tool',
+        #     filter=Q(phenotypeprioritization__tool__isnull=False)
+        # )
     }
     if add_sample_guids_field:
         additional_values.update({

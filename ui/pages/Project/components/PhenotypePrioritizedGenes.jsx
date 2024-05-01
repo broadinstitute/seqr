@@ -58,6 +58,7 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
 const BasePhenotypePriGenes = React.memo((
   { individualGuid, phenotypeGeneScores, familyGuid, loading, load },
 ) => (
+  //   TODO might have to make a change here
   <DataLoader content={phenotypeGeneScores[individualGuid]} contentId={individualGuid} load={load} loading={loading}>
     <GeneSearchLink
       buttonText="Search for variants in high-ranked genes"
