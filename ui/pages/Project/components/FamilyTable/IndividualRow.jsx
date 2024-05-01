@@ -31,7 +31,7 @@ import { getSamplesByGuid, getMmeSubmissionsByGuid } from 'redux/selectors'
 import { HPO_FORM_FIELDS } from '../HpoTerms'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
-  ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS,
+  ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS, PHENOTYPE_PRIORITIZATION_FIELDS,
 } from '../../constants'
 import { updateIndividuals } from '../../reducers'
 import { getCurrentProject, getParentOptionsByIndividual } from '../../selectors'
@@ -179,7 +179,11 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         </Link>
       </div>
     )}
-    {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
+    {individual.phenotypePrioritizationTools.map(
+        tool => <div key={tool.tool}><Sample loadedSample={{ sampleType: PHENOTYPE_PRIORITIZATION_FIELDS[tool.tool],
+          loadedDate: tool.createdDate }}/></div>
+    )}
+    {SHOW_DATA_MODAL_CONFIG.filter(({shouldShowField}) => individual[shouldShowField]).map(
       ({ modalName, title, modalSize, linkText, component }) => {
         const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
         const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
