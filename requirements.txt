@@ -159,7 +159,7 @@ slacker==0.14.0
     # via -r requirements.in
 slugify==0.0.1
     # via -r requirements.in
-social-auth-app-django==5.0.0
+social-auth-app-django==5.4.1
     # via -r requirements.in
 social-auth-core==4.3.0
     # via
