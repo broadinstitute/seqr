@@ -436,6 +436,7 @@ def get_loaded_projects(request, sample_type, dataset_type):
         project_samples = _fetch_airtable_loadable_project_samples(request.user)
         projects = projects.filter(guid__in=project_samples.keys())
         exclude_sample_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
+        # Include projects with either the matched sample type OR with no loaded data
         projects = projects.exclude(family__individual__sample__sample_type=exclude_sample_type)
     else:
         projects = projects.filter(family__individual__sample__sample_type=sample_type)
