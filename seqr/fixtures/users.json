@@ -161,7 +161,7 @@
         "username": "test_data_manager",
         "first_name": "Test Data Manager",
         "last_name": "",
-        "email": "test_data_manager@test.com",
+        "email": "test_data_manager@broadinstitute.org",
         "is_staff": true,
         "is_active": true,
         "date_joined": "2017-03-12T23:09:54.180Z",
