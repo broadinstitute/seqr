@@ -147,12 +147,13 @@ def update_individual_igv_sample(request, individual_guid):
         if not file_path:
             raise ValueError('request must contain fields: filePath')
 
-        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP if file_path.endswith(suffix)), None)
+        file_name = _get_valid_file_name(file_path, request.user)
+        if not file_name:
+            raise Exception('Error accessing "{}"'.format(file_path))
+        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP if file_name.endswith(suffix)), None)
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
-                file_path, ', '.join([suffix for suffix, _ in SAMPLE_TYPE_MAP])))
-        if not does_file_exist(file_path, user=request.user):
-            raise Exception('Error accessing "{}"'.format(file_path))
+                file_name, ', '.join([suffix for suffix, _ in SAMPLE_TYPE_MAP])))
 
         sample, created = get_or_create_model_from_json(
             IgvSample, create_json={'individual': individual, 'sample_type': sample_type},
@@ -170,6 +171,21 @@ def update_individual_igv_sample(request, individual_guid):
     except Exception as e:
         error = str(e)
         return create_json_response({'error': error}, status=400, reason=error)
+
+
+def _get_valid_file_name(file_path, user):
+    if not file_path.startswith('drs://'):
+        return file_path if does_file_exist(file_path, user=user) else None
+
+    drs_path = file_path.split('/')
+    response = requests.get(
+        f'https://{drs_path[-2]}/ga4gh/drs/v1/objects/{drs_path[-1]}',
+        headers=_get_gs_auth_api_headers(user),
+    )
+    if response.status_code != 200:
+        return None
+    #access = next((a['access_url'] for a in drs_info['access_methods'] if a.get('type') == 'https'), None)
+    return response.json()['name']
 
 
 @login_and_policies_required
@@ -198,8 +214,12 @@ def _stream_gs(request, gs_path):
                                  content_type='application/octet-stream')
 
 
+def _get_gs_auth_api_headers(user):
+    return {'Authorization': 'Bearer {}'.format(_get_access_token(user))}
+
+
 def _get_gs_rest_api_headers(range_header, gs_path, user=None):
-    headers = {'Authorization': 'Bearer {}'.format(_get_access_token(user))}
+    headers = _get_gs_auth_api_headers(user)
     if range_header:
         headers['Range'] = range_header
     google_project = get_google_project(gs_path)
