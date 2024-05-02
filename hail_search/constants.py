@@ -1,10 +1,14 @@
 GENOME_VERSION_GRCh38 = 'GRCh38'
+GENOME_VERSION_GRCh37 = 'GRCh37'
 
 AFFECTED = 'A'
 UNAFFECTED = 'N'
+UNKNOWN_AFFECTED = 'U'
 AFFECTED_ID = 0
 UNAFFECTED_ID = 1
+UNKNOWN_AFFECTED_ID = 2
 MALE = 'M'
+AFFECTED_ID_MAP = {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID, UNKNOWN_AFFECTED: UNKNOWN_AFFECTED_ID}
 
 GROUPED_VARIANTS_FIELD = 'variants'
 GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
@@ -15,6 +19,8 @@ CLINVAR_KEY = 'clinvar'
 CLINVAR_MITO_KEY = 'clinvar_mito'
 HGMD_KEY = 'hgmd'
 STRUCTURAL_ANNOTATION_FIELD = 'structural'
+FAMILY_GUID_FIELD = 'familyGuids'
+GENOTYPES_FIELD = 'genotypes'
 
 ANNOTATION_OVERRIDE_FIELDS = [
     SCREEN_KEY, SPLICE_AI_FIELD, NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD,
@@ -43,20 +49,20 @@ X_LINKED_RECESSIVE = 'x_linked_recessive'
 COMPOUND_HET = 'compound_het'
 ANY_AFFECTED = 'any_affected'
 RECESSIVE_FILTER = {
-    AFFECTED: ALT_ALT,
-    UNAFFECTED: HAS_REF,
+    AFFECTED_ID: ALT_ALT,
+    UNAFFECTED_ID: HAS_REF,
 }
 INHERITANCE_FILTERS = {
     RECESSIVE: RECESSIVE_FILTER,
     X_LINKED_RECESSIVE: RECESSIVE_FILTER,
     'homozygous_recessive': RECESSIVE_FILTER,
     COMPOUND_HET: {
-        AFFECTED: COMP_HET_ALT,
-        UNAFFECTED: HAS_REF,
+        AFFECTED_ID: COMP_HET_ALT,
+        UNAFFECTED_ID: HAS_REF,
     },
     'de_novo': {
-        AFFECTED: HAS_ALT,
-        UNAFFECTED: REF_REF,
+        AFFECTED_ID: HAS_ALT,
+        UNAFFECTED_ID: REF_REF,
     },
 }
 
@@ -68,7 +74,7 @@ CLINVAR_PATH_SIGNIFICANCES = {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
 CLINVAR_PATH_RANGES = [
     (CLINVAR_PATH_FILTER, 'Pathogenic', 'Pathogenic/Likely_risk_allele'),
     (CLINVAR_LIKELY_PATH_FILTER, 'Pathogenic/Likely_pathogenic', 'Likely_risk_allele'),
-    ('vus_or_conflicting', 'Conflicting_interpretations_of_pathogenicity', 'No_pathogenic_assertion'),
+    ('vus_or_conflicting', 'Conflicting_classifications_of_pathogenicity', 'No_pathogenic_assertion'),
     ('likely_benign', 'Likely_benign', 'Benign/Likely_benign'),
     ('benign', 'Benign/Likely_benign', 'Benign'),
 ]

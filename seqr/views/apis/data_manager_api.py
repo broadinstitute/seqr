@@ -20,13 +20,14 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.vcf_utils import validate_vcf_exists
 
 from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
-from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file, \
-    load_rna_seq_splice_outlier
+from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
+    post_process_rna_data
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 
-from seqr.models import Sample, Individual, Project, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, RnaSeqSpliceOutlier
+from seqr.models import Sample, Individual, Project, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
@@ -256,14 +257,7 @@ EXCLUDE_PROJECTS = [
     'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes', 'v02_loading_test_project',
 ]
 
-
-RNA_DATA_TYPE_CONFIGS = {
-    'outlier': {'load_func': load_rna_seq_outlier, 'model_class': RnaSeqOutlier},
-    'tpm': {'load_func': load_rna_seq_tpm, 'model_class': RnaSeqTpm},
-    'splice_outlier': {'load_func': load_rna_seq_splice_outlier, 'model_class': RnaSeqSpliceOutlier}
-}
-
-@data_manager_required
+@pm_or_data_manager_required
 def update_rna_seq(request):
     request_json = json.loads(request.body)
 
@@ -277,28 +271,44 @@ def update_rna_seq(request):
     if uploaded_mapping_file_id:
         mapping_file = load_uploaded_file(uploaded_mapping_file_id)
 
+    file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
+
+    sample_files = {}
+
+    def _save_sample_data(sample_guid, sample_data):
+        if sample_guid not in sample_files:
+            file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
+            sample_files[sample_guid] = gzip.open(file_name, 'at')
+        sample_files[sample_guid].write(f'{json.dumps(sample_data)}\n')
+
     try:
-        load_func = RNA_DATA_TYPE_CONFIGS[data_type]['load_func']
-        samples_to_load, info, warnings = load_func(
-            file_path, user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
+        sample_guids, info, warnings = load_rna_seq(
+            data_type, file_path, _save_sample_data,
+            user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
-
-    # Save sample data for loading
-    file_name = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}.json.gz'
-    with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'wt') as f:
-        for sample_guid, sample_data in samples_to_load.items():
-            f.write(f'{sample_guid}\t\t{json.dumps(sample_data)}\n')
 
     return create_json_response({
         'info': info,
         'warnings': warnings,
-        'fileName': file_name,
-        'sampleGuids': list(samples_to_load.keys()),
+        'fileName': file_name_prefix,
+        'sampleGuids': sorted(sample_guids),
     })
 
 
-@data_manager_required
+def _get_sample_file_name(file_name_prefix, sample_guid):
+    return f'{file_name_prefix}__{sample_guid}.json.gz'
+
+
+def _load_saved_sample_data(file_name_prefix, sample_guid):
+    file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
+    if os.path.exists(file_name):
+        with gzip.open(file_name, 'rt') as f:
+            return [json.loads(line) for line in f.readlines()]
+    return None
+
+
+@pm_or_data_manager_required
 def load_rna_seq_sample_data(request, sample_guid):
     sample = Sample.objects.get(guid=sample_guid)
     logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
@@ -306,12 +316,16 @@ def load_rna_seq_sample_data(request, sample_guid):
     request_json = json.loads(request.body)
     file_name = request_json['fileName']
     data_type = request_json['dataType']
-    with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'rt') as f:
-        row = next(line for line in f if line.split('\t\t')[0] == sample_guid)
-        data_by_gene = json.loads(row.split('\t\t')[1])
+    config = RNA_DATA_TYPE_CONFIGS[data_type]
 
-    model_cls = RNA_DATA_TYPE_CONFIGS[data_type]['model_class']
-    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_by_gene.values()])
+    data_rows = _load_saved_sample_data(file_name, sample_guid)
+    data_rows, error = post_process_rna_data(sample_guid, data_rows, **config.get('post_process_kwargs', {}))
+    if error:
+        return create_json_response({'error': error}, status=400)
+
+    model_cls = config['model_class']
+    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_rows])
+    update_model_from_json(sample, {'is_active': True}, user=request.user)
 
     return create_json_response({'success': True})
 

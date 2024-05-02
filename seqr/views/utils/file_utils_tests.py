@@ -28,10 +28,11 @@ TEST_DATA_TYPES = {
     'fam': TSV_DATA,
     'ped': TSV_DATA,
     'csv': CSV_DATA,
-    'json': JSON_DATA,
     'xls': EXCEL_DATA,
     'xlsx': EXCEL_DATA,
 }
+CONDITIONAL_DATA_TYPES = {'json': JSON_DATA}
+ALL_TEST_DATA_TYPES = {**TEST_DATA_TYPES, **CONDITIONAL_DATA_TYPES}
 
 PARSED_DATA = [
     ['Family ID', 'Individual ID', 'Notes'],
@@ -103,7 +104,7 @@ class FileUtilsTest(AuthenticationTestCase):
             xlsx_data = tmp.read()
 
 
-        for ext, data in TEST_DATA_TYPES.items():
+        for ext, data in ALL_TEST_DATA_TYPES.items():
             if ext == 'xls' or ext == 'xlsx':
                 data = xlsx_data
             response = self.client.post(
@@ -125,3 +126,9 @@ class FileUtilsTest(AuthenticationTestCase):
         for call_args in mock_load_xl.call_args_list:
             self.assertEqual(call_args.args[0].read().encode('utf-8'), EXCEL_DATA)
             self.assertDictEqual(call_args.kwargs, {'read_only': True})
+
+        for ext, data in CONDITIONAL_DATA_TYPES.items():
+            with self.assertRaises(ValueError) as cm:
+                parse_file('test.{}'.format(ext), StringIO(data.decode('utf-8')))
+            self.assertEqual(str(cm.exception), f'Unexpected file type: test.{ext}')
+            self.assertListEqual(parse_file('test.{}'.format(ext), StringIO(data.decode('utf-8')), allow_json=True), PARSED_DATA)

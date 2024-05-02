@@ -38,6 +38,7 @@ from seqr.views.apis.individual_api import \
     update_individual_handler, \
     edit_individuals_handler, \
     delete_individuals_handler, \
+    import_gregor_metadata, \
     receive_individuals_table_handler, \
     save_individuals_table_handler, \
     receive_individuals_metadata_handler, \
@@ -127,12 +128,10 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
     validate_callset, get_loaded_projects, load_data
 from seqr.views.apis.report_api import \
     anvil_export, \
-    family_metadata, \
-    variant_metadata, \
     gregor_export, \
     seqr_stats
 from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, hpo_summary_data, \
-    bulk_update_family_external_analysis, individual_metadata
+    bulk_update_family_external_analysis, individual_metadata, family_metadata, variant_metadata
 from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -142,7 +141,8 @@ from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, 
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
-    project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists
+    project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists, \
+    project_samples, project_notifications, mark_read_project_notifications, subscribe_project_notifications
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     grant_workspace_access, validate_anvil_vcf, add_workspace_data, get_anvil_vcf_list
@@ -206,12 +206,16 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
     'project/(?P<project_guid>[^/]+)/get_families': project_families,
     'project/(?P<project_guid>[^/]+)/get_individuals': project_individuals,
+    'project/(?P<project_guid>[^/]+)/get_samples': project_samples,
     'project/(?P<project_guid>[^/]+)/get_family_notes': project_family_notes,
     'project/(?P<project_guid>[^/]+)/get_mme_submissions': project_mme_submisssions,
     'project/(?P<project_guid>[^/]+)/get_analysis_groups': project_analysis_groups,
     'project/(?P<project_guid>[^/]+)/get_locus_lists': project_locus_lists,
     'project/(?P<project_guid>[^/]+)/get_overview': project_overview,
     'project/(?P<project_guid>[^/]+)/get_collaborators': project_collaborators,
+    'project/(?P<project_guid>[^/]+)/notifications/mark_read': mark_read_project_notifications,
+    'project/(?P<project_guid>[^/]+)/notifications/subscribe': subscribe_project_notifications,
+    'project/(?P<project_guid>[^/]+)/notifications/(?P<read_status>(un)?read)': project_notifications,
 
     'project/create_project': create_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project': update_project_handler,
@@ -225,6 +229,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/delete_families': delete_families_handler,
     'project/(?P<project_guid>[^/]+)/edit_individuals': edit_individuals_handler,
     'project/(?P<project_guid>[^/]+)/delete_individuals': delete_individuals_handler,
+    'project/(?P<project_guid>[^/]+)/import_gregor_metadata': import_gregor_metadata,
     'project/(?P<project_guid>[^/]+)/upload_families_table': receive_families_table_handler,
 
     'project/(?P<project_guid>[^/]+)/upload_individuals_table': receive_individuals_table_handler,
@@ -313,8 +318,6 @@ api_endpoints = {
     'upload_temp_file': save_temp_file,
 
     'report/anvil/(?P<project_guid>[^/]+)': anvil_export,
-    'report/family_metadata/(?P<project_guid>[^/]+)': family_metadata,
-    'report/variant_metadata/(?P<project_guid>[^/]+)': variant_metadata,
     'report/gregor': gregor_export,
     'report/seqr_stats': seqr_stats,
 
@@ -337,6 +340,8 @@ api_endpoints = {
     'summary_data/matchmaker': mme_details,
     'summary_data/update_external_analysis': bulk_update_family_external_analysis,
     'summary_data/individual_metadata/(?P<project_guid>[^/]+)': individual_metadata,
+    'summary_data/family_metadata/(?P<project_guid>[^/]+)': family_metadata,
+    'summary_data/variant_metadata/(?P<project_guid>[^/]+)': variant_metadata,
 
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/grant_access': grant_workspace_access,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/validate_vcf': validate_anvil_vcf,

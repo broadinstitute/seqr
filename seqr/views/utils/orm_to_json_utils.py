@@ -328,15 +328,7 @@ def add_individual_hpo_details(parsed_individuals):
                 feature.update({'category': hpo.category_id, 'label': hpo.name})
 
 
-def get_json_for_samples(samples, project_guid=None, family_guid=None, individual_guid=None, skip_nested=False, **kwargs):
-    """Returns a JSON representation of the given list of Samples.
-
-    Args:
-        samples (array): array of django models for the Samples.
-    Returns:
-        array: array of json objects
-    """
-
+def _get_sample_json_kwargs(project_guid=None, family_guid=None, individual_guid=None, skip_nested=False, **kwargs):
     if project_guid or not skip_nested:
         additional_kwargs = {'nested_fields': [
             {'fields': ('individual', 'guid'), 'value': individual_guid},
@@ -345,8 +337,19 @@ def get_json_for_samples(samples, project_guid=None, family_guid=None, individua
         ]}
     else:
         additional_kwargs = {'additional_model_fields': ['individual_id']}
+    return {'guid_key': 'sampleGuid', **additional_kwargs, **kwargs}
 
-    return _get_json_for_models(samples, guid_key='sampleGuid', **additional_kwargs, **kwargs)
+
+def get_json_for_samples(samples, **kwargs):
+    """Returns a JSON representation of the given list of Samples.
+
+    Args:
+        samples (array): array of django models for the Samples.
+    Returns:
+        array: array of json objects
+    """
+
+    return get_json_for_queryset(samples, **_get_sample_json_kwargs(**kwargs))
 
 
 def get_json_for_sample(sample, **kwargs):
@@ -358,7 +361,7 @@ def get_json_for_sample(sample, **kwargs):
         dict: json object
     """
 
-    return _get_json_for_model(sample, get_json_for_models=get_json_for_samples, **kwargs)
+    return _get_json_for_model(sample, **_get_sample_json_kwargs(**kwargs))
 
 
 def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False, **kwargs):
@@ -435,6 +438,8 @@ def _format_functional_tags(tags):
 
 
 AIP_TAG_TYPES = ['AIP', 'AIP-permissive', 'AIP-restrictive']
+GREGOR_FINDING_TAG_TYPE = 'GREGoR Finding'
+STRUCTURED_METADATA_TAG_TYPES = AIP_TAG_TYPES + [GREGOR_FINDING_TAG_TYPE,]
 def _format_variant_tags(tags):
     for tag in tags:
         if tag['name'] in AIP_TAG_TYPES and tag['metadata']:
@@ -612,7 +617,7 @@ def get_json_for_locus_lists(locus_lists, user, include_metadata=True, additiona
         ll_additional_values.update(additional_values)
     if include_metadata:
         ll_additional_values.update({
-            'numEntries': Count('locuslistgene') + Count('locuslistinterval'),
+            'numEntries': Count('locuslistgene', distinct=True) + Count('locuslistinterval', distinct=True),
             'canEdit': Case(When(created_by=user, then=Value(True)), default=Value(False)),
         })
 
@@ -648,7 +653,7 @@ def get_json_for_locus_list(locus_list, user):
     return result
 
 
-PROJECT_ACCESS_GROUP_NAMES = ['_owners', '_can_view', '_can_edit']
+PROJECT_ACCESS_GROUP_NAMES = ['_owners', '_can_view', '_can_edit', 'subscribers']
 
 
 def get_json_for_project_collaborator_groups(project):
@@ -778,18 +783,23 @@ def get_json_for_rna_seq_outliers(filters, significant_only=True, individual_gui
     data_by_individual_gene = defaultdict(lambda: {EXPRESSION_OUTLIERS: defaultdict(list), SPLICE_OUTLIERS: defaultdict(list)})
 
     for model, outlier_type in [(RnaSeqOutlier, EXPRESSION_OUTLIERS), (RnaSeqSpliceOutlier, SPLICE_OUTLIERS)]:
-        significant_filter = {f'{model.SIGNIFICANCE_FIELD}__lt': model.SIGNIFICANCE_THRESHOLD}
-        if hasattr(model, 'MAX_SIGNIFICANT_OUTLIER_NUM'):
-            significant_filter['rank__lt'] = model.MAX_SIGNIFICANT_OUTLIER_NUM
+        significance_q = Q(p_adjust__lt=model.MAX_SIGNIFICANT_P_ADJUST)
+        if hasattr(model, 'SIGNIFICANCE_ABS_VALUE_THRESHOLDS'):
+            for field, threshold in model.SIGNIFICANCE_ABS_VALUE_THRESHOLDS.items():
+                significance_q &= (Q(**{f'{field}__gt': threshold}) | Q(**{f'{field}__lt': -threshold}))
+
+        models = model.objects.filter(**filters)
+        if significant_only:
+            models = models.filter(significance_q)
 
         outliers = get_json_for_queryset(
-            model.objects.filter(**filters, **(significant_filter if significant_only else {})),
+            models,
             nested_fields=[
                 {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'},
                 {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid', 'value': individual_guid},
             ],
             additional_values={'isSignificant': Value(True)} if significant_only else {
-                'isSignificant': Case(When(then=Value(True), **significant_filter), default=Value(False))},
+                'isSignificant': Case(When(significance_q, then=Value(True)), default=Value(False))},
         )
 
         for data in outliers:

@@ -4,11 +4,12 @@ from django.db.models import Q
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     Family, GeneNote, Project
+from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
-    get_json_for_saved_variants_child_entities, get_json_for_gene_notes_by_gene_id, AIP_TAG_TYPES
+    get_json_for_saved_variants_child_entities, get_json_for_gene_notes_by_gene_id, AIP_TAG_TYPES, STRUCTURED_METADATA_TAG_TYPES
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required, service_account_access
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
@@ -61,7 +62,7 @@ def create_saved_variant_handler(request):
     saved_variant_guids = []
     for single_variant_json in variants_json:
         try:
-            create_json, update_json = parse_saved_variant_json(single_variant_json, family)
+            create_json, update_json = parse_saved_variant_json(single_variant_json, family.id)
         except ValueError as e:
             return create_json_response({'error': str(e)}, status=400)
         saved_variant, _ = get_or_create_model_from_json(
@@ -302,15 +303,20 @@ def update_saved_variant_json(request, project_guid):
 
 
 def update_saved_variant_json_base(request, project_guid):
+    backend_specific_call(lambda: True, _hail_backend_error)()
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     reset_cached_search_results(project)
     try:
-        updated_saved_variant_guids = update_project_saved_variant_json(project, user=request.user)
+        updated_saved_variant_guids = update_project_saved_variant_json(project.id, user=request.user)
     except Exception as e:
         logger.error('Unable to reset saved variant json for {}: {}'.format(project_guid, e))
         updated_saved_variant_guids = []
 
-    return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids})
+    return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids or []})
+
+
+def _hail_backend_error(*args, **kwargs):
+    raise ValueError('Endpoint is disabled for the hail backend')
 
 
 @login_and_policies_required

@@ -21,7 +21,7 @@ import {
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchableSampleByFamily, getSelectableTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
-  getSamplesGroupedByProjectGuid, getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual,
+  getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual,
   getRnaSeqDataByIndividual,
 } from 'redux/selectors'
 
@@ -64,6 +64,7 @@ export const getSamplesLoading = state => state.samplesLoading.isLoading
 export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
 export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
 export const getSavedVariantTableState = state => state.savedVariantTableState
+export const getGregorMetadataImportStats = state => state.importStats.gregorMetadata
 const getFamiliesTableFiltersByProject = state => state.familyTableFilterState
 
 export const getCurrentProject = createSelector(
@@ -77,9 +78,6 @@ export const getProjectFamiliesByGuid = createSelector(
 )
 export const getProjectAnalysisGroupsByGuid = createSelector(
   getAnalysisGroupsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid,
-)
-const getProjectSamplesByGuid = createSelector(
-  getSamplesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid,
 )
 
 const getAnalysisGroupGuid = (state, props) => (
@@ -119,7 +117,9 @@ export const getProjectAnalysisGroupDataLoadedFamilyIndividualCounts = createSel
   getProjectAnalysisGroupFamiliesByGuid,
   getSamplesByFamily,
   (familiesByGuid, samplesByFamily) => Object.values(familiesByGuid).map(((family) => {
-    const sampleIndividuals = new Set((samplesByFamily[family.familyGuid] || []).map(sample => sample.individualGuid))
+    const sampleIndividuals = new Set((samplesByFamily[family.familyGuid] || []).filter(
+      sample => sample.isActive,
+    ).map(sample => sample.individualGuid))
     const hasSampleParentCounts = (family.parents || []).map(
       ({ maternalGuid, paternalGuid }) => [maternalGuid, paternalGuid].filter(guid => sampleIndividuals.has(guid)),
     ).filter(parents => parents.length > 0)
@@ -142,20 +142,16 @@ export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
 )
 
 export const getProjectAnalysisGroupSamplesByTypes = createSelector(
-  getProjectSamplesByGuid,
-  getSamplesByFamily,
+  getCurrentProject,
   getCurrentAnalysisGroup,
-  (projectSamplesByGuid, samplesByFamily, analysisGroup) => (analysisGroup ? analysisGroup.familyGuids.reduce(
-    (acc, familyGuid) => ([...acc, ...(samplesByFamily[familyGuid] || [])]), [],
-  ) : Object.values(projectSamplesByGuid)).reduce((acc, sample) => {
-    const loadedDate = (sample.loadedDate).split('T')[0]
-    const typeKey = `${sample.sampleType}__${sample.datasetType}`
-    if (!acc[typeKey]) {
-      acc[typeKey] = {}
-    }
-    acc[typeKey][loadedDate] = (acc[typeKey][loadedDate] || 0) + 1
-    return acc
-  }, {}),
+  (project, analysisGroup) => Object.entries(project.sampleCounts || {}).map(
+    ([key, typeCounts]) => ([key, typeCounts.map(({ familyCounts, ...data }) => ({
+      ...data,
+      count: Object.entries(familyCounts).reduce((total, [familyGuid, count]) => (
+        (!analysisGroup || analysisGroup.familyGuids.includes(familyGuid)) ? total + count : total
+      ), 0),
+    })).filter(({ count }) => count > 0)]),
+  ),
 )
 
 export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(

@@ -4,6 +4,7 @@ APIs used by the main seqr dashboard page
 from django.db import models
 
 from seqr.models import ProjectCategory, Sample, Family, Project
+from seqr.views.utils.individual_utils import check_project_individuals_deletable
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
 from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, login_and_policies_required
@@ -46,6 +47,9 @@ def _get_projects_json(user):
         projects_by_guid[project.guid]['numFamilies'] = project.family__count
         projects_by_guid[project.guid]['numIndividuals'] = project.family__individual__count
         projects_by_guid[project.guid]['numVariantTags'] = project.family__savedvariant__count
+        if projects_by_guid[project.guid]['userIsCreator']:
+            errors, _ = check_project_individuals_deletable(project)
+            projects_by_guid[project.guid]['userCanDelete'] = not errors
 
     analysis_status_counts = Family.objects.filter(project__in=projects).values(
         'project__guid', 'analysis_status').annotate(count=models.Count('*'))

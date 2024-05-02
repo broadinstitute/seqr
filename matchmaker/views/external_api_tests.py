@@ -284,8 +284,8 @@ be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."
             mock.call().send(),
         ])
 
-        mock_logger.error.assert_called_with(
-            'Unable to create notification for incoming MME match request for 3 matches (NA19675_1_01, P0004515, P0004517): Email error')
+        mock_logger.error.assert_called_once_with(
+            'Unable to send notification email for incoming MME match with NA19675_1_01: Email error')
 
         # Test receive same request again
         mock_post_to_slack.reset_mock()
@@ -399,9 +399,9 @@ be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."
             mock.call().send(),
         ])
 
-    @mock.patch('matchmaker.views.external_api.logger')
+    @mock.patch('seqr.utils.communication_utils.logger')
     @mock.patch('matchmaker.views.external_api.EmailMessage')
-    @mock.patch('matchmaker.views.external_api.safe_post_to_slack')
+    @mock.patch('seqr.utils.communication_utils._post_to_slack')
     def test_mme_match_proxy_no_results(self, mock_post_to_slack, mock_email, mock_logger):
         url = '/api/matchmaker/v1/match'
         request_body = {
@@ -424,11 +424,12 @@ be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."
         self.assertEqual(incoming_query_q.count(), 1)
         self.assertIsNone(incoming_query_q.first().patient_id)
 
-        mock_post_to_slack.assert_called_with(
-            'matchmaker_matches',
-            """A match request for 12345 came in from Test Institute today.
+        slack_message = """A match request for 12345 came in from Test Institute today.
         The contact information given was: test@test.com.
         We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*."""
+        mock_post_to_slack.assert_called_with(
+            'matchmaker_matches',
+            slack_message
         )
         mock_email.assert_not_called()
 
@@ -440,6 +441,6 @@ be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."
         self.assertListEqual(response.json()['results'], [])
         self.assertEqual(MatchmakerIncomingQuery.objects.filter(institution='Test Institute').count(), 2)
         mock_logger.error.assert_called_with(
-            'Unable to create notification for incoming MME match request for 0 matches: Slack connection error')
+            f'Slack error: Slack connection error: Original message in channel (matchmaker_matches) - {slack_message}')
 
 

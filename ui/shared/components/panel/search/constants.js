@@ -456,7 +456,7 @@ const REQUIRE_SCORE_FIELD = {
 export const IN_SILICO_FIELDS = [
   REQUIRE_SCORE_FIELD,
   ...ORDERED_PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
-    ({ field, fieldTitle, thresholds, indicatorMap, group, min, max, requiresCitation }) => {
+    ({ field, fieldTitle, thresholds, reverseThresholds, indicatorMap, group, min, max, requiresCitation }) => {
       const label = fieldTitle || snakecaseToTitlecase(field)
       const filterField = { name: field, label, group }
 
@@ -475,7 +475,7 @@ export const IN_SILICO_FIELDS = [
       const labelHelp = (
         <div>
           {`Enter a numeric cutoff for ${label}`}
-          {thresholds && predictorColorRanges(thresholds, requiresCitation)}
+          {thresholds && predictorColorRanges(thresholds, requiresCitation, reverseThresholds)}
         </div>
       )
       return {

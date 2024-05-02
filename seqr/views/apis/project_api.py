@@ -7,12 +7,12 @@ from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Max, Q, Case, When, Value
-from django.db.models.functions import JSONObject
+from django.db.models.functions import JSONObject, TruncDate
 from django.utils import timezone
+from notifications.models import Notification
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, SavedVariant, \
-    FamilyNote, CAN_EDIT
+from seqr.models import Project, Family, Individual, Sample, FamilyNote, CAN_EDIT
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
@@ -24,7 +24,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
     has_workspace_perm, has_case_review_permissions, is_internal_anvil_project
 from seqr.views.utils.project_context_utils import families_discovery_tags, \
-    add_project_tag_types, get_project_analysis_groups, get_project_locus_lists, MME_TAG_NAME
+    add_project_tag_types, get_project_analysis_groups, get_project_locus_lists
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
 from settings import BASE_URL
 
@@ -211,14 +211,27 @@ def project_overview(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     sample_models = Sample.objects.filter(individual__family__project=project)
+
+    active_samples = sample_models.filter(is_active=True)
+    first_loaded_samples = sample_models.order_by('individual__family', 'loaded_date').distinct('individual__family')
+    samples_by_guid = {}
+    for samples in [active_samples, first_loaded_samples]:
+        samples_by_guid.update({s['sampleGuid']: s for s in get_json_for_samples(samples, project_guid=project_guid)})
+
+    sample_load_counts = sample_models.values(
+        'sample_type', 'dataset_type', loadedDate=TruncDate('loaded_date'),
+    ).order_by('loadedDate').annotate(familyCounts=ArrayAgg('individual__family__guid'))
+    grouped_sample_counts = defaultdict(list)
+    for s in sample_load_counts:
+        s['familyCounts'] = {f: s['familyCounts'].count(f) for f in s['familyCounts']}
+        grouped_sample_counts[f'{s.pop("sample_type")}__{s.pop("dataset_type")}'].append(s)
+
     response = {
-        'projectsByGuid': {project_guid: {'projectGuid': project_guid}},
-        'samplesByGuid': {
-            s['sampleGuid']: s for s in get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
-        },
+        'projectsByGuid': {project_guid: {'projectGuid': project_guid, 'sampleCounts': grouped_sample_counts}},
+        'samplesByGuid': samples_by_guid,
     }
 
-    add_project_tag_types(response['projectsByGuid'])
+    response['familyTagTypeCounts'] = add_project_tag_types(response['projectsByGuid'], add_counts=True)
 
     project_mme_submissions = MatchmakerSubmission.objects.filter(individual__family__project=project)
 
@@ -227,8 +240,6 @@ def project_overview(request, project_guid):
         'mmeSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=True).count(),
         'mmeDeletedSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=False).count(),
     })
-
-    response['familyTagTypeCounts'] = _add_tag_type_counts(project, project_json['variantTagTypes'])
 
     return create_json_response(response)
 
@@ -255,6 +266,17 @@ def project_individuals(request, project_guid):
     return create_json_response({
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
     })
+
+
+@login_and_policies_required
+def project_samples(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+    samples = Sample.objects.filter(individual__family__project=project)
+
+    return create_json_response({
+        'samplesByGuid': {s['sampleGuid']: s for s in get_json_for_samples(samples, project_guid=project_guid)},
+    })
+
 
 @login_and_policies_required
 def project_analysis_groups(request, project_guid):
@@ -305,38 +327,53 @@ def project_mme_submisssions(request, project_guid):
     })
 
 
-def _add_tag_type_counts(project, project_variant_tags):
-    family_tag_type_counts = defaultdict(dict)
-    note_tag_type = {
-        'variantTagTypeGuid': 'notes',
-        'name': 'Has Notes',
-        'category': 'Notes',
-        'description': '',
-        'color': 'grey',
-        'order': 100,
-        'numTags': SavedVariant.objects.filter(family__project=project, variantnote__isnull=False).distinct().count(),
-    }
+@login_and_policies_required
+def project_notifications(request, project_guid, read_status):
+    project = get_project_and_check_permissions(project_guid, request.user)
+    is_subscriber = project.subscribers.user_set.filter(id=request.user.id).exists()
+    if not is_subscriber:
+        max_loaded = _project_notifications(
+            project, request.user.notifications).aggregate(max_loaded=Max('timestamp'))['max_loaded']
+        to_create = _project_notifications(project, Notification.objects).distinct('verb', 'timestamp')
+        if max_loaded:
+            to_create = to_create.filter(timestamp__gt=max_loaded)
+        for notification in to_create:
+            notification.pk = None  # causes django to create a new model with otherwise identical fields
+            notification.unread = True
+            notification.recipient = request.user
+            notification.save()
 
-    project_variants = VariantTag.objects.filter(saved_variants__family__project=project)
+    response = {'isSubscriber': is_subscriber}
+    notifications = _project_notifications(project, request.user.notifications)
+    if read_status == 'unread':
+        response['readCount'] = notifications.read().count()
+        notifications = notifications.unread()
+    else:
+        notifications = notifications.read()
+    return create_json_response({
+        f'{read_status}Notifications': [
+            {'timestamp': n.naturaltime(), **{k: getattr(n, k) for k in ['id', 'verb']}}
+            for n in notifications],
+        **response,
+    })
 
-    mme_counts_by_family = project_variants.filter(saved_variants__matchmakersubmissiongenes__isnull=False) \
-        .values('saved_variants__family__guid').annotate(count=Count('saved_variants__guid', distinct=True))
 
-    tag_counts_by_type_and_family = project_variants.values(
-        'saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))
-    for tag_type in project_variant_tags:
-        current_tag_type_counts = mme_counts_by_family if tag_type['name'] == MME_TAG_NAME else [
-            counts for counts in tag_counts_by_type_and_family if counts['variant_tag_type__name'] == tag_type['name']
-        ]
-        num_tags = sum(count['count'] for count in current_tag_type_counts)
-        tag_type.update({
-            'numTags': num_tags,
-        })
-        for count in current_tag_type_counts:
-            family_tag_type_counts[count['saved_variants__family__guid']].update({tag_type['name']: count['count']})
+def _project_notifications(project, notifications):
+    return notifications.filter(actor_object_id=project.id)
 
-    project_variant_tags.append(note_tag_type)
-    return family_tag_type_counts
+
+@login_and_policies_required
+def mark_read_project_notifications(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+    _project_notifications(project, request.user.notifications).mark_all_as_read()
+    return create_json_response({'readCount': request.user.notifications.read().count(), 'unreadNotifications': []})
+
+
+@login_and_policies_required
+def subscribe_project_notifications(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+    request.user.groups.add(project.subscribers)
+    return create_json_response({'isSubscriber': True})
 
 
 def _delete_project(project_guid, user):

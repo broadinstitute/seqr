@@ -5,11 +5,12 @@
     "fields": {
         "guid": "R0001_1kg",
         "created_date": "2017-03-12T19:27:08.156Z",
-        "created_by": null,
+        "created_by": 10,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "1kg project n\u00e5me with uni\u00e7\u00f8de",
         "description": "1000 genomes project description with uni\u00e7\u00f8de",
         "consent_code": "H",
+        "subscribers": 6,
 	"can_edit_group": 2,
 	"can_view_group": 3,
     "workspace_name": "anvil-1kg project n\u00e5me with uni\u00e7\u00f8de",
@@ -28,13 +29,14 @@
     "fields": {
         "guid": "R0002_empty",
         "created_date": "2017-03-12T19:27:08.156Z",
-        "created_by": null,
+        "created_by": 11,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Empty Project",
         "description": "",
         "consent_code": "H",
         "workspace_name": "empty",
         "workspace_namespace": "my-seqr-billing",
+        "subscribers": 6,
 	"can_edit_group": 2,
 	"can_view_group": 3,
 	"is_mme_enabled": false,
@@ -48,10 +50,11 @@
     "fields": {
         "guid": "R0003_test",
         "created_date": "2017-03-12T19:27:08.156Z",
-        "created_by": null,
+        "created_by": 10,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Test Reprocessed Project",
         "description": "",
+        "subscribers": 6,
 	"can_edit_group": 2,
 	"can_view_group": 3,
     "workspace_name": "anvil-project 1000 Genomes Demo",
@@ -72,6 +75,7 @@
         "created_by": 11,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Non-Analyst Project",
+        "subscribers": 7,
 	    "can_edit_group": 2,
 	    "can_view_group": 2,
 	    "last_accessed_date": "2017-09-15T18:15:50.827Z",
@@ -121,7 +125,7 @@
         "family_id": "1",
         "display_name": "",
         "description": "test descripti\u00f8n",
-        "post_discovery_omim_numbers": [615120, 615123],
+        "post_discovery_omim_numbers": [615123, 615120],
         "pedigree_image": "ped_1.png",
         "analysis_status": "Q",
         "coded_phenotype": "myopathy",
@@ -144,6 +148,7 @@
         "description": "",
         "pedigree_image": "ped_2.png",
         "analysis_status": "Q",
+        "coded_phenotype": "microcephaly, seizures",
         "mondo_id": "MONDO:0044970",
         "case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
         "case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
@@ -164,6 +169,7 @@
         "pedigree_image": "ped_3.png",
         "analysis_status": "Q",
         "case_review_notes": "",
+        "post_discovery_omim_numbers": [615123],
         "case_review_summary": "internal_case_review_summary"
     }
 },
@@ -551,6 +557,8 @@
         "sex": "M",
         "affected": "N",
         "display_name": "",
+        "population": "NFE",
+        "proband_relationship": "F",
 	"notes": "",
         "case_review_status": "R",
         "case_review_status_last_modified_date": null,
@@ -793,6 +801,7 @@
         "individual_id": "NA20888",
         "mother_id": null,
         "father_id": null,
+        "population": "SAS",
         "sex": "M",
         "affected": "A",
         "display_name": "",
@@ -820,6 +829,7 @@
         "sex": "F",
         "affected": "A",
         "proband_relationship": "S",
+        "solve_status": "P",
         "display_name": ""
     }
 },
@@ -891,7 +901,7 @@
         "sample_id": "NA19675",
         "is_active": true,
         "elasticsearch_index": "test_index",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:12:55.397Z"
     }
 },
 {
@@ -910,7 +920,7 @@
         "sample_id": "NA19678",
         "is_active": true,
         "elasticsearch_index": "test_index_old",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:13:55.397Z"
     }
 },
 {
@@ -929,7 +939,7 @@
         "elasticsearch_index":null,
         "tissue_type": "F",
         "data_source": "fibs_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:14:55.397Z"
     }
 },
 {
@@ -948,7 +958,7 @@
         "tissue_type": "X",
         "individual": 3,
         "dataset_type": "SNV_INDEL",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:15:55.397Z"
     }
 },
 {
@@ -966,7 +976,7 @@
         "individual": 4,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:16:55.397Z"
     }
 },
 {
@@ -984,7 +994,7 @@
         "individual": 5,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:17:55.397Z"
     }
 },
 {
@@ -1002,7 +1012,7 @@
         "individual": 6,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:18:55.397Z"
     }
 },
 {
@@ -1020,7 +1030,7 @@
         "individual": 7,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:19:55.397Z"
     }
 },
 {
@@ -1039,7 +1049,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:20:55.397Z"
     }
 },
 {
@@ -1057,7 +1067,7 @@
         "individual": 9,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:21:55.397Z"
     }
 },
 {
@@ -1076,7 +1086,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:22:55.397Z"
     }
 },
 {
@@ -1095,7 +1105,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:23:55.397Z"
     }
 },
 {
@@ -1114,7 +1124,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:24:55.397Z"
     }
 },
 {
@@ -1133,7 +1143,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:25:55.397Z"
     }
 },
 {
@@ -1151,7 +1161,7 @@
         "individual": 15,
         "dataset_type": "SNV_INDEL",
         "tissue_type": "X",
-        "loaded_date": "2020-02-05T06:42:55.397Z"
+        "loaded_date": "2020-02-05T06:26:55.397Z"
     }
 },
 {
@@ -1170,7 +1180,7 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:27:55.397Z"
     }
 },
 {
@@ -1190,7 +1200,7 @@
         "elasticsearch_index": "1kg.vcf.gz",
         "data_source": "auto__2023-08-08",
         "tissue_type": "X",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:28:55.397Z"
     }
 },
 {
@@ -1208,7 +1218,7 @@
         "individual": 4,
         "dataset_type": "SV",
         "tissue_type": "X",
-        "loaded_date": "2018-02-05T06:42:55.397Z"
+        "loaded_date": "2018-02-05T06:29:55.397Z"
     }
 },
 {
@@ -1226,7 +1236,7 @@
         "individual": 5,
         "dataset_type": "SV",
         "tissue_type": "X",
-        "loaded_date": "2018-02-05T06:42:55.397Z"
+        "loaded_date": "2018-02-05T06:30:55.397Z"
     }
 },
 {
@@ -1243,7 +1253,7 @@
         "is_active": true,
         "individual": 18,
         "dataset_type": "SV",
-        "loaded_date": "2018-02-05T06:42:55.397Z"
+        "loaded_date": "2018-02-05T06:31:55.397Z"
     }
 },
 {
@@ -1260,7 +1270,7 @@
         "is_active": true,
         "individual": 6,
         "dataset_type": "SV",
-        "loaded_date": "2018-02-05T06:42:55.397Z"
+        "loaded_date": "2018-02-05T06:32:55.397Z"
     }
 },
 {
@@ -1272,12 +1282,12 @@
         "created_by": null,
         "last_modified_date": "2022-03-13T09:07:49.937Z",
         "elasticsearch_index": "test_index_mito_wgs",
-        "sample_id": "HG00733",
-        "sample_type": "WGS",
+        "sample_id": "HG00731",
+        "sample_type": "WES",
         "is_active": true,
-        "individual": 6,
+        "individual": 4,
         "dataset_type": "MITO",
-        "loaded_date": "2022-02-05T06:42:55.397Z"
+        "loaded_date": "2022-02-05T06:33:55.397Z"
     }
 },
 {
@@ -1296,7 +1306,7 @@
         "elasticsearch_index":null,
         "tissue_type": "F",
         "data_source": "muscle_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:34:55.397Z"
     }
 },
 {
@@ -1315,7 +1325,7 @@
         "elasticsearch_index":null,
         "tissue_type": "M",
         "data_source": "muscle_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2017-02-05T06:35:55.397Z"
     }
 },
 {
@@ -1390,18 +1400,20 @@
     "pk": 1,
     "fields": {
         "sample": 151,
-        "rank": 0,
         "gene_id": "ENSG00000268903",
         "p_value": 1.08E-56,
-        "z_score": 12.34,
+        "p_adjust": 3.08E-56,
+        "delta_intron_jaccard_index": 12.34,
         "chrom": "7",
         "start": 132885746,
         "end": 132886973,
         "strand": "*",
         "type": "psi5",
-        "delta_psi": 0.85,
-        "read_count": 1297,
-        "rare_disease_samples_with_junction": 1,
+        "mean_counts": 0.85,
+        "counts": 1297,
+        "mean_total_counts": 0.85,
+        "total_counts": 1297,
+        "rare_disease_samples_with_this_junction": 1,
         "rare_disease_samples_total": 20
     }
 },
@@ -1410,18 +1422,20 @@
     "pk": 2,
     "fields": {
         "sample": 153,
-        "rank": 0,
         "gene_id": "ENSG00000268903",
         "p_value": 1.08E-56,
-        "z_score": 12.34,
+        "p_adjust": 3.08E-56,
+        "delta_intron_jaccard_index": 12.34,
         "chrom": "7",
         "start": 132885754,
         "end": 132886934,
         "strand": "*",
         "type": "psi5",
-        "delta_psi": 0.65,
-        "read_count": 234,
-        "rare_disease_samples_with_junction": 2,
+        "mean_counts": 0.65,
+        "counts": 234,
+        "mean_total_counts": 0.65,
+        "total_counts": 234,
+        "rare_disease_samples_with_this_junction": 2,
         "rare_disease_samples_total": 23
     }
 },
@@ -1430,18 +1444,20 @@
     "pk": 3,
     "fields": {
         "sample": 151,
-        "rank": 3,
         "gene_id": "ENSG00000268903",
         "p_value": 0.1,
-        "z_score": 12.34,
+        "p_adjust": 0.3,
+        "delta_intron_jaccard_index": 12.34,
         "chrom": "7",
         "start": 1001,
         "end": 2001,
         "strand": "*",
         "type": "psi5",
-        "delta_psi": 0.85,
-        "read_count": 1297,
-        "rare_disease_samples_with_junction": 1,
+        "mean_total_counts": 0.85,
+        "total_counts": 1297,
+        "mean_counts": 0.85,
+        "counts": 1297,
+        "rare_disease_samples_with_this_junction": 1,
         "rare_disease_samples_total": 20
     }
 },
@@ -1450,18 +1466,20 @@
     "pk": 4,
     "fields": {
         "sample": 151,
-        "rank": 1,
         "gene_id": "ENSG00000268903",
         "p_value": 0.0001,
-        "z_score": 12.34,
+        "p_adjust": 0.0003,
+        "delta_intron_jaccard_index": -12.34,
         "chrom": "7",
         "start": 3000,
         "end": 4000,
         "strand": "*",
         "type": "psi5",
-        "delta_psi": 0.85,
-        "read_count": 1297,
-        "rare_disease_samples_with_junction": 1,
+        "mean_counts": 0.85,
+        "counts": 1297,
+        "mean_total_counts": 0.85,
+        "total_counts": 1297,
+        "rare_disease_samples_with_this_junction": 1,
         "rare_disease_samples_total": 20
     }
 },
@@ -1470,18 +1488,20 @@
     "pk": 5,
     "fields": {
         "sample": 151,
-        "rank": 2,
         "gene_id": "ENSG00000268903",
         "p_value": 0.0001,
-        "z_score": 12.34,
+        "p_adjust": 0.0003,
+        "delta_intron_jaccard_index": 0.05,
         "chrom": "7",
         "start": 5000,
         "end": 6000,
         "strand": "*",
         "type": "psi5",
-        "delta_psi": 0.85,
-        "read_count": 1297,
-        "rare_disease_samples_with_junction": 1,
+        "mean_total_counts": 0.85,
+        "total_counts": 1297,
+        "mean_counts": 0.85,
+        "counts": 1297,
+        "rare_disease_samples_with_this_junction": 1,
         "rare_disease_samples_total": 20
     }
 },
@@ -1491,17 +1511,19 @@
     "fields": {
         "sample": 152,
         "gene_id": "ENSG00000268903",
-        "rank": 0,
         "p_value": 0.001,
-        "z_score": 12.34,
+        "p_adjust": 0.003,
+        "delta_intron_jaccard_index": 12.34,
         "chrom": "7",
         "start": 7000,
         "end": 8000,
         "strand": "*",
         "type": "psi5",
-        "delta_psi": 0.85,
-        "read_count": 1297,
-        "rare_disease_samples_with_junction": 1,
+        "mean_counts": 0.85,
+        "counts": 1297,
+        "mean_total_counts": 0.85,
+        "total_counts": 1297,
+        "rare_disease_samples_with_this_junction": 1,
         "rare_disease_samples_total": 20
     }
 },
@@ -1510,18 +1532,20 @@
     "pk": 7,
     "fields": {
         "sample": 152,
-        "rank": 1,
         "gene_id": "ENSG00000268903",
         "p_value": 0.2,
-        "z_score": 12.34,
+        "p_adjust": 0.1,
+        "delta_intron_jaccard_index": -0.01,
         "chrom": "7",
         "start": 9000,
         "end": 9100,
         "strand": "*",
         "type": "psi5",
-        "delta_psi": 0.85,
-        "read_count": 1297,
-        "rare_disease_samples_with_junction": 1,
+        "mean_counts": 0.85,
+        "counts": 1297,
+        "mean_total_counts": 0.85,
+        "total_counts": 1297,
+        "rare_disease_samples_with_this_junction": 1,
         "rare_disease_samples_total": 20
     }
 },
@@ -1710,6 +1734,22 @@
     }
 },
 {
+    "model": "seqr.varianttagtype",
+    "pk": 6,
+    "fields": {
+        "guid": "VTT_gregor_finding",
+        "created_date": "2021-11-14T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": 3,
+        "name": "GREGoR Finding",
+        "category": "",
+        "description": "",
+        "color": "#c25fc4",
+        "order": 0.5
+    }
+},
+{
     "model": "seqr.savedvariant",
     "pk": 1,
     "fields": {
@@ -1763,7 +1803,7 @@
         "xpos_end": 1248367228,
         "ref": "TC",
         "alt": "T",
-        "variant_id": "12-48367227-TC-T",
+        "variant_id": "1-248367227-TC-T",
         "saved_variant_json": {
             "clinvar": {
                 "clinicalSignificance": "",
@@ -1879,7 +1919,6 @@
             "genotypeFilters": "pass",
             "mainTranscriptId": "ENST00000505820",
             "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0}, "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 8.142526788913136e-06}, "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "topmed": {"ac": null, "an": null, "af": null}},
-            "genomeVersion": "37",
             "pos": 1560662,
             "predictions": {"eigen": null, "revel": null, "sift": "damaging", "cadd": "31", "metasvm": "D", "mpc": null, "splice_ai": null, "phastcons_100_vert": null, "mut_taster": "disease_causing", "fathmm": "tolerated", "polyphen": "probably_damaging", "dann": null, "primate_ai": null, "gerp_rs": null},
             "hgmd": {"accession": null, "class": null},
@@ -1965,7 +2004,7 @@
                     "hom": 10332
                     }
                 },
-            "genomeVersion": "37",
+            "genomeVersion": "38",
             "pos": 1562437,
             "hgmd": {"accession": null, "class": null},
             "rsid": null,
@@ -1998,7 +2037,7 @@
         "xpos_end": 1248367228,
         "ref": "TC",
         "alt": "T",
-        "variant_id": "12-48367227-TC-T",
+        "variant_id": "1-248367227-TC-T",
         "saved_variant_json": {
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
             "liftedOverGenomeVersion": "38",  "liftedOverPos": "", "genotypeFilters": "pass",
@@ -2078,9 +2117,9 @@
         "xpos_end": 1248367228,
         "ref": "TC",
         "alt": "T",
-        "variant_id": "12-48367227-TC-T",
+        "variant_id": "1-248367227-TC-T",
         "saved_variant_json": {
-            "liftedOverGenomeVersion": "38",  "liftedOverPos": "", "genomeVersion": "37", "pos": 248367227,
+            "liftedOverGenomeVersion": "37",  "liftedOverPos": "", "genomeVersion": "38", "pos": 248367227,
             "transcripts": {}, "chrom": "1", "genotypes": {
                 "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}}},
         "family": 14
@@ -2722,5 +2761,67 @@
         "institution": "Broad Center for Mendelian Genomics",
         "patient_id": "NA19675"
     }
-}
-]
+}, {
+    "model": "notifications.notification",
+    "pk": 1,
+    "fields": {
+        "level": "info",
+        "recipient": 11,
+        "unread": true,
+        "actor_content_type": 40,
+        "actor_object_id": "1",
+        "verb": "Loaded 2 new WES SV samples",
+        "description": null,
+        "target_content_type": null,
+        "target_object_id": null,
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2023-12-17T22:14:44.568Z",
+        "public": true,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+}, {
+    "model": "notifications.notification",
+    "pk": 2,
+    "fields": {
+        "level": "info",
+        "recipient": 11,
+        "unread": false,
+        "actor_content_type": 10,
+        "actor_object_id": "1",
+        "verb": "Loaded 8 new WES samples",
+        "description": null,
+        "target_content_type": null,
+        "target_object_id": null,
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2023-08-27T22:14:44.568Z",
+        "public": true,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+}, {
+    "model": "notifications.notification",
+    "pk": 3,
+    "fields": {
+        "level": "info",
+        "recipient": 12,
+        "unread": true,
+        "actor_content_type": 10,
+        "actor_object_id": "1",
+        "verb": "Loaded 8 new WES samples",
+        "description": null,
+        "target_content_type": null,
+        "target_object_id": null,
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2023-08-27T22:14:44.568Z",
+        "public": true,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+}]

@@ -36,7 +36,7 @@ CUSTOM_AFFECTED_SAMPLE_DATA['SNV_INDEL'][2]['affected'] = 'U'
 
 FAMILY_1_SAMPLE_DATA = {
     'SNV_INDEL': [
-        {'sample_id': 'NA19675', 'individual_guid': 'I000001_na19675', 'family_guid': 'F000001_1', 'project_guid': 'R0001_1kg', 'affected': 'A'},
+        {'sample_id': 'NA19675_1', 'individual_guid': 'I000001_na19675', 'family_guid': 'F000001_1', 'project_guid': 'R0001_1kg', 'affected': 'A'},
         {'sample_id': 'NA19678', 'individual_guid': 'I000002_na19678', 'family_guid': 'F000001_1', 'project_guid': 'R0001_1kg', 'affected': 'N'},
     ],
 }
@@ -109,7 +109,7 @@ VARIANT1 = {
        'goldStars': None,
        'pathogenicity': 'Likely_pathogenic',
        'assertions': None,
-       'version': '2023-07-10',
+       'version': '2024-02-21',
     },
     'hgmd': None,
     'screenRegionType': None,
@@ -178,9 +178,9 @@ VARIANT2 = {
            {'count': 5, 'pathogenicity': 'Benign'},
        ],
        'goldStars': 1,
-       'pathogenicity': 'Conflicting_interpretations_of_pathogenicity',
+       'pathogenicity': 'Conflicting_classifications_of_pathogenicity',
        'assertions': ['other'],
-       'version': '2023-07-10',
+       'version': '2024-02-21',
     },
     'hgmd': {'accession': 'CM981315', 'class': 'DFP'},
     'screenRegionType': None,
@@ -194,7 +194,7 @@ VARIANT2 = {
     'predictions': {
        'cadd': 20.899999618530273,
        'eigen': 2.000999927520752,
-       'fathmm': 'D',
+       'fathmm': 0,
        'gnomad_noncoding': 5.868505001068115,
        'mpc': 0.28205373883247375,
        'mut_pred': None,
@@ -203,9 +203,9 @@ VARIANT2 = {
        'splice_ai_consequence': 'No consequence',
        'vest': 0.210999995470047,
        'mut_taster': 'P',
-       'polyphen': 'B',
+       'polyphen': 0.1,
        'revel': 0.19699999690055847,
-       'sift': 'T',
+       'sift': 0.05,
     },
     'transcripts': {
        'ENSG00000177000': [
@@ -337,7 +337,7 @@ VARIANT4 = {
     'predictions': {
         'cadd': 29.899999618530273,
         'eigen': 9.491000175476074,
-        'fathmm': 'D',
+        'fathmm': 0,
         'gnomad_noncoding': 0.2300506979227066,
         'mpc': 0.8326827883720398,
         'mut_pred': 0.6869999766349792,
@@ -345,10 +345,10 @@ VARIANT4 = {
         'splice_ai': 0.0,
         'splice_ai_consequence': 'No consequence',
         'vest': 0.8579999804496765,
-        'mut_taster': 'D',
-        'polyphen': 'D',
+        'mut_taster': 'N',
+        'polyphen': 0,
         'revel': 0.5260000228881836,
-        'sift': 'D',
+        'sift': 0,
     },
     'transcripts': {
         'ENSG00000097046': [
@@ -362,7 +362,20 @@ VARIANT4 = {
     '_sort': [1091511686],
 }
 
-VARIANT_LOOKUP_VARIANT = {**VARIANT1, 'familyGuids': [], 'genotypes': {}, 'genotypeFilters': ''}
+VARIANT_LOOKUP_VARIANT = {
+    **VARIANT1,
+    'familyGenotypes': {
+        VARIANT1['familyGuids'][0]: sorted([
+            {k: v for k, v in g.items() if k != 'individualGuid'} for g in VARIANT1['genotypes'].values()
+        ], key=lambda x: x['sampleId'], reverse=True),
+        'F000011_11': [{
+            'sampleId': 'NA20885', 'sampleType': 'WGS', 'familyGuid': 'F000011_11',
+            'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0,
+        }],
+    }
+}
+for k in {'familyGuids', 'genotypes', 'genotypeFilters'}:
+    VARIANT_LOOKUP_VARIANT.pop(k)
 
 FAMILY_3_VARIANT = deepcopy(VARIANT3)
 FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
@@ -783,7 +796,7 @@ MITO_VARIANT1 = {
         'goldStars': 1,
         'pathogenicity': 'Uncertain_significance',
         'assertions': [],
-        'version': '2023-08-06',
+        'version': '2024-02-21',
     },
     'transcripts': {
         'ENSG00000210112': [
@@ -826,7 +839,7 @@ MITO_VARIANT2 = {
         'hmtvar': 0.75,
         'mitotip': None,
         'mut_taster': 'N',
-        'sift': 'D',
+        'sift': 0,
     },
     'commonLowHeteroplasmy': False,
     'highConstraintRegion': True,
@@ -884,7 +897,7 @@ MITO_VARIANT3 = {
         'goldStars': 0,
         'pathogenicity': 'Likely_pathogenic',
         'assertions': [],
-        'version': '2023-08-06',
+        'version': '2024-02-21',
     },
     'transcripts': {
         'ENSG00000198727': [

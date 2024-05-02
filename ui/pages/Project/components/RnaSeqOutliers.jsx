@@ -3,11 +3,12 @@ import PropTypes from 'prop-types'
 import { Header } from 'semantic-ui-react'
 
 import { extent } from 'd3-array'
-import { axisBottom, axisLeft } from 'd3-axis'
-import { scaleLinear, scaleLog, scalePow } from 'd3-scale'
+import { scaleLinear, scaleLog } from 'd3-scale'
 import { select } from 'd3-selection'
 
 import { GeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
+import { initializeD3 } from 'shared/components/graph/d3Utils'
+import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 const GRAPH_HEIGHT = 400
 const GRAPH_WIDTH = 600
@@ -18,6 +19,8 @@ class RnaSeqOutliersGraph extends React.PureComponent {
   static propTypes = {
     data: PropTypes.arrayOf(PropTypes.object),
     genesById: PropTypes.object,
+    xField: PropTypes.string.isRequired,
+    yField: PropTypes.string,
   }
 
   componentDidMount() {
@@ -27,86 +30,60 @@ class RnaSeqOutliersGraph extends React.PureComponent {
   componentDidUpdate(prevProp) {
     const { data } = this.props
     if (data !== prevProp.data) {
-      select(this.svg).selectAll('*').remove()
+      select(this.container).selectAll('*').remove()
       this.initPlot()
     }
   }
 
   initPlot = () => {
-    const { data: dataArray, genesById } = this.props
+    const { data: dataArray, genesById, xField, yField = 'pValue' } = this.props
 
-    const svg = select(this.svg).append('g')
-      .attr('transform', `translate(${GRAPH_MARGIN.left},${GRAPH_MARGIN.top})`)
+    const x = scaleLinear().domain(extent(dataArray.map(d => d[xField]))).range([0, GRAPH_WIDTH])
+    const y = scaleLog().domain(extent(dataArray.map(d => d[yField]))).range([0, GRAPH_HEIGHT])
 
-    const x = scaleLinear().domain(extent(dataArray.map(d => d.zScore))).range([0, GRAPH_WIDTH])
-    const y = scaleLog().domain(extent(dataArray.map(d => d.pValue))).range([0, GRAPH_HEIGHT])
-    const r = scalePow().exponent(4).domain(extent(dataArray.map(d => Math.abs(d.deltaPsi)))).range([1, 10])
-
-    // x-axis
-    svg.append('g')
-      .attr('transform', `translate(0,${GRAPH_HEIGHT + 5})`)
-      .call(axisBottom(x).tickSizeOuter(0))
-
-    // y-axis
-    svg.append('g')
-      .attr('transform', 'translate(-10,0)')
-      .call(axisLeft(y).tickSizeOuter(0).ticks(5, val => -Math.log10(val)))
-
-    // x-axis label
-    svg.append('text')
-      .attr('text-anchor', 'end')
-      .attr('y', GRAPH_HEIGHT + GRAPH_MARGIN.bottom)
-      .attr('x', GRAPH_WIDTH / 2)
-      .text('Z-score')
-
-    // y-axis label
-    svg.append('text')
-      .attr('text-anchor', 'end')
-      .attr('transform', 'rotate(-90)')
-      .attr('y', 10 - GRAPH_MARGIN.left)
-      .attr('x', GRAPH_MARGIN.bottom - (GRAPH_HEIGHT / 2))
-      .text('-log(P-value)')
+    const svg = initializeD3(
+      select(this.container), { width: GRAPH_WIDTH, height: GRAPH_HEIGHT }, GRAPH_MARGIN, { x, y }, {
+        x: { text: camelcaseToTitlecase(xField).replace(' ', '-'), transform: xAxis => xAxis.tickSizeOuter(0) },
+        y: { text: `-log(${camelcaseToTitlecase(yField).replace(' ', '-')})`, transform: yAxis => yAxis.tickSizeOuter(0).ticks(5, val => -Math.log10(val)) },
+      },
+    )
 
     // scatterplot
     const dataPoints = svg.append('g').selectAll('dot').data(dataArray).enter()
       .append('g')
 
     dataPoints.append('circle')
-      .attr('cx', d => x(d.zScore))
-      .attr('cy', d => y(d.pValue))
-      .attr('r', d => (d.deltaPsi === undefined ? 3 : r(Math.abs(d.deltaPsi))))
+      .attr('cx', d => x(d[xField]))
+      .attr('cy', d => y(d[yField]))
+      .attr('r', 3)
       .style('fill', 'None')
       .style('stroke', d => (d.isSignificant ? 'red' : 'lightgrey'))
 
     dataPoints.append('text')
       .text(d => (d.isSignificant ? (genesById[d.geneId] || {}).geneSymbol : null))
-      .attr('text-anchor', d => (x(d.zScore) > GRAPH_WIDTH - 100 ? 'end' : 'start'))
+      .attr('text-anchor', d => (x(d[xField]) > GRAPH_WIDTH - 100 ? 'end' : 'start'))
       .attr('x', (d) => {
-        const xPos = x(d.zScore)
+        const xPos = x(d[xField])
         return xPos + (5 * (xPos > GRAPH_WIDTH - 100 ? -1 : 1))
       })
-      .attr('y', d => y(d.pValue))
+      .attr('y', d => y(d[yField]))
       .style('fill', 'red')
       .style('font-weight', 'bold')
   }
 
-  setSvgElement = (element) => {
-    this.svg = element
+  setContainerElement = (element) => {
+    this.container = element
   }
 
   render() {
     return (
-      <svg
-        ref={this.setSvgElement}
-        width={GRAPH_WIDTH + GRAPH_MARGIN.left + GRAPH_MARGIN.right}
-        height={GRAPH_HEIGHT + GRAPH_MARGIN.top + GRAPH_MARGIN.bottom}
-      />
+      <div ref={this.setContainerElement} />
     )
   }
 
 }
 
-const RnaSeqOutliers = React.memo(({ rnaSeqData, genesById, familyGuid, getLocation, searchType, title }) => (
+const RnaSeqOutliers = React.memo(({ rnaSeqData, familyGuid, getLocation, searchType, title, ...props }) => (
   <div>
     <Header content={title} textAlign="center" />
     <GeneSearchLink
@@ -116,7 +93,7 @@ const RnaSeqOutliers = React.memo(({ rnaSeqData, genesById, familyGuid, getLocat
       familyGuid={familyGuid}
       floated="right"
     />
-    <RnaSeqOutliersGraph data={rnaSeqData} genesById={genesById} />
+    <RnaSeqOutliersGraph data={rnaSeqData} {...props} />
   </div>
 ))
 

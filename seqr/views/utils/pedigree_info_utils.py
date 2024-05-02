@@ -68,7 +68,7 @@ def parse_pedigree_table(parsed_file, filename, user, project):
     except Exception as e:
         raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
 
-    json_records, warnings = _parse_pedigree_table_json(rows, header=header, column_map=column_map, errors=errors)
+    json_records, warnings = _parse_pedigree_table_json(project, rows, header=header, column_map=column_map, errors=errors)
 
     if is_merged_pedigree_sample_manifest:
         _set_proband_relationship(json_records)
@@ -77,9 +77,9 @@ def parse_pedigree_table(parsed_file, filename, user, project):
     return json_records, warnings
 
 
-def parse_basic_pedigree_table(parsed_file, filename, required_columns=None):
+def parse_basic_pedigree_table(project, parsed_file, filename, required_columns=None):
     rows, header = _parse_pedigree_table_rows(parsed_file, filename)
-    return _parse_pedigree_table_json(rows, header=header, fail_on_warnings=True, required_columns=required_columns)
+    return _parse_pedigree_table_json(project, rows, header=header, fail_on_warnings=True, required_columns=required_columns, allow_id_update=False)
 
 
 def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
@@ -103,22 +103,22 @@ def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
                     i + 1, len(row), ', '.join(row), len(header), ', '.join(header)
                 ))
 
-        formatted_rows = [{header_item: field.strip() for header_item, field in zip(header, row)} for row in rows]
+        formatted_rows = [{header_item: str(field).strip() for header_item, field in zip(header, row)} for row in rows]
         return formatted_rows, header
 
     except Exception as e:
         raise ErrorsWarningsException(['Error while parsing file: {}. {}'.format(filename, e)], [])
 
 
-def _parse_pedigree_table_json(rows, header=None, column_map=None, errors=None, fail_on_warnings=False, required_columns=None):
+def _parse_pedigree_table_json(project, rows, header=None, column_map=None, errors=None, fail_on_warnings=False, required_columns=None, allow_id_update=True):
     # convert to json and validate
-    column_map = column_map or (_parse_header_columns(header) if header else None)
+    column_map = column_map or (_parse_header_columns(header, allow_id_update) if header else None)
     if column_map:
         json_records = _convert_fam_file_rows_to_json(column_map, rows, required_columns=required_columns)
     else:
         json_records = rows
 
-    warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings, errors=errors)
+    warnings = validate_fam_file_records(project, json_records, fail_on_warnings=fail_on_warnings, errors=errors)
     return json_records, warnings
 
 
@@ -187,7 +187,7 @@ def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
 
             try:
                 value = _format_value(value, column)
-            except ValueError:
+            except (KeyError, ValueError):
                 errors.append(f'Invalid value "{value}" for {_to_title_case(_to_snake_case(column))} in row #{i + 1}')
                 continue
 
@@ -200,9 +200,10 @@ def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
     return json_results
 
 
-def _parse_header_columns(header):
+def _parse_header_columns(header, allow_id_update):
     column_map = {}
     for key in header:
+        column = None
         full_key = key
         key = key.lower()
         if full_key in JsonConstants.JSON_COLUMNS:
@@ -211,6 +212,9 @@ def _parse_header_columns(header):
             column = JsonConstants.FAMILY_NOTES_COLUMN
         elif key.startswith("notes"):
             column = JsonConstants.NOTES_COLUMN
+        elif 'indiv' in key and 'previous' in key:
+            if allow_id_update:
+                column = JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN
         else:
             column = next((
                 col for col, substrings in JsonConstants.COLUMN_SUBSTRINGS
@@ -227,14 +231,14 @@ def _format_value(value, column):
     if format_func:
         if (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
             value = format_func(value)
-            if value is None and column not in JsonConstants.JSON_COLUMNS:
+            if value is None and column not in JsonConstants.NULLABLE_COLUMNS:
                 raise ValueError()
     elif value == '':
         value = None
     return value
 
 
-def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
+def validate_fam_file_records(project, records, fail_on_warnings=False, errors=None, clear_invalid_values=False):
     """Basic validation such as checking that parents have the same family id as the child, etc.
 
     Args:
@@ -252,6 +256,9 @@ def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
                      if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)}
     records_by_id.update({r[JsonConstants.INDIVIDUAL_ID_COLUMN]: r for r in records})
 
+    loaded_individual_families = dict(Individual.objects.filter(
+        family__project=project, sample__is_active=True).values_list('individual_id', 'family__family_id'))
+
     errors = errors or []
     warnings = []
     individual_id_counts = defaultdict(int)
@@ -259,6 +266,11 @@ def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
         individual_id = r[JsonConstants.INDIVIDUAL_ID_COLUMN]
         individual_id_counts[individual_id] += 1
         family_id = r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
+
+        if loaded_individual_families.get(r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)):
+            errors.append(f'{r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN]} already has loaded data and cannot update the ID')
+        if loaded_individual_families.get(individual_id) and loaded_individual_families[individual_id] != family_id:
+            errors.append(f'{individual_id} already has loaded data and cannot be moved to a different family')
 
         # check proband relationship has valid gender
         if r.get(JsonConstants.PROBAND_RELATIONSHIP) and r.get(JsonConstants.SEX_COLUMN):
@@ -268,44 +280,23 @@ def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
             elif r[JsonConstants.SEX_COLUMN] == Individual.SEX_FEMALE:
                 invalid_choices = Individual.MALE_RELATIONSHIP_CHOICES
             if invalid_choices and r[JsonConstants.PROBAND_RELATIONSHIP] in invalid_choices:
-                errors.append(
-                    'Invalid proband relationship "{relationship}" for {individual_id} with given gender {sex}'.format(
-                        relationship=Individual.RELATIONSHIP_LOOKUP[r[JsonConstants.PROBAND_RELATIONSHIP]],
-                        individual_id=individual_id,
-                        sex=dict(Individual.SEX_CHOICES)[r[JsonConstants.SEX_COLUMN]]
-                    ))
+                message = 'Invalid proband relationship "{relationship}" for {individual_id} with given gender {sex}'.format(
+                    relationship=Individual.RELATIONSHIP_LOOKUP[r[JsonConstants.PROBAND_RELATIONSHIP]],
+                    individual_id=individual_id,
+                    sex=dict(Individual.SEX_CHOICES)[r[JsonConstants.SEX_COLUMN]]
+                )
+                if clear_invalid_values:
+                    r[JsonConstants.PROBAND_RELATIONSHIP] = None
+                    warnings.append(f'Skipped {message}')
+                else:
+                    errors.append(message)
 
         # check maternal and paternal ids for consistency
-        for parent_id_type, parent_id, expected_sex in [
-            ('father', r.get(JsonConstants.PATERNAL_ID_COLUMN), 'M'),
-            ('mother', r.get(JsonConstants.MATERNAL_ID_COLUMN), 'F')
+        for parent in [
+            ('father', JsonConstants.PATERNAL_ID_COLUMN, 'M'),
+            ('mother', JsonConstants.MATERNAL_ID_COLUMN, 'F')
         ]:
-            if not parent_id:
-                continue
-
-            # is there a separate record for the parent id?
-            if parent_id not in records_by_id:
-                warnings.append(
-                    f'{parent_id} is the {parent_id_type} of {individual_id} but is not included. '
-                    f'Make sure to create an additional record with {parent_id} as the Individual ID')
-                continue
-
-            # is the parent the same individuals
-            if parent_id == individual_id:
-                errors.append('{} is recorded as their own {}'.format(parent_id, parent_id_type))
-
-            # is father male and mother female?
-            if JsonConstants.SEX_COLUMN in records_by_id[parent_id]:
-                actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
-                if actual_sex != expected_sex:
-                    actual_sex_label = dict(Individual.SEX_CHOICES)[actual_sex]
-                    errors.append("%(parent_id)s is recorded as %(actual_sex_label)s and also as the %(parent_id_type)s of %(individual_id)s" % locals())
-
-            # is the parent in the same family?
-            parent = records_by_id[parent_id]
-            parent_family_id = parent.get(JsonConstants.FAMILY_ID_COLUMN) or parent['family']['familyId']
-            if parent_family_id != family_id:
-                errors.append("%(parent_id)s is recorded as the %(parent_id_type)s of %(individual_id)s but they have different family ids: %(parent_family_id)s and %(family_id)s" % locals())
+            _validate_parent(r, *parent, individual_id, family_id, records_by_id, warnings, errors, clear_invalid_values)
 
     errors += [
         f'{individual_id} is included as {count} separate records, but must be unique within the project'
@@ -318,6 +309,41 @@ def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
     if errors:
         raise ErrorsWarningsException(errors, warnings)
     return warnings
+
+
+def _validate_parent(row, parent_id_type, parent_id_field, expected_sex, individual_id, family_id, records_by_id, warnings, errors, clear_invalid_values):
+    parent_id = row.get(parent_id_field)
+    if not parent_id:
+        return
+
+    # is there a separate record for the parent id?
+    if parent_id not in records_by_id:
+        warning = f'{parent_id} is the {parent_id_type} of {individual_id} but is not included'
+        if clear_invalid_values:
+            row[parent_id_field] = None
+        else:
+            warning += f'. Make sure to create an additional record with {parent_id} as the Individual ID'
+        warnings.append(warning)
+        return
+
+    # is the parent the same individuals
+    if parent_id == individual_id:
+        errors.append('{} is recorded as their own {}'.format(parent_id, parent_id_type))
+
+    # is father male and mother female?
+    if JsonConstants.SEX_COLUMN in records_by_id[parent_id]:
+        actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
+        if actual_sex != expected_sex:
+            actual_sex_label = dict(Individual.SEX_CHOICES)[actual_sex]
+            errors.append(
+                "%(parent_id)s is recorded as %(actual_sex_label)s sex and also as the %(parent_id_type)s of %(individual_id)s" % locals())
+
+    # is the parent in the same family?
+    parent = records_by_id[parent_id]
+    parent_family_id = parent.get(JsonConstants.FAMILY_ID_COLUMN) or parent['family']['familyId']
+    if parent_family_id != family_id:
+        errors.append(
+            "%(parent_id)s is recorded as the %(parent_id_type)s of %(individual_id)s but they have different family ids: %(parent_family_id)s and %(family_id)s" % locals())
 
 
 def _is_header_row(row):
@@ -477,13 +503,13 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
 
     original_table_attachment_filename = '{}.xlsx'.format('.'.join(os.path.basename(original_filename).split('.')[:-1]))
 
-    email_body = "User {} just uploaded pedigree info to {}.<br />".format(user.email or user.username, project.name)
+    email_body = "User {} just uploaded pedigree info to {}.\n".format(user.email or user.username, project.name)
 
-    email_body += """This email has 2 attached files:<br />
-    <br />
-    <b>%(sample_manifest_filename)s</b> is the sample manifest file in a format that can be sent to GP.<br />
-    <br />
-    <b>%(original_filename)s</b> is the original merged pedigree-sample-manifest file that the user uploaded.<br />
+    email_body += """This email has 2 attached files:
+    
+    <b>%(sample_manifest_filename)s</b> is the sample manifest file in a format that can be sent to GP.
+    
+    <b>%(original_filename)s</b> is the original merged pedigree-sample-manifest file that the user uploaded.
     """ % locals()
 
     temp_original_file = tempfile.NamedTemporaryFile()
@@ -784,6 +810,8 @@ class JsonConstants:
     TISSUE_AFFECTED_STATUS = 'tissueAffectedStatus'
 
     JSON_COLUMNS = {MATERNAL_ETHNICITY, PATERNAL_ETHNICITY, BIRTH_YEAR, DEATH_YEAR, ONSET_AGE, AFFECTED_RELATIVES}
+    NULLABLE_COLUMNS = {TISSUE_AFFECTED_STATUS}
+    NULLABLE_COLUMNS.update(JSON_COLUMNS)
 
     FORMAT_COLUMNS = {
         SEX_COLUMN: _parse_sex,
@@ -794,13 +822,12 @@ class JsonConstants:
         PRIMARY_BIOSAMPLE: lambda value: next(
             (code for code, uberon_code in Individual.BIOSAMPLE_CHOICES if value.startswith(uberon_code)), None),
         ANALYTE_TYPE: Individual.ANALYTE_REVERSE_LOOKUP.get,
-        TISSUE_AFFECTED_STATUS: {'Yes': True, 'No': False}.get,
+        TISSUE_AFFECTED_STATUS: lambda value: {'Yes': True, 'No': False, 'Unknown': None}[value],
     }
     FORMAT_COLUMNS.update({col: json.loads for col in JSON_COLUMNS})
 
     COLUMN_SUBSTRINGS = [
         (FAMILY_ID_COLUMN, ['family']),
-        (PREVIOUS_INDIVIDUAL_ID_COLUMN, ['indiv', 'previous']),
         (INDIVIDUAL_ID_COLUMN, ['indiv']),
         (PATERNAL_ID_COLUMN, ['father']),
         (PATERNAL_ID_COLUMN, ['paternal']),

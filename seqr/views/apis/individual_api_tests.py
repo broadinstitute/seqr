@@ -9,11 +9,12 @@ from django.urls.base import reverse
 from io import BytesIO
 from openpyxl import load_workbook
 
-from seqr.models import Individual
+from seqr.models import Individual, Sample, SavedVariant, VariantTag
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
-    get_hpo_terms, get_individual_rna_seq_data, _get_record_updates
+    get_hpo_terms, get_individual_rna_seq_data, import_gregor_metadata, _get_record_updates
+from seqr.views.apis.report_api_tests import PARTICIPANT_TABLE, PHENOTYPE_TABLE, EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, GENETIC_FINDINGS_TABLE
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, INDIVIDUAL_FIELDS, \
     INDIVIDUAL_CORE_FIELDS, CORE_INTERNAL_INDIVIDUAL_FIELDS
 
@@ -84,6 +85,13 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
     "familyId": "1",
     "individualId": UPDATED_MATERNAL_ID,
 }
+
+LOAD_PARTICIPANT_TABLE = deepcopy(PARTICIPANT_TABLE)
+for row in LOAD_PARTICIPANT_TABLE[4:]:
+    row[7] = row[7].replace('Broad_', '')
+LOAD_PARTICIPANT_TABLE[6][15] += '|Asian'
+LOAD_PARTICIPANT_TABLE[6][17] = ''
+
 
 @mock.patch('seqr.utils.middleware.DEBUG', False)
 class IndividualAPITest(object):
@@ -174,10 +182,21 @@ class IndividualAPITest(object):
         }))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
+            'NA19678 already has loaded data and cannot update the ID',
             "NA20870 is the mother of NA19678_1 but is not included. Make sure to create an additional record with NA20870 as the Individual ID",
         ])
 
+        response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
+            'individuals': [INDIVIDUAL_IDS_UPDATE_DATA, INDIVIDUAL_FAMILY_UPDATE_DATA]
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'NA19678 already has loaded data and cannot update the ID',
+            'NA20870 already has loaded data and cannot be moved to a different family',
+        ])
+
         # send valid request
+        Sample.objects.filter(guid__in=['S000130_na19678', 'S000135_na20870']).update(is_active=False)
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA, INDIVIDUAL_FAMILY_UPDATE_DATA]
         }))
@@ -263,7 +282,7 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Invalid parental guid I000020_na65432',
-            'NA21234 is recorded as Female and also as the father of NA21987',
+            'NA21234 is recorded as Female sex and also as the father of NA21987',
         ])
 
         update_json = deepcopy(EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA)
@@ -398,7 +417,10 @@ class IndividualAPITest(object):
             'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"\n"2"	"NA19675_1"	""'.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
-            'errors': ['NA19675_1 is included as 2 separate records, but must be unique within the project'], 'warnings': []
+            'errors': [
+                'NA19675_1 already has loaded data and cannot be moved to a different family',
+                'NA19675_1 is included as 2 separate records, but must be unique within the project',
+            ], 'warnings': []
         })
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
@@ -441,8 +463,8 @@ class IndividualAPITest(object):
             'errors': [
                 'Invalid proband relationship "Father" for NA19675_1 with given gender Female',
                 'NA19675_1 is recorded as their own father',
-                'NA19675_1 is recorded as Female and also as the father of NA19675_1',
-                'NA19675_1 is recorded as Female and also as the father of NA19675_2',
+                'NA19675_1 is recorded as Female sex and also as the father of NA19675_1',
+                'NA19675_1 is recorded as Female sex and also as the father of NA19675_2',
                 'NA19675_1 is recorded as the father of NA19675_2 but they have different family ids: 1 and 2',
                 'NA19675_1 is included as 2 separate records, but must be unique within the project',
             ],
@@ -455,8 +477,9 @@ class IndividualAPITest(object):
         self.check_manager_login(individuals_url)
 
         data = 'Family ID	Individual ID	Previous Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes	familyNotes\n\
-"1"	" NA19675 "	"NA19675_1 "	"NA19678 "	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
+"1"	" NA19675_1 "	""	"NA19678 "	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
 "1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
+"4"	"NA20872_update"	"NA20872"	""	""	"Male"	"Affected"	""	""\n\
 "21"	" HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family""'
 
         f = SimpleUploadedFile("1000_genomes demo_individuals.tsv", data.encode('utf-8'))
@@ -468,9 +491,9 @@ class IndividualAPITest(object):
         self.assertListEqual(response_json['errors'], [])
         self.assertListEqual(response_json['warnings'], [])
         self.assertListEqual(response_json['info'], [
-            '2 families, 3 individuals parsed from 1000_genomes demo_individuals.tsv',
+            '3 families, 4 individuals parsed from 1000_genomes demo_individuals.tsv',
             '1 new families, 1 new individuals will be added to the project',
-            '2 existing individuals will be updated',
+            '3 existing individuals will be updated',
         ])
 
         url = reverse(save_individuals_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
@@ -480,9 +503,10 @@ class IndividualAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid', 'familyNotesByGuid'})
 
-        self.assertEqual(len(response_json['familiesByGuid']), 2)
+        self.assertEqual(len(response_json['familiesByGuid']), 3)
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
-        new_family_guid = next(guid for guid in response_json['familiesByGuid'].keys() if guid != 'F000001_1')
+        self.assertTrue('F000004_4' in response_json['familiesByGuid'])
+        new_family_guid = next(guid for guid in response_json['familiesByGuid'].keys() if guid != 'F000001_1' and guid != 'F000004_4')
         self.assertEqual(response_json['familiesByGuid'][new_family_guid]['familyId'], '21')
         self.assertIsNone(response_json['familiesByGuid']['F000001_1']['pedigreeImage'])
 
@@ -492,17 +516,19 @@ class IndividualAPITest(object):
         self.assertEqual(new_note['noteType'], 'C')
         self.assertEqual(new_note['createdBy'], 'Test Manager User')
 
-        self.assertEqual(len(response_json['individualsByGuid']), 3)
+        self.assertEqual(len(response_json['individualsByGuid']), 4)
         self.assertTrue('I000001_na19675' in response_json['individualsByGuid'])
         self.assertTrue('I000002_na19678' in response_json['individualsByGuid'])
+        self.assertTrue('I000008_na20872' in response_json['individualsByGuid'])
         new_indiv_guid = next(guid for guid in response_json['individualsByGuid'].keys()
-                              if guid not in {'I000001_na19675', 'I000002_na19678'})
-        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['individualId'], 'NA19675')
+                              if guid not in {'I000001_na19675', 'I000002_na19678', 'I000008_na20872'})
+        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['individualId'], 'NA19675_1')
         self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['sex'], 'F')
         self.assertEqual(
             response_json['individualsByGuid']['I000001_na19675']['notes'], 'A affected individual, test1-zsf')
         self.assertEqual(response_json['individualsByGuid'][new_indiv_guid]['individualId'], 'HG00735')
         self.assertEqual(response_json['individualsByGuid'][new_indiv_guid]['sex'], 'F')
+        self.assertEqual(response_json['individualsByGuid']['I000008_na20872']['individualId'], 'NA20872_update')
 
         # Test PM permission
         receive_url = reverse(receive_individuals_table_handler, args=[PM_REQUIRED_PROJECT_GUID])
@@ -530,7 +556,7 @@ class IndividualAPITest(object):
 
         def _send_request_data(data):
             return self.client.post(receive_url, {'f': SimpleUploadedFile(
-                'sample_manifest.tsv', '\n'.join(['\t'.join(row) for row in data]).encode('utf-8')),
+                'sample_manifest.tsv', '\n'.join(['\t'.join([str(c) for c in row]) for row in data]).encode('utf-8')),
             })
 
         header_2 = [
@@ -580,7 +606,7 @@ class IndividualAPITest(object):
         data[2] = header_3
         data += [
             ['SK-3QVD', 'A02', 'SM-IRW6C', 'PED073', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', '', '', 'male',
-             'unaffected', 'UBERON:0000479 (tissue)', 'blood plasma', '', 'Unknown', '20', '94.8', 'probably dad', '',
+             'unaffected', 'UBERON:0000479 (tissue)', 'blood plasma', '', 'Unknown', '20', 94.8, 'probably dad', '',
              '', 'GMB', '1234'],
             ['SK-3QVD', 'A03', 'SM-IRW69', 'PED073', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1',
              'SCO_PED073B_GA0339_1', 'SCO_PED073A_GA0338_1', 'female', 'affected', 'UBERON:0002371 (bone marrow)',
@@ -607,7 +633,12 @@ class IndividualAPITest(object):
             missing_columns_error, 'Consent code in manifest "GMB" does not match project consent code "HMB"',
         ]})
 
-        data[3][12] = 'No'
+        data[3][12] = 'Maybe'
+        response = _send_request_data(data)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'warnings': None, 'errors': ['Invalid value "Maybe" for Tissue Affected Status in row #1']})
+
+        data[3][12] = 'Unknown'
         data[3][17] = 'microcephaly'
         data[3][18] = 'MONDO:0001149'
         data[3][-2] = ''
@@ -639,7 +670,8 @@ class IndividualAPITest(object):
         self.assertEqual(
             mock_email.call_args.kwargs['body'],
             '\n'.join([
-                'User test_pm_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.This email has 2 attached files:',
+                'User test_pm_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.',
+                'This email has 2 attached files:',
                 '    ', '    SK-3QVD.xlsx is the sample manifest file in a format that can be sent to GP.', '    ',
                 '    sample_manifest.tsv is the original merged pedigree-sample-manifest file that the user uploaded.', '    ',
             ]))
@@ -649,7 +681,7 @@ class IndividualAPITest(object):
     <b>SK-3QVD.xlsx</b> is the sample manifest file in a format that can be sent to GP.<br />
     <br />
     <b>sample_manifest.tsv</b> is the original merged pedigree-sample-manifest file that the user uploaded.<br />
-    """, 'text/html')
+    """.replace('\n', ''), 'text/html')
         mock_email.return_value.send.assert_called()
 
         # Test sent sample manifest is correct
@@ -667,7 +699,7 @@ class IndividualAPITest(object):
         # Test original file copy is correct
         original_wb = load_workbook(BytesIO(mock_email.call_args.kwargs['attachments'][1][1]))
         original_ws = original_wb.active
-        self.assertListEqual([[cell.value or '' for cell in row] for row in original_ws], data)
+        self.assertListEqual([[cell.value or '' for cell in row] for row in original_ws], [[str(c) for c in row] for row in data])
 
         url = reverse(save_individuals_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
         response = self.client.post(url)
@@ -691,7 +723,7 @@ class IndividualAPITest(object):
         indiv_1 = next(i for i in response_json['individualsByGuid'].values() if i['individualId'] == 'SCO_PED073B_GA0339_1')
         self.assertDictEqual({k: v for k, v in indiv_1.items() if k in test_keys}, {
             'affected': 'N', 'notes': 'probably dad', 'sex': 'M', 'maternalId': None, 'paternalId': None,
-            'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': False,
+            'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': None,
             'probandRelationship': 'F',
         })
         indiv_2 = next(i for i in response_json['individualsByGuid'].values() if i['individualId'] == 'SCO_PED073C_GA0341_1')
@@ -931,29 +963,6 @@ class IndividualAPITest(object):
         response = self.client.post(url, data={'f': f})
         self._is_expected_individuals_metadata_upload(response, expected_families=True, has_non_hpo_update=True)
 
-    def test_individuals_metadata_json_table_handler(self):
-        url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
-        self.check_collaborator_login(url)
-
-        f = SimpleUploadedFile('updates.json', json.dumps([
-            {'external_id': 'NA19675_1', 'sex': 'F', 'date_of_birth': '2000-01-01', 'features': [
-                {'id': 'HP:0002017', 'observed': 'yes'},
-                {'id': 'HP:0002017', 'observed': 'yes'},
-                {'id': 'HP:0012469', 'observed': 'no'},
-                {'id': 'HP:0004322', 'observed': 'no'},
-            ], 'family_history': {'affectedRelatives': True}, 'global_age_of_onset': [{'label': 'Juvenile onset'}],
-             'global_mode_of_inheritance': [{'label': 'Autosomal dominant inheritance'}, {'label': 'Sporadic'}],
-             'ethnicity': {'maternal_ethnicity': ['Finnish', 'Irish']}, 'genes': [
-                 {'gene': 'IKBKAP', 'comments': 'multiple panels, no confirm'}, {'gene': 'EHBP1L1'},
-             ]},
-            {'external_id': 'NA19678', 'features': [], 'notes': {'family_history': 'history note'}},
-            {'external_id': 'NA19679', 'features': [{'id': 'HP:0100258', 'observed': 'yes'}]},
-            {'family_id': '1', 'external_id': 'HG00731', 'features': [
-                {'id': 'HP:0002017', 'observed': 'yes'}, {'id': 'HP:0011675', 'observed': 'no'}]},
-        ]).encode('utf-8'))
-        response = self.client.post(url, data={'f': f})
-        self._is_expected_individuals_metadata_upload(response)
-
     def test_individuals_metadata_hpo_term_number_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
         self.check_collaborator_login(url)
@@ -973,6 +982,255 @@ class IndividualAPITest(object):
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self._is_expected_individuals_metadata_upload(response)
+
+    def _set_metadata_file_iter(self, mock_subprocess, genetic_findings_table):
+        mock_subprocess.return_value.stdout.__iter__.side_effect = [
+            iter(['\t'.join(row).encode() for row in file]) for file in [
+                EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, LOAD_PARTICIPANT_TABLE, PHENOTYPE_TABLE,
+                genetic_findings_table,
+            ]
+        ]
+
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_import_gregor_metadata(self, mock_subprocess):
+        genetic_findings_table = deepcopy(GENETIC_FINDINGS_TABLE)
+        genetic_findings_table[2] = genetic_findings_table[2][:11] + genetic_findings_table[3][11:14] + \
+                                    genetic_findings_table[2][14:]
+        self._set_metadata_file_iter(mock_subprocess, genetic_findings_table)
+
+        url = reverse(import_gregor_metadata, args=[PM_REQUIRED_PROJECT_GUID])
+        self.check_pm_login(url)
+
+        body = {
+            'workspaceNamespace': 'my-seqr-billing', 'workspaceName': 'anvil-1kg project nåme with uniçøde',
+            'sampleType': 'exome',
+        }
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {
+            'importStats', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'familyTagTypeCounts',
+        })
+        warnings = [
+            'Broad_HG00733 is the mother of VCGS_FAM203_621_D2 but is not included',
+            'Skipped the following unrecognized HPO terms: HP:0001509',
+        ]
+        self.assertDictEqual(response_json['importStats'], {'gregorMetadata': {
+            'warnings': warnings, 'info': [
+                'Imported 4 individuals',
+                'Created 1 new families, 3 new individuals',
+                'Updated 1 existing families, 1 existing individuals',
+                'Skipped 0 unchanged individuals',
+                'Loaded 3 new and 0 updated findings tags',
+            ],
+        }})
+
+        self.assertDictEqual(response_json['projectsByGuid'], {
+            PM_REQUIRED_PROJECT_GUID: {'variantTagTypes': mock.ANY, 'variantFunctionalTagTypes': mock.ANY},
+        })
+        self.assertDictEqual(response_json['projectsByGuid'][PM_REQUIRED_PROJECT_GUID]['variantTagTypes'][1], {
+            'variantTagTypeGuid': 'VTT_gregor_finding',
+            'name': 'GREGoR Finding',
+            'category': '',
+            'description': '',
+            'metadataTitle': None,
+            'color': '#c25fc4',
+            'order': 0.5,
+            'numTags': 4,
+        })
+
+        self.assertEqual(len(response_json['familiesByGuid']), 2)
+        self.assertIn('F000012_12', response_json['familiesByGuid'])
+        new_family_guid = next(k for k in response_json['familiesByGuid'] if k != 'F000012_12')
+        self.assertEqual(response_json['familiesByGuid'][new_family_guid]['familyId'], 'Broad_2')
+        self.assertEqual(response_json['familiesByGuid'][new_family_guid]['codedPhenotype'], 'microcephaly; seizures')
+
+        self.assertDictEqual(response_json['familyTagTypeCounts'], {
+            'F000012_12': {'GREGoR Finding': 3, 'MME Submission': 2, 'Tier 1 - Novel gene and phenotype': 1},
+            new_family_guid: {'GREGoR Finding': 1},
+        })
+
+        self.assertEqual(len(response_json['individualsByGuid']), 4)
+        self.assertIn('I000016_na20888', response_json['individualsByGuid'])
+        created_individual_guid = next(
+            k for k, v in response_json['individualsByGuid'].items() if v['individualId'] == 'Broad_NA20889')
+        new_family_individual_guid = next(
+            k for k, v in response_json['individualsByGuid'].items() if v['individualId'] == 'VCGS_FAM203_621_D2')
+
+        individual_db_data = Individual.objects.filter(
+            guid__in=response_json['individualsByGuid']).order_by('individual_id').values(
+            'individual_id', 'display_name', 'family__guid', 'affected', 'sex', 'proband_relationship', 'population',
+            'mother__individual_id', 'father__individual_id', 'features', 'absent_features', 'case_review_status',
+        )
+        self.assertDictEqual(individual_db_data[0], {
+            'individual_id': 'Broad_HG00732',
+            'display_name': '',
+            'family__guid': new_family_guid,
+            'affected': 'N',
+            'sex': 'M',
+            'proband_relationship': 'F',
+            'mother__individual_id': None,
+            'father__individual_id': None,
+            'population': 'NFE',
+            'features': [],
+            'absent_features': [],
+            'case_review_status': 'I',
+        })
+        self.assertDictEqual(individual_db_data[1], {
+            'individual_id': 'Broad_NA20889',
+            'display_name': '',
+            'family__guid': 'F000012_12',
+            'affected': 'A',
+            'sex': 'F',
+            'proband_relationship': 'S',
+            'mother__individual_id': None,
+            'father__individual_id': None,
+            'population': 'OTH',
+            'features': [{'id': 'HP:0011675'}],
+            'absent_features': [],
+            'case_review_status': 'I',
+        })
+        self.assertDictEqual(individual_db_data[2], {
+            'individual_id': 'NA20888',
+            'display_name': 'Broad_NA20888',
+            'family__guid': 'F000012_12',
+            'affected': 'A',
+            'sex': 'M',
+            'proband_relationship': '',
+            'mother__individual_id': None,
+            'father__individual_id': None,
+            'population': 'SAS',
+            'features': [],
+            'absent_features': [],
+            'case_review_status': 'G',
+        })
+        self.assertDictEqual(individual_db_data[3], {
+            'individual_id': 'VCGS_FAM203_621_D2',
+            'display_name': 'Broad_HG00731',
+            'family__guid': new_family_guid,
+            'affected': 'A',
+            'sex': 'F',
+            'proband_relationship': 'S',
+            'mother__individual_id': None,
+            'father__individual_id': 'Broad_HG00732',
+            'population': 'AMR',
+            'features': [{'id': 'HP:0011675'}],
+            'absent_features': [{'id': 'HP:0002017'}],
+            'case_review_status': 'I',
+        })
+
+        saved_variants = SavedVariant.objects.filter(
+            varianttag__variant_tag_type__name='GREGoR Finding'
+        ).order_by('family_id', 'variant_id').distinct().values(
+            'guid', 'variant_id', 'xpos', 'family__guid', 'saved_variant_json__genomeVersion',
+            'saved_variant_json__transcripts', 'saved_variant_json__genotypes', 'saved_variant_json__mainTranscriptId',
+            'saved_variant_json__hgvsc',
+        )
+        self.assertEqual(len(saved_variants), 3)
+        self.assertDictEqual(saved_variants[0], {
+            'guid': 'SV0000006_1248367227_r0003_tes',
+            'variant_id': '1-248367227-TC-T',
+            'xpos': 1248367227,
+            'family__guid': 'F000012_12',
+            'saved_variant_json__genomeVersion': '37',
+            'saved_variant_json__transcripts': mock.ANY,
+            'saved_variant_json__genotypes': mock.ANY,
+            'saved_variant_json__mainTranscriptId': 'ENST00000505820',
+            'saved_variant_json__hgvsc': None,
+        })
+        self.assertEqual(len(saved_variants[0]['saved_variant_json__transcripts']), 2)
+        self.assertEqual(len(saved_variants[0]['saved_variant_json__genotypes']), 2)
+        self.assertDictEqual(saved_variants[1], {
+            'guid': mock.ANY,
+            'variant_id': '1-249045487-A-G',
+            'xpos': 1249045487,
+            'family__guid': 'F000012_12',
+            'saved_variant_json__genomeVersion': '37',
+            'saved_variant_json__transcripts': {
+                'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
+            },
+            'saved_variant_json__genotypes': {created_individual_guid: {'numAlt': 1}},
+            'saved_variant_json__mainTranscriptId': None,
+            'saved_variant_json__hgvsc': None,
+        })
+        new_family_genotypes = {new_family_individual_guid: {'numAlt': 2}}
+        self.assertDictEqual(saved_variants[2], {
+            'guid': mock.ANY,
+            'variant_id': '1-248367227-TC-T',
+            'xpos': 1248367227,
+            'family__guid': new_family_guid,
+            'saved_variant_json__genomeVersion': '37',
+            'saved_variant_json__transcripts': {
+                'ENSG00000135953': [{'hgvsc': 'c.3955G>A', 'hgvsp': 'c.1586-17C>G', 'transcriptId': 'ENST00000505820'}]
+            },
+            'saved_variant_json__genotypes': new_family_genotypes,
+            'saved_variant_json__mainTranscriptId': 'ENST00000505820',
+            'saved_variant_json__hgvsc': None,
+        })
+
+        variant_tags = VariantTag.objects.filter(variant_tag_type__name='GREGoR Finding')
+        existing_variant_tags = variant_tags.filter(saved_variants__guid='SV0000006_1248367227_r0003_tes')
+        new_variant_tags = variant_tags.filter(saved_variants__guid=saved_variants[1]['guid'])
+        comp_het_tags = set(existing_variant_tags).intersection(new_variant_tags)
+        self.assertEqual(len(comp_het_tags), 1)
+        comp_het_tag = comp_het_tags.pop()
+        self.assertIsNone(comp_het_tag.metadata)
+        self.assertDictEqual(json.loads(next(t for t in existing_variant_tags if t != comp_het_tag).metadata), {
+            'gene_known_for_phenotype': 'Candidate',
+            'condition_id': 'MONDO:0008788',
+            'known_condition_name': 'IRIDA syndrome',
+            'condition_inheritance': 'Autosomal dominant',
+        })
+        self.assertDictEqual(json.loads(next(t for t in new_variant_tags if t != comp_het_tag).metadata), {
+            'gene_known_for_phenotype': 'Candidate',
+            'condition_id': 'MONDO:0008788',
+            'known_condition_name': 'IRIDA syndrome',
+            'condition_inheritance': 'Autosomal dominant',
+        })
+
+        new_family_tag = variant_tags.get(saved_variants__guid=saved_variants[2]['guid'])
+        self.assertDictEqual(
+            json.loads(new_family_tag.metadata), {'gene_known_for_phenotype': 'Known', 'condition_id': 'MONDO:0044970'},
+        )
+
+        mock_subprocess.assert_has_calls([
+            mock.call('gsutil cat gs://test_bucket/data_tables/experiment_dna_short_read.tsv', stdout=-1, stderr=-2, shell=True),  # nosec
+            mock.call().stdout.__iter__(),
+            mock.call('gsutil cat gs://test_bucket/data_tables/experiment.tsv', stdout=-1, stderr=-2, shell=True),  # nosec
+            mock.call().stdout.__iter__(),
+            mock.call('gsutil cat gs://test_bucket/data_tables/participant.tsv', stdout=-1, stderr=-2, shell=True), # nosec
+            mock.call().stdout.__iter__(),
+            mock.call('gsutil cat gs://test_bucket/data_tables/phenotype.tsv', stdout=-1, stderr=-2, shell=True),  # nosec
+            mock.call().stdout.__iter__(),
+            mock.call('gsutil cat gs://test_bucket/data_tables/genetic_findings.tsv', stdout=-1, stderr=-2, shell=True),  # nosec
+            mock.call().stdout.__iter__(),
+        ])
+
+        # Test behavior on reload
+        SavedVariant.objects.get(guid=saved_variants[2]['guid']).delete()
+        genetic_findings_table[2][10] = 'PPX123'
+        self._set_metadata_file_iter(mock_subprocess, genetic_findings_table)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        warnings.append('The following unknown genes were omitted in the findings tags: PPX123')
+        self.assertDictEqual(response_json['importStats'], {'gregorMetadata': {
+            'warnings': warnings, 'info': [
+                'Imported 4 individuals',
+                'Created 0 new families, 0 new individuals',
+                'Updated 0 existing families, 0 existing individuals',
+                'Skipped 4 unchanged individuals',
+                'Loaded 1 new and 2 updated findings tags',
+            ],
+        }})
+        self.assertDictEqual(response_json['individualsByGuid'], {})
+
+        no_gene_saved_variant_json = SavedVariant.objects.get(family__guid=new_family_guid).saved_variant_json
+        self.assertDictEqual(no_gene_saved_variant_json['transcripts'], {})
+        self.assertDictEqual(no_gene_saved_variant_json['genotypes'], new_family_genotypes)
+        self.assertNotIn('mainTranscriptId', no_gene_saved_variant_json)
+        self.assertNotIn('hgvsc', no_gene_saved_variant_json)
 
     def test_get_hpo_terms(self):
         url = reverse(get_hpo_terms, args=['HP:0011458'])
@@ -1027,16 +1285,16 @@ class IndividualAPITest(object):
                            response_json['rnaSeqData'][INDIVIDUAL_GUID]['spliceOutliers']['ENSG00000268903']}
         self.assertDictEqual(
             {
-                'chrom': '7', 'deltaPsi': 0.85, 'end': 132886973, 'geneId': 'ENSG00000268903', 'isSignificant': True,
-                'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithJunction': 1,
-                'readCount': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'zScore': 12.34,
+                'chrom': '7', 'counts': 1297, 'end': 132886973, 'geneId': 'ENSG00000268903', 'isSignificant': True,
+                'meanCounts': 0.85,  'meanTotalCounts': 0.85, 'pAdjust': 3.08e-56,
+                'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1,
+                'totalCounts': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34,
                 'tissueType': 'F',
             },
             outliers_by_pos[132885746]
         )
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
-    @mock.patch('seqr.views.utils.orm_to_json_utils.RnaSeqSpliceOutlier.MAX_SIGNIFICANT_OUTLIER_NUM', 2)
     def test_get_individual_rna_seq_data_is_significant(self):
         url = reverse(get_individual_rna_seq_data, args=[INDIVIDUAL_GUID])
         self.check_collaborator_login(url)
@@ -1048,20 +1306,24 @@ class IndividualAPITest(object):
         significant_outliers = [outlier for outlier in response_rnaseq_data['outliers'].values() if outlier[0]['isSignificant']]
         self.assertEqual(2, len(significant_outliers))
         self.assertListEqual(
-            sorted([{field: outlier[field] for field in ['start', 'end', 'pValue', 'tissueType', 'isSignificant']}
+            sorted([{field: outlier[field] for field in ['start', 'end', 'pAdjust', 'deltaIntronJaccardIndex', 'tissueType', 'isSignificant']}
                     for outlier in response_rnaseq_data['spliceOutliers']['ENSG00000268903']], key=lambda r: r['start']),
-            [{'start': 1001, 'end': 2001, 'pValue': 0.1, 'tissueType': 'F', 'isSignificant': False},
-             {'start': 3000, 'end': 4000, 'pValue': 0.0001, 'tissueType': 'F', 'isSignificant': True},
-             {'start': 5000, 'end': 6000, 'pValue': 0.0001, 'tissueType': 'F', 'isSignificant': False},
-             {'start': 7000, 'end': 8000, 'pValue': 0.001, 'tissueType': 'M', 'isSignificant': True},
-             {'start': 9000, 'end': 9100, 'pValue': 0.2, 'tissueType': 'M', 'isSignificant': False},
-             {'start': 132885746, 'end': 132886973, 'pValue': 1.08e-56, 'tissueType': 'F', 'isSignificant': True}],
+            [{'start': 1001, 'end': 2001, 'pAdjust': 0.3, 'deltaIntronJaccardIndex': 12.34, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 3000, 'end': 4000, 'pAdjust': 0.0003, 'deltaIntronJaccardIndex': -12.34, 'tissueType': 'F', 'isSignificant': True},
+             {'start': 5000, 'end': 6000, 'pAdjust': 0.0003, 'deltaIntronJaccardIndex': 0.05, 'tissueType': 'F', 'isSignificant': False},
+             {'start': 7000, 'end': 8000, 'pAdjust': 0.003, 'deltaIntronJaccardIndex': 12.34, 'tissueType': 'M', 'isSignificant': True},
+             {'start': 9000, 'end': 9100, 'pAdjust': 0.1, 'deltaIntronJaccardIndex': -0.01, 'tissueType': 'M', 'isSignificant': False},
+             {'start': 132885746, 'end': 132886973, 'pAdjust': 3.08e-56, 'deltaIntronJaccardIndex': 12.34, 'tissueType': 'F', 'isSignificant': True}],
         )
 
 
 class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
     HAS_EXTERNAL_PROJECT_ACCESS = False
+
+    def test_import_gregor_metadata(self, *args):
+        # Importing gregor metadata does not work in local environment
+        pass
 
 
 # class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):

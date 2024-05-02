@@ -2,6 +2,22 @@
 
 ## dev
 
+## 4/4/24
+* Add ability to import project metadata from gregor metadata
+  * Only enabled for a project if tag is first created via 
+    ```
+    ./manage.py add_project_tag --name="GREGoR Finding" --order=0.5 --color=#c25fc4 --project=<project>
+    ```
+* Support FRASER2 data (REQUIRES DB MIGRATION)
+* Add solve_status to Individual model (REQUIRES DB MIGRATION)
+* Update data deployment for hail backend to disk snapshots
+
+## 3/13/24
+* Add "Probably Solved" analysis status (REQUIRES DB MIGRATION)
+
+## 3/1/24
+* Add subscribable project notifications (REQUIRES DB MIGRATION)
+
 ## 1/8/24
 * Support OMIM entries with no associated gene and remove phenotypic_series_number (REQUIRES DB MIGRATION)
 

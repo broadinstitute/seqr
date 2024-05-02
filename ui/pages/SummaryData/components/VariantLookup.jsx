@@ -7,14 +7,25 @@ import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import StateDataLoader from 'shared/components/StateDataLoader'
 import FormWrapper from 'shared/components/form/FormWrapper'
+import { helpLabel } from 'shared/components/form/FormHelpers'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
-import { Variant } from 'shared/components/panel/variants/Variants'
+import FamilyReads from 'shared/components/panel/family/FamilyReads'
+import FamilyVariantTags from 'shared/components/panel/variants/FamilyVariantTags'
+import Variants, { Variant, StyledVariantRow } from 'shared/components/panel/variants/Variants'
+import { FamilyVariantIndividuals } from 'shared/components/panel/variants/VariantIndividuals'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
 
 const FIELDS = [
   {
     name: 'variantId',
-    label: 'Variant ID',
+    label: helpLabel('Variant ID', (
+      <div>
+        Variants should be represented as &nbsp;
+        <i>chrom-pos-ref-alt</i>
+        <br />
+        For example, 4-88047328-C-T
+      </div>
+    )),
     inline: true,
     required: true,
     component: BaseSemanticInput,
@@ -23,10 +34,46 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
-const VariantDisplay = ({ variant }) => (variant ? <Variant variant={variant} /> : null)
+const LookupFamily = ({ familyGuid, variant, reads, showReads }) => (
+  <StyledVariantRow>
+    <Grid.Column width={16}>
+      <FamilyVariantTags familyGuid={familyGuid} variant={variant} linkToSavedVariants />
+    </Grid.Column>
+    <Grid.Column width={4} />
+    <Grid.Column width={12}>
+      <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
+      {showReads}
+    </Grid.Column>
+    <Grid.Column width={16}>{reads}</Grid.Column>
+  </StyledVariantRow>
+)
+
+LookupFamily.propTypes = {
+  familyGuid: PropTypes.string.isRequired,
+  variant: PropTypes.object.isRequired,
+  reads: PropTypes.object,
+  showReads: PropTypes.object,
+}
+
+const LookupVariant = ({ variant }) => (
+  <Grid stackable divided="vertically">
+    <Variant variant={variant} />
+    {variant.lookupFamilyGuids.map(familyGuid => (
+      <FamilyReads key={familyGuid} layout={LookupFamily} familyGuid={familyGuid} variant={variant} />
+    ))}
+  </Grid>
+)
+
+LookupVariant.propTypes = {
+  variant: PropTypes.object,
+}
+
+const VariantDisplay = ({ variants }) => (
+  (variants || [])[0]?.lookupFamilyGuids ? <LookupVariant variant={variants[0]} /> : <Variants variants={variants} />
+)
 
 VariantDisplay.propTypes = {
-  variant: PropTypes.object,
+  variants: PropTypes.arrayOf(PropTypes.object),
 }
 
 const onSubmit = updateQueryParams => (data) => {
@@ -44,12 +91,16 @@ const VariantLookup = ({ queryParams, receiveData, updateQueryParams }) => (
       </Grid.Column>
       <Grid.Column width={5} />
     </Grid.Row>
-    <StateDataLoader
-      url={queryParams.variantId && '/api/variant_lookup'}
-      query={queryParams}
-      parseResponse={receiveData}
-      childComponent={VariantDisplay}
-    />
+    <Grid.Row>
+      <Grid.Column width={16}>
+        <StateDataLoader
+          url={queryParams.variantId && '/api/variant_lookup'}
+          query={queryParams}
+          parseResponse={receiveData}
+          childComponent={VariantDisplay}
+        />
+      </Grid.Column>
+    </Grid.Row>
   </Grid>
 )
 

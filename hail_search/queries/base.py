@@ -7,9 +7,20 @@ import os
 from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
-    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT
+    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, UNKNOWN_AFFECTED, UNKNOWN_AFFECTED_ID, FAMILY_GUID_FIELD, GENOTYPES_FIELD, \
+    AFFECTED_ID_MAP
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
+SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
+
+# Number of filtered genes at which pre-filtering a table by gene-intervals does not improve performance
+# Estimated based on behavior for several representative gene lists
+MAX_GENE_INTERVALS = 100
+
+# Optimal number of entry table partitions, balancing parallelization with partition overhead
+# Experimentally determined based on compound het search performance:
+# https://github.com/broadinstitute/seqr-private/issues/1283#issuecomment-1973392719
+MAX_PARTITIONS = 12
 
 logger = logging.getLogger(__name__)
 
@@ -41,19 +52,22 @@ class BaseHailTableQuery(object):
 
     GENOTYPE_FIELDS = {}
     COMPUTED_GENOTYPE_FIELDS = {}
+    GENOTYPE_OVERRIDE_FIELDS = {}
     GENOTYPE_QUERY_FIELDS = {}
     QUALITY_FILTER_FORMAT = {}
     POPULATIONS = {}
     POPULATION_FIELDS = {}
     POPULATION_KEYS = ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']
     PREDICTION_FIELDS_CONFIG = {}
+    ANNOTATION_OVERRIDE_FIELDS = []
+    SECONDARY_ANNOTATION_OVERRIDE_FIELDS = None
 
-    GENOME_VERSIONS = [GENOME_VERSION_GRCh38]
+    GENOME_VERSION = GENOME_VERSION_GRCh38
     GLOBALS = ['enums']
     TRANSCRIPTS_FIELD = None
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
-        'familyGuids': lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
+        FAMILY_GUID_FIELD: lambda r: r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'variantId': lambda r: r.variant_id,
     }
@@ -77,11 +91,9 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def load_globals(cls):
-        cls.LOADED_GLOBALS = {}
-        for genome_version in cls.GENOME_VERSIONS:
-            ht_path = cls._get_generic_table_path(genome_version, 'annotations.ht')
-            ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
-            cls.LOADED_GLOBALS[genome_version] = {k: ht_globals[k] for k in cls.GLOBALS}
+        ht_path = cls._get_table_path('annotations.ht')
+        ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
+        cls.LOADED_GLOBALS = {k: ht_globals[k] for k in cls.GLOBALS}
 
     @classmethod
     def _format_population_config(cls, pop_config):
@@ -90,15 +102,12 @@ class BaseHailTableQuery(object):
         base_pop_config.pop('sort', None)
         return base_pop_config
 
-    def annotation_fields(self):
+    def annotation_fields(self, include_genotype_overrides=True):
         annotation_fields = {
-            'genotypes': lambda r: r.family_entries.flatmap(lambda x: x).filter(
+            GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
                 lambda gt: hl.is_defined(gt.individualGuid)
-            ).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0].select(
-                'sampleId', 'sampleType', 'individualGuid', 'familyGuid',
-                numAlt=hl.if_else(hl.is_defined(x[0].GT), x[0].GT.n_alt_alleles(), self.MISSING_NUM_ALT),
-                **{k: x[0][field] for k, field in self.GENOTYPE_FIELDS.items()},
-                **{_to_camel_case(k): v(x[0], k, r) for k, v in self.COMPUTED_GENOTYPE_FIELDS.items()},
+            ).group_by(lambda x: x.individualGuid).map_values(lambda x: self._get_sample_genotype(
+                x[0], r, select_fields=['individualGuid'], include_genotype_overrides=include_genotype_overrides,
             )),
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
@@ -110,6 +119,7 @@ class BaseHailTableQuery(object):
             }),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
+        annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         annotation_fields.update(self._additional_annotation_fields())
 
         prediction_fields = {path.source for path in self.PREDICTION_FIELDS_CONFIG.values()}
@@ -118,9 +128,16 @@ class BaseHailTableQuery(object):
             if enum and k not in prediction_fields
         ])
 
-        if self._genome_version == GENOME_VERSION_GRCh38:
-            annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
+
+    def _get_sample_genotype(self, sample, r=None, include_genotype_overrides=False, select_fields=None):
+        return sample.select(
+            'sampleId', 'sampleType', 'familyGuid', *(select_fields or []),
+            numAlt=hl.if_else(hl.is_defined(sample.GT), sample.GT.n_alt_alleles(), self.MISSING_NUM_ALT),
+            **{k: sample[field] for k, field in self.GENOTYPE_FIELDS.items()},
+            **{_to_camel_case(k): v(sample, k, r) for k, v in self.COMPUTED_GENOTYPE_FIELDS.items()
+               if include_genotype_overrides or k not in self.GENOTYPE_OVERRIDE_FIELDS},
+        )
 
     def _additional_annotation_fields(self):
         return {}
@@ -197,10 +214,9 @@ class BaseHailTableQuery(object):
 
         return value
 
-    def __init__(self, sample_data, genome_version, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
+    def __init__(self, sample_data, sort=XPOS, sort_metadata=None, num_results=100, inheritance_mode=None,
                  override_comp_het_alt=False, **kwargs):
         self.unfiltered_comp_het_ht = None
-        self._genome_version = genome_version
         self._sort = sort
         self._sort_metadata = sort_metadata
         self._num_results = num_results
@@ -209,14 +225,13 @@ class BaseHailTableQuery(object):
         self._comp_het_ht = None
         self._inheritance_mode = inheritance_mode
         self._has_secondary_annotations = False
-        self._load_table_kwargs = {}
+        self._is_multi_data_type_comp_het = False
+        self.max_unaffected_samples = None
+        self._load_table_kwargs = {'_n_partitions': min(MAX_PARTITIONS, (os.cpu_count() or 2)-1)}
+        self.entry_samples_by_family_guid = {}
 
         if sample_data:
-            self._load_filtered_table(sample_data, inheritance_mode=inheritance_mode, **kwargs)
-
-    @property
-    def _is_recessive_search(self):
-        return self._inheritance_mode == RECESSIVE
+            self._load_filtered_table(sample_data, **kwargs)
 
     @property
     def _has_comp_het_search(self):
@@ -224,46 +239,32 @@ class BaseHailTableQuery(object):
 
     @property
     def _globals(self):
-        return self.LOADED_GLOBALS[self._genome_version]
+        return self.LOADED_GLOBALS
 
     @property
     def _enums(self):
         return self._globals['enums']
 
-    def _load_filtered_table(self, sample_data, intervals=None, **kwargs):
+    def _load_filtered_table(self, sample_data, intervals=None, annotations=None, annotations_secondary=None, **kwargs):
         parsed_intervals = self._parse_intervals(intervals, **kwargs)
+        parsed_annotations = self._parse_annotations(annotations, annotations_secondary, **kwargs)
         self.import_filtered_table(
-            sample_data, parsed_intervals=parsed_intervals, **kwargs)
-
-        if self._has_comp_het_search:
-            self._comp_het_ht = self._filter_compound_hets()
-            if self._is_recessive_search:
-                self._ht = self._ht.filter(self._ht.family_entries.any(hl.is_defined))
-                if self._has_secondary_annotations:
-                    annotation_filters = self._get_annotation_filters(self._ht)
-                    if annotation_filters:
-                        self._ht = self._ht.filter(hl.any(annotation_filters))
-                    else:
-                        # Data type only has annotations for second hit
-                        self._ht = None
-            else:
-                self._ht = None
+            *self._parse_sample_data(sample_data), parsed_intervals=parsed_intervals, parsed_annotations=parsed_annotations, **kwargs)
 
     @classmethod
-    def _get_generic_table_path(cls, genome_version, path):
-        return f'{DATASETS_DIR}/{genome_version}/{cls.DATA_TYPE}/{path}'
+    def _get_table_path(cls, path, use_ssd_dir=False):
+        return f'{SSD_DATASETS_DIR if use_ssd_dir else DATASETS_DIR}/{cls.GENOME_VERSION}/{cls.DATA_TYPE}/{path}'
 
-    def _get_table_path(self, path):
-        return self._get_generic_table_path(self._genome_version, path)
-
-    def _read_table(self, path, drop_globals=None):
-        table_path = self._get_table_path(path)
+    def _read_table(self, path, drop_globals=None, use_ssd_dir=False, skip_missing_field=None):
+        table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
-            ht_globals = hl.read_table(table_path).globals
+            if skip_missing_field and not ht.any(hl.is_defined(ht[skip_missing_field])):
+                return None
+            ht_globals = hl.read_table(table_path).index_globals()
             if drop_globals:
                 ht_globals = ht_globals.drop(*drop_globals)
-            return ht.annotate_globals(**hl.eval(ht_globals))
+            return ht.annotate_globals(**ht_globals)
         return hl.read_table(table_path, **self._load_table_kwargs)
 
     @staticmethod
@@ -271,66 +272,118 @@ class BaseHailTableQuery(object):
         query_result = hl.query_table(query_table_path, ht.key).first().drop(*ht.key)
         return ht.annotate(**query_result)
 
-    def import_filtered_table(self, sample_data, intervals=None, **kwargs):
-        family_samples = defaultdict(list)
-        project_samples = defaultdict(list)
+    def _parse_sample_data(self, sample_data):
+        families = set()
+        project_samples = defaultdict(lambda: defaultdict(list))
         for s in sample_data:
-            family_samples[s['family_guid']].append(s)
-            project_samples[s['project_guid']].append(s)
+            families.add(s['family_guid'])
+            project_samples[s['project_guid']][s['family_guid']].append(s)
 
-        logger.info(f'Loading {self.DATA_TYPE} data for {len(family_samples)} families in {len(project_samples)} projects')
-        if len(family_samples) == 1:
-            family_guid, family_sample_data = list(family_samples.items())[0]
-            family_ht = self._read_table(f'families/{family_guid}.ht')
-            families_ht, _ = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
-        else:
-            filtered_project_hts = []
-            exception_messages = set()
-            for project_guid, project_sample_data in project_samples.items():
-                project_ht = self._read_table(f'projects/{project_guid}.ht')
-                try:
-                    filtered_project_hts.append(self._filter_entries_table(project_ht, project_sample_data, **kwargs))
-                except HTTPBadRequest as e:
-                    exception_messages.add(e.reason)
+        num_families = len(families)
+        logger.info(f'Loading {self.DATA_TYPE} data for {num_families} families in {len(project_samples)} projects')
+        return project_samples, num_families
 
-            if exception_messages:
-                raise HTTPBadRequest(reason='; '.join(exception_messages))
+    def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, n_partitions=MAX_PARTITIONS, **kwargs):
+        if len(project_samples) == 1:
+            project_guid = list(project_samples.keys())[0]
+            project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True)
+            return self._filter_entries_table(project_ht, project_samples[project_guid], **kwargs)
 
-            families_ht, num_families = filtered_project_hts[0]
-            entry_type = families_ht.family_entries.dtype.element_type
-            for project_ht, num_project_families in filtered_project_hts[1:]:
-                families_ht = families_ht.join(project_ht, how='outer')
-                families_ht = families_ht.select_globals(
-                    family_guids=families_ht.family_guids.extend(families_ht.family_guids_1)
+        # Need to chunk tables or else evaluating table globals throws LineTooLong exception
+        # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
+        # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
+        chunk_size = 64
+        filtered_project_hts = []
+        filtered_comp_het_project_hts = []
+        project_hts = []
+        sample_data = {}
+        for project_guid, project_sample_data in project_samples.items():
+            project_ht = self._read_table(
+                f'projects/{project_guid}.ht',
+                use_ssd_dir=True,
+                skip_missing_field='family_entries' if skip_all_missing else None,
+            )
+            if project_ht is None:
+                continue
+            project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
+            sample_data.update(project_sample_data)
+
+            if len(project_hts) >= chunk_size:
+                self._filter_merged_project_hts(
+                    project_hts, sample_data, filtered_project_hts, filtered_comp_het_project_hts, n_partitions, **kwargs,
                 )
-                select_fields = {
-                    'filters': families_ht.filters.union(families_ht.filters_1),
-                    'family_entries': hl.bind(
-                        lambda a1, a2: a1.extend(a2),
-                        hl.or_else(families_ht.family_entries, hl.empty_array(entry_type)),
-                        hl.or_else(families_ht.family_entries_1, hl.empty_array(entry_type)),
-                    ),
-                }
-                if 'comp_het_family_entries_1' in families_ht.row:
-                    missing_arr = lambda count: hl.range(count).map(lambda i: hl.missing(entry_type))
-                    select_fields['comp_het_family_entries'] = hl.bind(
-                        lambda a1, a2: a1.extend(a2),
-                        hl.or_else(families_ht.comp_het_family_entries, missing_arr(num_families)),
-                        hl.or_else(families_ht.comp_het_family_entries_1, missing_arr(num_project_families)),
-                    )
-                families_ht = families_ht.select(**select_fields)
-                num_families += num_project_families
+                project_hts = []
+                sample_data = {}
 
-        self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
+        self._filter_merged_project_hts(
+            project_hts, sample_data, filtered_project_hts, filtered_comp_het_project_hts, n_partitions, **kwargs,
+        )
 
-        self._filter_annotated_table(**kwargs)
+        ht = self._merge_project_hts(filtered_project_hts, n_partitions)
+        comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
 
-    def _filter_entries_table(self, ht, sample_data, inheritance_mode=None, inheritance_filter=None, quality_filter=None,
-                              **kwargs):
-        if not self._load_table_kwargs:
-            ht = self._prefilter_entries_table(ht, **kwargs)
+        return ht, comp_het_ht
 
-        ht, sample_id_family_index_map, num_families = self._add_entry_sample_families(ht, sample_data)
+    def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
+        if num_families == 1:
+            family_sample_data = list(project_samples.values())[0]
+            family_guid = list(family_sample_data.keys())[0]
+            family_ht = self._read_table(f'families/{family_guid}.ht', use_ssd_dir=True)
+            family_ht = family_ht.transmute(family_entries=[family_ht.entries])
+            family_ht = family_ht.annotate_globals(
+                family_guids=[family_guid], family_samples={family_guid: family_ht.sample_ids},
+            )
+            families_ht, comp_het_families_ht = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
+        else:
+            families_ht, comp_het_families_ht = self._load_filtered_project_hts(project_samples, **kwargs)
+
+        if comp_het_families_ht is not None:
+            self._comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
+            self._comp_het_ht = self._filter_annotated_table(self._comp_het_ht, is_comp_het=True, **kwargs)
+            self._comp_het_ht = self._filter_compound_hets()
+
+        if families_ht is not None:
+            self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
+            self._ht = self._filter_annotated_table(self._ht, **kwargs)
+
+    def _filter_merged_project_hts(self, project_hts, sample_data, filtered_project_hts, filtered_comp_het_project_hts, n_partitions, **kwargs):
+        if not project_hts:
+            return
+        ht = self._merge_project_hts(project_hts, n_partitions, include_all_globals=True)
+        ht, comp_het_ht = self._filter_entries_table(ht, sample_data, **kwargs)
+        if ht is not None:
+            filtered_project_hts.append(ht)
+        if comp_het_ht is not None:
+            filtered_comp_het_project_hts.append(comp_het_ht)
+
+    @staticmethod
+    def _merge_project_hts(project_hts, n_partitions, include_all_globals=False):
+        if not project_hts:
+            return None
+        ht = hl.Table.multi_way_zip_join(project_hts, 'project_entries', 'project_globals')
+        ht = ht.repartition(n_partitions)
+        ht = ht.transmute(
+            filters=ht.project_entries.fold(lambda f, x: f.union(x.filters), hl.empty_set(hl.tstr)),
+            family_entries=hl.enumerate(ht.project_entries).starmap(lambda i, x: hl.or_else(
+                x.family_entries,
+                ht.project_globals[i].family_guids.map(lambda f: hl.missing(x.family_entries.dtype.element_type)),
+            )).flatmap(lambda x: x),
+        )
+        global_expressions = {
+            'family_guids': ht.project_globals.flatmap(lambda x: x.family_guids),
+        }
+        if include_all_globals:
+            global_expressions.update({
+                'sample_types':  ht.project_globals.flatmap(lambda x: x.family_guids.map(lambda _: x.sample_type)),
+                'family_samples': hl.dict(ht.project_globals.flatmap(lambda x: x.family_samples.items())),
+            })
+
+        return ht.transmute_globals(**global_expressions)
+
+    def _filter_entries_table(self, ht, sample_data, inheritance_filter=None, quality_filter=None, **kwargs):
+        ht = self._prefilter_entries_table(ht, **kwargs)
+
+        ht, sorted_family_sample_data = self._add_entry_sample_families(ht, sample_data)
 
         quality_filter = quality_filter or {}
         if quality_filter.get('vcf_filter'):
@@ -343,71 +396,77 @@ class BaseHailTableQuery(object):
             ))
             ht = ht.filter(ht.family_entries.any(hl.is_defined))
 
-        ht = self._filter_inheritance(
-            ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map,
+        ht, ch_ht = self._filter_inheritance(
+            ht, inheritance_filter, sorted_family_sample_data,
         )
 
-        return ht.select_globals('family_guids'), num_families
+        return ht, ch_ht
 
-    @classmethod
-    def _add_entry_sample_families(cls, ht, sample_data):
+    def _add_entry_sample_families(self, ht, sample_data):
         ht_globals = hl.eval(ht.globals)
-        sample_index_id_map = dict(enumerate(ht_globals.sample_ids))
-        sample_id_index_map = {v: k for k, v in sample_index_id_map.items()}
-        sample_index_id_map = hl.dict(sample_index_id_map)
-        sample_individual_map = {s['sample_id']: s['individual_guid'] for s in sample_data}
-        missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
+
+        missing_samples = set()
+        family_sample_index_data = []
+        sorted_family_sample_data = []
+        family_guids = sorted(sample_data.keys())
+        for family_guid in family_guids:
+            ht_family_samples = ht_globals.family_samples[family_guid]
+            samples = sample_data[family_guid]
+            if samples is True:
+                samples = ht_family_samples
+                get_sample_data = lambda s: {'sampleId': s}
+                missing_family_samples = []
+            else:
+                get_sample_data = self._sample_entry_data
+                missing_family_samples = [s['sample_id'] for s in samples if s['sample_id'] not in ht_family_samples]
+            if missing_family_samples:
+                missing_samples.update(missing_family_samples)
+            else:
+                family_index = ht_globals.family_guids.index(family_guid)
+                family_entry_data = {
+                    'sampleType': self._get_sample_type(family_index, ht_globals),
+                    'familyGuid': family_guid,
+                }
+                formatted_samples = [{**family_entry_data, **get_sample_data(s)} for s in samples]
+                sample_index_data = [(ht_family_samples.index(s['sampleId']), hl.struct(**s)) for s in formatted_samples]
+                family_sample_index_data.append((family_index, sample_index_data))
+                sorted_family_sample_data.append(formatted_samples)
+                self.entry_samples_by_family_guid[family_guid] = [s['sampleId'] for s in formatted_samples]
+
         if missing_samples:
             raise HTTPBadRequest(
                 reason=f'The following samples are available in seqr but missing the loaded data: {", ".join(sorted(missing_samples))}'
             )
 
-        affected_id_map = {AFFECTED: AFFECTED_ID, UNAFFECTED: UNAFFECTED_ID}
-        sample_index_affected_status = hl.dict({
-            sample_id_index_map[s['sample_id']]: affected_id_map.get(s['affected']) for s in sample_data
-        })
-        sample_index_individual_map = hl.dict({
-            sample_id_index_map[sample_id]: i_guid for sample_id, i_guid in sample_individual_map.items()
-        })
-        sample_id_family_map = {s['sample_id']: s['family_guid'] for s in sample_data}
-        sample_index_family_map = hl.dict({sample_id_index_map[k]: v for k, v in sample_id_family_map.items()})
-        family_guids = sorted(set(sample_id_family_map.values()))
-        family_index_map = {f: i for i, f in enumerate(family_guids)}
-        num_families = len(family_index_map)
-        family_sample_indices = [None] * num_families
-        sample_id_family_index_map = {}
-        for sample_id, family_guid in sorted(sample_id_family_map.items()):
-            sample_index = sample_id_index_map[sample_id]
-            family_index = family_index_map[family_guid]
-            if not family_sample_indices[family_index]:
-                family_sample_indices[family_index] = []
-            sample_id_family_index_map[sample_id] = (family_index, len(family_sample_indices[family_index]))
-            family_sample_indices[family_index].append(sample_index)
-        family_sample_indices = hl.array(family_sample_indices)
+        family_sample_index_data = hl.array(family_sample_index_data)
 
         ht = ht.annotate_globals(family_guids=family_guids)
-        ht = ht.transmute(
-            family_entries=family_sample_indices.map(lambda sample_indices: sample_indices.map(
-                lambda i: ht.entries[i].annotate(
-                    sampleId=sample_index_id_map.get(i),
-                    sampleType=cls._get_sample_type(ht_globals),
-                    individualGuid=sample_index_individual_map.get(i),
-                    familyGuid=sample_index_family_map.get(i),
-                    affected_id=sample_index_affected_status.get(i),
-                )
-            ))
-        )
 
-        return ht, sample_id_family_index_map, num_families
+        ht = ht.transmute(family_entries=family_sample_index_data.map(lambda family_tuple: family_tuple[1].map(
+            lambda sample_tuple: ht.family_entries[family_tuple[0]][sample_tuple[0]].annotate(**sample_tuple[1])
+        )))
+
+        return ht, sorted_family_sample_data
 
     @classmethod
-    def _get_sample_type(cls, ht_globals):
+    def _sample_entry_data(cls, sample):
+        return dict(
+            sampleId=sample['sample_id'],
+            individualGuid=sample['individual_guid'],
+            affected_id=AFFECTED_ID_MAP.get(sample['affected']),
+            is_male='sex' in sample and sample['sex'] == MALE,
+        )
+
+    @classmethod
+    def _get_sample_type(cls, family_index, ht_globals):
+        if 'sample_types' in ht_globals:
+            return ht_globals.sample_types[family_index]
         return ht_globals.sample_type
 
-    def _filter_inheritance(self, ht, inheritance_mode, inheritance_filter, sample_data, sample_id_family_index_map):
+    def _filter_inheritance(self, ht, inheritance_filter, sorted_family_sample_data):
         any_valid_entry = lambda x: self.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
 
-        is_any_affected = inheritance_mode == ANY_AFFECTED
+        is_any_affected = self._inheritance_mode == ANY_AFFECTED
         if is_any_affected:
             prev_any_valid_entry = any_valid_entry
             any_valid_entry = lambda x: prev_any_valid_entry(x) & (x.affected_id == AFFECTED_ID)
@@ -416,57 +475,68 @@ class BaseHailTableQuery(object):
             lambda entries: hl.or_missing(entries.any(any_valid_entry), entries))
         )
 
-        filter_mode_map = {}
-        if (inheritance_filter or inheritance_mode) and not is_any_affected:
-            filter_mode_map[inheritance_mode] = 'family_entries'
+        comp_het_ht = None
         if self._has_comp_het_search:
-            filter_mode_map[COMPOUND_HET] = 'comp_het_family_entries'
-
-        for mode, field in sorted(filter_mode_map.items()):
-            ht = self._filter_families_inheritance(
-                ht, mode, inheritance_filter, sample_id_family_index_map, sample_data, field,
+            comp_het_ht = self._filter_families_inheritance(
+                ht, COMPOUND_HET, inheritance_filter, sorted_family_sample_data,
             )
 
-        filter_expr = ht.family_entries.any(hl.is_defined)
-        if self._has_comp_het_search:
-            ch_filter = ht.comp_het_family_entries.any(hl.is_defined)
-            filter_expr = (filter_expr | ch_filter) if self._is_recessive_search else ch_filter
+        if is_any_affected or not (inheritance_filter or self._inheritance_mode):
+            # No sample-specific inheritance filtering needed
+            sorted_family_sample_data = []
 
-        return ht.filter(filter_expr)
+        ht = None if self._inheritance_mode == COMPOUND_HET else self._filter_families_inheritance(
+            ht, self._inheritance_mode, inheritance_filter, sorted_family_sample_data,
+        )
 
-    def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sample_id_family_index_map, sample_data, field):
+        return ht, comp_het_ht
+
+    def _filter_families_inheritance(self, ht, inheritance_mode, inheritance_filter, sorted_family_sample_data):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
 
         entry_indices_by_gt = defaultdict(lambda: defaultdict(list))
-        for s in sample_data:
-            genotype = individual_genotype_filter.get(s['individual_guid']) \
-                if individual_genotype_filter else INHERITANCE_FILTERS[inheritance_mode].get(s['affected'])
-            if inheritance_mode == X_LINKED_RECESSIVE and s['affected'] == UNAFFECTED and s['sex'] == MALE:
-                genotype = REF_REF
-            if genotype == COMP_HET_ALT and self._override_comp_het_alt:
-                genotype = HAS_ALT
-            if genotype:
-                family_index, entry_index = sample_id_family_index_map[s['sample_id']]
-                entry_indices_by_gt[genotype][family_index].append(entry_index)
+        for family_index, samples in enumerate(sorted_family_sample_data):
+            for sample_index, s in enumerate(samples):
+                genotype = individual_genotype_filter.get(s['individualGuid']) \
+                    if individual_genotype_filter else INHERITANCE_FILTERS[inheritance_mode].get(s['affected_id'])
+                if inheritance_mode == X_LINKED_RECESSIVE and s['affected_id'] == UNAFFECTED_ID and s['is_male']:
+                    genotype = REF_REF
+                if genotype == COMP_HET_ALT and self._override_comp_het_alt:
+                    genotype = HAS_ALT
+                if genotype:
+                    entry_indices_by_gt[genotype][family_index].append(sample_index)
+
+        min_unaffected = None
+        if inheritance_mode == COMPOUND_HET:
+            family_unaffected_counts = [
+                len(i) for i in entry_indices_by_gt[INHERITANCE_FILTERS[COMPOUND_HET][UNAFFECTED_ID]].values()
+            ]
+            self.max_unaffected_samples = max(family_unaffected_counts) if family_unaffected_counts else 0
+            if self.max_unaffected_samples > 1:
+                min_unaffected = min(family_unaffected_counts)
 
         for genotype, entry_indices in entry_indices_by_gt.items():
+            if not entry_indices:
+                continue
             entry_indices = hl.dict(entry_indices)
-            family_entries = ht[field] if field in ht.row else ht.family_entries
-            ht = ht.annotate(**{field: hl.enumerate(family_entries).map(
-                lambda x: self._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, inheritance_mode)
-            )})
+            ht = ht.annotate(family_entries=hl.enumerate(ht.family_entries).map(
+                lambda x: self._valid_genotype_family_entries(x[1], entry_indices.get(x[0]), genotype, min_unaffected)
+            ))
 
-        return ht
+        return ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
 
     @classmethod
-    def _valid_genotype_family_entries(cls, entries, gentoype_entry_indices, genotype, inheritance_mode):
+    def _valid_genotype_family_entries(cls, entries, gentoype_entry_indices, genotype, min_unaffected):
         is_valid = hl.is_missing(gentoype_entry_indices) | gentoype_entry_indices.all(
             lambda i: cls.GENOTYPE_QUERY_MAP[genotype](entries[i].GT)
         )
-        if inheritance_mode == COMPOUND_HET and genotype == HAS_REF:
-            is_valid &= ((gentoype_entry_indices.size() < 2) | gentoype_entry_indices.any(
+        if min_unaffected is not None and genotype == HAS_REF:
+            unaffected_filter = gentoype_entry_indices.any(
                 lambda i: cls.GENOTYPE_QUERY_MAP[REF_REF](entries[i].GT)
-            ))
+            )
+            if min_unaffected < 2:
+                unaffected_filter |= gentoype_entry_indices.size() < 2
+            is_valid &= unaffected_filter
         return hl.or_missing(is_valid, entries)
 
     def _get_family_passes_quality_filter(self, quality_filter, **kwargs):
@@ -494,7 +564,7 @@ class BaseHailTableQuery(object):
             if field_config.override:
                 is_valid |= field_config.override(gt)
             if affected_only:
-                is_valid |= gt.affected_id == UNAFFECTED_ID
+                is_valid |= gt.affected_id != AFFECTED_ID
             return is_valid
 
         return passes_quality_field
@@ -509,32 +579,32 @@ class BaseHailTableQuery(object):
     def _prefilter_entries_table(self, ht, **kwargs):
         return ht
 
-    def _filter_annotated_table(self, gene_ids=None, rs_ids=None, frequencies=None, in_silico=None, pathogenicity=None,
-                                annotations=None, annotations_secondary=None, **kwargs):
+    def _filter_annotated_table(self, ht, gene_ids=None, rs_ids=None, frequencies=None, in_silico=None, pathogenicity=None,
+                                parsed_annotations=None, is_comp_het=False, **kwargs):
         if gene_ids:
-            self._filter_by_gene_ids(gene_ids)
+            ht = self._filter_by_gene_ids(ht, gene_ids)
 
         if rs_ids:
-            self._filter_rs_ids(rs_ids)
+            ht = self._filter_rs_ids(ht, rs_ids)
 
-        self._filter_by_frequency(frequencies, pathogenicity)
+        ht = self._filter_by_frequency(ht, frequencies, pathogenicity)
 
-        self._filter_by_in_silico(in_silico)
+        ht = self._filter_by_in_silico(ht, in_silico)
 
-        self._filter_by_annotations(pathogenicity, annotations, annotations_secondary)
+        return self._filter_by_annotations(ht, is_comp_het=is_comp_het, **(parsed_annotations or {}))
 
-    def _filter_by_gene_ids(self, gene_ids):
+    def _filter_by_gene_ids(self, ht, gene_ids):
         gene_ids = hl.set(gene_ids)
-        self._ht = self._ht.annotate(
-            gene_transcripts=self._ht[self.TRANSCRIPTS_FIELD].filter(lambda t: gene_ids.contains(t.gene_id))
+        ht = ht.annotate(
+            gene_transcripts=ht[self.TRANSCRIPTS_FIELD].filter(lambda t: gene_ids.contains(t.gene_id))
         )
-        self._ht = self._ht.filter(hl.is_defined(self._ht.gene_transcripts.first()))
+        return ht.filter(hl.is_defined(ht.gene_transcripts.first()))
 
-    def _filter_rs_ids(self, rs_ids):
+    def _filter_rs_ids(self, ht, rs_ids):
         rs_id_set = hl.set(rs_ids)
-        self._ht = self._ht.filter(rs_id_set.contains(self._ht.rsid))
+        return ht.filter(rs_id_set.contains(ht.rsid))
 
-    def _parse_intervals(self, intervals, **kwargs):
+    def _parse_intervals(self, intervals, gene_ids=None, **kwargs):
         parsed_variant_keys = self._parse_variant_keys(**kwargs)
         if parsed_variant_keys:
             self._load_table_kwargs['variant_ht'] = hl.Table.parallelize(parsed_variant_keys).key_by(*self.KEY_FIELD)
@@ -552,11 +622,14 @@ class BaseHailTableQuery(object):
             ]
 
         if is_x_linked:
-            reference_genome = hl.get_reference(self._genome_version)
+            reference_genome = hl.get_reference(self.GENOME_VERSION)
             intervals = (intervals or []) + [reference_genome.x_contigs[0]]
 
+        if len(intervals) > MAX_GENE_INTERVALS and len(intervals) == len(gene_ids or []):
+            return []
+
         parsed_intervals = [
-            hl.eval(hl.parse_locus_interval(interval, reference_genome=self._genome_version, invalid_missing=True))
+            hl.eval(hl.parse_locus_interval(interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
             for interval in intervals
         ]
         invalid_intervals = [raw_intervals[i] for i, interval in enumerate(parsed_intervals) if interval is None]
@@ -566,20 +639,20 @@ class BaseHailTableQuery(object):
         return parsed_intervals
 
     def _should_add_chr_prefix(self):
-        return self._genome_version == 'GRCh38'
+        return True
 
-    def _filter_by_frequency(self, frequencies, pathogenicity):
+    def _filter_by_frequency(self, ht, frequencies, pathogenicity):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
         if not frequencies:
-            return
+            return ht
 
-        path_override_filter = self._frequency_override_filter(pathogenicity)
+        path_override_filter = self._frequency_override_filter(ht, pathogenicity)
         filters = []
         for pop, freqs in sorted(frequencies.items()):
             pop_filters = []
-            pop_expr = self._ht[self.POPULATION_FIELDS.get(pop, pop)]
+            pop_expr = ht[self.POPULATION_FIELDS.get(pop, pop)]
             pop_config = self._format_population_config(self.POPULATIONS[pop])
-            if freqs.get('af') is not None:
+            if freqs.get('af') is not None and freqs['af'] < 1:
                 af_field = pop_config.get('filter_af') or pop_config['af']
                 pop_filter = pop_expr[af_field] <= freqs['af']
                 if path_override_filter is not None and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
@@ -602,22 +675,23 @@ class BaseHailTableQuery(object):
                 filters.append(hl.is_missing(pop_expr) | hl.all(pop_filters))
 
         if filters:
-            self._ht = self._ht.filter(hl.all(filters))
+            ht = ht.filter(hl.all(filters))
+        return ht
 
-    def _frequency_override_filter(self, pathogenicity):
+    def _frequency_override_filter(self, ht, pathogenicity):
         return None
 
-    def _filter_by_in_silico(self, in_silico_filters):
+    def _filter_by_in_silico(self, ht, in_silico_filters):
         in_silico_filters = in_silico_filters or {}
         require_score = in_silico_filters.get('requireScore', False)
         in_silico_filters = {k: v for k, v in in_silico_filters.items() if k in self.PREDICTION_FIELDS_CONFIG and v}
         if not in_silico_filters:
-            return
+            return ht
 
         in_silico_qs = []
         missing_qs = []
         for in_silico, value in in_silico_filters.items():
-            score_filter, ht_value = self._get_in_silico_filter(in_silico, value)
+            score_filter, ht_value = self._get_in_silico_filter(ht, in_silico, value)
             in_silico_qs.append(score_filter)
             if not require_score:
                 missing_qs.append(hl.is_missing(ht_value))
@@ -625,93 +699,149 @@ class BaseHailTableQuery(object):
         if missing_qs:
             in_silico_qs.append(hl.all(missing_qs))
 
-        self._ht = self._ht.filter(hl.any(in_silico_qs))
+        return ht.filter(hl.any(in_silico_qs))
 
-    def _get_in_silico_filter(self, in_silico, value):
+    def _get_in_silico_filter(self, ht, in_silico, value):
         score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
         enum_lookup = self._get_enum_lookup(*score_path[:2])
         if enum_lookup is not None:
-            ht_value = self._ht[score_path.source][f'{score_path.field}_id']
+            ht_value = ht[score_path.source][f'{score_path.field}_id']
             score_filter = ht_value == enum_lookup[value]
         else:
-            ht_value = self._ht[score_path.source][score_path.field]
+            ht_value = ht[score_path.source][score_path.field]
             score_filter = ht_value >= float(value)
 
         return score_filter, ht_value
 
-    def _filter_by_annotations(self, pathogenicity, annotations, annotations_secondary):
+    def _parse_annotations(self, annotations, annotations_secondary, **kwargs):
         annotations = annotations or {}
-        annotation_override_filters = self._get_annotation_override_filters(annotations, pathogenicity=pathogenicity)
+        allowed_consequence_ids = self._get_allowed_consequence_ids(annotations)
+        annotation_overrides = self._get_annotation_override_fields(annotations, **kwargs)
 
-        annotation_exprs, _ = self._get_allowed_consequences_annotations(annotations, annotation_override_filters)
-        if self._has_comp_het_search:
-            secondary_exprs, allowed_secondary_consequences = self._get_allowed_consequences_annotations(
-                annotations_secondary or {}, annotation_override_filters, is_secondary=True)
-            if secondary_exprs:
-                annotation_exprs.update({f'{k}_secondary': v for k, v in secondary_exprs.items()})
-            if secondary_exprs or allowed_secondary_consequences:
+        parsed_annotations = {}
+        if self._has_comp_het_search and annotations_secondary:
+            secondary_allowed_consequence_ids = self._get_allowed_consequence_ids(annotations_secondary)
+            has_different_secondary = secondary_allowed_consequence_ids != allowed_consequence_ids
+            has_data_type_primary_annotations = allowed_consequence_ids or annotation_overrides
+            has_data_type_secondary_annotations = bool(secondary_allowed_consequence_ids)
+            secondary_annotation_overrides = None
+            if self.SECONDARY_ANNOTATION_OVERRIDE_FIELDS:
+                secondary_annotation_overrides = self._get_annotation_override_fields(
+                    annotations_secondary, override_fields=self.SECONDARY_ANNOTATION_OVERRIDE_FIELDS, **kwargs)
+                has_data_type_secondary_annotations |= bool(secondary_annotation_overrides)
+                has_different_secondary &= secondary_annotation_overrides != annotation_overrides
+
+            if not has_data_type_primary_annotations:
+                allowed_consequence_ids = secondary_allowed_consequence_ids
+                annotation_overrides = secondary_annotation_overrides
+                # Data type only has annotations for second hit, so there is no need for the homozygous recessive query
+                self._inheritance_mode = COMPOUND_HET
+            elif has_different_secondary:
+                parsed_annotations.update({
+                    'secondary_consequence_ids': secondary_allowed_consequence_ids,
+                    'secondary_annotation_overrides': secondary_annotation_overrides,
+                })
                 self._has_secondary_annotations = True
 
-        if not annotation_exprs:
-            return
+            if not (has_data_type_primary_annotations and has_data_type_secondary_annotations):
+                self._is_multi_data_type_comp_het = True
 
-        self._ht = self._ht.annotate(**annotation_exprs)
-        annotation_filters = self._get_annotation_filters(self._ht) + self._get_annotation_filters(self._ht, is_secondary=True)
-        self._ht = self._ht.filter(hl.any(annotation_filters))
+        parsed_annotations.update({
+            'consequence_ids': allowed_consequence_ids,
+            'annotation_overrides': annotation_overrides,
+        })
+        return parsed_annotations
 
-    def _get_allowed_consequences_annotations(self, annotations, annotation_filters, is_secondary=False):
+    def _filter_by_annotations(self, ht, is_comp_het=False, consequence_ids=None, annotation_overrides=None,
+                               secondary_consequence_ids=None, secondary_annotation_overrides=None, **kwargs):
+
+        annotation_exprs = {}
+        if consequence_ids:
+            annotation_exprs[ALLOWED_TRANSCRIPTS] = self._get_allowed_transcripts(ht, consequence_ids)
+            ht = ht.annotate(**annotation_exprs)
+        annotation_filters = self._get_annotation_override_filters(ht, annotation_overrides or {})
+
+        if not is_comp_het:
+            if annotation_exprs:
+                annotation_filters.append(self._has_allowed_transcript_filter(ht, ALLOWED_TRANSCRIPTS))
+            if annotation_filters:
+                ht = ht.filter(hl.any(annotation_filters))
+            return ht
+
+        if annotation_filters:
+            annotation_exprs[HAS_ANNOTATION_OVERRIDE] = hl.any(annotation_filters)
+        if secondary_annotation_overrides is not None:
+            overrides = self._get_annotation_override_filters(ht, secondary_annotation_overrides)
+            annotation_exprs[f'{HAS_ANNOTATION_OVERRIDE}_secondary'] = hl.any(overrides) if overrides else False
+        secondary_allowed_transcripts_field = f'{ALLOWED_TRANSCRIPTS}_secondary'
+        if secondary_consequence_ids:
+            annotation_exprs[secondary_allowed_transcripts_field] = self._get_allowed_transcripts(ht, secondary_consequence_ids)
+
+        filter_fields = list(annotation_exprs.keys())
+        transcript_filter_fields = [ALLOWED_TRANSCRIPTS, secondary_allowed_transcripts_field]
+        annotation_exprs.pop(ALLOWED_TRANSCRIPTS, None)
+        if annotation_exprs:
+            ht = ht.annotate(**annotation_exprs)
+
+        all_filters = [
+            self._has_allowed_transcript_filter(ht, field) if field in transcript_filter_fields else ht[field]
+            for field in filter_fields
+        ]
+        return ht.filter(hl.any(all_filters))
+
+    def _get_allowed_consequence_ids(self, annotations):
         allowed_consequences = {
             ann for field, anns in annotations.items()
             if anns and (field not in ANNOTATION_OVERRIDE_FIELDS) for ann in anns
         }
-        allowed_consequence_ids = self._get_allowed_consequence_ids(allowed_consequences)
-
-        annotation_exprs = {}
-        transcript_consequence_filter = self._get_transcript_consequence_filter(allowed_consequence_ids, allowed_consequences)
-        has_consequence_filter = transcript_consequence_filter is not None
-        if has_consequence_filter:
-            allowed_transcripts = self._ht[self.TRANSCRIPTS_FIELD].filter(transcript_consequence_filter)
-            annotation_exprs[ALLOWED_TRANSCRIPTS] = allowed_transcripts
-        if annotation_filters:
-            annotation_exprs[HAS_ANNOTATION_OVERRIDE] = hl.any(annotation_filters)
-
-        return annotation_exprs, allowed_consequences
-
-    def _get_allowed_consequence_ids(self, allowed_consequences):
         return self._get_enum_terms_ids(self.TRANSCRIPTS_FIELD, self.TRANSCRIPT_CONSEQUENCE_FIELD, allowed_consequences)
 
-    def _get_transcript_consequence_filter(self, allowed_consequence_ids, allowed_consequences):
-        if not allowed_consequence_ids:
-            return None
+    def _get_allowed_transcripts(self, ht, allowed_consequence_ids):
+        transcript_filter = self._get_allowed_transcripts_filter(allowed_consequence_ids)
+        return ht[self.TRANSCRIPTS_FIELD].filter(transcript_filter)
+
+    @staticmethod
+    def _get_allowed_transcripts_filter(allowed_consequence_ids):
         allowed_consequence_ids = hl.set(allowed_consequence_ids)
         return lambda gc: allowed_consequence_ids.contains(gc.major_consequence_id)
 
-    def _get_annotation_override_filters(self, annotations, **kwargs):
+    def _get_annotation_override_fields(self, annotations, override_fields=None, **kwargs):
+        override_fields = override_fields or self.ANNOTATION_OVERRIDE_FIELDS
+        return {k: annotations[k] for k in override_fields if k in annotations}
+
+    def _get_annotation_override_filters(self, ht, annotation_overrides):
         return []
 
-    @staticmethod
-    def _get_annotation_filters(ht, is_secondary=False):
+    def _get_annotation_filters(self, ht, is_secondary=False):
         suffix = '_secondary' if is_secondary else ''
         annotation_filters = []
 
         allowed_transcripts_field = f'{ALLOWED_TRANSCRIPTS}{suffix}'
         if allowed_transcripts_field in ht.row:
-            annotation_filters.append(hl.is_defined(ht[allowed_transcripts_field].first()))
+            annotation_filters.append(self._has_allowed_transcript_filter(ht, allowed_transcripts_field))
 
         annotation_override_field = f'{HAS_ANNOTATION_OVERRIDE}{suffix}'
         if annotation_override_field in ht.row:
             annotation_filters.append(ht[annotation_override_field])
+        elif HAS_ANNOTATION_OVERRIDE in ht.row:
+            # For secondary annotations, if no secondary override is defined use the primary override
+            annotation_filters.append(ht[HAS_ANNOTATION_OVERRIDE])
 
         return annotation_filters
 
+    @staticmethod
+    def _has_allowed_transcript_filter(ht, allowed_transcript_field):
+        return hl.is_defined(ht[allowed_transcript_field].first())
+
     def _filter_compound_hets(self):
         # pylint: disable=pointless-string-statement
-        ch_ht = self._ht
-        if self._is_recessive_search:
-            ch_ht = ch_ht.filter(ch_ht.comp_het_family_entries.any(hl.is_defined))
+        ch_ht = self._comp_het_ht
 
         # Get possible pairs of variants within the same gene
-        ch_ht = ch_ht.annotate(gene_ids=self._gene_ids_expr(ch_ht, comp_het=True))
+        def key(v):
+            ks = [v[k] for k in self.KEY_FIELD]
+            return ks[0] if len(self.KEY_FIELD) == 1 else hl.tuple(ks)
+        ch_ht = ch_ht.annotate(key_=key(ch_ht.row), gene_ids=self._gene_ids_expr(ch_ht))
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
 
         # Filter allowed transcripts to the grouped gene
@@ -721,118 +851,125 @@ class BaseHailTableQuery(object):
         }
         if transcript_annotations:
             ch_ht = ch_ht.annotate(**transcript_annotations)
-        primary_filters = self._get_annotation_filters(ch_ht)
-        secondary_filters = self._get_annotation_filters(ch_ht, is_secondary=True)
 
-        self.unfiltered_comp_het_ht = ch_ht.filter(hl.any(primary_filters + secondary_filters))
-        if self._has_secondary_annotations and not (primary_filters and secondary_filters):
+        if transcript_annotations or self._has_secondary_annotations:
+            primary_filters = self._get_annotation_filters(ch_ht)
+            ch_ht = ch_ht.annotate(is_primary=hl.coalesce(hl.any(primary_filters), False))
+            if self._has_secondary_annotations and not self._is_multi_data_type_comp_het:
+                secondary_filters = self._get_annotation_filters(ch_ht, is_secondary=True)
+                is_secondary = hl.coalesce(hl.any(secondary_filters), False)
+            else:
+                is_secondary = ch_ht.is_primary
+            ch_ht = ch_ht.annotate(is_secondary=is_secondary)
+            if transcript_annotations:
+                ch_ht = ch_ht.filter(ch_ht.is_primary | ch_ht.is_secondary)
+        else:
+            ch_ht = ch_ht.annotate(is_primary=True, is_secondary=True)
+        self.unfiltered_comp_het_ht = ch_ht
+
+        if self._is_multi_data_type_comp_het:
             # In cases where comp het pairs must have different data types, there are no single data type results
             return None
 
-        primary_variants = hl.agg.filter(hl.any(primary_filters), hl.agg.collect(ch_ht.row))
-        if secondary_filters:
-            row_agg = ch_ht.row
-            if ALLOWED_TRANSCRIPTS in row_agg and ALLOWED_SECONDARY_TRANSCRIPTS in row_agg:
-                # Ensure main transcripts are properly selected for primary/secondary annotations in variant pairs
-                row_agg = row_agg.annotate(**{ALLOWED_TRANSCRIPTS: row_agg[ALLOWED_SECONDARY_TRANSCRIPTS]})
-            secondary_variants = hl.agg.filter(hl.any(secondary_filters), hl.agg.collect(row_agg))
-        else:
-            secondary_variants = primary_variants
-
-        ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=primary_variants, v2=secondary_variants)
-
-        # Compute all distinct variant pairs
         """ Assume a table with the following data
-         gene_ids | v1     | v2
-         A        | [1, 2] | [1, 2, 3]
-         B        | [2]    | [2, 3]
+        key_ | gene_ids | is_primary | is_secondary
+        1    | A        | true       | true
+        2    | A        | true       | true
+        2    | B        | true       | true
+        3    | A        | false      | true
+        3    | B        | false      | true
         """
-        key_expr = lambda v: v[self.KEY_FIELD[0]] if len(self.KEY_FIELD) == 1 else hl.tuple([v[k] for k in self.KEY_FIELD])
-        ch_ht = ch_ht.annotate(
-            v1_set=hl.set(ch_ht.v1.map(key_expr)),
-            v2=ch_ht.v2.group_by(key_expr).map_values(lambda x: x[0]),
+
+        variants = ch_ht.collect(_localize=False)
+        variants = variants.group_by(lambda v: v.gene_ids)
+        variants = variants.items().flatmap(lambda gvs:
+            hl.rbind(gvs[0], gvs[1], lambda gene_id, variants:
+                hl.rbind(
+                    variants.filter(lambda v: v.is_primary),
+                    variants.filter(lambda v: v.is_secondary),
+                    lambda v1s, v2s:
+                        v1s.flatmap(lambda v1:
+                            v2s \
+                            .filter(lambda v2: ~v2.is_primary | ~v1.is_secondary | (v1.key_ < v2.key_)) \
+                            .map(lambda v2: hl.tuple([gene_id, v1, v2]))
+                        )
+                )
+            )
         )
-        ch_ht = ch_ht.explode(ch_ht.v1)
-        """ After annotating and exploding by v1:
-         gene_ids | v1 | v2                          | v1_set 
-         A        | 1  | {id_1: 1, id_2: 2, id_3: 3} | {id_1, id_2}
-         A        | 2  | {id_2: 2, id_3: 3}          | {id_1, id_2}
-         B        | 2  | {id_2: 2, id_3: 3}          | {id_2}
+
+        """ After grouping by gene and pairing/filtering have array of tuples (gene_id, v1, v2)
+        (A, 1, 2)
+        (A, 1, 3)
+        (A, 2, 3)
+        (B, 2, 3)
         """
 
-        v1_key = key_expr(ch_ht.v1)
-        ch_ht = ch_ht.annotate(v2=ch_ht.v2.items().filter(
-            lambda x: ~ch_ht.v2.contains(v1_key) | ~ch_ht.v1_set.contains(x[0]) | (x[0] > v1_key)
+        variants = variants.group_by(lambda v: hl.tuple([v[1].key_, v[2].key_]))
+        variants = variants.values().map(lambda v: hl.rbind(
+            hl.set(v.map(lambda v: v[0])),
+            lambda comp_het_gene_ids: hl.struct(
+                v1=v[0][1].annotate(comp_het_gene_ids=comp_het_gene_ids),
+                v2=v[0][2].annotate(comp_het_gene_ids=comp_het_gene_ids),
+            )
         ))
-        """ After filtering v2:
-         gene_ids | v1 | v2                     | v1_set 
-         A        | 1  | [(id_2, 2), (id_3, 3)] | {id_1, id_2}
-         A        | 2  | [(id_3, 3)]            | {id_1, id_2}
-         B        | 2  | [(id_3, 3)]            | {id_2}
+
+        """ After grouping by pair have array of structs (v1, v2) annotated with comp_het_gene_ids
+        v1 | v2 | v<1/2>.comp_het_gene_ids
+         1 | 2  | {A}
+         1 | 3  | {A}
+         2 | 3  | {A, B} 
         """
 
-        ch_ht = ch_ht.group_by('v1').aggregate(
-            comp_het_gene_ids=hl.agg.collect_as_set(ch_ht.gene_ids),
-            v2_items=hl.agg.collect(ch_ht.v2).flatmap(lambda x: x),
+        variants = self._filter_comp_het_families(variants)
+
+        return hl.Table.parallelize(
+            variants.map(lambda v: hl.struct(**{GROUPED_VARIANTS_FIELD: hl.array([v.v1, v.v2])}))
         )
-        ch_ht = ch_ht.annotate(v2=hl.dict(ch_ht.v2_items).values())
-        """ After grouping by v1:
-         v1 | v2     | comp_het_gene_ids
-         1  | [2, 3] | {A}
-         2  | [3]    | {A, B}             
-        """
 
-        ch_ht = ch_ht.explode(ch_ht.v2)._key_by_assert_sorted()
-        """ After exploding by v2:
-         v1 | v2 | comp_het_gene_ids
-         1  | 2  | {A}
-         1  | 3  | {A}
-         2  | 3  | {A, B}             
-        """
-
-        ch_ht = self._filter_grouped_compound_hets(ch_ht)
-
-        # Return pairs formatted as lists
-        return ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.array([ch_ht.v1, ch_ht.v2])})
-
-    def _filter_grouped_compound_hets(self, ch_ht):
-        # Filter variant pairs for family and genotype
-        ch_ht = ch_ht.annotate(valid_families=hl.enumerate(ch_ht.v1.comp_het_family_entries).map(
-            lambda x: self._is_valid_comp_het_family(ch_ht, x[1], ch_ht.v2.comp_het_family_entries[x[0]])
+    def _filter_comp_het_families(self, variants, set_secondary_annotations=True):
+        return variants.map(lambda v: v.annotate(
+            valid_family_indices=hl.enumerate(v.v1.family_entries).map(lambda x: x[0]).filter(
+                lambda i: self._is_valid_comp_het_family(v.v1, v.v2, i)
+            )
+        )).filter(
+            lambda v: v.valid_family_indices.any(hl.is_defined)
+        ).map(lambda v: v.select(
+            v1=self._annotated_comp_het_variant(v.v1, v.valid_family_indices),
+            v2=self._annotated_comp_het_variant(v.v2, v.valid_family_indices, is_secondary=set_secondary_annotations),
         ))
-        ch_ht = ch_ht.filter(ch_ht.valid_families.any(lambda x: x))
-        ch_ht = ch_ht.select(**{k: self._annotated_comp_het_variant(ch_ht, k) for k in ['v1', 'v2']})
 
-        return ch_ht
+    def _annotated_comp_het_variant(self, variant, valid_family_indices, is_secondary=False):
+        if is_secondary and self._has_secondary_annotations and ALLOWED_TRANSCRIPTS in variant and ALLOWED_SECONDARY_TRANSCRIPTS in variant:
+            variant = variant.annotate(**{ALLOWED_TRANSCRIPTS: variant[ALLOWED_SECONDARY_TRANSCRIPTS]})
 
-    @staticmethod
-    def _annotated_comp_het_variant(ch_ht, field):
-        variant = ch_ht[field]
         return variant.annotate(
-            comp_het_gene_ids=ch_ht.comp_het_gene_ids,
-            family_entries=hl.enumerate(ch_ht.valid_families).filter(
-                lambda x: x[1]).map(lambda x: variant.comp_het_family_entries[x[0]]),
+            family_entries=valid_family_indices.map(lambda i: variant.family_entries[i]),
         )
 
     @classmethod
-    def _gene_ids_expr(cls, ht, comp_het=False):
+    def _gene_ids_expr(cls, ht):
         return hl.set(ht[cls.TRANSCRIPTS_FIELD].map(lambda t: t.gene_id))
 
-    def _is_valid_comp_het_family(self, ch_ht, entries_1, entries_2):
-        is_valid = hl.is_defined(entries_1) & hl.is_defined(entries_2) & hl.enumerate(entries_1).all(lambda x: hl.any([
-            (x[1].affected_id != UNAFFECTED_ID), *self._comp_het_entry_has_ref(x[1].GT, entries_2[x[0]].GT),
-        ]))
+    def _is_valid_comp_het_family(self, v1, v2, family_index):
+        entries_1 = v1.family_entries[family_index]
+        entries_2 = v2.family_entries[family_index]
+        family_filters = [hl.is_defined(entries_1), hl.is_defined(entries_2)]
+        if self.max_unaffected_samples > 0:
+            family_filters.append(hl.enumerate(entries_1).all(lambda x: hl.any([
+                (x[1].affected_id != UNAFFECTED_ID), *self._comp_het_entry_has_ref(x[1].GT, entries_2[x[0]].GT),
+            ])))
         if self._override_comp_het_alt:
-            is_valid &= entries_1.extend(entries_2).all(lambda x: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](x.GT))
-        return is_valid
+            family_filters.append(entries_1.extend(entries_2).all(lambda x: ~self.GENOTYPE_QUERY_MAP[ALT_ALT](x.GT)))
+        return hl.all(family_filters)
 
     def _comp_het_entry_has_ref(self, gt1, gt2):
         return [self.GENOTYPE_QUERY_MAP[REF_REF](gt1), self.GENOTYPE_QUERY_MAP[REF_REF](gt2)]
 
     def _format_comp_het_results(self, ch_ht, annotation_fields):
-        formatted_grouped_variants = ch_ht[GROUPED_VARIANTS_FIELD].map(
-            lambda v: self._format_results(v, annotation_fields=annotation_fields)
-        )
+        formatted_grouped_variants = hl.array([
+            self._format_results(ch_ht[GROUPED_VARIANTS_FIELD][0], annotation_fields=annotation_fields),
+            self._format_results(ch_ht[GROUPED_VARIANTS_FIELD][1], annotation_fields=annotation_fields),
+        ])
         ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted(formatted_grouped_variants, key=lambda x: x._sort)})
         return ch_ht.annotate(_sort=ch_ht[GROUPED_VARIANTS_FIELD][0]._sort)
 
@@ -842,7 +979,7 @@ class BaseHailTableQuery(object):
         annotations = {k: v(ht) for k, v in annotation_fields.items()}
         annotations.update({
             '_sort': self._sort_order(ht),
-            'genomeVersion': self._genome_version.replace('GRCh', ''),
+            'genomeVersion': self.GENOME_VERSION.replace('GRCh', ''),
         })
         results = ht.annotate(**annotations)
         return results.select(*self.CORE_FIELDS, *list(annotations.keys()))
@@ -886,7 +1023,7 @@ class BaseHailTableQuery(object):
 
         if sort in self.PREDICTION_FIELDS_CONFIG:
             prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
-            return [-hl.float64(ht[prediction_path.source][prediction_path.field])]
+            return [hl.or_else(-hl.float64(ht[prediction_path.source][prediction_path.field]), 0)]
 
         if sort == OMIM_SORT:
             return self._omim_sort(ht, hl.set(set(self._sort_metadata)))
@@ -912,7 +1049,7 @@ class BaseHailTableQuery(object):
     def _gene_count_selects(cls):
         return {
             'gene_ids': cls._gene_ids_expr,
-            'families': cls.BASE_ANNOTATION_FIELDS['familyGuids'],
+            'families': cls.BASE_ANNOTATION_FIELDS[FAMILY_GUID_FIELD],
         }
 
     def format_gene_count_hts(self):
@@ -936,20 +1073,34 @@ class BaseHailTableQuery(object):
             ht.gene_ids, hl.struct(total=hl.agg.count(), families=hl.agg.counter(ht.families))
         ))
 
-    def lookup_variant(self, variant_id):
-        self._parse_intervals(intervals=None, variant_ids=[variant_id], variant_keys=[variant_id])
+    def lookup_variants(self, variant_ids, include_project_data=False, **kwargs):
+        self._parse_intervals(intervals=None, variant_ids=variant_ids, variant_keys=variant_ids)
         ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
-        ht = ht.filter(hl.is_defined(ht[XPOS])).key_by()
+        ht = ht.filter(hl.is_defined(ht[XPOS]))
 
-        annotation_fields = self.annotation_fields()
-        annotation_fields.update({
-            'familyGuids': lambda ht: hl.empty_array(hl.tstr),
-            'genotypes': lambda ht: hl.empty_dict(hl.tstr, hl.tstr),
-            'genotypeFilters': lambda ht: hl.str(''),
-        })
-        formatted = self._format_results(ht, annotation_fields=annotation_fields, include_genotype_overrides=False)
+        annotation_fields = self.annotation_fields(include_genotype_overrides=False)
+        include_sample_annotations = False
+        if include_project_data:
+            ht, include_sample_annotations = self._add_project_lookup_data(ht, annotation_fields, **kwargs)
+        if not include_sample_annotations:
+            annotation_fields = {
+                k: v for k, v in annotation_fields.items()
+                if k not in {FAMILY_GUID_FIELD, GENOTYPES_FIELD, 'genotypeFilters'}
+            }
 
-        variants = formatted.aggregate(hl.agg.take(formatted.row, 1))
+        formatted = self._format_results(ht.key_by(), annotation_fields=annotation_fields, include_genotype_overrides=False)
+
+        return formatted.aggregate(hl.agg.take(formatted.row, len(variant_ids)))
+
+    def _add_project_lookup_data(self, ht, annotation_fields, include_sample_annotations=False, project_samples=None, **kwargs):
+        if project_samples:
+            projects_ht, _ = self._load_filtered_project_hts(project_samples, skip_all_missing=True, n_partitions=1)
+            ht = ht.annotate(**projects_ht[ht.key])
+
+        return ht, include_sample_annotations
+
+    def lookup_variant(self, variant_id, **kwargs):
+        variants = self.lookup_variants([variant_id], include_project_data=True, **kwargs)
         if not variants:
             raise HTTPNotFound()
-        return variants[0]
+        return dict(variants[0])

@@ -9,7 +9,8 @@ import responses
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
-    project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists
+    project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists, \
+    project_samples, project_notifications, mark_read_project_notifications, subscribe_project_notifications
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
@@ -106,6 +107,10 @@ class ProjectAPITest(object):
         )
 
         self._assert_expected_airtable_requests(mock_airtable_logger)
+
+    def _check_created_project_groups(self, project):
+        self.assertEqual(project.subscribers.name, 'new_project_subscribers_123abd')
+        self.assertSetEqual(set(project.subscribers.user_set.all()), {self.pm_user})
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_update_project(self):
@@ -258,7 +263,7 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
         project_fields = {
-            'variantTagTypes', 'variantFunctionalTagTypes',
+            'variantTagTypes', 'variantFunctionalTagTypes', 'sampleCounts',
             'projectGuid', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
         }
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
@@ -286,9 +291,22 @@ class ProjectAPITest(object):
             'order': 99,
             'numTags': 1,
         })
+        self.assertDictEqual(project_response['sampleCounts'], {
+            'WES__SNV_INDEL': [{
+                'familyCounts': {
+                    'F000001_1': 3, 'F000002_2': 3, 'F000003_3': 1, 'F000004_4': 1, 'F000005_5': 1, 'F000006_6': 1,
+                    'F000007_7': 1, 'F000008_8': 1, 'F000010_10': 1,
+                },
+                'loadedDate': '2017-02-05',
+            }],
+            'WES__SV': [{'familyCounts': {'F000002_2': 3}, 'loadedDate': '2018-02-05'}],
+            'WES__MITO': [{'familyCounts': {'F000002_2': 1}, 'loadedDate': '2022-02-05'}],
+            'RNA__SNV_INDEL': [{'familyCounts': {'F000001_1': 3}, 'loadedDate': '2017-02-05'}],
+        })
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
+        self.assertEqual(len(response_json['samplesByGuid']), 19)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
@@ -440,6 +458,24 @@ class ProjectAPITest(object):
             NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS,
         )
 
+    def test_project_samples(self):
+        url = reverse(project_samples, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        response_keys = {'samplesByGuid'}
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+
+        self.assertEqual(len(response_json['samplesByGuid']), 20)
+        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
+
+        # Test empty project
+        empty_url = reverse(project_samples, args=[EMPTY_PROJECT_GUID])
+        self._check_empty_project(empty_url, response_keys)
+
     def test_project_analysis_groups(self):
         url = reverse(project_analysis_groups, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
@@ -514,6 +550,85 @@ class ProjectAPITest(object):
         empty_url = reverse(project_mme_submisssions, args=[EMPTY_PROJECT_GUID])
         self._check_empty_project(empty_url, response_keys)
 
+    @mock.patch('django.contrib.humanize.templatetags.humanize.datetime')
+    def test_project_notifications(self, mock_datetime):
+        mock_datetime.now.return_value = datetime.fromisoformat('2024-01-01 00:00:00+00:00')
+        unread_url = reverse(project_notifications, args=[PROJECT_GUID, 'unread'])
+        self.check_collaborator_login(unread_url)
+
+        # Do not allow arbitrary read status
+        response = self.client.get(unread_url+'s')
+        self.assertEqual(response.status_code, 404)
+
+        # Non-subscribers do not necessarily have notification models for all new notifications
+        self.assertEqual(self.collaborator_user.notifications.count(), 1)
+
+        response = self.client.get(unread_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'isSubscriber': False,
+            'readCount': 0,
+            'unreadNotifications': [
+                {'timestamp': '2 weeks ago', 'id': 4, 'verb': 'Loaded 2 new WES SV samples'},
+                {'timestamp': '4 months ago', 'id': 3, 'verb': 'Loaded 8 new WES samples'},
+            ],
+        })
+
+        # Notification models will have been created for the non-subscriber for any new notifications
+        self.assertEqual(self.collaborator_user.notifications.count(), 2)
+
+        # Notifications only show for the correct project
+        response = self.client.get(reverse(project_notifications, args=[DEMO_PROJECT_GUID, 'unread']))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'isSubscriber': False,
+            'readCount': 0,
+            'unreadNotifications': [],
+        })
+
+        # Test subscribers
+        self.login_manager()
+        response = self.client.get(unread_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'isSubscriber': True,
+            'readCount': 1,
+            'unreadNotifications': [{'timestamp': '2 weeks ago', 'id': 1, 'verb': 'Loaded 2 new WES SV samples'}],
+        })
+
+        read_url = reverse(project_notifications, args=[PROJECT_GUID, 'read'])
+        response = self.client.get(read_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'isSubscriber': True,
+            'readNotifications': [{'timestamp': '4 months ago', 'id': 2, 'verb': 'Loaded 8 new WES samples'}],
+        })
+
+    def test_mark_read_project_notifications(self):
+        url = reverse(mark_read_project_notifications, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'readCount': 1, 'unreadNotifications': []})
+        self.assertEqual(self.collaborator_user.notifications.filter(unread=True).count(), 0)
+
+        # Test subscribers
+        self.login_manager()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'readCount': 2, 'unreadNotifications': []})
+        self.assertEqual(self.manager_user.notifications.filter(unread=True).count(), 0)
+
+    def test_subscribe_project_notifications(self):
+        url = reverse(subscribe_project_notifications, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'isSubscriber': True})
+        self.assertTrue(self.collaborator_user.groups.filter(name='subscribers').exists())
+
 
 BASE_COLLABORATORS = [
     {'displayName': 'Test Manager User', 'email': 'test_user_manager@test.com',  'username': 'test_user_manager',
@@ -539,8 +654,9 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     HAS_EMPTY_PROJECT = True
 
     def _check_created_project_groups(self, project):
-        self.assertEqual(project.can_edit_group.name, 'new_project_can_edit_123abd')
-        self.assertEqual(project.can_view_group.name, 'new_project_can_view_123abd')
+        super()._check_created_project_groups(project)
+        self.assertEqual(project.can_edit_group.name, 'new_project_can_edit_group_123abd')
+        self.assertEqual(project.can_view_group.name, 'new_project_can_view_group_123abd')
         self.assertSetEqual(set(project.can_edit_group.user_set.all()), {self.pm_user})
         self.assertSetEqual(set(project.can_view_group.user_set.all()), {self.pm_user})
 

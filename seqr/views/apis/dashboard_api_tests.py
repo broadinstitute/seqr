@@ -40,15 +40,32 @@ class DashboardPageTest(object):
         self.assertSetEqual(
             set(next(iter(response_json['projectsByGuid'].values())).keys()), DASHBOARD_PROJECT_FIELDS
         )
+        self.assertSetEqual({p['userIsCreator'] for p in response_json['projectsByGuid'].values()}, {False})
+        self.assertFalse(any('userCanDelete' in p for p in response_json['projectsByGuid'].values()))
         mock_get_redis.assert_called_with('projects__test_user_collaborator')
         mock_set_redis.assert_called_with(
             'projects__test_user_collaborator', list(response_json['projectsByGuid'].keys()), expire=300)
+
+        self.login_manager()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertEqual(len(response_json['projectsByGuid']), 4)
+        self.assertTrue(response_json['projectsByGuid']['R0002_empty']['userIsCreator'])
+        self.assertTrue(response_json['projectsByGuid']['R0004_non_analyst_project']['userIsCreator'])
+        self.assertFalse(response_json['projectsByGuid']['R0001_1kg']['userIsCreator'])
+        self.assertFalse(response_json['projectsByGuid']['R0003_test']['userIsCreator'])
+        self.assertTrue(response_json['projectsByGuid']['R0002_empty']['userCanDelete'])
+        self.assertFalse(response_json['projectsByGuid']['R0004_non_analyst_project']['userCanDelete'])
 
         self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertEqual(len(response_json['projectsByGuid']), 3)
+        self.assertFalse(response_json['projectsByGuid']['R0002_empty']['userIsCreator'])
+        self.assertTrue(response_json['projectsByGuid']['R0001_1kg']['userIsCreator'])
+        self.assertTrue(response_json['projectsByGuid']['R0003_test']['userIsCreator'])
         mock_get_redis.assert_called_with('projects__test_user')
         mock_set_redis.assert_called_with('projects__test_user', list(response_json['projectsByGuid'].keys()), expire=300)
 
@@ -91,7 +108,7 @@ class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
     NUM_COLLABORATOR_PROJECTS = 3
 
 
-def assert_has_list_workspaces_calls(self, call_count=5):
+def assert_has_list_workspaces_calls(self, call_count=6):
     self.assertEqual(self.mock_list_workspaces.call_count, call_count)
     calls = [
         mock.call(self.no_access_user),

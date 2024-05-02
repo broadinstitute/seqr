@@ -1,9 +1,13 @@
 import Cookies from 'js-cookie'
 import delay from 'timeout-as-promise'
 
-export const getUrlQueryString = (urlParams: Record<string, string>): string => Object.entries(urlParams)
-  .map(([key, value]) => [key, value].map(encodeURIComponent).join('='))
-  .join('&')
+const encodeURIParam = (key: string, value: string) => [key, value].map(encodeURIComponent).join('=')
+
+export const getUrlQueryString = (urlParams: Record<string, string | string[]>): string => Object.entries(urlParams)
+  .reduce((acc, [key, value]) => ([
+    ...acc,
+    ...(Array.isArray(value) ? value.map(v => encodeURIParam(key, v)) : [encodeURIParam(key, value)]),
+  ]), []).join('&')
 
 /**
  * Encapsulates the cycle of:
@@ -54,7 +58,7 @@ export class HttpRequestHelper {
    * @param urlParams A dictionary of key-value pairs {gene: 'ENSG00012345', chrom: '1'} to encode
    *   and append to the url as HTTP GET params (eg. "?gene=ENSG00012345&chrom=1")
    */
-  get = (urlParams: Record<string, string> = {}, fetchParams: Record<string, string> = {}) => {
+  get = (urlParams: Record<string, string | string[]> = {}, fetchParams: Record<string, string> = {}) => {
     const urlQueryString = getUrlQueryString(urlParams)
 
     const p = fetch(`${this.url}?${urlQueryString}`, {

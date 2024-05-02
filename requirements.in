@@ -3,6 +3,7 @@ django-anymail                    # for sending emails using cloud-based mail se
 django-csp                        # for setting CSP headers
 django-guardian                   # object-level permissions for database records. Behind a major version due to missing Python 2 support
 django-hijack                     # allows admins to login as other user
+django-notifications-hq           # notification app
 django-cors-headers < 4.0.0       # allows CORS requests for client-side development
 django-storages[google]==1.11.1   # alternative GCS storage backend for the django media_root
 social-auth-app-django            # the package for Django to authenticate users with social medieas

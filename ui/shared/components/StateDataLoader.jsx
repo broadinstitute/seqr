@@ -55,7 +55,7 @@ class StateDataLoader extends React.PureComponent {
           updates.errorHeader = validationErrorHeader
           updates.error = validationErrorMessage
         }
-        this.setState(updates)
+        this.setState(prevState => ({ ...prevState, ...updates }))
       },
       (e) => {
         this.setState({ loading: false, errorHeader, error: e.message })
