@@ -39,7 +39,7 @@ IgvDropzoneLabel.propTypes = {
 const NO_PROJECT_COLUMNS = [
   'Individual ID',
   'IGV Track File Path',
-  'gCNV Sample ID, to identify the sample in the gCNV batch path. Not used for other track types',
+  'For gCNV data: Sample ID, to identify the sample in the gCNV batch path. For other track types: Index File Path',
 ]
 
 // eslint-disable-next-line react-perf/jsx-no-new-array-as-prop

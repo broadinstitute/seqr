@@ -31,7 +31,14 @@ def _process_alignment_records(rows, num_id_cols=1, **kwargs):
     parsed_records = defaultdict(list)
     for row in rows:
         row_id = row[0] if num_id_cols == 1 else tuple(row[:num_id_cols])
-        parsed_records[row_id].append({'filePath': row[num_id_cols], 'sampleId': row[num_cols] if len(row) > num_cols else None})
+        sample_id = None
+        index_file_path = None
+        if len(row) > num_cols:
+            if _is_drs_uri_path(row[num_cols]):
+                index_file_path = row[num_cols]
+            else:
+                sample_id = row[num_cols]
+        parsed_records[row_id].append({'filePath': row[num_id_cols], 'sampleId': sample_id, 'indexFilePath': index_file_path})
     return parsed_records
 
 
@@ -158,7 +165,10 @@ def update_individual_igv_sample(request, individual_guid):
 
         sample, created = get_or_create_model_from_json(
             IgvSample, create_json={'individual': individual, 'sample_type': sample_type},
-            update_json={'file_path': file_path, 'sample_id': request_json.get('sampleId')}, user=request.user)
+            update_json={
+                'file_path': file_path,
+                **{field: request_json.get(field) for field in ['sampleId', 'indexFilePath']}
+            }, user=request.user)
 
         response = {
             'igvSamplesByGuid': {
@@ -224,14 +234,9 @@ def _stream_drs(request, file_path):
     drs_info = _get_drs_info(file_path, request.user)
 
     https_access = next(a['access_url'] for a in drs_info['access_methods'] if a['type'] == 'https')
-    url = https_access['url']
     headers = dict([h.split(': ') for h in https_access['headers']])
 
-    # TODO this does not actually result in a valid index file
-    if file_path.endswith('.cram.crai'):
-        url = url.replace('.cram', '.crai')
-
-    return _stream_response(url, headers, request)
+    return _stream_response(https_access['url'], headers, request)
 
 
 def _stream_response(url, headers, request):
