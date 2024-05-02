@@ -115,6 +115,15 @@ const POS_FIELD = {
 const START_FIELD = { name: 'pos', label: 'Start Position', ...POS_FIELD }
 const END_FIELD = { name: 'end', label: 'Stop Position', ...POS_FIELD }
 
+const GENE_FIELD = {
+  name: GENE_ID_FIELD_NAME,
+  label: 'Gene',
+  control: AwesomeBarFormInput,
+  categories: ['genes'],
+  fluid: true,
+  placeholder: 'Search for gene',
+}
+
 const SAVED_VARIANT_FIELD = {
   name: VARIANTS_FIELD_NAME,
   idField: 'variantGuid',
@@ -139,7 +148,13 @@ const validateHasTranscriptId = (value, allValues, props, name) => {
   return allValues[TRANSCRIPT_ID_FIELD_NAME] ? undefined : `Transcript ID is required to include ${name}`
 }
 
-const formatField = field => ({ inline: true, width: 16, ...field })
+const formatField = (field) => {
+  const formattedField = { inline: true, width: 16, ...field }
+  if (field.validate && field.validate !== validateHasTranscriptId) {
+    formattedField.label =`${field.label}*`
+  }
+  return formattedField
+}
 
 const SNV_FIELDS = [
   CHROM_FIELD,
@@ -147,16 +162,7 @@ const SNV_FIELDS = [
   { ...END_FIELD, validate: null },
   { name: 'ref', label: 'Ref', validate: validators.required, width: 4 },
   { name: 'alt', label: 'Alt', validate: validators.required, width: 4 },
-  {
-    name: GENE_ID_FIELD_NAME,
-    label: 'Gene',
-    validate: validators.required,
-    control: AwesomeBarFormInput,
-    categories: ['genes'],
-    fluid: true,
-    width: 8,
-    placeholder: 'Search for gene',
-  },
+  { ...GENE_FIELD, width: 8, validate: validators.required },
   { name: TRANSCRIPT_ID_FIELD_NAME, label: 'Transcript ID', width: 6 },
   { name: HGVSC_FIELD_NAME, label: 'HGVSC', width: 5, validate: validateHasTranscriptId },
   { name: HGVSP_FIELD_NAME, label: 'HGVSP', width: 5, validate: validateHasTranscriptId },
@@ -173,14 +179,13 @@ const SNV_FIELDS = [
       format: value => (value || {}).numAlt,
     },
   },
-].map(formatField).map(field => (
-  field.validate && field.validate !== validateHasTranscriptId ? { ...field, label: `${field.label}*` } : field
-))
+].map(formatField)
 
 const SV_FIELDS = [
   CHROM_FIELD,
   START_FIELD,
   END_FIELD,
+  GENE_FIELD,
   GENOME_FIELD,
   TAG_FIELD,
   { name: SV_FIELD_NAME, validate: validators.required, label: 'SV Name', width: 8 },
@@ -246,6 +251,9 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
 
     if (variant.svName) {
       variant.variantId = values.svName
+      if (values[GENE_ID_FIELD_NAME]) {
+        variant.transcripts = { [values[GENE_ID_FIELD_NAME]]: [] }
+      }
     } else {
       variant.variantId = `${values.chrom}-${values.pos}-${values.ref}-${values.alt}`
       variant.transcripts = {
