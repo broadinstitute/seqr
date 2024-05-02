@@ -187,6 +187,9 @@ def project_families(request, project_guid):
         metadata_individual_count=Count('individual', filter=Q(
             individual__features__0__isnull=False, individual__birth_year__isnull=False,
             individual__population__isnull=False, individual__proband_relationship__isnull=False,
+        )),
+        pp_individual_count=Count('individual', filter=Q(
+            individual__phenotypeprioritization__tool__isnull=False,
         ))
     )
     family_annotations = dict(
@@ -197,10 +200,7 @@ def project_families(request, project_guid):
             JSONObject(paternalGuid='individual__father__guid', maternalGuid='individual__mother__guid'),
             filter=Q(individual__mother__isnull=False) | Q(individual__father__isnull=False), distinct=True,
         ),
-        phenotypePrioritizationTools=ArrayAgg(
-            'individual__phenotypeprioritization__tool', distinct=True,
-            filter=Q(individual__phenotypeprioritization__tool__isnull=False),
-        ),
+        hasPhenotypePrioritization=Case(When(pp_individual_count__gt=0, then=Value(True)), default=Value(False)),
     )
     families = _get_json_for_families(
         family_models, request.user, has_case_review_perm=has_case_review_permissions(project, request.user),

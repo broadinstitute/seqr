@@ -9,9 +9,6 @@ from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL, ANVI
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
 
-BASE_EMAIL_TEMPLATE = 'Dear seqr user,\n\n{}\n\nAll the best,\nThe seqr team'
-
-
 def _hail_backend_error(*args, **kwargs):
     raise ValueError('Adding samples is disabled for the hail backend')
 
@@ -90,22 +87,6 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
     send_project_notification(
         project,
         notification=f'Loaded {sample_summary}',
-        email_body=BASE_EMAIL_TEMPLATE.format(email),
+        email=email,
         subject='New data available in seqr',
-    )
-
-
-def notify_phenotype_prioritization_loaded(project, tool, num_samples, file_path, user):
-    url = f'{BASE_URL}project/{project.guid}/project_page'
-    project_link = f'<a href={url}>{project.name}</a>'
-    email = (
-        f'This is to notify you that {tool.title()} data for {num_samples} samples '
-        f'has been loaded in seqr project {project_link} by {user.get_full_name()}'
-    )
-
-    send_project_notification(
-        project,
-        notification=f'Loaded {tool.title()} data from {file_path} for {num_samples} samples',
-        email_body=BASE_EMAIL_TEMPLATE.format(email),
-        subject=f'New {tool.title()} data available in seqr',
     )

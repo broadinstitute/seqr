@@ -1193,7 +1193,7 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
                        'delta_intron_jaccard_index', 'mean_counts', 'total_counts', 'mean_total_counts']
 
 
-class PhenotypePrioritization(BulkOperationBase):
+class PhenotypePrioritization(ModelWithGUID, BulkOperationBase):
     PARENT_FIELD = 'individual'
 
     individual = models.ForeignKey('Individual', on_delete=models.CASCADE, db_index=True)
@@ -1205,11 +1205,11 @@ class PhenotypePrioritization(BulkOperationBase):
     disease_name = models.TextField()
     scores = models.JSONField()
 
-    created_date = models.DateTimeField(default=timezone.now, db_index=True)
-    created_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
-
     def __unicode__(self):
         return "%s:%s:%s" % (self.individual.individual_id, self.gene_id, self.disease_id)
+
+    def _compute_guid(self):
+        return 'PP%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'disease_name', 'scores', 'created_date', 'created_by']

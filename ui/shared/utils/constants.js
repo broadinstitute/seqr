@@ -379,7 +379,8 @@ export const CATEGORY_FAMILY_FILTERS = {
     {
       value: `${SHOW_DATA_LOADED}_PHENO`,
       name: 'Data Loaded - Phenotype Prioritization',
-      createFilter: (family, user, samplesByFamily) => family.phenotypePrioritizationTools.length > 0,
+      // eslint-disable-next-line no-unused-vars
+      createFilter: (family, _user, _samplesByFamily) => family.hasPhenotypePrioritization,
     },
   ],
 }

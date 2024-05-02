@@ -9,7 +9,7 @@ import { BaseVariantGene } from 'shared/components/panel/variants/VariantGene'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import { loadPhenotypeGeneScores } from '../reducers'
 import { getPhenotypeDataLoading, getIndividualPhenotypeGeneScores } from '../selectors'
-import {PHENOTYPE_PRIORITIZATION_FIELDS} from "../constants";
+import { PHENOTYPE_PRIORITIZATION_FIELDS } from '../constants'
 
 const PHENOTYPE_GENE_INFO_COLUMNS = [
   {
@@ -64,7 +64,6 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
 const BasePhenotypePriGenes = React.memo((
   { individualGuid, phenotypeGeneScores, familyGuid, loading, load },
 ) => (
-  //   TODO might have to make a change here
   <DataLoader content={phenotypeGeneScores[individualGuid]} contentId={individualGuid} load={load} loading={loading}>
     <GeneSearchLink
       buttonText="Search for variants in high-ranked genes"

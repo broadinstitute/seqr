@@ -1,9 +1,12 @@
 import logging
 from slacker import Slacker
+
 from settings import SLACK_TOKEN, BASE_URL
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
 from notifications.signals import notify
+
+BASE_EMAIL_TEMPLATE = 'Dear seqr user,\n\n{}\n\nAll the best,\nThe seqr team'
 
 logger = logging.getLogger(__name__)
 
@@ -52,11 +55,11 @@ def send_html_email(email_body, process_message=None, **kwargs):
     email_message.send()
 
 
-def send_project_notification(project, notification, email_body, subject):
+def send_project_notification(project, notification, email, subject):
     users = project.subscribers.user_set.all()
     notify.send(project, recipient=users, verb=notification)
     send_html_email(
-        email_body,
+        email_body=BASE_EMAIL_TEMPLATE.format(email),
         to=list(users.values_list('email', flat=True)),
         subject=subject,
         process_message=_set_bulk_notification_stream,

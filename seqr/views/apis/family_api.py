@@ -80,11 +80,6 @@ def family_page_data(request, family_guid):
     for individual_guid in outlier_individual_guids:
         response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
 
-    has_phentoype_score_indivs = PhenotypePrioritization.objects.filter(individual__family=family).values_list(
-        'individual__guid', flat=True)
-    for individual_guid in has_phentoype_score_indivs:
-        response['individualsByGuid'][individual_guid]['hasPhenotypeGeneScores'] = True
-
     submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(individual__family=family))
     individual_mme_submission_guids = {s['individualGuid']: s['submissionGuid'] for s in submissions}
     for individual in response['individualsByGuid'].values():

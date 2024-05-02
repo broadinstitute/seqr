@@ -14,7 +14,7 @@ from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from seqr.utils.search.add_data_utils import notify_phenotype_prioritization_loaded
+from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
@@ -30,7 +30,7 @@ from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data
 
 from seqr.models import Sample, Individual, Project, PhenotypePrioritization
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
+from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
 
 logger = SeqrLogger(__name__)
 
@@ -331,6 +331,21 @@ def load_rna_seq_sample_data(request, sample_guid):
     return create_json_response({'success': True})
 
 
+def _notify_phenotype_prioritization_loaded(project, tool, num_samples, user):
+    url = f'{BASE_URL}project/{project.guid}/project_page'
+    project_link = f'<a href={url}>{project.name}</a>'
+    email = (
+        f'This is to notify you that {tool.title()} data for {num_samples} samples '
+        f'has been loaded in seqr project {project_link} by {user.get_full_name()}'
+    )
+    send_project_notification(
+        project,
+        notification=f'Loaded {num_samples} {tool.title()} samples',
+        email=email,
+        subject=f'New {tool.title()} data available in seqr',
+    )
+
+
 @data_manager_required
 def load_phenotype_prioritization_data(request):
     request_json = json.loads(request.body)
@@ -390,12 +405,12 @@ def load_phenotype_prioritization_data(request):
         PhenotypePrioritization.bulk_delete(request.user, to_delete)
 
     all_records = [record for indiv_records in all_records_by_project_name.values() for record in indiv_records]
-    PhenotypePrioritization.bulk_create(request.user, [PhenotypePrioritization(**data, created_by=user) for data in all_records])
+    PhenotypePrioritization.bulk_create(request.user, [PhenotypePrioritization(**data, created_by=request.user) for data in all_records])
 
     for project_name, indiv_records in all_records_by_project_name.items():
         project = projects_by_name[project_name][0]
         num_samples = len(indiv_records)
-        notify_phenotype_prioritization_loaded(project, tool, num_samples, file_path, request.user)
+        _notify_phenotype_prioritization_loaded(project, tool, num_samples, request.user)
 
     return create_json_response({
         'info': info,

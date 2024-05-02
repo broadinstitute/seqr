@@ -69,8 +69,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
-        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData',
-                             'hasPhenotypeGeneScores'}
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
         self.assertListEqual(
