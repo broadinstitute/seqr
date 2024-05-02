@@ -147,13 +147,14 @@ def update_individual_igv_sample(request, individual_guid):
         if not file_path:
             raise ValueError('request must contain fields: filePath')
 
-        file_name = _get_valid_file_name(file_path, request.user)
-        if not file_name:
-            raise Exception('Error accessing "{}"'.format(file_path))
-        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP if file_name.endswith(suffix)), None)
+        original_file_path = file_path
+        file_path = _get_valid_file_path(file_path, request.user)
+        if not file_path:
+            raise Exception('Error accessing "{}"'.format(original_file_path))
+        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP if file_path.endswith(suffix)), None)
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
-                file_name, ', '.join([suffix for suffix, _ in SAMPLE_TYPE_MAP])))
+                file_path, ', '.join([suffix for suffix, _ in SAMPLE_TYPE_MAP])))
 
         sample, created = get_or_create_model_from_json(
             IgvSample, create_json={'individual': individual, 'sample_type': sample_type},
@@ -180,17 +181,17 @@ def _is_drs_uri_path(file_path):
 def _get_drs_info(file_path, user):
     drs_path = file_path.split('/')
     response = requests.get(
-        f'https://{drs_path[-2]}/ga4gh/drs/v1/objects/{drs_path[-1]}',
+        f'https://{drs_path[2]}/ga4gh/drs/v1/objects/{drs_path[3]}',
         headers=_get_gs_auth_api_headers(user),
     )
 
     return response.json() if response.status_code == 200 else None
 
 
-def _get_valid_file_name(file_path, user):
+def _get_valid_file_path(file_path, user):
     if _is_drs_uri_path(file_path):
         drs_info = _get_drs_info(file_path, user)
-        return None if drs_info is None else drs_info['name']
+        return None if drs_info is None else f"{file_path}/{drs_info['name']}"
 
     return file_path if does_file_exist(file_path, user=user) else None
 
@@ -221,12 +222,16 @@ def _stream_gs(request, gs_path):
 
 def _stream_drs(request, file_path):
     drs_info = _get_drs_info(file_path, request.user)
-    https_access = next(a['access_url'] for a in drs_info['access_methods'] if a['type'] == 'https')
 
-    return _stream_response(
-        https_access['url'],
-        headers=dict([h.split(': ') for h in https_access['headers']]),
-        request=request)
+    https_access = next(a['access_url'] for a in drs_info['access_methods'] if a['type'] == 'https')
+    url = https_access['url']
+    headers = dict([h.split(': ') for h in https_access['headers']])
+
+    # TODO this does not actually result in a valid index file
+    if file_path.endswith('.cram.crai'):
+        url = url.replace('.cram', '.crai')
+
+    return _stream_response(url, headers, request)
 
 
 def _stream_response(url, headers, request):
