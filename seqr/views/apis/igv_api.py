@@ -162,6 +162,8 @@ def update_individual_igv_sample(request, individual_guid):
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
                 file_path, ', '.join([suffix for suffix, _ in SAMPLE_TYPE_MAP])))
+        if _is_drs_uri_path(file_path) and not request_json.get('indexFilePath'):
+            raise Exception('Index File Path is required for DRS URIs')
 
         sample, created = get_or_create_model_from_json(
             IgvSample, create_json={'individual': individual, 'sample_type': sample_type},
