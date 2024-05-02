@@ -173,19 +173,26 @@ def update_individual_igv_sample(request, individual_guid):
         return create_json_response({'error': error}, status=400, reason=error)
 
 
-def _get_valid_file_name(file_path, user):
-    if not file_path.startswith('drs://'):
-        return file_path if does_file_exist(file_path, user=user) else None
+def _is_drs_uri_path(file_path):
+    return file_path.startswith('drs://')
 
+
+def _get_drs_info(file_path, user):
     drs_path = file_path.split('/')
     response = requests.get(
         f'https://{drs_path[-2]}/ga4gh/drs/v1/objects/{drs_path[-1]}',
         headers=_get_gs_auth_api_headers(user),
     )
-    if response.status_code != 200:
-        return None
-    #access = next((a['access_url'] for a in drs_info['access_methods'] if a.get('type') == 'https'), None)
-    return response.json()['name']
+
+    return response.json() if response.status_code == 200 else None
+
+
+def _get_valid_file_name(file_path, user):
+    if _is_drs_uri_path(file_path):
+        drs_info = _get_drs_info(file_path, user)
+        return None if drs_info is None else drs_info['name']
+
+    return file_path if does_file_exist(file_path, user=user) else None
 
 
 @login_and_policies_required
@@ -199,16 +206,35 @@ def fetch_igv_track(request, project_guid, igv_track_path):
     if is_google_bucket_file_path(igv_track_path):
         return _stream_gs(request, igv_track_path)
 
+    if _is_drs_uri_path(igv_track_path):
+        return _stream_drs(request, igv_track_path)
+
     return _stream_file(request, igv_track_path)
 
 
 def _stream_gs(request, gs_path):
-    headers = _get_gs_rest_api_headers(request.META.get('HTTP_RANGE'), gs_path, user=request.user)
+    return _stream_response(
+        url=f"{GS_STORAGE_URL}/{gs_path.replace('gs://', '', 1)}",
+        headers=_get_gs_rest_api_headers(gs_path, user=request.user),
+        request=request)
 
-    response = requests.get(
-        f"{GS_STORAGE_URL}/{gs_path.replace('gs://', '', 1)}",
-        headers=headers,
-        stream=True)
+
+def _stream_drs(request, file_path):
+    drs_info = _get_drs_info(file_path, request.user)
+    https_access = next(a['access_url'] for a in drs_info['access_methods'] if a['type'] == 'https')
+
+    return _stream_response(
+        https_access['url'],
+        headers=dict([h.split(': ') for h in https_access['headers']]),
+        request=request)
+
+
+def _stream_response(url, headers, request):
+    range_header = request.META.get('HTTP_RANGE')
+    if range_header:
+        headers['Range'] = range_header
+
+    response = requests.get(url, headers=headers, stream=True)
 
     return StreamingHttpResponse(response.iter_content(chunk_size=65536), status=response.status_code,
                                  content_type='application/octet-stream')
@@ -218,10 +244,8 @@ def _get_gs_auth_api_headers(user):
     return {'Authorization': 'Bearer {}'.format(_get_access_token(user))}
 
 
-def _get_gs_rest_api_headers(range_header, gs_path, user=None):
+def _get_gs_rest_api_headers(gs_path, user):
     headers = _get_gs_auth_api_headers(user)
-    if range_header:
-        headers['Range'] = range_header
     google_project = get_google_project(gs_path)
     if google_project:
         headers['x-goog-user-project'] = get_google_project(gs_path)
