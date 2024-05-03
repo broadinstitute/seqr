@@ -582,14 +582,10 @@ class FamilyAPITest(AuthenticationTestCase):
                         'exomiser': [
                             {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
                              'scores': {'exomiser_score': 0.969347946, 'phenotype_score': 0.443567539,
-                                        'variant_score': 0.999200702},
-                             'createdDate': '2024-05-02T06:42:55.397Z', 'createdBy': None
-                             },
+                                        'variant_score': 0.999200702}},
                             {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
                              'scores': {'exomiser_score': 0.977923765, 'phenotype_score': 0.603998205,
-                                        'variant_score': 1},
-                             'createdDate': '2024-05-02T06:42:55.397Z', 'createdBy': None
-                             },
+                                        'variant_score': 1}},
                         ]
                     }
                 },
@@ -597,9 +593,7 @@ class FamilyAPITest(AuthenticationTestCase):
                     'ENSG00000268903': {
                         'lirical': [
                             {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 1,
-                             'scores': {'compositeLR': 0.003, 'post_test_probability': 0},
-                             'createdDate': '2024-05-02T06:42:55.397Z', 'createdBy': None,
-                             }
+                             'scores': {'compositeLR': 0.003, 'post_test_probability': 0}}
                         ]
                     }
                 }

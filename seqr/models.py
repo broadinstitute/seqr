@@ -1212,4 +1212,4 @@ class PhenotypePrioritization(ModelWithGUID):
         return 'PP%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'disease_name', 'scores', 'created_date', 'created_by']
+        json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'disease_name', 'scores']
