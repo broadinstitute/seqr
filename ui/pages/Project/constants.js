@@ -504,8 +504,3 @@ export const TAG_FORM_FIELD = {
   parse: value => (value || []).map(name => ({ name })),
   validate: value => (value && value.length ? undefined : 'Required'),
 }
-
-export const PHENOTYPE_PRIORITIZATION_FIELDS = {
-  exomiser: 'Exomiser',
-  lirical: 'LIRICAL',
-}

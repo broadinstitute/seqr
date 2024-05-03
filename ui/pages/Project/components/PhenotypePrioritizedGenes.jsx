@@ -9,7 +9,6 @@ import { BaseVariantGene } from 'shared/components/panel/variants/VariantGene'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import { loadPhenotypeGeneScores } from '../reducers'
 import { getPhenotypeDataLoading, getIndividualPhenotypeGeneScores } from '../selectors'
-import { PHENOTYPE_PRIORITIZATION_FIELDS } from '../constants'
 
 const PHENOTYPE_GENE_INFO_COLUMNS = [
   {
@@ -28,12 +27,7 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
       />
     ),
   },
-  {
-    name: 'tool',
-    width: 1,
-    content: 'Tool',
-    format: ({ tool }) => PHENOTYPE_PRIORITIZATION_FIELDS[tool],
-  },
+  { name: 'tool', width: 1, content: 'Tool' },
   {
     name: 'diseaseName',
     width: 5,

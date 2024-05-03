@@ -31,7 +31,7 @@ import { getSamplesByGuid, getMmeSubmissionsByGuid } from 'redux/selectors'
 import { HPO_FORM_FIELDS } from '../HpoTerms'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
-  ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS, PHENOTYPE_PRIORITIZATION_FIELDS,
+  ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS
 } from '../../constants'
 import { updateIndividuals } from '../../reducers'
 import { getCurrentProject, getParentOptionsByIndividual } from '../../selectors'
@@ -549,7 +549,7 @@ class IndividualRow extends React.PureComponent {
     loadedSamples = loadedSamples.filter((sample, i) => sample.isActive || i === 0 || i === loadedSamples.length - 1)
 
     const phenotypePrioritizationTools = individual.phenotypePrioritizationTools.map(
-      pp => ({ sampleType: PHENOTYPE_PRIORITIZATION_FIELDS[pp.tool], loadedDate: pp.createdDate }),
+      pp => ({ sampleType: pp.tool.charAt(0).toUpperCase() + pp.tool.slice(1), loadedDate: pp.createdDate }),
     )
 
     const leftContent = (
