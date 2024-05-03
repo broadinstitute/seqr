@@ -120,8 +120,7 @@ CaseReviewStatus.propTypes = {
 
 const SHOW_DATA_MODAL_CONFIG = [
   {
-    // TODO this doesn't work any more
-    shouldShowField: 'phenotypePrioritizationTools',
+    shouldShow: individual => individual.phenotypePrioritizationTools.length > 0,
     component: PhenotypePrioritizedGenes,
     modalName: ({ individualId }) => `PHENOTYPE-PRIORITIZATION-${individualId}`,
     title: ({ individualId }) => `Phenotype Prioritized Genes: ${individualId}`,
@@ -181,9 +180,9 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission, phen
       </div>
     )}
     { phenotypePrioritizationTools.map(
-      pp => <Sample loadedSample={pp} key={pp.tool} />,
+      pp => <div key={pp.tool}><Sample loadedSample={pp} key={pp.tool} /></div>,
     )}
-    {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
+    {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShow }) => shouldShow(individual)).map(
       ({ modalName, title, modalSize, linkText, component }) => {
         const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
         const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
