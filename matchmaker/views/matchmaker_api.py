@@ -187,7 +187,7 @@ def _search_external_matches(node, patient_data, user):
         'Content-Language': 'en-US',
     }
     try:
-        external_result = requests.post(url=node['url'], headers=headers, data=json.dumps(body))
+        external_result = requests.post(url=node['url'], headers=headers, data=json.dumps(body), timeout=300)
         if external_result.status_code != 200:
             try:
                 message = external_result.json().get('message')

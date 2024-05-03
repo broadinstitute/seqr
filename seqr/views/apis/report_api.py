@@ -666,7 +666,7 @@ def _populate_gregor_files(file_data):
 
 
 def _load_data_model_validators():
-    response = requests.get(GREGOR_DATA_MODEL_URL)
+    response = requests.get(GREGOR_DATA_MODEL_URL, timeout=10)
     response.raise_for_status()
     # remove commented out lines from json
     response_json = json.loads(re.sub('\\n\s*//.*\\n', '', response.text))

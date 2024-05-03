@@ -99,7 +99,7 @@ def _create_pa_locus_list_gene(seqr_locus_list_gene, panel_gene_json):
 
 
 def _get_all_panels(panels_url, all_results):
-    resp = requests.get(panels_url)
+    resp = requests.get(panels_url, timeout=REQUEST_TIMEOUT_S)
     resp_json = resp.json()
     curr_page_results = [r for r in resp_json.get('results', []) if r.get('stats', {}).get('number_of_genes', 0) > 0]
     all_results += curr_page_results

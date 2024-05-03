@@ -4,9 +4,7 @@ import responses
 from django.core.management import call_command, CommandError
 from django.urls.base import reverse
 
-from seqr.models import LocusList
-from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, add_project_locus_lists, \
-    delete_project_locus_lists
+from seqr.views.apis.locus_list_api import locus_lists, locus_list_info
 from seqr.views.apis.locus_list_api_tests import BaseLocusListAPITest
 from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELDS
 
