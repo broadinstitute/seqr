@@ -1041,7 +1041,6 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.052Z",
-
         "sample_id": "NA20872",
         "sample_type": "WES",
         "is_active": false,
@@ -1078,7 +1077,6 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.111Z",
-
         "sample_id": "NA20875",
         "sample_type": "WES",
         "is_active": false,

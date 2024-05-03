@@ -304,7 +304,7 @@ Let us know if you have any questions.""".format(
         if not email_content:
             email_content = f'This is to notify you that {count} new {sample_type} samples have been loaded in seqr project <a href={SEQR_URL}/project/{project_guid}/project_page>{project_name}</a>'
         mock_send_email.assert_called_once_with(
-            f'Dear seqr user,\n\n{email_content}\n\nAll the best,\nThe seqr team',
+            email_body=f'Dear seqr user,\n\n{email_content}\n\nAll the best,\nThe seqr team',
             subject='New data available in seqr', to=[recipient], process_message=mock.ANY,
         )
         slack_message = f'{count} new {sample_type} samples are loaded in {SEQR_URL}/project/{project_guid}/project_page'
