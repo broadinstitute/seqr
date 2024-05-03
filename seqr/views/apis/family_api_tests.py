@@ -585,7 +585,7 @@ class FamilyAPITest(AuthenticationTestCase):
                                         'variant_score': 0.999200702}},
                             {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
                              'scores': {'exomiser_score': 0.977923765, 'phenotype_score': 0.603998205,
-                                        'variant_score': 1}},
+                                        'variant_score': 1}}
                         ]
                     }
                 },
@@ -593,7 +593,8 @@ class FamilyAPITest(AuthenticationTestCase):
                     'ENSG00000268903': {
                         'lirical': [
                             {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 1,
-                             'scores': {'compositeLR': 0.003, 'post_test_probability': 0}}
+                             'scores': {'compositeLR': 0.003, 'post_test_probability': 0}
+                             }
                         ]
                     }
                 }

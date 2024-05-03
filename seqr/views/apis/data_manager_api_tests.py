@@ -384,7 +384,7 @@ EXPECTED_UPDATED_LIRICAL_DATA = [
      'tool': 'lirical', 'rank': 3, 'individualGuid': 'I000002_na19678'},
     {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
      'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
-     'tool': 'lirical', 'rank': 4, 'individualGuid': 'I000002_na19678'}
+     'tool': 'lirical', 'rank': 4, 'individualGuid': 'I000002_na19678'},
 ]
 
 PEDIGREE_HEADER = ['Project_GUID', 'Family_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex']
