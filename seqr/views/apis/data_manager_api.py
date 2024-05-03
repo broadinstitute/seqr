@@ -409,7 +409,7 @@ def load_phenotype_prioritization_data(request):
     for indiv_records in all_records_by_project_name.values():
         for record in indiv_records:
             model = PhenotypePrioritization(**record)
-            model.guid = f'PP{random.randint(10 ** 8, 10 ** 9)}_{model.individual.individual_id}_{model.gene_id}_{model.disease_id}'[:PhenotypePrioritization.MAX_GUID_SIZE]
+            model.guid = f'PP{random.randint(10 ** 8, 10 ** 9)}_{model.individual.individual_id}_{model.gene_id}_{model.disease_id}'[:PhenotypePrioritization.MAX_GUID_SIZE]  # nosec
             models_to_create.append(model)
     PhenotypePrioritization.bulk_create(request.user, models_to_create)
 
