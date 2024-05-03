@@ -1193,7 +1193,7 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
                        'delta_intron_jaccard_index', 'mean_counts', 'total_counts', 'mean_total_counts']
 
 
-class PhenotypePrioritization(ModelWithGUID, BulkOperationBase):
+class PhenotypePrioritization(ModelWithGUID):
     PARENT_FIELD = 'individual'
 
     individual = models.ForeignKey('Individual', on_delete=models.CASCADE, db_index=True)

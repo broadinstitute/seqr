@@ -3,6 +3,7 @@ from datetime import datetime
 from django.urls.base import reverse
 import json
 import mock
+from mock.mock import ANY
 from requests import HTTPError
 import responses
 
@@ -362,28 +363,28 @@ UPDATE_LIRICAL_DATA = [
 
 EXPECTED_LIRICAL_DATA = [
     {'diseaseId': 'OMIM:219801', 'geneId': 'ENSG00000268904', 'diseaseName': 'Cystinosis, no syndrome',
-     'scores': {'compositeLR': 0.003, 'post_test_probability': 0.1},
-     'tool': 'lirical', 'rank': 11, 'individualGuid': 'I000001_na19675'},  # record from the fixture
+     'scores': {'compositeLR': 0.003, 'post_test_probability': 0.1}, 'createdBy': None,
+     'tool': 'lirical', 'rank': 11, 'individualGuid': 'I000001_na19675', 'createdDate': ANY},  # record from the fixture
     {'diseaseId': 'OMIM:618460', 'geneId': 'ENSG00000105357', 'diseaseName': 'Khan-Khan-Katsanis syndrome',
-     'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0},
-     'tool': 'lirical', 'rank': 1, 'individualGuid': 'I000002_na19678'},
+     'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0}, 'createdBy': 'Test Data Manager',
+     'tool': 'lirical', 'rank': 1, 'individualGuid': 'I000002_na19678', 'createdDate': ANY},
     {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
-     'scores': {'postTestProbability': 0.0},
-     'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885'}
+     'scores': {'postTestProbability': 0.0}, 'createdBy': 'Test Data Manager',
+     'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885', 'createdDate': ANY},
 ]
 EXPECTED_UPDATED_LIRICAL_DATA = [
     {'diseaseId': 'OMIM:219801', 'geneId': 'ENSG00000268904', 'diseaseName': 'Cystinosis, no syndrome',
-     'scores': {'compositeLR': 0.003, 'post_test_probability': 0.1},
-     'tool': 'lirical', 'rank': 11, 'individualGuid': 'I000001_na19675'},  # record from the fixture
+     'scores': {'compositeLR': 0.003, 'post_test_probability': 0.1}, 'createdBy': None,
+     'tool': 'lirical', 'rank': 11, 'individualGuid': 'I000001_na19675', 'createdDate': ANY},  # record from the fixture
     {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
-     'scores': {'postTestProbability': 0.0},
-     'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885'},
+     'scores': {'postTestProbability': 0.0}, 'createdBy': 'Test Data Manager',
+     'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885', 'createdDate': ANY},
     {'diseaseId': 'OMIM:618460', 'geneId': 'ENSG00000105357', 'diseaseName': 'Khan-Khan-Katsanis syndrome',
-     'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0},
-     'tool': 'lirical', 'rank': 3, 'individualGuid': 'I000002_na19678'},
+     'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0}, 'createdBy': 'Test Data Manager',
+     'tool': 'lirical', 'rank': 3, 'individualGuid': 'I000002_na19678', 'createdDate': ANY},
     {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
-     'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
-     'tool': 'lirical', 'rank': 4, 'individualGuid': 'I000002_na19678'},
+     'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0}, 'createdBy': 'Test Data Manager',
+     'tool': 'lirical', 'rank': 4, 'individualGuid': 'I000002_na19678', 'createdDate': ANY},
 ]
 
 PEDIGREE_HEADER = ['Project_GUID', 'Family_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex']
@@ -1172,13 +1173,13 @@ class DataManagerAPITest(AuthenticationTestCase):
         ]
         self.assertEqual(response.json()['info'], info)
         self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
-            ('delete PhenotypePrioritizations', {'dbUpdate': {
-                'dbEntity': 'PhenotypePrioritization', 'numEntities': 1, 'updateType': 'bulk_delete',
-                'parentEntityIds': ['I000002_na19678'],
+            ('delete 1 PhenotypePrioritizations', {'dbUpdate': {
+                'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_delete',
+                'entityIds': ['PP000003_NA19678_ENSG000002689'],
             }}),
-            ('create PhenotypePrioritizations', {'dbUpdate': {
-                'dbEntity': 'PhenotypePrioritization', 'numEntities': 2, 'updateType': 'bulk_create',
-                'parentEntityIds': ['I000002_na19678', 'I000015_na20885'],
+            ('create 2 PhenotypePrioritizations', {'dbUpdate': {
+                'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_create',
+                "entityIds": [ANY, ANY],
             }}),
         ])
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical').order_by('id'),
@@ -1197,13 +1198,13 @@ class DataManagerAPITest(AuthenticationTestCase):
         ]
         self.assertEqual(response.json()['info'], info)
         self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
-            ('delete PhenotypePrioritizations', {'dbUpdate': {
-                'dbEntity': 'PhenotypePrioritization', 'numEntities': 1, 'updateType': 'bulk_delete',
-                'parentEntityIds': ['I000002_na19678'],
+            ('delete 1 PhenotypePrioritizations', {'dbUpdate': {
+                'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_delete',
+                'entityIds': [ANY],
             }}),
-            ('create PhenotypePrioritizations', {'dbUpdate': {
-                'dbEntity': 'PhenotypePrioritization', 'numEntities': 2, 'updateType': 'bulk_create',
-                'parentEntityIds': ['I000002_na19678'],
+            ('create 2 PhenotypePrioritizations', {'dbUpdate': {
+                'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_create',
+                'entityIds': [ANY, ANY],
             }}),
         ])
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),

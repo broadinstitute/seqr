@@ -758,7 +758,7 @@ INDIVIDUAL_CORE_FIELDS = {
 
 INDIVIDUAL_FIELDS = {
     'projectGuid', 'familyGuid', 'paternalId', 'maternalId', 'paternalGuid', 'maternalGuid',
-    'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures',
+    'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures', 'phenotypePrioritizationTools',
 }
 INDIVIDUAL_FIELDS.update(INDIVIDUAL_CORE_FIELDS)
 
