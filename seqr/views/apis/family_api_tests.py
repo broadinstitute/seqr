@@ -594,7 +594,7 @@ class FamilyAPITest(AuthenticationTestCase):
                         'lirical': [
                             {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 1,
                              'scores': {'compositeLR': 0.003, 'post_test_probability': 0}
-                             }
+                            }
                         ]
                     }
                 }
