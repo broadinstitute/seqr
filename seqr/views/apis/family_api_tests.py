@@ -69,9 +69,18 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
-        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData'}
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData',
+                             'phenotypePrioritizationTools'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
+        self.assertListEqual([[
+            {'createdDate': '2024-05-02T06:42:55.397Z', 'tool': 'exomiser'},
+            {'createdDate': '2024-05-02T06:42:55.397Z', 'tool': 'lirical'}
+        ], [
+            {'createdDate': '2024-05-02T06:42:55.397Z', 'tool': 'lirical'}
+        ], []],
+            [response_json['individualsByGuid'][guid].get('phenotypePrioritizationTools') for guid in INDIVIDUAL_GUIDS]
+        )
         self.assertListEqual(
             [True, False, True],
             [response_json['individualsByGuid'][guid].get('hasRnaOutlierData', False) for guid in INDIVIDUAL_GUIDS]

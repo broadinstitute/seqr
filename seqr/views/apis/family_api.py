@@ -80,10 +80,26 @@ def family_page_data(request, family_guid):
     for individual_guid in outlier_individual_guids:
         response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
 
+    phentoype_prioritization_tools = (
+        PhenotypePrioritization.objects.filter(individual__family=family).values(
+            'individual__guid',
+            'individual__phenotypeprioritization__tool',
+            'individual__phenotypeprioritization__created_date'
+        ).distinct()
+    )
+    pp_tools_by_indiv = defaultdict(list)
+    for pp in phentoype_prioritization_tools:
+        individual_guid = pp.get('individual__guid')
+        pp_tools_by_indiv[individual_guid].append({
+            'tool': pp.get('individual__phenotypeprioritization__tool'),
+            'createdDate': pp.get('individual__phenotypeprioritization__created_date'),
+        })
+
     submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(individual__family=family))
     individual_mme_submission_guids = {s['individualGuid']: s['submissionGuid'] for s in submissions}
     for individual in response['individualsByGuid'].values():
         individual['mmeSubmissionGuid'] = individual_mme_submission_guids.get(individual['individualGuid'])
+        individual['phenotypePrioritizationTools'] = pp_tools_by_indiv.get(individual['individualGuid'], [])
     response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
     return create_json_response(response)
