@@ -3,7 +3,6 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Count, F, Q
 from django.utils import timezone
 from tqdm import tqdm
-import random
 
 from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
 from seqr.utils.communication_utils import safe_post_to_slack
@@ -60,7 +59,8 @@ def _find_or_create_samples(
 
     matched_individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
     loaded_date = timezone.now()
-    samples = {**existing_samples}
+    samples_guids = [sample['guid'] for sample in existing_samples.values()]
+    individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
     if len(remaining_sample_keys) > 0:
         remaining_individuals_dict = _get_individuals_by_key(projects, matched_individual_ids)
 
@@ -88,14 +88,16 @@ def _find_or_create_samples(
             sample_key: _get_new_sample_args(sample_key, individual)
             for sample_key, individual in sample_id_to_individual_record.items()
         }
-        samples.update(new_sample_args)
-        _create_samples(
+        individual_ids.update({sample['individual_id'] for sample in new_sample_args.values()})
+        sample_models = _create_samples(
             new_sample_args.values(),
             user,
             loaded_date=loaded_date,
             **sample_params,
         )
-    return samples, remaining_sample_keys, loaded_date
+        samples_guids += list(sample_models.values_list('guid', flat=True))
+
+    return samples_guids, individual_ids, remaining_sample_keys, loaded_date
 
 
 def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
@@ -106,7 +108,7 @@ def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
             **created_sample_data,
             **kwargs,
         ) for created_sample_data in sorted(sample_data, key=lambda s: s['guid'])]
-    Sample.bulk_create(user, new_samples)
+    return Sample.bulk_create(user, new_samples)
 
 
 def _get_matched_samples_by_key(projects, key_fields=None, values=None, **sample_params):
@@ -135,7 +137,6 @@ def _get_individual_key(sample_key, sample_id_to_individual_id_mapping):
 
 def _get_new_sample_args(sample_key, individual_data, key_fields=None):
     return {
-        'guid': f'S{random.randint(10 ** 9, 10 ** 10)}_{individual_data["individual_id"]}'[:Sample.MAX_GUID_SIZE],  # nosec
         'individual_id': individual_data['id'],
         'sample_id': sample_key[0],
         **{key_field: sample_key[i+2] for i, key_field in enumerate(key_fields or [])}
@@ -193,7 +194,7 @@ def match_and_update_search_samples(
         projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
         sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
 ):
-    samples, remaining_sample_keys, loaded_date = _find_or_create_samples(
+    samples_guids, individual_ids, remaining_sample_keys, loaded_date = _find_or_create_samples(
         sample_project_tuples=sample_project_tuples,
         projects=projects,
         user=user,
@@ -206,8 +207,6 @@ def match_and_update_search_samples(
         sample_data=sample_data,
     )
 
-    samples_guids = [sample['guid'] for sample in samples.values()]
-    individual_ids = {sample['individual_id'] for sample in samples.values()}
     included_families = dict(Family.objects.filter(individual__id__in=individual_ids).values_list('guid', 'analysis_status'))
     _validate_samples_families(samples_guids, included_families.keys(), sample_type, dataset_type, expected_families=expected_families)
 
@@ -489,7 +488,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
         if sample_key not in samples_to_create and sample_key not in unmatched_samples:
             individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
             if individual_key in individual_data_by_key:
-                samples_to_create[sample_key] = _get_new_sample_args(
+                samples_to_create[sample_key] = _get_new_sample_args(  # TODO
                     sample_key, individual_data_by_key[individual_key], key_fields=['tissue_type'],
                 )
             else:
