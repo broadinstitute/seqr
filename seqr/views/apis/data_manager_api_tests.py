@@ -1265,15 +1265,15 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         ])
 
     @staticmethod
-    def _assert_expected_notifications(mock_send_email, notification_info: list[dict]):
+    def _assert_expected_notifications(mock_send_email, expected_notifs: list[dict]):
         calls = []
-        for notif_dict in notification_info:
+        for notif_dict in expected_notifs:
             project_guid = notif_dict.get('project_guid', PROJECT_GUID)
             project_name = notif_dict.get('project_name', '1kg project nåme with uniçøde')
             url = f'{SEQR_URL}project/{project_guid}/project_page'
             project_link = f'<a href={url}>{project_name}</a>'
             email = (
-                f'This is to notify you that {notif_dict["tool"].title()} data for {notif_dict["num_samples"]} samples '
+                f'This is to notify you that {notif_dict["tool"].title()} data for {notif_dict["num_samples"]} sample(s) '
                 f'has been loaded in seqr project {project_link} by {notif_dict["user"].get_full_name()}'
             )
             calls.append(mock.call(
@@ -1281,7 +1281,6 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 subject=f'New {notif_dict["tool"].title()} data available in seqr',
                 to=['test_user_manager@test.com'], process_message=ANY,
             ))
-
         mock_send_email.assert_has_calls(calls)
 
     @staticmethod
