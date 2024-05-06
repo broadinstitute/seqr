@@ -22,6 +22,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.vcf_utils import validate_vcf_exists
 
 from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
+from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
@@ -440,6 +441,11 @@ DATA_TYPE_FILE_EXTS = {
     Sample.DATASET_TYPE_SV_CALLS: ('.bed',),
 }
 
+LOADABLE_PDO_STATUSES = [
+    'On hold for phenotips, but ready to load',
+    'Methods (Loading)',
+]
+
 
 @pm_or_data_manager_required
 def validate_callset(request):
@@ -452,12 +458,42 @@ def validate_callset(request):
 
 @pm_or_data_manager_required
 def get_loaded_projects(request, sample_type, dataset_type):
-    projects = get_internal_projects().filter(
-        family__individual__sample__sample_type=sample_type, is_demo=False,
-    ).distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
+    projects = get_internal_projects().filter(is_demo=False)
+    project_samples = None
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+        project_samples = _fetch_airtable_loadable_project_samples(request.user)
+        projects = projects.filter(guid__in=project_samples.keys())
+        exclude_sample_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
+        # Include projects with either the matched sample type OR with no loaded data
+        projects = projects.exclude(family__individual__sample__sample_type=exclude_sample_type)
+    else:
+        projects = projects.filter(family__individual__sample__sample_type=sample_type)
+
+    projects = projects.distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
         'family__individual__sample__loaded_date', filter=Q(family__individual__sample__dataset_type=dataset_type),
     ))
+
+    if project_samples:
+        for project in projects:
+            project['sampleIds'] = sorted(project_samples[project['projectGuid']])
+
     return create_json_response({'projects': list(projects)})
+
+
+def _fetch_airtable_loadable_project_samples(user):
+    pdos = AirtableSession(user).fetch_records(
+        'PDO', fields=['PassingCollaboratorSampleIDs', 'SeqrIDs', 'SeqrProjectURL'],
+        or_filters={'PDOStatus': LOADABLE_PDO_STATUSES}
+    )
+    project_samples = defaultdict(set)
+    for pdo in pdos.values():
+        project_guid = re.match(
+            'https://seqr.broadinstitute.org/project/([^/]+)/project_page', pdo['SeqrProjectURL'],
+        ).group(1)
+        project_samples[project_guid].update([
+            sample_id for sample_id in pdo['PassingCollaboratorSampleIDs'] + pdo['SeqrIDs'] if sample_id
+        ])
+    return project_samples
 
 
 @pm_or_data_manager_required
@@ -465,18 +501,19 @@ def load_data(request):
     request_json = json.loads(request.body)
     sample_type = request_json['sampleType']
     dataset_type = request_json['datasetType']
-    projects = request_json['projects']
+    projects = [json.loads(project) for project in request_json['projects']]
+    project_samples = {p['projectGuid']: p.get('sampleIds') for p in projects}
 
-    project_models = Project.objects.filter(guid__in=projects)
+    project_models = Project.objects.filter(guid__in=project_samples)
     if len(project_models) < len(projects):
-        missing = sorted(set(projects) - {p.guid for p in project_models})
+        missing = sorted(set(project_samples.keys()) - {p.guid for p in project_models})
         return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
 
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
     trigger_data_loading(
         project_models, sample_type, dataset_type, request_json['filePath'], request.user, success_message,
         SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
-        is_internal=True,
+        is_internal=True, project_samples=project_samples if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else None,
     )
 
     return create_json_response({'success': True})
