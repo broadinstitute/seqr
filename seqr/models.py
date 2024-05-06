@@ -127,6 +127,7 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
+            model.guid = model._format_guid(randint(10**(cls.GUID_PRECISION-1), 10**cls.GUID_PRECISION))  # nosec
         models = cls.objects.bulk_create(new_models)
         log_model_bulk_update(logger, models, user, 'create')
         return models
