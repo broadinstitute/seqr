@@ -276,25 +276,35 @@ def update_rna_seq(request):
 
     sample_files = {}
 
-    def _save_sample_data(sample_guid, sample_data):
-        if sample_guid not in sample_files:
-            file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
-            sample_files[sample_guid] = gzip.open(file_name, 'at')
-        sample_files[sample_guid].write(f'{json.dumps(sample_data)}\n')
+    def _save_sample_data(sample_key, sample_data):
+        if sample_key not in sample_files:
+            file_name = _get_sample_file_path(file_name_prefix, sample_key.join('_'))
+            sample_files[sample_key] = gzip.open(file_name, 'at')
+        sample_files[sample_key].write(f'{json.dumps(sample_data)}\n')
 
     try:
-        sample_guids, info, warnings = load_rna_seq(
+        sample_guids_to_keys, info, warnings = load_rna_seq(
             data_type, file_path, _save_sample_data,
             user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
 
+    for sample_guid, sample_key in sample_guids_to_keys.items():
+        os.rename(
+            _get_sample_file_path(file_name_prefix, sample_key.join('_')),
+            _get_sample_file_path(file_name_prefix, sample_guid),
+        )
+
     return create_json_response({
         'info': info,
         'warnings': warnings,
         'fileName': file_name_prefix,
-        'sampleGuids': sorted(sample_guids),
+        'sampleGuids': sorted(sample_guids_to_keys.keys()),
     })
+
+
+def _get_sample_file_path(file_name_prefix, sample_guid):
+    return os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
 
 
 def _get_sample_file_name(file_name_prefix, sample_guid):
