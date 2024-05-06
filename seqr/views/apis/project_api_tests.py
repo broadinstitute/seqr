@@ -687,8 +687,8 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     PROJECT_COLLABORATOR_GROUPS = None
     HAS_EMPTY_PROJECT = False
 
-    def test_create_and_delete_project(self):
-        super(AnvilProjectAPITest, self).test_create_and_delete_project()
+    def test_create_and_delete_project(self, *args, **kwargs):
+        super(AnvilProjectAPITest, self).test_create_and_delete_project(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_group_members.assert_not_called()

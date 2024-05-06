@@ -288,7 +288,7 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
         # test with service account credentials
         mock_datetime.now.return_value = datetime(2021, 1, 1)
         mock_credentials.expiry = datetime(2021, 1, 2)
-        mock_credentials.token = 'ya29.SA_EXAMPLE'
+        mock_credentials.token = 'ya29.SA_EXAMPLE'  # nosec
         get_anvil_group_members(self.analyst_user, USERS_GROUP, use_sa_credentials=True)
         self.assertEqual(responses.calls[1].request.headers['Authorization'], 'Bearer ya29.SA_EXAMPLE')
         mock_credentials.refresh.assert_not_called()

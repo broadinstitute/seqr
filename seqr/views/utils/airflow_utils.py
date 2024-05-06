@@ -5,7 +5,6 @@ import google.auth
 from google.auth.transport.requests import AuthorizedSession
 import itertools
 import json
-import requests
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Individual, Sample, Project

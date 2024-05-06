@@ -1494,7 +1494,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
         },
     })
 
-GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
-GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
+GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'  # nosec
+GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'  # nosec
 
-GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
+GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'  # nosec
