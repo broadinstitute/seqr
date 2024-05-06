@@ -24,7 +24,7 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
         return local_file_path
 
     is_gz = url.endswith(".gz")
-    response = requests.get(url, stream=is_gz)
+    response = requests.get(url, stream=is_gz, timeout=300)
     input_iter = response if is_gz else response.iter_content()
     if verbose:
         logger.info("Downloading {} to {}".format(url, local_file_path))
@@ -40,7 +40,7 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
 
 def _get_remote_file_size(url):
     if url.startswith("http"):
-        response = requests.head(url)
+        response = requests.head(url, timeout=10)
         return int(response.headers.get('Content-Length', '0'))
     else:
         return 0  # file size not yet implemented for FTP and other protocols

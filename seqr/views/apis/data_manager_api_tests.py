@@ -1045,7 +1045,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
         # test correct file interactions
-        mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
+        mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)  # nosec
         filename = RNA_FILENAME_TEMPLATE.format(data_type) + f'__{new_sample_guid}.json.gz'
         expected_files = {
             f'{RNA_FILENAME_TEMPLATE.format(data_type)}__{new_sample_guid if sample_guid == PLACEHOLDER_GUID else sample_guid}.json.gz': data
@@ -1163,7 +1163,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'File not found: gs://seqr_data/lirical_data.tsv.gz')
-        mock_subprocess.assert_called_with('gsutil ls gs://seqr_data/lirical_data.tsv.gz', stdout=-1, stderr=-2, shell=True)
+        mock_subprocess.assert_called_with('gsutil ls gs://seqr_data/lirical_data.tsv.gz', stdout=-1, stderr=-2, shell=True)  # nosec
 
         mock_subprocess.reset_mock()
         mock_subprocess.return_value.wait.return_value = 0
@@ -1171,14 +1171,14 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Invalid file: missing column(s) project, diseaseId')
-        mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
+        mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)  # nosec
 
         mock_subprocess.reset_mock()
         mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_PROJECT_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Both sample ID and project fields are required.')
-        mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
+        mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)  # nosec
 
         mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA + EXOMISER_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
@@ -1229,7 +1229,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical').order_by('id'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_LIRICAL_DATA)
-        mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
+        mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)  # nosec
         self._assert_expected_notifications(mock_send_email, [
             {'tool': 'lirical', 'num_samples': 1, 'user': self.data_manager_user},
             {'tool': 'lirical', 'num_samples': 1, 'user': self.data_manager_user,
@@ -1286,7 +1286,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
     @staticmethod
     def _ls_subprocess_calls(file, is_error=True):
         calls = [
-            mock.call(f'gsutil ls {file}',stdout=-1, stderr=-2, shell=True),
+            mock.call(f'gsutil ls {file}',stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
         ]
         if is_error:

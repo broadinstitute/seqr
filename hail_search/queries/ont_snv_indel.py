@@ -1,6 +1,6 @@
 from aiohttp.web import HTTPBadRequest
 
-from hail_search.queries.base import BaseHailTableQuery, PredictionPath
+from hail_search.queries.base import BaseHailTableQuery
 from hail_search.queries.snv_indel import SnvIndelHailTableQuery
 
 
