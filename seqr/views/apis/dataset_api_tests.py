@@ -51,7 +51,7 @@ MOCK_RECORDS = {'records': [{'id': MOCK_RECORD_ID, 'fields': {'Status': 'Loading
 @mock.patch('seqr.utils.file_utils.open', MOCK_OPEN)
 class DatasetAPITest(object):
 
-    @mock.patch('seqr.views.utils.dataset_utils.random.randint')
+    @mock.patch('seqr.models.random.randint')
     @mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
     @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', MOCK_AIRTABLE_URL)
@@ -109,8 +109,8 @@ class DatasetAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
 
-        new_sample_guid = 'S98765432101234567890_NA20878'
-        replaced_sample_guid = 'S98765432101234567890_NA19678'
+        new_sample_guid = 'S98765432101234567890_na20878'
+        replaced_sample_guid = 'S98765432101234567890_na19678_'
         self.assertSetEqual(
             set(response_json['samplesByGuid'].keys()),
             {existing_sample_guid, existing_old_index_sample_guid, replaced_sample_guid, new_sample_guid}
@@ -191,7 +191,7 @@ class DatasetAPITest(object):
 
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
-        sv_sample_guid = 'S1234567_NA19675_1'
+        sv_sample_guid = 'S0001234567_na19675_1'
         self.assertDictEqual(response_json['familiesByGuid'], {})
         self.assertListEqual(list(response_json['samplesByGuid'].keys()), [sv_sample_guid])
         self.assertEqual(response_json['samplesByGuid'][sv_sample_guid]['datasetType'], 'SV')
@@ -239,7 +239,7 @@ class DatasetAPITest(object):
 
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
-        new_sample_type_sample_guid = 'S987654_NA19675_1'
+        new_sample_type_sample_guid = 'S0000987654_na19675_1'
         self.assertDictEqual(response_json['familiesByGuid'], {})
         self.assertListEqual(list(response_json['samplesByGuid'].keys()), [new_sample_type_sample_guid])
         self.assertEqual(response_json['samplesByGuid'][new_sample_type_sample_guid]['datasetType'], 'SNV_INDEL')

@@ -95,7 +95,7 @@ def _find_or_create_samples(
             loaded_date=loaded_date,
             **sample_params,
         )
-        samples_guids += list(new_sample_models.values_list('guid', flat=True))
+        samples_guids += [s.guid for s in new_sample_models]
 
     return samples_guids, individual_ids, remaining_sample_keys, loaded_date
 
