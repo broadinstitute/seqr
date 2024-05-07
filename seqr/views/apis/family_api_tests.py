@@ -73,12 +73,14 @@ class FamilyAPITest(AuthenticationTestCase):
                              'phenotypePrioritizationTools'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
-        self.assertListEqual([[
-            {'createdDate': '2024-05-02T06:42:55.397Z', 'tool': 'exomiser'},
-            {'createdDate': '2024-05-02T06:42:55.397Z', 'tool': 'lirical'}
-        ], [
-            {'createdDate': '2024-05-02T06:42:55.397Z', 'tool': 'lirical'}
-        ], []],
+        self.assertListEqual([
+            [
+                {'createdDate': '2024-05-02T06:42:55.397+00:00', 'tool': 'exomiser'},
+                {'createdDate': '2024-05-02T06:42:55.397+00:00', 'tool': 'lirical'}
+            ], [
+                {'createdDate': '2024-05-02T06:42:55.397+00:00', 'tool': 'lirical'}
+            ], []
+        ],
             [response_json['individualsByGuid'][guid].get('phenotypePrioritizationTools') for guid in INDIVIDUAL_GUIDS]
         )
         self.assertListEqual(
