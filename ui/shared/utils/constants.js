@@ -379,8 +379,7 @@ export const CATEGORY_FAMILY_FILTERS = {
     {
       value: `${SHOW_DATA_LOADED}_PHENO`,
       name: 'Data Loaded - Phenotype Prioritization',
-      // eslint-disable-next-line no-unused-vars
-      createFilter: (family, _user, _samplesByFamily) => family.hasPhenotypePrioritization,
+      createFilter: family => family.hasPhenotypePrioritization,
     },
   ],
 }

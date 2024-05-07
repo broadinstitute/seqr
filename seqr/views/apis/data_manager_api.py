@@ -333,12 +333,12 @@ def load_rna_seq_sample_data(request, sample_guid):
     return create_json_response({'success': True})
 
 
-def _notify_phenotype_prioritization_loaded(project, tool, num_samples, user):
+def _notify_phenotype_prioritization_loaded(project, tool, num_samples):
     url = f'{BASE_URL}project/{project.guid}/project_page'
     project_link = f'<a href={url}>{project.name}</a>'
     email = (
         f'This is to notify you that {tool.title()} data for {num_samples} sample(s) '
-        f'has been loaded in seqr project {project_link} by {user.get_full_name()}'
+        f'has been loaded in seqr project {project_link}'
     )
     send_project_notification(
         project,
@@ -417,7 +417,7 @@ def load_phenotype_prioritization_data(request):
     for project_name, indiv_records in all_records_by_project_name.items():
         project = projects_by_name[project_name][0]
         num_samples = len(indiv_records)
-        _notify_phenotype_prioritization_loaded(project, tool, num_samples, request.user)
+        _notify_phenotype_prioritization_loaded(project, tool, num_samples)
 
     return create_json_response({
         'info': info,

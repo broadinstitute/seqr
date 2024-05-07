@@ -18,12 +18,10 @@ class Migration(migrations.Migration):
     def update_guids(apps, schema_editor):
         PhenotypePrioritization = apps.get_model('seqr', 'PhenotypePrioritization')
         db_alias = schema_editor.connection.alias
-
         pps = PhenotypePrioritization.objects.using(db_alias).all()
         for pp in pps:
             ids_as_str = "%s:%s:%s" % (pp.individual.individual_id, pp.gene_id, pp.disease_id)
             pp.guid = 'PP%07d_%s' % (pp.id, _slugify(str(ids_as_str)))[:MAX_GUID_SIZE]
-
         PhenotypePrioritization.objects.using(db_alias).bulk_update(pps, ['guid'])
 
     operations = [
@@ -48,7 +46,7 @@ class Migration(migrations.Migration):
             name='last_modified_date',
             field=models.DateTimeField(blank=True, db_index=True, null=True),
         ),
-        migrations.RunPython(update_guids),
+        migrations.RunPython(update_guids, reverse_code=migrations.RunPython.noop),
         # Add uniqueness constraint to guid after default is replaced by update_guids
         migrations.AlterField(
             model_name='phenotypeprioritization',

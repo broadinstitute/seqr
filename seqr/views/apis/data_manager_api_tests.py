@@ -1274,7 +1274,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
             project_link = f'<a href={url}>{project_name}</a>'
             email = (
                 f'This is to notify you that {notif_dict["tool"].title()} data for {notif_dict["num_samples"]} sample(s) '
-                f'has been loaded in seqr project {project_link} by {notif_dict["user"].get_full_name()}'
+                f'has been loaded in seqr project {project_link}'
             )
             calls.append(mock.call(
                 email_body=f'Dear seqr user,\n\n{email}\n\nAll the best,\nThe seqr team',
