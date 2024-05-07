@@ -448,7 +448,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     individual_data_by_key = _get_individuals_by_key(projects)
 
     prev_loaded_individual_ids = set()
-    sample_guid_keys_to_load = set()
+    sample_guid_keys_to_load = {}
     existing_samples_by_guid = {}
     samples_to_create = {}
 
