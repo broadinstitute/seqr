@@ -278,7 +278,7 @@ def update_rna_seq(request):
 
     def _save_sample_data(sample_key, sample_data):
         if sample_key not in sample_files:
-            file_name = _get_sample_file_path(file_name_prefix, sample_key.join('_'))
+            file_name = _get_sample_file_path(file_name_prefix, '_'.join(sample_key))
             sample_files[sample_key] = gzip.open(file_name, 'at')
         sample_files[sample_key].write(f'{json.dumps(sample_data)}\n')
 
@@ -291,7 +291,7 @@ def update_rna_seq(request):
 
     for sample_guid, sample_key in sample_guids_to_keys.items():
         os.rename(
-            _get_sample_file_path(file_name_prefix, sample_key.join('_')),
+            _get_sample_file_path(file_name_prefix, '_'.join(sample_key)),
             _get_sample_file_path(file_name_prefix, sample_guid),
         )
 

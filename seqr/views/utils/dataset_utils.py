@@ -107,7 +107,7 @@ def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
             loaded_date=loaded_date,
             **created_sample_data,
             **kwargs,
-        ) for created_sample_data in sorted(sample_data, key=lambda s: s['guid'])]
+        ) for created_sample_data in sample_data]
     return Sample.bulk_create(user, new_samples)
 
 
@@ -461,7 +461,8 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
                 sample_type=Sample.SAMPLE_TYPE_RNA,
                 dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
             )
-            sample_key_map = _get_sample_models_by_key(new_sample_models, key_fields=key_fields)
+            new_sample_ids = [s.id for s in new_sample_models]
+            sample_key_map = _get_sample_models_by_key(Sample.objects.filter(id__in=new_sample_ids), key_fields=key_fields)
             sample_guid_keys_to_load.update({s['guid']: sample_key for sample_key, s in sample_key_map.items()})
 
         # Delete old data
@@ -490,6 +491,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
             sample_guid = sample['guid']
             existing_samples_by_guid[sample_guid] = sample
             sample_guid_keys_to_load[sample_guid] = sample_key
+            return
 
         if sample_key not in samples_to_create and sample_key not in unmatched_samples:
             individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
@@ -499,8 +501,6 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
                 )
             else:
                 unmatched_samples.add(sample_key)
-
-        return None
 
     warnings, not_loaded_count = _load_rna_seq_file(
         file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample,

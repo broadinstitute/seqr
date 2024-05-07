@@ -1051,10 +1051,10 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
             for sample_guid, data in params['parsed_file_data'].items()
         }
         self.assertIn(filename, expected_files)
-        mock_open.assert_has_calls([mock.call(filename, 'at') for filename in expected_files])
+        file_rename = self._assert_expected_file_open(mock_os, mock_open, expected_files.keys())
         for filename in expected_files:
             self.assertEqual(
-                ''.join([call.args[0] for call in mock_files[filename].write.call_args_list]),
+                ''.join([call.args[0] for call in mock_files[file_rename[filename]].write.call_args_list]),
                 expected_files[filename],
             )
 
@@ -1077,6 +1077,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         # Test loading data when where an individual has multiple tissue types
         data = [data[1][:2] + data[0][2:], data[1]]
         mock_files = defaultdict(mock.MagicMock)
+        mock_os.reset_mock()
         new_sample_individual_id = 7
         response_json, new_sample_guid = _test_basic_data_loading(data, 2, 2, new_sample_individual_id, body,
                                                                   '1kg project nåme with uniçøde')
@@ -1086,14 +1087,20 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         )
         self.assertTrue(second_tissue_sample_guid != new_sample_guid)
         self.assertTrue(second_tissue_sample_guid in response_json['sampleGuids'])
-        mock_open.assert_has_calls([
-            mock.call(f'{RNA_FILENAME_TEMPLATE.format(data_type)}__{sample_guid}.json.gz', 'at')
+        self._assert_expected_file_open(mock_os, mock_open, [
+            f'{RNA_FILENAME_TEMPLATE.format(data_type)}__{sample_guid}.json.gz'
             for sample_guid in response_json['sampleGuids']
         ])
         self.assertSetEqual(
             {''.join([call.args[0] for call in mock_file.write.call_args_list]) for mock_file in mock_files.values()},
             params['write_data'],
         )
+
+    def _assert_expected_file_open(self, mock_os, mock_open, expected_file_names):
+        file_rename = {call.args[1]: call.args[0] for call in mock_os.rename.call_args_list}
+        self.assertSetEqual(set(expected_file_names), set(file_rename.keys()))
+        mock_open.assert_has_calls([mock.call(file_rename[filename], 'at') for filename in expected_file_names])
+        return file_rename
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
