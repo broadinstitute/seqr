@@ -1099,7 +1099,6 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     def test_load_rna_seq_sample_data(self, mock_open, mock_os):
         mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
-        mock_os.path.exists.return_value = True
 
         url = reverse(load_rna_seq_sample_data, args=[RNA_MUSCLE_SAMPLE_GUID])
         self.check_pm_login(url)
@@ -1110,12 +1109,25 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 url = reverse(load_rna_seq_sample_data, args=[sample_guid])
                 model_cls = params['model_cls']
                 model_cls.objects.all().delete()
+                mock_os.path.exists.return_value = False
                 self.reset_logs()
                 parsed_file_lines = params['parsed_file_data'][sample_guid].strip().split('\n')
                 mock_open.return_value.__enter__.return_value.readlines.return_value = parsed_file_lines
                 file_name = RNA_FILENAME_TEMPLATE.format(data_type)
 
                 body = {'fileName': file_name, 'dataType': data_type}
+                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+                self.assertEqual(response.status_code, 400)
+                self.assertDictEqual(response.json(), {'error': 'Data for this sample was not properly parsed. Please re-upload the data'})
+                self.assert_json_logs(self.pm_user, [
+                    (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
+                    (f'No saved temp data found for {sample_guid} with file prefix {file_name}', {
+                        'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+                    }),
+                ])
+
+                mock_os.path.exists.return_value = True
+                self.reset_logs()
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 200)
                 self.assertDictEqual(response.json(), {'success': True})
