@@ -120,7 +120,7 @@ CaseReviewStatus.propTypes = {
 
 const SHOW_DATA_MODAL_CONFIG = [
   {
-    shouldShowField: 'hasPhenotypeGeneScores',
+    shouldShow: individual => individual.phenotypePrioritizationTools.length > 0,
     component: PhenotypePrioritizedGenes,
     modalName: ({ individualId }) => `PHENOTYPE-PRIORITIZATION-${individualId}`,
     title: ({ individualId }) => `Phenotype Prioritized Genes: ${individualId}`,
@@ -146,7 +146,7 @@ MmeStatusLabel.propTypes = {
   mmeSubmission: PropTypes.object,
 }
 
-const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) => (
+const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission, phenotypePrioritizationTools }) => (
   <div>
     {loadedSamples.map(
       sample => <div key={sample.sampleGuid}><Sample loadedSample={sample} isOutdated={!sample.isActive} /></div>,
@@ -179,7 +179,10 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         </Link>
       </div>
     )}
-    {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
+    { phenotypePrioritizationTools.map(
+      pp => <div key={pp.tool}><Sample loadedSample={pp} key={pp.tool} /></div>,
+    )}
+    {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShow }) => shouldShow(individual)).map(
       ({ modalName, title, modalSize, linkText, component }) => {
         const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
         const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
@@ -206,6 +209,7 @@ DataDetails.propTypes = {
   mmeSubmission: PropTypes.object,
   individual: PropTypes.object,
   loadedSamples: PropTypes.arrayOf(PropTypes.object),
+  phenotypePrioritizationTools: PropTypes.arrayOf(PropTypes.object),
 }
 
 const formatGene = gene => `${gene.gene} ${gene.comments ? ` (${gene.comments.trim()})` : ''}`
@@ -544,6 +548,10 @@ class IndividualRow extends React.PureComponent {
     // only show active or first/ last inactive samples
     loadedSamples = loadedSamples.filter((sample, i) => sample.isActive || i === 0 || i === loadedSamples.length - 1)
 
+    const phenotypePrioritizationTools = individual.phenotypePrioritizationTools.map(
+      pp => ({ sampleType: pp.tool.charAt(0).toUpperCase() + pp.tool.slice(1), loadedDate: pp.createdDate }),
+    )
+
     const leftContent = (
       <IndividualContainer>
         <div>
@@ -573,8 +581,14 @@ class IndividualRow extends React.PureComponent {
 
     const editCaseReview = tableName === CASE_REVIEW_TABLE_NAME
     const rightContent = editCaseReview ?
-      <CaseReviewStatus individual={individual} /> :
-      <DataDetails loadedSamples={loadedSamples} individual={individual} mmeSubmission={mmeSubmission} />
+      <CaseReviewStatus individual={individual} /> : (
+        <DataDetails
+          loadedSamples={loadedSamples}
+          individual={individual}
+          mmeSubmission={mmeSubmission}
+          phenotypePrioritizationTools={phenotypePrioritizationTools}
+        />
+      )
 
     return (
       <CollapsableLayout

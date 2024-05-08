@@ -4,8 +4,10 @@ APIs used to retrieve and modify Individual fields
 import json
 from collections import defaultdict
 from django.contrib.auth.models import User
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Count, Q
 from django.db.models.fields.files import ImageFieldFile
+from django.db.models.functions import JSONObject
 
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import Omim
@@ -80,15 +82,21 @@ def family_page_data(request, family_guid):
     for individual_guid in outlier_individual_guids:
         response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
 
-    has_phentoype_score_indivs = PhenotypePrioritization.objects.filter(individual__family=family).values_list(
-        'individual__guid', flat=True)
-    for individual_guid in has_phentoype_score_indivs:
-        response['individualsByGuid'][individual_guid]['hasPhenotypeGeneScores'] = True
+    tools_by_indiv = {}
+    tools_agg = PhenotypePrioritization.objects.filter(individual__family=family).values('individual__guid').annotate(
+        phenotypePrioritizationTools=ArrayAgg(
+            JSONObject(tool='tool', createdDate='created_date'),
+            distinct=True,
+        ))
+    for indiv_record in tools_agg:
+        individual_guid = indiv_record.get('individual__guid')
+        tools_by_indiv[individual_guid] = indiv_record.get('phenotypePrioritizationTools')
 
     submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(individual__family=family))
     individual_mme_submission_guids = {s['individualGuid']: s['submissionGuid'] for s in submissions}
     for individual in response['individualsByGuid'].values():
         individual['mmeSubmissionGuid'] = individual_mme_submission_guids.get(individual['individualGuid'])
+        individual['phenotypePrioritizationTools'] = tools_by_indiv.get(individual['individualGuid'], [])
     response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
     return create_json_response(response)

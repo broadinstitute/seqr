@@ -7,6 +7,7 @@ import os
 import re
 import requests
 import urllib3
+import random
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Max, F, Q
@@ -14,6 +15,7 @@ from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
+from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
@@ -30,7 +32,7 @@ from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data
 
 from seqr.models import Sample, Individual, Project, PhenotypePrioritization
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
+from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
 
 logger = SeqrLogger(__name__)
 
@@ -341,6 +343,21 @@ def load_rna_seq_sample_data(request, sample_guid):
     return create_json_response({'success': True})
 
 
+def _notify_phenotype_prioritization_loaded(project, tool, num_samples):
+    url = f'{BASE_URL}project/{project.guid}/project_page'
+    project_link = f'<a href={url}>{project.name}</a>'
+    email = (
+        f'This is to notify you that {tool.title()} data for {num_samples} sample(s) '
+        f'has been loaded in seqr project {project_link}'
+    )
+    send_project_notification(
+        project,
+        notification=f'Loaded {num_samples} {tool.title()} sample(s)',
+        email=email,
+        subject=f'New {tool.title()} data available in seqr',
+    )
+
+
 @data_manager_required
 def load_phenotype_prioritization_data(request):
     request_json = json.loads(request.body)
@@ -367,7 +384,7 @@ def load_phenotype_prioritization_data(request):
     if missing_info or conflict_info:
         return create_json_response({'error': missing_info + conflict_info}, status=400)
 
-    all_records = []
+    all_records_by_project_name = {}
     to_delete = PhenotypePrioritization.objects.none()
     error = None
     for project_name, records_by_indiv in data_by_project_indiv_id.items():
@@ -391,7 +408,7 @@ def load_phenotype_prioritization_data(request):
         info.append(f'Project {project_name}: {delete_info}loaded {len(indiv_records)} record(s)')
 
         to_delete |= exist_records
-        all_records += indiv_records
+        all_records_by_project_name[project_name] = indiv_records
 
     if error:
         return create_json_response({'error': error}, status=400)
@@ -399,7 +416,18 @@ def load_phenotype_prioritization_data(request):
     if to_delete:
         PhenotypePrioritization.bulk_delete(request.user, to_delete)
 
-    PhenotypePrioritization.bulk_create(request.user, [PhenotypePrioritization(**data) for data in all_records])
+    models_to_create = []
+    for indiv_records in all_records_by_project_name.values():
+        for record in indiv_records:
+            model = PhenotypePrioritization(**record)
+            model.guid = f'PP{random.randint(10 ** 8, 10 ** 9)}_{model.individual.individual_id}_{model.gene_id}_{model.disease_id}'[:PhenotypePrioritization.MAX_GUID_SIZE]  # nosec
+            models_to_create.append(model)
+    PhenotypePrioritization.bulk_create(request.user, models_to_create)
+
+    for project_name, indiv_records in all_records_by_project_name.items():
+        project = projects_by_name[project_name][0]
+        num_samples = len(indiv_records)
+        _notify_phenotype_prioritization_loaded(project, tool, num_samples)
 
     return create_json_response({
         'info': info,

@@ -3,6 +3,7 @@ from datetime import datetime
 from django.urls.base import reverse
 import json
 import mock
+from mock.mock import ANY
 from requests import HTTPError
 import responses
 
@@ -15,7 +16,7 @@ from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
-
+SEQR_URL = 'https://seqr.broadinstitute.org/'
 PROJECT_GUID = 'R0001_1kg'
 
 ES_CAT_ALLOCATION=[{
@@ -1157,8 +1158,10 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
     def _join_data(cls, data):
         return ['\t'.join(line).encode('utf-8') for line in data]
 
+    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', SEQR_URL)
+    @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_load_phenotype_prioritization_data(self, mock_subprocess):
+    def test_load_phenotype_prioritization_data(self, mock_subprocess, mock_send_email):
         url = reverse(load_phenotype_prioritization_data)
         self.check_data_manager_login(url)
 
@@ -1221,22 +1224,28 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         ]
         self.assertEqual(response.json()['info'], info)
         self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
-            ('delete PhenotypePrioritizations', {'dbUpdate': {
-                'dbEntity': 'PhenotypePrioritization', 'numEntities': 1, 'updateType': 'bulk_delete',
-                'parentEntityIds': ['I000002_na19678'],
+            ('delete 1 PhenotypePrioritizations', {'dbUpdate': {
+                'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_delete',
+                'entityIds': ['PP000003_NA19678_ENSG000002689'],
             }}),
-            ('create PhenotypePrioritizations', {'dbUpdate': {
-                'dbEntity': 'PhenotypePrioritization', 'numEntities': 2, 'updateType': 'bulk_create',
-                'parentEntityIds': ['I000002_na19678', 'I000015_na20885'],
+            ('create 2 PhenotypePrioritizations', {'dbUpdate': {
+                'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_create',
+                "entityIds": [ANY, ANY],
             }}),
         ])
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical').order_by('id'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_LIRICAL_DATA)
         mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)  # nosec
+        self._assert_expected_notifications(mock_send_email, [
+            {'tool': 'lirical', 'num_samples': 1, 'user': self.data_manager_user},
+            {'tool': 'lirical', 'num_samples': 1, 'user': self.data_manager_user,
+             'project_guid': 'R0003_test', 'project_name': 'Test Reprocessed Project'}
+        ])
 
         # Test uploading new data
         self.reset_logs()
+        mock_send_email.reset_mock()
         mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + UPDATE_LIRICAL_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
@@ -1246,18 +1255,40 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         ]
         self.assertEqual(response.json()['info'], info)
         self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
-            ('delete PhenotypePrioritizations', {'dbUpdate': {
-                'dbEntity': 'PhenotypePrioritization', 'numEntities': 1, 'updateType': 'bulk_delete',
-                'parentEntityIds': ['I000002_na19678'],
+            ('delete 1 PhenotypePrioritizations', {'dbUpdate': {
+                'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_delete',
+                'entityIds': [ANY],
             }}),
-            ('create PhenotypePrioritizations', {'dbUpdate': {
-                'dbEntity': 'PhenotypePrioritization', 'numEntities': 2, 'updateType': 'bulk_create',
-                'parentEntityIds': ['I000002_na19678'],
+            ('create 2 PhenotypePrioritizations', {'dbUpdate': {
+                'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_create',
+                'entityIds': [ANY, ANY],
             }}),
         ])
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_UPDATED_LIRICAL_DATA)
+        self._assert_expected_notifications(mock_send_email, [
+            {'tool': 'lirical', 'num_samples': 2, 'user': self.data_manager_user},
+        ])
+
+    @staticmethod
+    def _assert_expected_notifications(mock_send_email, expected_notifs: list[dict]):
+        calls = []
+        for notif_dict in expected_notifs:
+            project_guid = notif_dict.get('project_guid', PROJECT_GUID)
+            project_name = notif_dict.get('project_name', '1kg project nåme with uniçøde')
+            url = f'{SEQR_URL}project/{project_guid}/project_page'
+            project_link = f'<a href={url}>{project_name}</a>'
+            email = (
+                f'This is to notify you that {notif_dict["tool"].title()} data for {notif_dict["num_samples"]} sample(s) '
+                f'has been loaded in seqr project {project_link}'
+            )
+            calls.append(mock.call(
+                email_body=f'Dear seqr user,\n\n{email}\n\nAll the best,\nThe seqr team',
+                subject=f'New {notif_dict["tool"].title()} data available in seqr',
+                to=['test_user_manager@test.com'], process_message=ANY,
+            ))
+        mock_send_email.assert_has_calls(calls)
 
     @staticmethod
     def _ls_subprocess_calls(file, is_error=True):

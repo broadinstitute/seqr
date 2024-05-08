@@ -2,6 +2,7 @@
 
 ## dev
 * Adds dynamic analysis groups (REQUIRES DB MIGRATION)
+* Adds guid and created fields to PhenotypePrioritization model (REQUIRES DB MIGRATION)
 
 ## 4/4/24
 * Add ability to import project metadata from gregor metadata
