@@ -7,7 +7,6 @@ import os
 import re
 import requests
 import urllib3
-import random
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Max, F, Q
@@ -416,12 +415,9 @@ def load_phenotype_prioritization_data(request):
     if to_delete:
         PhenotypePrioritization.bulk_delete(request.user, to_delete)
 
-    models_to_create = []
-    for indiv_records in all_records_by_project_name.values():
-        for record in indiv_records:
-            model = PhenotypePrioritization(**record)
-            model.guid = f'PP{random.randint(10 ** 8, 10 ** 9)}_{model.individual.individual_id}_{model.gene_id}_{model.disease_id}'[:PhenotypePrioritization.MAX_GUID_SIZE]  # nosec
-            models_to_create.append(model)
+    models_to_create = [
+        PhenotypePrioritization(**record) for records in all_records_by_project_name.values() for record in records
+    ]
     PhenotypePrioritization.bulk_create(request.user, models_to_create)
 
     for project_name, indiv_records in all_records_by_project_name.items():

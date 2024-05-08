@@ -1197,8 +1197,7 @@ class PhenotypePrioritization(ModelWithGUID):
     def __unicode__(self):
         return "%s:%s:%s" % (self.individual.individual_id, self.gene_id, self.disease_id)
 
-    def _compute_guid(self):
-        return 'PP%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'PP'
 
     class Meta:
         json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'disease_name', 'scores']
