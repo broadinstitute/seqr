@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
-from seqr.utils.file_utils import file_iter, does_file_exist
+from seqr.utils.file_utils import file_iter, does_file_exist, mv_file_to_gs
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.vcf_utils import validate_vcf_exists
 
@@ -33,6 +33,8 @@ from seqr.models import Sample, Individual, Project, PhenotypePrioritization
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
+
+TEMP_GS_BUCKET = 'gs://seqr-scratch-temp'
 
 
 @data_manager_required
@@ -273,12 +275,13 @@ def update_rna_seq(request):
         mapping_file = load_uploaded_file(uploaded_mapping_file_id)
 
     file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
+    file_dir = os.path.join(get_temp_upload_directory(), file_name_prefix)
 
     sample_files = {}
 
     def _save_sample_data(sample_guid, sample_data):
         if sample_guid not in sample_files:
-            file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
+            file_name = os.path.join(file_dir, f'{sample_guid}.json.gz')
             sample_files[sample_guid] = gzip.open(file_name, 'at')
         sample_files[sample_guid].write(f'{json.dumps(sample_data)}\n')
 
@@ -289,6 +292,8 @@ def update_rna_seq(request):
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
 
+    mv_file_to_gs(f'{file_dir}/*', f'{TEMP_GS_BUCKET}/{file_name_prefix}', request.user)
+
     return create_json_response({
         'info': info,
         'warnings': warnings,
@@ -297,15 +302,10 @@ def update_rna_seq(request):
     })
 
 
-def _get_sample_file_name(file_name_prefix, sample_guid):
-    return f'{file_name_prefix}__{sample_guid}.json.gz'
-
-
 def _load_saved_sample_data(file_name_prefix, sample_guid):
-    file_name = os.path.join(get_temp_upload_directory(), _get_sample_file_name(file_name_prefix, sample_guid))
-    if os.path.exists(file_name):
-        with gzip.open(file_name, 'rt') as f:
-            return [json.loads(line) for line in f.readlines()]
+    file_name = f'{TEMP_GS_BUCKET}/{file_name_prefix}/{sample_guid}.json.gz'
+    if does_file_exist(file_name, user=request.user):
+        return [json.loads(line) for line in file_iter(file_name, user=request.user)]
     return None
 
 
