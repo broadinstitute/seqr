@@ -5,13 +5,22 @@ import { validators } from 'shared/components/form/FormHelpers'
 import FormWizard from 'shared/components/form/FormWizard'
 import { ButtonRadioGroup } from 'shared/components/form/Inputs'
 import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
-import { SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
+import {
+  SAMPLE_TYPE_EXOME,
+  SAMPLE_TYPE_GENOME,
+  DATASET_TYPE_SV_CALLS,
+  DATASET_TYPE_MITO_CALLS,
+  DATASET_TYPE_SNV_INDEL_CALLS,
+} from 'shared/utils/constants'
 
-const formatProjectOption = ({ name, projectGuid, dataTypeLastLoaded }) => ({
-  value: projectGuid,
-  text: name,
-  description: dataTypeLastLoaded && `Last Loaded: ${new Date(dataTypeLastLoaded).toLocaleDateString()}`,
-  color: dataTypeLastLoaded ? 'teal' : 'orange',
+const formatProjectOption = opt => ({
+  value: JSON.stringify(opt),
+  text: opt.name,
+  description: [
+    opt.sampleIds && `${opt.sampleIds.length} Samples to Load`,
+    opt.dataTypeLastLoaded && `Last Loaded: ${new Date(opt.dataTypeLastLoaded).toLocaleDateString()}`,
+  ].filter(val => val).join('; '),
+  color: opt.dataTypeLastLoaded ? 'teal' : 'orange',
 })
 
 const renderLabel = ({ color, text }) => ({ color, content: text })
@@ -54,7 +63,11 @@ const LOAD_DATA_PAGES = [
         name: 'datasetType',
         label: 'Dataset Type',
         component: ButtonRadioGroup,
-        options: [DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS].map(value => ({ value, text: value })),
+        options: [
+          DATASET_TYPE_SNV_INDEL_CALLS,
+          DATASET_TYPE_SV_CALLS,
+          DATASET_TYPE_MITO_CALLS,
+        ].map(value => ({ value, text: value.replace('_', '/') })),
         validate: validators.required,
       },
     ],

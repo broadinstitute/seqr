@@ -355,19 +355,7 @@ def gregor_export(request):
         consent_code=consent_code[0],
         projectcategory__name=GREGOR_CATEGORY,
     )
-    sample_types = Sample.objects.filter(individual__family__project__in=projects).values_list('individual_id', 'sample_type')
-    individual_data_types = defaultdict(set)
-    for individual_db_id, sample_type in sample_types:
-        individual_data_types[individual_db_id].add(sample_type)
-    individuals = Individual.objects.filter(id__in=individual_data_types).prefetch_related(
-        'family__project', 'mother', 'father')
-
-    grouped_data_type_individuals = defaultdict(dict)
-    family_individuals = defaultdict(dict)
-    for i in individuals:
-        participant_id = _format_gregor_id(i.individual_id)
-        grouped_data_type_individuals[participant_id].update({data_type: i for data_type in individual_data_types[i.id]})
-        family_individuals[i.family_id][i.guid] = participant_id
+    grouped_data_type_individuals = _get_individual_data_types(projects)
 
     # If multiple individual records, prefer WGS
     individual_lookup = {
@@ -415,38 +403,17 @@ def gregor_export(request):
     experiment_lookup_rows = []
     experiment_ids_by_participant = {}
     for participant in participant_rows:
-        # phenotype table
-        base_phenotype_row = {'participant_id': participant['participant_id'], 'presence': 'Present', 'ontology': 'HPO'}
-        phenotype_rows += [
-            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in participant['features'] or []
-        ]
-        base_phenotype_row['presence'] = 'Absent'
-        phenotype_rows += [
-            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in participant['absent_features'] or []
-        ]
+        phenotype_rows += _parse_participant_phenotype_rows(participant)
 
         if not participant[PARTICIPANT_ID_FIELD]:
             continue
 
         airtable_metadata = airtable_metadata_by_participant.get(participant[PARTICIPANT_ID_FIELD]) or {}
-
-        has_analyte = False
-        # airtable data
-        for data_type in grouped_data_type_individuals[participant['participant_id']]:
-            if data_type not in airtable_metadata:
-                continue
-            is_rna, row = _get_airtable_row(data_type, airtable_metadata)
-            has_analyte = True
-            analyte_rows.append({**participant, **row})
-            if not is_rna:
-                experiment_ids_by_participant[participant['participant_id']] = row['experiment_dna_short_read_id']
-            (airtable_rna_rows if is_rna else airtable_rows).append(row)
-            experiment_lookup_rows.append(
-                {'participant_id': participant['participant_id'], **_get_experiment_lookup_row(is_rna, row)}
-            )
-
-        if participant['analyte_id'] and not has_analyte:
-            analyte_rows.append(participant)
+        data_types = grouped_data_type_individuals[participant['participant_id']]
+        _parse_participant_airtable_rows(
+            participant, airtable_metadata, data_types, experiment_ids_by_participant,
+            analyte_rows, airtable_rows, airtable_rna_rows, experiment_lookup_rows,
+        )
 
     # Add experiment IDs
     for variant in genetic_findings_rows:
@@ -476,6 +443,54 @@ def gregor_export(request):
         'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families'],
         'warnings': warnings,
     })
+
+
+def _get_individual_data_types(projects):
+    sample_types = Sample.objects.filter(individual__family__project__in=projects).values_list('individual_id', 'sample_type')
+    individual_data_types = defaultdict(set)
+    for individual_db_id, sample_type in sample_types:
+        individual_data_types[individual_db_id].add(sample_type)
+    individuals = Individual.objects.filter(id__in=individual_data_types).prefetch_related(
+        'family__project', 'mother', 'father')
+
+    grouped_data_type_individuals = defaultdict(dict)
+    for i in individuals:
+        participant_id = _format_gregor_id(i.individual_id)
+        grouped_data_type_individuals[participant_id].update(
+            {data_type: i for data_type in individual_data_types[i.id]})
+    return grouped_data_type_individuals
+
+
+def _parse_participant_phenotype_rows(participant):
+    base_phenotype_row = {'participant_id': participant['participant_id'], 'presence': 'Present', 'ontology': 'HPO'}
+    present_rows = [
+        dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in participant['features'] or []
+    ]
+    base_phenotype_row['presence'] = 'Absent'
+    return present_rows + [
+        dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in participant['absent_features'] or []
+    ]
+
+
+def _parse_participant_airtable_rows(participant, airtable_metadata, data_types, experiment_ids_by_participant,
+                                     analyte_rows, airtable_rows, airtable_rna_rows, experiment_lookup_rows):
+    has_analyte = False
+    # airtable data
+    for data_type in data_types:
+        if data_type not in airtable_metadata:
+            continue
+        is_rna, row = _get_airtable_row(data_type, airtable_metadata)
+        has_analyte = True
+        analyte_rows.append({**participant, **row})
+        if not is_rna:
+            experiment_ids_by_participant[participant['participant_id']] = row['experiment_dna_short_read_id']
+        (airtable_rna_rows if is_rna else airtable_rows).append(row)
+        experiment_lookup_rows.append(
+            {'participant_id': participant['participant_id'], **_get_experiment_lookup_row(is_rna, row)}
+        )
+
+    if participant['analyte_id'] and not has_analyte:
+        analyte_rows.append(participant)
 
 
 def _get_gregor_airtable_data(participants, user):
@@ -666,7 +681,7 @@ def _populate_gregor_files(file_data):
 
 
 def _load_data_model_validators():
-    response = requests.get(GREGOR_DATA_MODEL_URL)
+    response = requests.get(GREGOR_DATA_MODEL_URL, timeout=10)
     response.raise_for_status()
     # remove commented out lines from json
     response_json = json.loads(re.sub('\\n\s*//.*\\n', '', response.text))

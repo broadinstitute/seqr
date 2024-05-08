@@ -4,7 +4,7 @@ import {
   getProjectsByGuid,
   getFamiliesByGuid,
   getFamiliesGroupedByProjectGuid,
-  getAnalysisGroupsByGuid,
+  getCurrentAnalysisGroupFamilyGuids,
   getLocusListsByGuid,
   getAnalysisGroupsGroupedByProjectGuid,
   getCurrentSearchParams,
@@ -26,37 +26,43 @@ export const getInhertanceFilterMode = createSelector(
   searchParams => (((searchParams || {}).search || {}).inheritance || {}).mode,
 )
 
-export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
-  if (params.projectGuid && params.familyGuids) {
-    return params
-  }
+export const getProjectFamilies = createSelector(
+  getFamiliesByGuid,
+  getFamiliesGroupedByProjectGuid,
+  getCurrentAnalysisGroupFamilyGuids,
+  (familiesByGuid, familiesByProjectGuid, analysisGroupFamilyGuids) => (
+    { projectGuid, familyGuids, familyGuid, analysisGroupGuid, searchHash, ...params },
+  ) => {
+    if (projectGuid && familyGuids) {
+      return { projectGuid, familyGuids }
+    }
 
-  if (params.projectGuid) {
-    const loadedProjectFamilies = familiesByProjectGuid[params.projectGuid]
-    return {
-      projectGuid: params.projectGuid,
-      familyGuids: loadedProjectFamilies ? Object.keys(loadedProjectFamilies) : null,
+    if (analysisGroupGuid) {
+      return analysisGroupFamilyGuids ? {
+        projectGuid,
+        familyGuids: analysisGroupFamilyGuids,
+      } : { projectGuid, analysisGroupGuid }
     }
-  }
-  if (params.analysisGroupGuid) {
-    const analysisGroup = analysisGroupByGuid[params.analysisGroupGuid]
-    return analysisGroup ? {
-      projectGuid: analysisGroup.projectGuid,
-      familyGuids: analysisGroup.familyGuids,
-    } : { analysisGroupGuid: params.analysisGroupGuid }
-  }
-  if (params.familyGuid || params.familyGuids) {
-    const familyGuid = params.familyGuid || params.familyGuids[0]
-    return {
-      projectGuid: (familiesByGuid[familyGuid] || {}).projectGuid,
-      familyGuids: [familyGuid],
+    if (projectGuid) {
+      const loadedProjectFamilies = familiesByProjectGuid[projectGuid]
+      return {
+        projectGuid,
+        familyGuids: loadedProjectFamilies ? Object.keys(loadedProjectFamilies) : null,
+      }
     }
-  }
-  if (params.searchHash) {
-    return params
-  }
-  return null
-}
+    if (familyGuid || familyGuids) {
+      const singleFamilyGuid = familyGuid || familyGuids[0]
+      return {
+        projectGuid: (familiesByGuid[singleFamilyGuid] || {}).projectGuid,
+        familyGuids: [singleFamilyGuid],
+      }
+    }
+    if (searchHash) {
+      return { projectGuid, familyGuids, familyGuid, analysisGroupGuid, searchHash, ...params }
+    }
+    return null
+  },
+)
 
 export const getMultiProjectFamilies = createSelector(
   (state, props) => props.match.params,
@@ -74,10 +80,8 @@ const createProjectFamiliesSelector = createSelectorCreator(
 
 const getIntitialProjectFamilies = createProjectFamiliesSelector(
   (state, props) => props.match.params,
-  getFamiliesByGuid,
-  getFamiliesGroupedByProjectGuid,
-  getAnalysisGroupsByGuid,
   getProjectFamilies,
+  (params, getProjectFamiliesFunc) => getProjectFamiliesFunc(params),
 )
 
 export const getIntitialSearch = createSelector(
@@ -181,7 +185,8 @@ export const getFamilyOptions = createSelector(
 export const getAnalysisGroupOptions = createSelector(
   getAnalysisGroupsGroupedByProjectGuid,
   (state, props) => props.value.projectGuid,
-  (analysisGroupsGroupedByProjectGuid, projectGuid) => Object.values(
-    analysisGroupsGroupedByProjectGuid[projectGuid] || {},
-  ).map(group => ({ value: group.analysisGroupGuid, text: group.name })),
+  (analysisGroupsGroupedByProjectGuid, projectGuid) => Object.values({
+    ...(analysisGroupsGroupedByProjectGuid[projectGuid] || {}),
+    ...(analysisGroupsGroupedByProjectGuid.null || {}),
+  }).map(group => ({ value: group.analysisGroupGuid, text: group.name, icon: group.criteria ? 'sync' : null })),
 )

@@ -4,9 +4,7 @@ import responses
 from django.core.management import call_command, CommandError
 from django.urls.base import reverse
 
-from seqr.models import LocusList
-from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, add_project_locus_lists, \
-    delete_project_locus_lists
+from seqr.views.apis.locus_list_api import locus_lists, locus_list_info
 from seqr.views.apis.locus_list_api_tests import BaseLocusListAPITest
 from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELDS
 
@@ -55,22 +53,21 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         # Given all PanelApp gene lists and associated genes
         au_panels_p1_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL_AU)
         au_panels_p2_url = '{}/panels/?page=2'.format(PANEL_APP_API_URL_AU)
-        uk_panels_p1_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL_UK)
-        au_genes_260_url = '{}/panels/{}/genes/?page=1'.format(PANEL_APP_API_URL_AU, 260)
-        au_genes_3069_url = '{}/panels/{}/genes/?page=1'.format(PANEL_APP_API_URL_AU, 3069)
-        uk_genes_260_url = '{}/panels/{}/genes/?page=1'.format(PANEL_APP_API_URL_UK, 260)
+        au_genes_url = '{}/genes/?page=1'.format(PANEL_APP_API_URL_AU)
         au_panels_p1_json = _get_json_from_file('panelapp/test_resources/au_panelapp_panels_p1.json')
         au_panels_p2_json = _get_json_from_file('panelapp/test_resources/au_panelapp_panels_p2.json')
+        au_genes_json = _get_json_from_file('panelapp/test_resources/au_panelapp_genes.json')
+
+        uk_panels_p1_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL_UK)
+        uk_genes_url = '{}/genes/?page=1'.format(PANEL_APP_API_URL_UK)
         uk_panels_p1_json = _get_json_from_file('panelapp/test_resources/uk_panelapp_panels_p1.json')
-        au_genes_260_json = _get_json_from_file('panelapp/test_resources/au_panel_260_genes.json')
-        au_genes_3069_json = _get_json_from_file('panelapp/test_resources/au_panel_3069_genes.json')
-        uk_genes_260_json = _get_json_from_file('panelapp/test_resources/uk_panel_260_genes.json')
+        uk_genes_json = _get_json_from_file('panelapp/test_resources/uk_panelapp_genes.json')
+
         responses.add(responses.GET, au_panels_p1_url, json=au_panels_p1_json, status=200)
         responses.add(responses.GET, au_panels_p2_url, json=au_panels_p2_json, status=200)
+        responses.add(responses.GET, au_genes_url, json=au_genes_json, status=200)
         responses.add(responses.GET, uk_panels_p1_url, json=uk_panels_p1_json, status=200)
-        responses.add(responses.GET, au_genes_260_url, json=au_genes_260_json, status=200)
-        responses.add(responses.GET, au_genes_3069_url, json=au_genes_3069_json, status=200)
-        responses.add(responses.GET, uk_genes_260_url, json=uk_genes_260_json, status=200)
+        responses.add(responses.GET, uk_genes_url, json=uk_genes_json, status=200)
 
         # URl argument is required
         with self.assertRaises(CommandError) as err:

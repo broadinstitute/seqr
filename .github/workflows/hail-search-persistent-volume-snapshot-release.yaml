@@ -24,7 +24,7 @@ on:
         - SV
         required: true
       version:
-        required: true
+        required: false
       volume_handle:
         required: true
 
@@ -42,6 +42,7 @@ jobs:
           fetch-depth: 0
 
       - name: update dataset version in the broad-seqr chart
+        if: "${{ inputs.version != '' }}"
         uses: mikefarah/yq@v4.22.1
         with:
           cmd: >
@@ -61,4 +62,4 @@ jobs:
           github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
           author_email: ${{ github.actor }}@users.noreply.github.com
           author_name: tgg-automation
-          message: "Updating ${{ inputs.environment }} ${{ inputs.reference_genome }}/${{ inputs.dataset_type }} dataset version to ${{ inputs.version }} and volume handle to ${{ inputs.volume_handle }} "
+          message: "Updating ${{ inputs.environment }} ${{ inputs.reference_genome }}/${{ inputs.dataset_type }} ${{ inputs.version != '' && format('{0} {1} {2}', 'dataset version to', inputs.version, 'and') || ''}} volume handle to ${{ inputs.volume_handle }} "

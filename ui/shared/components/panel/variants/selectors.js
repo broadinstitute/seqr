@@ -16,7 +16,7 @@ import {
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
   getFamiliesByGuid, getProjectsByGuid, getIndividualsByGuid, getRnaSeqDataByIndividual,
-  getPhenotypeGeneScoresByIndividual,
+  getPhenotypeGeneScoresByIndividual, getCurrentAnalysisGroupFamilyGuids,
 } from 'redux/selectors'
 
 export const getIndividualGeneDataByFamilyGene = createSelector(
@@ -71,10 +71,10 @@ const sortCompHet = (a, b) => (a.populations ? 1 : 0) - (b.populations ? 1 : 0)
 const getProjectSavedVariantsSelection = createSelector(
   (state, props) => props.match.params,
   getFamiliesByGuid,
-  getAnalysisGroupsByGuid,
+  getCurrentAnalysisGroupFamilyGuids,
   state => state.currentProjectGuid,
   getVariantTagsByGuid,
-  ({ tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid,
+  ({ tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupFamilyGuids,
     projectGuid, tagsByGuid) => {
     if (!projectGuid) {
       return null
@@ -83,8 +83,7 @@ const getProjectSavedVariantsSelection = createSelector(
     let variantFilter
     if (variantGuid) {
       variantFilter = o => variantGuid.split(',').includes(o.variantGuid)
-    } else if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {
-      const analysisGroupFamilyGuids = analysisGroupsByGuid[analysisGroupGuid].familyGuids
+    } else if (analysisGroupFamilyGuids) {
       variantFilter = o => o.familyGuids.some(fg => analysisGroupFamilyGuids.includes(fg))
     } else if (familyGuid) {
       variantFilter = o => o.familyGuids.includes(familyGuid)

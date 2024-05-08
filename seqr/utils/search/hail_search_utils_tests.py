@@ -10,10 +10,10 @@ from seqr.utils.search.utils import get_variant_query_gene_counts, query_variant
     get_variants_for_variant_ids, variant_lookup, sv_variant_lookup, InvalidSearchException
 from seqr.utils.search.search_utils_tests import SearchTestHelper
 from hail_search.test_utils import get_hail_search_body, EXPECTED_SAMPLE_DATA, FAMILY_1_SAMPLE_DATA, \
-    FAMILY_2_ALL_SAMPLE_DATA, ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
+    ALL_AFFECTED_SAMPLE_DATA, CUSTOM_AFFECTED_SAMPLE_DATA, HAIL_BACKEND_VARIANTS, \
     LOCATION_SEARCH, EXCLUDE_LOCATION_SEARCH, VARIANT_ID_SEARCH, RSID_SEARCH, GENE_COUNTS, FAMILY_2_VARIANT_SAMPLE_DATA, \
     FAMILY_2_MITO_SAMPLE_DATA, EXPECTED_SAMPLE_DATA_WITH_SEX, VARIANT_LOOKUP_VARIANT, MULTI_PROJECT_SAMPLE_DATA, \
-    GCNV_VARIANT4, SV_VARIANT2, SV_VARIANT4
+    GCNV_VARIANT4, SV_VARIANT2
 MOCK_HOST = 'http://test-hail-host'
 
 SV_WGS_SAMPLE_DATA = [{

@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
-from django.db.models import F, Q, Value, CharField, Case, When
+from django.db.models import F, Q, Value, CharField
 from django.db.models.functions import Replace
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -12,7 +12,6 @@ from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_L
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTagType
 from seqr.views.utils.airtable_utils import get_airtable_samples
 from seqr.utils.gene_utils import get_genes
-from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY

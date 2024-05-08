@@ -50,8 +50,8 @@ class IgvAPITest(AuthenticationTestCase):
         mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
         mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token1', expire=3594)
         mock_subprocess.assert_has_calls([
-            mock.call('gsutil -u anvil-datastorage ls gs://fc-secure-project_A/sample_1.bam.bai', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),
-            mock.call('gcloud auth print-access-token', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),
+            mock.call('gsutil -u anvil-datastorage ls gs://fc-secure-project_A/sample_1.bam.bai', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),  # nosec
+            mock.call('gcloud auth print-access-token', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),  # nosec
         ])
         mock_ls_subprocess.wait.assert_called_once()
         mock_access_token_subprocess.wait.assert_called_once()
@@ -88,7 +88,7 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
         mock_subprocess.assert_called_with(
             'dd skip=100 count=151 bs=1 if=/project_A/sample_1.bai status="none"',
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)  # nosec
         mock_open.assert_not_called()
 
         # test no byte range
@@ -256,7 +256,7 @@ class IgvAPITest(AuthenticationTestCase):
             set(response_json['individualsByGuid']['I000001_na19675']['igvSampleGuids']),
             {'S000145_na19675', sample_guid}
         )
-        mock_subprocess.assert_called_with('gsutil ls gs://readviz/batch_10.dcr.bed.gz', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        mock_subprocess.assert_called_with('gsutil ls gs://readviz/batch_10.dcr.bed.gz', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)  # nosec
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'filePath': 'gs://readviz/batch_10.junctions.bed.gz', 'sampleId': 'NA19675',

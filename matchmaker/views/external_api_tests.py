@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from matchmaker.models import MatchmakerIncomingQuery
 
-TEST_ACCESS_TOKEN = 'erjhtg3558324u82'
+TEST_ACCESS_TOKEN = 'erjhtg3558324u82'  # nosec
 TEST_MME_NODES = {TEST_ACCESS_TOKEN: {'name': 'Test Node'}}
 
 

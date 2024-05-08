@@ -1,17 +1,17 @@
 from collections import defaultdict, OrderedDict
 from django.contrib.auth.models import User
-from django.db.models import F
+from django.db.models import F, Q, Count
 import google.auth
 from google.auth.transport.requests import AuthorizedSession
 import itertools
 import json
-import requests
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Individual, Sample, Project
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.file_utils import does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from settings import AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
@@ -27,7 +27,7 @@ class DagRunningException(Exception):
 
 def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type: str, data_path: str, user: User,
                          success_message: str, success_slack_channel: str, error_message: str,
-                         genome_version: str = GENOME_VERSION_GRCh38, is_internal: bool = False):
+                         genome_version: str = GENOME_VERSION_GRCh38, is_internal: bool = False, project_samples: dict = None):
 
     success = True
     dag_name = f'v03_pipeline-{_dag_dataset_type(sample_type, dataset_type)}'
@@ -40,7 +40,8 @@ def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type
         'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
     }
 
-    upload_info = _upload_data_loading_files(projects, is_internal, user, genome_version, sample_type)
+    upload_info = _upload_data_loading_files(
+        projects, is_internal, user, genome_version, sample_type, project_samples=project_samples)
 
     try:
         _check_dag_running_state(dag_name)
@@ -106,7 +107,8 @@ def _dag_dataset_type(sample_type: str, dataset_type: str):
 
 
 def _upload_data_loading_files(projects: list[Project], is_internal: bool,
-                               user: User, genome_version: str, sample_type: str, callset: str = 'Internal'):
+                               user: User, genome_version: str, sample_type: str, callset: str = 'Internal',
+                               project_samples: dict = None):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
         'Family_ID': F('family__family_id'),
@@ -114,6 +116,8 @@ def _upload_data_loading_files(projects: list[Project], is_internal: bool,
         'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
     })
     annotations = {'project': F('family__project__guid'), **file_annotations}
+    if project_samples:
+        annotations['sampleCount'] = Count('sample', filter=Q(sample__is_active=True) & Q(sample__sample_type=sample_type))
     data = Individual.objects.filter(family__project__in=projects).order_by('family_id', 'individual_id').values(
         **dict(annotations))
 
@@ -122,16 +126,59 @@ def _upload_data_loading_files(projects: list[Project], is_internal: bool,
         data_by_project[row.pop('project')].append(row)
 
     info = []
+    errors = []
     for project_guid, rows in data_by_project.items():
         gs_path = _get_dag_project_gs_path(project_guid, genome_version, sample_type, is_internal, callset)
         try:
-            write_multiple_files_to_gs(
-                [(f'{project_guid}_pedigree', file_annotations.keys(), rows)], gs_path, user, file_format='tsv')
+            files, file_suffixes = _parse_project_upload_files(project_guid, rows, file_annotations.keys(), project_samples)
+            write_multiple_files_to_gs(files, gs_path, user, file_format='tsv', file_suffixes=file_suffixes)
+        except ValueError as e:
+            errors.append(str(e))
         except Exception as e:
             logger.error(f'Uploading Pedigree to Google Storage failed. Errors: {e}', user, detail=rows)
         info.append(f'Pedigree file has been uploaded to {gs_path}')
 
+    if errors:
+        raise ErrorsWarningsException(errors)
+
     return info
+
+
+def _parse_project_upload_files(project_guid, rows, header, project_samples):
+    files = [(f'{project_guid}_pedigree', header, rows)]
+    file_suffixes = None
+    if project_samples and project_guid in project_samples:
+        _validate_project_samples(project_samples[project_guid], rows)
+        file_name = f'{project_guid}_ids'
+        files.append((file_name, ['s'], [{'s': sample_id} for sample_id in project_samples[project_guid]]))
+        file_suffixes = {file_name: 'txt'}
+    return files, file_suffixes
+
+
+def _validate_project_samples(sample_ids, pedigree_rows):
+    individual_families = {}
+    loaded_family_individuals = defaultdict(set)
+    for row in pedigree_rows:
+        individual_id = row['Individual_ID']
+        family_id = row['Family_ID']
+        individual_families[individual_id] = family_id
+        if row['sampleCount']:
+            loaded_family_individuals[family_id].add(individual_id)
+
+    missing_samples = sorted(set(sample_ids) - set(individual_families.keys()))
+    if missing_samples:
+        raise ValueError(f'The following samples are included in airtable but missing from seqr: {", ".join(missing_samples)}')
+
+    airtable_families = defaultdict(set)
+    for sample_id in sample_ids:
+        airtable_families[individual_families[sample_id]].add(sample_id)
+    family_errors = []
+    for family_id, family_samples in airtable_families.items():
+        missing_family_samples = sorted(loaded_family_individuals[family_id] - family_samples)
+        if missing_family_samples:
+            family_errors.append(f'{family_id} ({", ".join(missing_family_samples)})')
+    if family_errors:
+        raise ValueError(f'The following families have previously loaded samples absent from airtable: {"; ".join(family_errors)}')
 
 
 def _get_dag_project_gs_path(project: str, genome_version: str, sample_type: str, is_internal: bool, callset: str):

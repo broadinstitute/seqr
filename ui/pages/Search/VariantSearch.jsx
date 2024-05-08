@@ -11,8 +11,8 @@ const RESULTS_PATH = 'results/:searchHash'
 const SINGLE_VARIANT_RESULTS_PATH = 'variant/:variantId/family/:familyGuid'
 
 const SEARCH_FORM_PAGES = [
+  'project/:projectGuid/analysis_group/:analysisGroupGuid',
   'project/:projectGuid',
-  'analysis_group/:analysisGroupGuid',
   'family/:familyGuid',
   RESULTS_PATH,
 ]

@@ -31,17 +31,17 @@ class DetectInactivePrivilegedUsersTest(TestCase):
         call_command('detect_inactive_privileged_users')
 
         self.assertFalse(User.objects.get(email='test_superuser@test.com').is_active)
-        self.assertTrue(User.objects.get(email='test_data_manager@test.com').is_active)
+        self.assertTrue(User.objects.get(email='test_data_manager@broadinstitute.org').is_active)
 
         mock_send_mail.assert_has_calls([
-            mock.call('Warning: seqr account deactivation', WARNING_EMAIL, None, ['test_data_manager@test.com']),
+            mock.call('Warning: seqr account deactivation', WARNING_EMAIL, None, ['test_data_manager@broadinstitute.org']),
             mock.call('Warning: seqr account deactivated', DEACTIVATED_EMAIL, None, ['test_superuser@test.com']),
         ])
 
         mock_logger.error.assert_called_with('Unable to send email: Connection error')
         mock_logger.info.assert_has_calls([
             mock.call('Checking for inactive users'),
-            mock.call('Warning test_data_manager@test.com of impending account inactivation'),
+            mock.call('Warning test_data_manager@broadinstitute.org of impending account inactivation'),
             mock.call('Inactivating account for test_superuser@test.com'),
             mock.call('Inactive user check complete'),
         ])

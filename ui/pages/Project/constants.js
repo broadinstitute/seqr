@@ -2,7 +2,8 @@
 
 import { stripMarkdown } from 'shared/utils/stringUtils'
 import {
-  SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS,
+  CATEGORY_FAMILY_FILTERS,
+  ASSIGNED_TO_ME_FILTER,
   FAMILY_FIELD_ID,
   FAMILY_DISPLAY_NAME,
   FAMILY_FIELD_DESCRIPTION,
@@ -35,12 +36,7 @@ import {
   INDIVIDUAL_HPO_EXPORT_DATA,
   FAMILY_NOTES_FIELDS,
   SNP_DATA_TYPE,
-  FAMILY_ANALYSED_BY_DATA_TYPES,
   MME_TAG_NAME,
-  SAMPLE_TYPE_RNA,
-  DATASET_TYPE_SV_CALLS,
-  DATASET_TYPE_MITO_CALLS,
-  DATASET_TITLE_LOOKUP,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -243,42 +239,32 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
 export const SHOW_IN_REVIEW = 'IN_REVIEW'
 const SHOW_ACCEPTED = 'ACCEPTED'
 
-const SHOW_DATA_LOADED = 'SHOW_DATA_LOADED'
 const SHOW_PHENOTYPES_ENTERED = 'SHOW_PHENOTYPES_ENTERED'
 const SHOW_NO_PHENOTYPES_ENTERED = 'SHOW_NO_PHENOTYPES_ENTERED'
 
 const SHOW_ASSIGNED_TO_ME_IN_REVIEW = 'SHOW_ASSIGNED_TO_ME_IN_REVIEW'
-const SHOW_ASSIGNED_TO_ME = 'SHOW_ASSIGNED_TO_ME'
-const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
-const SHOW_ANALYSED = 'SHOW_ANALYSED'
-const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
 
-const getFamilyCaseReviewStatuses  = (family, individualsByGuid) => {
-  const statuses = family.individualGuids.map(
-    individualGuid => (individualsByGuid[individualGuid] || {}).caseReviewStatus,
+const getFamilyCaseReviewStatuses  = (family) => {
+  const statuses = family.individuals.map(
+    individual => (individual || {}).caseReviewStatus,
   ).filter(status => status)
   return statuses.length ? statuses : family.caseReviewStatuses
 }
 
-const caseReviewStatusFilter = status => individualsByGuid => family => getFamilyCaseReviewStatuses(
-  family, individualsByGuid,
+const caseReviewStatusFilter = status => family => getFamilyCaseReviewStatuses(
+  family,
 ).some(caseReviewStatus => caseReviewStatus === status)
 
-const familyIsInReview = (family, individualsByGuid) => getFamilyCaseReviewStatuses(family, individualsByGuid).every(
+const familyIsInReview = family => getFamilyCaseReviewStatuses(family).every(
   status => status === CASE_REVIEW_STATUS_IN_REVIEW,
 )
-
-const familyIsAssignedToMe = (family, user) => (
-  family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null)
 
 const REQUIRED_METADATA_FIELDS = INDIVIDUAL_DETAIL_FIELDS.filter(
   ({ isRequiredInternal }) => isRequiredInternal,
 ).map(({ field, subFields }) => (subFields ? subFields[0].field : field))
 
-const familyHasRequiredMetadata = (family, individualsByGuid) => {
-  const individuals = family.individualGuids.map(
-    individualGuid => individualsByGuid[individualGuid],
-  ).filter(individual => individual)
+const familyHasRequiredMetadata = (family) => {
+  const individuals = family.individuals.filter(individual => individual)
   return individuals.length ? individuals.some(individual => REQUIRED_METADATA_FIELDS.every(
     field => individual[field] || individual[field] === false,
   ) && individual.features.length > 0) : family.hasRequiredMetadata
@@ -288,120 +274,47 @@ const ALL_FAMILIES_FILTER = { value: SHOW_ALL, name: 'All', createFilter: () => 
 const IN_REVIEW_FAMILIES_FILTER = {
   value: SHOW_IN_REVIEW,
   name: 'In Review',
-  createFilter: individualsByGuid => family => familyIsInReview(family, individualsByGuid),
+  createFilter: familyIsInReview,
 }
 const ACCEPTED_FILTER = {
   value: SHOW_ACCEPTED,
   name: 'Accepted',
   createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_ACCEPTED),
 }
-const ASSIGNED_TO_ME_FILTER = {
-  value: SHOW_ASSIGNED_TO_ME,
-  name: 'Assigned To Me',
-  createFilter: (individualsByGuid, user) => family => familyIsAssignedToMe(family, user),
-}
+
 const ANALYST_HIGH_PRIORITY_TAG = 'Analyst high priority'
 
-const hasMatchingSampleFilter = isMatchingSample => (individualsByGuid, user, samplesByFamily) => family => (
-  (samplesByFamily[family.familyGuid] || []).some(sample => sample.isActive && isMatchingSample(sample)))
-
-export const CATEGORY_FAMILY_FILTERS = {
+export const PROJECT_CATEGORY_FAMILY_FILTERS = {
+  ...CATEGORY_FAMILY_FILTERS,
   [FAMILY_FIELD_ANALYSIS_STATUS]: [
-    ...SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS.map(option => ({
-      ...option,
-      createFilter: () => family => family.analysisStatus === option.value,
-    })),
+    ...CATEGORY_FAMILY_FILTERS[FAMILY_FIELD_ANALYSIS_STATUS],
     ...[ACCEPTED_FILTER, IN_REVIEW_FAMILIES_FILTER].map(filter => ({ ...filter, category: 'Case Review Status' })),
   ],
-  [FAMILY_FIELD_ANALYSED_BY]: [
-    ASSIGNED_TO_ME_FILTER,
-    {
-      value: SHOW_ANALYSED_BY_ME,
-      name: 'Analysed By Me',
-      analysedByFilter: (individualsByGuid, user) => ({ createdBy }) => createdBy === (user.displayName || user.email),
-    },
-    {
-      value: SHOW_ANALYSED,
-      name: 'Analysed',
-      analysedByFilter: () => () => true,
-    },
-    {
-      value: SHOW_NOT_ANALYSED,
-      name: 'Not Analysed',
-      requireNoAnalysedBy: true,
-      analysedByFilter: () => () => true,
-    },
-    ...FAMILY_ANALYSED_BY_DATA_TYPES.map(([type, typeDisplay]) => ({
-      value: type,
-      name: typeDisplay,
-      category: 'Data Type',
-      analysedByFilter: () => ({ dataType }) => dataType === type,
-    })),
-    {
-      value: 'yearSinceAnalysed',
-      name: '>1 Year',
-      category: 'Analysis Date',
-      requireNoAnalysedBy: true,
-      analysedByFilter: () => ({ lastModifiedDate }) => (
-        (new Date()).setFullYear(new Date().getFullYear() - 1) < new Date(lastModifiedDate)
-      ),
-    },
-  ],
   [FAMILY_FIELD_FIRST_SAMPLE]: [
-    {
-      value: SHOW_DATA_LOADED,
-      name: 'Data Loaded',
-      createFilter: hasMatchingSampleFilter(() => true),
-    },
-    {
-      value: `${SHOW_DATA_LOADED}_RNA`,
-      name: 'Data Loaded - RNA',
-      createFilter: hasMatchingSampleFilter(({ sampleType }) => sampleType === SAMPLE_TYPE_RNA),
-    },
-    ...[DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS].map(dataType => ({
-      value: `${SHOW_DATA_LOADED}_${dataType}`,
-      name: `Data Loaded -${DATASET_TITLE_LOOKUP[dataType]}`,
-      createFilter: hasMatchingSampleFilter(
-        ({ sampleType, datasetType }) => sampleType !== SAMPLE_TYPE_RNA && datasetType === dataType,
-      ),
-    })),
+    ...CATEGORY_FAMILY_FILTERS[FAMILY_FIELD_FIRST_SAMPLE],
     {
       value: SHOW_PHENOTYPES_ENTERED,
       name: 'Required Metadata Entered',
-      createFilter: individualsByGuid => family => familyHasRequiredMetadata(family, individualsByGuid),
+      createFilter: familyHasRequiredMetadata,
     },
     {
       value: SHOW_NO_PHENOTYPES_ENTERED,
       name: 'Required Metadata Missing',
-      createFilter: individualsByGuid => family => !familyHasRequiredMetadata(family, individualsByGuid),
+      createFilter: family => !familyHasRequiredMetadata(family),
     },
   ],
   [FAMILY_FIELD_SAVED_VARIANTS]: [MME_TAG_NAME, ANALYST_HIGH_PRIORITY_TAG].map(tagName => ({
     value: tagName,
     name: tagName,
-    createFilter: (individualsByGuid, user, samplesByFamily, familyTagTypeCounts) => ({ familyGuid }) => (
-      (familyTagTypeCounts[familyGuid] || {})[tagName]
-    ),
   })),
 }
-
-export const FAMILY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
-  (acc, options) => {
-    options.forEach((opt) => {
-      acc[opt.value] = opt.createFilter
-    })
-    return acc
-  }, {},
-)
 
 export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
   ALL_FAMILIES_FILTER,
   {
     value: SHOW_ASSIGNED_TO_ME_IN_REVIEW,
     name: 'Assigned To Me - In Review',
-    createFilter: (individualsByGuid, user) => family => familyIsAssignedToMe(
-      family, user,
-    ) && familyIsInReview(family, individualsByGuid),
+    createFilter: (family, user) => ASSIGNED_TO_ME_FILTER.createFilter(family, user) && familyIsInReview(family),
   },
   { ...ASSIGNED_TO_ME_FILTER, name: 'Assigned To Me - All' },
   { ...IN_REVIEW_FAMILIES_FILTER, category: 'Case Review Status:' },

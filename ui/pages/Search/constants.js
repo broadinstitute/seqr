@@ -3,10 +3,6 @@ import {
   DE_NOVO_FILTER, ANY_AFFECTED, INHERITANCE_FILTER_OPTIONS,
 } from 'shared/utils/constants'
 
-export const getSelectedAnalysisGroups = (analysisGroupsByGuid, familyGuids) => Object.values(
-  analysisGroupsByGuid,
-).filter(group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)))
-
 const REF_REF = 'ref_ref'
 const HAS_REF = 'has_ref'
 const REF_ALT = 'ref_alt'

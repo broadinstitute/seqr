@@ -242,7 +242,7 @@ export const updateCollaboratorGroup = values => updateEntity(
 )
 
 export const updateAnalysisGroup = values => updateEntity(
-  values, RECEIVE_DATA, null, 'analysisGroupGuid', null, state => `/api/project/${state.currentProjectGuid}/analysis_groups`,
+  values, RECEIVE_DATA, null, 'analysisGroupGuid', null, state => `/api/project/${state.currentProjectGuid}/${values.criteria ? 'dynamic_' : ''}analysis_groups`,
 )
 
 export const getMmeMatches = submissionGuid => (dispatch, getState) => {

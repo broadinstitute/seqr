@@ -1,5 +1,4 @@
 from django.urls.base import reverse
-from django.utils.dateparse import parse_datetime
 import json
 import mock
 import responses
@@ -826,9 +825,9 @@ class ReportAPITest(AirtableTest):
 
         # test gsutil commands
         mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
-            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
         ])
 

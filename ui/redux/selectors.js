@@ -3,7 +3,7 @@ import uniqWith from 'lodash/uniqWith'
 
 import { compHetGene } from 'shared/components/panel/variants/VariantUtils'
 import { compareObjects } from 'shared/utils/sortUtils'
-import { NOTE_TAG_NAME, MME_TAG_NAME } from 'shared/utils/constants'
+import { NOTE_TAG_NAME, MME_TAG_NAME, FAMILY_FIELD_ANALYSED_BY, CATEGORY_FAMILY_FILTERS } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
@@ -100,7 +100,7 @@ export const getProjectAnalysisGroupOptions = createSelector(
 export const getAnalysisGroupsByFamily = createSelector(
   getAnalysisGroupsByGuid,
   analysisGroupsByGuid => Object.values(analysisGroupsByGuid).reduce(
-    (acc, analysisGroup) => analysisGroup.familyGuids.reduce(
+    (acc, analysisGroup) => (analysisGroup.familyGuids || []).reduce(
       (familyAcc, familyGuid) => ({ ...familyAcc, [familyGuid]: [...(familyAcc[familyGuid] || []), analysisGroup] }),
       acc,
     ), {},
@@ -452,4 +452,109 @@ export const getSpliceOutliersByChromFamily = createSelector(
   spliceDataByIndiv => Object.values(spliceDataByIndiv).reduce(
     (acc, spliceData) => (groupDataNestedByChrom(acc, spliceData, spliceData[0].familyGuid)), {},
   ),
+)
+
+const ANALYSED_BY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, options) => {
+    options.forEach((opt) => {
+      acc[opt.value] = opt.analysedByFilter
+    })
+    return acc
+  }, {},
+)
+
+const NO_ANALYSED_BY_FIELDS = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, options) => {
+    options.filter(opt => opt.requireNoAnalysedBy).forEach((opt) => {
+      acc.add(opt.value)
+    })
+    return acc
+  }, new Set(),
+)
+
+const ANALYSED_BY_CATEGORY_OPTION_LOOKUP = CATEGORY_FAMILY_FILTERS[FAMILY_FIELD_ANALYSED_BY].reduce(
+  (acc, { value, category }) => ({ ...acc, [value]: category || 'Analysed By' }), {},
+)
+
+const isAnalysedBy = (family, analysedByFilter, user, analysedByOptions) => {
+  let requireNoAnalysedBy = false
+  const analsedByGroups = Object.values(analysedByFilter.reduce(
+    (acc, val) => {
+      const optFilter = analysedByOptions?.has(val) ? ({ createdBy }) => createdBy === val :
+        ANALYSED_BY_FILTER_LOOKUP[val]
+      if (optFilter) {
+        const category = ANALYSED_BY_CATEGORY_OPTION_LOOKUP[val]
+        if (!acc[category]) {
+          acc[category] = []
+        }
+        acc[category].push(optFilter)
+      }
+      if (NO_ANALYSED_BY_FIELDS.has(val)) {
+        requireNoAnalysedBy = true
+      }
+      return acc
+    }, {},
+  ))
+  if (!analsedByGroups.length) {
+    return true
+  }
+  const filteredAnalysedBy = analsedByGroups.reduce(
+    (acc, filterGroup) => acc.filter(analysedBy => filterGroup.some(f => f(analysedBy, user))),
+    family.analysedBy,
+  )
+  return requireNoAnalysedBy ? filteredAnalysedBy.length === 0 : filteredAnalysedBy.length > 0
+}
+
+export const familyPassesFilters = createSelector(
+  getUser,
+  getSamplesByFamily,
+  (user, samplesByFamily) => (
+    family, groupedFilters, analysedByOptions, categoryFilters = CATEGORY_FAMILY_FILTERS,
+  ) => {
+    if (groupedFilters.analysedBy && !isAnalysedBy(family, groupedFilters.analysedBy, user, analysedByOptions)) {
+      return false
+    }
+    return Object.entries(groupedFilters).every(([key, groupVals]) => {
+      const filters = categoryFilters[key]?.filter(
+        opt => groupVals.includes(opt.value) && opt.createFilter,
+      ).map(opt => opt.createFilter)
+      return !filters?.length || filters.some(filter => filter(family, user, samplesByFamily))
+    })
+  },
+)
+
+export const getProjectAnalysisGroupFamilyGuidsByGuid = createSelector(
+  getAnalysisGroupsGroupedByProjectGuid,
+  getFamiliesGroupedByProjectGuid,
+  familyPassesFilters,
+  (state, props) => (
+    state.currentProjectGuid ||
+    props.projectGuid ||
+    props.value?.projectGuid ||
+    props.match?.params?.projectGuid ||
+    props.match?.params?.entityGuid
+  ),
+  (projectAnalysisGroupsByGuid, familiesByProjectGuid, passesFilterFunc, projectGuid) => (
+    [
+      ...Object.values(projectAnalysisGroupsByGuid[projectGuid] || {}),
+      ...Object.values(projectAnalysisGroupsByGuid.null || {}),
+    ].reduce((acc, analysisGroup) => ({
+      ...acc,
+      [analysisGroup.analysisGroupGuid]: analysisGroup.criteria ?
+        Object.values(familiesByProjectGuid[projectGuid] || {}).filter(
+          family => passesFilterFunc(family, analysisGroup.criteria),
+        ).map(family => family.familyGuid) : analysisGroup.familyGuids,
+    }), {})
+  ),
+)
+
+export const getAnalysisGroupGuid = (state, props) => (
+  (props || {}).match ? props.match.params.analysisGroupGuid : (props || {}).analysisGroupGuid
+)
+
+export const getCurrentAnalysisGroupFamilyGuids = createSelector(
+  getAnalysisGroupGuid,
+  getProjectAnalysisGroupFamilyGuidsByGuid,
+  (state, props) => state.currentProjectGuid || props.match?.params?.projectGuid,
+  (analysisGroupGuid, analysisGroupFamilyGuidsByGuid) => analysisGroupFamilyGuidsByGuid[analysisGroupGuid],
 )

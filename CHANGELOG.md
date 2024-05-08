@@ -2,6 +2,9 @@
 
 ## dev
 
+## 5/8/24
+* Adds dynamic analysis groups (REQUIRES DB MIGRATION)
+
 ## 4/4/24
 * Add ability to import project metadata from gregor metadata
   * Only enabled for a project if tag is first created via 

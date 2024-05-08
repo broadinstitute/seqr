@@ -16,7 +16,7 @@ import {
 } from '../../../selectors'
 import { updateFamiliesTable, updateFamiliesTableFilters } from '../../../reducers'
 import {
-  CATEGORY_FAMILY_FILTERS,
+  PROJECT_CATEGORY_FAMILY_FILTERS,
   CASE_REVIEW_FAMILY_FILTER_OPTIONS,
   FAMILY_SORT_OPTIONS,
   CASE_REVIEW_TABLE_NAME,
@@ -151,7 +151,7 @@ const FamilyTableFilter = connect(mapFilterStateToProps, mapFilterDispatchToProp
 
 const familyFieldDisplay = (field) => {
   const { id } = field
-  return CATEGORY_FAMILY_FILTERS[id] ? <FamilyTableFilter category={id} /> : FAMILY_FIELD_NAME_LOOKUP[id]
+  return PROJECT_CATEGORY_FAMILY_FILTERS[id] ? <FamilyTableFilter category={id} /> : FAMILY_FIELD_NAME_LOOKUP[id]
 }
 
 const TableHeaderRow = React.memo(({

@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Label, Header, Table, Segment } from 'semantic-ui-react'
 
-import { getGenesById, getTranscriptsById } from 'redux/selectors'
+import { getGenesById, getTranscriptsById, getFamiliesByGuid, getProjectsByGuid } from 'redux/selectors'
 import { updateVariantMainTranscript } from 'redux/rootReducer'
 import { VerticalSpacer } from '../../Spacers'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
@@ -42,7 +42,7 @@ const TRANSCRIPT_LABELS = [
   },
 ]
 
-const Transcripts = React.memo(({ variant, genesById, transcriptsById, updateMainTranscript }) => (
+const Transcripts = React.memo(({ variant, genesById, transcriptsById, updateMainTranscript, project }) => (
   variant.transcripts && Object.entries(variant.transcripts).sort((transcriptsA, transcriptsB) => (
     Math.min(...transcriptsA[1].map(t => t.transcriptRank)) - Math.min(...transcriptsB[1].map(t => t.transcriptRank))
   )).map(([geneId, geneTranscripts]) => (
@@ -79,7 +79,7 @@ const Transcripts = React.memo(({ variant, genesById, transcriptsById, updateMai
                       )
                     ))}
                     {
-                      variant.variantGuid && (
+                      variant.variantGuid && project?.canEdit && (
                         <span>
                           <VerticalSpacer height={5} />
                           {
@@ -142,11 +142,13 @@ Transcripts.propTypes = {
   genesById: PropTypes.object.isRequired,
   transcriptsById: PropTypes.object.isRequired,
   updateMainTranscript: PropTypes.func.isRequired,
+  project: PropTypes.object,
 }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
   genesById: getGenesById(state),
   transcriptsById: getTranscriptsById(state),
+  project: getProjectsByGuid(state)[getFamiliesByGuid(state)[ownProps.variant.familyGuids[0]]?.projectGuid],
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
