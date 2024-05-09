@@ -1129,7 +1129,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 self.assert_json_logs(self.pm_user, [
                     (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
                     (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
-                    (f'CommandException: One or more URLs matched no objects', None),
+                    ('CommandException: One or more URLs matched no objects', None),
                     (f'No saved temp data found for {sample_guid} with file prefix {file_name}', {
                         'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
                     }),
