@@ -2,7 +2,7 @@ import json
 import os
 import random
 import string
-import subprocess  # nosec
+import subprocess # nosec
 
 from ssl import create_default_context
 
@@ -71,7 +71,7 @@ ALLOWED_HOSTS = ['*']
 
 CSRF_COOKIE_NAME = 'csrf_token'
 CSRF_COOKIE_HTTPONLY = False
-SESSION_COOKIE_AGE = 86400  # seconds in 1 day
+SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 SECURE_BROWSER_XSS_FILTER = True
 
@@ -282,8 +282,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',  # required for admin template
-                'django.template.context_processors.request',
-                # must be enabled in DjangoTemplates (TEMPLATES) in order to use the admin navigation sidebar
+                'django.template.context_processors.request',   # must be enabled in DjangoTemplates (TEMPLATES) in order to use the admin navigation sidebar
                 'social_django.context_processors.backends',  # required for social_auth, same for below
                 'social_django.context_processors.login_redirect',
             ],
@@ -307,8 +306,7 @@ SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
 AIRTABLE_URL = 'https://api.airtable.com/v0'
 AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
-GREGOR_DATA_MODEL_URL = os.environ.get('GREGOR_DATA_MODEL_URL',
-                                       'https://raw.githubusercontent.com/UW-GAC/gregor_data_models/main/GREGoR_data_model.json')
+GREGOR_DATA_MODEL_URL = os.environ.get('GREGOR_DATA_MODEL_URL', 'https://raw.githubusercontent.com/UW-GAC/gregor_data_models/main/GREGoR_data_model.json')
 
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 API_POLICY_REQUIRED_URL = '/api/policy-required-error'
@@ -387,12 +385,14 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 SOCIAL_AUTH_PROVIDER = 'google-oauth2'
 GOOGLE_LOGIN_REQUIRED_URL = '/login/{}'.format(SOCIAL_AUTH_PROVIDER)
 
+
 # Use Google sub ID as the user ID, safer than using email
 USE_UNIQUE_USER_ID = True
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
 LOGIN_URL = GOOGLE_LOGIN_REQUIRED_URL if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '/login'
+
 
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
@@ -420,7 +420,7 @@ AIRFLOW_DAG_VERSION = os.environ.get('AIRFLOW_DAG_VERSION', '0.0.1')
 
 if TERRA_API_ROOT_URL:
     try:
-        # Refresh pattern taken from: https://stackoverflow.com/a/74377391
+       # Refresh pattern taken from: https://stackoverflow.com/a/74377391
         SERVICE_ACCOUNT_CREDENTIALS, project_id = google.auth.default(scopes=SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
         request = google.auth.transport.requests.Request()
         SERVICE_ACCOUNT_CREDENTIALS.refresh(request=request)
@@ -430,14 +430,13 @@ if TERRA_API_ROOT_URL:
 
     # activate command line account if failed on start up
     activated_service_account = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
-                                               capture_output=True, text=True, shell=True).stdout.split('\n')[
-        0]  # nosec
+                                               capture_output=True, text=True, shell=True).stdout.split('\n')[0] # nosec
     if activated_service_account != SERVICE_ACCOUNT_FOR_ANVIL:
         raise Exception('Error starting seqr - attempt to authenticate gcloud cli failed')
 
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
         'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)
-        'approval_prompt': 'auto',  # required for successful token refresh
+        'approval_prompt': 'auto', # required for successful token refresh
     }
 
     SOCIAL_AUTH_PIPELINE = ('seqr.utils.social_auth_pipeline.validate_anvil_registration',) + \
