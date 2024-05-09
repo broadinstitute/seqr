@@ -878,14 +878,14 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
 
     @mock.patch('seqr.views.utils.dataset_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.dataset_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
+    @mock.patch('seqr.views.apis.data_manager_api.get_temp_upload_directory', lambda: 'tmp/')
     @mock.patch('seqr.views.utils.dataset_utils.safe_post_to_slack')
     @mock.patch('seqr.views.apis.data_manager_api.datetime')
-    @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess, mock_load_uploaded_file,
-                            mock_os, mock_datetime, mock_send_slack):
+                            mock_datetime, mock_send_slack):
         url = reverse(update_rna_seq)
         self.check_pm_login(url)
 
@@ -897,8 +897,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         # Test errors
         body = {'dataType': data_type, 'file': 'gs://rna_data/muscle_samples.tsv'}
         mock_datetime.now.return_value = datetime(2020, 4, 15)
-        mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
-        mock_os.path.exists.return_value = False
+        mock_load_uploaded_file.return_value = [['a']]
         mock_load_uploaded_file.return_value = [['a']]
         mock_does_file_exist = mock.MagicMock()
         mock_does_file_exist.wait.return_value = 1
@@ -911,7 +910,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         mock_file_iter = mock.MagicMock()
         def _set_file_iter_stdout(rows):
             mock_file_iter.stdout = [('\t'.join([str(col) for col in row]) + '\n').encode() for row in rows]
-            mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+            mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter, mock_does_file_exist]
 
         _set_file_iter_stdout([])
         invalid_body = {**body, 'file': body['file'].replace('tsv', 'xlsx')}
@@ -1004,6 +1003,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
 
         # Test loading new data
         mock_open.reset_mock()
+        mock_subprocess.reset_mock()
         self.reset_logs()
         mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
         mock_files = defaultdict(mock.MagicMock)
@@ -1044,10 +1044,15 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
         # test correct file interactions
-        mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)  # nosec
-        filename = RNA_FILENAME_TEMPLATE.format(data_type) + f'__{new_sample_guid}.json.gz'
+        file_path = RNA_FILENAME_TEMPLATE.format(data_type)
+        mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [  # nosec
+            f'gsutil ls {RNA_FILE_ID}',
+            f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ',
+            f'gsutil mv tmp/{file_path}/* gs://seqr-scratch-temp/{file_path}',
+        ]])
+        filename = f'tmp/{file_path}/{new_sample_guid}.json.gz'
         expected_files = {
-            f'{RNA_FILENAME_TEMPLATE.format(data_type)}__{new_sample_guid if sample_guid == PLACEHOLDER_GUID else sample_guid}.json.gz': data
+            f'tmp/{file_path}/{new_sample_guid if sample_guid == PLACEHOLDER_GUID else sample_guid}.json.gz': data
             for sample_guid, data in params['parsed_file_data'].items()
         }
         self.assertIn(filename, expected_files)
@@ -1087,7 +1092,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         self.assertTrue(second_tissue_sample_guid != new_sample_guid)
         self.assertTrue(second_tissue_sample_guid in response_json['sampleGuids'])
         mock_open.assert_has_calls([
-            mock.call(f'{RNA_FILENAME_TEMPLATE.format(data_type)}__{sample_guid}.json.gz', 'at')
+            mock.call(f'tmp/{RNA_FILENAME_TEMPLATE.format(data_type)}/{sample_guid}.json.gz', 'at')
             for sample_guid in response_json['sampleGuids']
         ])
         self.assertSetEqual(
