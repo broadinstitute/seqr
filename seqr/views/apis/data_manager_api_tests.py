@@ -1095,10 +1095,8 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
             params['write_data'],
         )
 
-    @mock.patch('seqr.views.apis.data_manager_api.os')
-    @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
-    def test_load_rna_seq_sample_data(self, mock_open, mock_os):
-        mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_load_rna_seq_sample_data(self, mock_subprocess):
 
         url = reverse(load_rna_seq_sample_data, args=[RNA_MUSCLE_SAMPLE_GUID])
         self.check_pm_login(url)
@@ -1109,10 +1107,14 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 url = reverse(load_rna_seq_sample_data, args=[sample_guid])
                 model_cls = params['model_cls']
                 model_cls.objects.all().delete()
-                mock_os.path.exists.return_value = False
                 self.reset_logs()
                 parsed_file_lines = params['parsed_file_data'][sample_guid].strip().split('\n')
-                mock_open.return_value.__enter__.return_value.readlines.return_value = parsed_file_lines
+
+                mock_does_file_exist = mock.MagicMock()
+                mock_does_file_exist.wait.return_value = 1
+                mock_does_file_exist.stdout = [b'CommandException: One or more URLs matched no objects']
+                mock_subprocess.side_effect = [mock_does_file_exist]
+
                 file_name = RNA_FILENAME_TEMPLATE.format(data_type)
 
                 body = {'fileName': file_name, 'dataType': data_type}
@@ -1121,12 +1123,17 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 self.assertDictEqual(response.json(), {'error': 'Data for this sample was not properly parsed. Please re-upload the data'})
                 self.assert_json_logs(self.pm_user, [
                     (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
+                    (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
+                    (f'CommandException: One or more URLs matched no objects', None),
                     (f'No saved temp data found for {sample_guid} with file prefix {file_name}', {
                         'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
                     }),
                 ])
 
-                mock_os.path.exists.return_value = True
+                mock_does_file_exist.wait.return_value = 0
+                mock_file_iter = mock.MagicMock()
+                mock_file_iter.stdout = [row.encode('utf-8') for row in parsed_file_lines]
+                mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
                 self.reset_logs()
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 200)
@@ -1138,10 +1145,13 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 self.assertSetEqual({model.sample.guid for model in models}, {sample_guid})
                 self.assertTrue(all(model.sample.is_active for model in models))
 
-                mock_open.assert_called_with(f'{file_name}__{sample_guid}.json.gz', 'rt')
+                gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
+                mock_subprocess.assert_called_with(gsutil_cat, stdout=-1, stderr=-2, shell=True)  # nosec
 
                 self.assert_json_logs(self.pm_user, [
                     (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
+                    (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
+                    (f'==> {gsutil_cat}', None),
                     (f'create {model_cls.__name__}s', {'dbUpdate': {
                         'dbEntity': model_cls.__name__, 'numEntities': num_models, 'parentEntityIds': [sample_guid],
                         'updateType': 'bulk_create',
@@ -1151,7 +1161,8 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 self.assertListEqual(list(params['get_models_json'](models)), params['expected_models_json'])
 
                 mismatch_row = {**json.loads(parsed_file_lines[0]), params.get('mismatch_field', 'p_value'): '0.05'}
-                mock_open.return_value.__enter__.return_value.readlines.return_value = parsed_file_lines + [json.dumps(mismatch_row)]
+                mock_file_iter.stdout += [json.dumps(mismatch_row).encode('utf-8')]
+                mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {

@@ -302,13 +302,6 @@ def update_rna_seq(request):
     })
 
 
-def _load_saved_sample_data(file_name_prefix, sample_guid):
-    file_name = f'{TEMP_GS_BUCKET}/{file_name_prefix}/{sample_guid}.json.gz'
-    if does_file_exist(file_name, user=request.user):
-        return [json.loads(line) for line in file_iter(file_name, user=request.user)]
-    return None
-
-
 @pm_or_data_manager_required
 def load_rna_seq_sample_data(request, sample_guid):
     sample = Sample.objects.get(guid=sample_guid)
@@ -319,8 +312,9 @@ def load_rna_seq_sample_data(request, sample_guid):
     data_type = request_json['dataType']
     config = RNA_DATA_TYPE_CONFIGS[data_type]
 
-    data_rows = _load_saved_sample_data(file_name, sample_guid)
-    if data_rows:
+    gs_file_name = f'{TEMP_GS_BUCKET}/{file_name}/{sample_guid}.json.gz'
+    if does_file_exist(gs_file_name, user=request.user):
+        data_rows = [json.loads(line) for line in file_iter(gs_file_name, user=request.user)]
         data_rows, error = post_process_rna_data(sample_guid, data_rows, **config.get('post_process_kwargs', {}))
     else:
         logger.error(f'No saved temp data found for {sample_guid} with file prefix {file_name}', request.user)
