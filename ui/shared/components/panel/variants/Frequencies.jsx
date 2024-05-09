@@ -143,7 +143,7 @@ gnomadLink.propTypes = {
 
 const GNOMAD_URL_INFO = {
   urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org', [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
-  queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r3' },
+  queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r3', [GENOME_VERSION_37]: 'dataset=gnomad_r2_1' }, // TODO
 }
 
 const sectionTitle = ({ fieldTitle, section }) => (
@@ -174,14 +174,13 @@ const POPULATIONS = [
   },
   {
     field: 'gnomad_exomes',
-    fieldTitle: 'gnomAD v2 exomes',
+    fieldTitle: 'gnomAD v2 exomes', // TODO
     titleContainer: gnomadLink,
-    urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org' },
-    queryParams: { [GENOME_VERSION_37]: 'dataset=gnomad_r2_1' },
+    ...GNOMAD_URL_INFO,
   },
   {
     field: 'gnomad_genomes',
-    fieldTitle: 'gnomAD v3 genomes',
+    fieldTitle: 'gnomAD v3 genomes', // TODO
     titleContainer: gnomadLink,
     precision: 3,
     ...GNOMAD_URL_INFO,
