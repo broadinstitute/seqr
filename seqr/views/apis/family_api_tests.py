@@ -75,10 +75,10 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(individual.keys()), individual_fields)
         self.assertListEqual([
             [
-                {'createdDate': '2024-05-02T06:42:55.397+00:00', 'tool': 'exomiser'},
-                {'createdDate': '2024-05-02T06:42:55.397+00:00', 'tool': 'lirical'}
+                {'loadedDate': '2024-05-02T06:42:55.397+00:00', 'sampleType': 'Exomiser'},
+                {'loadedDate': '2024-05-02T06:42:55.397+00:00', 'sampleType': 'Lirical'}
             ], [
-                {'createdDate': '2024-05-02T06:42:55.397+00:00', 'tool': 'lirical'}
+                {'loadedDate': '2024-05-02T06:42:55.397+00:00', 'sampleType': 'Lirical'}
             ], []
         ],
             [response_json['individualsByGuid'][guid].get('phenotypePrioritizationTools') for guid in INDIVIDUAL_GUIDS]
