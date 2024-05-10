@@ -330,7 +330,16 @@ export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
 export const loadPhenotypeGeneScores = individualGuid => (dispatch, getState) => {
   const state = getState()
   const { familyGuid } = state.individualsByGuid[individualGuid]
-  if (!state.phenotypeGeneScoresByIndividual[individualGuid]) {
+  const loadedToolCounts = Object.values(state.phenotypeGeneScoresByIndividual[individualGuid] || {}).reduce(
+    (acc, dataByTool) => (
+      Object.entries(dataByTool).reduce((acc2, [tool, data]) => ({
+        ...acc2,
+        [tool]: (acc2[tool] || 0) + data.length,
+      }), acc)
+    ), {},
+  )
+  // Data can be loaded for only a subset of genes if previously loaded variant information
+  if (!Object.values(loadedToolCounts).some(val => val >= 10)) {
     dispatch({ type: REQUEST_PHENOTYPE_GENE_SCORES })
     new HttpRequestHelper(`/api/family/${familyGuid}/phenotype_gene_scores`,
       (responseJson) => {
