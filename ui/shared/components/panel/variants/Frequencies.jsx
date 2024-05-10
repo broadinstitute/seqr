@@ -57,7 +57,7 @@ const getFreqLinkPath = ({ chrom, pos, variant, value }) => {
 }
 
 const FreqSummary = React.memo((props) => {
-  const { field, fieldTitle, variant, urls, queryParams, acDisplay, titleContainer, precision = 2 } = props
+  const { field, fieldTitle, variant, urls, conditionalQueryParams, acDisplay, titleContainer, precision = 2 } = props
   const { populations = {}, chrom } = variant
   const population = populations[field] || {}
   if (population.af === null || population.af === undefined) {
@@ -66,6 +66,11 @@ const FreqSummary = React.memo((props) => {
   const afValue = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
   const value = population.id ? population.id.replace('gnomAD-SV_v2.1_', '') : afValue
   const displayValue = population.filter_af > 0 ? population.filter_af.toPrecision(precision) : afValue
+
+  let { queryParams } = props
+  if (conditionalQueryParams) {
+    queryParams = conditionalQueryParams(populations)
+  }
 
   return (
     <div>
@@ -121,16 +126,18 @@ FreqSummary.propTypes = {
   titleContainer: PropTypes.func,
   urls: PropTypes.object,
   queryParams: PropTypes.object,
+  conditionalQueryParams: PropTypes.object,
   acDisplay: PropTypes.string,
 }
 
 const getGenePath = ({ variant }) => `gene/${getVariantMainGeneId(variant)}`
 
-const gnomadLink = ({ fieldTitle, ...props }) => {
-  const [detail, ...linkName] = fieldTitle.split(' ').reverse()
+const gnomadLink = ({ fieldTitle, esVersion, variant, ...props }) => {
+  const isEs = !(variant || {}).populations?.seqr
+  const [prefix, detail] = fieldTitle.split(' ')
   return (
     <span>
-      <FreqLink {...props} displayValue={linkName.reverse().join(' ')} getPath={getGenePath} />
+      <FreqLink {...props} variant={variant} displayValue={`${prefix} ${isEs ? esVersion : 'v4'}`} getPath={getGenePath} />
       &nbsp;
       {detail}
     </span>
@@ -143,7 +150,7 @@ gnomadLink.propTypes = {
 
 const GNOMAD_URL_INFO = {
   urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org', [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
-  queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r3' },
+  queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r4', [GENOME_VERSION_37]: 'dataset=gnomad_r2_1' },
 }
 
 const sectionTitle = ({ fieldTitle, section }) => (
@@ -174,15 +181,18 @@ const POPULATIONS = [
   },
   {
     field: 'gnomad_exomes',
-    fieldTitle: 'gnomAD v2 exomes',
+    fieldTitle: 'gnomAD exomes',
     titleContainer: gnomadLink,
-    urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org' },
-    queryParams: { [GENOME_VERSION_37]: 'dataset=gnomad_r2_1' },
+    esVersion: 'v2',
+    conditionalQueryParams: populations => (populations.seqr ? GNOMAD_URL_INFO.queryParams : { [GENOME_VERSION_37]: 'dataset=gnomad_r2_1' }),
+    ...GNOMAD_URL_INFO,
   },
   {
     field: 'gnomad_genomes',
-    fieldTitle: 'gnomAD v3 genomes',
+    fieldTitle: 'gnomAD genomes',
     titleContainer: gnomadLink,
+    esVersion: 'v3',
+    conditionalQueryParams: populations => (populations.seqr ? GNOMAD_URL_INFO.queryParams : { [GENOME_VERSION_38]: 'dataset=gnomad_r3' }),
     precision: 3,
     ...GNOMAD_URL_INFO,
   },
