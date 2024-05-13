@@ -24,6 +24,7 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
         compact
         showInlineDetails
         noExpand
+        hideLocusLists
       />
     ),
   },

@@ -579,7 +579,7 @@ const getGeneConsequence = (geneId, variant) => {
 
 export const BaseVariantGene = React.memo(({
   geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, tpmGenes, individualGeneData, geneModalId,
-  noExpand, geneSearchFamily,
+  noExpand, geneSearchFamily, hideLocusLists,
 }) => {
   const geneConsequence = variant && getGeneConsequence(geneId, variant)
 
@@ -598,7 +598,7 @@ export const BaseVariantGene = React.memo(({
       margin={showInlineDetails ? '1em .5em 0px 0px' : null}
       horizontal={showInlineDetails}
       individualGeneData={individualGeneData}
-      showLocusLists
+      showLocusLists={!hideLocusLists}
     />
   )
 
@@ -684,6 +684,7 @@ BaseVariantGene.propTypes = {
   geneModalId: PropTypes.string,
   noExpand: PropTypes.bool,
   geneSearchFamily: PropTypes.string,
+  hideLocusLists: PropTypes.bool,
   ...RNA_SEQ_PROP_TYPES,
 }
 
