@@ -28,7 +28,7 @@ def _update_analysis_group(request, project_guid, analysis_group_guid, model_cls
 
     if analysis_group_guid:
         analysis_group = model_cls.objects.get(guid=analysis_group_guid, project=project)
-        update_model_from_json(analysis_group, request_json, user=request.user)
+        update_model_from_json(analysis_group, request_json, user=request.user, allow_unknown_keys=True)
     else:
         analysis_group, created = get_or_create_model_from_json(model_cls, {
             'project': project,
