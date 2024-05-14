@@ -201,12 +201,9 @@ const LOF_FILTER_MAP = {
   '3UTR_SPLICE': { title: "3'UTR", message: 'Essential splice variant LoF occurs in the UTR of the transcript' },
 }
 
-const getSvRegion = (
-  { chrom, endChrom, pos, end, liftedOverGenomeVersion, liftedOverPos }, divider, useLiftoverVersion,
-) => {
+const getSvRegion = ({ chrom, endChrom, pos, end }, divider) => {
   const endOffset = endChrom ? 0 : end - pos
-  const start = (useLiftoverVersion && liftedOverGenomeVersion === useLiftoverVersion) ? liftedOverPos : pos
-  return `${chrom}${divider}${start}-${start + endOffset}`
+  return `${chrom}${divider}${pos}-${pos + endOffset}`
 }
 
 const getGeneNames = genes => genes.reduce((acc, gene) => [gene.geneSymbol, ...getOtherGeneNames(gene), ...acc], [])
@@ -237,8 +234,8 @@ const shouldShowNonDefaultTranscriptInfoIcon = (variant, transcript, transcripts
 const VARIANT_LINKS = [
   {
     name: 'gnomAD',
-    shouldShow: variant => !!variant.svType && has37Coords(variant),
-    getHref: variant => `https://gnomad.broadinstitute.org/region/${getSvRegion(variant, '-', GENOME_VERSION_37)}?dataset=gnomad_sv_r2_1`,
+    shouldShow: variant => !!variant.svType,
+    getHref: variant => `https://gnomad.broadinstitute.org/region/${getSvRegion(variant, '-')}?dataset=gnomad_sv_r4`,
   },
   {
     name: 'Decipher',

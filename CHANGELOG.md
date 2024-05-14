@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 5/8/24
 * Adds dynamic analysis groups (REQUIRES DB MIGRATION)
 * Adds guid and created fields to PhenotypePrioritization model (REQUIRES DB MIGRATION)
 
