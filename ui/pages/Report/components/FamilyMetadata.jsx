@@ -1,7 +1,9 @@
 import React from 'react'
 
+import LoadReportTable from 'shared/components/table/LoadReportTable'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
-import LoadReportTable from './LoadReportTable'
+
+const VIEW_ALL_PAGES = [{ name: 'Broad', downloadName: 'All', path: 'all' }]
 
 const COLUMNS = [
   { name: 'data_type' },
@@ -31,8 +33,10 @@ const COLUMNS = [
 const FamilyMetadata = props => (
   <LoadReportTable
     columns={COLUMNS}
-    urlPath="family_metadata"
+    viewAllPages={VIEW_ALL_PAGES}
+    urlBase="report/family_metadata"
     idField="family_id"
+    fileName="Family_Metadata"
     {...props}
   />
 )

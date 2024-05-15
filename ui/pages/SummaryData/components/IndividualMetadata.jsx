@@ -1,8 +1,12 @@
-import React from 'react'
+import { connect } from 'react-redux'
 
+import { getUser } from 'redux/selectors'
 import { BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
+import LoadReportTable from 'shared/components/table/LoadReportTable'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP, VARIANT_METADATA_COLUMNS } from 'shared/utils/constants'
-import LoadReportTable from './LoadReportTable'
+
+const ALL_PROJECTS_PATH = 'all'
+const GREGOR_PROJECT_PATH = 'gregor'
 
 const FIELDS = [
   {
@@ -63,6 +67,12 @@ const AIRTABLE_COLUMNS = [
   { name: 'sample_provider' },
 ]
 
+const ANALYST_VIEW_ALL_PAGES = [
+  { name: 'GREGoR', downloadName: 'All_GREGoR_Projects', path: GREGOR_PROJECT_PATH },
+  { name: 'Broad', downloadName: 'All_AnVIL_Projects', path: ALL_PROJECTS_PATH },
+]
+const VIEW_ALL_PAGES = [{ name: 'my', downloadName: 'All_Projects', path: ALL_PROJECTS_PATH }]
+
 const getColumns = (data) => {
   const maxSavedVariants = Math.max(1, ...(data || []).map(row => row.num_saved_variants))
   const hasAirtable = data && data[0] && data[0][AIRTABLE_DBGAP_SUBMISSION_FIELD]
@@ -78,15 +88,16 @@ const getColumns = (data) => {
   )
 }
 
-const IndividualMetadata = props => (
-  <LoadReportTable
-    getColumns={getColumns}
-    allQueryFields={AIRTABLE_FIELDS}
-    queryFields={FIELDS}
-    urlPath="individual_metadata"
-    idField="participant_id"
-    {...props}
-  />
-)
+const mapStateToProps = (state, ownProps) => {
+  const user = getUser(state)
+  return {
+    getColumns,
+    queryFields: (user.isAnalyst && ownProps.match.params.projectGuid !== ALL_PROJECTS_PATH) ? AIRTABLE_FIELDS : FIELDS,
+    viewAllPages: (user.isAnalyst ? ANALYST_VIEW_ALL_PAGES : VIEW_ALL_PAGES),
+    urlBase: 'summary_data/individual_metadata',
+    idField: 'participant_id',
+    fileName: 'Metadata',
+  }
+}
 
-export default IndividualMetadata
+export default connect(mapStateToProps)(LoadReportTable)
