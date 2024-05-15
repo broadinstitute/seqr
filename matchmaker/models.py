@@ -24,8 +24,7 @@ class MatchmakerSubmission(ModelWithGUID):
     def __unicode__(self):
         return '{}_submission_{}'.format(str(self.individual), self.id)
 
-    def _compute_guid(self):
-        return 'MS%07d_%s' % (self.id, str(self.individual))
+    GUID_PREFIX = 'MS'
 
     class Meta:
         json_fields = [
@@ -46,8 +45,7 @@ class MatchmakerIncomingQuery(ModelWithGUID):
     def __unicode__(self):
         return '{}_{}_query'.format(self.patient_id or self.id, self.institution)
 
-    def _compute_guid(self):
-        return 'MIQ%07d_%s_%s' % (self.id, self.patient_id, self.institution.replace(' ', '_'))
+    GUID_PREFIX = 'MIQ'
 
     class Meta:
         json_fields = ['guid', 'created_date']
@@ -71,8 +69,7 @@ class MatchmakerResult(ModelWithGUID):
     def __unicode__(self):
         return '{}_{}_result'.format(self.id, str(self.submission))
 
-    def _compute_guid(self):
-        return 'MR%07d_%s' % (self.id, str(self.submission))
+    GUID_PREFIX = 'MR'
 
     class Meta:
         json_fields = [
@@ -88,8 +85,7 @@ class MatchmakerContactNotes(ModelWithGUID):
     def __unicode__(self):
         return '{}_{}_contact'.format(self.id, self.institution)
 
-    def _compute_guid(self):
-        return 'MCN%07d_%s' % (self.id, self.institution.replace(' ', '_'))
+    GUID_PREFIX = 'MCN'
 
     class Meta:
         json_fields = []
