@@ -13,19 +13,23 @@ import Gregor from './components/Gregor'
 import SeqrStats from './components/SeqrStats'
 import VariantMetadata from './components/VariantMetadata'
 
-export const REPORT_PAGES = [
-  { path: 'anvil', component: Anvil },
+const LOCAL_REPORT_PAGES = [
   { path: 'custom_search', params: '/:searchHash?', component: CustomSearch },
   { path: 'family_metadata', params: '/:projectGuid?', component: FamilyMetadata },
   { path: 'variant_metadata', params: '/:projectGuid?', component: VariantMetadata },
-  { path: 'gregor', component: Gregor },
   { path: 'seqr_stats', component: SeqrStats },
 ]
 
+export const REPORT_PAGES = [
+  { path: 'anvil', component: Anvil },
+  { path: 'gregor', component: Gregor },
+  ...LOCAL_REPORT_PAGES,
+]
+
 const Report = ({ match, user }) => (
-  user.isAnalyst ? (
+  (user.isAnalyst || user.isPm) ? (
     <Switch>
-      {REPORT_PAGES.map(
+      {(user.isAnalyst ? REPORT_PAGES : LOCAL_REPORT_PAGES).map(
         ({ path, params, component }) => <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
       )}
       <Route path={match.url} component={null} />
