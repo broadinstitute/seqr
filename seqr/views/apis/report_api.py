@@ -18,7 +18,7 @@ from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, \
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
-    get_project_guids_user_can_view, get_internal_projects
+    get_project_guids_user_can_view, get_internal_projects, pm_or_analyst_required
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
@@ -31,7 +31,7 @@ logger = SeqrLogger(__name__)
 MONDO_BASE_URL = 'https://monarchinitiative.org/v3/api/entity'
 
 
-@analyst_required
+@pm_or_analyst_required
 def seqr_stats(request):
     non_demo_projects = Project.objects.filter(is_demo=False)
 
@@ -793,7 +793,7 @@ def _get_row_id(row):
     return row[id_col]
 
 
-@analyst_required
+@pm_or_analyst_required
 def family_metadata(request, project_guid):
     projects = _get_metadata_projects(project_guid, request.user)
 
@@ -851,7 +851,7 @@ def family_metadata(request, project_guid):
 
 def _get_metadata_projects(project_guid, user):
     if project_guid == 'all':
-        return get_internal_projects()
+        return get_internal_projects().filter(guid__in=get_project_guids_user_can_view(user))
     if project_guid == GREGOR_CATEGORY.lower():
         return Project.objects.filter(projectcategory__name=GREGOR_CATEGORY)
     return [get_project_and_check_permissions(project_guid, user)]
@@ -872,7 +872,7 @@ def _get_family_structure(num_individuals, num_known_individuals):
     return 'other'
 
 
-@analyst_required
+@pm_or_analyst_required
 def variant_metadata(request, project_guid):
     projects = _get_metadata_projects(project_guid, request.user)
 

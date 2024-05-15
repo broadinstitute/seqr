@@ -648,7 +648,7 @@ class ReportAPITest(AirtableTest):
         self.assertDictEqual(response_json['familiesCount'], self.STATS_DATA['familiesCount'])
         self.assertDictEqual(response_json['sampleCountsByType'], self.STATS_DATA['sampleCountsByType'])
 
-        self.check_no_analyst_no_access(url)
+        self.check_no_analyst_no_access(url, has_override=self.HAS_PM_OVERRIDE)
 
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
@@ -1140,9 +1140,10 @@ class ReportAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertListEqual(sorted([r['familyGuid'] for r in response_json['rows']]), [
+        expected_families = [
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
-            'F000009_9', 'F000010_10', 'F000011_11', 'F000012_12', 'F000013_13'] + self.ADDITIONAL_FAMILIES)
+            'F000009_9', 'F000010_10', 'F000011_11', 'F000012_12', 'F000013_13']
+        self.assertListEqual(sorted([r['familyGuid'] for r in response_json['rows']]), expected_families)
         test_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000003_3')
         self.assertDictEqual(test_row, {
             'projectGuid': 'R0001_1kg',
@@ -1173,6 +1174,12 @@ class ReportAPITest(AirtableTest):
         response = self.client.get(empty_project_url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'rows': []})
+
+        # Test access with no analyst group
+        response = self.check_no_analyst_no_access(all_projects_url, has_override=self.HAS_PM_OVERRIDE)
+        if self.HAS_PM_OVERRIDE:
+            self.assertListEqual(
+                sorted([r['familyGuid'] for r in response.json()['rows']]), expected_families + self.ADDITIONAL_FAMILIES)
 
     def test_variant_metadata(self):
         url = reverse(variant_metadata, args=[PROJECT_GUID])
@@ -1315,7 +1322,6 @@ class ReportAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        row_ids += self.ADDITIONAL_FINDINGS
         self.assertListEqual([r['genetic_findings_id'] for r in response_json['rows']], row_ids)
         self.assertDictEqual(response_json['rows'][1], expected_row)
         self.assertDictEqual(response_json['rows'][2], expected_mnv)
@@ -1326,11 +1332,18 @@ class ReportAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'rows': []})
 
+        # Test access with no analyst group
+        response = self.check_no_analyst_no_access(all_projects_url, has_override=self.HAS_PM_OVERRIDE)
+        if self.HAS_PM_OVERRIDE:
+            row_ids += self.ADDITIONAL_FINDINGS
+            self.assertListEqual([r['genetic_findings_id'] for r in response.json()['rows']], row_ids)
+
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
     ADDITIONAL_FAMILIES = ['F000014_14']
     ADDITIONAL_FINDINGS = ['NA21234_1_248367227']
+    HAS_PM_OVERRIDE = True
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
         'familiesCount': {'non_demo': 12, 'demo': 2},
@@ -1347,8 +1360,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 
 class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
-    ADDITIONAL_FAMILIES = []
-    ADDITIONAL_FINDINGS = []
+    HAS_PM_OVERRIDE = False
     STATS_DATA = {
         'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},

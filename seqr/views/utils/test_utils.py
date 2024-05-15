@@ -229,12 +229,17 @@ class AuthenticationTestCase(TestCase):
     def get_initial_page_json(self, response):
         return self.get_initial_page_window('initialJSON', response)
 
-    def check_no_analyst_no_access(self, url, get_response=None):
+    def check_no_analyst_no_access(self, url, get_response=None, has_override=False):
         self.mock_analyst_group.__str__.return_value = ''
 
         response = get_response() if get_response else self.client.get(url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
+
+        self.client.force_login(self.super_user)
+        response = get_response() if get_response else self.client.get(url)
+        self.assertEqual(response.status_code, 200 if has_override else 403)
+        return response
 
     def reset_logs(self):
         self._log_stream.truncate(0)
