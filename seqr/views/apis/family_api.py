@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Count, Q
 from django.db.models.fields.files import ImageFieldFile
-from django.db.models.functions import JSONObject
+from django.db.models.functions import JSONObject, Concat, Upper, Substr
 
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import Omim
@@ -85,8 +85,10 @@ def family_page_data(request, family_guid):
     tools_by_indiv = {}
     tools_agg = PhenotypePrioritization.objects.filter(individual__family=family).values('individual__guid').annotate(
         phenotypePrioritizationTools=ArrayAgg(
-            JSONObject(tool='tool', createdDate='created_date'),
-            distinct=True,
+            JSONObject(
+                sampleType=Concat(Upper(Substr('tool', 1, 1)), Substr('tool', 2)),
+                loadedDate='created_date'),
+            distinct=True
         ))
     for indiv_record in tools_agg:
         individual_guid = indiv_record.get('individual__guid')

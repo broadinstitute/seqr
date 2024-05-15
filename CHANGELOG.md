@@ -1,8 +1,10 @@
 # _seqr_ Changes
 
 ## dev
-* Adds dynamic analysis groups (REQUIRES DB MIGRATION)
 * Adds guid and created fields to PhenotypePrioritization model (REQUIRES DB MIGRATION)
+
+## 5/8/24
+* Adds dynamic analysis groups (REQUIRES DB MIGRATION)
 
 ## 4/4/24
 * Add ability to import project metadata from gregor metadata

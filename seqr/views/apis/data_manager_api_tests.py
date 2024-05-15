@@ -3,10 +3,10 @@ from datetime import datetime
 from django.urls.base import reverse
 import json
 import mock
-from mock.mock import ANY
 from requests import HTTPError
 import responses
 
+from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree, validate_callset, \
     get_loaded_projects, load_data
@@ -879,14 +879,15 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
 
     @mock.patch('seqr.views.utils.dataset_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.dataset_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
+    @mock.patch('seqr.views.apis.data_manager_api.get_temp_upload_directory', lambda: 'tmp/')
     @mock.patch('seqr.views.utils.dataset_utils.safe_post_to_slack')
     @mock.patch('seqr.views.apis.data_manager_api.datetime')
-    @mock.patch('seqr.views.apis.data_manager_api.os')
+    @mock.patch('seqr.views.apis.data_manager_api.os.rename')
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess, mock_load_uploaded_file,
-                            mock_os, mock_datetime, mock_send_slack):
+                            mock_rename, mock_datetime, mock_send_slack):
         url = reverse(update_rna_seq)
         self.check_pm_login(url)
 
@@ -898,8 +899,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         # Test errors
         body = {'dataType': data_type, 'file': 'gs://rna_data/muscle_samples.tsv'}
         mock_datetime.now.return_value = datetime(2020, 4, 15)
-        mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
-        mock_os.path.exists.return_value = False
+        mock_load_uploaded_file.return_value = [['a']]
         mock_load_uploaded_file.return_value = [['a']]
         mock_does_file_exist = mock.MagicMock()
         mock_does_file_exist.wait.return_value = 1
@@ -912,7 +912,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         mock_file_iter = mock.MagicMock()
         def _set_file_iter_stdout(rows):
             mock_file_iter.stdout = [('\t'.join([str(col) for col in row]) + '\n').encode() for row in rows]
-            mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+            mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter, mock_does_file_exist]
 
         _set_file_iter_stdout([])
         invalid_body = {**body, 'file': body['file'].replace('tsv', 'xlsx')}
@@ -1005,6 +1005,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
 
         # Test loading new data
         mock_open.reset_mock()
+        mock_subprocess.reset_mock()
         self.reset_logs()
         mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
         mock_files = defaultdict(mock.MagicMock)
@@ -1045,14 +1046,19 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
         # test correct file interactions
-        mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)  # nosec
-        filename = RNA_FILENAME_TEMPLATE.format(data_type) + f'__{new_sample_guid}.json.gz'
+        file_path = RNA_FILENAME_TEMPLATE.format(data_type)
+        mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [  # nosec
+            f'gsutil ls {RNA_FILE_ID}',
+            f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ',
+            f'gsutil mv tmp/{file_path}/* gs://seqr-scratch-temp/{file_path}',
+        ]])
+        filename = f'tmp/{file_path}/{new_sample_guid}.json.gz'
         expected_files = {
-            f'{RNA_FILENAME_TEMPLATE.format(data_type)}__{new_sample_guid if sample_guid == PLACEHOLDER_GUID else sample_guid}.json.gz': data
+            f'tmp/{file_path}/{new_sample_guid if sample_guid == PLACEHOLDER_GUID else sample_guid}.json.gz': data
             for sample_guid, data in params['parsed_file_data'].items()
         }
         self.assertIn(filename, expected_files)
-        file_rename = self._assert_expected_file_open(mock_os, mock_open, expected_files.keys())
+        file_rename = self._assert_expected_file_open(mock_rename, mock_open, expected_files.keys())
         for filename in expected_files:
             self.assertEqual(
                 ''.join([call.args[0] for call in mock_files[file_rename[filename]].write.call_args_list]),
@@ -1078,7 +1084,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         # Test loading data when where an individual has multiple tissue types
         data = [data[1][:2] + data[0][2:], data[1]]
         mock_files = defaultdict(mock.MagicMock)
-        mock_os.reset_mock()
+        mock_rename.reset_mock()
         new_sample_individual_id = 7
         response_json, new_sample_guid = _test_basic_data_loading(data, 2, 2, new_sample_individual_id, body,
                                                                   '1kg project nåme with uniçøde')
@@ -1088,8 +1094,8 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         )
         self.assertTrue(second_tissue_sample_guid != new_sample_guid)
         self.assertTrue(second_tissue_sample_guid in response_json['sampleGuids'])
-        self._assert_expected_file_open(mock_os, mock_open, [
-            f'{RNA_FILENAME_TEMPLATE.format(data_type)}__{sample_guid}.json.gz'
+        self._assert_expected_file_open(mock_rename, mock_open, [
+            f'tmp/{RNA_FILENAME_TEMPLATE.format(data_type)}/{sample_guid}.json.gz'
             for sample_guid in response_json['sampleGuids']
         ])
         self.assertSetEqual(
@@ -1097,17 +1103,14 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
             params['write_data'],
         )
 
-    def _assert_expected_file_open(self, mock_os, mock_open, expected_file_names):
-        file_rename = {call.args[1]: call.args[0] for call in mock_os.rename.call_args_list}
+    def _assert_expected_file_open(self, mock_rename, mock_open, expected_file_names):
+        file_rename = {call.args[1]: call.args[0] for call in mock_rename.call_args_list}
         self.assertSetEqual(set(expected_file_names), set(file_rename.keys()))
         mock_open.assert_has_calls([mock.call(file_rename[filename], 'at') for filename in expected_file_names])
         return file_rename
 
-    @mock.patch('seqr.views.apis.data_manager_api.os')
-    @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
-    def test_load_rna_seq_sample_data(self, mock_open, mock_os):
-        mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
-        mock_os.path.exists.return_value = True
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_load_rna_seq_sample_data(self, mock_subprocess):
 
         url = reverse(load_rna_seq_sample_data, args=[RNA_MUSCLE_SAMPLE_GUID])
         self.check_pm_login(url)
@@ -1120,10 +1123,32 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 model_cls.objects.all().delete()
                 self.reset_logs()
                 parsed_file_lines = params['parsed_file_data'][sample_guid].strip().split('\n')
-                mock_open.return_value.__enter__.return_value.readlines.return_value = parsed_file_lines
+
+                mock_does_file_exist = mock.MagicMock()
+                mock_does_file_exist.wait.return_value = 1
+                mock_does_file_exist.stdout = [b'CommandException: One or more URLs matched no objects']
+                mock_subprocess.side_effect = [mock_does_file_exist]
+
                 file_name = RNA_FILENAME_TEMPLATE.format(data_type)
 
                 body = {'fileName': file_name, 'dataType': data_type}
+                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+                self.assertEqual(response.status_code, 400)
+                self.assertDictEqual(response.json(), {'error': 'Data for this sample was not properly parsed. Please re-upload the data'})
+                self.assert_json_logs(self.pm_user, [
+                    (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
+                    (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
+                    ('CommandException: One or more URLs matched no objects', None),
+                    (f'No saved temp data found for {sample_guid} with file prefix {file_name}', {
+                        'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+                    }),
+                ])
+
+                mock_does_file_exist.wait.return_value = 0
+                mock_file_iter = mock.MagicMock()
+                mock_file_iter.stdout = [row.encode('utf-8') for row in parsed_file_lines]
+                mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+                self.reset_logs()
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 200)
                 self.assertDictEqual(response.json(), {'success': True})
@@ -1134,10 +1159,13 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 self.assertSetEqual({model.sample.guid for model in models}, {sample_guid})
                 self.assertTrue(all(model.sample.is_active for model in models))
 
-                mock_open.assert_called_with(f'{file_name}__{sample_guid}.json.gz', 'rt')
+                gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
+                mock_subprocess.assert_called_with(gsutil_cat, stdout=-1, stderr=-2, shell=True)  # nosec
 
                 self.assert_json_logs(self.pm_user, [
                     (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
+                    (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
+                    (f'==> {gsutil_cat}', None),
                     (f'create {model_cls.__name__}s', {'dbUpdate': {
                         'dbEntity': model_cls.__name__, 'numEntities': num_models, 'parentEntityIds': [sample_guid],
                         'updateType': 'bulk_create',
@@ -1147,7 +1175,8 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 self.assertListEqual(list(params['get_models_json'](models)), params['expected_models_json'])
 
                 mismatch_row = {**json.loads(parsed_file_lines[0]), params.get('mismatch_field', 'p_value'): '0.05'}
-                mock_open.return_value.__enter__.return_value.readlines.return_value = parsed_file_lines + [json.dumps(mismatch_row)]
+                mock_file_iter.stdout += [json.dumps(mismatch_row).encode('utf-8')]
+                mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {
@@ -1159,9 +1188,10 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         return ['\t'.join(line).encode('utf-8') for line in data]
 
     @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', SEQR_URL)
+    @mock.patch('seqr.models.random')
     @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_load_phenotype_prioritization_data(self, mock_subprocess, mock_send_email):
+    def test_load_phenotype_prioritization_data(self, mock_subprocess, mock_send_email, mock_random):
         url = reverse(load_phenotype_prioritization_data)
         self.check_data_manager_login(url)
 
@@ -1197,6 +1227,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Project CMG_Beggs_WGS not found. ')
 
+        mock_random.randint.return_value = 12345
         project = Project.objects.create(created_by=self.data_manager_user,
                                          name='1kg project nåme with uniçøde', workspace_namespace='my-seqr-billing')
         mock_subprocess.return_value.stdout = self._join_data(
@@ -1215,6 +1246,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         mock_subprocess.reset_mock()
         mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA)
         self.reset_logs()
+        mock_random.randint.side_effect = [256989491, 295284416]
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
         info = [
@@ -1230,7 +1262,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
             }}),
             ('create 2 PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_create',
-                "entityIds": [ANY, ANY],
+                "entityIds": ['PP256989491_na19678ensg0000010', 'PP295284416_na20885ensg0000010'],
             }}),
         ])
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical').order_by('id'),
@@ -1247,6 +1279,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         self.reset_logs()
         mock_send_email.reset_mock()
         mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + UPDATE_LIRICAL_DATA)
+        mock_random.randint.side_effect = [177442291, 215071655]
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
         info = [
@@ -1257,11 +1290,11 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         self._has_expected_file_loading_logs('gs://seqr_data/lirical_data.tsv.gz', user=self.data_manager_user, additional_logs=[
             ('delete 1 PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_delete',
-                'entityIds': [ANY],
+                'entityIds': ['PP256989491_na19678ensg0000010'],
             }}),
             ('create 2 PhenotypePrioritizations', {'dbUpdate': {
                 'dbEntity': 'PhenotypePrioritization', 'updateType': 'bulk_create',
-                'entityIds': [ANY, ANY],
+                'entityIds': ['PP177442291_na19678ensg0000010', 'PP215071655_na19678ensg0000010'],
             }}),
         ])
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),
@@ -1283,11 +1316,14 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 f'This is to notify you that {notif_dict["tool"].title()} data for {notif_dict["num_samples"]} sample(s) '
                 f'has been loaded in seqr project {project_link}'
             )
-            calls.append(mock.call(
-                email_body=f'Dear seqr user,\n\n{email}\n\nAll the best,\nThe seqr team',
-                subject=f'New {notif_dict["tool"].title()} data available in seqr',
-                to=['test_user_manager@test.com'], process_message=ANY,
-            ))
+            calls.append(
+                mock.call(
+                    email_body=f'Dear seqr user,\n\n{email}\n\nAll the best,\nThe seqr team',
+                    subject=f'New {notif_dict["tool"].title()} data available in seqr',
+                    to=['test_user_manager@test.com'],
+                    process_message=_set_bulk_notification_stream,
+                )
+            )
         mock_send_email.assert_has_calls(calls)
 
     @staticmethod

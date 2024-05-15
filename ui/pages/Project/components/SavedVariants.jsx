@@ -91,7 +91,19 @@ const LINK_VARIANT_FIELDS = [
       VARIANT_POS_COLUMN,
       TAG_COLUMN,
     ],
-    validate: value => (Object.keys(value || {}).length > 1 ? undefined : 'Multiple variants required'),
+    includeSelectedRowData: true,
+    validate: (value) => {
+      const variants = Object.values(value || {}).filter(v => v)
+      if (variants.length < 2) {
+        return 'Multiple variants required'
+      }
+      if (variants.length === 2 &&
+        Object.keys(variants[0].transcripts).every(geneId => !variants[1].transcripts[geneId])
+      ) {
+        return 'Compound het pairs must be in the same gene'
+      }
+      return undefined
+    },
   },
 ]
 

@@ -146,7 +146,7 @@ MmeStatusLabel.propTypes = {
   mmeSubmission: PropTypes.object,
 }
 
-const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission, phenotypePrioritizationTools }) => (
+const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) => (
   <div>
     {loadedSamples.map(
       sample => <div key={sample.sampleGuid}><Sample loadedSample={sample} isOutdated={!sample.isActive} /></div>,
@@ -179,8 +179,8 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission, phen
         </Link>
       </div>
     )}
-    { phenotypePrioritizationTools.map(
-      pp => <div key={pp.tool}><Sample loadedSample={pp} key={pp.tool} /></div>,
+    {individual.phenotypePrioritizationTools.map(
+      tool => <div key={tool.tool}><Sample loadedSample={tool} /></div>,
     )}
     {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShow }) => shouldShow(individual)).map(
       ({ modalName, title, modalSize, linkText, component }) => {
@@ -209,7 +209,6 @@ DataDetails.propTypes = {
   mmeSubmission: PropTypes.object,
   individual: PropTypes.object,
   loadedSamples: PropTypes.arrayOf(PropTypes.object),
-  phenotypePrioritizationTools: PropTypes.arrayOf(PropTypes.object),
 }
 
 const formatGene = gene => `${gene.gene} ${gene.comments ? ` (${gene.comments.trim()})` : ''}`
@@ -548,10 +547,6 @@ class IndividualRow extends React.PureComponent {
     // only show active or first/ last inactive samples
     loadedSamples = loadedSamples.filter((sample, i) => sample.isActive || i === 0 || i === loadedSamples.length - 1)
 
-    const phenotypePrioritizationTools = individual.phenotypePrioritizationTools.map(
-      pp => ({ sampleType: pp.tool.charAt(0).toUpperCase() + pp.tool.slice(1), loadedDate: pp.createdDate }),
-    )
-
     const leftContent = (
       <IndividualContainer>
         <div>
@@ -586,7 +581,6 @@ class IndividualRow extends React.PureComponent {
           loadedSamples={loadedSamples}
           individual={individual}
           mmeSubmission={mmeSubmission}
-          phenotypePrioritizationTools={phenotypePrioritizationTools}
         />
       )
 
