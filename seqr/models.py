@@ -74,8 +74,8 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         internal_json_fields = []
         audit_fields = set()
 
-    def _format_guid(self, id):
-        return f'{self.GUID_PREFIX}{id:0{self.GUID_PRECISION}d}_{_slugify(str(self))}'[:self.MAX_GUID_SIZE]
+    def _format_guid(self, model_id):
+        return f'{self.GUID_PREFIX}{model_id:0{self.GUID_PRECISION}d}_{_slugify(str(self))}'[:self.MAX_GUID_SIZE]
 
     def _compute_guid(self):
         return self._format_guid(self.id)
