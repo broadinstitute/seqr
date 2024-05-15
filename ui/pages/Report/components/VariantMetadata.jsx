@@ -1,7 +1,12 @@
 import React from 'react'
 
+import LoadReportTable from 'shared/components/table/LoadReportTable'
 import { clinvarSignificance, VARIANT_METADATA_COLUMNS } from 'shared/utils/constants'
-import LoadReportTable from './LoadReportTable'
+
+const VIEW_ALL_PAGES = [
+  { name: 'GREGoR', downloadName: 'GREGoR', path: 'gregor' },
+  { name: 'Broad', downloadName: 'All', path: 'all' },
+]
 
 const COLUMNS = [
   { name: 'participant_id' },
@@ -24,8 +29,10 @@ const COLUMNS = [
 const FamilyMetadata = props => (
   <LoadReportTable
     columns={COLUMNS}
-    urlPath="variant_metadata"
+    viewAllPages={VIEW_ALL_PAGES}
+    urlBase="report/variant_metadata"
     idField="genetic_findings_id"
+    fileName="Variant_Metadata"
     {...props}
   />
 )
