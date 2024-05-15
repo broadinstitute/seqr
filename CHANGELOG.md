@@ -1,8 +1,6 @@
 # _seqr_ Changes
 
 ## dev
-
-## 5/14/24
 * Adds guid and created fields to PhenotypePrioritization model (REQUIRES DB MIGRATION)
 
 ## 5/8/24
