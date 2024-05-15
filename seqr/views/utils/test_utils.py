@@ -236,7 +236,7 @@ class AuthenticationTestCase(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
-        self.login_pm_user()
+        self.client.force_login(self.super_user)
         response = get_response() if get_response else self.client.get(url)
         self.assertEqual(response.status_code, 200 if has_override else 403)
         return response
