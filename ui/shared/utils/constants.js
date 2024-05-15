@@ -376,6 +376,11 @@ export const CATEGORY_FAMILY_FILTERS = {
         ({ sampleType, datasetType }) => sampleType !== SAMPLE_TYPE_RNA && datasetType === dataType,
       ),
     })),
+    {
+      value: `${SHOW_DATA_LOADED}_PHENO`,
+      name: 'Data Loaded - Phenotype Prioritization',
+      createFilter: family => family.hasPhenotypePrioritization,
+    },
   ],
 }
 
