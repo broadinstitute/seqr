@@ -183,16 +183,16 @@ def project_page_data(request, project_guid):
 @login_and_policies_required
 def project_families(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
+
     family_models = Family.objects.filter(project=project)
-    family_annotations = dict(
-        _id=F('id'),
-    )
     families = _get_json_for_families(
         family_models, request.user, has_case_review_perm=has_case_review_permissions(project, request.user),
-        project_guid=project_guid, add_individual_guids_field=False, additional_values=family_annotations,
+        project_guid=project_guid, add_individual_guids_field=False, additional_values={'_id': F('id')},
     )
     families_by_id = {f.pop('_id'): f for f in families}
-    # TODO multiple joins against individual table to get parent annotations
+
+    phenotype_priority_families = set(PhenotypePrioritization.objects.filter(
+        individual__family_id__in=families_by_id).values_list('individual__family_id', flat=True).distinct())
     family_individuals = Individual.objects.filter(family_id__in=families_by_id).values('family_id').annotate(
         caseReviewStatuses=ArrayAgg('case_review_status', distinct=True, filter=~Q(case_review_status='')),
         caseReviewStatusLastModified=Max('case_review_status_last_modified_date'),
@@ -203,11 +203,12 @@ def project_families(request, project_guid):
         )),
     )
     for individual_agg in family_individuals:
-        family = families_by_id[individual_agg.pop('family_id')]
+        family_id = individual_agg.pop('family_id')
         parental_ids = individual_agg.pop('parental_ids')
         id_guid_map = {i['id']: i['guid'] for i in parental_ids}
-        family.update({
+        families_by_id[family_id].update({
             'individualGuids': sorted(id_guid_map.values()),
+            'hasPhenotypePrioritization': family_id in phenotype_priority_families,
             'hasRequiredMetadata': individual_agg.pop('metadata_count') > 0,
             'parents': [
                 {'paternalGuid': id_guid_map.get(p['father_id']), 'maternalGuid': id_guid_map.get(p['mother_id'])}
@@ -216,10 +217,6 @@ def project_families(request, project_guid):
             **individual_agg,
         })
 
-    phenotype_priority_family_ids = set(PhenotypePrioritization.objects.filter(
-        individual__family_id__in=families_by_id).values_list('individual__family', flat=True).distinct())
-    for family_id, family in families_by_id.items():
-        family['hasPhenotypePrioritization'] = family_id in phenotype_priority_family_ids
     response = families_discovery_tags(families, project=project)
     return create_json_response(response)
 
