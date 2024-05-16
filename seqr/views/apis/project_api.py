@@ -203,10 +203,11 @@ def project_families(request, project_guid):
         family_models, request.user, has_case_review_perm=has_case_review_permissions(project, request.user),
         project_guid=project_guid, add_individual_guids_field=True, additional_values=family_annotations,
     )
+    families_by_id = {f.pop('_id'): f for f in families}
     phenotype_priority_family_ids = set(PhenotypePrioritization.objects.filter(
-        individual__family__project=project).values_list('individual__family', flat=True).distinct())
-    for family in families:
-        family['hasPhenotypePrioritization'] = family.pop('_id') in phenotype_priority_family_ids
+        individual__family_id__in=families_by_id).values_list('individual__family', flat=True).distinct())
+    for family_id, family in families_by_id.items():
+        family['hasPhenotypePrioritization'] = family_id in phenotype_priority_family_ids
     response = families_discovery_tags(families, project=project)
     return create_json_response(response)
 
