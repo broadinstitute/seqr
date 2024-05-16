@@ -207,7 +207,7 @@ def project_families(request, project_guid):
         individual__family__project=project).values_list('individual__family', flat=True).distinct())
     for family in families:
         family['hasPhenotypePrioritization'] = family.pop('_id') in phenotype_priority_family_ids
-    response = families_discovery_tags(families)
+    response = families_discovery_tags(families, project=project)
     return create_json_response(response)
 
 
