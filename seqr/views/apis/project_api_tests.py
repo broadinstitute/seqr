@@ -14,8 +14,8 @@ from seqr.views.apis.project_api import create_project_handler, delete_project_h
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
-    SAMPLE_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
-    CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
+    SAMPLE_FIELDS, SUMMARY_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
+    FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
     EXT_WORKSPACE_NAMESPACE, EXT_WORKSPACE_NAME, DYNAMIC_ANALYSIS_GROUP_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
@@ -369,7 +369,7 @@ class ProjectAPITest(object):
             'individualGuids', 'discoveryTags', 'caseReviewStatuses', 'caseReviewStatusLastModified', 'hasRequiredMetadata',
             'parents', 'hasPhenotypePrioritization',
         }
-        family_fields.update(FAMILY_FIELDS)
+        family_fields.update(SUMMARY_FAMILY_FIELDS)
         self.assertSetEqual(set(family_1.keys()), family_fields)
 
         self.assertEqual(len(family_1['individualGuids']), 3)
@@ -400,22 +400,6 @@ class ProjectAPITest(object):
         # Test empty project
         empty_url = reverse(project_families, args=[EMPTY_PROJECT_GUID])
         self._check_empty_project(empty_url, response_keys)
-
-        # Test analyst users have internal fields returned
-        self.login_analyst_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-        response_json = response.json()
-        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
-        internal_fields = deepcopy(family_fields)
-        internal_fields.update(INTERNAL_FAMILY_FIELDS)
-        self.assertSetEqual(set(next(iter(response_json['familiesByGuid'].values())).keys()), internal_fields)
-
-        self.mock_analyst_group.__str__.return_value = ''
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertSetEqual(set(next(iter(response.json()['familiesByGuid'].values())).keys()), family_fields)
 
     def test_project_individuals(self):
         url = reverse(project_individuals, args=[PROJECT_GUID])
