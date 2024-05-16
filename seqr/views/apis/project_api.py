@@ -6,13 +6,13 @@ import json
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Max, Q, Case, When, Value
+from django.db.models import Count, Max, Q, F, Case, When, Value
 from django.db.models.functions import JSONObject, TruncDate
 from django.utils import timezone
 from notifications.models import Notification
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, FamilyNote, CAN_EDIT
+from seqr.models import Project, Family, Individual, Sample, FamilyNote, PhenotypePrioritization, CAN_EDIT
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
@@ -188,11 +188,9 @@ def project_families(request, project_guid):
             individual__features__0__isnull=False, individual__birth_year__isnull=False,
             individual__population__isnull=False, individual__proband_relationship__isnull=False,
         )),
-        pp_individual_count=Count('individual', filter=Q(
-            individual__phenotypeprioritization__tool__isnull=False,
-        ))
     )
     family_annotations = dict(
+        _id=F('id'),
         caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True, filter=~Q(individual__case_review_status='')),
         caseReviewStatusLastModified=Max('individual__case_review_status_last_modified_date'),
         hasRequiredMetadata=Case(When(metadata_individual_count__gt=0, then=Value(True)), default=Value(False)),
@@ -200,12 +198,15 @@ def project_families(request, project_guid):
             JSONObject(paternalGuid='individual__father__guid', maternalGuid='individual__mother__guid'),
             filter=Q(individual__mother__isnull=False) | Q(individual__father__isnull=False), distinct=True,
         ),
-        hasPhenotypePrioritization=Case(When(pp_individual_count__gt=0, then=Value(True)), default=Value(False)),
     )
     families = _get_json_for_families(
         family_models, request.user, has_case_review_perm=has_case_review_permissions(project, request.user),
         project_guid=project_guid, add_individual_guids_field=True, additional_values=family_annotations,
     )
+    phenotype_priority_family_ids = set(PhenotypePrioritization.objects.filter(
+        individual__family__project=project).values_list('individual__family', flat=True).distinct())
+    for family in families:
+        family['hasPhenotypePrioritization'] = family.pop('_id') in phenotype_priority_family_ids
     response = families_discovery_tags(families)
     return create_json_response(response)
 
