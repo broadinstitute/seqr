@@ -1398,7 +1398,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'Invalid VCF file format - file path must end with .bed or .vcf or .vcf.gz or .vcf.bgz',
+            'Invalid VCF file format - file path must end with .bed or .bed.gz or .vcf or .vcf.gz or .vcf.bgz',
         ])
 
         body['datasetType'] = 'MITO'
