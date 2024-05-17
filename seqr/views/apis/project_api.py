@@ -15,11 +15,12 @@ from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, FamilyNote, PhenotypePrioritization, CAN_EDIT
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.individual_utils import delete_individuals
-from seqr.views.utils.json_utils import create_json_response, _to_snake_case
+from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json, update_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, \
-    get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families, \
-    get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups
+    get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, \
+    get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups, \
+    FAMILY_ADDITIONAL_VALUES, INDIVIDUAL_GUIDS_VALUES
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
     has_workspace_perm, has_case_review_permissions, is_internal_anvil_project
@@ -185,11 +186,16 @@ def project_families(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     family_models = Family.objects.filter(project=project)
-    families = _get_json_for_families(
-        family_models, request.user, has_case_review_perm=has_case_review_permissions(project, request.user),
-        project_guid=project_guid, add_individual_guids_field=False, additional_values={'_id': F('id')},
+    families = family_models.values(
+        'id', 'description',
+        **{_to_camel_case(field): F(field) for field in [
+            'family_id', 'analysis_status', 'created_date', 'coded_phenotype', 'mondo_id',
+        ]},
+        familyGuid=F('guid'),
+        projectGuid=Value(project_guid),
+        **FAMILY_ADDITIONAL_VALUES,
     )
-    families_by_id = {f.pop('_id'): f for f in families}
+    families_by_id = {f.pop('id'): f for f in families}
 
     phenotype_priority_families = set(PhenotypePrioritization.objects.filter(
         individual__family_id__in=families_by_id).values_list('individual__family_id', flat=True).distinct())
