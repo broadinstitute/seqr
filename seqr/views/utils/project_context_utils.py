@@ -168,7 +168,8 @@ def add_project_tag_types(projects_by_guid, project=None):
 
 
 def add_project_tag_type_counts(project, response_json, project_json=None):
-    response_json['projectsByGuid'] = {project.guid: project_json or {}}
+    project_json = project_json or {}
+    response_json['projectsByGuid'] = {project.guid: project_json}
     add_project_tag_types(response_json['projectsByGuid'], project=project)
 
     saved_variants = SavedVariant.objects.filter(family__project=project)
