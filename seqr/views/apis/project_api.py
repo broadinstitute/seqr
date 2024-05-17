@@ -227,11 +227,9 @@ def project_overview(request, project_guid):
 
     sample_models = Sample.objects.filter(individual__family__project=project)
 
-    active_samples = sample_models.filter(is_active=True)
-    first_loaded_samples = sample_models.order_by('individual__family', 'loaded_date').distinct('individual__family')
-    samples_by_guid = {}
-    for samples in [active_samples, first_loaded_samples]:
-        samples_by_guid.update({s['sampleGuid']: s for s in get_json_for_samples(samples, project_guid=project_guid)})
+    first_loaded_samples = sample_models.order_by('individual__family', 'loaded_date').distinct('individual__family').values_list('id', flat=True)
+    samples = sample_models.filter(Q(is_active=True) | Q(id__in=first_loaded_samples))
+    samples_by_guid = {s['sampleGuid']: s for s in get_json_for_samples(samples, project_guid=project_guid)}
 
     sample_load_counts = sample_models.values(
         'sample_type', 'dataset_type', loadedDate=TruncDate('loaded_date'),
