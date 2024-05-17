@@ -6,7 +6,7 @@ import json
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Max, Q, Case, When, Value
+from django.db.models import Count, Max, Q, F, Case, When, Value
 from django.db.models.functions import JSONObject, TruncDate
 from django.utils import timezone
 from notifications.models import Notification
@@ -15,11 +15,12 @@ from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, FamilyNote, CAN_EDIT
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.individual_utils import delete_individuals
-from seqr.views.utils.json_utils import create_json_response, _to_snake_case
+from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json, update_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, \
-    get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families, \
-    get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups
+    get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, \
+    get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups, \
+    FAMILY_ADDITIONAL_VALUES, INDIVIDUAL_GUIDS_VALUES
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
     has_workspace_perm, has_case_review_permissions, is_internal_anvil_project
@@ -192,7 +193,15 @@ def project_families(request, project_guid):
             individual__phenotypeprioritization__tool__isnull=False,
         ))
     )
-    family_annotations = dict(
+    families = family_models.values(
+        'description',
+        **{_to_camel_case(field): F(field) for field in [
+            'family_id', 'analysis_status', 'created_date', 'coded_phenotype', 'mondo_id',
+        ]},
+        familyGuid=F('guid'),
+        projectGuid=Value(project_guid),
+        **FAMILY_ADDITIONAL_VALUES,
+        **INDIVIDUAL_GUIDS_VALUES,
         caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True, filter=~Q(individual__case_review_status='')),
         caseReviewStatusLastModified=Max('individual__case_review_status_last_modified_date'),
         hasRequiredMetadata=Case(When(metadata_individual_count__gt=0, then=Value(True)), default=Value(False)),
@@ -201,10 +210,6 @@ def project_families(request, project_guid):
             filter=Q(individual__mother__isnull=False) | Q(individual__father__isnull=False), distinct=True,
         ),
         hasPhenotypePrioritization=Case(When(pp_individual_count__gt=0, then=Value(True)), default=Value(False)),
-    )
-    families = _get_json_for_families(
-        family_models, request.user, has_case_review_perm=has_case_review_permissions(project, request.user),
-        project_guid=project_guid, add_individual_guids_field=True, additional_values=family_annotations,
     )
     response = families_discovery_tags(families)
     return create_json_response(response)

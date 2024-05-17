@@ -737,11 +737,15 @@ PROJECT_FIELDS = {
 ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
 DYNAMIC_ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'criteria', 'name', 'projectGuid'}
 
+SUMMARY_FAMILY_FIELDS = {
+    'projectGuid', 'familyGuid', 'analysedBy', 'familyId', 'displayName', 'description',
+    'analysisStatus', 'createdDate', 'assignedAnalyst', 'codedPhenotype', 'mondoId',
+}
 FAMILY_FIELDS = {
-    'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
-    'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst', 'codedPhenotype', 'postDiscoveryOmimNumbers',
+    'pedigreeImage', 'postDiscoveryOmimNumbers',
     'pedigreeDataset', 'analysisStatusLastModifiedDate', 'analysisStatusLastModifiedBy', 'mondoId',
 }
+FAMILY_FIELDS.update(SUMMARY_FAMILY_FIELDS)
 CASE_REVIEW_FAMILY_FIELDS = {
     'caseReviewNotes', 'caseReviewSummary'
 }
