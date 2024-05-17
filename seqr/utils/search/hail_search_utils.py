@@ -87,6 +87,9 @@ def _execute_lookup(variant_id, data_type,  user, **kwargs):
 
 
 def hail_variant_lookup(user, variant_id, **kwargs):
+    if kwargs.get('genome_version') == 'GRCh37' and variant_id[0] == 'M':
+        from seqr.utils.search.utils import InvalidSearchException
+        raise InvalidSearchException('Mitochondrial variants are not supported in GRCh37')
     variant, _ = _execute_lookup(variant_id, Sample.DATASET_TYPE_VARIANT_CALLS, user, **kwargs)
     return variant
 
