@@ -750,7 +750,7 @@ CASE_REVIEW_FAMILY_FIELDS = {
     'caseReviewNotes', 'caseReviewSummary'
 }
 INTERNAL_FAMILY_FIELDS = {
-    'individualGuids', 'successStory', 'successStoryTypes', 'pubmedIds',
+    'individualGuids', 'successStory', 'successStoryTypes', 'pubmedIds', 'externalData',
 }
 INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
 

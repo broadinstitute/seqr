@@ -12,7 +12,7 @@ import OptionFieldView from '../view-fields/OptionFieldView'
 import ListFieldView from '../view-fields/ListFieldView'
 import NoteListFieldView from '../view-fields/NoteListFieldView'
 import SingleFieldView from '../view-fields/SingleFieldView'
-import TagFieldView from '../view-fields/TagFieldView'
+import TagFieldView, { TagFieldDisplay } from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
 import { InlineHeader } from '../../StyledComponents'
 import {
@@ -28,8 +28,8 @@ import {
   FAMILY_FIELD_NAME_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBERS,
   FAMILY_FIELD_PMIDS, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_SUCCESS_STORY, FAMILY_NOTES_FIELDS,
-  FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY,
-  FAMILY_FIELD_ANALYSIS_GROUPS, FAMILY_FIELD_MONDO_ID,
+  FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY, FAMILY_EXTERNAL_DATA_LOOKUP,
+  FAMILY_FIELD_ANALYSIS_GROUPS, FAMILY_FIELD_MONDO_ID, FAMILY_FIELD_EXTERNAL_DATA, FAMILY_EXTERNAL_DATA_OPTIONS,
 } from '../../../utils/constants'
 import { FirstSample, AnalystEmailDropdown, AnalysedBy, AnalysisGroups, analysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
@@ -88,6 +88,13 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     fieldDisplay: (analysedByList, compact, familyGuid) => (
       <AnalysedBy analysedByList={analysedByList} compact={compact} familyGuid={familyGuid} />
     ),
+  },
+  [FAMILY_FIELD_EXTERNAL_DATA]: {
+    internal: true,
+    component: TagFieldView,
+    tagOptions: FAMILY_EXTERNAL_DATA_OPTIONS,
+    simplifiedValue: true,
+    fieldDisplay: value => <TagFieldDisplay displayFieldValues={value} tagLookup={FAMILY_EXTERNAL_DATA_LOOKUP} />,
   },
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
     internal: true,
