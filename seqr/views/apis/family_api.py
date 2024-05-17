@@ -139,7 +139,7 @@ def family_variant_tag_summary(request, family_guid):
         saved_variants__matchmakersubmissiongenes__isnull=False).values('saved_variants__guid').distinct().count()
 
     response['projectsByGuid'] = {project.guid: {}}
-    add_project_tag_types(response['projectsByGuid'])
+    add_project_tag_types(response['projectsByGuid'], project=project)
 
     return create_json_response(response)
 

@@ -24,7 +24,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
     has_workspace_perm, has_case_review_permissions, is_internal_anvil_project
 from seqr.views.utils.project_context_utils import families_discovery_tags, \
-    add_project_tag_types, get_project_analysis_groups, get_project_locus_lists
+    add_project_tag_type_counts, get_project_analysis_groups, get_project_locus_lists
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
 from settings import BASE_URL
 
@@ -241,12 +241,12 @@ def project_overview(request, project_guid):
         s['familyCounts'] = {f: s['familyCounts'].count(f) for f in s['familyCounts']}
         grouped_sample_counts[f'{s.pop("sample_type")}__{s.pop("dataset_type")}'].append(s)
 
+    project_json = {'projectGuid': project_guid, 'sampleCounts': grouped_sample_counts}
     response = {
-        'projectsByGuid': {project_guid: {'projectGuid': project_guid, 'sampleCounts': grouped_sample_counts}},
         'samplesByGuid': samples_by_guid,
     }
 
-    response['familyTagTypeCounts'] = add_project_tag_types(response['projectsByGuid'], add_counts=True)
+    add_project_tag_type_counts(project, response, project_json=project_json)
 
     project_mme_submissions = MatchmakerSubmission.objects.filter(individual__family__project=project)
 
