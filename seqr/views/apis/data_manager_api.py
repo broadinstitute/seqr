@@ -7,7 +7,6 @@ import os
 import re
 import requests
 import urllib3
-import random
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Max, F, Q
@@ -282,32 +281,39 @@ def update_rna_seq(request):
 
     sample_files = {}
 
-    def _save_sample_data(sample_guid, sample_data):
-        if sample_guid not in sample_files:
-            file_name = os.path.join(file_dir, f'{sample_guid}.json.gz')
-            sample_files[sample_guid] = gzip.open(file_name, 'at')
-        sample_files[sample_guid].write(f'{json.dumps(sample_data)}\n')
+    def _save_sample_data(sample_key, sample_data):
+        if sample_key not in sample_files:
+            file_name = _get_sample_file_path(file_dir, '_'.join(sample_key))
+            sample_files[sample_key] = gzip.open(file_name, 'at')
+        sample_files[sample_key].write(f'{json.dumps(sample_data)}\n')
 
     try:
-        sample_guids, info, warnings = load_rna_seq(
+        sample_guids_to_keys, info, warnings = load_rna_seq(
             data_type, file_path, _save_sample_data,
             user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
 
-    for f in sample_files.values():
-        # Required to ensure gzipped files are properly encoded/ terminated
-        f.close()
+    for sample_guid, sample_key in sample_guids_to_keys.items():
+        sample_files[sample_key].close()  # Required to ensure gzipped files are properly terminated
+        os.rename(
+            _get_sample_file_path(file_dir, '_'.join(sample_key)),
+            _get_sample_file_path(file_dir, sample_guid),
+        )
 
-    if sample_guids:
+    if sample_guids_to_keys:
         mv_file_to_gs(f'{file_dir}/*', f'{TEMP_GS_BUCKET}/{file_name_prefix}', request.user)
 
     return create_json_response({
         'info': info,
         'warnings': warnings,
         'fileName': file_name_prefix,
-        'sampleGuids': sorted(sample_guids),
+        'sampleGuids': sorted(sample_guids_to_keys.keys()),
     })
+
+
+def _get_sample_file_path(file_dir, sample_guid):
+    return os.path.join(file_dir, f'{sample_guid}.json.gz')
 
 
 @pm_or_data_manager_required
@@ -410,12 +416,9 @@ def load_phenotype_prioritization_data(request):
     if to_delete:
         PhenotypePrioritization.bulk_delete(request.user, to_delete)
 
-    models_to_create = []
-    for indiv_records in all_records_by_project_name.values():
-        for record in indiv_records:
-            model = PhenotypePrioritization(**record)
-            model.guid = f'PP{random.randint(10 ** 8, 10 ** 9)}_{model.individual.individual_id}_{model.gene_id}_{model.disease_id}'[:PhenotypePrioritization.MAX_GUID_SIZE]  # nosec
-            models_to_create.append(model)
+    models_to_create = [
+        PhenotypePrioritization(**record) for records in all_records_by_project_name.values() for record in records
+    ]
     PhenotypePrioritization.bulk_create(request.user, models_to_create)
 
     for project_name, indiv_records in all_records_by_project_name.items():

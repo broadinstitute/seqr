@@ -56,6 +56,8 @@ class CustomModelBase(base.ModelBase):
 
 class ModelWithGUID(models.Model, metaclass=CustomModelBase):
     MAX_GUID_SIZE = 30
+    GUID_PREFIX = ''
+    GUID_PRECISION = 7
 
     guid = models.CharField(max_length=MAX_GUID_SIZE, db_index=True, unique=True)
 
@@ -72,13 +74,11 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         internal_json_fields = []
         audit_fields = set()
 
-    @abstractmethod
+    def _format_guid(self, model_id):
+        return f'{self.GUID_PREFIX}{model_id:0{self.GUID_PRECISION}d}_{_slugify(str(self))}'[:self.MAX_GUID_SIZE]
+
     def _compute_guid(self):
-        """Returns a human-readable label (aka. slug) for this object with only alphanumeric
-        chars, '-' and '_'. This label doesn't need to be globally unique by itself, but should not
-        be null or blank, and should be globally unique when paired with this object's created-time
-        in seconds.
-        """
+        return self._format_guid(self.id)
 
     def __unicode__(self):
         return self.guid
@@ -112,7 +112,7 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
             self.created_date = kwargs.pop('created_date', current_time)
             super(ModelWithGUID, self).save(*args, **kwargs)
 
-            self.guid = self._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE]
+            self.guid = self._compute_guid()
             super(ModelWithGUID, self).save()
 
     def delete_model(self, user, user_can_delete=False):
@@ -127,6 +127,7 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
+            model.guid = model._format_guid(random.randint(10**(cls.GUID_PRECISION-1), 10**cls.GUID_PRECISION))  # nosec
         models = cls.objects.bulk_create(new_models)
         log_model_bulk_update(logger, models, user, 'create')
         return models
@@ -208,8 +209,8 @@ class Project(ModelWithGUID):
     def __unicode__(self):
         return self.name.strip()
 
-    def _compute_guid(self):
-        return 'R%04d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'R'
+    GUID_PRECISION = 4
 
     def save(self, *args, **kwargs):
         """Override the save method and create user permissions groups + add the created_by user.
@@ -271,8 +272,8 @@ class ProjectCategory(ModelWithGUID):
     def __unicode__(self):
         return self.name.strip()
 
-    def _compute_guid(self):
-        return 'PC%06d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'PC'
+    GUID_PRECISION = 6
 
 
 class Family(ModelWithGUID):
@@ -370,8 +371,8 @@ class Family(ModelWithGUID):
     def __unicode__(self):
         return self.family_id.strip()
 
-    def _compute_guid(self):
-        return 'F%06d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'F'
+    GUID_PRECISION = 6
 
     class Meta:
         unique_together = ('project', 'family_id')
@@ -401,8 +402,8 @@ class FamilyAnalysedBy(ModelWithGUID):
     def __unicode__(self):
         return '{}_{}_{}'.format(self.family.guid, self.created_by, self.data_type)
 
-    def _compute_guid(self):
-        return 'FAB%06d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'FAB'
+    GUID_PRECISION = 6
 
     class Meta:
         json_fields = ['last_modified_date', 'created_by', 'data_type']
@@ -422,8 +423,8 @@ class FamilyNote(ModelWithGUID):
     def __unicode__(self):
         return '{}_{}_{}'.format(self.family.family_id, self.note_type, self.note)[:20]
 
-    def _compute_guid(self):
-        return 'FAN{:06d}_{}'.format(self.id, _slugify(str(self)))
+    GUID_PREFIX = 'FAN'
+    GUID_PRECISION = 6
 
     class Meta:
         json_fields = ['guid', 'note', 'note_type', 'last_modified_date', 'created_by']
@@ -647,8 +648,7 @@ class Individual(ModelWithGUID):
     def __unicode__(self):
         return self.individual_id.strip()
 
-    def _compute_guid(self):
-        return 'I%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'I'
 
     def save(self, *args, **kwargs):
         if Individual.objects.filter(individual_id=self.individual_id, family__project_id=self.family.project_id).count() > 1:
@@ -729,8 +729,8 @@ class Sample(ModelWithGUID):
     def __unicode__(self):
         return self.sample_id.strip()
 
-    def _compute_guid(self):
-        return 'S%010d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'S'
+    GUID_PRECISION = 10
 
     class Meta:
        json_fields = [
@@ -762,8 +762,8 @@ class IgvSample(ModelWithGUID):
     def __unicode__(self):
         return self.file_path.split('/')[-1].split('.')[0].strip()
 
-    def _compute_guid(self):
-        return 'S%010d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'S'
+    GUID_PRECISION = 10
 
     class Meta:
         unique_together = ('individual', 'sample_type')
@@ -789,8 +789,7 @@ class SavedVariant(ModelWithGUID):
         chrom, pos = get_chrom_pos(self.xpos)
         return "%s:%s-%s" % (chrom, pos, self.family.guid)
 
-    def _compute_guid(self):
-        return 'SV%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'SV'
 
     class Meta:
         unique_together = ('xpos', 'xpos_end', 'variant_id', 'family')
@@ -825,8 +824,8 @@ class VariantTagType(ModelWithGUID):
     def __unicode__(self):
         return self.name.strip()
 
-    def _compute_guid(self):
-        return 'VTT%05d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'VTT'
+    GUID_PRECISION = 5
 
     class Meta:
         unique_together = ('project', 'name', 'color')
@@ -846,8 +845,7 @@ class VariantTag(ModelWithGUID):
         saved_variants_ids = "".join(str(saved_variant) for saved_variant in self.saved_variants.all())
         return "%s:%s" % (saved_variants_ids, self.variant_tag_type.name)
 
-    def _compute_guid(self):
-        return 'VT%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'VT'
 
     class Meta:
         json_fields = ['guid', 'search_hash', 'metadata', 'last_modified_date', 'created_by']
@@ -865,8 +863,7 @@ class VariantNote(ModelWithGUID):
         saved_variants_ids = "".join(str(saved_variant) for saved_variant in self.saved_variants.all())
         return "%s:%s" % (saved_variants_ids, (self.note or "")[:20])
 
-    def _compute_guid(self):
-        return 'VN%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'VN'
 
     class Meta:
         json_fields = ['guid', 'note', 'submit_to_clinvar', 'last_modified_date', 'created_by']
@@ -959,8 +956,7 @@ class VariantFunctionalData(ModelWithGUID):
         saved_variants_ids = "".join(str(saved_variant) for saved_variant in self.saved_variants.all())
         return "%s:%s" % (saved_variants_ids, self.functional_data_tag)
 
-    def _compute_guid(self):
-        return 'VFD%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'VFD'
 
     class Meta:
         json_fields = ['guid', 'functional_data_tag', 'metadata', 'last_modified_date', 'created_by']
@@ -973,8 +969,7 @@ class GeneNote(ModelWithGUID):
     def __unicode__(self):
         return "%s:%s" % (self.gene_id, (self.note or "")[:20])
 
-    def _compute_guid(self):
-        return 'GN%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'GN'
 
     class Meta:
         json_fields = ['guid', 'note', 'gene_id', 'last_modified_date', 'created_by']
@@ -992,8 +987,8 @@ class LocusList(ModelWithGUID):
     def __unicode__(self):
         return self.name.strip()
 
-    def _compute_guid(self):
-        return 'LL%05d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'LL'
+    GUID_PRECISION = 5
 
     class Meta:
         unique_together = ('name', 'description', 'is_public', 'created_by')
@@ -1009,8 +1004,7 @@ class LocusListGene(ModelWithGUID):
     def __unicode__(self):
         return "%s:%s" % (self.locus_list, self.gene_id)
 
-    def _compute_guid(self):
-        return 'LLG%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'LLG'
 
     class Meta:
         unique_together = ('locus_list', 'gene_id')
@@ -1027,8 +1021,7 @@ class LocusListInterval(ModelWithGUID):
     def __unicode__(self):
         return "%s:%s:%s-%s" % (self.locus_list, self.chrom, self.start, self.end)
 
-    def _compute_guid(self):
-        return 'LLI%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'LLI'
 
     class Meta:
         unique_together = ('locus_list', 'genome_version', 'chrom', 'start', 'end')
@@ -1046,8 +1039,7 @@ class AnalysisGroup(ModelWithGUID):
     def __unicode__(self):
         return self.name.strip()
 
-    def _compute_guid(self):
-        return 'AG%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'AG'
 
     class Meta:
         unique_together = ('project', 'name')
@@ -1063,8 +1055,7 @@ class DynamicAnalysisGroup(ModelWithGUID):
     def __unicode__(self):
         return self.name.strip()
 
-    def _compute_guid(self):
-        return 'DAG%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'DAG'
 
     class Meta:
         unique_together = ('project', 'name')
@@ -1080,8 +1071,7 @@ class VariantSearch(ModelWithGUID):
     def __unicode__(self):
         return self.name or str(self.id)
 
-    def _compute_guid(self):
-        return 'VS%07d_%s' % (self.id, _slugify(self.name or ''))
+    GUID_PREFIX = 'VS'
 
     class Meta:
         unique_together = ('created_by', 'name')
@@ -1097,8 +1087,7 @@ class VariantSearchResults(ModelWithGUID):
     def __unicode__(self):
         return self.search_hash
 
-    def _compute_guid(self):
-        return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'VSR'
 
 
 class BulkOperationBase(models.Model):
@@ -1223,8 +1212,7 @@ class PhenotypePrioritization(ModelWithGUID):
     def __unicode__(self):
         return "%s:%s:%s" % (self.individual.individual_id, self.gene_id, self.disease_id)
 
-    def _compute_guid(self):
-        return 'PP%07d_%s' % (self.id, _slugify(str(self)))
+    GUID_PREFIX = 'PP'
 
     class Meta:
         json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'disease_name', 'scores']

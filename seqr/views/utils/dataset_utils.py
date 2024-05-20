@@ -3,7 +3,6 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Count, F, Q
 from django.utils import timezone
 from tqdm import tqdm
-import random
 
 from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
 from seqr.utils.communication_utils import safe_post_to_slack
@@ -60,7 +59,8 @@ def _find_or_create_samples(
 
     matched_individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
     loaded_date = timezone.now()
-    samples = {**existing_samples}
+    samples_guids = [sample['guid'] for sample in existing_samples.values()]
+    individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
     if len(remaining_sample_keys) > 0:
         remaining_individuals_dict = _get_individuals_by_key(projects, matched_individual_ids)
 
@@ -88,14 +88,16 @@ def _find_or_create_samples(
             sample_key: _get_new_sample_args(sample_key, individual)
             for sample_key, individual in sample_id_to_individual_record.items()
         }
-        samples.update(new_sample_args)
-        _create_samples(
+        individual_ids.update({sample['individual_id'] for sample in new_sample_args.values()})
+        new_sample_models = _create_samples(
             new_sample_args.values(),
             user,
             loaded_date=loaded_date,
             **sample_params,
         )
-    return samples, remaining_sample_keys, loaded_date
+        samples_guids += [s.guid for s in new_sample_models]
+
+    return samples_guids, individual_ids, remaining_sample_keys, loaded_date
 
 
 def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
@@ -105,17 +107,21 @@ def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
             loaded_date=loaded_date,
             **created_sample_data,
             **kwargs,
-        ) for created_sample_data in sorted(sample_data, key=lambda s: s['guid'])]
-    Sample.bulk_create(user, new_samples)
+        ) for created_sample_data in sample_data]
+    return Sample.bulk_create(user, new_samples)
 
 
 def _get_matched_samples_by_key(projects, key_fields=None, values=None, **sample_params):
+    return _get_sample_models_by_key(samples=Sample.objects.filter(
+        individual__family__project__in=projects,
+        **sample_params
+    ), key_fields=key_fields, values=values)
+
+
+def _get_sample_models_by_key(samples, key_fields=None, values=None):
     return {
         (s.pop('sample_id'), s.pop('individual__family__project__name'), *[s[field] for field in (key_fields or [])]): s
-        for s in Sample.objects.filter(
-            individual__family__project__in=projects,
-            **sample_params
-        ).values('guid', 'individual_id', 'sample_id', 'tissue_type', 'individual__family__project__name', **(values or {}))
+        for s in samples.values('guid', 'individual_id', 'sample_id', 'tissue_type', 'individual__family__project__name', **(values or {}))
     }
 
 
@@ -135,7 +141,6 @@ def _get_individual_key(sample_key, sample_id_to_individual_id_mapping):
 
 def _get_new_sample_args(sample_key, individual_data, key_fields=None):
     return {
-        'guid': f'S{random.randint(10 ** 9, 10 ** 10)}_{individual_data["individual_id"]}'[:Sample.MAX_GUID_SIZE],  # nosec
         'individual_id': individual_data['id'],
         'sample_id': sample_key[0],
         **{key_field: sample_key[i+2] for i, key_field in enumerate(key_fields or [])}
@@ -193,7 +198,7 @@ def match_and_update_search_samples(
         projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
         sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
 ):
-    samples, remaining_sample_keys, loaded_date = _find_or_create_samples(
+    samples_guids, individual_ids, remaining_sample_keys, loaded_date = _find_or_create_samples(
         sample_project_tuples=sample_project_tuples,
         projects=projects,
         user=user,
@@ -206,8 +211,6 @@ def match_and_update_search_samples(
         sample_data=sample_data,
     )
 
-    samples_guids = [sample['guid'] for sample in samples.values()]
-    individual_ids = {sample['individual_id'] for sample in samples.values()}
     included_families = dict(Family.objects.filter(individual__id__in=individual_ids).values_list('guid', 'analysis_status'))
     _validate_samples_families(samples_guids, included_families.keys(), sample_type, dataset_type, expected_families=expected_families)
 
@@ -332,7 +335,7 @@ def _validate_rna_header(header, column_map):
 
 
 def _load_rna_seq_file(
-        file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample,
+        file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, match_sample,
         column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
 ):
 
@@ -379,7 +382,7 @@ def _load_rna_seq_file(
         if any(row_gene_ids):
             gene_ids.update(row_gene_ids)
 
-        sample_guid = get_matched_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping)
+        match_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping)
 
         if missing_required_fields or (unmatched_samples and not ignore_extra_samples) or (sample_key in unmatched_samples):
             # If there are definite errors, do not process/save data, just continue to check for additional errors
@@ -387,7 +390,7 @@ def _load_rna_seq_file(
 
         for gene_id in row_gene_ids:
             row_dict = {**row_dict, GENE_ID_COL: gene_id}
-            save_sample_data(sample_guid, row_dict)
+            save_sample_data(sample_key, row_dict)
 
     errors, warnings = _process_rna_errors(
         gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
@@ -432,9 +435,10 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     projects = get_internal_projects()
     data_source = file_path.split('/')[-1].split('_-_')[-1]
 
+    key_fields = ['tissue_type']
     potential_samples = _get_matched_samples_by_key(
         projects, sample_type=Sample.SAMPLE_TYPE_RNA, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        key_fields=['tissue_type'], values={
+        key_fields=key_fields, values={
             'dataSource': F('data_source'),
             'model_count': Count(model_cls.__name__.lower()),
             'active': F('is_active'),
@@ -444,19 +448,22 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     individual_data_by_key = _get_individuals_by_key(projects)
 
     prev_loaded_individual_ids = set()
-    sample_guids_to_load = set()
+    sample_guid_keys_to_load = {}
     existing_samples_by_guid = {}
     samples_to_create = {}
 
     def update_sample_models():
         if samples_to_create:
-            _create_samples(
+            new_sample_models = _create_samples(
                 samples_to_create.values(),
                 user=user,
                 data_source=data_source,
                 sample_type=Sample.SAMPLE_TYPE_RNA,
                 dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
             )
+            new_sample_ids = [s.id for s in new_sample_models]
+            sample_key_map = _get_sample_models_by_key(Sample.objects.filter(id__in=new_sample_ids), key_fields=key_fields)
+            sample_guid_keys_to_load.update({s['guid']: sample_key for sample_key, s in sample_key_map.items()})
 
         # Delete old data
         to_delete_sample_individuals = {
@@ -472,19 +479,19 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
         for guid in to_delete_sample_individuals:
             existing_samples_by_guid[guid]['dataSource'] = data_source
 
-    def save_sample_data(sample_guid, sample_data):
+    def save_sample_data(sample_key, sample_data):
         if not sample_data:
             return
 
-        sample_guids_to_load.add(sample_guid)
-        save_data(sample_guid, sample_data)
+        save_data(sample_key, sample_data)
 
-    def get_matched_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping):
+    def match_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping):
         if sample_key in potential_samples:
             sample = potential_samples[sample_key]
             sample_guid = sample['guid']
             existing_samples_by_guid[sample_guid] = sample
-            return sample_guid
+            sample_guid_keys_to_load[sample_guid] = sample_key
+            return
 
         if sample_key not in samples_to_create and sample_key not in unmatched_samples:
             individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
@@ -495,22 +502,20 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
             else:
                 unmatched_samples.add(sample_key)
 
-        return samples_to_create.get(sample_key, {}).get('guid')
-
     warnings, not_loaded_count = _load_rna_seq_file(
-        file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample,
+        file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, match_sample,
         *args, **kwargs)
-    message = f'Parsed {len(sample_guids_to_load) + not_loaded_count} RNA-seq samples'
+    message = f'Parsed {len(sample_guid_keys_to_load) + not_loaded_count} RNA-seq samples'
     info = [message]
     logger.info(message, user)
 
-    sample_projects = Project.objects.filter(family__individual__sample__guid__in=sample_guids_to_load).values(
+    sample_projects = Project.objects.filter(family__individual__sample__guid__in=sample_guid_keys_to_load).values(
         'guid', 'name', new_sample_ids=ArrayAgg(
             'family__individual__sample__sample_id', distinct=True, ordering='family__individual__sample__sample_id',
             filter=~Q(family__individual__id__in=prev_loaded_individual_ids) if prev_loaded_individual_ids else None
         ))
     project_names = ', '.join(sorted([project['name'] for project in sample_projects]))
-    message = f'Attempted data loading for {len(sample_guids_to_load)} RNA-seq samples in the following {len(sample_projects)} projects: {project_names}'
+    message = f'Attempted data loading for {len(sample_guid_keys_to_load)} RNA-seq samples in the following {len(sample_projects)} projects: {project_names}'
     info.append(message)
     logger.info(message, user)
 
@@ -519,7 +524,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     for warning in warnings:
         logger.warning(warning, user)
 
-    return sample_guids_to_load, info, warnings
+    return sample_guid_keys_to_load, info, warnings
 
 
 def post_process_rna_data(sample_guid, data, get_unique_key=None, format_fields=None):

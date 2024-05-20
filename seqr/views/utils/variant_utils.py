@@ -148,9 +148,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
         new_variant_models = []
         for (family_id, variant_id), variant in new_variant_data.items():
             create_json, update_json = parse_saved_variant_json(variant, family_id, variant_id=variant_id)
-            variant_model = SavedVariant(**create_json, **update_json)
-            variant_model.guid = f'SV{str(variant_model)}'[:SavedVariant.MAX_GUID_SIZE]
-            new_variant_models.append(variant_model)
+            new_variant_models.append(SavedVariant(**create_json, **update_json))
 
         saved_variant_map.update({
             (v.family_id, v.variant_id): v for v in SavedVariant.bulk_create(user, new_variant_models)
