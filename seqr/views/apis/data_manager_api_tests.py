@@ -882,12 +882,13 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
     @mock.patch('seqr.views.apis.data_manager_api.get_temp_upload_directory', lambda: 'tmp/')
     @mock.patch('seqr.views.utils.dataset_utils.safe_post_to_slack')
     @mock.patch('seqr.views.apis.data_manager_api.datetime')
+    @mock.patch('seqr.views.apis.data_manager_api.os.mkdir')
     @mock.patch('seqr.views.apis.data_manager_api.os.rename')
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess, mock_load_uploaded_file,
-                            mock_rename, mock_datetime, mock_send_slack):
+                            mock_rename, mock_mkdir, mock_datetime, mock_send_slack):
         url = reverse(update_rna_seq)
         self.check_pm_login(url)
 
@@ -1058,6 +1059,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
             f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ',
             f'gsutil mv tmp/{file_path}/* gs://seqr-scratch-temp/{file_path}',
         ]])
+        mock_mkdir.assert_called_with(f'tmp/{file_path}')
         filename = f'tmp/{file_path}/{new_sample_guid}.json.gz'
         expected_files = {
             f'tmp/{file_path}/{new_sample_guid if sample_guid == PLACEHOLDER_GUID else sample_guid}.json.gz': data
