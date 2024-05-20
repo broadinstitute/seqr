@@ -229,12 +229,17 @@ class AuthenticationTestCase(TestCase):
     def get_initial_page_json(self, response):
         return self.get_initial_page_window('initialJSON', response)
 
-    def check_no_analyst_no_access(self, url, get_response=None):
+    def check_no_analyst_no_access(self, url, get_response=None, has_override=False):
         self.mock_analyst_group.__str__.return_value = ''
 
         response = get_response() if get_response else self.client.get(url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
+
+        self.client.force_login(self.super_user)
+        response = get_response() if get_response else self.client.get(url)
+        self.assertEqual(response.status_code, 200 if has_override else 403)
+        return response
 
     def reset_logs(self):
         self._log_stream.truncate(0)
@@ -732,16 +737,20 @@ PROJECT_FIELDS = {
 ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
 DYNAMIC_ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'criteria', 'name', 'projectGuid'}
 
+SUMMARY_FAMILY_FIELDS = {
+    'projectGuid', 'familyGuid', 'analysedBy', 'familyId', 'displayName', 'description',
+    'analysisStatus', 'createdDate', 'assignedAnalyst', 'codedPhenotype', 'mondoId',
+}
 FAMILY_FIELDS = {
-    'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
-    'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst', 'codedPhenotype', 'postDiscoveryOmimNumbers',
+    'pedigreeImage', 'postDiscoveryOmimNumbers',
     'pedigreeDataset', 'analysisStatusLastModifiedDate', 'analysisStatusLastModifiedBy', 'mondoId',
 }
+FAMILY_FIELDS.update(SUMMARY_FAMILY_FIELDS)
 CASE_REVIEW_FAMILY_FIELDS = {
     'caseReviewNotes', 'caseReviewSummary'
 }
 INTERNAL_FAMILY_FIELDS = {
-    'individualGuids', 'successStory', 'successStoryTypes', 'pubmedIds',
+    'individualGuids', 'successStory', 'successStoryTypes', 'pubmedIds', 'externalData',
 }
 INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
 

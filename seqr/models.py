@@ -316,6 +316,14 @@ class Family(ModelWithGUID):
         ('D', 'Data Sharing'),
         ('O', 'Other'),
     )
+    EXTERNAL_DATA_CHOICES = (
+        ('M', 'Methylation'),
+        ('P', 'PacBio lrGS'),
+        ('R', 'PacBio RNA'),
+        ('L', 'ONT lrGS'),
+        ('O', 'ONT RNA'),
+        ('B', 'BioNano'),
+    )
 
     project = models.ForeignKey('Project', on_delete=models.PROTECT)
 
@@ -338,6 +346,13 @@ class Family(ModelWithGUID):
         blank=True
     ), default=list)
     success_story = models.TextField(null=True, blank=True)
+
+    external_data = ArrayField(models.CharField(
+        max_length=1,
+        choices=EXTERNAL_DATA_CHOICES,
+        null=True,
+        blank=True
+    ), default=list)
 
     coded_phenotype = models.TextField(null=True, blank=True)
     mondo_id = models.CharField(null=True, blank=True, max_length=30)
@@ -367,7 +382,7 @@ class Family(ModelWithGUID):
             'post_discovery_omim_numbers', 'pedigree_dataset', 'coded_phenotype', 'mondo_id',
         ]
         internal_json_fields = [
-            'success_story_types', 'success_story', 'pubmed_ids',
+            'success_story_types', 'success_story', 'pubmed_ids', 'external_data',
         ]
         audit_fields = {'analysis_status'}
 

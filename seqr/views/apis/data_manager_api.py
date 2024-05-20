@@ -442,7 +442,7 @@ def write_pedigree(request, project_guid):
 
 DATA_TYPE_FILE_EXTS = {
     Sample.DATASET_TYPE_MITO_CALLS: ('.mt',),
-    Sample.DATASET_TYPE_SV_CALLS: ('.bed',),
+    Sample.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
 }
 
 LOADABLE_PDO_STATUSES = [

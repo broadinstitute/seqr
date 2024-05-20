@@ -13,7 +13,7 @@ import {
   BaseSemanticInput,
 } from '../components/form/Inputs'
 
-import { stripMarkdown, snakecaseToTitlecase } from './stringUtils'
+import { stripMarkdown, snakecaseToTitlecase, camelcaseToTitlecase } from './stringUtils'
 import { ColoredIcon } from '../components/StyledComponents'
 import HpoPanel from '../components/panel/HpoPanel'
 
@@ -199,6 +199,19 @@ export const FAMILY_ANALYSED_BY_DATA_TYPES = [
   ['STR', 'STR'],
 ]
 
+export const FAMILY_EXTERNAL_DATA_OPTIONS = [
+  { value: 'M', color: '#3c9f6d', name: 'Methylation' },
+  { value: 'P', color: '#1135cc', name: 'PacBio lrGS' },
+  { value: 'R', color: '#5c2672', name: 'PacBio RNA' },
+  { value: 'L', color: '#6583EC', name: 'ONT lrGS' },
+  { value: 'O', color: '#644e96', name: 'ONT RNA' },
+  { value: 'B', color: '#d0672d', name: 'BioNano' },
+]
+
+export const FAMILY_EXTERNAL_DATA_LOOKUP = FAMILY_EXTERNAL_DATA_OPTIONS.reduce(
+  (acc, tag) => ({ [tag.value]: tag, ...acc }), {},
+)
+
 // SUCCESS STORY
 
 const FAMILY_SUCCESS_STORY_NOVEL_DISCOVERY = 'N'
@@ -252,27 +265,7 @@ export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
 export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
 export const FAMILY_FIELD_ANALYSIS_GROUPS = 'analysisGroups'
 export const FAMILY_FIELD_SAVED_VARIANTS = 'savedVariants'
-
-export const FAMILY_FIELD_NAME_LOOKUP = {
-  [FAMILY_FIELD_DESCRIPTION]: 'Family Description',
-  [FAMILY_FIELD_ANALYSIS_GROUPS]: 'Analysis Groups',
-  [FAMILY_FIELD_ANALYSIS_STATUS]: 'Analysis Status',
-  [FAMILY_FIELD_ASSIGNED_ANALYST]: 'Assigned Analyst',
-  [FAMILY_FIELD_ANALYSED_BY]: 'Analysed By',
-  [FAMILY_FIELD_SUCCESS_STORY_TYPE]: 'Success Story Type',
-  [FAMILY_FIELD_SUCCESS_STORY]: 'Success Story',
-  [FAMILY_FIELD_FIRST_SAMPLE]: 'Data Loaded?',
-  [FAMILY_FIELD_CASE_NOTES]: 'Case Notes',
-  [FAMILY_FIELD_ANALYSIS_NOTES]: 'Analysis Notes',
-  [FAMILY_FIELD_MME_NOTES]: 'Matchmaker Notes',
-  [FAMILY_FIELD_CODED_PHENOTYPE]: 'Phenotype Description',
-  [FAMILY_FIELD_MONDO_ID]: 'MONDO ID',
-  [FAMILY_FIELD_OMIM_NUMBERS]: 'Post-discovery OMIM #',
-  [FAMILY_FIELD_PMIDS]: 'Publications on this discovery',
-  [FAMILY_FIELD_INTERNAL_NOTES]: 'Internal Notes',
-  [FAMILY_FIELD_INTERNAL_SUMMARY]: 'Internal Summary',
-  [FAMILY_FIELD_SAVED_VARIANTS]: 'Saved Variants',
-}
+export const FAMILY_FIELD_EXTERNAL_DATA = 'externalData'
 
 export const FAMILY_NOTES_FIELDS = [
   { id: FAMILY_FIELD_CASE_NOTES, noteType: 'C' },
@@ -290,6 +283,7 @@ export const FAMILY_MAIN_FIELDS = [
 export const FAMILY_DETAIL_FIELDS = [
   ...FAMILY_MAIN_FIELDS,
   { id: FAMILY_FIELD_ANALYSED_BY },
+  { id: FAMILY_FIELD_EXTERNAL_DATA },
   { id: FAMILY_FIELD_SUCCESS_STORY_TYPE },
   { id: FAMILY_FIELD_SUCCESS_STORY },
   ...FAMILY_NOTES_FIELDS,
@@ -298,6 +292,19 @@ export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_OMIM_NUMBERS },
   { id: FAMILY_FIELD_PMIDS },
 ]
+
+export const FAMILY_FIELD_NAME_LOOKUP = {
+  ...FAMILY_DETAIL_FIELDS.reduce((acc, field) => ({ ...acc, [field.id]: camelcaseToTitlecase(field.id) }), {}),
+  [FAMILY_FIELD_DESCRIPTION]: 'Family Description',
+  [FAMILY_FIELD_FIRST_SAMPLE]: 'Data Loaded?',
+  [FAMILY_FIELD_MME_NOTES]: 'Matchmaker Notes',
+  [FAMILY_FIELD_CODED_PHENOTYPE]: 'Phenotype Description',
+  [FAMILY_FIELD_MONDO_ID]: 'MONDO ID',
+  [FAMILY_FIELD_OMIM_NUMBERS]: 'Post-discovery OMIM #',
+  [FAMILY_FIELD_PMIDS]: 'Publications on this discovery',
+  [FAMILY_FIELD_INTERNAL_NOTES]: 'Internal Notes',
+  [FAMILY_FIELD_INTERNAL_SUMMARY]: 'Internal Summary',
+}
 
 const SHOW_DATA_LOADED = 'SHOW_DATA_LOADED'
 const SHOW_ASSIGNED_TO_ME = 'SHOW_ASSIGNED_TO_ME'

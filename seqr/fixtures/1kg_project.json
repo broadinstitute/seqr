@@ -130,6 +130,7 @@
         "analysis_status": "Q",
         "coded_phenotype": "myopathy",
         "pubmed_ids": ["34415322", "33665635"],
+        "external_data": ["M"],
         "case_review_notes": "<div>initial notes with uni&ccedil;&oslash;de</div>\n<div>test</div>",
         "case_review_summary": "<div>internal case review summary with uni&ccedil;&oslash;de</div>"
     }

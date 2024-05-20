@@ -96,6 +96,8 @@ data_manager_required = active_user_has_policies_and_passes_test(user_is_data_ma
 pm_required = active_user_has_policies_and_passes_test(user_is_pm)
 pm_or_data_manager_required = active_user_has_policies_and_passes_test(
     lambda user: user_is_data_manager(user) or user_is_pm(user))
+pm_or_analyst_required = active_user_has_policies_and_passes_test(
+    lambda user: user_is_analyst(user) or user_is_pm(user))
 superuser_required = active_user_has_policies_and_passes_test(lambda user: user.is_superuser)
 
 
