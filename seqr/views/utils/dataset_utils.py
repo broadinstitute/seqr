@@ -335,7 +335,7 @@ def _validate_rna_header(header, column_map):
 
 
 def _load_rna_seq_file(
-        file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample,
+        file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, match_sample,
         column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
 ):
 
@@ -382,7 +382,7 @@ def _load_rna_seq_file(
         if any(row_gene_ids):
             gene_ids.update(row_gene_ids)
 
-        get_matched_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping)
+        match_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping)
 
         if missing_required_fields or (unmatched_samples and not ignore_extra_samples) or (sample_key in unmatched_samples):
             # If there are definite errors, do not process/save data, just continue to check for additional errors
@@ -485,7 +485,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
 
         save_data(sample_key, sample_data)
 
-    def get_matched_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping):
+    def match_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping):
         if sample_key in potential_samples:
             sample = potential_samples[sample_key]
             sample_guid = sample['guid']
@@ -503,7 +503,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
                 unmatched_samples.add(sample_key)
 
     warnings, not_loaded_count = _load_rna_seq_file(
-        file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, get_matched_sample,
+        file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, match_sample,
         *args, **kwargs)
     message = f'Parsed {len(sample_guid_keys_to_load) + not_loaded_count} RNA-seq samples'
     info = [message]
