@@ -956,6 +956,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
 
         # Test already loaded data
         mock_send_slack.reset_mock()
+        mock_subprocess.reset_mock()
         self.reset_logs()
         _set_file_iter_stdout([header, loaded_data_row])
         body['file'] = 'gs://rna_data/muscle_samples.tsv.gz'
@@ -970,6 +971,11 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.pm_user)
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
         mock_send_slack.assert_not_called()
+        self.assertEqual(mock_subprocess.call_count, 2)
+        mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [  # nosec
+            f'gsutil ls {body["file"]}',
+            f'gsutil cat {body["file"]} | gunzip -c -q - ',
+        ]])
 
         def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, new_sample_individual_id, body,
                                      project_names, num_created_samples=1, warnings=None, additional_logs=None):

@@ -294,7 +294,8 @@ def update_rna_seq(request):
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
 
-    mv_file_to_gs(f'{file_dir}/*', f'{TEMP_GS_BUCKET}/{file_name_prefix}', request.user)
+    if sample_guids:
+        mv_file_to_gs(f'{file_dir}/*', f'{TEMP_GS_BUCKET}/{file_name_prefix}', request.user)
 
     return create_json_response({
         'info': info,
