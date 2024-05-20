@@ -172,8 +172,6 @@ def bulk_update_family_external_analysis(request):
         FamilyAnalysedBy(family_id=family_db_id_lookup[family_key], data_type=data_type, last_modified_date=datetime.now())
         for family_key in requested_families if family_key in family_db_id_lookup
     ]
-    for ab in analysed_by_models:
-        ab.guid = f'FAB{randint(10**5, 10**6)}_{ab}'[:FamilyAnalysedBy.MAX_GUID_SIZE] # nosec
     FamilyAnalysedBy.bulk_create(request.user, analysed_by_models)
 
     return create_json_response({
