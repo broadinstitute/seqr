@@ -278,6 +278,7 @@ def update_rna_seq(request):
 
     file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
     file_dir = os.path.join(get_temp_upload_directory(), file_name_prefix)
+    os.mkdir(file_dir)
 
     sample_files = {}
 
@@ -293,6 +294,10 @@ def update_rna_seq(request):
             user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
+
+    for f in sample_files.values():
+        # Required to ensure gzipped files are properly encoded/ terminated
+        f.close()
 
     if sample_guids:
         mv_file_to_gs(f'{file_dir}/*', f'{TEMP_GS_BUCKET}/{file_name_prefix}', request.user)
