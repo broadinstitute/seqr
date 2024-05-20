@@ -300,11 +300,15 @@ def get_variant_query_gene_counts(search_model, user):
 def _get_gene_aggs_for_cached_variants(previous_search_results):
     gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
     for var in previous_search_results['all_results']:
-        gene_id = next((
-            gene_id for gene_id, transcripts in var['transcripts'].items()
-            if any(t['transcriptId'] == var['mainTranscriptId'] for t in transcripts)
-        ), None) if var['mainTranscriptId'] else None
-        if gene_id:
+        # ES only reports breakdown for main transcript gene only, hail backend reports for all genes
+        gene_ids = backend_specific_call(
+            lambda variant_transcripts: next((
+                [gene_id] for gene_id, transcripts in variant_transcripts.items()
+                if any(t['transcriptId'] == var['mainTranscriptId'] for t in transcripts)
+            ), []) if var['mainTranscriptId'] else [],
+            lambda variant_transcripts: variant_transcripts.keys(),
+        )(var['transcripts'])
+        for gene_id in gene_ids:
             gene_aggs[gene_id]['total'] += 1
             for family_guid in var['familyGuids']:
                 gene_aggs[gene_id]['families'][family_guid] += 1
