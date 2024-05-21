@@ -261,6 +261,12 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
             'variant_id': ['1', 10439, 'AC', 'A'], 'genome_version': 'GRCh38', 'data_type': 'SNV_INDEL',
         })
 
+        # Test mitochondrial variant lookup
+        responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=400)
+        with self.assertRaises(InvalidSearchException) as cm:
+            variant_lookup(self.user, ('M', 11018, 'G', 'T'), genome_version='37')
+        self.assertEqual(str(cm.exception), 'MITO variants are not available for GRCh37')
+
     @responses.activate
     def test_sv_variant_lookup(self):
         sv_families = Family.objects.filter(id__in=[2, 14])

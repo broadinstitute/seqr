@@ -56,7 +56,7 @@ class SearchUtilsTests(SearchTestHelper):
         mock_variant_lookup.return_value = VARIANT_LOOKUP_VARIANT
         variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'), genome_version='38')
         self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
-        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh38')
+        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), 'SNV_INDEL', genome_version='GRCh38')
         cache_key = "variant_lookup_results__('1', 10439, 'AC', 'A')__38__"
         self.assert_cached_results(variant, cache_key=cache_key)
 
@@ -73,7 +73,7 @@ class SearchUtilsTests(SearchTestHelper):
         variants = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', self.families, genome_version='38', sample_type='WGS')
         self.assertListEqual(variants, [SV_VARIANT4, SV_VARIANT1])
         mock_sv_variant_lookup.assert_called_with(
-            self.user, 'phase2_DEL_chr14_4640', genome_version='GRCh38', samples=mock.ANY, sample_type='WGS')
+            self.user, 'phase2_DEL_chr14_4640', 'SV', genome_version='GRCh38', samples=mock.ANY, sample_type='WGS')
         cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38__test_user'
         self.assert_cached_results(variants, cache_key=cache_key)
         expected_samples = {s for s in self.search_samples if s.guid in SV_SAMPLES}
