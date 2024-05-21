@@ -12,7 +12,7 @@ from django.utils import timezone
 from notifications.models import Notification
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, FamilyNote, CAN_EDIT
+from seqr.models import Project, Family, Individual, Sample, FamilyNote, PhenotypePrioritization, CAN_EDIT
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
@@ -25,7 +25,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
     has_workspace_perm, has_case_review_permissions, is_internal_anvil_project
 from seqr.views.utils.project_context_utils import families_discovery_tags, \
-    add_project_tag_types, get_project_analysis_groups, get_project_locus_lists
+    add_project_tag_type_counts, get_project_analysis_groups, get_project_locus_lists
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
 from settings import BASE_URL
 
@@ -184,34 +184,46 @@ def project_page_data(request, project_guid):
 @login_and_policies_required
 def project_families(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
-    family_models = Family.objects.filter(project=project).annotate(
-        metadata_individual_count=Count('individual', filter=Q(
-            individual__features__0__isnull=False, individual__birth_year__isnull=False,
-            individual__population__isnull=False, individual__proband_relationship__isnull=False,
-        )),
-        pp_individual_count=Count('individual', filter=Q(
-            individual__phenotypeprioritization__tool__isnull=False,
-        ))
-    )
+
+    family_models = Family.objects.filter(project=project)
     families = family_models.values(
-        'description',
+        'id', 'description',
         **{_to_camel_case(field): F(field) for field in [
             'family_id', 'analysis_status', 'created_date', 'coded_phenotype', 'mondo_id',
         ]},
         familyGuid=F('guid'),
         projectGuid=Value(project_guid),
         **FAMILY_ADDITIONAL_VALUES,
-        **INDIVIDUAL_GUIDS_VALUES,
-        caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True, filter=~Q(individual__case_review_status='')),
-        caseReviewStatusLastModified=Max('individual__case_review_status_last_modified_date'),
-        hasRequiredMetadata=Case(When(metadata_individual_count__gt=0, then=Value(True)), default=Value(False)),
-        parents=ArrayAgg(
-            JSONObject(paternalGuid='individual__father__guid', maternalGuid='individual__mother__guid'),
-            filter=Q(individual__mother__isnull=False) | Q(individual__father__isnull=False), distinct=True,
-        ),
-        hasPhenotypePrioritization=Case(When(pp_individual_count__gt=0, then=Value(True)), default=Value(False)),
     )
-    response = families_discovery_tags(families)
+    families_by_id = {f.pop('id'): f for f in families}
+
+    phenotype_priority_families = set(PhenotypePrioritization.objects.filter(
+        individual__family_id__in=families_by_id).values_list('individual__family_id', flat=True).distinct())
+    family_individuals = Individual.objects.filter(family_id__in=families_by_id).values('family_id').annotate(
+        caseReviewStatuses=ArrayAgg('case_review_status', distinct=True, filter=~Q(case_review_status='')),
+        caseReviewStatusLastModified=Max('case_review_status_last_modified_date'),
+        parental_ids=ArrayAgg(JSONObject(**{k: k for k in ['id', 'guid', 'father_id', 'mother_id']})),
+        metadata_count=Count('id', filter=Q(
+            features__0__isnull=False, birth_year__isnull=False,
+            population__isnull=False, proband_relationship__isnull=False,
+        )),
+    )
+    for individual_agg in family_individuals:
+        family_id = individual_agg.pop('family_id')
+        parental_ids = individual_agg.pop('parental_ids')
+        id_guid_map = {i['id']: i['guid'] for i in parental_ids}
+        families_by_id[family_id].update({
+            'individualGuids': sorted(id_guid_map.values()),
+            'hasPhenotypePrioritization': family_id in phenotype_priority_families,
+            'hasRequiredMetadata': individual_agg.pop('metadata_count') > 0,
+            'parents': [
+                {'paternalGuid': id_guid_map.get(p['father_id']), 'maternalGuid': id_guid_map.get(p['mother_id'])}
+                for p in parental_ids if p['father_id'] or p['mother_id']
+            ],
+            **individual_agg,
+        })
+
+    response = families_discovery_tags(families, project=project)
     return create_json_response(response)
 
 
@@ -221,11 +233,9 @@ def project_overview(request, project_guid):
 
     sample_models = Sample.objects.filter(individual__family__project=project)
 
-    active_samples = sample_models.filter(is_active=True)
-    first_loaded_samples = sample_models.order_by('individual__family', 'loaded_date').distinct('individual__family')
-    samples_by_guid = {}
-    for samples in [active_samples, first_loaded_samples]:
-        samples_by_guid.update({s['sampleGuid']: s for s in get_json_for_samples(samples, project_guid=project_guid)})
+    first_loaded_samples = sample_models.order_by('individual__family', 'loaded_date').distinct('individual__family').values_list('id', flat=True)
+    samples = sample_models.filter(Q(is_active=True) | Q(id__in=first_loaded_samples))
+    samples_by_guid = {s['sampleGuid']: s for s in get_json_for_samples(samples, project_guid=project_guid)}
 
     sample_load_counts = sample_models.values(
         'sample_type', 'dataset_type', loadedDate=TruncDate('loaded_date'),
@@ -235,12 +245,12 @@ def project_overview(request, project_guid):
         s['familyCounts'] = {f: s['familyCounts'].count(f) for f in s['familyCounts']}
         grouped_sample_counts[f'{s.pop("sample_type")}__{s.pop("dataset_type")}'].append(s)
 
+    project_json = {'projectGuid': project_guid, 'sampleCounts': grouped_sample_counts}
     response = {
-        'projectsByGuid': {project_guid: {'projectGuid': project_guid, 'sampleCounts': grouped_sample_counts}},
         'samplesByGuid': samples_by_guid,
     }
 
-    response['familyTagTypeCounts'] = add_project_tag_types(response['projectsByGuid'], add_counts=True)
+    add_project_tag_type_counts(project, response, project_json=project_json)
 
     project_mme_submissions = MatchmakerSubmission.objects.filter(individual__family__project=project)
 

@@ -24,7 +24,7 @@ from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
     is_internal_anvil_project, pm_or_data_manager_required, check_workspace_perm
-from seqr.views.utils.project_context_utils import add_project_tag_types
+from seqr.views.utils.project_context_utils import add_project_tag_type_counts
 from seqr.views.utils.individual_utils import delete_individuals, add_or_update_individuals_and_families
 from seqr.views.utils.variant_utils import bulk_create_tagged_variants
 
@@ -936,8 +936,7 @@ def import_gregor_metadata(request, project_guid):
     )
     info.append(f'Loaded {num_new} new and {num_updated} updated findings tags')
 
-    response_json['projectsByGuid'] = {project_guid: {}}
-    response_json['familyTagTypeCounts'] = add_project_tag_types(response_json['projectsByGuid'], add_counts=True)
+    add_project_tag_type_counts(project, response_json)
 
     response_json['importStats'] = {'gregorMetadata': {'info': info, 'warnings': warnings}}
     return create_json_response(response_json)
