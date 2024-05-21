@@ -2,7 +2,7 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
 
-from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38
+from reference_data.models import GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
@@ -149,27 +149,36 @@ def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, 
     )
 
 
-def _variant_lookup(lookup_func, user, variant_id, genome_version=None, cache_key_suffix='', **kwargs):
+def _variant_lookup(lookup_func, user, variant_id, dataset_type, genome_version=None, cache_key_suffix='', **kwargs):
     genome_version = genome_version or GENOME_VERSION_GRCh38
+    _validate_dataset_type_genome_version(dataset_type, genome_version)
     cache_key = f'variant_lookup_results__{variant_id}__{genome_version}__{cache_key_suffix}'
     variant = safe_redis_get_json(cache_key)
     if variant:
         return variant
 
     lookup_func = backend_specific_call(_raise_search_error('Hail backend is disabled'), lookup_func)
-    variant = lookup_func(user, variant_id, genome_version=GENOME_VERSION_LOOKUP[genome_version], **kwargs)
+    variant = lookup_func(user, variant_id, dataset_type, genome_version=GENOME_VERSION_LOOKUP[genome_version], **kwargs)
     safe_redis_set_json(cache_key, variant, expire=timedelta(weeks=2))
     return variant
 
 
-def variant_lookup(*args, **kwargs):
-    return _variant_lookup(hail_variant_lookup, *args, **kwargs)
+def _validate_dataset_type_genome_version(dataset_type, genome_version):
+    if genome_version == GENOME_VERSION_GRCh37 and dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS:
+        raise InvalidSearchException('Only SNV_INDEL variants are available for GRCh37')
+
+
+def variant_lookup(user, parsed_variant_id, **kwargs):
+    dt = _variant_ids_dataset_type([parsed_variant_id])
+    dataset_type = DATASET_TYPES_LOOKUP[dt][0]
+    return _variant_lookup(hail_variant_lookup, user, parsed_variant_id, **kwargs, dataset_type=dataset_type)
 
 
 def sv_variant_lookup(user, variant_id, families, **kwargs):
     samples, _ = _get_families_search_data(families, dataset_type=Sample.DATASET_TYPE_SV_CALLS)
     return _variant_lookup(
         hail_sv_variant_lookup, user, variant_id, **kwargs, samples=samples, cache_key_suffix=user,
+        dataset_type=Sample.DATASET_TYPE_SV_CALLS,
     )
 
 

@@ -265,7 +265,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         responses.add(responses.POST, f'{MOCK_HOST}:5000/lookup', status=400)
         with self.assertRaises(InvalidSearchException) as cm:
             variant_lookup(self.user, ('M', 11018, 'G', 'T'), genome_version='37')
-        self.assertEqual(str(cm.exception), 'Mitochondrial variants are not supported in GRCh37')
+        self.assertEqual(str(cm.exception), 'Only SNV_INDEL variants are available for GRCh37')
 
     @responses.activate
     def test_sv_variant_lookup(self):
