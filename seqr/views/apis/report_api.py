@@ -206,7 +206,7 @@ EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
     'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
 ]
 EXPERIMENT_COLUMNS = {'analyte_id', 'experiment_sample_id'}
-EXPERIMENT_TABLE_COLUMNS = {'experiment_dna_short_read_id'}
+EXPERIMENT_TABLE_COLUMNS = {'experiment_dna_short_read_id', 'sequencing_event_details'}
 EXPERIMENT_TABLE_COLUMNS.update(EXPERIMENT_COLUMNS)
 EXPERIMENT_TABLE_COLUMNS.update(EXPERIMENT_TABLE_AIRTABLE_FIELDS)
 EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS = [
@@ -240,9 +240,10 @@ CALLED_TABLE_COLUMNS = {
 }
 GENETIC_FINDINGS_TABLE_COLUMNS = {
     'chrom', 'pos', 'ref', 'alt', 'variant_type', 'variant_reference_assembly', 'gene', 'transcript', 'hgvsc', 'hgvsp',
-    *FINDING_METADATA_COLUMNS[:4], 'phenotype_contribution',
+    'hgvs', 'sv_type', 'chrom_end', 'pos_end', 'copy_number', *FINDING_METADATA_COLUMNS[:4], 'phenotype_contribution',
     'genetic_findings_id', 'participant_id', 'experiment_id', 'zygosity', 'allele_balance_or_heteroplasmy_percentage',
     'variant_inheritance', 'linked_variant', 'additional_family_members_with_variant', 'method_of_discovery',
+    'gene_disease_validity',
 }
 
 RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS + [
