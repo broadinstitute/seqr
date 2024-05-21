@@ -452,7 +452,7 @@ MOCK_DATA_MODEL_RESPONSE = json.dumps(MOCK_DATA_MODEL, indent=2).replace('"refer
 INVALID_MODEL_TABLES = {
     'participant': {
         'internal_project_id': {'data_type': 'reference'},
-        'prior_testing': {'data_type': 'enumeration'},
+        'prior_testing': {'data_type': 'enumeration', 'required': 'CONDITIONAL (proband_relationship = Self, proband_relationship = Father)'},
         'proband_relationship': {'required': 'CONDITIONAL (sex = Male)'},
         'reported_race': {'enumerations': ['Asian', 'White', 'Black']},
         'age_at_enrollment': {'data_type': 'date'}
@@ -830,6 +830,7 @@ class ReportAPITest(AirtableTest):
         ] + [
             'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
         ] + [
+            'The following entries are missing required "prior_testing" in the "participant" table: Broad_HG00731, Broad_HG00732',
             'The following entries are missing required "proband_relationship" in the "participant" table: Broad_NA19678, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
             'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
             'The following entries have invalid values for "age_at_enrollment" in the "participant" table. Allowed values have data type date. Invalid values: Broad_NA19675_1 (18)',
