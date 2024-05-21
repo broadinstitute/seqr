@@ -28,6 +28,7 @@ FINDING_METADATA_COLUMNS = [
     'gene_known_for_phenotype', 'known_condition_name', 'condition_id', 'condition_inheritance',
     'GREGoR_variant_classification', 'notes',
 ]
+GENE_COLUMN = 'gene_of_interest'
 
 HISPANIC = 'AMR'
 OTHER = 'OTH'
@@ -345,7 +346,7 @@ def _get_parsed_saved_discovery_variants_by_family(
 
     saved_variants_by_family = defaultdict(list)
     for row in variants:
-        row['gene'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
+        row[GENE_COLUMN] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
         family_id = row.pop('family_id')
         saved_variants_by_family[family_id].append(row)
 
@@ -462,13 +463,13 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, partici
             if sample is not None:
                 parsed_row['sample_id'] = sample.sample_id
             parsed_rows.append(parsed_row)
-            variants_by_gene[row['gene']].append({**parsed_row, 'individual_genotype': individual_genotype})
+            variants_by_gene[row[GENE_COLUMN]].append({**parsed_row, 'individual_genotype': individual_genotype})
 
     to_remove = []
     for row in parsed_rows:
         del row['genotypes']
         process_func = post_process_variant or _post_process_variant_metadata
-        update = process_func(row, variants_by_gene[row['gene']], include_parent_mnvs=include_parent_mnvs)
+        update = process_func(row, variants_by_gene[row[GENE_COLUMN]], include_parent_mnvs=include_parent_mnvs)
         if update:
             row.update(update)
         else:

@@ -14,7 +14,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, \
     FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, \
-    EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, FINDING_METADATA_COLUMNS
+    EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, FINDING_METADATA_COLUMNS, GENE_COLUMN
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
@@ -123,9 +123,10 @@ def anvil_export(request, project_guid):
                     [f'Discovery variant(s) {", ".join(missing_gene_rows)} in family {family_id} have no associated gene'])
             parsed_rows[row_type] += [{
                 'entity:discovery_id': f'{discovery_row["chrom"]}_{discovery_row["pos"]}_{discovery_row["participant_id"]}',
-                **{k: str(discovery_row.get(k.lower()) or '') for k in ['Gene', 'Zygosity', 'Chrom', 'Pos', 'Ref', 'Alt', 'Transcript']},
+                **{k: str(discovery_row.get(k.lower()) or '') for k in ['Zygosity', 'Chrom', 'Pos', 'Ref', 'Alt', 'Transcript']},
                 **{k: discovery_row[field] for k, field in {
                     'subject_id': 'participant_id',
+                    'Gene': GENE_COLUMN,
                     'Gene_Class': 'gene_known_for_phenotype',
                     'inheritance_description': 'variant_inheritance',
                     'variant_genome_build': 'variant_reference_assembly',
@@ -239,7 +240,7 @@ CALLED_TABLE_COLUMNS = {
     'caller_software', 'variant_types', 'analysis_details',
 }
 GENETIC_FINDINGS_TABLE_COLUMNS = {
-    'chrom', 'pos', 'ref', 'alt', 'variant_type', 'variant_reference_assembly', 'gene', 'transcript', 'hgvsc', 'hgvsp',
+    'chrom', 'pos', 'ref', 'alt', 'variant_type', 'variant_reference_assembly', GENE_COLUMN, 'transcript', 'hgvsc', 'hgvsp',
     'hgvs', 'sv_type', 'chrom_end', 'pos_end', 'copy_number', *FINDING_METADATA_COLUMNS[:4], 'phenotype_contribution',
     'genetic_findings_id', 'participant_id', 'experiment_id', 'zygosity', 'allele_balance_or_heteroplasmy_percentage',
     'variant_inheritance', 'linked_variant', 'additional_family_members_with_variant', 'method_of_discovery',
@@ -813,7 +814,7 @@ def family_metadata(request, project_guid):
             family = families_by_id[family_id]
             if 'inheritance_models' not in family:
                 family.update({'genes': set(), 'inheritance_models': set()})
-            family['genes'].update({v.get('gene') or v.get('sv_name') or v.get('gene_id') or '' for v in row})
+            family['genes'].update({v.get(GENE_COLUMN) or v.get('sv_name') or v.get('gene_id') or '' for v in row})
             family['inheritance_models'].update({v['variant_inheritance'] for v in row})
 
     parse_anvil_metadata(
