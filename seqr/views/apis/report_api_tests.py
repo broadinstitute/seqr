@@ -314,6 +314,7 @@ MOCK_DATA_MODEL = {
                 {'column': 'date_data_generation', 'data_type': 'date'},
                 {'column': 'target_insert_size', 'data_type': 'integer'},
                 {'column': 'sequencing_platform'},
+                {'column': 'sequencing_event_details'},
             ],
         },
         {
@@ -418,7 +419,7 @@ MOCK_DATA_MODEL = {
                 {'column': 'ref','required': True},
                 {'column': 'alt', 'required': True},
                 {'column': 'ClinGen_allele_ID'},
-                {'column': 'gene', 'required': True},
+                {'column': 'gene_of_interest', 'required': True},
                 {'column': 'transcript'},
                 {'column': 'hgvsc'},
                 {'column': 'hgvsp'},
@@ -435,7 +436,13 @@ MOCK_DATA_MODEL = {
                 {'column': 'partial_contribution_explained'},
                 {'column': 'additional_family_members_with_variant'},
                 {'column': 'method_of_discovery', 'data_type': 'enumeration', 'multi_value_delimiter': '|', 'enumerations': ['SR-ES', 'SR-GS', 'LR-GS', 'SNP array']},
-                {'column': 'notes'}
+                {'column': 'notes'},
+                {'column': 'sv_type'},
+                {'column': 'chrom_end'},
+                {'column': 'pos_end'},
+                {'column': 'copy_number'},
+                {'column': 'hgvs'},
+                {'column': 'gene_disease_validity'},
             ]
         },
     ]
@@ -558,16 +565,16 @@ EXPERIMENT_TABLE = [
     [
         'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
         'read_length', 'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file',
-        'date_data_generation', 'target_insert_size', 'sequencing_platform',
+        'date_data_generation', 'target_insert_size', 'sequencing_platform', 'sequencing_event_details',
     ], [
         'Broad_exome_VCGS_FAM203_621_D2', 'Broad_SM-JDBTM', 'VCGS_FAM203_621_D2', 'Kapa HyperPrep', '151', 'exome',
-        'Twist', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2022-08-15', '385', 'NovaSeq',
+        'Twist', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2022-08-15', '385', 'NovaSeq', '',
     ], [
         'Broad_exome_NA20888', 'Broad_SM-L5QMP', 'NA20888', 'Kapa HyperPrep', '151', 'exome',
-        'Twist', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2022-06-05', '380', 'NovaSeq',
+        'Twist', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2022-06-05', '380', 'NovaSeq', '',
     ], [
          'Broad_genome_NA20888_1', 'Broad_SM-L5QMWP', 'NA20888_1', 'Kapa HyperPrep w/o amplification', '200', 'genome',
-         '', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2023-03-13', '450', 'NovaSeq2',
+         '', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2023-03-13', '450', 'NovaSeq2', '',
     ],
 ]
 
@@ -592,29 +599,29 @@ EXPERIMENT_LOOKUP_TABLE = [
 GENETIC_FINDINGS_TABLE = [
     [
         'genetic_findings_id', 'participant_id', 'experiment_id', 'variant_type', 'variant_reference_assembly',
-        'chrom', 'pos', 'ref', 'alt', 'ClinGen_allele_ID', 'gene', 'transcript', 'hgvsc', 'hgvsp', 'zygosity',
+        'chrom', 'pos', 'ref', 'alt', 'ClinGen_allele_ID', 'gene_of_interest', 'transcript', 'hgvsc', 'hgvsp', 'zygosity',
         'allele_balance_or_heteroplasmy_percentage', 'variant_inheritance', 'linked_variant', 'linked_variant_phase',
         'gene_known_for_phenotype', 'known_condition_name', 'condition_id', 'condition_inheritance',
         'phenotype_contribution', 'partial_contribution_explained', 'additional_family_members_with_variant',
-        'method_of_discovery', 'notes',
+        'method_of_discovery', 'notes', 'sv_type', 'chrom_end', 'pos_end', 'copy_number', 'hgvs', 'gene_disease_validity',
     ], [
         'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'SNV/INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
-        'RP11', 'ENST00000258436', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '', 'Candidate',
+        'RP11', 'ENST00000258436.5', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '', 'Candidate',
         'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120', 'Autosomal recessive|X-linked',
-        'Full', '', '', 'SR-ES', '',
+        'Full', '', '', 'SR-ES', '', '', '', '', '', '', '',
     ], [
         'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh37', '1',
         '248367227', 'TC', 'T', '', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
-        'MONDO:0044970', '', 'Full', '', 'Broad_HG00732', 'SR-ES', '',
+        'MONDO:0044970', '', 'Full', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
     ], [
         'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '248367227', 'TC', 'T',
         '', 'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown',
         'Broad_NA20889_1_249045487', '', 'Candidate', 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant',
-        'Full', '', '', 'SR-ES', '',
+        'Full', '', '', 'SR-ES', '', '', '', '', '', '', '',
     ], [
         'Broad_NA20889_1_249045487', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '249045487', 'A', 'G', '',
         'OR4G11P', '', '', '', 'Heterozygous', '', 'unknown', 'Broad_NA20889_1_248367227', '', 'Candidate',
-        'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant', 'Full', '', '', 'SR-ES', '',
+        'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant', 'Full', '', '', 'SR-ES', '', '', '', '', '', '', '',
     ],
 ]
 
@@ -723,7 +730,7 @@ class ReportAPITest(AirtableTest):
             'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-'], discovery_file)
         self.assertIn([
             '21_3343353_NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Candidate', 'de novo',
-            'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
+            'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436.5',
             '-', '-', '-', '-'], discovery_file)
         self.assertIn([
             '19_1912633_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'unknown', 'Heterozygous', 'GRCh38', '19',
@@ -1202,7 +1209,7 @@ class ReportAPITest(AirtableTest):
             'displayName': '2',
             'familyGuid': 'F000002_2',
             'family_id': '2',
-            'gene': 'RP11',
+            'gene_of_interest': 'RP11',
             'gene_id': 'ENSG00000135953',
             'gene_known_for_phenotype': 'Known',
             'genetic_findings_id': 'HG00731_1_248367227',
@@ -1230,7 +1237,7 @@ class ReportAPITest(AirtableTest):
             'end': 1912634,
             'familyGuid': 'F000002_2',
             'family_id': '2',
-            'gene': 'OR4G11P',
+            'gene_of_interest': 'OR4G11P',
             'gene_id': 'ENSG00000240361',
             'gene_known_for_phenotype': 'Known',
             'genetic_findings_id': 'HG00731_19_1912634',
@@ -1271,7 +1278,7 @@ class ReportAPITest(AirtableTest):
             'familyGuid': 'F000012_12',
             'family_id': '12',
             'family_history': 'Yes',
-            'gene': 'OR4G11P',
+            'gene_of_interest': 'OR4G11P',
             'gene_id': 'ENSG00000240361',
             'gene_known_for_phenotype': 'Candidate',
             'genetic_findings_id': 'NA20889_1_248367227',
@@ -1299,7 +1306,7 @@ class ReportAPITest(AirtableTest):
             'familyGuid': 'F000012_12',
             'family_id': '12',
             'family_history': 'Yes',
-            'gene': None,
+            'gene_of_interest': None,
             'gene_id': None,
             'gene_known_for_phenotype': 'Candidate',
             'genetic_findings_id': 'NA20889_1_249045487',
