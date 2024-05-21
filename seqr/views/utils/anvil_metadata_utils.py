@@ -100,10 +100,21 @@ METHOD_MAP = {
     Sample.SAMPLE_TYPE_WGS: 'SR-GS',
 }
 
+
+def _format_hgvs(hgvs, *args):
+    return (hgvs or '').split(':')[-1]
+
+
+def _format_transcript_id(transcript_id, transcript):
+    if transcript_id and (transcript.get('hgvsc') or '').startswith(transcript_id):
+        return transcript['hgvsc'].split(':')[0]
+    return transcript_id
+
+
 TRANSCRIPT_FIELDS = {
-    'transcript': {'seqr_field': 'transcriptId'},
-    'hgvsc': {'format': lambda hgvs: (hgvs or '').split(':')[-1]},
-    'hgvsp': {'format': lambda hgvs: (hgvs or '').split(':')[-1]},
+    'transcript': {'seqr_field': 'transcriptId', 'format': _format_transcript_id},
+    'hgvsc': {'format': _format_hgvs},
+    'hgvsp': {'format': _format_hgvs},
 }
 
 
@@ -374,7 +385,7 @@ def _get_variant_main_transcript(variant_model):
 def _get_transcript_field(field, config, transcript):
     value = transcript.get(config.get('seqr_field', field))
     if config.get('format'):
-        value = config['format'](value)
+        value = config['format'](value, transcript)
     return value
 
 
