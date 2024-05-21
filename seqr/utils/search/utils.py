@@ -165,12 +165,11 @@ def _variant_lookup(lookup_func, user, variant_id, dataset_type, genome_version=
 
 def _validate_dataset_type_genome_version(dataset_type, genome_version):
     if genome_version == GENOME_VERSION_GRCh37 and dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS:
-        raise InvalidSearchException('Only SNV_INDEL variants are available for GRCh37')
+        raise InvalidSearchException(f'{dataset_type} variants are not available for GRCh37')
 
 
 def variant_lookup(user, parsed_variant_id, **kwargs):
-    dt = _variant_ids_dataset_type([parsed_variant_id])
-    dataset_type = DATASET_TYPES_LOOKUP[dt][0]
+    dataset_type = DATASET_TYPES_LOOKUP[_variant_ids_dataset_type([parsed_variant_id])][0]
     return _variant_lookup(hail_variant_lookup, user, parsed_variant_id, **kwargs, dataset_type=dataset_type)
 
 
