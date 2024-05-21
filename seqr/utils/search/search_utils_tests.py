@@ -427,13 +427,6 @@ class SearchUtilsTests(SearchTestHelper):
         gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
         self.assertDictEqual(gene_counts, cached_gene_counts)
 
-        self.set_cache({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, 'total_results': 2})
-        gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
-        self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}},
-            'ENSG00000228198': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}}
-        })
-
 
 @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
@@ -491,6 +484,13 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
     def test_cached_get_variant_query_gene_counts(self):
         super(ElasticsearchSearchUtilsTests, self).test_cached_get_variant_query_gene_counts()
 
+        self.set_cache({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, 'total_results': 2})
+        gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
+        self.assertDictEqual(gene_counts, {
+            'ENSG00000135953': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}},
+            'ENSG00000228198': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}},
+        })
+
         self.set_cache({
             'grouped_results': [
                 {'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT},
@@ -533,3 +533,14 @@ class HailSearchUtilsTests(TestCase, SearchUtilsTests):
     @mock.patch('seqr.utils.search.utils.get_hail_variants')
     def test_get_variant_query_gene_counts(self, mock_call):
         super(HailSearchUtilsTests, self).test_get_variant_query_gene_counts(mock_call)
+
+    def test_cached_get_variant_query_gene_counts(self):
+        super(HailSearchUtilsTests, self).test_cached_get_variant_query_gene_counts()
+
+        self.set_cache({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT + [SV_VARIANT1], 'total_results': 3})
+        gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
+        self.assertDictEqual(gene_counts, {
+            'ENSG00000135953': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}},
+            'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}},
+            'ENSG00000171621': {'total': 1, 'families': {'F000011_11': 1}},
+        })
