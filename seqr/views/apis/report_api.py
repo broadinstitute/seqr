@@ -695,12 +695,16 @@ def _load_data_model_validators():
     return table_configs, required_tables
 
 
+def _get_multi_conditional_validator(validator):
+    match = re.match(r'CONDITIONAL \(([^\)]+)\)', validator)
+    return match and match.group(1).split(', ')
+
+
 def _parse_table_required(required_validator):
     if required_validator is True:
         return True
 
-    match = re.match(r'CONDITIONAL \(([\w+(\s,)?]+)\)', required_validator)
-    return match and match.group(1).split(', ')
+    return _get_multi_conditional_validator(required_validator)
 
 
 def _has_required_table(table, validator, tables):
@@ -718,15 +722,12 @@ def _is_required_col(required_validator, row):
     if required_validator is True:
         return True
 
-    match = re.match(r'CONDITIONAL \(([\w+(\s)?]+) = ([\w+(\s)?]+)\)', required_validator)
-    if not match:
+    condition_validators = _get_multi_conditional_validator(required_validator)
+    if not condition_validators:
         return True
 
-    field, value = match.groups()
-    return row[field] == value
-
-
-
+    conditions = [re.match(r'([^\s]+) = ([^\s]+)', c).groups() for c in condition_validators]
+    return any(row[field] == value for field, value in conditions)
 
 
 def _validate_column_data(column, file_name, data, column_validator, warnings, errors):
