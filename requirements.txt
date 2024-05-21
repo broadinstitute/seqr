@@ -131,7 +131,7 @@ pytz==2022.7.1
     #   django-notifications-hq
 redis==4.5.4
     # via -r requirements.in
-requests==2.31.0
+requests==2.32.0
     # via
     #   -r requirements.in
     #   django-anymail
@@ -179,6 +179,3 @@ urllib3==1.26.18
     #   requests
 whitenoise==6.3.0
     # via -r requirements.in
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools

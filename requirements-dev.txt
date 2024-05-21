@@ -39,8 +39,10 @@ idna==3.7
     #   requests
 mock==5.0.1
     # via -r requirements-dev.in
-packaging==23.0
-    # via build
+packaging==24.0
+    # via
+    #   -c requirements.txt
+    #   build
 pip-tools==6.12.2
     # via -r requirements-dev.in
 pyproject-hooks==1.0.0
@@ -51,7 +53,7 @@ pytz==2022.7.1
     #   django
 rcssmin==1.1.1
     # via django-compressor
-requests==2.31.0
+requests==2.32.0
     # via
     #   -c requirements.txt
     #   responses
