@@ -277,6 +277,7 @@ def update_rna_seq(request):
 
     file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
     file_dir = os.path.join(get_temp_upload_directory(), file_name_prefix)
+    os.mkdir(file_dir)
 
     sample_files = {}
 
@@ -294,12 +295,14 @@ def update_rna_seq(request):
         return create_json_response({'error': str(e)}, status=400)
 
     for sample_guid, sample_key in sample_guids_to_keys.items():
+        sample_files[sample_key].close()  # Required to ensure gzipped files are properly terminated
         os.rename(
             _get_sample_file_path(file_dir, '_'.join(sample_key)),
             _get_sample_file_path(file_dir, sample_guid),
         )
 
-    mv_file_to_gs(f'{file_dir}/*', f'{TEMP_GS_BUCKET}/{file_name_prefix}', request.user)
+    if sample_guids_to_keys:
+        mv_file_to_gs(f'{file_dir}/*', f'{TEMP_GS_BUCKET}/{file_name_prefix}', request.user)
 
     return create_json_response({
         'info': info,
