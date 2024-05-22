@@ -48,7 +48,7 @@ const DATA = [
     sex: 'Female',
     'chrom-1': '1',
     'alt-1': 'T',
-    'gene-1': 'OR4G11P',
+    'gene_of_interest-1': 'OR4G11P',
     'gene_id-1': 'ENSG00000240361',
     pmid_id: null,
     phenotype_description: null,
@@ -75,10 +75,10 @@ test('IndividualMetadata render and export', () => {
     'condition_id', 'known_condition_name', 'disorders', 'affected_status', 'hpo_present', 'hpo_absent',
     'phenotype_description', 'analysis_groups', 'analysis_status', 'solve_status', 'MME', 'data_type', 'date_data_generation',
     'filter_flags', 'consanguinity', 'family_history', 'genetic_findings_id-1', 'variant_reference_assembly-1',
-    'chrom-1', 'pos-1', 'ref-1', 'alt-1', 'gene-1', 'gene_id-1', 'seqr_chosen_consequence-1', 'transcript-1',
+    'chrom-1', 'pos-1', 'ref-1', 'alt-1', 'gene_of_interest-1', 'gene_id-1', 'seqr_chosen_consequence-1', 'transcript-1',
     'hgvsc-1', 'hgvsp-1', 'zygosity-1', 'sv_name-1', 'sv_type-1', 'variant_inheritance-1', 'gene_known_for_phenotype-1',
     'notes-1', 'genetic_findings_id-2', 'variant_reference_assembly-2', 'chrom-2', 'pos-2',
-    'ref-2', 'alt-2', 'gene-2', 'gene_id-2', 'seqr_chosen_consequence-2', 'transcript-2', 'hgvsc-2', 'hgvsp-2',
+    'ref-2', 'alt-2', 'gene_of_interest-2', 'gene_id-2', 'seqr_chosen_consequence-2', 'transcript-2', 'hgvsc-2', 'hgvsp-2',
     'zygosity-2', 'sv_name-2', 'sv_type-2', 'variant_inheritance-2', 'gene_known_for_phenotype-2', 'notes-2'])
   expect(exportConfig.processRow(DATA[0])).toEqual([
     'Test Reprocessed Project', 'R0003_test', '12', 'F000012_12', 'NA20889', 'I000017_na20889', null, '', '', '', '',
