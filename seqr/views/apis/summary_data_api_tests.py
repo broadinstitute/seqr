@@ -107,6 +107,9 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'notes-2': None,
     'tags-1': ['Tier 1 - Novel gene and phenotype'],
     'tags-2': ['Tier 1 - Novel gene and phenotype'],
+    'condition_id': 'OMIM:616126',
+    'condition_inheritance': 'Autosomal recessive',
+    'known_condition_name': 'Immunodeficiency 38',
 }
 EXPECTED_SAMPLE_METADATA_ROW = {
     "dbgap_submission": "No",

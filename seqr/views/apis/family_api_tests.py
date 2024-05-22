@@ -121,7 +121,7 @@ class FamilyAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000012_12'})
-        self.assertListEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimNumbers'], [])
+        self.assertListEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimNumbers'], [616126])
         self.assertDictEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimOptions'], {'616126': {
             'phenotypeMimNumber': 616126, 'phenotypes': [{
                 'chrom': '1',
