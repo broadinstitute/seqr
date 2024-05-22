@@ -109,7 +109,7 @@ TRANSCRIPT_FIELDS = {
 def _get_family_metadata(family_filter, family_fields, include_metadata, include_mondo, format_id):
     family_data = Family.objects.filter(**family_filter).distinct().order_by('id').values(
         'id', 'family_id', 'post_discovery_omim_numbers',
-        *(['mondo_id'] if include_mondo else []),
+        *(['post_discovery_mondo_id'] if include_mondo else []),
         internal_project_id=F('project__name'),
         pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
         phenotype_description=Replace(
@@ -511,9 +511,9 @@ def _get_condition_map(families):
     mondo_ids = set()
     for family in families:
         mim_numbers.update(family['post_discovery_omim_numbers'])
-        if family.get('mondo_id'):
-            family['mondo_id'] = f"MONDO:{family['mondo_id'].replace('MONDO:', '')}"
-            mondo_ids.add(family['mondo_id'])
+        if family.get('post_discovery_mondo_id'):
+            family['post_discovery_mondo_id'] = f"MONDO:{family['post_discovery_mondo_id'].replace('MONDO:', '')}"
+            mondo_ids.add(family['post_discovery_mondo_id'])
 
     omim_conditions_by_id_gene = defaultdict(lambda: defaultdict(list))
     for omim in Omim.objects.filter(phenotype_mim_number__in=mim_numbers).values(
@@ -543,7 +543,7 @@ def _get_mondo_condition_data(mondo_id):
 
 
 def _update_conditions(family_subject_row, variants, omim_conditions, mondo_conditions, set_conditions_for_variants):
-    mondo_id = family_subject_row.pop('mondo_id', None)
+    mondo_id = family_subject_row.pop('post_discovery_mondo_id', None)
     mim_numbers = family_subject_row.pop('post_discovery_omim_numbers')
     if mim_numbers:
         family_conditions = []
