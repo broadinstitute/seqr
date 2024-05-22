@@ -544,42 +544,37 @@ def _get_mondo_condition_data(mondo_id):
 
 def _update_conditions(family_subject_row, variants, omim_conditions, mondo_conditions, set_conditions_for_variants):
     mondo_id = family_subject_row.pop('post_discovery_mondo_id', None)
-    mim_numbers = family_subject_row.pop('post_discovery_omim_numbers')
-    if mim_numbers:
-        family_conditions = []
-        for v in variants:
-            variant_conditions = [
-                c for mim_number in mim_numbers for c in omim_conditions[mim_number][None]
-                if c['chrom'] == v['chrom'] and c['start'] <= v['pos'] <= c['end']
-            ]
+    mondo_condition = {'condition_id': mondo_id, **mondo_conditions[mondo_id]} if mondo_id else {}
+    mim_numbers = family_subject_row.pop('post_discovery_omim_numbers') or []
+
+    family_conditions = []
+    for v in variants:
+        variant_conditions = [
+            c for mim_number in mim_numbers for c in omim_conditions[mim_number][None]
+            if c['chrom'] == v['chrom'] and c['start'] <= v['pos'] <= c['end']
+        ]
+        for mim_number in mim_numbers:
             for gene_id in v['gene_ids']:
-                for mim_number in mim_numbers:
-                    variant_conditions += omim_conditions[mim_number][gene_id]
-
-            if set_conditions_for_variants:
-                v.update(_format_omim_conditions(variant_conditions))
-            else:
-                family_conditions += variant_conditions
+                variant_conditions += omim_conditions[mim_number][gene_id]
 
         if set_conditions_for_variants:
-            return
-
-        # Preferentially include conditions associated with discovery genes/regions, but fall back to all
-        if not family_conditions:
-            family_conditions = [
-                c for mim_number in mim_numbers for conditions in omim_conditions[mim_number].values() for c in conditions
-            ] or [{'phenotype_mim_number': mim_number} for mim_number in mim_numbers]
-
-        if family_conditions:
-            family_subject_row.update(_format_omim_conditions(family_conditions))
-
-    elif mondo_id:
-        mondo_condition = {'condition_id': mondo_id, **mondo_conditions[mondo_id]}
-        if set_conditions_for_variants:
-            for v in variants:
-                v.update(mondo_condition)
+            conditions = _format_omim_conditions(variant_conditions) if variant_conditions else mondo_condition
+            v.update(conditions)
         else:
-            family_subject_row.update(mondo_condition)
+            family_conditions += variant_conditions
+
+    if set_conditions_for_variants:
+        return
+
+    # Preferentially include conditions associated with discovery genes/regions, but fall back to all
+    if not family_conditions:
+        family_conditions = [
+            c for mim_number in mim_numbers for conditions in omim_conditions[mim_number].values() for c in conditions
+        ] or [{'phenotype_mim_number': mim_number} for mim_number in mim_numbers]
+
+    family_condition = _format_omim_conditions(family_conditions) if family_conditions else mondo_condition
+    if family_condition:
+        family_subject_row.update(family_condition)
 
 
 def _format_omim_conditions(conditions):
