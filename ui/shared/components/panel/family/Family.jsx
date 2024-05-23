@@ -26,6 +26,7 @@ import {
   FAMILY_FIELD_SUCCESS_STORY_TYPE,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_NAME_LOOKUP,
+  FAMILY_FIELD_DISCOVERY_MONDO_ID,
   FAMILY_FIELD_OMIM_NUMBERS,
   FAMILY_FIELD_PMIDS, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_SUCCESS_STORY, FAMILY_NOTES_FIELDS,
   FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY, FAMILY_EXTERNAL_DATA_LOOKUP,
@@ -58,6 +59,15 @@ const getNoteField = noteType => ({
   submitArgs: { noteType, nestedField: 'note' },
   ...BASE_NOTE_FIELD,
 })
+
+const MONDO_FIELD = {
+  component: SingleFieldView,
+  fieldDisplay: value => (
+    <a target="_blank" rel="noreferrer" href={`http://purl.obolibrary.org/obo/MONDO_${value.replace('MONDO:', '')}`}>
+      {value}
+    </a>
+  ),
+}
 
 const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_ANALYSIS_GROUPS]: {
@@ -111,13 +121,13 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { component: SingleFieldView, canEdit: true },
   [FAMILY_FIELD_MONDO_ID]: {
-    component: SingleFieldView,
+    ...MONDO_FIELD,
     canEdit: true,
-    fieldDisplay: value => (
-      <a target="_blank" rel="noreferrer" href={`http://purl.obolibrary.org/obo/MONDO_${value.replace('MONDO:', '')}`}>
-        {value}
-      </a>
-    ),
+  },
+  [FAMILY_FIELD_DISCOVERY_MONDO_ID]: {
+    ...MONDO_FIELD,
+    internal: true,
+    canEditFamily: ({ discoveryTags }) => discoveryTags?.length > 0,
   },
   [FAMILY_FIELD_OMIM_NUMBERS]: {
     canEditFamily: ({ postDiscoveryOmimOptions }) => Object.keys(postDiscoveryOmimOptions || {}).length > 0,
@@ -197,8 +207,8 @@ class Family extends React.PureComponent {
       values => dispatchUpdateFamily({ ...values, ...submitArgs }) : dispatchUpdateFamily
     return React.createElement(component || TextFieldView, {
       key: field.id,
-      isEditable: !disableEdit && (
-        canEdit || (canEditFamily && canEditFamily(family)) || (!disableInternalEdit && internal)),
+      isEditable: !disableEdit && (canEditFamily ? canEditFamily(family) :
+        (canEdit || (!disableInternalEdit && internal))),
       isPrivate: internal,
       fieldName: compact ? null : name,
       field: field.id,
