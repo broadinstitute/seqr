@@ -13,7 +13,7 @@ from seqr.models import Individual, Family, CAN_VIEW
 from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from seqr.views.utils.anvil_metadata_utils import PARTICIPANT_TABLE, PHENOTYPE_TABLE, EXPERIMENT_TABLE, \
-    EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, FINDING_METADATA_COLUMNS, TRANSCRIPT_FIELDS, parse_population
+    EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, FINDING_METADATA_COLUMNS, TRANSCRIPT_FIELDS, GENE_COLUMN, parse_population
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file, parse_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
@@ -909,13 +909,13 @@ def import_gregor_metadata(request, project_guid):
             'support_vars': [],
         })
         family_variant_data[key] = variant
-        genes.add(variant['gene'])
+        genes.add(variant[GENE_COLUMN])
         finding_id_map[variant['genetic_findings_id']] = variant_id
 
     gene_symbols_to_ids = {k: v[0] for k, v in get_gene_ids_for_gene_symbols(genes).items()}
     missing_genes = set()
     for variant in family_variant_data.values():
-        gene = variant['gene']
+        gene = variant[GENE_COLUMN]
         transcript = variant.pop('transcript')
         if gene in gene_symbols_to_ids:
             variant.update({

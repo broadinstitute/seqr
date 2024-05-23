@@ -1854,7 +1854,7 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'pos' },
   { name: 'ref' },
   { name: 'alt' },
-  { name: 'gene' },
+  { name: 'gene_of_interest' },
   { name: 'seqr_chosen_consequence' },
   { name: 'transcript' },
   { name: 'hgvsc' },

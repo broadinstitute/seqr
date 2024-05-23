@@ -80,7 +80,7 @@ const getColumns = (data) => {
     ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_METADATA_COLUMNS.map(
       ({ name, format, fieldName, ...col }) => ({
         name: `${name}-${i + 1}`,
-        secondaryExportColumn: name === 'gene' ? `gene_id-${i + 1}` : null,
+        secondaryExportColumn: name === 'gene_of_interest' ? `gene_id-${i + 1}` : null,
         format: format ? row => format({ [fieldName]: row[`${fieldName}-${i + 1}`] }) : null,
         ...col,
       }),
