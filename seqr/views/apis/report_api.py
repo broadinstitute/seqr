@@ -14,12 +14,13 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, \
     FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, \
-    EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, FINDING_METADATA_COLUMNS
+    EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, FINDING_METADATA_COLUMNS, GENE_COLUMN
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
-    get_project_guids_user_can_view, get_internal_projects
+    get_project_guids_user_can_view, get_internal_projects, pm_or_analyst_required
 from seqr.views.utils.terra_api_utils import anvil_enabled
+from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
 from seqr.models import Project, Family, Sample, Individual
 from settings import GREGOR_DATA_MODEL_URL
@@ -30,7 +31,7 @@ logger = SeqrLogger(__name__)
 MONDO_BASE_URL = 'https://monarchinitiative.org/v3/api/entity'
 
 
-@analyst_required
+@pm_or_analyst_required
 def seqr_stats(request):
     non_demo_projects = Project.objects.filter(is_demo=False)
 
@@ -122,9 +123,10 @@ def anvil_export(request, project_guid):
                     [f'Discovery variant(s) {", ".join(missing_gene_rows)} in family {family_id} have no associated gene'])
             parsed_rows[row_type] += [{
                 'entity:discovery_id': f'{discovery_row["chrom"]}_{discovery_row["pos"]}_{discovery_row["participant_id"]}',
-                **{k: str(discovery_row.get(k.lower()) or '') for k in ['Gene', 'Zygosity', 'Chrom', 'Pos', 'Ref', 'Alt', 'Transcript']},
+                **{k: str(discovery_row.get(k.lower()) or '') for k in ['Zygosity', 'Chrom', 'Pos', 'Ref', 'Alt', 'Transcript']},
                 **{k: discovery_row[field] for k, field in {
                     'subject_id': 'participant_id',
+                    'Gene': GENE_COLUMN,
                     'Gene_Class': 'gene_known_for_phenotype',
                     'inheritance_description': 'variant_inheritance',
                     'variant_genome_build': 'variant_reference_assembly',
@@ -205,7 +207,7 @@ EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
     'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
 ]
 EXPERIMENT_COLUMNS = {'analyte_id', 'experiment_sample_id'}
-EXPERIMENT_TABLE_COLUMNS = {'experiment_dna_short_read_id'}
+EXPERIMENT_TABLE_COLUMNS = {'experiment_dna_short_read_id', 'sequencing_event_details'}
 EXPERIMENT_TABLE_COLUMNS.update(EXPERIMENT_COLUMNS)
 EXPERIMENT_TABLE_COLUMNS.update(EXPERIMENT_TABLE_AIRTABLE_FIELDS)
 EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS = [
@@ -238,10 +240,11 @@ CALLED_TABLE_COLUMNS = {
     'caller_software', 'variant_types', 'analysis_details',
 }
 GENETIC_FINDINGS_TABLE_COLUMNS = {
-    'chrom', 'pos', 'ref', 'alt', 'variant_type', 'variant_reference_assembly', 'gene', 'transcript', 'hgvsc', 'hgvsp',
-    *FINDING_METADATA_COLUMNS[:4], 'phenotype_contribution',
+    'chrom', 'pos', 'ref', 'alt', 'variant_type', 'variant_reference_assembly', GENE_COLUMN, 'transcript', 'hgvsc', 'hgvsp',
+    'hgvs', 'sv_type', 'chrom_end', 'pos_end', 'copy_number', *FINDING_METADATA_COLUMNS[:4], 'phenotype_contribution',
     'genetic_findings_id', 'participant_id', 'experiment_id', 'zygosity', 'allele_balance_or_heteroplasmy_percentage',
     'variant_inheritance', 'linked_variant', 'additional_family_members_with_variant', 'method_of_discovery',
+    'gene_disease_validity',
 }
 
 RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS + [
@@ -694,12 +697,16 @@ def _load_data_model_validators():
     return table_configs, required_tables
 
 
+def _get_multi_conditional_validator(validator):
+    match = re.match(r'CONDITIONAL \(([^\)]+)\)', validator)
+    return match and match.group(1).split(', ')
+
+
 def _parse_table_required(required_validator):
     if required_validator is True:
         return True
 
-    match = re.match(r'CONDITIONAL \(([\w+(\s,)?]+)\)', required_validator)
-    return match and match.group(1).split(', ')
+    return _get_multi_conditional_validator(required_validator)
 
 
 def _has_required_table(table, validator, tables):
@@ -717,15 +724,12 @@ def _is_required_col(required_validator, row):
     if required_validator is True:
         return True
 
-    match = re.match(r'CONDITIONAL \(([\w+(\s)?]+) = ([\w+(\s)?]+)\)', required_validator)
-    if not match:
+    condition_validators = _get_multi_conditional_validator(required_validator)
+    if not condition_validators:
         return True
 
-    field, value = match.groups()
-    return row[field] == value
-
-
-
+    conditions = [re.match(r'([^\s]+) = ([^\s]+)', c).groups() for c in condition_validators]
+    return any(row[field] == value for field, value in conditions)
 
 
 def _validate_column_data(column, file_name, data, column_validator, warnings, errors):
@@ -790,3 +794,130 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
 def _get_row_id(row):
     id_col = next(col for col in ['genetic_findings_id', 'participant_id', 'experiment_sample_id', 'family_id'] if col in row)
     return row[id_col]
+
+
+@pm_or_analyst_required
+def family_metadata(request, project_guid):
+    projects = _get_metadata_projects(project_guid, request.user)
+
+    families_by_id = {}
+    family_individuals = defaultdict(dict)
+
+    def _add_row(row, family_id, row_type):
+        if row_type == FAMILY_ROW_TYPE:
+            families_by_id[family_id] = row
+        elif row_type == SUBJECT_ROW_TYPE:
+            family_individuals[family_id][row['participant_id']] = row
+        elif row_type == SAMPLE_ROW_TYPE:
+            family_individuals[family_id][row['participant_id']].update(row)
+        elif row_type == DISCOVERY_ROW_TYPE:
+            family = families_by_id[family_id]
+            if 'inheritance_models' not in family:
+                family.update({'genes': set(), 'inheritance_models': set()})
+            family['genes'].update({v.get(GENE_COLUMN) or v.get('sv_name') or v.get('gene_id') or '' for v in row})
+            family['inheritance_models'].update({v['variant_inheritance'] for v in row})
+
+    parse_anvil_metadata(
+        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_metadata=True, include_no_individual_families=True)
+
+    for family_id, f in families_by_id.items():
+        individuals_by_id = family_individuals[family_id]
+        proband = next((i for i in individuals_by_id.values() if i['proband_relationship'] == 'Self'), None)
+        individuals_ids = set(individuals_by_id.keys())
+        known_ids = {}
+        if proband:
+            known_ids = {
+                'proband_id': proband['participant_id'],
+                'paternal_id': proband['paternal_id'],
+                'maternal_id': proband['maternal_id'],
+            }
+            f.update(known_ids)
+            individuals_ids -= set(known_ids.values())
+
+        sorted_samples = sorted(individuals_by_id.values(), key=lambda x: x.get('date_data_generation', ''))
+        earliest_sample = next((s for s in [proband or {}] + sorted_samples if s.get('date_data_generation')), {})
+
+        inheritance_models = f.pop('inheritance_models', [])
+        f.update({
+            'individual_count': len(individuals_by_id),
+            'other_individual_ids':  '; '.join(sorted(individuals_ids)),
+            'family_structure': _get_family_structure(len(individuals_by_id), sum(1 for id in known_ids.values() if id)),
+            'data_type': earliest_sample.get('data_type'),
+            'date_data_generation': earliest_sample.get('date_data_generation'),
+            'genes': '; '.join(sorted(f.get('genes', []))),
+            'actual_inheritance': 'unknown' if inheritance_models == {'unknown'} else ';'.join(
+                sorted([i for i in inheritance_models if i != 'unknown'])),
+        })
+
+    return create_json_response({'rows': list(families_by_id.values())})
+
+
+def _get_metadata_projects(project_guid, user):
+    if project_guid == 'all':
+        return get_internal_projects().filter(guid__in=get_project_guids_user_can_view(user))
+    if project_guid == GREGOR_CATEGORY.lower():
+        return Project.objects.filter(projectcategory__name=GREGOR_CATEGORY)
+    return [get_project_and_check_permissions(project_guid, user)]
+
+
+FAMILY_STRUCTURES = {
+    1: 'singleton',
+    2: 'duo',
+    3: 'trio',
+    4: 'quad',
+}
+
+
+def _get_family_structure(num_individuals, num_known_individuals):
+    if (num_individuals and num_known_individuals == num_individuals) or (
+            num_known_individuals in {0, 3} and num_individuals == num_known_individuals + 1):
+        return FAMILY_STRUCTURES[num_individuals]
+    return 'other'
+
+
+@pm_or_analyst_required
+def variant_metadata(request, project_guid):
+    projects = _get_metadata_projects(project_guid, request.user)
+
+    individuals = Individual.objects.filter(
+        family__project__in=projects, family__savedvariant__varianttag__variant_tag_type__category=DISCOVERY_CATEGORY,
+    ).distinct().annotate(
+        data_types=ArrayAgg('sample__sample_type', distinct=True, filter=Q(sample__isnull=False))
+    )
+
+    families_by_id = {}
+    participant_mme = {}
+    variant_rows = []
+
+    def _add_row(row, family_id, row_type):
+        if row_type == FAMILY_ROW_TYPE:
+            families_by_id[family_id] = row
+        elif row_type == SUBJECT_ROW_TYPE:
+            participant_mme[row['participant_id']] = row.get('MME', {})
+        elif row_type == DISCOVERY_ROW_TYPE:
+            family = families_by_id[family_id]
+            for variant in row:
+                del variant['gene_ids']
+                variant_rows.append({
+                    'MME': variant.pop('variantId') in participant_mme[variant['participant_id']].get('variant_ids', []),
+                    'phenotype_contribution': 'Full',
+                    **family,
+                    **variant,
+                })
+
+    parse_anvil_metadata(
+        projects,
+        user=request.user,
+        individual_samples={i: None for i in individuals},
+        individual_data_types={i.individual_id: i.data_types for i in individuals},
+        add_row=_add_row,
+        variant_json_fields=['clinvar', 'variantId'],
+        mme_values={'variant_ids': ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId')},
+        include_metadata=True,
+        include_mondo=True,
+        omit_airtable=True,
+        proband_only_variants=True,
+        include_parent_mnvs=True,
+    )
+
+    return create_json_response({'rows': variant_rows})

@@ -130,6 +130,7 @@
         "analysis_status": "Q",
         "coded_phenotype": "myopathy",
         "pubmed_ids": ["34415322", "33665635"],
+        "external_data": ["M"],
         "case_review_notes": "<div>initial notes with uni&ccedil;&oslash;de</div>\n<div>test</div>",
         "case_review_summary": "<div>internal case review summary with uni&ccedil;&oslash;de</div>"
     }
@@ -149,7 +150,8 @@
         "pedigree_image": "ped_2.png",
         "analysis_status": "Q",
         "coded_phenotype": "microcephaly, seizures",
-        "mondo_id": "MONDO:0044970",
+        "mondo_id": "MONDO:0044976",
+        "post_discovery_mondo_id": "MONDO:0044970",
         "case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
         "case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
     }
@@ -333,7 +335,8 @@
         "analysis_status": "Q",
         "success_story": "Published with Gleeson and Reza (PMID 31668703)",
         "success_story_types": ["C", "D"],
-        "mondo_id": "0008788",
+        "post_discovery_mondo_id": "0008788",
+        "post_discovery_omim_numbers": [616126],
         "case_review_notes": "<div><span style=\"text-decoration: underline;\"><span style=\"font-family: 'book antiqua', palatino, serif;\">case review notes for family 12</span></span></div>\n<ul>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note1</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 2</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 3</span></li>\n</ul>",
         "case_review_summary": "<div><span style=\"font-family: 'courier new', courier, monospace;\"><strong>summary for family 12</strong></span></div>"
     }
@@ -1041,7 +1044,6 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.052Z",
-        
         "sample_id": "NA20872",
         "sample_type": "WES",
         "is_active": false,
@@ -1078,7 +1080,6 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.111Z",
-        
         "sample_id": "NA20875",
         "sample_type": "WES",
         "is_active": false,
@@ -1553,6 +1554,9 @@
     "model": "seqr.phenotypeprioritization",
     "pk": 1,
     "fields": {
+        "guid": "PP000001_NA19675_1ENSG00000268",
+        "created_date": "2024-05-02T06:42:55.397Z",
+        "created_by": null,
         "individual": 1,
         "gene_id": "ENSG00000268903",
         "tool": "exomiser",
@@ -1570,6 +1574,9 @@
     "model": "seqr.phenotypeprioritization",
     "pk": 2,
     "fields": {
+        "guid": "PP000002_NA19675_ENSG000002689",
+        "created_date": "2024-05-02T06:42:55.397Z",
+        "created_by": null,
         "individual": 1,
         "gene_id": "ENSG00000268903",
         "tool": "exomiser",
@@ -1587,6 +1594,9 @@
     "model": "seqr.phenotypeprioritization",
     "pk": 3,
     "fields": {
+        "guid": "PP000003_NA19678_ENSG000002689",
+        "created_date": "2024-05-02T06:42:55.397Z",
+        "created_by": null,
         "individual": 2,
         "gene_id": "ENSG00000268903",
         "tool": "lirical",
@@ -1603,6 +1613,9 @@
     "model": "seqr.phenotypeprioritization",
     "pk": 4,
     "fields": {
+        "guid": "PP000004_NA19675_ENSG000002689",
+        "created_date": "2024-05-02T06:42:55.397Z",
+        "created_by": null,
         "individual": 1,
         "gene_id": "ENSG00000268904",
         "tool": "lirical",

@@ -14,6 +14,7 @@ from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
+from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.file_utils import file_iter, does_file_exist, mv_file_to_gs
 from seqr.utils.logging_utils import SeqrLogger
@@ -30,7 +31,7 @@ from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data
 
 from seqr.models import Sample, Individual, Project, PhenotypePrioritization
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
+from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
 
 logger = SeqrLogger(__name__)
 
@@ -276,30 +277,43 @@ def update_rna_seq(request):
 
     file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
     file_dir = os.path.join(get_temp_upload_directory(), file_name_prefix)
+    os.mkdir(file_dir)
 
     sample_files = {}
 
-    def _save_sample_data(sample_guid, sample_data):
-        if sample_guid not in sample_files:
-            file_name = os.path.join(file_dir, f'{sample_guid}.json.gz')
-            sample_files[sample_guid] = gzip.open(file_name, 'at')
-        sample_files[sample_guid].write(f'{json.dumps(sample_data)}\n')
+    def _save_sample_data(sample_key, sample_data):
+        if sample_key not in sample_files:
+            file_name = _get_sample_file_path(file_dir, '_'.join(sample_key))
+            sample_files[sample_key] = gzip.open(file_name, 'at')
+        sample_files[sample_key].write(f'{json.dumps(sample_data)}\n')
 
     try:
-        sample_guids, info, warnings = load_rna_seq(
+        sample_guids_to_keys, info, warnings = load_rna_seq(
             data_type, file_path, _save_sample_data,
             user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
 
-    mv_file_to_gs(f'{file_dir}/*', f'{TEMP_GS_BUCKET}/{file_name_prefix}', request.user)
+    for sample_guid, sample_key in sample_guids_to_keys.items():
+        sample_files[sample_key].close()  # Required to ensure gzipped files are properly terminated
+        os.rename(
+            _get_sample_file_path(file_dir, '_'.join(sample_key)),
+            _get_sample_file_path(file_dir, sample_guid),
+        )
+
+    if sample_guids_to_keys:
+        mv_file_to_gs(f'{file_dir}/*', f'{TEMP_GS_BUCKET}/{file_name_prefix}', request.user)
 
     return create_json_response({
         'info': info,
         'warnings': warnings,
         'fileName': file_name_prefix,
-        'sampleGuids': sorted(sample_guids),
+        'sampleGuids': sorted(sample_guids_to_keys.keys()),
     })
+
+
+def _get_sample_file_path(file_dir, sample_guid):
+    return os.path.join(file_dir, f'{sample_guid}.json.gz')
 
 
 @pm_or_data_manager_required
@@ -329,6 +343,21 @@ def load_rna_seq_sample_data(request, sample_guid):
     return create_json_response({'success': True})
 
 
+def _notify_phenotype_prioritization_loaded(project, tool, num_samples):
+    url = f'{BASE_URL}project/{project.guid}/project_page'
+    project_link = f'<a href={url}>{project.name}</a>'
+    email = (
+        f'This is to notify you that {tool.title()} data for {num_samples} sample(s) '
+        f'has been loaded in seqr project {project_link}'
+    )
+    send_project_notification(
+        project,
+        notification=f'Loaded {num_samples} {tool.title()} sample(s)',
+        email=email,
+        subject=f'New {tool.title()} data available in seqr',
+    )
+
+
 @data_manager_required
 def load_phenotype_prioritization_data(request):
     request_json = json.loads(request.body)
@@ -355,7 +384,7 @@ def load_phenotype_prioritization_data(request):
     if missing_info or conflict_info:
         return create_json_response({'error': missing_info + conflict_info}, status=400)
 
-    all_records = []
+    all_records_by_project_name = {}
     to_delete = PhenotypePrioritization.objects.none()
     error = None
     for project_name, records_by_indiv in data_by_project_indiv_id.items():
@@ -379,7 +408,7 @@ def load_phenotype_prioritization_data(request):
         info.append(f'Project {project_name}: {delete_info}loaded {len(indiv_records)} record(s)')
 
         to_delete |= exist_records
-        all_records += indiv_records
+        all_records_by_project_name[project_name] = indiv_records
 
     if error:
         return create_json_response({'error': error}, status=400)
@@ -387,7 +416,15 @@ def load_phenotype_prioritization_data(request):
     if to_delete:
         PhenotypePrioritization.bulk_delete(request.user, to_delete)
 
-    PhenotypePrioritization.bulk_create(request.user, [PhenotypePrioritization(**data) for data in all_records])
+    models_to_create = [
+        PhenotypePrioritization(**record) for records in all_records_by_project_name.values() for record in records
+    ]
+    PhenotypePrioritization.bulk_create(request.user, models_to_create)
+
+    for project_name, indiv_records in all_records_by_project_name.items():
+        project = projects_by_name[project_name][0]
+        num_samples = len(indiv_records)
+        _notify_phenotype_prioritization_loaded(project, tool, num_samples)
 
     return create_json_response({
         'info': info,
@@ -408,7 +445,7 @@ def write_pedigree(request, project_guid):
 
 DATA_TYPE_FILE_EXTS = {
     Sample.DATASET_TYPE_MITO_CALLS: ('.mt',),
-    Sample.DATASET_TYPE_SV_CALLS: ('.bed',),
+    Sample.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
 }
 
 LOADABLE_PDO_STATUSES = [

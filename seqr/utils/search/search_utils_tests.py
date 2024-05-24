@@ -56,7 +56,7 @@ class SearchUtilsTests(SearchTestHelper):
         mock_variant_lookup.return_value = VARIANT_LOOKUP_VARIANT
         variant = variant_lookup(self.user, ('1', 10439, 'AC', 'A'), genome_version='38')
         self.assertDictEqual(variant, VARIANT_LOOKUP_VARIANT)
-        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), genome_version='GRCh38')
+        mock_variant_lookup.assert_called_with(self.user, ('1', 10439, 'AC', 'A'), 'SNV_INDEL', genome_version='GRCh38')
         cache_key = "variant_lookup_results__('1', 10439, 'AC', 'A')__38__"
         self.assert_cached_results(variant, cache_key=cache_key)
 
@@ -73,7 +73,7 @@ class SearchUtilsTests(SearchTestHelper):
         variants = sv_variant_lookup(self.user, 'phase2_DEL_chr14_4640', self.families, genome_version='38', sample_type='WGS')
         self.assertListEqual(variants, [SV_VARIANT4, SV_VARIANT1])
         mock_sv_variant_lookup.assert_called_with(
-            self.user, 'phase2_DEL_chr14_4640', genome_version='GRCh38', samples=mock.ANY, sample_type='WGS')
+            self.user, 'phase2_DEL_chr14_4640', 'SV', genome_version='GRCh38', samples=mock.ANY, sample_type='WGS')
         cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38__test_user'
         self.assert_cached_results(variants, cache_key=cache_key)
         expected_samples = {s for s in self.search_samples if s.guid in SV_SAMPLES}
@@ -427,13 +427,6 @@ class SearchUtilsTests(SearchTestHelper):
         gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
         self.assertDictEqual(gene_counts, cached_gene_counts)
 
-        self.set_cache({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, 'total_results': 2})
-        gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
-        self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}},
-            'ENSG00000228198': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}}
-        })
-
 
 @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
@@ -491,6 +484,13 @@ class ElasticsearchSearchUtilsTests(TestCase, SearchUtilsTests):
     def test_cached_get_variant_query_gene_counts(self):
         super(ElasticsearchSearchUtilsTests, self).test_cached_get_variant_query_gene_counts()
 
+        self.set_cache({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, 'total_results': 2})
+        gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
+        self.assertDictEqual(gene_counts, {
+            'ENSG00000135953': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}},
+            'ENSG00000228198': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}},
+        })
+
         self.set_cache({
             'grouped_results': [
                 {'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT},
@@ -533,3 +533,14 @@ class HailSearchUtilsTests(TestCase, SearchUtilsTests):
     @mock.patch('seqr.utils.search.utils.get_hail_variants')
     def test_get_variant_query_gene_counts(self, mock_call):
         super(HailSearchUtilsTests, self).test_get_variant_query_gene_counts(mock_call)
+
+    def test_cached_get_variant_query_gene_counts(self):
+        super(HailSearchUtilsTests, self).test_cached_get_variant_query_gene_counts()
+
+        self.set_cache({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT + [SV_VARIANT1], 'total_results': 3})
+        gene_counts = get_variant_query_gene_counts(self.results_model, self.user)
+        self.assertDictEqual(gene_counts, {
+            'ENSG00000135953': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}},
+            'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}},
+            'ENSG00000171621': {'total': 1, 'families': {'F000011_11': 1}},
+        })

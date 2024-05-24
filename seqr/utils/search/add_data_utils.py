@@ -87,6 +87,6 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
     send_project_notification(
         project,
         notification=f'Loaded {sample_summary}',
-        email_body=f'Dear seqr user,\n\n{email}\n\nAll the best,\nThe seqr team',
+        email=email,
         subject='New data available in seqr',
     )

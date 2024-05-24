@@ -29,22 +29,23 @@ class Command(BaseCommand):
         config = RNA_DATA_TYPE_CONFIGS[data_type]
         model_cls = config['model_class']
 
-        sample_data_by_guid = defaultdict(list)
+        sample_data_by_key = defaultdict(list)
 
-        def _save_sample_data(sample_guid, row):
-            sample_data_by_guid[sample_guid].append(row)
+        def _save_sample_data(sample_key, row):
+            sample_data_by_key[sample_key].append(row)
 
-        possible_sample_guids, _, _ = load_rna_seq(
+        possible_sample_guids_to_keys, _, _ = load_rna_seq(
             data_type, options['input_file'], _save_sample_data,
             mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
 
         sample_models_by_guid = {
-            s.guid: s for s in Sample.objects.filter(guid__in=sample_data_by_guid)
+            s.guid: s for s in Sample.objects.filter(guid__in=possible_sample_guids_to_keys)
         }
         errors = []
         sample_guids = []
-        for sample_guid in possible_sample_guids:
-            data_rows, error = post_process_rna_data(sample_guid, sample_data_by_guid[sample_guid], **config.get('post_process_kwargs', {}))
+        for sample_guid in possible_sample_guids_to_keys:
+            sample_key = possible_sample_guids_to_keys[sample_guid]
+            data_rows, error = post_process_rna_data(sample_guid, sample_data_by_key[sample_key], **config.get('post_process_kwargs', {}))
             if error:
                 errors.append(error)
                 continue

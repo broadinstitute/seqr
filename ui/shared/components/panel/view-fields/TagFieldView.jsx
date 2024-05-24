@@ -74,11 +74,12 @@ MetadataField.propTypes = {
   error: PropTypes.bool,
 }
 
-export const TagFieldDisplay = React.memo((
-  { displayFieldValues, tagAnnotation, popup, displayAnnotationFirst, displayMetadata, linkTagType, tagLinkUrl },
-) => (
+export const TagFieldDisplay = React.memo(({
+  displayFieldValues, tagAnnotation, popup, displayAnnotationFirst, displayMetadata, linkTagType, tagLinkUrl, tagLookup,
+}) => (
   <span>
-    {displayFieldValues.map((tag) => {
+    {displayFieldValues.map((initialTag) => {
+      const tag = tagLookup ? tagLookup[initialTag] : initialTag
       let content = tag.name || tag.text
       if (displayMetadata && tag.metadata) {
         content = `${content}: ${tag.metadata}`
@@ -100,13 +101,14 @@ export const TagFieldDisplay = React.memo((
 ))
 
 TagFieldDisplay.propTypes = {
-  displayFieldValues: PropTypes.arrayOf(PropTypes.object).isRequired,
+  displayFieldValues: PropTypes.arrayOf(PropTypes.oneOfType(PropTypes.object, PropTypes.string)).isRequired,
   popup: PropTypes.func,
   tagAnnotation: PropTypes.func,
   displayAnnotationFirst: PropTypes.bool,
   displayMetadata: PropTypes.bool,
   linkTagType: PropTypes.string,
   tagLinkUrl: PropTypes.string,
+  tagLookup: PropTypes.object,
 }
 
 class TagFieldView extends React.PureComponent {

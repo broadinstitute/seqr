@@ -40,6 +40,8 @@ def import_all_panels(user, panel_app_api_url, label=None):
                 panel_genes_url = '{}/panels/{}/genes'.format(panel_app_api_url, panel_app_id)
                 pa_locus_list = _create_or_update_locus_list_from_panel(user, panel_genes_url, panel, label)
                 all_genes_for_panel = genes_by_panel_id.get(panel_app_id, [])
+                if not all_genes_for_panel:
+                    continue  # Genes in 'super panels' are associated with sub panels
                 panel_genes_by_id = {_extract_ensembl_id_from_json(gene): gene for gene in all_genes_for_panel
                                      if _extract_ensembl_id_from_json(gene)}
                 raw_ensbl_38_gene_ids_csv = ','.join(panel_genes_by_id.keys())
