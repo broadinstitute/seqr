@@ -6,7 +6,7 @@ import json
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Max, Q, F, Case, When, Value
+from django.db.models import Count, Max, Q, F, When, Value
 from django.db.models.functions import JSONObject, TruncDate
 from django.utils import timezone
 from notifications.models import Notification
