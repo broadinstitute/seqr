@@ -99,7 +99,7 @@ def _compute_serialized_file_name(uploaded_file_id):
     return f'temp_upload_{uploaded_file_id}.json.gz'
 
 
-def save_uploaded_file(request, user, process_records=None, allow_json=False):
+def save_uploaded_file(request, process_records=None, allow_json=False):
 
     if len(request.FILES) != 1:
         raise ValueError("Received %s files instead of 1" % len(request.FILES))
@@ -122,7 +122,7 @@ def save_uploaded_file(request, user, process_records=None, allow_json=False):
     with gzip.open(serialized_file_path, 'wt') as f:
         json.dump(json_records, f)
 
-    persist_temp_file(file_name, user)
+    persist_temp_file(file_name, request.user)
 
     return uploaded_file_id, filename, json_records
 
