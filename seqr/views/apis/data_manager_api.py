@@ -16,7 +16,7 @@ from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
-from seqr.utils.file_utils import file_iter, does_file_exist, mv_file_to_gs
+from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.vcf_utils import validate_vcf_exists
 
@@ -274,7 +274,7 @@ def update_rna_seq(request):
         mapping_file = load_uploaded_file(uploaded_mapping_file_id)
 
     file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
-    file_dir = get_temp_file_path(file_name_prefix)
+    file_dir = get_temp_file_path(file_name_prefix, is_local=True)
     os.mkdir(file_dir)
 
     sample_files = {}
