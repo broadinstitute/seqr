@@ -1,9 +1,15 @@
 import json
+from collections import defaultdict
+
 import mock
 import responses
+import tenacity
 from django.core.management import call_command, CommandError
 from django.urls.base import reverse
+from requests import Response
+from urllib3.exceptions import MaxRetryError
 
+from panelapp.panelapp_utils import _get_all_genes
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info
 from seqr.views.apis.locus_list_api_tests import BaseLocusListAPITest
 from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELDS
@@ -165,3 +171,22 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
         self.assertEqual(response.status_code, 200)
         locus_lists_dict = response.json()['locusListsByGuid']
         self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID})
+
+    @mock.patch("panelapp.panelapp_utils.requests.get")
+    def test_get_all_genes_exhausts_retries(self, mock_get_request):
+        url = '{}/genes/?page=1'.format(PANEL_APP_API_URL_UK)
+        request_error = MaxRetryError(pool=mock.MagicMock(), url=url)
+        mock_get_request.side_effect = [request_error] * 5
+        with self.assertRaises(tenacity.RetryError):
+            _get_all_genes(url, defaultdict(list))
+
+    @mock.patch("panelapp.panelapp_utils.requests.get")
+    def test_get_all_genes_retries_success(self, mock_get_request):
+        url = '{}/genes/?page=1'.format(PANEL_APP_API_URL_UK)
+        valid_response = Response()
+        valid_response.status_code = 200
+        valid_response._content = b'{"results": [{"panel": {"id": 1207, "name": "Acute intermittent porphyria"}}]}'
+        request_error = MaxRetryError(pool=mock.MagicMock(), url=url)
+        mock_get_request.side_effect = [request_error] * 4 + [valid_response]
+        expected_res = {1207: [{'panel': {'id': 1207, 'name': 'Acute intermittent porphyria'}}]}
+        self.assertEqual(_get_all_genes(url, defaultdict(list)), expected_res)
