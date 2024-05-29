@@ -3,6 +3,8 @@ from collections import defaultdict
 import requests
 from django.db import transaction
 from django.utils import timezone
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from urllib3.exceptions import MaxRetryError
 
 from panelapp.models import PaLocusList, PaLocusListGene
 from seqr.models import LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
@@ -113,6 +115,11 @@ def _get_all_panels(panels_url, all_results):
         return _get_all_panels(next_page, all_results)
 
 
+@retry(
+    retry=retry_if_exception_type(MaxRetryError),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    stop=stop_after_attempt(5),
+)
 def _get_all_genes(genes_url: str, results_by_panel_id: dict):
     resp = requests.get(genes_url, timeout=REQUEST_TIMEOUT_S)
     resp_json = resp.json()
