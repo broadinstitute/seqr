@@ -54,10 +54,13 @@ class SnvIndelHailTableQuery(MitoHailTableQuery):
     }
     PATHOGENICITY_FIELD_MAP = {}
     ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD, SCREEN_KEY]
-
+    SNV_INDEL_ANNOTATION_FIELDS = {
+        'CAID': lambda r: r.CAID,
+    }
     BASE_ANNOTATION_FIELDS = {
-        k: v for k, v in MitoHailTableQuery.BASE_ANNOTATION_FIELDS.items()
-        if k not in MitoHailTableQuery.MITO_ANNOTATION_FIELDS
+        **SNV_INDEL_ANNOTATION_FIELDS,
+        **{k: v for k, v in MitoHailTableQuery.BASE_ANNOTATION_FIELDS.items()
+            if k not in MitoHailTableQuery.MITO_ANNOTATION_FIELDS},
     }
     ENUM_ANNOTATION_FIELDS = {
         **MitoHailTableQuery.ENUM_ANNOTATION_FIELDS,

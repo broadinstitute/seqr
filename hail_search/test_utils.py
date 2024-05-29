@@ -142,6 +142,7 @@ VARIANT1 = {
     'mainTranscriptId': None,
     'selectedMainTranscriptId': None,
     '_sort': [1000010439],
+    'CAID': 'CA16717152',
 }
 VARIANT2 = {
     'variantId': '1-38724419-T-G',
@@ -241,6 +242,7 @@ VARIANT2 = {
     'mainTranscriptId': 'ENST00000376585',
     'selectedMainTranscriptId': None,
     '_sort': [1038724419],
+    'CAID': None,
 }
 VARIANT3 = {
     'variantId': '1-91502721-G-A',
@@ -309,6 +311,7 @@ VARIANT3 = {
     'mainTranscriptId': 'ENST00000428239',
     'selectedMainTranscriptId': None,
     '_sort': [1091502721],
+    'CAID': 'CA10960369',
 }
 VARIANT4 = {
     'variantId': '1-91511686-T-G',
@@ -374,6 +377,7 @@ VARIANT4 = {
     'mainTranscriptId': 'ENST00000428239',
     'selectedMainTranscriptId': None,
     '_sort': [1091511686],
+    'CAID': 'CA341062623',
 }
 
 VARIANT_LOOKUP_VARIANT = {

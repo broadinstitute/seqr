@@ -119,6 +119,7 @@ GRCH37_VARIANT = {
     'mainTranscriptId': 'ENST00000420911',
     'selectedMainTranscriptId': None,
     '_sort': [7143270172],
+    'CAID': 'CA4540310',
 }
 
 FAMILY_3_VARIANT = deepcopy(VARIANT3)
