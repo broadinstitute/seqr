@@ -144,7 +144,8 @@ class AnvilFileUtilsTest(AnvilAuthenticationTestCase, FileUtilsTest):
     fixtures = ['users']
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_temp_file_upload(self, mock_subprocess, **kwargs):
+    def test_temp_file_upload(self, *args, **kwargs):
+        mock_subprocess = args[0]
         mock_subprocess.return_value.wait.return_value = 0
         mock_subprocess.return_value.stdout.__iter__.side_effect = self._iter_gs_data
         super().test_temp_file_upload()
