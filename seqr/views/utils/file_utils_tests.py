@@ -59,6 +59,7 @@ MOCK_EXCEL_SHEET.iter_rows.return_value = [[_mock_cell(cell) for cell in row] fo
 class FileUtilsTest(AuthenticationTestCase):
     fixtures = ['users']
 
+    # TODO test persist_temp_file
     def test_temp_file_upload(self):
         url = reverse(save_temp_file)
         self.check_require_login(url)
