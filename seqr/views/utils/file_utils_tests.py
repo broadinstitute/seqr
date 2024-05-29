@@ -144,10 +144,10 @@ class AnvilFileUtilsTest(AnvilAuthenticationTestCase, FileUtilsTest):
     fixtures = ['users']
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_temp_file_upload(self, mock_subprocess, *args, **kwargs):
+    def test_temp_file_upload(self, mock_subprocess, **kwargs):
         mock_subprocess.return_value.wait.return_value = 0
         mock_subprocess.return_value.stdout.__iter__.side_effect = self._iter_gs_data
-        super().test_temp_file_upload(*args, **kwargs)
+        super().test_temp_file_upload()
         gs_file = f'gs://seqr-scratch-temp/{HASH_FILE_NAME}'
         mock_subprocess.assert_has_calls([
             mock.call(f'gsutil mv {self._temp_file_path()} {gs_file}', stdout=-1, stderr=-2, shell=True),  # nosec
