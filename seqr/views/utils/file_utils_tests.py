@@ -61,7 +61,7 @@ MOCK_EXCEL_SHEET.iter_rows.return_value = [[_mock_cell(cell) for cell in row] fo
 
 class FileUtilsTest(object):
 
-    def test_temp_file_upload(self):
+    def test_temp_file_upload(self, *args, **kwargs):
         url = reverse(save_temp_file)
         self.check_require_login(url)
 
@@ -144,10 +144,10 @@ class AnvilFileUtilsTest(AnvilAuthenticationTestCase, FileUtilsTest):
     fixtures = ['users']
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_temp_file_upload(self, mock_subprocess):
+    def test_temp_file_upload(self, mock_subprocess, *args, **kwargs):
         mock_subprocess.return_value.wait.return_value = 0
         mock_subprocess.return_value.stdout.__iter__.side_effect = self._iter_gs_data
-        super().test_temp_file_upload()
+        super().test_temp_file_upload(*args, **kwargs)
         gs_file = f'gs://seqr-scratch-temp/{HASH_FILE_NAME}'
         mock_subprocess.assert_has_calls([
             mock.call(f'gsutil mv {self._temp_file_path()} {gs_file}', stdout=-1, stderr=-2, shell=True),  # nosec
