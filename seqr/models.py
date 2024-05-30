@@ -935,6 +935,10 @@ class VariantFunctionalData(ModelWithGUID):
                 'description': 'Variant has been shown to be disease-causing (in literature, functional studies, etc.) but one or more individuals in this family with the variant do not present with clinical features of the disorder.',
                 'color': '#E985DC',
             })),
+            ('Partial Phenotype Contribution', json.dumps({
+                'description': 'Variant is believed to be part but not all of the solve, explaining only some of the phenotypes.',
+                'color': '#1F42D9',
+            })),
         )),
     )
 
