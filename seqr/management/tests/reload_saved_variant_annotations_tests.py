@@ -1,4 +1,3 @@
-from datetime import datetime
 from django.core.management import call_command
 from django.core.management.base import CommandError
 import json
@@ -6,7 +5,7 @@ import mock
 import responses
 
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
-from seqr.models import Project, Family, Individual, Sample, SavedVariant
+from seqr.models import Sample, SavedVariant
 
 MOCK_HAIL_HOST = 'http://test-hail-host'
 
