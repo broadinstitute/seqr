@@ -936,7 +936,8 @@ class VariantFunctionalData(ModelWithGUID):
                 'color': '#E985DC',
             })),
             ('Partial Phenotype Contribution', json.dumps({
-                'description': 'Variant is believed to be part but not all of the solve, explaining only some of the phenotypes.',
+                'metadata_title': 'HPO Terms',
+                'description': 'Variant is believed to be part of the solve, explaining only some of the phenotypes.',
                 'color': '#1F42D9',
             })),
         )),
