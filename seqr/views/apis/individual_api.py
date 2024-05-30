@@ -1040,7 +1040,7 @@ def sa_sync_individuals(request, project_guid):
         return create_json_response({'errors': ['missing individuals in body']}, status=400)
 
 
-    warnings = validate_fam_file_records(json_records)
+    warnings = validate_fam_file_records(project_guid, json_records)
     _ = add_or_update_individuals_and_families(
         project=project,
         individual_records=json_records,
