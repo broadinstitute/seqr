@@ -132,23 +132,27 @@ class Command(BaseCommand):
         # Reload saved variant JSON
         updated_variants_by_id = update_projects_saved_variant_json(
             updated_project_families, user_email=USER_EMAIL, dataset_type=dataset_type)
+
+        data_type = f'{dataset_type}_{sample_type}' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else dataset_type
         self._reload_shared_variant_annotations(
-            updated_variants_by_id, updated_families, dataset_type, sample_type, genome_version)
+            data_type, genome_version, updated_variants_by_id, exclude_families=updated_families)
 
         logger.info('DONE')
 
     @staticmethod
-    def _reload_shared_variant_annotations(updated_variants_by_id, updated_families, dataset_type, sample_type, genome_version):
-        data_type = dataset_type
-        is_sv = dataset_type == Sample.DATASET_TYPE_SV_CALLS
+    def _reload_shared_variant_annotations(data_type, genome_version, updated_variants_by_id=None, exclude_families=None):
+        dataset_type = data_type.split('_')[0]
+        is_sv = dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS)
+        dataset_type = data_type.split('_')[0] if is_sv else data_type
         db_genome_version = genome_version.replace('GRCh', '')
         updated_annotation_samples = Sample.objects.filter(
             is_active=True, dataset_type=dataset_type,
             individual__family__project__genome_version=db_genome_version,
-        ).exclude(individual__family__guid__in=updated_families)
+        )
+        if exclude_families:
+            updated_annotation_samples = updated_annotation_samples.exclude(individual__family__guid__in=exclude_families)
         if is_sv:
-            updated_annotation_samples = updated_annotation_samples.filter(sample_type=sample_type)
-            data_type = f'{dataset_type}_{sample_type}'
+            updated_annotation_samples = updated_annotation_samples.filter(sample_type=data_type.split('_')[1])
 
         variant_models = SavedVariant.objects.filter(
             family_id__in=updated_annotation_samples.values_list('individual__family', flat=True).distinct(),
@@ -167,7 +171,7 @@ class Command(BaseCommand):
 
         updated_variants_by_id = {
             variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}}
-            for variant_id, variant in updated_variants_by_id.items()
+            for variant_id, variant in (updated_variants_by_id or {}).items()
         }
         fetch_variant_ids = sorted(set(variants_by_id.keys()) - set(updated_variants_by_id.keys()))
         if fetch_variant_ids:
@@ -186,3 +190,6 @@ class Command(BaseCommand):
 
         SavedVariant.objects.bulk_update(updated_variant_models, ['saved_variant_json'], batch_size=10000)
         logger.info(f'Updated {len(updated_variant_models)} saved variants')
+
+
+reload_shared_variant_annotations = Command._reload_shared_variant_annotations
