@@ -150,7 +150,7 @@ class UpdateGencodeTest(TestCase):
         responses.add(responses.GET, url_23_lift, body=self.gzipped_gtf_data, stream=True)
         call_command('update_gencode', '--gencode-release=23')
         self.assertEqual(responses.calls[0].request.url, url_23_lift)
-        self.assertEqual(responses.calls[2].request.url, url_23)
+        self.assertEqual(responses.calls[1].request.url, url_23)
 
     def _has_expected_new_genes(self, expected_release=None):
         gene_info = GeneInfo.objects.get(gene_id='ENSG00000223972')
@@ -261,7 +261,7 @@ class UpdateGencodeTest(TestCase):
         ])
 
         self.assertEqual(responses.calls[0].request.url, url_lift)
-        self.assertEqual(responses.calls[2].request.url, url)
+        self.assertEqual(responses.calls[1].request.url, url)
 
     @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
