@@ -12,7 +12,7 @@ from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.utils.search.utils import parse_valid_variant_id
-from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup
+from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     saved_variants_dataset_type_filter
@@ -133,9 +133,8 @@ class Command(BaseCommand):
         updated_variants_by_id = update_projects_saved_variant_json(
             updated_project_families, user_email=USER_EMAIL, dataset_type=dataset_type)
 
-        data_type = f'{dataset_type}_{sample_type}' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else dataset_type
         self._reload_shared_variant_annotations(
-            data_type, genome_version, updated_variants_by_id, exclude_families=updated_families)
+            search_data_type(dataset_type, sample_type), genome_version, updated_variants_by_id, exclude_families=updated_families)
 
         logger.info('DONE')
 
@@ -167,7 +166,7 @@ class Command(BaseCommand):
         for v in variant_models:
             variants_by_id[v.variant_id].append(v)
 
-        logger.info(f'Reloading shared annotations for {len(variant_models)} saved variants ({len(variants_by_id)} unique)')
+        logger.info(f'Reloading shared annotations for {len(variant_models)} {data_type} {genome_version} saved variants ({len(variants_by_id)} unique)')
 
         updated_variants_by_id = {
             variant_id: {k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}}

@@ -220,7 +220,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234'},
             ]}},
         ], reload_annotations_logs=[
-            'Reloading shared annotations for 3 saved variants (3 unique)', 'Fetched 1 additional variants', 'Fetched 1 additional variants', 'Updated 2 saved variants',
+            'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Fetched 1 additional variants', 'Fetched 1 additional variants', 'Updated 2 saved variants',
         ])
 
         old_data_sample_guid = 'S000143_na20885'

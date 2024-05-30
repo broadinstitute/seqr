@@ -129,6 +129,10 @@ def _format_search_body(samples, genome_version, num_results, search):
     return search_body
 
 
+def search_data_type(dataset_type, sample_type):
+    return f'{dataset_type}_{sample_type}' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else dataset_type
+
+
 def _get_sample_data(samples, inheritance_filter=None, inheritance_mode=None, **kwargs):
     sample_values = dict(
         individual_guid=F('individual__guid'),
