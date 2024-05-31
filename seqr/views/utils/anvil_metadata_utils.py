@@ -160,7 +160,7 @@ def parse_anvil_metadata(
         get_additional_sample_fields: Callable[[Sample, dict], dict] = None,
         get_additional_individual_fields: Callable[[Individual, dict], dict] = None,
         individual_samples: dict[Individual, Sample] = None, individual_data_types: dict[str, Iterable[str]] = None,
-        airtable_fields: Iterable[str] = None, mme_values: dict = None, variant_filter: dict = None,
+        airtable_fields: Iterable[str] = None, mme_values: dict = None, include_svs: bool = True,
         variant_json_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
         include_no_individual_families: bool = False, omit_airtable: bool = False, include_metadata: bool = False,
         include_discovery_sample_id: bool = False, include_mondo: bool = False, include_parent_mnvs: bool = False,
@@ -184,7 +184,7 @@ def parse_anvil_metadata(
             sample_ids.add(sample.sample_id)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(
-        list(family_data_by_id.keys()), include_metadata, variant_filter=variant_filter, variant_json_fields=variant_json_fields,
+        list(family_data_by_id.keys()), include_metadata, include_svs=include_svs, variant_json_fields=variant_json_fields,
     )
 
     condition_map = _get_condition_map(family_data_by_id.values())
@@ -327,13 +327,13 @@ def _post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
 
 
 def _get_parsed_saved_discovery_variants_by_family(
-        families: Iterable[Family], include_metadata: bool, variant_filter: dict, variant_json_fields: list[str],
+        families: Iterable[Family], include_metadata: bool, include_svs: dict, variant_json_fields: list[str],
 ):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
     project_saved_variants = SavedVariant.objects.filter(
         varianttag__variant_tag_type__in=tag_types, family__id__in=families,
-        **(variant_filter or {}),
+        **({} if include_svs else {'alt__isnull': False}),
     ).order_by('created_date').distinct().annotate(
         tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True),
         partial_hpo_terms=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Partial Phenotype Contribution')),
@@ -355,6 +355,10 @@ def _get_parsed_saved_discovery_variants_by_family(
             phenotype_contribution = 'Uncertain'
             partial_hpo_terms = ''
 
+        variant_fields = ['genotypes']
+        if include_svs:
+            variant_fields += ['svType', 'svName', 'end']
+
         parsed_variant = {
             'chrom': chrom,
             'pos': pos,
@@ -365,7 +369,7 @@ def _get_parsed_saved_discovery_variants_by_family(
             'phenotype_contribution': phenotype_contribution,
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
-            **{k: variant_json.get(k) for k in ['genotypes', 'svType', 'svName', 'end'] + (variant_json_fields or [])},
+            **{k: variant_json.get(k) for k in variant_fields + (variant_json_fields or [])},
             **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt']},
         }
         if include_metadata:

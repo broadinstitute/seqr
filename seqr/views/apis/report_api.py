@@ -397,7 +397,7 @@ def gregor_export(request):
         format_id=_format_gregor_id,
         get_additional_individual_fields=_get_participant_row,
         post_process_variant=_post_process_gregor_variant,
-        variant_filter={'alt__isnull': False},
+        include_svs=False,
         airtable_fields=[SMID_FIELD, PARTICIPANT_ID_FIELD, 'Recontactable'],
         include_mondo=True,
         proband_only_variants=True,
@@ -414,9 +414,6 @@ def gregor_export(request):
         phenotype_rows += _parse_participant_phenotype_rows(participant)
 
         airtable_participant_id = participant.pop(PARTICIPANT_ID_FIELD)
-        if not airtable_participant_id:
-            continue
-
         airtable_metadata = airtable_metadata_by_participant.get(airtable_participant_id) or {}
         data_types = grouped_data_type_individuals[participant['participant_id']]
         _parse_participant_airtable_rows(
@@ -479,6 +476,7 @@ def _parse_participant_airtable_rows(participant, airtable_metadata, data_types,
     has_analyte = False
     analyte_row = {k: participant.pop(k) for k in ANALYTE_TABLE_COLUMNS}
     participant['participant_id'] = analyte_row['participant_id']
+
     # airtable data
     for data_type in data_types:
         if data_type not in airtable_metadata:
