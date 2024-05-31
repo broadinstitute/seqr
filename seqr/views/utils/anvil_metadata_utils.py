@@ -328,7 +328,10 @@ def _get_parsed_saved_discovery_variants_by_family(
     project_saved_variants = SavedVariant.objects.filter(
         varianttag__variant_tag_type__in=tag_types, family__id__in=families,
         **(variant_filter or {}),
-    ).order_by('created_date').distinct().annotate(tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True))
+    ).order_by('created_date').distinct().annotate(
+        tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True),
+        partial_hpo_terms=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Partial Phenotype Contribution')),
+    )
 
     variants = []
     gene_ids = set()
@@ -348,6 +351,8 @@ def _get_parsed_saved_discovery_variants_by_family(
             'gene_ids': [gene_id] if gene_id else variant_json.get('transcripts', {}).keys(),
             'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
             'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.tags else 'Candidate',
+            'phenotype_contribution': 'Partial' if variant.partial_hpo_terms else 'Full',
+            'partial_contribution_explained': variant.partial_hpo_terms[0].replace(', ', '|') if variant.partial_hpo_terms else None,
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
             **{k: variant_json.get(k) for k in ['genotypes', 'svType', 'svName', 'end'] + (variant_json_fields or [])},
             **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt', 'tags']},

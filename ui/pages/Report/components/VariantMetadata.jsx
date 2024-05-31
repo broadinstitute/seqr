@@ -19,6 +19,7 @@ const COLUMNS = [
   { name: 'condition_id' },
   { name: 'condition_inheritance' },
   { name: 'phenotype_contribution' },
+  { name: 'partial_contribution_explained' },
   { name: 'additional_family_members_with_variant' },
   { name: 'method_of_discovery' },
   { name: 'Submitted to MME', format: ({ MME }) => (MME ? 'Yes' : 'No') },
