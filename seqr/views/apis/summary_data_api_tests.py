@@ -107,6 +107,10 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'notes-2': None,
     'tags-1': ['Tier 1 - Novel gene and phenotype'],
     'tags-2': ['Tier 1 - Novel gene and phenotype'],
+    'phenotype_contribution-1': 'Partial',
+    'phenotype_contribution-2': 'Full',
+    'partial_contribution_explained-1': 'HP:0000501|HP:0000365',
+    'partial_contribution_explained-2': '',
     'condition_id': 'OMIM:616126',
     'condition_inheritance': 'Autosomal recessive',
     'known_condition_name': 'Immunodeficiency 38',
@@ -153,6 +157,8 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'chrom-1': '1',
     'gene_known_for_phenotype-1': 'Candidate',
     'tags-1': ['Tier 1 - Novel gene and phenotype'],
+    'phenotype_contribution-1': 'Full',
+    'partial_contribution_explained-1': '',
     'pos-1': 248367227,
     'end-1': None,
     'ref-1': 'TC',
@@ -352,7 +358,8 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get('{}?gene=ENSG00000135953'.format(all_tag_url))
         self.assertEqual(response.status_code, 200)
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
-        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
+        report_variants = {'SV0027168_191912632_r0384_rare', 'SV0027167_191912633_r0384_rare', 'SV0027166_191912634_r0384_rare'}
+        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {*report_variants, *expected_variant_guids})
 
         multi_tag_url = reverse(saved_variants_page, args=['Review;Tier 1 - Novel gene and phenotype'])
         response = self.client.get('{}?gene=ENSG00000135953'.format(multi_tag_url))
@@ -369,7 +376,7 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {
             'SV0000001_2103343353_r0390_100', 'SV0000002_1248367227_r0390_100', 'SV0000007_prefix_19107_DEL_r00',
-            'SV0000006_1248367227_r0003_tes',
+            'SV0000006_1248367227_r0003_tes', *report_variants,
         })
 
         multi_discovery_tag_url = reverse(saved_variants_page, args=['CMG Discovery Tags;Review'])
@@ -707,7 +714,7 @@ class SummaryDataAPITest(AirtableTest):
 
 # Tests for AnVIL access disabled
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data']
+    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = ['NA21234', 'NA21987']
 
@@ -723,7 +730,7 @@ def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
 
 # Test for permissions from AnVIL only
 class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = []
 
