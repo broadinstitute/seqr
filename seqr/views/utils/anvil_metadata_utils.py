@@ -202,10 +202,13 @@ def parse_anvil_metadata(
             family_subject_row, saved_variants, *condition_map, set_conditions_for_variants=proband_only_variants,
         )
 
-        affected_individuals = [individual for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED]
+        affected_individuals = [
+            individual for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED
+        ] if include_metadata else []
 
+        subject_family_row = {k: family_subject_row.pop(k) for k in ['family_id', 'internal_project_id', 'phenotype_description', 'pmid_id', 'solve_status']}  # TODO constant
         family_row = {
-            'family_id': family_subject_row['family_id'],
+            'family_id': subject_family_row['family_id'],
             'consanguinity': next((
                 'Present' if individual.consanguinity else 'None suspected'
                 for individual in family_individuals if individual.consanguinity is not None
@@ -235,7 +238,7 @@ def parse_anvil_metadata(
             )
             if individual.id in matchmaker_individuals:
                 subject_row['MME'] = matchmaker_individuals[individual.id] if mme_values else 'Yes'
-            subject_row.update(family_subject_row)
+            subject_row.update(subject_family_row)
             if individual.solve_status:
                 subject_row['solve_status'] = Individual.SOLVE_STATUS_LOOKUP[individual.solve_status]
             elif individual.affected != Individual.AFFECTED_STATUS_AFFECTED:
