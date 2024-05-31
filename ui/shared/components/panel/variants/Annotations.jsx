@@ -438,7 +438,7 @@ const svSizeDisplay = (size) => {
 const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcriptsById }) => {
   const {
     rsid, svType, numExon, pos, end, svTypeDetail, svSourceDetail, cpxIntervals, algorithms, bothsidesSupport,
-    endChrom,
+    endChrom, CAID
   } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
@@ -610,6 +610,13 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcripts
         <div>
           <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${rsid}`} target="_blank" rel="noreferrer">
             {rsid}
+          </a>
+        </div>
+      )}
+      {CAID && (
+        <div>
+          <a href={`https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/by_canonicalid?canonicalid=${CAID}`} target="_blank" rel="noreferrer">
+            {CAID}
           </a>
         </div>
       )}
