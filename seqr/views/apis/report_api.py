@@ -12,7 +12,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 
 from seqr.views.utils.airtable_utils import AirtableSession
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, \
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, \
     FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, \
     EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, FINDING_METADATA_COLUMNS, GENE_COLUMN
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
@@ -112,12 +112,13 @@ def anvil_export(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     parsed_rows = defaultdict(list)
+    family_diseases = {}
 
     def _add_row(row, family_id, row_type):
         if row_type == DISCOVERY_ROW_TYPE:
             missing_gene_rows = [
                 '{chrom}-{pos}-{ref}-{alt}'.format(**discovery_row) for discovery_row in row
-                if not (discovery_row.get('gene_id') or discovery_row.get('svType'))]
+                if not (discovery_row.get(GENE_COLUMN) or discovery_row.get('svType'))]
             if missing_gene_rows:
                 raise ErrorsWarningsException(
                     [f'Discovery variant(s) {", ".join(missing_gene_rows)} in family {family_id} have no associated gene'])
@@ -146,19 +147,23 @@ def anvil_export(request, project_guid):
                 row.update({
                     'project_id': row.pop('internal_project_id'),
                     'solve_state': row.pop('solve_status'),
-                    'disease_id': row.get('condition_id', '').replace('|', ';'),
-                    'disease_description': row.get('known_condition_name', '').replace('|', ';'),
                     'hpo_present': '|'.join([feature['id'] for feature in row.get('features') or []]),
                     'hpo_absent': '|'.join([feature['id'] for feature in row.get('absent_features') or []]),
                     'ancestry': row['reported_ethnicity'] or row['reported_race'],
                 })
+            if row_type == FAMILY_ROW_TYPE:
+                family_diseases[row[entity_id_field]] = {
+                    'disease_id': row.get('condition_id', '').replace('|', ';'),
+                    'disease_description': row.get('known_condition_name', '').replace('|', ';'),
+                }
             parsed_rows[row_type].append(row)
 
     max_loaded_date = request.GET.get('loadedBefore') or (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
     parse_anvil_metadata(
         [project], request.user, _add_row, max_loaded_date=max_loaded_date, include_discovery_sample_id=True,
-        get_additional_individual_fields=lambda individual, *args: {
+        get_additional_individual_fields=lambda individual, airtable_metadata, has_dbgap_submission, *args: {
             'congenital_status': Individual.ONSET_AGE_LOOKUP[individual.onset_age] if individual.onset_age else 'Unknown',
+            **anvil_export_airtable_fields(airtable_metadata, has_dbgap_submission),
         },
         get_additional_sample_fields=lambda sample, *args: {
             'entity:sample_id': sample.individual.individual_id,
@@ -172,6 +177,9 @@ def anvil_export(request, project_guid):
             'format': lambda f: '|'.join(f.pop('phenotype_group')),
         }},
     )
+
+    for row in parsed_rows[SUBJECT_ROW_TYPE]:
+        row.update(family_diseases[row['family_id']])
 
     return export_multiple_files([
         ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, parsed_rows[SUBJECT_ROW_TYPE]],
@@ -530,7 +538,7 @@ def _get_gregor_airtable_data(participants, user):
     return airtable_metadata_by_participant
 
 
-def _get_participant_row(individual, airtable_sample):
+def _get_participant_row(individual, airtable_sample, *args):
     participant = {
         'gregor_center': 'BROAD',
         'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),

@@ -234,7 +234,7 @@ def parse_anvil_metadata(
 
             subject_row = _get_subject_row(
                 individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields,
-                format_id, include_metadata,
+                format_id,
             )
             if individual.id in matchmaker_individuals:
                 subject_row['MME'] = matchmaker_individuals[individual.id] if mme_values else 'Yes'
@@ -410,7 +410,7 @@ def _get_transcript_field(field, config, transcript):
     return value
 
 
-def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields, format_id, include_metadata):
+def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields, format_id):
     paternal_ids = individual_ids_map.get(individual.father_id, ('', ''))
     maternal_ids = individual_ids_map.get(individual.mother_id, ('', ''))
     subject_row = {
@@ -426,26 +426,25 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, indivi
         'paternal_id': format_id(paternal_ids[0]),
         'maternal_id': format_id(maternal_ids[0]),
     }
-    if include_metadata:
-        subject_row.update({
-            'paternal_guid': paternal_ids[1],
-            'maternal_guid': maternal_ids[1],
-        })
     if airtable_metadata is not None:
-        sequencing = airtable_metadata.get('SequencingProduct') or set()
         subject_row.update({
             'dbgap_study_id': airtable_metadata.get('dbgap_study_id', '') if has_dbgap_submission else '',
             'dbgap_subject_id': airtable_metadata.get('dbgap_subject_id', '') if has_dbgap_submission else '',
         })
-        if include_metadata:
-            subject_row.update({
-                'dbgap_submission': 'Yes' if has_dbgap_submission else 'No',
-                'multiple_datasets': 'Yes' if len(sequencing) > 1 or (
-                        len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS) else 'No',
-            })
     if get_additional_individual_fields:
-        subject_row.update(get_additional_individual_fields(individual, airtable_metadata))
+        subject_row.update(get_additional_individual_fields(individual, airtable_metadata, has_dbgap_submission, maternal_ids, paternal_ids))
     return subject_row
+
+
+def anvil_export_airtable_fields(airtable_metadata, has_dbgap_submission):
+    if airtable_metadata is None:
+        return {}
+    sequencing = airtable_metadata.get('SequencingProduct') or set()
+    return {
+        'dbgap_submission': 'Yes' if has_dbgap_submission else 'No',
+        'multiple_datasets': 'Yes' if len(sequencing) > 1 or (
+                len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS) else 'No',
+    }
 
 
 def _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields=None):
