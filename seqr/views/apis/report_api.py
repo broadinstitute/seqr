@@ -487,31 +487,26 @@ def _parse_participant_phenotype_rows(participant):
 def _parse_participant_airtable_rows(participant, airtable_metadata, data_types, experiment_ids_by_participant,
                                      analyte_rows, airtable_rows, experiment_lookup_rows):
     has_analyte = False
+    analyte_row = {k: participant.pop(k) for k in ANALYTE_TABLE_COLUMNS}
+    participant['participant_id'] = analyte_row['participant_id']
     # airtable data
     for data_type in data_types:
         if data_type not in airtable_metadata:
             continue
         is_rna, row = _get_airtable_row(data_type, airtable_metadata)
         has_analyte = True
-        analyte_rows.append({**participant, **row})
+        analyte_rows.append({**analyte_row, **{k: row[k] for k in ANALYTE_TABLE_COLUMNS if k in row}})
         if not is_rna:
             experiment_ids_by_participant[participant['participant_id']] = row['experiment_dna_short_read_id']
         for table in (RNA_AIRTABLE_TABLES if is_rna else DNA_AIRTABLE_TABLES):
             if table == CALLED_TABLE and not row.get(CALLED_VARIANT_FILE_COLUMN):
                 continue
-            try:
-                airtable_rows[table].append({k: row[k] for k in AIRTABLE_TABLE_COLUMNS[table] if k in row})
-            except KeyError as e:
-                # TODO
-                import pdb; pdb.set_trace()
-                raise e
+            airtable_rows[table].append({k: row[k] for k in AIRTABLE_TABLE_COLUMNS[table] if k in row})
 
         experiment_lookup_rows.append(
             {'participant_id': participant['participant_id'], **_get_experiment_lookup_row(is_rna, row)}
         )
 
-    # TODO constant
-    analyte_row = {k: participant.pop(k) for k in ['analyte_id', 'analyte_type', 'primary_biosample', 'tissue_affected_status']}
     if analyte_row['analyte_id'] and not has_analyte:
         analyte_rows.append(analyte_row)
 
