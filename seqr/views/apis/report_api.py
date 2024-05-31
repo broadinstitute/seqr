@@ -196,17 +196,6 @@ GREGOR_DATA_TYPES = ['wgs', 'wes', 'rna']
 SMID_FIELD = 'SMID'
 PARTICIPANT_ID_FIELD = 'CollaboratorParticipantID'
 COLLABORATOR_SAMPLE_ID_FIELD = 'CollaboratorSampleID'
-PARTICIPANT_TABLE_COLUMNS = {
-    'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
-    'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'proband_relationship',
-    'sex', 'reported_race', 'reported_ethnicity', 'ancestry_detail', 'solve_status', 'missing_variant_case',
-    'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
-}
-GREGOR_FAMILY_TABLE_COLUMNS = {'family_id', 'consanguinity'}
-PHENOTYPE_TABLE_COLUMNS = {
-    'phenotype_id', 'participant_id', 'term_id', 'presence', 'ontology', 'additional_details', 'onset_age_range',
-    'additional_modifiers',
-}
 ANALYTE_TABLE_COLUMNS = {
     'analyte_id', 'participant_id', 'analyte_type', 'primary_biosample', 'tissue_affected_status',
 }
@@ -227,7 +216,6 @@ EXPERIMENT_RNA_TABLE_COLUMNS = {'experiment_rna_short_read_id'}
 EXPERIMENT_RNA_TABLE_COLUMNS.update(EXPERIMENT_COLUMNS)
 EXPERIMENT_RNA_TABLE_COLUMNS.update(EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS)
 EXPERIMENT_RNA_TABLE_COLUMNS.update([c for c in EXPERIMENT_TABLE_AIRTABLE_FIELDS if not c.startswith('target')])
-EXPERIMENT_LOOKUP_TABLE_COLUMNS = {'experiment_id', 'table_name', 'id_in_table', 'participant_id'}
 READ_TABLE = 'aligned_dna_short_read'
 READ_TABLE_AIRTABLE_FIELDS = [
     'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
@@ -251,24 +239,6 @@ CALLED_VARIANT_FILE_COLUMN = 'called_variants_dna_file'
 CALLED_TABLE_COLUMNS = {
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', CALLED_VARIANT_FILE_COLUMN, 'md5sum',
     'caller_software', 'variant_types', 'analysis_details',
-}
-AIRTABLE_TABLE_COLUMNS = {
-    EXPERIMENT_TABLE: EXPERIMENT_TABLE_COLUMNS,
-    READ_TABLE: READ_TABLE_COLUMNS,
-    READ_SET_TABLE: READ_SET_TABLE_COLUMNS,
-    CALLED_TABLE: CALLED_TABLE_COLUMNS,
-    EXPERIMENT_RNA_TABLE: EXPERIMENT_RNA_TABLE_COLUMNS,
-    READ_RNA_TABLE: READ_RNA_TABLE_COLUMNS,
-}
-RNA_AIRTABLE_TABLES = {EXPERIMENT_RNA_TABLE, READ_RNA_TABLE}
-DNA_AIRTABLE_TABLES = set(AIRTABLE_TABLE_COLUMNS.keys()) - RNA_AIRTABLE_TABLES
-
-GENETIC_FINDINGS_TABLE_COLUMNS = {
-    'chrom', 'pos', 'ref', 'alt', 'variant_type', 'variant_reference_assembly', GENE_COLUMN, 'transcript', 'hgvsc', 'hgvsp',
-    'hgvs', 'sv_type', 'chrom_end', 'pos_end', 'copy_number', *FINDING_METADATA_COLUMNS[:4], 'phenotype_contribution', 'partial_contribution_explained',
-    'genetic_findings_id', 'participant_id', 'experiment_id', 'zygosity', 'allele_balance_or_heteroplasmy_percentage',
-    'variant_inheritance', 'linked_variant', 'additional_family_members_with_variant', 'method_of_discovery',
-    'gene_disease_validity',
 }
 
 RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS + [
@@ -295,6 +265,17 @@ AIRTABLE_QUERY_COLUMNS.update(NO_DATA_TYPE_FIELDS)
 for data_type in GREGOR_DATA_TYPES:
     data_type_columns = set(DATA_TYPE_AIRTABLE_COLUMNS) - NO_DATA_TYPE_FIELDS - set(DATA_TYPE_OMIT[data_type])
     AIRTABLE_QUERY_COLUMNS.update({f'{field}_{data_type}' for field in data_type_columns})
+
+AIRTABLE_TABLE_COLUMNS = {
+    EXPERIMENT_TABLE: EXPERIMENT_TABLE_COLUMNS,
+    READ_TABLE: READ_TABLE_COLUMNS,
+    READ_SET_TABLE: READ_SET_TABLE_COLUMNS,
+    CALLED_TABLE: CALLED_TABLE_COLUMNS,
+    EXPERIMENT_RNA_TABLE: EXPERIMENT_RNA_TABLE_COLUMNS,
+    READ_RNA_TABLE: READ_RNA_TABLE_COLUMNS,
+}
+RNA_AIRTABLE_TABLES = {EXPERIMENT_RNA_TABLE, READ_RNA_TABLE}
+DNA_AIRTABLE_TABLES = set(AIRTABLE_TABLE_COLUMNS.keys()) - RNA_AIRTABLE_TABLES
 
 WARN_MISSING_TABLE_COLUMNS = {
     PARTICIPANT_TABLE: ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
@@ -447,13 +428,13 @@ def gregor_export(request):
         variant['experiment_id'] = experiment_ids_by_participant.get(variant['participant_id'])
 
     file_data = [
-        (PARTICIPANT_TABLE, PARTICIPANT_TABLE_COLUMNS, participant_rows),
-        ('family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())),
-        (PHENOTYPE_TABLE, PHENOTYPE_TABLE_COLUMNS, phenotype_rows),
-        ('analyte', ANALYTE_TABLE_COLUMNS, analyte_rows),
-        *[(table, AIRTABLE_TABLE_COLUMNS[table], rows) for table, rows in airtable_rows.items()],
-        (EXPERIMENT_LOOKUP_TABLE, EXPERIMENT_LOOKUP_TABLE_COLUMNS, experiment_lookup_rows),
-        (FINDINGS_TABLE, GENETIC_FINDINGS_TABLE_COLUMNS, genetic_findings_rows),
+        (PARTICIPANT_TABLE, participant_rows),
+        ('family', list(family_map.values())),
+        (PHENOTYPE_TABLE, phenotype_rows),
+        ('analyte', analyte_rows),
+        *[(table, rows) for table, rows in airtable_rows.items()],
+        (EXPERIMENT_LOOKUP_TABLE, experiment_lookup_rows),
+        (FINDINGS_TABLE, genetic_findings_rows),
     ]
 
     files, warnings = _populate_gregor_files(file_data)
@@ -662,7 +643,7 @@ def _populate_gregor_files(file_data):
         )
 
     files = []
-    for file_name, expected_columns, data in file_data:
+    for file_name, data in file_data:
         table_config = table_configs.get(file_name)
         if not table_config:
             errors.insert(0, f'No data model found for "{file_name}" table')
@@ -670,15 +651,13 @@ def _populate_gregor_files(file_data):
 
         files.append((file_name, list(table_config.keys()), data))
 
-        expected_columns = {k for d in data for k, v in d.items() if v}  # TODO
+        expected_columns = {k for d in data for k, v in d.items() if v}
         extra_columns = expected_columns.difference(table_config.keys())
         if extra_columns:
             col_summary = ', '.join(sorted(extra_columns))
             warnings.insert(
                 0, f'The following columns are computed for the "{file_name}" table but are missing from the data model: {col_summary}',
             )
-            errors.append(warnings[0]) # TODO
-            continue
         invalid_data_type_columns = {
             col: config['data_type'] for col, config in table_config.items()
             if config.get('data_type') and config['data_type'] not in DATA_TYPE_VALIDATORS
@@ -864,7 +843,7 @@ def family_metadata(request, project_guid):
             individuals_ids -= set(known_ids.values())
         individual = proband or next(iter(individuals_by_id.values()), None)
         if individual:
-            f.update({k: individual[k] for k in ['phenotype_description', 'pmid_id', 'solve_status']})  # TODO constant?
+            f.update({k: individual[k] for k in ['phenotype_description', 'pmid_id', 'solve_status']})
 
         sorted_samples = sorted(individuals_by_id.values(), key=lambda x: x.get('date_data_generation', ''))
         earliest_sample = next((s for s in [proband or {}] + sorted_samples if s.get('date_data_generation')), {})

@@ -100,6 +100,8 @@ METHOD_MAP = {
     Sample.SAMPLE_TYPE_WGS: 'SR-GS',
 }
 
+FAMILY_INDIVIDUAL_FIELDS = ['family_id', 'internal_project_id', 'phenotype_description', 'pmid_id', 'solve_status']
+
 
 def _format_hgvs(hgvs, *args):
     return (hgvs or '').split(':')[-1]
@@ -206,7 +208,7 @@ def parse_anvil_metadata(
             individual for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED
         ] if include_metadata else []
 
-        subject_family_row = {k: family_subject_row.pop(k) for k in ['family_id', 'internal_project_id', 'phenotype_description', 'pmid_id', 'solve_status']}  # TODO constant
+        subject_family_row = {k: family_subject_row.pop(k) for k in FAMILY_INDIVIDUAL_FIELDS}
         family_row = {
             'family_id': subject_family_row['family_id'],
             'consanguinity': next((
