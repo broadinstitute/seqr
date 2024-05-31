@@ -63,6 +63,7 @@ PROJECT_2_VARIANT = {
     'mainTranscriptId': None,
     'selectedMainTranscriptId': None,
     '_sort': [1000010146],
+    'CAID': 'CA520798130',
 }
 
 GRCH37_VARIANT = {
