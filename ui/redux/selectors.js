@@ -431,7 +431,7 @@ export const getHpoTermOptionsByFamily = createSelector(
     ...acc,
     [familyGuid]: individuals.reduce((fAcc, { features }) => ([...fAcc, ...(features || []).map(
       ({ id, label }) => ({ value: id, text: label, description: id }),
-    )]), []),
+    )]), [{ value: 'Uncertain' }]),
   }), {}),
 )
 
