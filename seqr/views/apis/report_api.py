@@ -412,12 +412,16 @@ def gregor_export(request):
     experiment_ids_by_participant = {}
     for participant in participant_rows:
         phenotype_rows += _parse_participant_phenotype_rows(participant)
+        analyte = {k: participant.pop(k) for k in ANALYTE_TABLE_COLUMNS}
+        participant['participant_id'] = analyte['participant_id']
 
-        airtable_participant_id = participant.pop(PARTICIPANT_ID_FIELD)
-        airtable_metadata = airtable_metadata_by_participant.get(airtable_participant_id) or {}
+        if not participant[PARTICIPANT_ID_FIELD]:
+            continue
+
+        airtable_metadata = airtable_metadata_by_participant.get(participant.pop(PARTICIPANT_ID_FIELD)) or {}
         data_types = grouped_data_type_individuals[participant['participant_id']]
         _parse_participant_airtable_rows(
-            participant, airtable_metadata, data_types, experiment_ids_by_participant,
+            analyte, airtable_metadata, data_types, experiment_ids_by_participant,
             analyte_rows, airtable_rows, experiment_lookup_rows,
         )
 
@@ -471,32 +475,29 @@ def _parse_participant_phenotype_rows(participant):
     ]
 
 
-def _parse_participant_airtable_rows(participant, airtable_metadata, data_types, experiment_ids_by_participant,
+def _parse_participant_airtable_rows(analyte, airtable_metadata, data_types, experiment_ids_by_participant,
                                      analyte_rows, airtable_rows, experiment_lookup_rows):
     has_analyte = False
-    analyte_row = {k: participant.pop(k) for k in ANALYTE_TABLE_COLUMNS}
-    participant['participant_id'] = analyte_row['participant_id']
-
     # airtable data
     for data_type in data_types:
         if data_type not in airtable_metadata:
             continue
         is_rna, row = _get_airtable_row(data_type, airtable_metadata)
         has_analyte = True
-        analyte_rows.append({**analyte_row, **{k: row[k] for k in ANALYTE_TABLE_COLUMNS if k in row}})
+        analyte_rows.append({**analyte, **{k: row[k] for k in ANALYTE_TABLE_COLUMNS if k in row}})
         if not is_rna:
-            experiment_ids_by_participant[participant['participant_id']] = row['experiment_dna_short_read_id']
+            experiment_ids_by_participant[analyte['participant_id']] = row['experiment_dna_short_read_id']
         for table in (RNA_AIRTABLE_TABLES if is_rna else DNA_AIRTABLE_TABLES):
             if table == CALLED_TABLE and not row.get(CALLED_VARIANT_FILE_COLUMN):
                 continue
             airtable_rows[table].append({k: row[k] for k in AIRTABLE_TABLE_COLUMNS[table] if k in row})
 
         experiment_lookup_rows.append(
-            {'participant_id': participant['participant_id'], **_get_experiment_lookup_row(is_rna, row)}
+            {'participant_id': analyte['participant_id'], **_get_experiment_lookup_row(is_rna, row)}
         )
 
-    if analyte_row['analyte_id'] and not has_analyte:
-        analyte_rows.append(analyte_row)
+    if analyte['analyte_id'] and not has_analyte:
+        analyte_rows.append(analyte)
 
 
 def _get_gregor_airtable_data(participants, user):
@@ -797,8 +798,8 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
 
 def _get_row_id(row):
     id_col = next(col for col in [
-        'genetic_findings_id', 'participant_id', 'experiment_sample_id', 'analyte_id',
-        'aligned_dna_short_read_id', 'aligned_rna_short_read_id', 'family_id',
+        'genetic_findings_id', 'participant_id', 'experiment_sample_id', 'analyte_id', 'family_id',
+        'aligned_dna_short_read_id', 'aligned_rna_short_read_id', 'aligned_dna_short_read_set_id', 'aligned_rna_short_read_set_id',
     ] if col in row)
     return row[id_col]
 
