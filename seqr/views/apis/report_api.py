@@ -226,7 +226,8 @@ READ_TABLE_COLUMNS.update(READ_TABLE_AIRTABLE_FIELDS)
 READ_RNA_TABLE = 'aligned_rna_short_read'
 READ_RNA_TABLE_AIRTABLE_ID_FIELDS = ['aligned_rna_short_read_file', 'aligned_rna_short_read_index_file']
 READ_RNA_TABLE_AIRTABLE_FIELDS = [
-    'gene_annotation', 'alignment_software', 'alignment_log_file', 'percent_uniquely_aligned', 'percent_multimapped', 'percent_unaligned',
+    'gene_annotation', 'alignment_software', 'alignment_log_file', 'percent_uniquely_aligned', 'percent_multimapped',
+    'percent_unaligned', 'reference_assembly_uri',
 ]
 READ_RNA_TABLE_COLUMNS = {'aligned_rna_short_read_id', 'experiment_rna_short_read_id'}
 READ_RNA_TABLE_COLUMNS.update(READ_RNA_TABLE_AIRTABLE_ID_FIELDS)
@@ -242,7 +243,7 @@ CALLED_TABLE_COLUMNS = {
 }
 
 RNA_ONLY = EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS + READ_RNA_TABLE_AIRTABLE_FIELDS + [
-    'reference_assembly_uri', 'tissue_affected_status', 'Primary_Biosample']
+    'tissue_affected_status', 'Primary_Biosample']
 DATA_TYPE_OMIT = {
     'wgs': ['targeted_regions_method'] + RNA_ONLY, 'wes': RNA_ONLY, 'rna': [
         'targeted_regions_method', 'target_insert_size', 'mean_coverage', 'aligned_dna_short_read_file',
