@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add "Partial Phenotype Contribution" functional tag (REQUIRES DB MIGRATION)
 
 ## 5/24/24
 * Adds external_data to Family model (REQUIRES DB MIGRATION)
