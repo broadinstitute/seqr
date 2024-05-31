@@ -207,9 +207,10 @@ EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
     'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
 ]
 EXPERIMENT_COLUMNS = {'analyte_id', 'experiment_sample_id'}
-EXPERIMENT_TABLE_COLUMNS = {'experiment_dna_short_read_id', 'sequencing_event_details'}
+EXPERIMENT_TABLE_COLUMNS = {'experiment_dna_short_read_id'}
 EXPERIMENT_TABLE_COLUMNS.update(EXPERIMENT_COLUMNS)
 EXPERIMENT_TABLE_COLUMNS.update(EXPERIMENT_TABLE_AIRTABLE_FIELDS)
+EXPERIMENT_RNA_TABLE = 'experiment_rna_short_read'
 EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS = [
     'library_prep_type', 'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size',
     'total_reads', 'percent_rRNA', 'percent_mRNA', '5prime3prime_bias',
@@ -219,12 +220,14 @@ EXPERIMENT_RNA_TABLE_COLUMNS.update(EXPERIMENT_COLUMNS)
 EXPERIMENT_RNA_TABLE_COLUMNS.update(EXPERIMENT_RNA_TABLE_AIRTABLE_FIELDS)
 EXPERIMENT_RNA_TABLE_COLUMNS.update([c for c in EXPERIMENT_TABLE_AIRTABLE_FIELDS if not c.startswith('target')])
 EXPERIMENT_LOOKUP_TABLE_COLUMNS = {'experiment_id', 'table_name', 'id_in_table', 'participant_id'}
+READ_TABLE = 'aligned_dna_short_read'
 READ_TABLE_AIRTABLE_FIELDS = [
     'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
     'mean_coverage', 'alignment_software', 'analysis_details',
 ]
 READ_TABLE_COLUMNS = {'aligned_dna_short_read_id', 'experiment_dna_short_read_id'}
 READ_TABLE_COLUMNS.update(READ_TABLE_AIRTABLE_FIELDS)
+READ_RNA_TABLE = 'aligned_rna_short_read'
 READ_RNA_TABLE_AIRTABLE_ID_FIELDS = ['aligned_rna_short_read_file', 'aligned_rna_short_read_index_file']
 READ_RNA_TABLE_AIRTABLE_FIELDS = [
     'gene_annotation', 'alignment_software', 'alignment_log_file', 'percent_uniquely_aligned', 'percent_multimapped', 'percent_unaligned',
@@ -233,12 +236,25 @@ READ_RNA_TABLE_COLUMNS = {'aligned_rna_short_read_id', 'experiment_rna_short_rea
 READ_RNA_TABLE_COLUMNS.update(READ_RNA_TABLE_AIRTABLE_ID_FIELDS)
 READ_RNA_TABLE_COLUMNS.update(READ_RNA_TABLE_AIRTABLE_FIELDS)
 READ_RNA_TABLE_COLUMNS.update(READ_TABLE_AIRTABLE_FIELDS[2:-1])
+READ_SET_TABLE = 'aligned_dna_short_read_set'
 READ_SET_TABLE_COLUMNS = {'aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'}
+CALLED_TABLE = 'called_variants_dna_short_read'
 CALLED_VARIANT_FILE_COLUMN = 'called_variants_dna_file'
 CALLED_TABLE_COLUMNS = {
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', CALLED_VARIANT_FILE_COLUMN, 'md5sum',
     'caller_software', 'variant_types', 'analysis_details',
 }
+AIRTABLE_TABLE_COLUMNS = {
+    EXPERIMENT_TABLE: EXPERIMENT_TABLE_COLUMNS,
+    READ_TABLE: READ_TABLE_COLUMNS,
+    READ_SET_TABLE: READ_SET_TABLE_COLUMNS,
+    CALLED_TABLE: CALLED_TABLE_COLUMNS,
+    EXPERIMENT_RNA_TABLE: EXPERIMENT_RNA_TABLE_COLUMNS,
+    READ_RNA_TABLE: READ_RNA_TABLE_COLUMNS,
+}
+RNA_AIRTABLE_TABLES = {EXPERIMENT_RNA_TABLE, READ_RNA_TABLE}
+DNA_AIRTABLE_TABLES = set(AIRTABLE_TABLE_COLUMNS.keys()) - RNA_AIRTABLE_TABLES
+
 GENETIC_FINDINGS_TABLE_COLUMNS = {
     'chrom', 'pos', 'ref', 'alt', 'variant_type', 'variant_reference_assembly', GENE_COLUMN, 'transcript', 'hgvsc', 'hgvsp',
     'hgvs', 'sv_type', 'chrom_end', 'pos_end', 'copy_number', *FINDING_METADATA_COLUMNS[:4], 'phenotype_contribution', 'partial_contribution_explained',
@@ -401,8 +417,7 @@ def gregor_export(request):
 
     phenotype_rows = []
     analyte_rows = []
-    airtable_rows = []
-    airtable_rna_rows = []
+    airtable_rows = {table: [] for table in AIRTABLE_TABLE_COLUMNS.keys()}
     experiment_lookup_rows = []
     experiment_ids_by_participant = {}
     for participant in participant_rows:
@@ -416,7 +431,7 @@ def gregor_export(request):
         data_types = grouped_data_type_individuals[participant['participant_id']]
         _parse_participant_airtable_rows(
             participant, airtable_metadata, data_types, experiment_ids_by_participant,
-            analyte_rows, airtable_rows, airtable_rna_rows, experiment_lookup_rows,
+            analyte_rows, airtable_rows, experiment_lookup_rows,
         )
 
     # Add experiment IDs
@@ -428,14 +443,7 @@ def gregor_export(request):
         ('family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())),
         (PHENOTYPE_TABLE, PHENOTYPE_TABLE_COLUMNS, phenotype_rows),
         ('analyte', ANALYTE_TABLE_COLUMNS, analyte_rows),
-        (EXPERIMENT_TABLE, EXPERIMENT_TABLE_COLUMNS, airtable_rows),
-        ('aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows),
-        ('aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows),
-        ('called_variants_dna_short_read', CALLED_TABLE_COLUMNS, [
-            row for row in airtable_rows if row.get(CALLED_VARIANT_FILE_COLUMN)
-        ]),
-        ('experiment_rna_short_read', EXPERIMENT_RNA_TABLE_COLUMNS, airtable_rna_rows),
-        ('aligned_rna_short_read', READ_RNA_TABLE_COLUMNS, airtable_rna_rows),
+        *[(table, AIRTABLE_TABLE_COLUMNS[table], rows) for table, rows in airtable_rows.items()],
         (EXPERIMENT_LOOKUP_TABLE, EXPERIMENT_LOOKUP_TABLE_COLUMNS, experiment_lookup_rows),
         (FINDINGS_TABLE, GENETIC_FINDINGS_TABLE_COLUMNS, genetic_findings_rows),
     ]
@@ -477,7 +485,7 @@ def _parse_participant_phenotype_rows(participant):
 
 
 def _parse_participant_airtable_rows(participant, airtable_metadata, data_types, experiment_ids_by_participant,
-                                     analyte_rows, airtable_rows, airtable_rna_rows, experiment_lookup_rows):
+                                     analyte_rows, airtable_rows, experiment_lookup_rows):
     has_analyte = False
     # airtable data
     for data_type in data_types:
@@ -488,7 +496,16 @@ def _parse_participant_airtable_rows(participant, airtable_metadata, data_types,
         analyte_rows.append({**participant, **row})
         if not is_rna:
             experiment_ids_by_participant[participant['participant_id']] = row['experiment_dna_short_read_id']
-        (airtable_rna_rows if is_rna else airtable_rows).append(row)
+        for table in (RNA_AIRTABLE_TABLES if is_rna else DNA_AIRTABLE_TABLES):
+            if table == CALLED_TABLE and not row.get(CALLED_VARIANT_FILE_COLUMN):
+                continue
+            try:
+                airtable_rows[table].append({k: row[k] for k in AIRTABLE_TABLE_COLUMNS[table] if k in row})
+            except KeyError as e:
+                # TODO
+                import pdb; pdb.set_trace()
+                raise e
+
         experiment_lookup_rows.append(
             {'participant_id': participant['participant_id'], **_get_experiment_lookup_row(is_rna, row)}
         )
@@ -798,7 +815,10 @@ def _validate_column_data(column, file_name, data, column_validator, warnings, e
 
 
 def _get_row_id(row):
-    id_col = next(col for col in ['genetic_findings_id', 'participant_id', 'experiment_sample_id', 'family_id'] if col in row)
+    id_col = next(col for col in [
+        'genetic_findings_id', 'participant_id', 'experiment_sample_id', 'analyte_id',
+        'aligned_dna_short_read_id', 'aligned_rna_short_read_id', 'family_id',
+    ] if col in row)
     return row[id_col]
 
 
