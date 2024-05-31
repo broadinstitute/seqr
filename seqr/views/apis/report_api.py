@@ -918,7 +918,6 @@ def variant_metadata(request, project_guid):
         elif row_type == DISCOVERY_ROW_TYPE:
             family = families_by_id[family_id]
             for variant in row:
-                del variant['gene_ids']
                 variant_rows.append({
                     'MME': variant.pop('variantId') in participant_mme[variant['participant_id']].get('variant_ids', []),
                     'phenotype_contribution': 'Full',

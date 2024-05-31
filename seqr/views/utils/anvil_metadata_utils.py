@@ -182,7 +182,7 @@ def parse_anvil_metadata(
             sample_ids.add(sample.sample_id)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(
-        list(family_data_by_id.keys()), variant_filter=variant_filter, variant_json_fields=variant_json_fields,
+        list(family_data_by_id.keys()), include_metadata, variant_filter=variant_filter, variant_json_fields=variant_json_fields,
     )
 
     condition_map = _get_condition_map(family_data_by_id.values())
@@ -325,7 +325,7 @@ def _post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
 
 
 def _get_parsed_saved_discovery_variants_by_family(
-        families: Iterable[Family], variant_filter: dict, variant_json_fields: list[str],
+        families: Iterable[Family], include_metadata: bool, variant_filter: dict, variant_json_fields: list[str],
 ):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
@@ -353,26 +353,32 @@ def _get_parsed_saved_discovery_variants_by_family(
             phenotype_contribution = 'Uncertain'
             partial_hpo_terms = ''
 
-        variants.append({
+        variant = {
             'chrom': chrom,
             'pos': pos,
             'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
             'gene_id': gene_id,
             'gene_ids': [gene_id] if gene_id else variant_json.get('transcripts', {}).keys(),
-            'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
             'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.tags else 'Candidate',
             'phenotype_contribution': phenotype_contribution,
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
             **{k: variant_json.get(k) for k in ['genotypes', 'svType', 'svName', 'end'] + (variant_json_fields or [])},
-            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt', 'tags']},
-        })
+            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt']},
+        }
+        if include_metadata:
+            variant.update({
+                'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
+                'tags': variant.tags,
+            })
+        variants.append(variant)
 
     genes_by_id = get_genes(gene_ids)
 
     saved_variants_by_family = defaultdict(list)
     for row in variants:
-        row[GENE_COLUMN] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
+        gene_id = row['gene_id'] if include_metadata else row.pop('gene_id')
+        row[GENE_COLUMN] = genes_by_id.get(gene_id, {}).get('geneSymbol')
         family_id = row.pop('family_id')
         saved_variants_by_family[family_id].append(row)
 
@@ -586,8 +592,9 @@ def _update_conditions(family_subject_row, variants, omim_conditions, mondo_cond
             c for mim_number in mim_numbers for c in omim_conditions[mim_number][None]
             if c['chrom'] == v['chrom'] and c['start'] <= v['pos'] <= c['end']
         ]
+        gene_ids = v.pop('gene_ids')
         for mim_number in mim_numbers:
-            for gene_id in v['gene_ids']:
+            for gene_id in gene_ids:
                 variant_conditions += omim_conditions[mim_number][gene_id]
 
         if set_conditions_for_variants:
