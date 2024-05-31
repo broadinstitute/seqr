@@ -8,12 +8,12 @@ from seqr.models import Family, VariantTagType, VariantTag, Sample
 class TransferFamiliesTest(TestCase):
     fixtures = ['users', '1kg_project']
 
-    def _test_command(self, mock_loger, additional_family, logs):
+    def _test_command(self, mock_logger, additional_family, logs):
         call_command(
             'transfer_families_to_different_project', '--from-project=R0001_1kg', '--to-project=R0003_test', additional_family, '2',
         )
 
-        mock_loger.assert_has_calls([
+        mock_logger.assert_has_calls([
             *logs,
             mock.call('Updating "Excluded" tags'),
             mock.call('Updating families'),
@@ -38,15 +38,15 @@ class TransferFamiliesTest(TestCase):
 
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @mock.patch('seqr.management.commands.transfer_families_to_different_project.logger.info')
-    def test_es_command(self, mock_loger):
+    def test_es_command(self, mock_logger):
         self._test_command(
-            mock_loger, additional_family='12', logs=[mock.call('Found 1 out of 2 families. No match for: 12.')]
+            mock_logger, additional_family='12', logs=[mock.call('Found 1 out of 2 families. No match for: 12.')]
         )
 
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', '')
     @mock.patch('seqr.management.commands.transfer_families_to_different_project.logger.info')
-    def test_hail_backend_command(self, mock_loger):
-        searchable_family = self._test_command(mock_loger, additional_family='4', logs=[
+    def test_hail_backend_command(self, mock_logger):
+        searchable_family = self._test_command(mock_logger, additional_family='4', logs=[
             mock.call('Found 2 out of 2 families.'),
             mock.call('Disabled search for 7 samples in the following 1 families: 2'),
         ])
