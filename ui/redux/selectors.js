@@ -425,6 +425,16 @@ export const getUserOptions = createSelector(
   ),
 )
 
+export const getHpoTermOptionsByFamily = createSelector(
+  getIndividualsByFamily,
+  individualsByFamily => Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
+    ...acc,
+    [familyGuid]: individuals.reduce((fAcc, { features }) => ([...fAcc, ...(features || []).map(
+      ({ id, label }) => ({ value: id, text: label, description: id }),
+    )]), []),
+  }), {}),
+)
+
 export const getRnaSeqSignificantJunctionData = createSelector(
   getGenesById,
   getIndividualsByGuid,

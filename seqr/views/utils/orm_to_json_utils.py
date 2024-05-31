@@ -441,8 +441,7 @@ def _format_functional_tags(tags):
         display_data = VariantFunctionalData.FUNCTIONAL_DATA_TAG_LOOKUP[name]
         tag.update({
             'name': name,
-            'metadataTitle': display_data.get('metadata_title', 'Notes'),
-            'color': display_data['color'],
+            **{k: display_data[k] for k in ['metadataTitle', 'color']},
         })
     return tags
 
