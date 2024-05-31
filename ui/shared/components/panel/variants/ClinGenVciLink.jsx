@@ -11,13 +11,20 @@ class ClinGenVciLink extends React.PureComponent {
 
   static propTypes = {
     hgvsc: PropTypes.string.isRequired,
+    caid: PropTypes.string,
   }
 
   state = {
     loading: false,
     alleleId: null,
     error: '',
-  };
+  }
+
+  constructor(props) {
+    super(props)
+    const { caid } = props
+    this.state.alleleId = caid
+  }
 
   load = (hgvsc) => {
     this.setState({ loading: true })
@@ -34,11 +41,17 @@ class ClinGenVciLink extends React.PureComponent {
     const { hgvsc } = this.props
     const { alleleId, loading, error } = this.state
 
-    return (
-      <DataLoader contentId={hgvsc} content={alleleId || error} loading={loading} load={this.load}>
+    const clingenInfo = (
+      <div>
         <a href={CLINGEN_VCI_URL} target="_blank" rel="noreferrer">In ClinGen VCI</a>
         <br />
         {error || (alleleId && <CopyToClipboardButton text={alleleId} />)}
+      </div>
+    )
+
+    return alleleId ? clingenInfo : (
+      <DataLoader contentId={hgvsc} content={alleleId || error} loading={loading} load={this.load}>
+        {clingenInfo}
       </DataLoader>
     )
   }
