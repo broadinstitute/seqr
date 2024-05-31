@@ -438,7 +438,7 @@ const svSizeDisplay = (size) => {
 const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcriptsById }) => {
   const {
     rsid, svType, numExon, pos, end, svTypeDetail, svSourceDetail, cpxIntervals, algorithms, bothsidesSupport,
-    endChrom, CAID
+    endChrom, CAID,
   } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
