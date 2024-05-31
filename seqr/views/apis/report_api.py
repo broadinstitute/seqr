@@ -408,10 +408,11 @@ def gregor_export(request):
     for participant in participant_rows:
         phenotype_rows += _parse_participant_phenotype_rows(participant)
 
-        if not participant[PARTICIPANT_ID_FIELD]:
+        airtable_participant_id = participant.pop(PARTICIPANT_ID_FIELD)
+        if not airtable_participant_id:
             continue
 
-        airtable_metadata = airtable_metadata_by_participant.get(participant[PARTICIPANT_ID_FIELD]) or {}
+        airtable_metadata = airtable_metadata_by_participant.get(airtable_participant_id) or {}
         data_types = grouped_data_type_individuals[participant['participant_id']]
         _parse_participant_airtable_rows(
             participant, airtable_metadata, data_types, experiment_ids_by_participant,
@@ -467,11 +468,11 @@ def _get_individual_data_types(projects):
 def _parse_participant_phenotype_rows(participant):
     base_phenotype_row = {'participant_id': participant['participant_id'], 'presence': 'Present', 'ontology': 'HPO'}
     present_rows = [
-        dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in participant['features'] or []
+        dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in participant.pop('features') or []
     ]
     base_phenotype_row['presence'] = 'Absent'
     return present_rows + [
-        dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in participant['absent_features'] or []
+        dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in participant.pop('absent_features') or []
     ]
 
 
@@ -492,8 +493,10 @@ def _parse_participant_airtable_rows(participant, airtable_metadata, data_types,
             {'participant_id': participant['participant_id'], **_get_experiment_lookup_row(is_rna, row)}
         )
 
-    if participant['analyte_id'] and not has_analyte:
-        analyte_rows.append(participant)
+    # TODO constant
+    analyte_row = {k: participant.pop(k) for k in ['analyte_id', 'analyte_type', 'primary_biosample', 'tissue_affected_status']}
+    if analyte_row['analyte_id'] and not has_analyte:
+        analyte_rows.append(analyte_row)
 
 
 def _get_gregor_airtable_data(participants, user):
@@ -647,12 +650,15 @@ def _populate_gregor_files(file_data):
 
         files.append((file_name, list(table_config.keys()), data))
 
+        expected_columns = {k for d in data for k, v in d.items() if v}  # TODO
         extra_columns = expected_columns.difference(table_config.keys())
         if extra_columns:
             col_summary = ', '.join(sorted(extra_columns))
             warnings.insert(
                 0, f'The following columns are computed for the "{file_name}" table but are missing from the data model: {col_summary}',
             )
+            errors.append(warnings[0]) # TODO
+            continue
         invalid_data_type_columns = {
             col: config['data_type'] for col, config in table_config.items()
             if config.get('data_type') and config['data_type'] not in DATA_TYPE_VALIDATORS

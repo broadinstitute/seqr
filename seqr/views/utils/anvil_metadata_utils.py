@@ -136,7 +136,8 @@ def _get_family_metadata(family_filter, family_fields, include_metadata, include
     family_data_by_id = {}
     for f in family_data:
         family_id = f.pop('id')
-        solve_status = ANALYSIS_SOLVE_STATUS_LOOKUP.get(f['analysisStatus'], Individual.UNSOLVED)
+        analysis_status = f['analysisStatus'] if include_metadata else f.pop('analysisStatus')
+        solve_status = ANALYSIS_SOLVE_STATUS_LOOKUP.get(analysis_status, Individual.UNSOLVED)
         f.update({
             'solve_status': Individual.SOLVE_STATUS_LOOKUP[solve_status],
             **{k: v['format'](f) for k, v in (family_fields or {}).items()},
@@ -230,7 +231,7 @@ def parse_anvil_metadata(
 
             subject_row = _get_subject_row(
                 individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields,
-                format_id,
+                format_id, include_metadata,
             )
             if individual.id in matchmaker_individuals:
                 subject_row['MME'] = matchmaker_individuals[individual.id] if mme_values else 'Yes'
@@ -400,7 +401,7 @@ def _get_transcript_field(field, config, transcript):
     return value
 
 
-def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields, format_id):
+def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, individual_ids_map, get_additional_individual_fields, format_id, include_metadata):
     paternal_ids = individual_ids_map.get(individual.father_id, ('', ''))
     maternal_ids = individual_ids_map.get(individual.mother_id, ('', ''))
     subject_row = {
@@ -414,19 +415,25 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, indivi
         'absent_features': individual.absent_features,
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
         'paternal_id': format_id(paternal_ids[0]),
-        'paternal_guid': paternal_ids[1],
         'maternal_id': format_id(maternal_ids[0]),
-        'maternal_guid': maternal_ids[1],
     }
+    if include_metadata:
+        subject_row.update({
+            'paternal_guid': paternal_ids[1],
+            'maternal_guid': maternal_ids[1],
+        })
     if airtable_metadata is not None:
         sequencing = airtable_metadata.get('SequencingProduct') or set()
         subject_row.update({
-            'dbgap_submission': 'Yes' if has_dbgap_submission else 'No',
             'dbgap_study_id': airtable_metadata.get('dbgap_study_id', '') if has_dbgap_submission else '',
             'dbgap_subject_id': airtable_metadata.get('dbgap_subject_id', '') if has_dbgap_submission else '',
-            'multiple_datasets': 'Yes' if len(sequencing) > 1 or (
-            len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS) else 'No',
         })
+        if include_metadata:
+            subject_row.update({
+                'dbgap_submission': 'Yes' if has_dbgap_submission else 'No',
+                'multiple_datasets': 'Yes' if len(sequencing) > 1 or (
+                        len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS) else 'No',
+            })
     if get_additional_individual_fields:
         subject_row.update(get_additional_individual_fields(individual, airtable_metadata))
     return subject_row
