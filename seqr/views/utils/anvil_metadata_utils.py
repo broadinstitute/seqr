@@ -353,7 +353,7 @@ def _get_parsed_saved_discovery_variants_by_family(
             phenotype_contribution = 'Uncertain'
             partial_hpo_terms = ''
 
-        variant = {
+        parsed_variant = {
             'chrom': chrom,
             'pos': pos,
             'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
@@ -367,11 +367,11 @@ def _get_parsed_saved_discovery_variants_by_family(
             **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt']},
         }
         if include_metadata:
-            variant.update({
+            parsed_variant.update({
                 'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
                 'tags': variant.tags,
             })
-        variants.append(variant)
+        variants.append(parsed_variant)
 
     genes_by_id = get_genes(gene_ids)
 

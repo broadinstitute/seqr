@@ -854,6 +854,9 @@ def family_metadata(request, project_guid):
             }
             f.update(known_ids)
             individuals_ids -= set(known_ids.values())
+        individual = proband or next(iter(individuals_by_id.values()), None)
+        if individual:
+            f.update({k: individual[k] for k in ['phenotype_description', 'pmid_id', 'solve_status']})  # TODO constant?
 
         sorted_samples = sorted(individuals_by_id.values(), key=lambda x: x.get('date_data_generation', ''))
         earliest_sample = next((s for s in [proband or {}] + sorted_samples if s.get('date_data_generation')), {})
