@@ -120,7 +120,7 @@ CaseReviewStatus.propTypes = {
 
 const SHOW_DATA_MODAL_CONFIG = [
   {
-    shouldShowField: 'hasPhenotypeGeneScores',
+    shouldShow: individual => individual.phenotypePrioritizationTools.length > 0,
     component: PhenotypePrioritizedGenes,
     modalName: ({ individualId }) => `PHENOTYPE-PRIORITIZATION-${individualId}`,
     title: ({ individualId }) => `Phenotype Prioritized Genes: ${individualId}`,
@@ -179,7 +179,10 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         </Link>
       </div>
     )}
-    {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
+    {individual.phenotypePrioritizationTools.map(
+      tool => <div key={tool.tool}><Sample loadedSample={tool} /></div>,
+    )}
+    {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShow }) => shouldShow(individual)).map(
       ({ modalName, title, modalSize, linkText, component }) => {
         const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
         const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
@@ -573,8 +576,13 @@ class IndividualRow extends React.PureComponent {
 
     const editCaseReview = tableName === CASE_REVIEW_TABLE_NAME
     const rightContent = editCaseReview ?
-      <CaseReviewStatus individual={individual} /> :
-      <DataDetails loadedSamples={loadedSamples} individual={individual} mmeSubmission={mmeSubmission} />
+      <CaseReviewStatus individual={individual} /> : (
+        <DataDetails
+          loadedSamples={loadedSamples}
+          individual={individual}
+          mmeSubmission={mmeSubmission}
+        />
+      )
 
     return (
       <CollapsableLayout

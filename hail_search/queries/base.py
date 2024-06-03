@@ -4,11 +4,10 @@ import hail as hl
 import logging
 import os
 
-from hail_search.constants import AFFECTED, AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
+from hail_search.constants import AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIELDS, ANY_AFFECTED, COMP_HET_ALT, \
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
-    HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, UNAFFECTED, \
-    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, UNKNOWN_AFFECTED, UNKNOWN_AFFECTED_ID, FAMILY_GUID_FIELD, GENOTYPES_FIELD, \
-    AFFECTED_ID_MAP
+    HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, \
+    UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
@@ -385,11 +384,7 @@ class BaseHailTableQuery(object):
 
         ht, sorted_family_sample_data = self._add_entry_sample_families(ht, sample_data)
 
-        quality_filter = quality_filter or {}
-        if quality_filter.get('vcf_filter'):
-            ht = self._filter_vcf_filters(ht)
-
-        passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht=ht, **kwargs)
+        passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, **kwargs)
         if passes_quality_filter is not None:
             ht = ht.annotate(family_entries=ht.family_entries.map(
                 lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
@@ -539,7 +534,9 @@ class BaseHailTableQuery(object):
             is_valid &= unaffected_filter
         return hl.or_missing(is_valid, entries)
 
-    def _get_family_passes_quality_filter(self, quality_filter, **kwargs):
+    def _get_family_passes_quality_filter(self, quality_filter, ht, **kwargs):
+        quality_filter = quality_filter or {}
+
         affected_only = quality_filter.get('affected_only')
         passes_quality_filters = []
         for filter_k, value in quality_filter.items():
@@ -548,10 +545,16 @@ class BaseHailTableQuery(object):
             if field and value:
                 passes_quality_filters.append(self._get_genotype_passes_quality_field(field, value, affected_only))
 
-        if not passes_quality_filters:
+        has_vcf_filter = quality_filter.get('vcf_filter')
+        if not (passes_quality_filters or has_vcf_filter):
             return None
 
-        return lambda entries: entries.all(lambda gt: hl.all([f(gt) for f in passes_quality_filters]))
+        def passes_quality(entries):
+            passes_filters = entries.all(lambda gt: hl.all([f(gt) for f in passes_quality_filters])) if passes_quality_filters else True
+            passes_vcf_filters = self._passes_vcf_filters(ht) if has_vcf_filter else True
+            return passes_filters & passes_vcf_filters
+
+        return passes_quality
 
     @classmethod
     def _get_genotype_passes_quality_field(cls, field, value, affected_only):
@@ -570,8 +573,8 @@ class BaseHailTableQuery(object):
         return passes_quality_field
 
     @staticmethod
-    def _filter_vcf_filters(ht):
-        return ht.filter(hl.is_missing(ht.filters) | (ht.filters.length() < 1))
+    def _passes_vcf_filters(ht):
+        return hl.is_missing(ht.filters) | (ht.filters.length() < 1)
 
     def _parse_variant_keys(self, variant_keys=None, **kwargs):
         return [hl.struct(**{self.KEY_FIELD[0]: key}) for key in (variant_keys or [])]

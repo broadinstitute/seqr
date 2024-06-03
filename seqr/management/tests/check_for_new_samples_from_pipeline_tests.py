@@ -14,9 +14,9 @@ EXTERNAL_PROJECT_GUID = 'R0004_non_analyst_project'
 MOCK_HAIL_HOST = 'http://test-hail-host'
 
 GUID_ID = 54321
-NEW_SAMPLE_GUID_P3 = f'S{GUID_ID}_NA20888'
-NEW_SAMPLE_GUID_P4 = f'S{GUID_ID}_NA21234'
-REPLACED_SAMPLE_GUID = f'S{GUID_ID}_NA20885'
+NEW_SAMPLE_GUID_P3 = f'S00000{GUID_ID}_na20888'
+NEW_SAMPLE_GUID_P4 = f'S00000{GUID_ID}_na21234'
+REPLACED_SAMPLE_GUID = f'S00000{GUID_ID}_na20885'
 EXISTING_SAMPLE_GUID = 'S000154_na20889'
 EXISTING_WGS_SAMPLE_GUID = 'S000144_na20888'
 EXISTING_SV_SAMPLE_GUID = 'S000147_na21234'
@@ -49,7 +49,7 @@ INTERNAL_HTML_EMAIL = f'Dear seqr user,<br /><br />' \
 
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HAIL_HOST)
-@mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: GUID_ID)
+@mock.patch('seqr.models.random.randint', lambda *args: GUID_ID)
 @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', 'http://testairtable')
 @mock.patch('seqr.utils.search.add_data_utils.BASE_URL', SEQR_URL)
 @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
@@ -220,7 +220,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
                 {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234'},
             ]}},
         ], reload_annotations_logs=[
-            'Reloading shared annotations for 3 saved variants (3 unique)', 'Fetched 1 additional variants', 'Fetched 1 additional variants', 'Updated 2 saved variants',
+            'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Fetched 1 additional variants', 'Fetched 1 additional variants', 'Updated 2 saved variants',
         ])
 
         old_data_sample_guid = 'S000143_na20885'
@@ -381,7 +381,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             'sample_type': 'WES',
             'family_samples': {'F000004_4': ['NA20872'], 'F000012_12': ['NA20889']},
         }
-        self._test_success('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S{GUID_ID}_NA20872', f'S{GUID_ID}_NA20889'}, reload_calls=[{
+        self._test_success('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S00000{GUID_ID}_na20872', f'S00000{GUID_ID}_na20889'}, reload_calls=[{
             'genome_version': 'GRCh37', 'num_results': 1, 'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'],
             'sample_data': {'SV_WES': [{'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889'}]},
         }], reload_annotations_logs=['No additional saved variants to update'])

@@ -406,7 +406,7 @@ export const getVisibleFamilies = createSelector(
     return familyFilter ?
       searchedFamilies.filter(family => familyFilter({
         ...family,
-        individuals: family?.individualGuids.map(individualGuid => (individualsByGuid[individualGuid])),
+        individuals: family?.individualGuids?.map(individualGuid => (individualsByGuid[individualGuid])),
       })) : searchedFamilies
   },
 )

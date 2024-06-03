@@ -153,7 +153,7 @@ MISMATCHED_GENE_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
 MISMATCHED_GENE_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene']['id'] = 'ENSG00000227232'
 MISMATCHED_GENE_NEW_MATCH_JSON['patient']['id'] = '987'
 
-MOCK_SLACK_TOKEN = 'xoxp-123'
+MOCK_SLACK_TOKEN = 'xoxp-123'  # nosec
 
 MOCK_NODES_BY_NAME = {
     'Node A': {'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'},

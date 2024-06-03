@@ -1,6 +1,14 @@
 # _seqr_ Changes
 
 ## dev
+
+## 5/24/24
+* Adds external_data to Family model (REQUIRES DB MIGRATION)
+* Adds post_discovery_mondo_id to Family model (REQUIRES DB MIGRATION)
+* Adds guid and created fields to PhenotypePrioritization model (REQUIRES DB MIGRATION)
+* Enable "Reports" tab by default for local installations
+
+## 5/8/24
 * Adds dynamic analysis groups (REQUIRES DB MIGRATION)
 
 ## 4/4/24

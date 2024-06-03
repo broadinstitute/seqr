@@ -22,7 +22,7 @@ const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) => (
       <span>
         <Icon size="small" name="circle" color={iconColor(loadedSample, isOutdated)} />
         {loadedSample && <b>{loadedSample.sampleType}</b>}
-        {loadedSample && loadedSample.datasetType !== DATASET_TYPE_SNV_INDEL_CALLS && ` - ${loadedSample.datasetType}`}
+        {loadedSample && loadedSample.datasetType && loadedSample.datasetType !== DATASET_TYPE_SNV_INDEL_CALLS && ` - ${loadedSample.datasetType}`}
         {
           !hoverDetails && (loadedSample ? (
             <Detail>

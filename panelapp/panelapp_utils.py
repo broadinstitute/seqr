@@ -3,6 +3,8 @@ from collections import defaultdict
 import requests
 from django.db import transaction
 from django.utils import timezone
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from urllib3.exceptions import MaxRetryError
 
 from panelapp.models import PaLocusList, PaLocusListGene
 from seqr.models import LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
@@ -40,6 +42,8 @@ def import_all_panels(user, panel_app_api_url, label=None):
                 panel_genes_url = '{}/panels/{}/genes'.format(panel_app_api_url, panel_app_id)
                 pa_locus_list = _create_or_update_locus_list_from_panel(user, panel_genes_url, panel, label)
                 all_genes_for_panel = genes_by_panel_id.get(panel_app_id, [])
+                if not all_genes_for_panel:
+                    continue  # Genes in 'super panels' are associated with sub panels
                 panel_genes_by_id = {_extract_ensembl_id_from_json(gene): gene for gene in all_genes_for_panel
                                      if _extract_ensembl_id_from_json(gene)}
                 raw_ensbl_38_gene_ids_csv = ','.join(panel_genes_by_id.keys())
@@ -99,7 +103,7 @@ def _create_pa_locus_list_gene(seqr_locus_list_gene, panel_gene_json):
 
 
 def _get_all_panels(panels_url, all_results):
-    resp = requests.get(panels_url)
+    resp = requests.get(panels_url, timeout=REQUEST_TIMEOUT_S)
     resp_json = resp.json()
     curr_page_results = [r for r in resp_json.get('results', []) if r.get('stats', {}).get('number_of_genes', 0) > 0]
     all_results += curr_page_results
@@ -111,6 +115,11 @@ def _get_all_panels(panels_url, all_results):
         return _get_all_panels(next_page, all_results)
 
 
+@retry(
+    retry=retry_if_exception_type(MaxRetryError),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    stop=stop_after_attempt(5),
+)
 def _get_all_genes(genes_url: str, results_by_panel_id: dict):
     resp = requests.get(genes_url, timeout=REQUEST_TIMEOUT_S)
     resp_json = resp.json()

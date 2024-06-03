@@ -21,6 +21,7 @@ CLOUD_STORAGE_URLS = {
     's3': 'https://s3.amazonaws.com',
     'gs': GS_STORAGE_URL,
 }
+TIMEOUT = 300
 
 
 def _process_alignment_records(rows, num_id_cols=1, **kwargs):
@@ -246,7 +247,7 @@ def _stream_response(url, headers, request):
     if range_header:
         headers['Range'] = range_header
 
-    response = requests.get(url, headers=headers, stream=True)
+    response = requests.get(url, headers=headers, stream=True, timeout=TIMEOUT)
 
     return StreamingHttpResponse(response.iter_content(chunk_size=65536), status=response.status_code,
                                  content_type='application/octet-stream')
@@ -268,7 +269,7 @@ def _get_gs_rest_api_headers(gs_path, user):
 def _get_token_expiry(token):
     response = requests.post('https://www.googleapis.com/oauth2/v1/tokeninfo',
                              headers={'Content-Type': 'application/x-www-form-urlencoded'},
-                             data='access_token={}'.format(token))
+                             data='access_token={}'.format(token), timeout=30)
     if response.status_code == 200:
         result = json.loads(response.text)
         return result['expires_in']
@@ -315,7 +316,7 @@ def igv_genomes_proxy(request, cloud_host, file_path):
     if range_header:
         headers['Range'] = range_header
 
-    genome_response = requests.get(f'{CLOUD_STORAGE_URLS[cloud_host]}/{file_path}', headers=headers)
+    genome_response = requests.get(f'{CLOUD_STORAGE_URLS[cloud_host]}/{file_path}', headers=headers, timeout=TIMEOUT)
     proxy_response = HttpResponse(
         content=genome_response.content,
         status=genome_response.status_code,

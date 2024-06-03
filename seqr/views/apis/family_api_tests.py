@@ -70,12 +70,18 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
         individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData',
-                             'hasPhenotypeGeneScores'}
+                             'phenotypePrioritizationTools'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
-        self.assertListEqual(
-            [True, True, False],
-            [response_json['individualsByGuid'][guid].get('hasPhenotypeGeneScores', False) for guid in INDIVIDUAL_GUIDS]
+        self.assertListEqual([
+            [
+                {'loadedDate': '2024-05-02T06:42:55.397+00:00', 'sampleType': 'Exomiser'},
+                {'loadedDate': '2024-05-02T06:42:55.397+00:00', 'sampleType': 'Lirical'}
+            ], [
+                {'loadedDate': '2024-05-02T06:42:55.397+00:00', 'sampleType': 'Lirical'}
+            ], []
+        ],
+            [response_json['individualsByGuid'][guid].get('phenotypePrioritizationTools') for guid in INDIVIDUAL_GUIDS]
         )
         self.assertListEqual(
             [True, False, True],
@@ -115,7 +121,7 @@ class FamilyAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000012_12'})
-        self.assertListEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimNumbers'], [])
+        self.assertListEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimNumbers'], [616126])
         self.assertDictEqual(response_json['familiesByGuid']['F000012_12']['postDiscoveryOmimOptions'], {'616126': {
             'phenotypeMimNumber': 616126, 'phenotypes': [{
                 'chrom': '1',

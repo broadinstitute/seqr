@@ -300,7 +300,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['Data file or path /test_path.vcf.gz is not found.'])
-        mock_subprocess.assert_called_with('gsutil ls gs://test_bucket/test_path.vcf.gz', stdout=-1, stderr=-2, shell=True)
+        mock_subprocess.assert_called_with('gsutil ls gs://test_bucket/test_path.vcf.gz', stdout=-1, stderr=-2, shell=True)  # nosec
         mock_file_logger.info.assert_has_calls([
             mock.call('==> gsutil ls gs://test_bucket/test_path.vcf.gz', self.manager_user),
             mock.call('File not found', self.manager_user),
@@ -312,7 +312,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_SHARDED_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['Data file or path /test_path-*.vcf.gz is not found.'])
-        mock_subprocess.assert_called_with('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-1, shell=True)
+        mock_subprocess.assert_called_with('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-1, shell=True)  # nosec
         mock_file_logger.info.assert_has_calls([
             mock.call('==> gsutil ls gs://test_bucket/test_path-*.vcf.gz', self.manager_user),
             mock.call('File not found', self.manager_user),
@@ -324,7 +324,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_SHARDED_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['Data file or path /test_path-*.vcf.gz is not found.'])
-        mock_subprocess.assert_called_with('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-1, shell=True)
+        mock_subprocess.assert_called_with('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-1, shell=True)  # nosec
         mock_file_logger.info.assert_has_calls([
             mock.call('==> gsutil ls gs://test_bucket/test_path-*.vcf.gz', self.manager_user),
         ])
@@ -342,10 +342,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['No header found in the VCF file.'])
         mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://test_bucket/test_path.vcf.gz', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil ls gs://test_bucket/test_path.vcf.gz', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
             mock.call('gsutil cat -r 0-65536 gs://test_bucket/test_path.vcf.gz | gunzip -c -q - ',
-                      stdout=-1, stderr=-2, shell=True),
+                      stdout=-1, stderr=-2, shell=True),  # nosec
         ])
         mock_file_logger.info.assert_has_calls([
             mock.call('==> gsutil ls gs://test_bucket/test_path.vcf.gz', self.manager_user),
@@ -384,9 +384,9 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), VALIDATE_VFC_RESPONSE)
         mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://test_bucket/test_path.vcf', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil ls gs://test_bucket/test_path.vcf', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
-            mock.call('gsutil cat gs://test_bucket/test_path.vcf', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil cat gs://test_bucket/test_path.vcf', stdout=-1, stderr=-2, shell=True),  # nosec
         ])
         mock_file_logger.info.assert_has_calls([
             mock.call('==> gsutil ls gs://test_bucket/test_path.vcf', self.manager_user),
@@ -404,8 +404,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'fullDataPath': 'gs://test_bucket/test_path-*.vcf.gz', 'vcfSamples': ['HG00735', 'NA19675_1', 'NA19678']})
         mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-1, shell=True),
-            mock.call('gsutil cat -r 0-65536 gs://test_bucket/test_path-001.vcf.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-1, shell=True),  # nosec
+            mock.call('gsutil cat -r 0-65536 gs://test_bucket/test_path-001.vcf.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True),  # nosec
         ])
         mock_file_logger.info.assert_has_calls([
             mock.call('==> gsutil ls gs://test_bucket/test_path-*.vcf.gz', self.manager_user),
@@ -435,7 +435,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'dataPathList': []})
-        mock_subprocess.assert_called_with('gsutil ls gs://test_bucket', stdout=-1, stderr=-1, shell=True)
+        mock_subprocess.assert_called_with('gsutil ls gs://test_bucket', stdout=-1, stderr=-1, shell=True)  # nosec
         mock_file_logger.info.assert_called_with('==> gsutil ls gs://test_bucket', self.manager_user)
 
         # Test a valid operation
@@ -456,9 +456,9 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertDictEqual(response.json(), {'dataPathList': ['/test.vcf', '/data/test.vcf.gz', '/data/test-101.vcf.gz',
                                                                 '/data/test-102.vcf.gz', '/sharded/test-*.vcf.gz']})
         mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://test_bucket', stdout=-1, stderr=-1, shell=True),
+            mock.call('gsutil ls gs://test_bucket', stdout=-1, stderr=-1, shell=True),  # nosec
             mock.call().communicate(),
-            mock.call('gsutil ls gs://test_bucket/**', stdout=-1, stderr=-1, shell=True),
+            mock.call('gsutil ls gs://test_bucket/**', stdout=-1, stderr=-1, shell=True),  # nosec
             mock.call().communicate(),
         ])
         mock_file_logger.info.assert_has_calls([

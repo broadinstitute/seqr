@@ -111,7 +111,7 @@ class AnalysisGroupAPITest(AuthenticationTestCase):
         # update the analysis_group
         update_analysis_group_url = reverse(update_dynamic_analysis_group_handler, args=[PROJECT_GUID, guid])
         response = self.client.post(update_analysis_group_url, content_type='application/json',  data=json.dumps(
-            {'name': 'updated_analysis_group', 'criteria': {'analysisStatus': ['I']}}))
+            {**new_analysis_group, 'name': 'updated_analysis_group', 'criteria': {'analysisStatus': ['I']}}))
 
         self.assertEqual(response.status_code, 200)
         updated_analysis_group_response = response.json()

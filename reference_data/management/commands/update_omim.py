@@ -146,7 +146,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
 
         command = 'gsutil mv {filename} gs://{bucket}'.format(filename=CACHED_RECORDS_FILENAME, bucket=CACHED_RECORDS_BUCKET)
         logger.info(command)
-        os.system(command)
+        os.system(command)  # nosec
 
 
 class Command(GeneCommand):

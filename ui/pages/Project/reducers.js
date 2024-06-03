@@ -327,10 +327,22 @@ export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
   }
 }
 
+const MAX_EXPECTED_PHENOTYPE_PRIORITY_RANK = 10
+
 export const loadPhenotypeGeneScores = individualGuid => (dispatch, getState) => {
   const state = getState()
   const { familyGuid } = state.individualsByGuid[individualGuid]
-  if (!state.phenotypeGeneScoresByIndividual[individualGuid]) {
+  const loadedToolCounts = Object.values(state.phenotypeGeneScoresByIndividual[individualGuid] || {}).reduce(
+    (acc, dataByTool) => (
+      Object.entries(dataByTool).reduce((acc2, [tool, data]) => ({
+        ...acc2,
+        [tool]: (acc2[tool] || 0) + data.length,
+      }), acc)
+    ), {},
+  )
+  // Data can be loaded for only a subset of genes if previously loaded variant information
+  // The top 10 genes are expected to be loaded per tool, so load data if fewer than that are available
+  if (!Object.values(loadedToolCounts).some(val => val >= MAX_EXPECTED_PHENOTYPE_PRIORITY_RANK)) {
     dispatch({ type: REQUEST_PHENOTYPE_GENE_SCORES })
     new HttpRequestHelper(`/api/family/${familyGuid}/phenotype_gene_scores`,
       (responseJson) => {

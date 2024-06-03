@@ -151,7 +151,7 @@ const validateHasTranscriptId = (value, allValues, props, name) => {
 const formatField = (field) => {
   const formattedField = { inline: true, width: 16, ...field }
   if (field.validate && field.validate !== validateHasTranscriptId) {
-    formattedField.label =`${field.label}*`
+    formattedField.label = `${field.label}*`
   }
   return formattedField
 }

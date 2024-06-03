@@ -1,5 +1,4 @@
 from aiohttp import web
-import hail as hl
 import logging
 
 from hail_search.web_app import init_web_app

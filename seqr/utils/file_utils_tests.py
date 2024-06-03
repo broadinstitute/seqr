@@ -19,7 +19,7 @@ class FileUtilsTest(TestCase):
         with self.assertRaises(Exception) as ee:
             mv_file_to_gs('/temp_path', 'gs://bucket/target_path', user=None)
         self.assertEqual(str(ee.exception), 'Run command failed: -bash: gsutil: command not found. Please check the path.')
-        mock_subproc.Popen.assert_called_with('gsutil mv /temp_path gs://bucket/target_path', stdout=mock_subproc.PIPE, stderr=mock_subproc.STDOUT, shell=True)
+        mock_subproc.Popen.assert_called_with('gsutil mv /temp_path gs://bucket/target_path', stdout=mock_subproc.PIPE, stderr=mock_subproc.STDOUT, shell=True)  # nosec
         mock_logger.info.assert_called_with('==> gsutil mv /temp_path gs://bucket/target_path', None)
         process.wait.assert_called_with()
 
@@ -27,7 +27,7 @@ class FileUtilsTest(TestCase):
         mock_logger.reset_mock()
         process.wait.return_value = 0
         mv_file_to_gs('/temp_path', 'gs://bucket/target_path', user=None)
-        mock_subproc.Popen.assert_called_with('gsutil mv /temp_path gs://bucket/target_path', stdout=mock_subproc.PIPE, stderr=mock_subproc.STDOUT, shell=True)
+        mock_subproc.Popen.assert_called_with('gsutil mv /temp_path gs://bucket/target_path', stdout=mock_subproc.PIPE, stderr=mock_subproc.STDOUT, shell=True)  # nosec
         mock_logger.info.assert_called_with('==> gsutil mv /temp_path gs://bucket/target_path', None)
         process.wait.assert_called_with()
 
@@ -44,7 +44,7 @@ class FileUtilsTest(TestCase):
             get_gs_file_list('gs://bucket/target_path/', user=None)
         self.assertEqual(str(ee.exception), 'Run command failed: -bash: gsutil: command not found. Please check the path.')
         mock_subproc.Popen.assert_called_with('gsutil ls gs://bucket/target_path', stdout=mock_subproc.PIPE,
-                                              stderr=mock_subproc.PIPE, shell=True)
+                                              stderr=mock_subproc.PIPE, shell=True)  # nosec
         mock_logger.info.assert_called_with('==> gsutil ls gs://bucket/target_path', None)
         process.communicate.assert_called_with()
 
@@ -55,7 +55,7 @@ class FileUtilsTest(TestCase):
                                            b'gs://bucket/target_path/data.vcf.gz\n', b''
         file_list = get_gs_file_list('gs://bucket/target_path', user=None)
         mock_subproc.Popen.assert_called_with('gsutil ls gs://bucket/target_path/**', stdout=mock_subproc.PIPE,
-                                              stderr=mock_subproc.PIPE, shell=True)
+                                              stderr=mock_subproc.PIPE, shell=True)  # nosec
         mock_logger.info.assert_called_with('==> gsutil ls gs://bucket/target_path/**', None)
         process.communicate.assert_called_with()
         self.assertEqual(file_list, ['gs://bucket/target_path/id_file.txt', 'gs://bucket/target_path/data.vcf.gz'])

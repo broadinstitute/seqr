@@ -1,10 +1,10 @@
 from collections import defaultdict
-from django.db.models import Count, Q, prefetch_related_objects
+from django.db.models import Count, Q, F, prefetch_related_objects
 
 from seqr.models import Individual, IgvSample, AnalysisGroup, DynamicAnalysisGroup, LocusList, VariantTagType,\
     VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote
 from seqr.utils.gene_utils import get_genes
-from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, _get_json_for_models, \
+from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, get_json_for_queryset, \
     get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, \
     get_json_for_family_notes, get_json_for_saved_variants
 
@@ -110,11 +110,12 @@ def add_child_ids(response):
         family['individualGuids'] = individual_guids_by_family[family['familyGuid']]
 
 
-def families_discovery_tags(families):
+def families_discovery_tags(families, project=None):
     families_by_guid = {f['familyGuid']: dict(discoveryTags=[], **f) for f in families}
 
+    family_filter = {'family__project': project} if project else {'family__guid__in': families_by_guid.keys()}
     discovery_tags = get_json_for_saved_variants(SavedVariant.objects.filter(
-        family__guid__in=families_by_guid.keys(), varianttag__variant_tag_type__category='CMG Discovery Tags',
+        varianttag__variant_tag_type__category='CMG Discovery Tags', **family_filter,
     ), add_details=True)
 
     gene_ids = set()
@@ -132,20 +133,20 @@ def families_discovery_tags(families):
 MME_TAG_NAME = 'MME Submission'
 
 
-def add_project_tag_types(projects_by_guid, add_counts=False):
-    variant_tag_types_models = VariantTagType.objects.filter(Q(project__guid__in=projects_by_guid.keys()) | Q(project__isnull=True))
-    variant_tag_types = _get_json_for_models(variant_tag_types_models)
+def add_project_tag_types(projects_by_guid, project=None):
+    is_single_project = len(projects_by_guid) == 1
+    project_q = dict(project=project) if project else dict(project__guid__in=projects_by_guid.keys())
+    variant_tag_types_models = VariantTagType.objects.filter(Q(**project_q) | Q(project__isnull=True))
+    variant_tag_types = get_json_for_queryset(
+        variant_tag_types_models, nested_fields=None if is_single_project else [{'fields': ('project', 'guid')}])
 
     project_tag_types = defaultdict(list)
-    if len(projects_by_guid) == 1:
+    if is_single_project:
         project_guid = next(iter((projects_by_guid.keys())))
-        project_tag_types[project_guid] = variant_tag_types
+        project_tag_types[project_guid] = list(variant_tag_types)
     else:
-        prefetch_related_objects(variant_tag_types_models, 'project')
-        variant_tag_types_by_guid = {vtt['variantTagTypeGuid']: vtt for vtt in variant_tag_types}
-        for vtt in variant_tag_types_models:
-            project_guid = vtt.project.guid if vtt.project else None
-            project_tag_types[project_guid].append(variant_tag_types_by_guid[vtt.guid])
+        for vtt in variant_tag_types:
+            project_tag_types[vtt.pop('projectGuid')].append(vtt)
 
     project_tag_types[None].append({
         'variantTagTypeGuid': 'mmeSubmissionVariants',
@@ -156,7 +157,6 @@ def add_project_tag_types(projects_by_guid, add_counts=False):
         'order': 99,
     })
 
-    family_counts = {}
     for project_guid, project_json in projects_by_guid.items():
         project_json.update({
             'variantTagTypes': sorted(
@@ -165,17 +165,19 @@ def add_project_tag_types(projects_by_guid, add_counts=False):
             ),
             'variantFunctionalTagTypes': VariantFunctionalData.FUNCTIONAL_DATA_TAG_TYPES,
         })
-        if add_counts:
-            family_counts.update(_add_tag_type_counts(project_guid, project_json['variantTagTypes']))
-
-    return family_counts
 
 
-def _add_tag_type_counts(project_guid, project_variant_tags):
-    project_tags = VariantTag.objects.filter(saved_variants__family__project__guid=project_guid)
-    project_notes = VariantNote.objects.filter(saved_variants__family__project__guid=project_guid)
+def add_project_tag_type_counts(project, response_json, project_json=None):
+    project_json = project_json or {}
+    response_json['projectsByGuid'] = {project.guid: project_json}
+    add_project_tag_types(response_json['projectsByGuid'], project=project)
+
+    saved_variants = SavedVariant.objects.filter(family__project=project)
+    project_tags = VariantTag.objects.filter(saved_variants__in=saved_variants)
+    project_notes = VariantNote.saved_variants.through.objects.filter(savedvariant_id__in=saved_variants)
 
     family_tag_type_counts = defaultdict(dict)
+
     note_tag_type = {
         'variantTagTypeGuid': 'notes',
         'name': 'Has Notes',
@@ -183,24 +185,27 @@ def _add_tag_type_counts(project_guid, project_variant_tags):
         'description': '',
         'color': 'grey',
         'order': 100,
-        'numTags': project_notes.aggregate(count=Count('saved_variants__guid', distinct=True))['count'],
+        'numTags': project_notes.values_list('savedvariant_id').distinct().count(),
     }
 
-    mme_counts_by_family = project_tags.filter(saved_variants__matchmakersubmissiongenes__isnull=False) \
-        .values('saved_variants__family__guid').annotate(count=Count('saved_variants__guid', distinct=True))
+    mme_counts_by_family = saved_variants.filter(matchmakersubmissiongenes__isnull=False) \
+        .values(family_guid=F('family__guid')).annotate(count=Count('guid', distinct=True))
 
-    tag_counts_by_type_and_family = project_tags.values(
-        'saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))
+    tag_counts_by_type_and_family = defaultdict(list)
+    for counts in project_tags.values(
+        'variant_tag_type__name', family_guid=F('saved_variants__family__guid')).annotate(count=Count('guid', distinct=True)):
+        tag_counts_by_type_and_family[counts['variant_tag_type__name']].append(counts)
+    tag_counts_by_type_and_family[MME_TAG_NAME] = mme_counts_by_family
+
+    project_variant_tags = project_json['variantTagTypes']
     for tag_type in project_variant_tags:
-        current_tag_type_counts = mme_counts_by_family if tag_type['name'] == MME_TAG_NAME else [
-            counts for counts in tag_counts_by_type_and_family if counts['variant_tag_type__name'] == tag_type['name']
-        ]
+        current_tag_type_counts = tag_counts_by_type_and_family[tag_type['name']]
         num_tags = sum(count['count'] for count in current_tag_type_counts)
         tag_type.update({
             'numTags': num_tags,
         })
         for count in current_tag_type_counts:
-            family_tag_type_counts[count['saved_variants__family__guid']].update({tag_type['name']: count['count']})
+            family_tag_type_counts[count['family_guid']].update({tag_type['name']: count['count']})
 
     project_variant_tags.append(note_tag_type)
-    return family_tag_type_counts
+    response_json['familyTagTypeCounts'] = family_tag_type_counts

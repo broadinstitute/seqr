@@ -77,7 +77,7 @@ def get_hail_variants_for_variant_ids(samples, genome_version, parsed_variant_id
     return response_json['results']
 
 
-def _execute_lookup(variant_id, data_type,  user, **kwargs):
+def _execute_lookup(user, variant_id, data_type, **kwargs):
     body = {
         'variant_id': variant_id,
         'data_type': data_type,
@@ -86,19 +86,19 @@ def _execute_lookup(variant_id, data_type,  user, **kwargs):
     return _execute_search(body, user, path='lookup', exception_map={404: 'Variant not present in seqr'}), body
 
 
-def hail_variant_lookup(user, variant_id, **kwargs):
-    variant, _ = _execute_lookup(variant_id, Sample.DATASET_TYPE_VARIANT_CALLS, user, **kwargs)
+def hail_variant_lookup(user, variant_id, dataset_type, **kwargs):
+    variant, _ = _execute_lookup(user, variant_id, data_type=dataset_type, **kwargs)
     return variant
 
 
-def hail_sv_variant_lookup(user, variant_id, samples, sample_type=None, **kwargs):
+def hail_sv_variant_lookup(user, variant_id, dataset_type, samples, sample_type=None, **kwargs):
     if not sample_type:
         from seqr.utils.search.utils import InvalidSearchException
         raise InvalidSearchException('Sample type must be specified to look up a structural variant')
-    data_type = f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
+    data_type = f'{dataset_type}_{sample_type}'
 
     sample_data = _get_sample_data(samples)
-    variant, body = _execute_lookup(variant_id, data_type, user, sample_data=sample_data.pop(data_type), **kwargs)
+    variant, body = _execute_lookup(user, variant_id, data_type, sample_data=sample_data.pop(data_type), **kwargs)
     variants = [variant]
 
     if variant['svType'] in {'DEL', 'DUP'}:
@@ -129,6 +129,10 @@ def _format_search_body(samples, genome_version, num_results, search):
     return search_body
 
 
+def search_data_type(dataset_type, sample_type):
+    return f'{dataset_type}_{sample_type}' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else dataset_type
+
+
 def _get_sample_data(samples, inheritance_filter=None, inheritance_mode=None, **kwargs):
     sample_values = dict(
         individual_guid=F('individual__guid'),
@@ -150,7 +154,7 @@ def _get_sample_data(samples, inheritance_filter=None, inheritance_mode=None, **
         dataset_type = s.pop('dataset_type')
         sample_type = s.pop('sample_type')
         s['sample_id'] = s.pop('individual__individual_id')
-        data_type_key = f'{dataset_type}_{sample_type}' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else dataset_type
+        data_type_key = search_data_type(dataset_type, sample_type)
         sample_data_by_data_type[data_type_key].append(s)
 
     return sample_data_by_data_type
