@@ -32,13 +32,14 @@ def _process_alignment_records(rows, num_id_cols=1, **kwargs):
     parsed_records = defaultdict(list)
     for row in rows:
         row_id = row[0] if num_id_cols == 1 else tuple(row[:num_id_cols])
+        file_path = row[num_id_cols]
         sample_id = None
         index_file_path = None
         if len(row) > num_cols:
-            if _is_drs_uri_path(row[num_cols]):
-                index_file_path = row[num_cols]
-            else:
+            if file_path.endswith(GCNV_FILE_EXTENSIONS):
                 sample_id = row[num_cols]
+            else:
+                index_file_path = row[num_cols]
         parsed_records[row_id].append({'filePath': row[num_id_cols], 'sampleId': sample_id, 'indexFilePath': index_file_path})
     return parsed_records
 
@@ -140,6 +141,8 @@ SAMPLE_TYPE_MAP = [
     ('junctions.bed.gz', IgvSample.SAMPLE_TYPE_JUNCTION),
     ('bed.gz', IgvSample.SAMPLE_TYPE_GCNV),
 ]
+
+GCNV_FILE_EXTENSIONS = tuple(ext for ext, sample_type in SAMPLE_TYPE_MAP if sample_type == IgvSample.SAMPLE_TYPE_GCNV)
 
 
 @pm_or_data_manager_required
