@@ -184,22 +184,28 @@ class BaseHailTableQuery(object):
 
         return cls._enum_field(field, value, enum, **kwargs)
 
-    @staticmethod
-    def _enum_field(field_name, value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, enum_keys=None, include_version=False, **kwargs):
+    @classmethod
+    def _enum_field(cls, field_name, value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, enum_keys=None, include_version=False, **kwargs):
         annotations = {}
         drop = [] + (drop_fields or [])
         value_keys = value.keys()
         for field in (enum_keys or enum.keys()):
             field_enum = enum[field]
+            if field == 'utrannotator':
+                field = 'utrrannotator'
+            is_nested_struct = field in value_keys
             is_array = f'{field}_ids' in value_keys
-            value_field = f"{field}_id{'s' if is_array else ''}"
-            drop.append(value_field)
 
-            enum_array = hl.array(field_enum)
-            if is_array:
-                annotations[f'{field}s'] = value[value_field].map(lambda v: enum_array[v])
+            if is_nested_struct:
+                annotations[field] = cls._enum_field(field, value[field], field_enum, format_value=format_value)
             else:
-                annotations[field] = enum_array[value[value_field]]
+                value_field = f"{field}_id{'s' if is_array else ''}"
+                drop.append(value_field)
+                enum_array = hl.array(field_enum)
+                if is_array:
+                    annotations[f'{field}s'] = value[value_field].map(lambda v: enum_array[v])
+                else:
+                    annotations[field] = enum_array[value[value_field]]
 
         if include_version:
             annotations['version'] = ht_globals['versions'][field_name]
