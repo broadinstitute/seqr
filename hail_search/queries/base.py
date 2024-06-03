@@ -35,6 +35,8 @@ def _to_camel_case(snake_case_str):
 
 class BaseHailTableQuery(object):
 
+    ANNS_HT = 'annotations.ht'
+
     DATA_TYPE = None
     KEY_FIELD = None
     LOADED_GLOBALS = None
@@ -90,7 +92,7 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def load_globals(cls):
-        ht_path = cls._get_table_path('annotations.ht')
+        ht_path = cls._get_table_path(cls.ANNS_HT)
         ht_globals = hl.eval(hl.read_table(ht_path).globals.select(*cls.GLOBALS))
         cls.LOADED_GLOBALS = {k: ht_globals[k] for k in cls.GLOBALS}
 
@@ -1081,7 +1083,7 @@ class BaseHailTableQuery(object):
 
     def lookup_variants(self, variant_ids, include_project_data=False, **kwargs):
         self._parse_intervals(intervals=None, variant_ids=variant_ids, variant_keys=variant_ids)
-        ht = self._read_table('annotations_vep_110.ht', drop_globals=['paths', 'versions'])
+        ht = self._read_table(self.ANNS_HT, drop_globals=['paths', 'versions'])
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         annotation_fields = self.annotation_fields(include_genotype_overrides=False)
