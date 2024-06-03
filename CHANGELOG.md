@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Adds index_file_path to IGV Sample model (REQUIRES DB MIGRATION)
 
 ## 5/24/24
 * Adds external_data to Family model (REQUIRES DB MIGRATION)
