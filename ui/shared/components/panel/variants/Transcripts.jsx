@@ -115,8 +115,8 @@ const Transcripts = React.memo(({ variant, genesById, transcriptsById, updateMai
                     {transcript.biotype}
                     <br />
                     <AnnotationLabel>Intron/Exon</AnnotationLabel>
-                    {transcript.intron && `Intron ${transcript.intron.index} of ${transcript.intron.total}`}
-                    {transcript.exon && `${transcript.intron ? ', ' : ''}Exon ${transcript.exon.index} of ${transcript.exon.total}`}
+                    {transcript.intron && `Intron ${transcript.intron.index}/${transcript.intron.total}`}
+                    {transcript.exon && `${transcript.intron ? ', ' : ''}Exon ${transcript.exon.index}/${transcript.exon.total}`}
                     <br />
                   </AnnotationSection>
                   <AnnotationSection>
