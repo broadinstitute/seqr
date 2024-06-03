@@ -435,29 +435,21 @@ const svSizeDisplay = (size) => {
   return `${(size / 1000000).toFixed(2) / 1}Mb`
 }
 
-const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcriptsById }) => {
-  const {
-    rsid, svType, numExon, pos, end, svTypeDetail, svSourceDetail, cpxIntervals, algorithms, bothsidesSupport,
-    endChrom,
-  } = variant
-  const mainTranscript = getVariantMainTranscript(variant)
-
-  const isLofNagnag = mainTranscript.isLofNagnag || mainTranscript.lofFlags === 'NAGNAG_SITE'
-  const lofFilters = mainTranscript.lofFilters || (
-    mainTranscript.lof === 'LC' && mainTranscript.lofFilter && mainTranscript.lofFilter.split(/&|,/g)
-  )
-  const lofDetails = (lofFilters || isLofNagnag) ? [
-    ...(lofFilters ? [...new Set(lofFilters)] : []).map((lofFilterKey) => {
-      const lofFilter = LOF_FILTER_MAP[lofFilterKey] || { message: lofFilterKey }
+const getLofDetails = ({ isLofNagnag, lofFilters, lofFilter, lofFlags, lof }) => {
+  const isNagnag = isLofNagnag || lofFlags === 'NAGNAG_SITE'
+  const filters = lofFilters || (lof === 'LC' && lofFilter && lofFilter.split(/&|,/g))
+  return (filters || isNagnag) ? [
+    ...(filters ? [...new Set(filters)] : []).map((lofFilterKey) => {
+      const filter = LOF_FILTER_MAP[lofFilterKey] || { message: lofFilterKey }
       return (
         <div key={lofFilterKey}>
-          <b>{`LOFTEE: ${lofFilter.title}`}</b>
+          <b>{`LOFTEE: ${filter.title}`}</b>
           <br />
-          {lofFilter.message}
+          {filter.message}
         </div>
       )
     }),
-    isLofNagnag ? (
+    isNagnag ? (
       <div key="NAGNAG_SITE">
         <b>LOFTEE: NAGNAG site</b>
         <br />
@@ -465,6 +457,15 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcripts
       </div>
     ) : null,
   ] : null
+}
+
+const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcriptsById }) => {
+  const {
+    rsid, svType, numExon, pos, end, svTypeDetail, svSourceDetail, cpxIntervals, algorithms, bothsidesSupport,
+    endChrom,
+  } = variant
+  const mainTranscript = getVariantMainTranscript(variant)
+  const lofDetails = getLofDetails(mainTranscript.loftee || mainTranscript)
 
   const transcriptPopupProps = mainTranscript.transcriptId && {
     content: <TranscriptLink variant={variant} transcript={mainTranscript} />,
