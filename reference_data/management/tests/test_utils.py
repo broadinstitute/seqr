@@ -28,7 +28,6 @@ class ReferenceDataCommandTestCase(TestCase):
     @responses.activate
     def _test_update_command(self, command_name, model_name, existing_records=1, created_records=1, skipped_records=1):
         # test without a file_path parameter
-        responses.add(responses.HEAD, self.URL, headers={"Content-Length": "1024"})
         body = ''.join(self.DATA)
         if self.URL.endswith('gz'):
             body = gzip.compress(body.encode())
@@ -51,6 +50,7 @@ class ReferenceDataCommandTestCase(TestCase):
 
         # test with a file_path parameter
         self.mock_logger.reset_mock()
+        responses.add(responses.HEAD, self.URL, headers={"Content-Length": "1024"})
         responses.remove(responses.GET, self.URL)
         call_command(command_name, self.tmp_file)
         log_calls[1] = mock.call('Deleting {} existing {} records'.format(created_records, model_name))

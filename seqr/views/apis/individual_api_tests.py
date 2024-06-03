@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import datetime
+import gzip
 import json
 import mock
+import re
 
 from copy import deepcopy
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -1321,6 +1323,14 @@ class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
     HAS_EXTERNAL_PROJECT_ACCESS = False
 
+    def setUp(self):
+        patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
+        _mock_subprocess = patcher.start()
+        _mock_subprocess.side_effect = Exception('Calling gs from local')
+        self.addCleanup(patcher.stop)
+
+        super().setUp()
+
     def test_import_gregor_metadata(self, *args):
         # Importing gregor metadata does not work in local environment
         pass
@@ -1329,3 +1339,30 @@ class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
 class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     HAS_EXTERNAL_PROJECT_ACCESS = True
+
+    def setUp(self):
+        patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
+        _mock_subprocess = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        self.mock_subprocess = mock.MagicMock()
+        self.mock_subprocess.wait.return_value = 0
+        self.mock_subprocess.stdout.__iter__.return_value = []
+        self.gs_files = {}
+        _mock_subprocess.side_effect = self._mock_subprocess
+
+        super().setUp()
+
+    def _mock_subprocess(self, command, **kwargs):
+        command_args = re.match(
+            r'gsutil (?P<cmd>cat|mv)(?P<local_path> \S+)? gs://seqr-scratch-temp/(?P<gs_path>\S+)', command,
+        ).groupdict()
+        file_name = command_args['gs_path']
+        if command_args['cmd'] == 'mv':
+            src_path = command_args['local_path'].strip()
+            self.assertEqual(src_path.split('/')[-1], file_name)
+            with gzip.open(src_path) as f:
+                self.gs_files[file_name] = f.readlines()
+        else:
+            self.mock_subprocess.stdout.__iter__.return_value = self.gs_files[file_name]
+        return self.mock_subprocess

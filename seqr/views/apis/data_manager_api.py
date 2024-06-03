@@ -16,7 +16,7 @@ from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
-from seqr.utils.file_utils import file_iter, does_file_exist, mv_file_to_gs
+from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.vcf_utils import validate_vcf_exists
 
@@ -24,7 +24,7 @@ from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_load
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data
-from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
+from seqr.views.utils.file_utils import parse_file, get_temp_file_path, load_uploaded_file, persist_temp_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
@@ -34,8 +34,6 @@ from seqr.models import Sample, Individual, Project, PhenotypePrioritization
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
 
 logger = SeqrLogger(__name__)
-
-TEMP_GS_BUCKET = 'gs://seqr-scratch-temp'
 
 
 @data_manager_required
@@ -276,7 +274,7 @@ def update_rna_seq(request):
         mapping_file = load_uploaded_file(uploaded_mapping_file_id)
 
     file_name_prefix = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}'
-    file_dir = os.path.join(get_temp_upload_directory(), file_name_prefix)
+    file_dir = get_temp_file_path(file_name_prefix, is_local=True)
     os.mkdir(file_dir)
 
     sample_files = {}
@@ -302,7 +300,7 @@ def update_rna_seq(request):
         )
 
     if sample_guids_to_keys:
-        mv_file_to_gs(f'{file_dir}/*', f'{TEMP_GS_BUCKET}/{file_name_prefix}', request.user)
+        persist_temp_file(file_name_prefix, request.user, is_directory=True)
 
     return create_json_response({
         'info': info,
@@ -326,9 +324,9 @@ def load_rna_seq_sample_data(request, sample_guid):
     data_type = request_json['dataType']
     config = RNA_DATA_TYPE_CONFIGS[data_type]
 
-    gs_file_name = f'{TEMP_GS_BUCKET}/{file_name}/{sample_guid}.json.gz'
-    if does_file_exist(gs_file_name, user=request.user):
-        data_rows = [json.loads(line) for line in file_iter(gs_file_name, user=request.user)]
+    file_path = get_temp_file_path(f'{file_name}/{sample_guid}.json.gz')
+    if does_file_exist(file_path, user=request.user):
+        data_rows = [json.loads(line) for line in file_iter(file_path, user=request.user)]
         data_rows, error = post_process_rna_data(sample_guid, data_rows, **config.get('post_process_kwargs', {}))
     else:
         logger.error(f'No saved temp data found for {sample_guid} with file prefix {file_name}', request.user)
