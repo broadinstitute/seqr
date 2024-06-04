@@ -76,7 +76,6 @@ class BaseHailTableQuery(object):
         'transcripts': {
             'response_key': 'transcripts',
             'empty_array': True,
-            'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
             'format_array_values': lambda values, *args: values.group_by(lambda t: t.geneId),
         },
     }
@@ -168,6 +167,10 @@ class BaseHailTableQuery(object):
         value = lambda r: self._format_enum(r, k, enum, ht_globals=self._globals, **enum_config)
         return enum_config.get('response_key', _to_camel_case(k)), value
 
+    @staticmethod
+    def _camelcase_value(value):
+        return value.rename({k: _to_camel_case(k) for k in value.keys()})
+
     @classmethod
     def _format_enum(cls, r, field, enum, empty_array=False, format_array_values=None, **kwargs):
         if hasattr(r, f'{field}_id'):
@@ -177,7 +180,7 @@ class BaseHailTableQuery(object):
         if hasattr(value, 'map'):
             if empty_array:
                 value = hl.or_else(value, hl.empty_array(value.dtype.element_type))
-            value = value.map(lambda x: cls._enum_field(field, x, enum, **kwargs))
+            value = value.map(lambda x: cls._enum_field(field, x, enum, **kwargs, format_value=cls._camelcase_value))
             if format_array_values:
                 value = format_array_values(value, r)
             return value
