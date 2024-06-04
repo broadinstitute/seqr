@@ -22,7 +22,7 @@ import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import RnaSeqJunctionOutliersTable from '../../table/RnaSeqJunctionOutliersTable'
 import { getOtherGeneNames } from '../genes/GeneDetail'
-import Transcripts from './Transcripts'
+import Transcripts, { ConsequenceDetails } from './Transcripts'
 import VariantGenes, { GeneLabelContent, omimPhenotypesDetail } from './VariantGene'
 import {
   getLocus,
@@ -184,6 +184,9 @@ VariantPosition.propTypes = {
   useLiftover: PropTypes.bool,
   svType: PropTypes.string,
 }
+
+const REGULATORY_FEATURE_SECTIONS = [[{ title: 'Biotype' }]]
+const REGULATORY_FEATURE_LINK = { ensemblEntity: 'Regulation', ensemblKey: 'rf' }
 
 const LOF_FILTER_MAP = {
   END_TRUNC: { title: 'End Truncation', message: 'This variant falls in the last 5% of the transcript' },
@@ -625,6 +628,26 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcripts
           <HorizontalSpacer width={12} />
           <Label color="red" horizontal size="tiny">High Constraint Region</Label>
         </span>
+      )}
+      {variant.sortedRegulatoryFeatureConsequences && (
+        <div>
+          <b>Regulatory Feature: &nbsp;</b>
+          <Modal
+            modalName={`${variant.variantId}-regulatory`}
+            title="Regulatory Feature Consequences"
+            trigger={
+              <ButtonLink>{variant.sortedRegulatoryFeatureConsequences[0].consequenceTerms[0].replace(/_/g, ' ')}</ButtonLink>
+            }
+          >
+            <ConsequenceDetails
+              idField="regulatoryFeatureId"
+              consequences={variant.sortedRegulatoryFeatureConsequences}
+              variant={variant}
+              annotationSections={REGULATORY_FEATURE_SECTIONS}
+              ensemblLink={REGULATORY_FEATURE_LINK}
+            />
+          </Modal>
+        </div>
       )}
       {mainTranscript.utrannotator?.fiveutrConsequence && (
         <div>

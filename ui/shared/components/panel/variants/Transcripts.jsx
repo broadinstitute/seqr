@@ -39,13 +39,15 @@ AnnotationDetail.propTypes = {
   getContent: PropTypes.func,
 }
 
-export const ConsequenceDetails = ({ consequences, variant, idField, idDetails, annotationSections, ...props }) => (
+export const ConsequenceDetails = (
+  { consequences, variant, idField, idDetails, annotationSections, ensemblLink = {}, ...props },
+) => (
   <Table basic="very">
     <Table.Body>
       {consequences.map(c => (
         <Table.Row key={c[idField]}>
           <Table.Cell width={3}>
-            <TranscriptLink variant={variant} transcript={c} />
+            <TranscriptLink variant={variant} transcript={c} idField={idField} {...ensemblLink} />
             {idDetails && idDetails(c, variant, props)}
           </Table.Cell>
           <Table.Cell width={4}>
@@ -53,7 +55,7 @@ export const ConsequenceDetails = ({ consequences, variant, idField, idDetails, 
           </Table.Cell>
           <Table.Cell width={9}>
             {annotationSections.map(([field1, field2]) => (
-              <AnnotationSection>
+              <AnnotationSection key={field1.title}>
                 <AnnotationDetail consequence={c} {...field1} />
                 {field2 && <AnnotationDetail consequence={c} {...field2} />}
               </AnnotationSection>
@@ -71,6 +73,7 @@ ConsequenceDetails.propTypes = {
   variant: PropTypes.object,
   idDetails: PropTypes.func,
   annotationSections: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.object)),
+  ensemblLink: PropTypes.object,
 }
 
 const TRANSCRIPT_LABELS = [
