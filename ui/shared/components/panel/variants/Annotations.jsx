@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import styled from 'styled-components'
-import { Popup, Label, Icon } from 'semantic-ui-react'
+import { Popup, Label, Icon, Table } from 'semantic-ui-react'
 
 import {
   getGenesById,
@@ -36,6 +36,7 @@ import {
 import {
   GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS,
 } from '../../../utils/constants'
+import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 
 const OverlappedIntervalLabels = React.memo(({ groupedIntervals, variant, getOverlapArgs, getLabels }) => {
   const chromIntervals = groupedIntervals[variant.chrom]
@@ -459,6 +460,60 @@ const getLofDetails = ({ isLofNagnag, lofFilters, lofFilter, lofFlags, lof }) =>
   ] : null
 }
 
+// Adapted from https://github.com/ImperialCardioGenetics/UTRannotator/blob/master/README.md#the-detailed-annotation-for-each-consequence
+const UTR_ANNOTATOR_DESCRIPTIONS = {
+  AltStop: 'Whether there is an alternative stop codon downstream within 5’ UTR',
+  AltStopDistanceToCDS: 'The distance between the alternative stop codon (if exists) and CDS',
+  CapDistanceToStart: 'The distance (number of nucleotides) to the start of 5’UTR',
+  DistanceToCDS: 'The distance (number of nucleotides) to CDS',
+  DistanceToStop: 'The distance (number of nucleotides) to the nearest stop codon (scanning through both the 5’UTR and its downstream CDS)',
+  Evidence: 'Whether the disrupted uORF has any translation evidence',
+  FrameWithCDS: 'The frame of the uORF with respect to CDS, described by inFrame or outOfFrame',
+  KozakContext: 'The Kozak context sequence',
+  KozakStrength: 'The Kozak strength, described by one of the following values: Weak, Moderate or Strong',
+  StartDistanceToCDS: 'The distance between the disrupting uORF and CDS',
+  alt_type: 'The type of uORF with the alternative allele, described by one of following: uORF, inframe_oORF or OutOfFrame_oORF',
+  alt_type_length: 'The length of uORF with the alt allele',
+  newSTOPDistanceToCDS: 'The distance between the gained uSTOP to the start of the CDS',
+  ref_StartDistanceToCDS: 'The distance between the uAUG of the disrupting uORF to CDS',
+  ref_type: 'The type of uORF with the reference allele, described by one of following: uORF, inframe_oORF or OutOfFrame_oORF',
+  ref_type_length: 'The length of uORF with the reference allele',
+  type: 'The type of of 5’ UTR ORF, described by one of the following: uORF(with a stop codon in 5’UTR), inframe_oORF (inframe and overlapping with CDS),OutOfFrame_oORF (out of frame and overlapping with CDS)',
+}
+
+const UtrAnnotatorDetail = ({ fiveutrConsequence, fiveutrAnnotation, ...counts }) => (
+  <Table compact singleLine basic="very">
+    <Table.Body>
+      <Table.Row>
+        <Table.HeaderCell textAlign="right" content="5' UTR Consequence" />
+        <Table.Cell content={fiveutrConsequence} />
+      </Table.Row>
+      {Object.entries(counts).map(([field, value]) => (
+        <Table.Row key={field}>
+          <Table.HeaderCell textAlign="right" content={camelcaseToTitlecase(field)} />
+          <Table.Cell content={value} />
+        </Table.Row>
+      ))}
+      {Object.entries(fiveutrAnnotation).filter(e => e[1] !== null).map(([field, value]) => (
+        <Table.Row key={field}>
+          <Table.HeaderCell textAlign="right">
+            {camelcaseToTitlecase(field)}
+            {UTR_ANNOTATOR_DESCRIPTIONS[field] && (
+              <Popup trigger={<HelpIcon color="black" />} content={UTR_ANNOTATOR_DESCRIPTIONS[field]} flowing />
+            )}
+          </Table.HeaderCell>
+          <Table.Cell content={value} />
+        </Table.Row>
+      ))}
+    </Table.Body>
+  </Table>
+)
+
+UtrAnnotatorDetail.propTypes = {
+  fiveutrConsequence: PropTypes.string,
+  fiveutrAnnotation: PropTypes.object,
+}
+
 const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcriptsById }) => {
   const {
     rsid, svType, numExon, pos, end, svTypeDetail, svSourceDetail, cpxIntervals, algorithms, bothsidesSupport,
@@ -570,6 +625,22 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcripts
           <HorizontalSpacer width={12} />
           <Label color="red" horizontal size="tiny">High Constraint Region</Label>
         </span>
+      )}
+      {mainTranscript.utrannotator?.fiveutrConsequence && (
+        <div>
+          <b>UTRAnnotator: &nbsp;</b>
+          <Modal
+            modalName={`${variant.variantId}-utrannotator`}
+            title="UTRAnnotator"
+            trigger={
+              <ButtonLink>
+                {mainTranscript.utrannotator.fiveutrConsequence.replace('5_prime_UTR_', '').replace('_variant', '').replace(/_/g, ' ')}
+              </ButtonLink>
+            }
+          >
+            <UtrAnnotatorDetail {...mainTranscript.utrannotator} />
+          </Modal>
+        </div>
       )}
       {variant.screenRegionType && (
         <div>
