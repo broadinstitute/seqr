@@ -112,7 +112,7 @@ class Predictions extends React.PureComponent {
       }
     }
     const mainTranscript = getVariantMainTranscript(variant)
-    if (mainTranscript?.alphamissense.pathogenicity) {
+    if (mainTranscript?.alphamissense?.pathogenicity) {
       genePredictors.alphamissense = {
         field: 'alphamissense',
         fieldValue: mainTranscript.alphamissense.pathogenicity,

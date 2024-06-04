@@ -10,6 +10,7 @@ import { VerticalSpacer } from '../../Spacers'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import { ProteinSequence, TranscriptLink } from './VariantUtils'
+import { toCamelcase, camelcaseToTitlecase } from '../../../utils/stringUtils'
 
 const AnnotationSection = styled.div`
   display: inline-block;
@@ -23,6 +24,54 @@ const AnnotationLabel = styled.small`
 `
 
 const HeaderLabel = AnnotationLabel.withComponent('span')
+
+const AnnotationDetail = ({ consequence, title, getContent }) => (
+  <span>
+    <AnnotationLabel>{title}</AnnotationLabel>
+    {getContent ? getContent(consequence) : consequence[toCamelcase(title)]}
+    <br />
+  </span>
+)
+
+AnnotationDetail.propTypes = {
+  consequence: PropTypes.object.isRequired,
+  title: PropTypes.string.isRequired,
+  getContent: PropTypes.func,
+}
+
+export const ConsequenceDetails = ({ consequences, variant, idField, idDetails, annotationSections, ...props }) => (
+  <Table basic="very">
+    <Table.Body>
+      {consequences.map(c => (
+        <Table.Row key={c[idField]}>
+          <Table.Cell width={3}>
+            <TranscriptLink variant={variant} transcript={c} />
+            {idDetails && idDetails(c, variant, props)}
+          </Table.Cell>
+          <Table.Cell width={4}>
+            {c.majorConsequence || c.consequenceTerms.join('; ')}
+          </Table.Cell>
+          <Table.Cell width={9}>
+            {annotationSections.map(([field1, field2]) => (
+              <AnnotationSection>
+                <AnnotationDetail consequence={c} {...field1} />
+                {field2 && <AnnotationDetail consequence={c} {...field2} />}
+              </AnnotationSection>
+            ))}
+          </Table.Cell>
+        </Table.Row>
+      ))}
+    </Table.Body>
+  </Table>
+)
+
+ConsequenceDetails.propTypes = {
+  consequences: PropTypes.arrayOf(PropTypes.object).isRequired,
+  idField: PropTypes.string.isRequired,
+  variant: PropTypes.object,
+  idDetails: PropTypes.func,
+  annotationSections: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.object)),
+}
 
 const TRANSCRIPT_LABELS = [
   {
@@ -42,7 +91,62 @@ const TRANSCRIPT_LABELS = [
   },
 ]
 
-const Transcripts = React.memo(({ variant, genesById, transcriptsById, updateMainTranscript, project }) => (
+const transcriptIdDetails = (transcript, variant, { transcriptsById, project, updateMainTranscript }) => (
+  <div>
+    {transcriptsById[transcript.transcriptId]?.refseqId && (
+      <div>
+        <HeaderLabel>RefSeq:</HeaderLabel>
+        <a
+          href={`https://www.ncbi.nlm.nih.gov/nuccore/${transcriptsById[transcript.transcriptId].refseqId}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {transcriptsById[transcript.transcriptId].refseqId}
+        </a>
+      </div>
+    )}
+    {TRANSCRIPT_LABELS.map(({ shouldShow, ...labelProps }) => (
+      shouldShow(transcript, transcriptsById) && (
+        <Label key={labelProps.content} size="small" horizontal {...labelProps} />
+      )
+    ))}
+    {
+      variant.variantGuid && project?.canEdit && (
+        <span>
+          <VerticalSpacer height={5} />
+          {
+            transcript.transcriptId === variant.selectedMainTranscriptId ?
+              <Label content="User Chosen Transcript" color="purple" size="small" /> : (
+                <DispatchRequestButton
+                  onSubmit={updateMainTranscript(transcript.transcriptId)}
+                  confirmDialog="Are you sure want to update the main transcript for this variant?"
+                >
+                  <Label as="a" content="Use as Main Transcript" color="violet" basic size="small" />
+                </DispatchRequestButton>
+              )
+          }
+        </span>
+      )
+    }
+  </div>
+)
+
+const ANNOTATION_SECTIONS = [
+  [{ title: 'Codons' }, { title: 'Amino Acids' }],
+  [
+    { title: 'Biotype' },
+    {
+      title: 'Intron/Exon',
+      getContent: c => ['intron', 'exon'].filter(f => c[f]).map(f => `${camelcaseToTitlecase(f)} ${c[f].index}/${c[f].total}`).join(', '),
+    },
+  ],
+  [
+    { title: 'HGVS.C', getContent: transcript => transcript.hgvsc && <ProteinSequence hgvs={transcript.hgvsc} /> },
+    { title: 'HGVS.P', getContent: transcript => transcript.hgvsp && <ProteinSequence hgvs={transcript.hgvsp} /> },
+  ],
+]
+
+const Transcripts = React.memo(({ variant, genesById, ...props }) => (
   variant.transcripts && Object.entries(variant.transcripts).sort((transcriptsA, transcriptsB) => (
     Math.min(...transcriptsA[1].map(t => t.transcriptRank)) - Math.min(...transcriptsB[1].map(t => t.transcriptRank))
   )).map(([geneId, geneTranscripts]) => (
@@ -54,84 +158,14 @@ const Transcripts = React.memo(({ variant, genesById, transcriptsById, updateMai
         subheader={`Gene Id: ${geneId}`}
       />
       <Segment attached="bottom">
-        <Table basic="very">
-          <Table.Body>
-            {geneTranscripts.map(transcript => (
-              <Table.Row key={transcript.transcriptId}>
-                <Table.Cell width={3}>
-                  <TranscriptLink variant={variant} transcript={transcript} />
-                  {transcriptsById[transcript.transcriptId]?.refseqId && (
-                    <div>
-                      <HeaderLabel>RefSeq:</HeaderLabel>
-                      <a
-                        href={`https://www.ncbi.nlm.nih.gov/nuccore/${transcriptsById[transcript.transcriptId].refseqId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {transcriptsById[transcript.transcriptId].refseqId}
-                      </a>
-                    </div>
-                  )}
-                  <div>
-                    {TRANSCRIPT_LABELS.map(({ shouldShow, ...labelProps }) => (
-                      shouldShow(transcript, transcriptsById) && (
-                        <Label key={labelProps.content} size="small" horizontal {...labelProps} />
-                      )
-                    ))}
-                    {
-                      variant.variantGuid && project?.canEdit && (
-                        <span>
-                          <VerticalSpacer height={5} />
-                          {
-                            transcript.transcriptId === variant.selectedMainTranscriptId ?
-                              <Label content="User Chosen Transcript" color="purple" size="small" /> : (
-                                <DispatchRequestButton
-                                  onSubmit={updateMainTranscript(transcript.transcriptId)}
-                                  confirmDialog="Are you sure want to update the main transcript for this variant?"
-                                >
-                                  <Label as="a" content="Use as Main Transcript" color="violet" basic size="small" />
-                                </DispatchRequestButton>
-                              )
-                          }
-                        </span>
-                      )
-                    }
-                  </div>
-                </Table.Cell>
-                <Table.Cell width={4}>
-                  {transcript.majorConsequence}
-                </Table.Cell>
-                <Table.Cell width={9}>
-                  <AnnotationSection>
-                    <AnnotationLabel>Codons</AnnotationLabel>
-                    {transcript.codons}
-                    <br />
-                    <AnnotationLabel>Amino Acids</AnnotationLabel>
-                    {transcript.aminoAcids}
-                    <br />
-                  </AnnotationSection>
-                  <AnnotationSection>
-                    <AnnotationLabel>Biotype</AnnotationLabel>
-                    {transcript.biotype}
-                    <br />
-                    <AnnotationLabel>Intron/Exon</AnnotationLabel>
-                    {transcript.intron && `Intron ${transcript.intron.index}/${transcript.intron.total}`}
-                    {transcript.exon && `${transcript.intron ? ', ' : ''}Exon ${transcript.exon.index}/${transcript.exon.total}`}
-                    <br />
-                  </AnnotationSection>
-                  <AnnotationSection>
-                    <AnnotationLabel>HGVS.C</AnnotationLabel>
-                    {transcript.hgvsc && <ProteinSequence hgvs={transcript.hgvsc} />}
-                    <br />
-                    <AnnotationLabel>HGVS.P</AnnotationLabel>
-                    {transcript.hgvsp && <ProteinSequence hgvs={transcript.hgvsp} />}
-                    <br />
-                  </AnnotationSection>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table>
+        <ConsequenceDetails
+          consequences={geneTranscripts}
+          variant={variant}
+          idField="transcriptId"
+          idDetails={transcriptIdDetails}
+          annotationSections={ANNOTATION_SECTIONS}
+          {...props}
+        />
       </Segment>
       <VerticalSpacer height={10} />
     </div>
