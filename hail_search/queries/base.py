@@ -191,8 +191,6 @@ class BaseHailTableQuery(object):
         value_keys = value.keys()
         for field in (enum_keys or enum.keys()):
             field_enum = enum[field]
-            if field == 'utrannotator':
-                field = 'utrrannotator'
             is_nested_struct = field in value_keys
             is_array = f'{field}_ids' in value_keys
 
