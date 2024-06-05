@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('seqr', '0066_family_post_discovery_mondo_id'),
+        ('seqr', '0067_alter_variantfunctionaldata_functional_data_tag'),
     ]
 
     operations = [
