@@ -35,8 +35,6 @@ def _to_camel_case(snake_case_str):
 
 class BaseHailTableQuery(object):
 
-    ANNS_HT = 'annotations.ht'
-
     DATA_TYPE = None
     KEY_FIELD = None
     LOADED_GLOBALS = None
@@ -306,14 +304,11 @@ class BaseHailTableQuery(object):
         project_hts = []
         sample_data = {}
         for project_guid, project_sample_data in project_samples.items():
-            try:
-                project_ht = self._read_table(
-                    f'projects/{project_guid}.ht',
-                    use_ssd_dir=True,
-                    skip_missing_field='family_entries' if skip_all_missing else None,
-                )
-            except Exception as e:
-                project_ht = None
+            project_ht = self._read_table(
+                f'projects/{project_guid}.ht',
+                use_ssd_dir=True,
+                skip_missing_field='family_entries' if skip_all_missing else None,
+            )
             if project_ht is None:
                 continue
             project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
@@ -1090,7 +1085,7 @@ class BaseHailTableQuery(object):
 
     def lookup_variants(self, variant_ids, include_project_data=False, **kwargs):
         self._parse_intervals(intervals=None, variant_ids=variant_ids, variant_keys=variant_ids)
-        ht = self._read_table(self.ANNS_HT, drop_globals=['paths', 'versions'])
+        ht = self._read_table('annotations.ht', drop_globals=['paths', 'versions'])
         ht = ht.filter(hl.is_defined(ht[XPOS]))
 
         annotation_fields = self.annotation_fields(include_genotype_overrides=False)
