@@ -1870,6 +1870,8 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'sv_type', fieldName: 'svType', format: ({ svType }) => SVTYPE_LOOKUP[svType] || svType },
   { name: 'variant_inheritance' },
   { name: 'gene_known_for_phenotype' },
+  { name: 'phenotype_contribution' },
+  { name: 'partial_contribution_explained' },
   { name: 'notes' },
 ]
 
