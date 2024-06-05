@@ -40,7 +40,7 @@ AnnotationDetail.propTypes = {
 }
 
 export const ConsequenceDetails = (
-  { consequences, variant, idField, idDetails, annotationSections, ensemblLink = {}, ...props },
+  { consequences, variant, idField, idDetails, consequenceDetails, annotationSections, ensemblLink = {}, ...props },
 ) => (
   <Table basic="very">
     <Table.Body>
@@ -52,6 +52,7 @@ export const ConsequenceDetails = (
           </Table.Cell>
           <Table.Cell width={4}>
             {c.majorConsequence || c.consequenceTerms.join('; ')}
+            {consequenceDetails && consequenceDetails(c)}
           </Table.Cell>
           <Table.Cell width={9}>
             {annotationSections.map(([field1, field2]) => (
@@ -72,6 +73,7 @@ ConsequenceDetails.propTypes = {
   idField: PropTypes.string.isRequired,
   variant: PropTypes.object,
   idDetails: PropTypes.func,
+  consequenceDetails: PropTypes.func,
   annotationSections: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.object)),
   ensemblLink: PropTypes.object,
 }
@@ -134,6 +136,13 @@ const transcriptIdDetails = (transcript, variant, { transcriptsById, project, up
   </div>
 )
 
+const transcriptConsequenceDetails = ({ utrannotator }) => utrannotator?.fiveutrConsequence && (
+  <div>
+    <HeaderLabel>UTRAnnotator:</HeaderLabel>
+    {utrannotator.fiveutrConsequence}
+  </div>
+)
+
 const ANNOTATION_SECTIONS = [
   [{ title: 'Codons' }, { title: 'Amino Acids' }],
   [
@@ -166,6 +175,7 @@ const Transcripts = React.memo(({ variant, genesById, ...props }) => (
           variant={variant}
           idField="transcriptId"
           idDetails={transcriptIdDetails}
+          consequenceDetails={transcriptConsequenceDetails}
           annotationSections={ANNOTATION_SECTIONS}
           {...props}
         />
