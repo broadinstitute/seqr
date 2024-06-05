@@ -241,7 +241,7 @@ CALLED_TABLE_COLUMNS = {
 }
 GENETIC_FINDINGS_TABLE_COLUMNS = {
     'chrom', 'pos', 'ref', 'alt', 'variant_type', 'variant_reference_assembly', GENE_COLUMN, 'transcript', 'hgvsc', 'hgvsp',
-    'hgvs', 'sv_type', 'chrom_end', 'pos_end', 'copy_number', *FINDING_METADATA_COLUMNS[:4], 'phenotype_contribution',
+    'hgvs', 'sv_type', 'chrom_end', 'pos_end', 'copy_number', *FINDING_METADATA_COLUMNS[:4], 'phenotype_contribution', 'partial_contribution_explained',
     'genetic_findings_id', 'participant_id', 'experiment_id', 'zygosity', 'allele_balance_or_heteroplasmy_percentage',
     'variant_inheritance', 'linked_variant', 'additional_family_members_with_variant', 'method_of_discovery',
     'gene_disease_validity',
@@ -379,7 +379,7 @@ def gregor_export(request):
         elif row_type == DISCOVERY_ROW_TYPE and row:
             for variant in row:
                 genetic_findings_rows.append({
-                    **variant, 'phenotype_contribution': 'Full', 'variant_type': 'SNV/INDEL',
+                    **variant, 'variant_type': 'SNV/INDEL',
                 })
 
     parse_anvil_metadata(
