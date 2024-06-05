@@ -5,7 +5,7 @@ from hail_search.queries.snv_indel import SnvIndelHailTableQuery
 
 
 class SnvIndelHailTableQuery37(SnvIndelHailTableQuery):
-    ANNS_HT = 'annotations.ht'
+
     GENOME_VERSION = GENOME_VERSION_GRCh37
     PREDICTION_FIELDS_CONFIG = SnvIndelHailTableQuery.PREDICTION_FIELDS_CONFIG_ALL_BUILDS
     LIFTOVER_ANNOTATION_FIELDS = {}

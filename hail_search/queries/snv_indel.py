@@ -11,7 +11,6 @@ from hail_search.queries.mito import MitoHailTableQuery
 class SnvIndelHailTableQuery(MitoHailTableQuery):
 
     DATA_TYPE = 'SNV_INDEL'
-    ANNS_HT = 'annotations_vep_110.ht'
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ', 'AB']}
     QUALITY_FILTER_FORMAT = {

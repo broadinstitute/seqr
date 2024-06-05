@@ -7,7 +7,6 @@ from hail_search.queries.snv_indel import SnvIndelHailTableQuery
 class OntSnvIndelHailTableQuery(SnvIndelHailTableQuery):
 
     DATA_TYPE = 'ONT_SNV_INDEL'
-    ANNS_HT = 'annotations.ht'
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS
 
