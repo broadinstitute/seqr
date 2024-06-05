@@ -2,6 +2,7 @@ import requests
 from collections import defaultdict
 from django.core.exceptions import PermissionDenied
 
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.terra_api_utils import is_google_authenticated
 
@@ -138,7 +139,7 @@ def get_airtable_samples(sample_ids, user, fields, list_fields=None):
             if len(record_field) > 1:
                 error = 'Found multiple airtable records for sample {} with mismatched values in field {}'.format(
                     record_id, field)
-                raise Exception(error)
+                raise ErrorsWarningsException([error])
             if record_field:
                 parsed_record[field] = record_field.pop()
         for field in list_fields:
