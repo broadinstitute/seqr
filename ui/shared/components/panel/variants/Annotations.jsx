@@ -632,23 +632,6 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcripts
           <Label color="red" horizontal size="tiny">High Constraint Region</Label>
         </span>
       )}
-      {CONSEQUENCE_FEATURES.filter(({ field }) => variant[field]).map(({ field, name, ...props }) => (
-        <div>
-          <b>{`${name} Feature: `}</b>
-          <Modal
-            modalName={`${variant.variantId}-${name}`}
-            title={`${name} Feature Consequences`}
-            trigger={<ButtonLink>{variant[field][0].consequenceTerms[0].replace(/_/g, ' ')}</ButtonLink>}
-          >
-            <ConsequenceDetails
-              consequences={variant[field]}
-              variant={variant}
-              ensemblLink={REGULATORY_FEATURE_LINK}
-              {...props}
-            />
-          </Modal>
-        </div>
-      ))}
       {mainTranscript.utrannotator?.fiveutrConsequence && (
         <div>
           <b>UTRAnnotator: &nbsp;</b>
@@ -673,6 +656,23 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcripts
           </b>
         </div>
       )}
+      {CONSEQUENCE_FEATURES.filter(({ field }) => variant[field]).map(({ field, name, ...props }) => (
+        <div>
+          <b>{`${name} Feature: `}</b>
+          <Modal
+            modalName={`${variant.variantId}-${name}`}
+            title={`${name} Feature Consequences`}
+            trigger={<ButtonLink>{variant[field][0].consequenceTerms[0].replace(/_/g, ' ')}</ButtonLink>}
+          >
+            <ConsequenceDetails
+              consequences={variant[field]}
+              variant={variant}
+              ensemblLink={REGULATORY_FEATURE_LINK}
+              {...props}
+            />
+          </Modal>
+        </div>
+      ))}
       {mainTranscript.hgvsc && (
         <div>
           <b>HGVS.C</b>
