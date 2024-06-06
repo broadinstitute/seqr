@@ -900,13 +900,6 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001578',
   },
   {
-    description: 'A codon variant that changes at least one base of the first codon of a transcript',
-    text: 'Initiator codon',
-    value: 'initiator_codon_variant',
-    group: VEP_GROUP_MISSENSE,
-    so: 'SO:0001582',
-  },
-  {
     description: 'A codon variant that changes at least one base of the canonical start codon.',
     text: 'Start lost',
     value: 'start_lost',
@@ -966,6 +959,13 @@ const ORDERED_VEP_CONSEQUENCES = [
     value: 'synonymous_variant',
     group: VEP_GROUP_SYNONYMOUS,
     so: 'SO:0001819',
+  },
+  {
+    description: 'A sequence variant where at least one base in the start codon is changed, but the start remains',
+    text: 'Start retained',
+    value: 'start_retained_variant',
+    group: VEP_GROUP_SYNONYMOUS,
+    so: 'SO:0002019',
   },
   {
     description: 'A sequence variant where at least one base in the terminator codon is changed, but the terminator remains',
