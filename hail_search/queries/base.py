@@ -75,7 +75,7 @@ class BaseHailTableQuery(object):
             'response_key': 'transcripts',
             'empty_array': True,
             'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
-            'format_array_values': lambda values, *args: hl.enumerate(values).starmap(lambda i, v: v.annotate(transcriptRank=i)).group_by(lambda t: t.geneId),
+            'format_array_values': lambda values, *args: values.group_by(lambda t: t.geneId),
         },
     }
     LIFTOVER_ANNOTATION_FIELDS = {
