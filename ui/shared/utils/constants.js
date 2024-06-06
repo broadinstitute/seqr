@@ -1028,6 +1028,12 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001619',
   },
   {
+    description: 'A transcript variant of a protein coding gene',
+    text: 'Coding transcript variant',
+    value: 'coding_transcript_variant',
+    so: 'SO:0001968',
+  },
+  {
     description: 'A feature ablation whereby the deleted region includes a transcription factor binding site',
     text: 'TFBS ablation',
     value: 'TFBS_ablation',
@@ -1080,6 +1086,12 @@ const ORDERED_VEP_CONSEQUENCES = [
     text: 'Intergenic variant',
     value: 'intergenic_variant',
     so: 'SO:0001628',
+  },
+  {
+    description: 'A sequence_variant is a non exact copy of a sequence_feature or genome exhibiting one or more sequence_alteration',
+    text: 'Sequence variant',
+    value: 'sequence_variant',
+    so: 'SO:0001060',
   },
 ]
 
