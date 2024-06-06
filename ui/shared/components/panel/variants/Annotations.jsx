@@ -22,7 +22,7 @@ import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import RnaSeqJunctionOutliersTable from '../../table/RnaSeqJunctionOutliersTable'
 import { getOtherGeneNames } from '../genes/GeneDetail'
-import Transcripts, { ConsequenceDetails } from './Transcripts'
+import Transcripts, { ConsequenceDetails, ExtendedSpliceLabel } from './Transcripts'
 import VariantGenes, { GeneLabelContent, omimPhenotypesDetail } from './VariantGene'
 import {
   getLocus,
@@ -632,6 +632,7 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcripts
           <Label color="red" horizontal size="tiny">High Constraint Region</Label>
         </span>
       )}
+      <ExtendedSpliceLabel {...mainTranscript} />
       {mainTranscript.utrannotator?.fiveutrConsequence && (
         <div>
           <b>UTRAnnotator: &nbsp;</b>
