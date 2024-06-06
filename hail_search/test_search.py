@@ -112,7 +112,7 @@ GRCH37_VARIANT = {
         'ENSG00000176227': [
             {'aminoAcids': None, 'canonical': 1, 'codons': None, 'geneId': 'ENSG00000176227',
              'hgvsc': 'ENST00000447022.1:n.1354A>G', 'hgvsp': None,
-             'transcriptId': 'ENST00000447022', 'isLofNagnag': None, 'transcriptRank': 1,
+             'transcriptId': 'ENST00000447022', 'isLofNagnag': None, 'transcriptRank': 0,
              'biotype': 'processed_pseudogene', 'lofFilters': None, 'majorConsequence': 'non_coding_transcript_exon_variant'},
         ],
     },
