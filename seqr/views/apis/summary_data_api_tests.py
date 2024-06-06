@@ -679,10 +679,10 @@ class SummaryDataAPITest(AirtableTest):
         responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Collaborator'.format(AIRTABLE_URL),
                       json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
         response = self.client.get(include_airtable_url)
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(
-            response.json()['error'],
-            'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(
+            response.json()['errors'],
+            ['Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id'])
         self.assertEqual(len(responses.calls), 4)
         first_formula = "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888')"
         expected_fields = [

@@ -274,7 +274,7 @@ const VARIANT_LINKS = [
   {
     name: 'AoU',
     shouldShow: ({ svType }) => !svType,
-    getHref: ({ chrom, pos, ref, alt }) => `https://databrowser.researchallofus.org/genomic-variants/${chrom}-${pos}-${ref}-${alt}`,
+    getHref: ({ chrom, pos, ref, alt }) => `https://databrowser.researchallofus.org/variants/${chrom}-${pos}-${ref}-${alt}`,
   },
   {
     name: 'Iranome',
