@@ -649,7 +649,7 @@ class BaseHailTableQuery(object):
         return parsed_intervals
 
     def _should_add_chr_prefix(self):
-        return True
+        return self.GENOME_VERSION == GENOME_VERSION_GRCh38
 
     def _filter_by_frequency(self, ht, frequencies, pathogenicity):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
