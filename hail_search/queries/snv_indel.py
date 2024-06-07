@@ -5,6 +5,8 @@ from hail_search.constants import GENOME_VERSION_GRCh38, SCREEN_KEY, PREFILTER_F
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath
 from hail_search.queries.snv_indel_37 import SnvIndelHailTableQuery37
 
+EXTENDED_SPLICE_REGION_CONSEQUENCE = 'extended_intronic_splice_region_variant'
+
 
 class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
 
@@ -24,6 +26,23 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
         ('is_gt_5_percent', 0.05),
         ('is_gt_10_percent', 0.1),
     ])
+
+    def _get_allowed_consequence_ids(self, annotations):
+        consequence_ids = super()._get_allowed_consequence_ids(annotations)
+        if EXTENDED_SPLICE_REGION_CONSEQUENCE in (annotations.get('extended_splice_site') or []):
+            consequence_ids.add(EXTENDED_SPLICE_REGION_CONSEQUENCE)
+        return consequence_ids
+
+    @staticmethod
+    def _get_allowed_transcripts_filter(allowed_consequence_ids):
+        has_extended_splice = EXTENDED_SPLICE_REGION_CONSEQUENCE in allowed_consequence_ids
+        allowed_consequence_ids = allowed_consequence_ids - {EXTENDED_SPLICE_REGION_CONSEQUENCE}
+        allowed_consequence_filter = SnvIndelHailTableQuery37._get_allowed_transcripts_filter(allowed_consequence_ids)
+
+        if not has_extended_splice:
+            return allowed_consequence_filter
+
+        return lambda tc: allowed_consequence_filter(tc) | tc.spliceregion.extended_intronic_splice_region_variant
 
     def _get_annotation_override_filters(self, ht, annotation_overrides):
         annotation_filters = super()._get_annotation_override_filters(ht, annotation_overrides)
