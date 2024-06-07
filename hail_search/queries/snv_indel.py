@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import hail as hl
 
 from hail_search.constants import GENOME_VERSION_GRCh38, SCREEN_KEY, PREFILTER_FREQ_CUTOFF
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath
