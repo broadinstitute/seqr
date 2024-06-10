@@ -307,7 +307,6 @@ class IndividualAPITest(object):
         self.assertIsNone(updated_individual['paternalGuid'])
         self.assertIsNone(updated_individual['paternalGuid'])
 
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_individuals(self, mock_pm_group):
         individuals_url = reverse(delete_individuals_handler, args=[PROJECT_GUID])
@@ -323,6 +322,9 @@ class IndividualAPITest(object):
         response = self.client.post(individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA]
         }))
+        self._assert_expected_delete_individuals(response, mock_pm_group)
+
+    def _assert_expected_delete_individuals(self, response, mock_pm_group):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
@@ -362,11 +364,6 @@ class IndividualAPITest(object):
         data = json.dumps({
             'individuals': [{'individualGuid': 'I000015_na20885'}]
         })
-        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
-            response = self.client.post(pm_required_delete_individuals_url, content_type='application/json', data=data)
-        self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active search sample: NA20885'])
-
         response = self.client.post(pm_required_delete_individuals_url, content_type='application/json', data=data)
         self.assertEqual(response.status_code, 200)
 
@@ -1366,3 +1363,7 @@ class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
         else:
             self.mock_subprocess.stdout.__iter__.return_value = self.gs_files[file_name]
         return self.mock_subprocess
+
+    def _assert_expected_delete_individuals(self, response, mock_pm_group):
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active search sample: NA19678'])
