@@ -270,7 +270,7 @@ def _saved_variant_genes_transcripts(variants):
             TranscriptInfo.objects.filter(transcript_id__in=transcript_ids),
             nested_fields=[{'fields': ('refseqtranscript', 'refseq_id'), 'key': 'refseqId'}]
         )
-    }
+    } if transcript_ids else None
 
     return genes, transcripts, family_genes
 
@@ -385,7 +385,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values(), request.user)
         response.update(discovery_response)
 
-    response['transcriptsById'] = transcripts
+    if transcripts:
+        response['transcriptsById'] = transcripts
     response['locusListsByGuid'] = _add_locus_lists(
         projects, genes, add_list_detail=add_locus_list_detail, user=request.user)
 
