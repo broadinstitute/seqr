@@ -136,9 +136,9 @@ const transcriptIdDetails = (transcript, variant, { transcriptsById, project, up
   </div>
 )
 
-export const ExtendedSpliceLabel = ({ spliceregion }) => spliceregion?.extended_intronic_splice_region_variant && (
+export const ExtendedSpliceLabel = ({ spliceregion }) => (spliceregion?.extended_intronic_splice_region_variant ? (
   <Label size="small" horizontal color="yellow" content="Extended Intronic Splice Region" />
-)
+) : null)
 
 ExtendedSpliceLabel.propTypes = {
   spliceregion: PropTypes.object,

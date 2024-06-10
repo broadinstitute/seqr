@@ -900,13 +900,6 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001578',
   },
   {
-    description: 'A codon variant that changes at least one base of the first codon of a transcript',
-    text: 'Initiator codon',
-    value: 'initiator_codon_variant',
-    group: VEP_GROUP_MISSENSE,
-    so: 'SO:0001582',
-  },
-  {
     description: 'A codon variant that changes at least one base of the canonical start codon.',
     text: 'Start lost',
     value: 'start_lost',
@@ -948,11 +941,32 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001583',
   },
   {
+    description: 'A sequence variant that causes a change at the 5th base pair after the start of the intron in the orientation of the transcript',
+    text: 'Splice donor 5th base',
+    value: 'splice_donor_5th_base_variant',
+    group: VEP_GROUP_EXTENDED_SPLICE_SITE,
+    so: 'SO:0001787',
+  },
+  {
     description: 'A sequence variant in which a change has occurred within the region of the splice site, either within 1-3 bases of the exon or 3-8 bases of the intron',
     text: 'Splice region',
     value: 'splice_region_variant',
     group: VEP_GROUP_EXTENDED_SPLICE_SITE,
     so: 'SO:0001630',
+  },
+  {
+    description: "A sequence variant that falls in the region between the 3rd and 6th base after splice junction (5' end of intron)",
+    text: 'Splice donor region',
+    value: 'splice_donor_region_variant',
+    group: VEP_GROUP_EXTENDED_SPLICE_SITE,
+    so: 'SO:0002170',
+  },
+  {
+    description: "A sequence variant that falls in the polypyrimidine tract at 3' end of intron between 17 and 3 bases from the end (acceptor -3 to acceptor -17)",
+    text: 'Splice polypyrimidine tract',
+    value: 'splice_polypyrimidine_tract_variant',
+    group: VEP_GROUP_EXTENDED_SPLICE_SITE,
+    so: 'SO:0002169',
   },
   {
     description: 'A variant flagged in the extended intronic splice region by the SpiceRegion plugin',
@@ -972,6 +986,13 @@ const ORDERED_VEP_CONSEQUENCES = [
     value: 'synonymous_variant',
     group: VEP_GROUP_SYNONYMOUS,
     so: 'SO:0001819',
+  },
+  {
+    description: 'A sequence variant where at least one base in the start codon is changed, but the start remains',
+    text: 'Start retained',
+    value: 'start_retained_variant',
+    group: VEP_GROUP_SYNONYMOUS,
+    so: 'SO:0002019',
   },
   {
     description: 'A sequence variant where at least one base in the terminator codon is changed, but the terminator remains',
@@ -1034,6 +1055,12 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001619',
   },
   {
+    description: 'A transcript variant of a protein coding gene',
+    text: 'Coding transcript variant',
+    value: 'coding_transcript_variant',
+    so: 'SO:0001968',
+  },
+  {
     description: 'A feature ablation whereby the deleted region includes a transcription factor binding site',
     text: 'TFBS ablation',
     value: 'TFBS_ablation',
@@ -1086,6 +1113,12 @@ const ORDERED_VEP_CONSEQUENCES = [
     text: 'Intergenic variant',
     value: 'intergenic_variant',
     so: 'SO:0001628',
+  },
+  {
+    description: 'A sequence_variant is a non exact copy of a sequence_feature or genome exhibiting one or more sequence_alteration',
+    text: 'Sequence variant',
+    value: 'sequence_variant',
+    so: 'SO:0001060',
   },
 ]
 
