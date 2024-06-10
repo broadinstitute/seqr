@@ -888,6 +888,12 @@ class HailSearchTestCase(AioHTTPTestCase):
             pathogenicity=pathogenicity, annotations=annotations, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
         )
 
+        annotations['extended_splice_site'] = ['extended_intronic_splice_region_variant']
+        await self._assert_expected_search(
+            [VARIANT1, VARIANT3, VARIANT4, MITO_VARIANT1, MITO_VARIANT3],
+            pathogenicity=pathogenicity, annotations=annotations, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+        )
+
     async def test_secondary_annotations_filter(self):
         annotations_1 = {'missense': ['missense_variant']}
         annotations_2 = {'other': ['intron_variant']}
