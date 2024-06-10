@@ -969,6 +969,12 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0002169',
   },
   {
+    description: 'A variant flagged in the extended intronic splice region by the SpiceRegion plugin',
+    text: 'Extended Intronic Splice Region',
+    value: 'extended_intronic_splice_region_variant',
+    group: VEP_GROUP_EXTENDED_SPLICE_SITE,
+  },
+  {
     description: 'A sequence variant where at least one base of the final codon of an incompletely annotated transcript is changed',
     text: 'Incomplete terminal codon variant',
     value: 'incomplete_terminal_codon_variant',
