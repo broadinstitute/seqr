@@ -74,7 +74,6 @@ class BaseHailTableQuery(object):
         'transcripts': {
             'response_key': 'transcripts',
             'empty_array': True,
-            'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
             'format_array_values': lambda values, *args: values.group_by(lambda t: t.geneId),
         },
     }
@@ -166,6 +165,10 @@ class BaseHailTableQuery(object):
         value = lambda r: self._format_enum(r, k, enum, ht_globals=self._globals, **enum_config)
         return enum_config.get('response_key', _to_camel_case(k)), value
 
+    @staticmethod
+    def _camelcase_value(value):
+        return value.rename({k: _to_camel_case(k) for k in value.keys()})
+
     @classmethod
     def _format_enum(cls, r, field, enum, empty_array=False, format_array_values=None, **kwargs):
         if hasattr(r, f'{field}_id'):
@@ -175,29 +178,33 @@ class BaseHailTableQuery(object):
         if hasattr(value, 'map'):
             if empty_array:
                 value = hl.or_else(value, hl.empty_array(value.dtype.element_type))
-            value = value.map(lambda x: cls._enum_field(field, x, enum, **kwargs))
+            value = value.map(lambda x: cls._enum_field(field, x, enum, **kwargs, format_value=cls._camelcase_value))
             if format_array_values:
                 value = format_array_values(value, r)
             return value
 
         return cls._enum_field(field, value, enum, **kwargs)
 
-    @staticmethod
-    def _enum_field(field_name, value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, enum_keys=None, include_version=False, **kwargs):
+    @classmethod
+    def _enum_field(cls, field_name, value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, enum_keys=None, include_version=False, **kwargs):
         annotations = {}
         drop = [] + (drop_fields or [])
         value_keys = value.keys()
         for field in (enum_keys or enum.keys()):
             field_enum = enum[field]
+            is_nested_struct = field in value_keys
             is_array = f'{field}_ids' in value_keys
-            value_field = f"{field}_id{'s' if is_array else ''}"
-            drop.append(value_field)
 
-            enum_array = hl.array(field_enum)
-            if is_array:
-                annotations[f'{field}s'] = value[value_field].map(lambda v: enum_array[v])
+            if is_nested_struct:
+                annotations[field] = cls._enum_field(field, value[field], field_enum, format_value=format_value)
             else:
-                annotations[field] = enum_array[value[value_field]]
+                value_field = f"{field}_id{'s' if is_array else ''}"
+                drop.append(value_field)
+                enum_array = hl.array(field_enum)
+                if is_array:
+                    annotations[f'{field}s'] = value[value_field].map(lambda v: enum_array[v])
+                else:
+                    annotations[field] = enum_array[value[value_field]]
 
         if include_version:
             annotations['version'] = ht_globals['versions'][field_name]

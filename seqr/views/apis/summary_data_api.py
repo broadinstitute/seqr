@@ -23,7 +23,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissio
     add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR, AIP_TAG_TYPE
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required, get_project_and_check_permissions, get_internal_projects
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, DISCOVERY_ROW_TYPE
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.variant_utils import get_variants_response, bulk_create_tagged_variants, DISCOVERY_CATEGORY
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
@@ -285,7 +285,6 @@ def individual_metadata(request, project_guid):
             family_rows_by_id[family_id] = row
         elif row_type == DISCOVERY_ROW_TYPE:
             for i, discovery_row in enumerate(row):
-                del discovery_row['gene_ids']
                 participant_id = discovery_row.pop('participant_id')
                 parsed_row = {'{}-{}'.format(k, i + 1): v for k, v in discovery_row.items()}
                 parsed_row['num_saved_variants'] = len(row)
@@ -313,11 +312,14 @@ def individual_metadata(request, project_guid):
         projects, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
         include_metadata=True,
         omit_airtable=not include_airtable,
-        get_additional_individual_fields=lambda individual, airtable_metadata: {
+        get_additional_individual_fields=lambda individual, airtable_metadata, has_dbgap_submission, maternal_ids, paternal_ids: {
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
             'individual_guid': individual.guid,
             'disorders': individual.disorders,
             'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
+            'paternal_guid': paternal_ids[1],
+            'maternal_guid': maternal_ids[1],
+            **anvil_export_airtable_fields(airtable_metadata, has_dbgap_submission),
         },
     )
 
