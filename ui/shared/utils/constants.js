@@ -1190,6 +1190,7 @@ const SORT_BY_SPLICE_AI = 'SPLICE_AI'
 const SORT_BY_EIGEN = 'EIGEN'
 const SORT_BY_MPC = 'MPC'
 const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
+const SORT_BY_ALPHAMISSENSE = 'ALPHAMISSENSE'
 const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
 const SORT_BY_SIZE = 'SIZE'
 
@@ -1264,6 +1265,7 @@ const populationComparator =
 const predictionComparator =
   prediction => (a, b) => ((b.predictions || {})[prediction] || -1) - ((a.predictions || {})[prediction] || -1)
 
+
 const getConsequenceRank = ({ transcripts, svType }) => (
   transcripts ? Math.min(...Object.values(transcripts || {}).flat().map(
     ({ majorConsequence }) => VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence],
@@ -1307,6 +1309,7 @@ const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_MPC, text: 'MPC', comparator: predictionComparator('mpc') },
   { value: SORT_BY_SPLICE_AI, text: 'SpliceAI', comparator: predictionComparator('splice_ai') },
   { value: SORT_BY_PRIMATE_AI, text: 'PrimateAI', comparator: predictionComparator('primate_ai') },
+  { value: SORT_BY_ALPHAMISSENSE, text: 'AlphaMissense', comparator: predictionComparator('primate_ai') },
   {
     value: SORT_BY_PATHOGENICITY,
     text: 'Pathogenicity',
