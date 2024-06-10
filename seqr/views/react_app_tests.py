@@ -24,7 +24,7 @@ class AppPageTest(object):
             'version': mock.ANY,
             'hijakEnabled': False,
             'googleLoginEnabled': self.GOOGLE_ENABLED,
-            'elasticsearchEnabled': self.ES_ENABLED,
+            'elasticsearchEnabled': bool(self.ES_HOSTNAME),
             'warningMessages': [{'id': 1, 'header': 'Warning!', 'message': 'A sample warning'}],
             'anvilLoadingDelayDate': anvil_loading_date,
         })
@@ -100,13 +100,11 @@ class AppPageTest(object):
 class LocalAppPageTest(AuthenticationTestCase, AppPageTest):
     fixtures = ['users']
     GOOGLE_ENABLED = False
-    ES_ENABLED = True
 
 
 class AnvilAppPageTest(AnvilAuthenticationTestCase, AppPageTest):
     fixtures = ['users']
     GOOGLE_ENABLED = True
-    ES_ENABLED = False
 
     def test_react_page(self, *args, **kwargs):
         super(AnvilAppPageTest, self).test_react_page(*args, **kwargs)
