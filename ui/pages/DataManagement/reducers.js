@@ -54,7 +54,17 @@ export const uploadQcPipelineOutput = values => submitRequest(
 
 export const deleteEsIndex = index => submitRequest('delete_index', RECEIVE_ELASTICSEARCH_STATUS, { index })
 
-const loadMultipleData = (path, getUpdateData, dispatchType, formatSuccessMessage) => values => (dispatch) => {
+const executeMultipleRequests = (requests, onSuccess, warnings) => Promise.all(requests.map(
+  ([entityUrl, entityId, body]) => new HttpRequestHelper(
+    entityUrl,
+    onSuccess,
+    e => warnings.push(`Error loading ${entityId}: ${e.body && e.body.error ? e.body.error : e.message}`),
+  ).post(body),
+))
+
+const loadMultipleData = (
+  path, getUpdateData, dispatchType, formatSuccessMessage, maxConcurrentRequests = 50,
+) => values => (dispatch) => {
   let successResponseJson = null
   return new HttpRequestHelper(
     `/api/data_management/${path}`,
@@ -64,15 +74,19 @@ const loadMultipleData = (path, getUpdateData, dispatchType, formatSuccessMessag
   ).post(values).then(() => {
     const { info, warnings } = successResponseJson
     let numLoaded = 0
-    return Promise.all(getUpdateData(successResponseJson, values).map(
-      ([entityUrl, entityId, body]) => new HttpRequestHelper(
-        entityUrl,
-        () => {
-          numLoaded += 1
-        },
-        e => warnings.push(`Error loading ${entityId}: ${e.body && e.body.error ? e.body.error : e.message}`),
-      ).post(body),
-    )).then(() => {
+    const updateData = getUpdateData(successResponseJson, values)
+    return updateData.reduce((prevPromise, item, index) => {
+      if (index % maxConcurrentRequests === 0) {
+        return prevPromise.then(() => executeMultipleRequests(
+          updateData.slice(index, index + maxConcurrentRequests),
+          () => {
+            numLoaded += 1
+          },
+          warnings,
+        ))
+      }
+      return prevPromise
+    }, Promise.resolve()).then(() => {
       info.push(formatSuccessMessage(numLoaded))
       dispatch({ type: dispatchType, newValue: { info, warnings } })
     })
@@ -86,6 +100,7 @@ export const uploadRnaSeq = loadMultipleData(
   ])),
   RECEIVE_RNA_SEQ_UPLOAD_STATS,
   numLoaded => `Successfully loaded data for ${numLoaded} RNA-seq samples`,
+  10,
 )
 
 export const addIgv = loadMultipleData(

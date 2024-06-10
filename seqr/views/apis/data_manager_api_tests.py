@@ -11,7 +11,7 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree, validate_callset, \
     get_loaded_projects, load_data
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
-from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase, AirtableTest
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirflowTestCase, AirtableTest
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
@@ -439,8 +439,7 @@ AIRTABLE_PDO_RECORDS = {
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
-    fixtures = ['users', '1kg_project', 'reference_data']
+class DataManagerAPITest(AirtableTest):
 
     @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
@@ -879,7 +878,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
 
     @mock.patch('seqr.views.utils.dataset_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.dataset_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
-    @mock.patch('seqr.views.apis.data_manager_api.get_temp_upload_directory', lambda: 'tmp/')
+    @mock.patch('seqr.views.utils.file_utils.tempfile.gettempdir', lambda: 'tmp/')
     @mock.patch('seqr.views.utils.dataset_utils.safe_post_to_slack')
     @mock.patch('seqr.views.apis.data_manager_api.datetime')
     @mock.patch('seqr.views.apis.data_manager_api.os.mkdir')
@@ -1054,15 +1053,18 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
 
         # test correct file interactions
         file_path = RNA_FILENAME_TEMPLATE.format(data_type)
-        mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [  # nosec
+        expected_subprocess_calls = [
             f'gsutil ls {RNA_FILE_ID}',
             f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ',
-            f'gsutil mv tmp/{file_path}/* gs://seqr-scratch-temp/{file_path}',
-        ]])
-        mock_mkdir.assert_called_with(f'tmp/{file_path}')
-        filename = f'tmp/{file_path}/{new_sample_guid}.json.gz'
+        ] + self._additional_expected_loading_subprocess_calls(file_path)
+        self.assertEqual(mock_subprocess.call_count, len(expected_subprocess_calls))
+        mock_subprocess.assert_has_calls([
+            mock.call(command, stdout=-1, stderr=-2, shell=True) for command in expected_subprocess_calls  # nosec
+        ])
+        mock_mkdir.assert_any_call(f'tmp/temp_uploads/{file_path}')
+        filename = f'tmp/temp_uploads/{file_path}/{new_sample_guid}.json.gz'
         expected_files = {
-            f'tmp/{file_path}/{new_sample_guid if sample_guid == PLACEHOLDER_GUID else sample_guid}.json.gz': data
+            f'tmp/temp_uploads/{file_path}/{new_sample_guid if sample_guid == PLACEHOLDER_GUID else sample_guid}.json.gz': data
             for sample_guid, data in params['parsed_file_data'].items()
         }
         self.assertIn(filename, expected_files)
@@ -1103,7 +1105,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         self.assertTrue(second_tissue_sample_guid != new_sample_guid)
         self.assertTrue(second_tissue_sample_guid in response_json['sampleGuids'])
         self._assert_expected_file_open(mock_rename, mock_open, [
-            f'tmp/{RNA_FILENAME_TEMPLATE.format(data_type)}/{sample_guid}.json.gz'
+            f'tmp/temp_uploads/{RNA_FILENAME_TEMPLATE.format(data_type)}/{sample_guid}.json.gz'
             for sample_guid in response_json['sampleGuids']
         ])
         self.assertSetEqual(
@@ -1111,14 +1113,20 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
             params['write_data'],
         )
 
+    @staticmethod
+    def _additional_expected_loading_subprocess_calls(file_path):
+        return []
+
+    def _get_expected_read_file_subprocess_calls(self, file_name, sample_guid):
+        return []
+
     def _assert_expected_file_open(self, mock_rename, mock_open, expected_file_names):
         file_rename = {call.args[1]: call.args[0] for call in mock_rename.call_args_list}
         self.assertSetEqual(set(expected_file_names), set(file_rename.keys()))
         mock_open.assert_has_calls([mock.call(file_rename[filename], 'at') for filename in expected_file_names])
         return file_rename
 
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_load_rna_seq_sample_data(self, mock_subprocess):
+    def test_load_rna_seq_sample_data(self):
 
         url = reverse(load_rna_seq_sample_data, args=[RNA_MUSCLE_SAMPLE_GUID])
         self.check_pm_login(url)
@@ -1132,12 +1140,8 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 self.reset_logs()
                 parsed_file_lines = params['parsed_file_data'][sample_guid].strip().split('\n')
 
-                mock_does_file_exist = mock.MagicMock()
-                mock_does_file_exist.wait.return_value = 1
-                mock_does_file_exist.stdout = [b'CommandException: One or more URLs matched no objects']
-                mock_subprocess.side_effect = [mock_does_file_exist]
-
                 file_name = RNA_FILENAME_TEMPLATE.format(data_type)
+                not_found_logs = self._set_file_not_found(file_name, sample_guid)
 
                 body = {'fileName': file_name, 'dataType': data_type}
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1145,17 +1149,14 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 self.assertDictEqual(response.json(), {'error': 'Data for this sample was not properly parsed. Please re-upload the data'})
                 self.assert_json_logs(self.pm_user, [
                     (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
-                    (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
-                    ('CommandException: One or more URLs matched no objects', None),
+                    *not_found_logs,
                     (f'No saved temp data found for {sample_guid} with file prefix {file_name}', {
                         'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
                     }),
                 ])
 
-                mock_does_file_exist.wait.return_value = 0
-                mock_file_iter = mock.MagicMock()
-                mock_file_iter.stdout = [row.encode('utf-8') for row in parsed_file_lines]
-                mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+                self._add_file_iter([row.encode('utf-8') for row in parsed_file_lines])
+
                 self.reset_logs()
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 200)
@@ -1167,13 +1168,11 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 self.assertSetEqual({model.sample.guid for model in models}, {sample_guid})
                 self.assertTrue(all(model.sample.is_active for model in models))
 
-                gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
-                mock_subprocess.assert_called_with(gsutil_cat, stdout=-1, stderr=-2, shell=True)  # nosec
+                subprocess_logs = self._get_expected_read_file_subprocess_calls(file_name, sample_guid)
 
                 self.assert_json_logs(self.pm_user, [
                     (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
-                    (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
-                    (f'==> {gsutil_cat}', None),
+                    *subprocess_logs,
                     (f'create {model_cls.__name__}s', {'dbUpdate': {
                         'dbEntity': model_cls.__name__, 'numEntities': num_models, 'parentEntityIds': [sample_guid],
                         'updateType': 'bulk_create',
@@ -1183,8 +1182,7 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
                 self.assertListEqual(list(params['get_models_json'](models)), params['expected_models_json'])
 
                 mismatch_row = {**json.loads(parsed_file_lines[0]), params.get('mismatch_field', 'p_value'): '0.05'}
-                mock_file_iter.stdout += [json.dumps(mismatch_row).encode('utf-8')]
-                mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+                self._add_file_iter([json.dumps(mismatch_row).encode('utf-8')])
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {
@@ -1469,6 +1467,75 @@ class DataManagerAPITest(AuthenticationTestCase, AirtableTest):
         response = self.client.get(snv_indel_url.replace('WGS', 'WES'))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'projects': [EMPTY_PROJECT_OPTION]})
+
+
+class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data']
+
+    def setUp(self):
+        patcher = mock.patch('seqr.utils.file_utils.os.path.isfile')
+        self.mock_does_file_exist = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.file_utils.gzip.open')
+        self.mock_open = patcher.start()
+        self.mock_file_iter = self.mock_open.return_value.__enter__.return_value.__iter__
+        self.mock_file_iter.return_value = []
+        self.addCleanup(patcher.stop)
+        super().setUp()
+
+    def _set_file_not_found(self, file_name, sample_guid):
+        self.mock_does_file_exist.return_value = False
+        self.mock_file_iter.return_value = []
+        return []
+
+    def _add_file_iter(self, stdout):
+        self.mock_does_file_exist.return_value = True
+        self.mock_file_iter.return_value += stdout
+
+
+class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data']
+
+    def setUp(self):
+        patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
+        self.mock_subprocess = patcher.start()
+        self.mock_does_file_exist = mock.MagicMock()
+        self.mock_file_iter = mock.MagicMock()
+        self.mock_file_iter.stdout = []
+        self.mock_subprocess.side_effect = [self.mock_does_file_exist, self.mock_file_iter]
+        self.addCleanup(patcher.stop)
+        super().setUp()
+
+    def _set_file_not_found(self, file_name, sample_guid):
+        self.mock_file_iter.stdout = []
+        self.mock_does_file_exist.wait.return_value = 1
+        self.mock_does_file_exist.stdout = [b'CommandException: One or more URLs matched no objects']
+        self.mock_subprocess.side_effect = [self.mock_does_file_exist]
+        return [
+            (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
+            ('CommandException: One or more URLs matched no objects', None),
+        ]
+
+    def _add_file_iter(self, stdout):
+        self.mock_does_file_exist.wait.return_value = 0
+        self.mock_file_iter.stdout += stdout
+        self.mock_subprocess.side_effect = [self.mock_does_file_exist, self.mock_file_iter]
+
+    def _get_expected_read_file_subprocess_calls(self, file_name, sample_guid):
+        gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
+        self.mock_subprocess.assert_called_with(gsutil_cat, stdout=-1, stderr=-2, shell=True)  # nosec
+        return [
+            (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
+            (f'==> {gsutil_cat}', None),
+        ]
+
+    @staticmethod
+    def _additional_expected_loading_subprocess_calls(file_path):
+        return [f'gsutil mv tmp/temp_uploads/{file_path}/* gs://seqr-scratch-temp/{file_path}']
+
+    def test_get_loaded_projects(self, *args, **kwargs):
+        # Test relies on the local-only project data, and has no real difference for local/ non-local behavior
+        pass
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')

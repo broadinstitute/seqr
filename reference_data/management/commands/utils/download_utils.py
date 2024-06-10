@@ -18,8 +18,7 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
     if not (url and url.startswith(("http://", "https://"))):
         raise ValueError("Invalid url: {}".format(url))
     local_file_path = os.path.join(to_dir, os.path.basename(url))
-    remote_file_size = _get_remote_file_size(url)
-    if os.path.isfile(local_file_path) and os.path.getsize(local_file_path) == remote_file_size:
+    if os.path.isfile(local_file_path) and os.path.getsize(local_file_path) == _get_remote_file_size(url):
         logger.info("Re-using {} previously downloaded from {}".format(local_file_path, url))
         return local_file_path
 
@@ -39,9 +38,10 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
 
 
 def _get_remote_file_size(url):
-    if url.startswith("http"):
-        response = requests.head(url, timeout=10)
+    try:
+        response = requests.head(url, timeout=5)
         return int(response.headers.get('Content-Length', '0'))
-    else:
-        return 0  # file size not yet implemented for FTP and other protocols
+    except Exception:
+        # file size not yet implemented for FTP and other protocols, and HEAD not supported for all http requests
+        return 0
 

@@ -73,14 +73,14 @@ def update_records(reference_data_handler, file_path=None):
     Args:
         file_path (str): optional local file path. If not specified, or the path doesn't exist, the table will be downloaded.
     """
-    logger.info('Updating {}'.format(reference_data_handler))
-
-    if not file_path or not os.path.isfile(file_path):
-        file_path = download_file(reference_data_handler.url)
-
     model_cls = reference_data_handler.model_cls
     model_name = model_cls.__name__
     model_objects = getattr(model_cls, 'objects')
+
+    logger.info(f'Updating {model_name}')
+
+    if not file_path or not os.path.isfile(file_path):
+        file_path = download_file(reference_data_handler.url)
 
     models = []
     skip_counter = 0

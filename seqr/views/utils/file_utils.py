@@ -9,10 +9,14 @@ import os
 import tempfile
 import openpyxl as xl
 
+from seqr.utils.file_utils import mv_file_to_gs, file_iter
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import login_and_policies_required
+from seqr.views.utils.terra_api_utils import anvil_enabled
 
 logger = logging.getLogger(__name__)
+
+TEMP_GS_BUCKET = 'gs://seqr-scratch-temp'
 
 
 @login_and_policies_required
@@ -77,19 +81,22 @@ def _parse_excel_string_cell(cell):
         cell_value = '{:.0f}'.format(cell_value)
     return cell_value or ''
 
-def get_temp_upload_directory():
+
+def get_temp_file_path(file_name, is_local=None):
+    if is_local is None:
+        is_local = not anvil_enabled()
+    if not is_local:
+        return f'{TEMP_GS_BUCKET}/{file_name}'
+
     upload_directory = os.path.join(tempfile.gettempdir(), 'temp_uploads')
     if not os.path.isdir(upload_directory):
-        logger.debug("Creating directory: " + upload_directory)
         os.makedirs(upload_directory)
-    return upload_directory
 
-def _compute_serialized_file_path(uploaded_file_id):
-    """Compute local file path, and make sure the directory exists"""
+    return os.path.join(upload_directory, file_name)
 
-    upload_directory = get_temp_upload_directory()
 
-    return os.path.join(upload_directory, "temp_upload_{}.json.gz".format(uploaded_file_id))
+def _compute_serialized_file_name(uploaded_file_id):
+    return f'temp_upload_{uploaded_file_id}.json.gz'
 
 
 def save_uploaded_file(request, process_records=None, allow_json=False):
@@ -110,16 +117,27 @@ def save_uploaded_file(request, process_records=None, allow_json=False):
 
     # save json to temporary file
     uploaded_file_id = hashlib.md5(str(json_records).encode('utf-8')).hexdigest() # nosec
-    serialized_file_path = _compute_serialized_file_path(uploaded_file_id)
+    file_name = _compute_serialized_file_name(uploaded_file_id)
+    serialized_file_path = get_temp_file_path(file_name, is_local=True)
     with gzip.open(serialized_file_path, 'wt') as f:
         json.dump(json_records, f)
+
+    persist_temp_file(file_name, request.user)
 
     return uploaded_file_id, filename, json_records
 
 
-def load_uploaded_file(upload_file_id):
-    serialized_file_path = _compute_serialized_file_path(upload_file_id)
-    with gzip.open(serialized_file_path, "rt") as f:
-        json_records = json.load(f)
+def persist_temp_file(file_name, user, is_directory=False):
+    if not anvil_enabled():
+        return
 
-    return json_records
+    src_path = get_temp_file_path(file_name, is_local=True)
+    dest_path = get_temp_file_path(file_name, is_local=False)
+    if is_directory:
+        src_path = f'{src_path}/*'
+    mv_file_to_gs(src_path, dest_path, user)
+
+
+def load_uploaded_file(upload_file_id):
+    serialized_file_path = get_temp_file_path(_compute_serialized_file_name(upload_file_id))
+    return json.loads(next(file_iter(serialized_file_path)))
