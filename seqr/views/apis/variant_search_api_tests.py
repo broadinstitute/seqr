@@ -491,7 +491,6 @@ class VariantSearchAPITest(object):
             'searchedVariants': COMP_HET_VARAINTS,
             'savedVariantsByGuid': {'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT},
             'genesById': {'ENSG00000233653': EXPECTED_GENE},
-            'transcriptsById': {},
             'variantTagsByGuid': {
                 'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
                 'VT1726985_2103343353_r0390_100': expected_aip_tag,
@@ -503,6 +502,7 @@ class VariantSearchAPITest(object):
         })
         expected_search_response['search']['totalResults'] = 1
         del expected_search_response['familiesByGuid']
+        del expected_search_response['transcriptsById']
         self.assertSetEqual(set(response_json.keys()), set(expected_search_response.keys()))
         self.assertDictEqual(response_json, expected_search_response)
         self._assert_expected_results_context(response_json, has_pa_detail=False, rnaseq=False)
@@ -760,6 +760,8 @@ class VariantSearchAPITest(object):
         response_keys.update(expected_response.keys())
         if omit_fields:
             response_keys -= omit_fields
+        if no_metadata:
+            response_keys.remove('transcriptsById')
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
         expected_search_response = deepcopy(EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE)
@@ -772,8 +774,9 @@ class VariantSearchAPITest(object):
         if no_metadata:
             expected_search_response.update({k: {} for k in {
                 'savedVariantsByGuid', 'variantTagsByGuid', 'variantFunctionalDataByGuid', 'genesById',
-                'transcriptsById', 'rnaSeqData', 'phenotypeGeneScores', 'mmeSubmissionsByGuid'
+                'rnaSeqData', 'phenotypeGeneScores', 'mmeSubmissionsByGuid'
             }})
+            del expected_search_response['transcriptsById']
         else:
             expected_search_response['savedVariantsByGuid'].pop('SV0000002_1248367227_r0390_100')
             expected_search_response['variantTagsByGuid'] = {
@@ -814,7 +817,7 @@ class VariantSearchAPITest(object):
         expected_body = {
             **{k: {} for k in EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE if k not in {
                 'searchedVariants', 'search', 'variantNotesByGuid', 'variantTagsByGuid', 'variantFunctionalDataByGuid',
-
+                'transcriptsById',
             }},
             'projectsByGuid': {},
             'individualsByGuid': {
