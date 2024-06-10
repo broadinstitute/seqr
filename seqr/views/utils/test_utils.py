@@ -29,6 +29,8 @@ class AuthenticationTestCase(TestCase):
     AUTHENTICATED_USER = 'authenticated'
     NO_POLICY_USER = 'no_policy'
 
+    ES_HOSTNAME = 'testhost'
+
     super_user = None
     analyst_user = None
     pm_user = None
@@ -40,6 +42,9 @@ class AuthenticationTestCase(TestCase):
     no_policy_user = None
 
     def setUp(self):
+        patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', self.ES_HOSTNAME)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.permissions_utils.SEQR_PRIVACY_VERSION', 2.1)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -505,6 +510,8 @@ def get_group_members_side_effect(user, group, use_sa_credentials=False):
 
 
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
+
+    ES_HOSTNAME = ''
 
     # mock the terra apis
     def setUp(self):

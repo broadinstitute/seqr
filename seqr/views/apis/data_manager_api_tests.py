@@ -441,7 +441,6 @@ AIRTABLE_PDO_RECORDS = {
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class DataManagerAPITest(AirtableTest):
 
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
     def test_elasticsearch_status(self):
         url = reverse(elasticsearch_status)
@@ -457,6 +456,9 @@ class DataManagerAPITest(AirtableTest):
         urllib3_responses.add_json('/_all/_mapping', ES_INDEX_MAPPING)
 
         response = self.client.get(url)
+        self._assert_expected_es_status(response)
+
+    def _assert_expected_es_status(self, response):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'indices', 'errors', 'diskStats', 'nodeStats'})
@@ -471,12 +473,6 @@ class DataManagerAPITest(AirtableTest):
         self.assertListEqual(response_json['diskStats'], EXPECTED_DISK_ALLOCATION)
         self.assertListEqual(response_json['nodeStats'], EXPECTED_NODE_STATS)
 
-        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.json()['error'], 'Elasticsearch is disabled')
-
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @urllib3_responses.activate
     def test_delete_index(self):
         url = reverse(delete_index)
@@ -495,6 +491,9 @@ class DataManagerAPITest(AirtableTest):
         urllib3_responses.add(urllib3_responses.DELETE, '/unused_index')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
+        self._assert_expected_delete_index_response(response)
+
+    def _assert_expected_delete_index_response(self, response):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'indices'})
@@ -504,11 +503,6 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(response_json['indices'][4], TEST_SV_INDEX_EXPECTED_DICT)
 
         self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
-
-        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
-            response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
-            self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.json()['error'], 'Deleting indices is disabled for the hail backend')
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_upload_qc_pipeline_output(self, mock_subprocess):
@@ -1532,6 +1526,14 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
     @staticmethod
     def _additional_expected_loading_subprocess_calls(file_path):
         return [f'gsutil mv tmp/temp_uploads/{file_path}/* gs://seqr-scratch-temp/{file_path}']
+
+    def _assert_expected_es_status(self, response):
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Elasticsearch is disabled')
+
+    def _assert_expected_delete_index_response(self, response):
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Deleting indices is disabled for the hail backend')
 
     def test_get_loaded_projects(self, *args, **kwargs):
         # Test relies on the local-only project data, and has no real difference for local/ non-local behavior

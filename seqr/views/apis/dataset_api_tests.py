@@ -46,7 +46,6 @@ MOCK_RECORD_ID = 'recH4SEO1CeoIlOiE'
 MOCK_RECORDS = {'records': [{'id': MOCK_RECORD_ID, 'fields': {'Status': 'Loading'}}]}
 
 
-@mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
 @mock.patch('seqr.utils.file_utils.open', MOCK_OPEN)
 class DatasetAPITest(object):
@@ -326,14 +325,12 @@ Let us know if you have any questions.""".format(
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid dataset type "NOT_A_TYPE"']})
 
+        self._assert_expected_add_dataset_errors(url)
+
+    def _assert_expected_add_dataset_errors(self, url):
         response = self.client.post(url, content_type='application/json', data=json.dumps({'datasetType': 'SV'}))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['request must contain field: "elasticsearchIndex"']})
-
-        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
-            response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['errors'][0], 'Adding samples is disabled for the hail backend')
 
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
@@ -498,6 +495,11 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     ANVIL_DISABLED = False
 
+    def _assert_expected_add_dataset_errors(self, url):
+        response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['errors'][0], 'Adding samples is disabled for the hail backend')
+
     def test_add_variants_dataset(self, *args):
-        super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)
-        assert_no_anvil_calls(self)
+        # Adding dataset is always disabled when ES is disabled, which is tested in test_add_variants_dataset_errors
+        pass
