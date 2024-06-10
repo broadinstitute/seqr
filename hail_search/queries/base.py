@@ -1027,6 +1027,10 @@ class BaseHailTableQuery(object):
             sort_expressions = self._get_sort_expressions(ht, self._sort) + sort_expressions
         return sort_expressions
 
+    @staticmethod
+    def _format_prediction_sort_value(value):
+        return hl.or_else(-hl.float64(value), 0)
+
     def _get_sort_expressions(self, ht, sort):
         if sort in self.SORTS:
             return self.SORTS[sort](ht)

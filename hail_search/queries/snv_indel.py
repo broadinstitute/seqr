@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import hail as hl
 
-from hail_search.constants import GENOME_VERSION_GRCh38, SCREEN_KEY, PREFILTER_FREQ_CUTOFF
+from hail_search.constants import GENOME_VERSION_GRCh38, SCREEN_KEY, PREFILTER_FREQ_CUTOFF, ALPHAMISSENSE_SORT
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath
 from hail_search.queries.snv_indel_37 import SnvIndelHailTableQuery37
 
@@ -26,6 +26,15 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
         ('is_gt_5_percent', 0.05),
         ('is_gt_10_percent', 0.1),
     ])
+    SORTS = {
+        **SnvIndelHailTableQuery37.SORTS,
+        ALPHAMISSENSE_SORT: lambda r: [
+            SnvIndelHailTableQuery37._format_prediction_sort_value(
+                hl.min(r.sorted_transcript_consequences.map(lambda t: t.alphamissense.pathogenicity))
+            ),
+            SnvIndelHailTableQuery37._format_prediction_sort_value(r.selected_transcript.alphamissense.pathogenicity),
+        ],
+    }
 
     def _get_allowed_consequence_ids(self, annotations):
         consequence_ids = super()._get_allowed_consequence_ids(annotations)
