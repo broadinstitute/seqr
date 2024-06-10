@@ -62,6 +62,8 @@ PROJECT_2_VARIANT = {
     'transcripts': {},
     'mainTranscriptId': None,
     'selectedMainTranscriptId': None,
+    'sortedMotifFeatureConsequences': None,
+    'sortedRegulatoryFeatureConsequences': None,
     '_sort': [1000010146],
 }
 
@@ -134,11 +136,12 @@ MULTI_FAMILY_VARIANT = deepcopy(VARIANT3)
 MULTI_FAMILY_VARIANT['familyGuids'] += FAMILY_3_VARIANT['familyGuids']
 MULTI_FAMILY_VARIANT['genotypes'].update(FAMILY_3_VARIANT['genotypes'])
 
-SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
-SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
-SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000426137'}
-SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000641759'}
-MULTI_DATA_TYPE_COMP_HET_VARIANT2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000641820'}
+SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000426137'}
+SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT = {**MULTI_FAMILY_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611'}
+SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000459627'}
+MULTI_DATA_TYPE_COMP_HET_VARIANT2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000450625'}
 
 PROJECT_2_VARIANT1 = deepcopy(VARIANT1)
 PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
@@ -848,12 +851,12 @@ class HailSearchTestCase(AioHTTPTestCase):
             'structural_consequence': ['INTRONIC', 'LOF'],
         }
         await self._assert_expected_search(
-            [VARIANT1, VARIANT2, VARIANT4, MITO_VARIANT2, MITO_VARIANT3], pathogenicity=pathogenicity,
+            [VARIANT1, VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, MITO_VARIANT2, MITO_VARIANT3], pathogenicity=pathogenicity,
             annotations=annotations, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
         )
 
         await self._assert_expected_search(
-            [VARIANT2, VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
+            [VARIANT2, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], annotations=annotations,
         )
 
         await self._assert_expected_search([SV_VARIANT1], annotations=annotations, sample_data=SV_WGS_SAMPLE_DATA)
@@ -861,7 +864,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         annotations['splice_ai'] = '0.005'
         annotations['structural'] = ['gCNV_DUP', 'DEL']
         await self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
+            [VARIANT2, MULTI_FAMILY_VARIANT, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
             annotations=annotations,
         )
 
@@ -890,17 +893,17 @@ class HailSearchTestCase(AioHTTPTestCase):
         annotations_2 = {'other': ['intron_variant']}
 
         await self._assert_expected_search(
-            [[VARIANT3, VARIANT4]], inheritance_mode='compound_het', omit_sample_type='SV_WES',
+            [[VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='compound_het', omit_sample_type='SV_WES',
             annotations=annotations_1, annotations_secondary=annotations_2,
         )
 
         await self._assert_expected_search(
-            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            [VARIANT2, [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
             annotations=annotations_1, annotations_secondary=annotations_2,
         )
 
         await self._assert_expected_search(
-            [[VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            [[VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
             annotations=annotations_2, annotations_secondary=annotations_1,
         )
 
@@ -935,7 +938,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
+            [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive',
             annotations={**annotations_1, **gcnv_annotations_1}, annotations_secondary={**annotations_2, **gcnv_annotations_2},
         )
@@ -955,7 +958,7 @@ class HailSearchTestCase(AioHTTPTestCase):
 
         pathogenicity = {'clinvar': ['likely_pathogenic', 'vus_or_conflicting']}
         await self._assert_expected_search(
-            [VARIANT2, [VARIANT3, VARIANT4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
+            [VARIANT2, [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='recessive', omit_sample_type='SV_WES',
             annotations=annotations_2, annotations_secondary=annotations_1, pathogenicity=pathogenicity,
         )
 
@@ -1069,8 +1072,8 @@ class HailSearchTestCase(AioHTTPTestCase):
 
     async def test_sort(self):
         await self._assert_expected_search(
-            [_sorted(VARIANT2, [11, 11]),  _sorted(VARIANT4, [11, 11]), _sorted(MITO_VARIANT2, [11, 11]),
-             _sorted(MITO_VARIANT3, [17, 17]),  _sorted(MITO_VARIANT1, [22, 22]), _sorted(VARIANT3, [22, 24]),
+            [_sorted(VARIANT4, [2, 2]), _sorted(MITO_VARIANT2, [11, 11]), _sorted(VARIANT2, [12, 12]),
+             _sorted(MITO_VARIANT3, [17, 17]),  _sorted(MITO_VARIANT1, [22, 22]), _sorted(VARIANT3, [26, 27]),
              _sorted(VARIANT1, [None, None])], sample_data=FAMILY_2_ALL_SAMPLE_DATA, sort='protein_consequence',
         )
 
@@ -1080,9 +1083,9 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [_sorted(GCNV_VARIANT2, [4.5, 0]), _sorted(GCNV_VARIANT3, [4.5, 0]), _sorted(GCNV_VARIANT4, [4.5, 0]),
-             _sorted(GCNV_VARIANT1, [4.5, 3]), _sorted(VARIANT2, [11, 11]), _sorted(VARIANT4, [11, 11]),
-             _sorted(MULTI_FAMILY_VARIANT, [22, 24]), _sorted(VARIANT1, [None, None])], sort='protein_consequence',
+            [_sorted(VARIANT4, [2, 2]), _sorted(GCNV_VARIANT2, [4.5, 0]), _sorted(GCNV_VARIANT3, [4.5, 0]), _sorted(GCNV_VARIANT4, [4.5, 0]),
+             _sorted(GCNV_VARIANT1, [4.5, 3]), _sorted(VARIANT2, [12, 12]),
+             _sorted(MULTI_FAMILY_VARIANT, [26, 27]), _sorted(VARIANT1, [None, None])], sort='protein_consequence',
         )
 
         await self._assert_expected_search(
@@ -1091,8 +1094,8 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [_sorted(VARIANT4, [11, 11]), _sorted(SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [11, 22]),
-             _sorted(SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, [22, 22])],
+            [_sorted(VARIANT4, [2, 2]), _sorted(SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_2, [12, 26]),
+             _sorted(SELECTED_ANNOTATION_TRANSCRIPT_MULTI_FAMILY_VARIANT, [26, 26])],
             omit_sample_type='SV_WES', sort='protein_consequence',
             annotations={'other': ['non_coding_transcript_exon_variant'], 'splice_ai': '0'},
         )
@@ -1225,9 +1228,10 @@ class HailSearchTestCase(AioHTTPTestCase):
 
     async def test_multi_data_type_comp_het_sort(self):
         await self._assert_expected_search(
-            [_sorted(GCNV_VARIANT3, [4.5, 0]), [_sorted(GCNV_VARIANT3, [0]), _sorted(GCNV_VARIANT4, [0])],
-             [_sorted(GCNV_VARIANT4, [4.5, 0]), _sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [11, 11])],
-             _sorted(VARIANT2, [11, 11]), [_sorted(VARIANT4, [11, 11]), _sorted(VARIANT3, [22, 24])]],
+            [[_sorted(VARIANT4, [2, 2]), _sorted(VARIANT3, [26, 27])],
+             _sorted(GCNV_VARIANT3, [4.5, 0]), [_sorted(GCNV_VARIANT3, [0]), _sorted(GCNV_VARIANT4, [0])],
+             [_sorted(GCNV_VARIANT4, [4.5, 0]), _sorted(MULTI_DATA_TYPE_COMP_HET_VARIANT2, [12, 12])],
+             _sorted(VARIANT2, [12, 12])],
             sort='protein_consequence', inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS,
         )
 
