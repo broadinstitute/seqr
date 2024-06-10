@@ -37,7 +37,7 @@ const VariantClassify = React.memo(({ variant, familyGuid }) => {
           {hgvsc && (
             <LoaderContainer>
               <React.Suspense fallback={<Loader />}>
-                <ClinGenVciLink caid={CAID} hgvsc={hgvsc} />
+                <ClinGenVciLink CAID={CAID} hgvsc={hgvsc} />
               </React.Suspense>
             </LoaderContainer>
           )}

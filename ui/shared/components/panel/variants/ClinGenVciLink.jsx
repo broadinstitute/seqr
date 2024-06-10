@@ -7,11 +7,24 @@ import DataLoader from 'shared/components/DataLoader'
 const CLINGEN_ALLELE_REGISTRY_URL = 'https://reg.genome.network/allele'
 const CLINGEN_VCI_URL = 'https://curation.clinicalgenome.org/select-variant'
 
-class ClinGenVciLink extends React.PureComponent {
+const ClingenInfo = ({ alleleId, error }) => (
+  <div>
+    <a href={CLINGEN_VCI_URL} target="_blank" rel="noreferrer">In ClinGen VCI</a>
+    <br />
+    {error || (alleleId && <CopyToClipboardButton text={alleleId} />)}
+  </div>
+)
+
+ClingenInfo.propTypes = {
+  alleleId: PropTypes.string,
+  error: PropTypes.string,
+}
+
+class LoadedClingenVciLink extends React.PureComponent {
 
   static propTypes = {
     hgvsc: PropTypes.string.isRequired,
-    caid: PropTypes.string,
+    alleleId: PropTypes.string,
   }
 
   state = {
@@ -22,8 +35,8 @@ class ClinGenVciLink extends React.PureComponent {
 
   constructor(props) {
     super(props)
-    const { caid } = props
-    this.state.alleleId = caid
+    const { alleleId } = props
+    this.state.alleleId = alleleId
   }
 
   load = (hgvsc) => {
@@ -41,21 +54,22 @@ class ClinGenVciLink extends React.PureComponent {
     const { hgvsc } = this.props
     const { alleleId, loading, error } = this.state
 
-    const clingenInfo = (
-      <div>
-        <a href={CLINGEN_VCI_URL} target="_blank" rel="noreferrer">In ClinGen VCI</a>
-        <br />
-        {error || (alleleId && <CopyToClipboardButton text={alleleId} />)}
-      </div>
-    )
-
-    return alleleId ? clingenInfo : (
+    return (
       <DataLoader contentId={hgvsc} content={alleleId || error} loading={loading} load={this.load}>
-        {clingenInfo}
+        <ClingenInfo alleleId={alleleId} error={error} />
       </DataLoader>
     )
   }
 
+}
+
+const ClinGenVciLink = ({ CAID, hgvsc }) => (
+  CAID ? <ClingenInfo alleleId={CAID} /> : <LoadedClingenVciLink alleleId={CAID} hgvsc={hgvsc} />
+)
+
+ClinGenVciLink.propTypes = {
+  CAID: PropTypes.string,
+  hgvsc: PropTypes.string.isRequired,
 }
 
 export default ClinGenVciLink
