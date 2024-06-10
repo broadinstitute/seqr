@@ -94,6 +94,11 @@ const TRANSCRIPT_LABELS = [
     shouldShow: isManeSelect,
   },
   {
+    content: 'MANE Plus Clinical',
+    color: 'olive',
+    shouldShow: transcript => !!transcript.manePlusClinical,
+  },
+  {
     content: 'seqr Chosen Transcript',
     color: 'blue',
     shouldShow: transcript => transcript.transcriptRank === 0,
