@@ -12,7 +12,7 @@ from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqTpm, PhenotypePrioritization, Project, Sample, VariantTag, VariantTagType
-from seqr.utils.search.utils import get_variants_for_variant_ids
+from seqr.utils.search.utils import get_variants_for_variant_ids, backend_specific_call
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
@@ -239,6 +239,12 @@ def get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs)
     return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
 
 
+def _requires_transcript_metadata(variant):
+    if isinstance(variant, list):
+        return _requires_transcript_metadata(variant[0])
+    return variant.get('genomeVersion') != GENOME_VERSION_GRCh38 or variant.get('chrom', '').startswith('M')
+
+
 def _saved_variant_genes_transcripts(variants):
     family_genes = defaultdict(set)
     gene_ids = set()
@@ -249,7 +255,8 @@ def _saved_variant_genes_transcripts(variants):
         for var in variant:
             for gene_id, transcripts in var.get('transcripts', {}).items():
                 gene_ids.add(gene_id)
-                transcript_ids.update([t['transcriptId'] for t in transcripts if t.get('transcriptId')])
+                if backend_specific_call(lambda v: True, _requires_transcript_metadata)(variant):
+                    transcript_ids.update([t['transcriptId'] for t in transcripts if t.get('transcriptId')])
             for family_guid in var['familyGuids']:
                 family_genes[family_guid].update(var.get('transcripts', {}).keys())
 
