@@ -576,7 +576,7 @@ def _post_process_gregor_variant(row, gene_variants, **kwargs):
 
 
 def _get_airtable_row(data_type, airtable_metadata):
-    data_type_metadata = airtable_metadata[data_type]
+    data_type_metadata = airtable_metadata.pop(data_type)
     collaborator_sample_id = data_type_metadata[COLLABORATOR_SAMPLE_ID_FIELD]
     experiment_short_read_id = f'Broad_{data_type_metadata.get("experiment_type", "NA")}_{collaborator_sample_id}'
     aligned_short_read_id = f'{experiment_short_read_id}_1'
