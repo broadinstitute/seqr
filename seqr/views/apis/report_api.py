@@ -522,7 +522,7 @@ def _get_gregor_airtable_data(participants, user):
 def _get_participant_row(individual, airtable_sample, *args):
     participant = {
         'gregor_center': 'BROAD',
-        'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),
+        'prior_testing': '|'.join([gene.get('gene') or gene['comments'] for gene in individual.rejected_genes or []]),
         'recontactable': (airtable_sample or {}).get('Recontactable'),
         'missing_variant_case': 'No',
         PARTICIPANT_ID_FIELD: (airtable_sample or {}).get(PARTICIPANT_ID_FIELD),
@@ -582,7 +582,7 @@ def _get_airtable_row(data_type, airtable_metadata):
             'primary_biosample': next((BIOSAMPLE_LOOKUP[b] for b in biosamples if b in BIOSAMPLE_LOOKUP), biosamples[0]),
         })
     else:
-        row['alignment_software'] = row['alignment_software_dna']
+        row['alignment_software'] = row.get('alignment_software_dna')
     return is_rna, row
 
 
