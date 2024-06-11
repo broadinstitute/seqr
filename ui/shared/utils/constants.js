@@ -1446,6 +1446,7 @@ export const ORDERED_PREDICTOR_FIELDS = [
     thresholds: [undefined, undefined, 2.18, 4, undefined],
     requiresCitation: true,
   },
+  { field: 'alphamissense', fieldTitle: 'AlphaMissense', displayOnly: true },
   { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP, fieldTitle: 'MitoTIP' },
   { field: 'hmtvar', thresholds: [undefined, undefined, 0.35, 0.35, undefined], fieldTitle: 'HmtVar' },
@@ -1453,9 +1454,9 @@ export const ORDERED_PREDICTOR_FIELDS = [
 
 export const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
 export const predictionFieldValue = (
-  predictions, { field, thresholds, reverseThresholds, indicatorMap, infoField, infoTitle },
+  predictions, { field, fieldValue, thresholds, reverseThresholds, indicatorMap, infoField, infoTitle },
 ) => {
-  let value = predictions[field]
+  let value = fieldValue || predictions[field]
   if (value === null || value === undefined) {
     return { value }
   }
@@ -1487,6 +1488,8 @@ export const predictorColorRanges = (thresholds, requiresCitation, reverseThresh
         range = ` >= ${thresholds[i - 1]}`
       } else if (prevUndefined) {
         range = ` < ${thresholds[i]}`
+      } else if (thresholds[i - 1] === thresholds[i]) {
+        return null
       } else {
         range = ` ${thresholds[i - 1]} - ${thresholds[i]}`
       }
@@ -1867,6 +1870,8 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'sv_type', fieldName: 'svType', format: ({ svType }) => SVTYPE_LOOKUP[svType] || svType },
   { name: 'variant_inheritance' },
   { name: 'gene_known_for_phenotype' },
+  { name: 'phenotype_contribution' },
+  { name: 'partial_contribution_explained' },
   { name: 'notes' },
 ]
 

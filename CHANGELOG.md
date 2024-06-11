@@ -2,6 +2,9 @@
 
 ## dev
 
+## 6/11/24
+* Add "Partial Phenotype Contribution" functional tag (REQUIRES DB MIGRATION)
+
 ## 5/24/24
 * Adds external_data to Family model (REQUIRES DB MIGRATION)
 * Adds post_discovery_mondo_id to Family model (REQUIRES DB MIGRATION)
