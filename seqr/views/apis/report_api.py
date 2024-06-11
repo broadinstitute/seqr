@@ -376,12 +376,14 @@ def gregor_export(request):
     participant_rows = []
     family_map = {}
     genetic_findings_rows = []
+    smids_by_airtable_record_id = {}
 
     def _add_row(row, family_id, row_type):
         if row_type == FAMILY_ROW_TYPE:
             family_map[family_id] = row
         elif row_type == SUBJECT_ROW_TYPE:
             participant_rows.append({**row, 'consent_code': consent_code})
+            smids_by_airtable_record_id.update(row[SMID_FIELD] or {})
         elif row_type == DISCOVERY_ROW_TYPE and row:
             for variant in row:
                 genetic_findings_rows.append({
@@ -403,7 +405,7 @@ def gregor_export(request):
         proband_only_variants=True,
     )
 
-    airtable_metadata_by_participant = _get_gregor_airtable_data(participant_rows, request.user)
+    airtable_metadata_by_participant = _get_gregor_airtable_data(participant_rows, request.user, smids_by_airtable_record_id)
 
     phenotype_rows = []
     analyte_rows = []
@@ -497,10 +499,10 @@ def _parse_participant_airtable_rows(analyte, airtable_metadata, data_types, exp
         )
 
     if smids:
-        analyte_rows += [{**analyte, 'analyte_id': _get_analyte_id(smid)} for smid in smids]
+        analyte_rows += [{**analyte, 'analyte_id': _get_analyte_id(smid)} for smid in smids.values()]
 
 
-def _get_gregor_airtable_data(participants, user):
+def _get_gregor_airtable_data(participants, user, smids_by_airtable_record_id):
     session = AirtableSession(user)
 
     airtable_metadata = session.fetch_records(
@@ -510,11 +512,25 @@ def _get_gregor_airtable_data(participants, user):
     )
 
     airtable_metadata_by_participant = {r[PARTICIPANT_ID_FIELD]: r for r in airtable_metadata.values()}
+    rna_metadata_by_smid_record = {}
     for data_type in GREGOR_DATA_TYPES:
         for r in airtable_metadata_by_participant.values():
             data_type_fields = [f for f in r if f.endswith(f'_{data_type}')]
             if data_type_fields:
-                r[data_type.upper()] = {f.replace(f'_{data_type}', ''): r.pop(f) for f in data_type_fields}
+                data_type_metadata = {f.replace(f'_{data_type}', ''): r.pop(f) for f in data_type_fields}
+                r[data_type.upper()] = data_type_metadata
+                if data_type == 'rna':
+                    smid_record_id = data_type_metadata[SMID_FIELD][0]
+                    if smid_record_id in smids_by_airtable_record_id:
+                        data_type_metadata[SMID_FIELD] = smids_by_airtable_record_id[smid_record_id]
+                    else:
+                        rna_metadata_by_smid_record[smid_record_id] = data_type_metadata
+
+    rna_sample_metadata = session.fetch_records(
+       'Samples', fields=[SMID_FIELD], or_filters={'RECORD_ID()': rna_metadata_by_smid_record.keys()}
+    )
+    for record_id, rna_metadata in rna_metadata_by_smid_record.items():
+        rna_metadata[SMID_FIELD] = rna_sample_metadata[record_id][SMID_FIELD]
 
     return airtable_metadata_by_participant
 

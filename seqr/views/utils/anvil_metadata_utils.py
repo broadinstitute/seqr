@@ -551,8 +551,8 @@ def _get_airtable_samples_for_id_field(sample_ids, id_field, fields, session):
     )
 
     records_by_id = defaultdict(list)
-    for record in raw_records.values():
-        records_by_id[record[id_field]].append(record)
+    for airtable_id, record in raw_records.items():
+        records_by_id[record[id_field]].append({**record, 'airtable_id': airtable_id})
     return records_by_id
 
 
@@ -580,13 +580,13 @@ def _get_sample_airtable_metadata(sample_ids, user, airtable_fields):
             if record_field:
                 parsed_record[field] = record_field.pop()
         for field in list_fields:
-            parsed_record[field] = set()
+            parsed_record[field] = {} if airtable_fields else set()
             for record in records:
                 if field in record:
-                    values = record[field]
-                    if isinstance(values, str):
-                        values = [values]
-                    parsed_record[field].update(values)
+                    if airtable_fields:
+                        parsed_record[field][record['airtable_id']] = record[field]
+                    else:
+                        parsed_record[field].update(record[field])
 
         sample_records[record_id] = parsed_record
 
