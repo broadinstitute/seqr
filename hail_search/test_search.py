@@ -1162,6 +1162,11 @@ class HailSearchTestCase(AioHTTPTestCase):
              _sorted(VARIANT1, [0])], omit_sample_type='SV_WES', sort='splice_ai',
         )
 
+        await self._assert_expected_search(
+            [_sorted(VARIANT2, [-0.9977999925613403, -0.9977999925613403]), _sorted(VARIANT1, [0, 0]),
+             _sorted(MULTI_FAMILY_VARIANT, [0, 0]), _sorted(VARIANT4, [0, 0])], omit_sample_type='SV_WES', sort='alphamissense',
+        )
+
         sort = 'in_omim'
         await self._assert_expected_search(
             [_sorted(MULTI_FAMILY_VARIANT, [0, -2]), _sorted(VARIANT2, [0, -1]), _sorted(VARIANT4, [0, -1]), _sorted(VARIANT1, [1, 0])],

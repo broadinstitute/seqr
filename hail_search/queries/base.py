@@ -1027,13 +1027,17 @@ class BaseHailTableQuery(object):
             sort_expressions = self._get_sort_expressions(ht, self._sort) + sort_expressions
         return sort_expressions
 
+    @staticmethod
+    def _format_prediction_sort_value(value):
+        return hl.or_else(-hl.float64(value), 0)
+
     def _get_sort_expressions(self, ht, sort):
         if sort in self.SORTS:
             return self.SORTS[sort](ht)
 
         if sort in self.PREDICTION_FIELDS_CONFIG:
             prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
-            return [hl.or_else(-hl.float64(ht[prediction_path.source][prediction_path.field]), 0)]
+            return [self._format_prediction_sort_value(ht[prediction_path.source][prediction_path.field])]
 
         if sort == OMIM_SORT:
             return self._omim_sort(ht, hl.set(set(self._sort_metadata)))
