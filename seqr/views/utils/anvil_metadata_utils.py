@@ -492,6 +492,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, partici
                 }[zygosity],
                 'allele_balance_or_heteroplasmy_percentage': heteroplasmy,
                 'variant_inheritance': _get_variant_inheritance(individual, genotypes),
+                'ClinGen_allele_ID': row.pop('CAID', None),
                 **row,
             }
             if family_individuals is not None:

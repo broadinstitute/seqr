@@ -494,7 +494,7 @@ MOCK_INVALID_DATA_MODEL = {
 }
 
 BASE_VARIANT_METADATA_ROW = {
-    'CAID': None,
+    'ClinGen_allele_ID': None,
     'MME': False,
     'additional_family_members_with_variant': '',
     'allele_balance_or_heteroplasmy_percentage': None,

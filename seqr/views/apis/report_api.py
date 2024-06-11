@@ -395,6 +395,7 @@ def gregor_export(request):
         individual_data_types=grouped_data_type_individuals,
         add_row=_add_row,
         format_id=_format_gregor_id,
+        variant_json_fields=['CAID'],
         get_additional_individual_fields=_get_participant_row,
         post_process_variant=_post_process_gregor_variant,
         include_svs=False,
