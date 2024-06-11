@@ -13,7 +13,7 @@ class AppPageTest(object):
     databases = '__all__'
     fixtures = ['users']
 
-    def _check_page_html(self, response,  user, user_key='user', user_fields=None, ga_token_id=None, anvil_loading_date=None, elasticsearch_enabled=False):
+    def _check_page_html(self, response,  user, user_key='user', user_fields=None, ga_token_id=None, anvil_loading_date=None):
         user_fields = user_fields or USER_FIELDS
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
@@ -24,7 +24,7 @@ class AppPageTest(object):
             'version': mock.ANY,
             'hijakEnabled': False,
             'googleLoginEnabled': self.GOOGLE_ENABLED,
-            'elasticsearchEnabled': elasticsearch_enabled,
+            'elasticsearchEnabled': bool(self.ES_HOSTNAME),
             'warningMessages': [{'id': 1, 'header': 'Warning!', 'message': 'A sample warning'}],
             'anvilLoadingDelayDate': anvil_loading_date,
         })
@@ -80,7 +80,6 @@ class AppPageTest(object):
         response = self.client.get(url)
         self._check_page_html(response, 'test_user')
 
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @mock.patch('seqr.views.react_app.ANVIL_LOADING_DELAY_EMAIL_START_DATE', '2022-12-01')
     @mock.patch('seqr.views.react_app.datetime')
     def test_react_page_additional_configs(self, mock_datetime):
@@ -91,11 +90,11 @@ class AppPageTest(object):
         self.check_require_login_no_policies(url, login_redirect_url='/login')
 
         response = self.client.get(url)
-        self._check_page_html(response, 'test_user_no_policies', elasticsearch_enabled=True)
+        self._check_page_html(response, 'test_user_no_policies')
 
         mock_datetime.now.return_value = datetime(2022, 12, 30, 0, 0, 0)
         response = self.client.get(url)
-        self._check_page_html(response, 'test_user_no_policies', anvil_loading_date='2022-12-01', elasticsearch_enabled=True)
+        self._check_page_html(response, 'test_user_no_policies', anvil_loading_date='2022-12-01')
 
 
 class LocalAppPageTest(AuthenticationTestCase, AppPageTest):
