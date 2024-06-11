@@ -921,7 +921,7 @@ def variant_metadata(request, project_guid):
         individual_samples={i: None for i in individuals},
         individual_data_types={i.individual_id: i.data_types for i in individuals},
         add_row=_add_row,
-        variant_json_fields=['clinvar', 'variantId'],
+        variant_json_fields=['clinvar', 'variantId', 'CAID'],
         mme_values={'variant_ids': ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId')},
         include_metadata=True,
         include_mondo=True,
