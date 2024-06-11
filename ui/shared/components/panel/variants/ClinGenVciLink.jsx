@@ -24,19 +24,12 @@ class LoadedClingenVciLink extends React.PureComponent {
 
   static propTypes = {
     hgvsc: PropTypes.string.isRequired,
-    alleleId: PropTypes.string,
   }
 
   state = {
     loading: false,
     alleleId: null,
     error: '',
-  }
-
-  constructor(props) {
-    super(props)
-    const { alleleId } = props
-    this.state.alleleId = alleleId
   }
 
   load = (hgvsc) => {
@@ -64,7 +57,7 @@ class LoadedClingenVciLink extends React.PureComponent {
 }
 
 const ClinGenVciLink = ({ CAID, hgvsc }) => (
-  CAID ? <ClingenInfo alleleId={CAID} /> : <LoadedClingenVciLink alleleId={CAID} hgvsc={hgvsc} />
+  CAID ? <ClingenInfo alleleId={CAID} /> : <LoadedClingenVciLink hgvsc={hgvsc} />
 )
 
 ClinGenVciLink.propTypes = {
