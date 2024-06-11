@@ -544,8 +544,9 @@ LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
 
 def _get_sample_airtable_metadata(sample_ids, user, fields):
+    single_fields, list_fields = fields or [SINGLE_SAMPLE_FIELDS, LIST_SAMPLE_FIELDS]
     sample_records, _ = get_airtable_samples(
-        sample_ids, user, fields=fields or SINGLE_SAMPLE_FIELDS, list_fields=None if fields else LIST_SAMPLE_FIELDS,
+        sample_ids, user, fields=single_fields, list_fields=list_fields,
     )
     return sample_records
 

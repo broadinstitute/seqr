@@ -146,7 +146,10 @@ def get_airtable_samples(sample_ids, user, fields, list_fields=None):
             parsed_record[field] = set()
             for record in records:
                 if field in record:
-                    parsed_record[field].update(record[field])
+                    values = record[field]
+                    if isinstance(values, str):
+                        values = [values]
+                    parsed_record[field].update(values)
 
         sample_records[record_id] = parsed_record
 

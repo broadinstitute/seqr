@@ -1074,7 +1074,7 @@ class ReportAPITest(AirtableTest):
         }
         sample_ids.update(additional_samples or [])
         sample_filter = ','.join([f"{{CollaboratorSampleID}}='{sample_id}'" for sample_id in sorted(sample_ids)])
-        sample_fields = ['CollaboratorSampleID', 'SMID', 'CollaboratorParticipantID', 'Recontactable']
+        sample_fields = ['CollaboratorSampleID', 'CollaboratorParticipantID', 'Recontactable', 'SMID']
         self.assert_expected_airtable_call(len(mondo_ids), f"OR({sample_filter})", sample_fields)
         sample_ids -= {'NA19675_1', 'NA19679', 'NA20888'}
         secondary_sample_filter = ','.join([f"{{SeqrCollaboratorSampleID}}='{sample_id}'" for sample_id in sorted(sample_ids)])
