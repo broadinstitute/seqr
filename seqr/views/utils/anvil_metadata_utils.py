@@ -355,7 +355,7 @@ def _get_parsed_saved_discovery_variants_by_family(
             phenotype_contribution = 'Uncertain'
             partial_hpo_terms = ''
 
-        variant_fields = ['genotypes']
+        variant_fields = ['genotypes', 'CAID']
         if include_svs:
             variant_fields += ['svType', 'svName', 'end']
 

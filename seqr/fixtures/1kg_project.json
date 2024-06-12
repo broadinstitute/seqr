@@ -1906,7 +1906,8 @@
                 "I000005_hg00732": {
                     "numAlt": 1
                 }
-            }
+            },
+            "CAID": "CA1501729"
         },
         "family": 2
     }
@@ -1948,7 +1949,8 @@
                 "I000003_na19679": {"sampleId": "NA19679", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 0},
                 "I000002_na19678": {"sampleId": "NA19678", "ab": 0, "ad": null, "gq": 6, "dp": 2, "pl": null, "numAlt": 0},
                 "I000002_na19675": {"sampleId": "NA19675", "ab": 0.125, "ad": null, "gq": 7, "dp": 8, "pl": null, "numAlt": 1}
-            }
+            },
+            "CAID": null
         },
         "family": 1
     }
@@ -2077,7 +2079,10 @@
                 ]
             }, "chrom": "1", "genotypes": {
                 "I000002_na19675": {"sampleId": "NA19675", "ab": 0.5555556, "ad": null, "gq": 99, "dp": 9, "pl": null, "numAlt": 1},
-                "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}}},
+                "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}
+            },
+            "CAID": "CA1501729"
+        },
         "family": 12
     }
 },
@@ -2134,7 +2139,10 @@
         "saved_variant_json": {
             "liftedOverGenomeVersion": "37",  "liftedOverPos": "", "genomeVersion": "38", "pos": 248367227,
             "transcripts": {}, "chrom": "1", "genotypes": {
-                "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}}},
+                "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}
+            },
+            "CAID": "CA1501729"
+        },
         "family": 14
     }
 },
