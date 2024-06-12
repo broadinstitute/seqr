@@ -46,6 +46,8 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
     PATHOGENICITY_FIELD_MAP = {}
     ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD]
 
+    CORE_FIELDS = MitoHailTableQuery.CORE_FIELDS + ['CAID']
+
     LIFTOVER_ANNOTATION_FIELDS = {}
     BASE_ANNOTATION_FIELDS = {
         k: v for k, v in MitoHailTableQuery.BASE_ANNOTATION_FIELDS.items()
