@@ -1950,8 +1950,7 @@
                 "I000003_na19679": {"sampleId": "NA19679", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 0},
                 "I000002_na19678": {"sampleId": "NA19678", "ab": 0, "ad": null, "gq": 6, "dp": 2, "pl": null, "numAlt": 0},
                 "I000002_na19675": {"sampleId": "NA19675", "ab": 0.125, "ad": null, "gq": 7, "dp": 8, "pl": null, "numAlt": 1}
-            },
-            "CAID": null
+            }
         },
         "family": 1
     }
