@@ -147,7 +147,7 @@ ExtendedSpliceLabel.propTypes = {
 const transcriptConsequenceDetails = ({ utrannotator, ...transcript }) => (
   <div>
     {utrannotator?.fiveutrConsequence && <HeaderLabel>UTRAnnotator:</HeaderLabel>}
-    {utrannotator.fiveutrConsequence}
+    {utrannotator?.fiveutrConsequence}
     <ExtendedSpliceLabel {...transcript} />
   </div>
 )
