@@ -95,7 +95,6 @@ EXPECTED_SEARCH_RESPONSE = {
         'ENSG00000227232': expected_pa_gene, 'ENSG00000268903': EXPECTED_GENE, 'ENSG00000233653': EXPECTED_GENE,
         'ENSG00000177000': mock.ANY, 'ENSG00000097046': mock.ANY,
     },
-    'transcriptsById': {'ENST00000624735': {'isManeSelect': False, 'refseqId': None, 'transcriptId': 'ENST00000624735'}},
     'search': {
         'search': SEARCH,
         'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': mock.ANY}],
@@ -127,6 +126,10 @@ EXPECTED_SEARCH_RESPONSE = {
     'familiesByGuid': {'F000001_1': {'tpmGenes': ['ENSG00000227232']}},
 }
 
+EXPECTED_TRANSCRIPTS_RESPONSE = {
+    'transcriptsById': {'ENST00000624735': {'isManeSelect': False, 'refseqId': None, 'transcriptId': 'ENST00000624735'}},
+}
+
 EXPECTED_SEARCH_CONTEXT_RESPONSE = {
     'savedSearchesByGuid': {
         'VS0000001_de_novo_dominant_res': mock.ANY, 'VS0000002_recessive_restrictiv': mock.ANY, 'VS0000003_de_novo_dominant_per': mock.ANY,
@@ -137,8 +140,7 @@ EXPECTED_SEARCH_CONTEXT_RESPONSE = {
     'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY, 'LL00005_retina_proteome': mock.ANY},
 }
 
-EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE = {
-    **EXPECTED_SEARCH_RESPONSE,
+EXPECTED_SEARCH_FAMILY_CONTEXT = {
     'familiesByGuid': {'F000001_1': mock.ANY, 'F000002_2': mock.ANY},
     'individualsByGuid': mock.ANY,
     'igvSamplesByGuid': mock.ANY,
@@ -353,8 +355,8 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
-        self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
+        self.assertSetEqual(set(response_json.keys()), set(self.EXPECTED_SEARCH_RESPONSE.keys()))
+        self.assertDictEqual(response_json, self.EXPECTED_SEARCH_RESPONSE)
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']), {'F000001_1', 'F000002_2'})
         self._assert_expected_results_context(response_json)
@@ -368,7 +370,7 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         expected_search_response = {'projectsByGuid': EXPECTED_SEARCH_CONTEXT_RESPONSE['projectsByGuid']}
-        expected_search_response.update(EXPECTED_SEARCH_RESPONSE)
+        expected_search_response.update(self.EXPECTED_SEARCH_RESPONSE)
         self.assertSetEqual(set(response_json.keys()), set(expected_search_response.keys()))
         self.assertDictEqual(response_json, expected_search_response)
         self._assert_expected_results_context(response_json)
@@ -378,8 +380,12 @@ class VariantSearchAPITest(object):
         response = self.client.get('{}?loadFamilyContext=true'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE.keys()))
-        self.assertDictEqual(response_json, EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE)
+        expected_response = {
+            **self.EXPECTED_SEARCH_RESPONSE,
+            **EXPECTED_SEARCH_FAMILY_CONTEXT,
+        }
+        self.assertSetEqual(set(response_json.keys()), set(expected_response.keys()))
+        self.assertDictEqual(response_json, expected_response)
         self._assert_expected_results_family_context(response_json)
 
         # Test pagination
@@ -491,7 +497,6 @@ class VariantSearchAPITest(object):
             'searchedVariants': COMP_HET_VARAINTS,
             'savedVariantsByGuid': {'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT},
             'genesById': {'ENSG00000233653': EXPECTED_GENE},
-            'transcriptsById': {},
             'variantTagsByGuid': {
                 'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
                 'VT1726985_2103343353_r0390_100': expected_aip_tag,
@@ -514,7 +519,7 @@ class VariantSearchAPITest(object):
         response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        expected_search_results = deepcopy(EXPECTED_SEARCH_RESPONSE)
+        expected_search_results = deepcopy(self.EXPECTED_SEARCH_RESPONSE)
         expected_search_results['searchedVariants'] = VARIANTS_WITH_DISCOVERY_TAGS
         expected_search_results['savedVariantsByGuid']['SV0000002_1248367227_r0390_100']['discoveryTags'] = DISCOVERY_TAGS
         expected_search_results['familiesByGuid'].update({'F000012_12': mock.ANY})
@@ -588,7 +593,7 @@ class VariantSearchAPITest(object):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
+        self.assertDictEqual(response_json, self.EXPECTED_SEARCH_RESPONSE)
         self._assert_expected_results_context(response_json)
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
@@ -605,8 +610,8 @@ class VariantSearchAPITest(object):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
-        self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
+        self.assertSetEqual(set(response_json.keys()), set(self.EXPECTED_SEARCH_RESPONSE.keys()))
+        self.assertDictEqual(response_json, self.EXPECTED_SEARCH_RESPONSE)
         self._assert_expected_results_context(response_json)
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
@@ -617,8 +622,8 @@ class VariantSearchAPITest(object):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
-        self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
+        self.assertSetEqual(set(response_json.keys()), set(self.EXPECTED_SEARCH_RESPONSE.keys()))
+        self.assertDictEqual(response_json, self.EXPECTED_SEARCH_RESPONSE)
         self._assert_expected_results_context(response_json)
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
@@ -755,14 +760,8 @@ class VariantSearchAPITest(object):
 
     def _assert_expected_single_variant_results_context(self, response_json, omit_fields=None, no_metadata=False, **expected_response):
         omit_fields = {'search', *(omit_fields or [])}
-        response_keys = {'projectsByGuid'}
-        response_keys.update(EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE)
-        response_keys.update(expected_response.keys())
-        if omit_fields:
-            response_keys -= omit_fields
-        self.assertSetEqual(set(response_json.keys()), response_keys)
 
-        expected_search_response = deepcopy(EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE)
+        expected_search_response = deepcopy({**EXPECTED_SEARCH_RESPONSE, **EXPECTED_SEARCH_FAMILY_CONTEXT})
         expected_search_response.update(expected_response)
         expected_search_response.update({
             k: EXPECTED_SEARCH_CONTEXT_RESPONSE[k] for k in ['projectsByGuid', 'familiesByGuid', 'locusListsByGuid']
@@ -772,18 +771,21 @@ class VariantSearchAPITest(object):
         if no_metadata:
             expected_search_response.update({k: {} for k in {
                 'savedVariantsByGuid', 'variantTagsByGuid', 'variantFunctionalDataByGuid', 'genesById',
-                'transcriptsById', 'rnaSeqData', 'phenotypeGeneScores', 'mmeSubmissionsByGuid'
+                'rnaSeqData', 'phenotypeGeneScores', 'mmeSubmissionsByGuid'
             }})
         else:
             expected_search_response['savedVariantsByGuid'].pop('SV0000002_1248367227_r0390_100')
             expected_search_response['variantTagsByGuid'] = {
-                k: EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE['variantTagsByGuid'][k]
+                k: EXPECTED_SEARCH_RESPONSE['variantTagsByGuid'][k]
                 for k in {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'}
             }
+            if 'transcriptsById' in self.EXPECTED_SEARCH_RESPONSE:
+                expected_search_response['transcriptsById'] = self.EXPECTED_SEARCH_RESPONSE['transcriptsById']
         expected_search_response['variantNotesByGuid'] = {}
         expected_search_response['genesById'] = {
             k: v for k, v in expected_search_response['genesById'].items() if k in {'ENSG00000227232', 'ENSG00000268903'}
         }
+        self.assertSetEqual(set(response_json.keys()), set(expected_search_response.keys()))
         self.assertDictEqual(response_json, expected_search_response)
         self._assert_expected_results_family_context(response_json, locus_list_detail=True, skip_gene_context=no_metadata)
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_TAG_TYPE_FIELDS)
@@ -812,10 +814,10 @@ class VariantSearchAPITest(object):
         }
         del expected_variant['familyGenotypes']
         expected_body = {
-            **{k: {} for k in EXPECTED_SEARCH_FAMILY_CONTEXT_RESPONSE if k not in {
+            **{k: {} for k in EXPECTED_SEARCH_RESPONSE if k not in {
                 'searchedVariants', 'search', 'variantNotesByGuid', 'variantTagsByGuid', 'variantFunctionalDataByGuid',
-
             }},
+            **{k: {} for k in EXPECTED_SEARCH_FAMILY_CONTEXT},
             'projectsByGuid': {},
             'individualsByGuid': {
                 'I0_F0_1-10439-AC-A': {
@@ -844,14 +846,16 @@ class VariantSearchAPITest(object):
         expected_variant['transcripts'] = VARIANTS[0]['transcripts']
         expected_body.update({
             'genesById': {'ENSG00000227232': EXPECTED_GENE, 'ENSG00000268903': EXPECTED_GENE},
-            'transcriptsById': EXPECTED_SEARCH_RESPONSE['transcriptsById'],
         })
+        if 'transcriptsById' in self.EXPECTED_SEARCH_RESPONSE:
+            expected_body['transcriptsById'] = self.EXPECTED_SEARCH_RESPONSE['transcriptsById']
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_body)
 
         response_variant['variantId'] = '1-248367227-TC-T'
+        response_variant['genomeVersion'] = '37'
         self.login_collaborator()
         response = self.client.get(url.replace("38", "37"))
         self.assertEqual(response.status_code, 200)
@@ -868,12 +872,14 @@ class VariantSearchAPITest(object):
                 individual_guid: {**expected_variant['genotypes'][anon_individual_guid], **genotype}
                 for individual_guid, anon_individual_guid, genotype in individual_guid_map
             },
+            'genomeVersion': '37',
             'variantId': '1-248367227-TC-T',
         })
         expected_body.update({
             **{k: {**EXPECTED_SEARCH_RESPONSE[k]} for k in {
                 'savedVariantsByGuid', 'variantTagsByGuid', 'variantNotesByGuid',
             }},
+            **EXPECTED_TRANSCRIPTS_RESPONSE,
             'variantFunctionalDataByGuid': {},
             'locusListsByGuid': EXPECTED_SEARCH_CONTEXT_RESPONSE['locusListsByGuid'],
             'projectsByGuid': {
@@ -1008,6 +1014,11 @@ class VariantSearchAPITest(object):
 class LocalVariantSearchAPITest(AuthenticationTestCase, VariantSearchAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
 
+    EXPECTED_SEARCH_RESPONSE = {
+        **EXPECTED_SEARCH_RESPONSE,
+        **EXPECTED_TRANSCRIPTS_RESPONSE,
+    }
+
 
 def assert_no_list_ws_has_al(self, acl_call_count, group_call_count, workspace_name=None):
     self.mock_list_workspaces.assert_not_called()
@@ -1046,6 +1057,8 @@ def assert_workspace_calls(self, group_call_count, user=None):
 # Test for permissions from AnVIL only
 class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
+
+    EXPECTED_SEARCH_RESPONSE = EXPECTED_SEARCH_RESPONSE
 
     def test_query_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
