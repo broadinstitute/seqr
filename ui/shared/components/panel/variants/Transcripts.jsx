@@ -78,6 +78,10 @@ ConsequenceDetails.propTypes = {
   ensemblLink: PropTypes.object,
 }
 
+export const isManeSelect = (transcript, transcriptsById) => (
+  !!transcript.maneSelect || transcriptsById[transcript.transcriptId]?.isManeSelect
+)
+
 const TRANSCRIPT_LABELS = [
   {
     content: 'Canonical',
@@ -87,7 +91,12 @@ const TRANSCRIPT_LABELS = [
   {
     content: 'MANE Select',
     color: 'teal',
-    shouldShow: (transcript, transcriptsById) => transcriptsById[transcript.transcriptId]?.isManeSelect,
+    shouldShow: isManeSelect,
+  },
+  {
+    content: 'MANE Plus Clinical',
+    color: 'olive',
+    shouldShow: transcript => !!transcript.manePlusClinical,
   },
   {
     content: 'seqr Chosen Transcript',
@@ -96,20 +105,31 @@ const TRANSCRIPT_LABELS = [
   },
 ]
 
+const RefseqLink = ({ refseqId }) => (refseqId ? (
+  <div>
+    <HeaderLabel>RefSeq:</HeaderLabel>
+    <a
+      href={`https://www.ncbi.nlm.nih.gov/nuccore/${refseqId}`}
+      target="_blank"
+      rel="noreferrer"
+    >
+      {refseqId}
+    </a>
+  </div>
+) : null)
+
+RefseqLink.propTypes = {
+  refseqId: PropTypes.string,
+}
+
 const transcriptIdDetails = (transcript, variant, { transcriptsById, project, updateMainTranscript }) => (
   <div>
-    {transcriptsById[transcript.transcriptId]?.refseqId && (
-      <div>
-        <HeaderLabel>RefSeq:</HeaderLabel>
-        <a
-          href={`https://www.ncbi.nlm.nih.gov/nuccore/${transcriptsById[transcript.transcriptId].refseqId}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {transcriptsById[transcript.transcriptId].refseqId}
-        </a>
-      </div>
-    )}
+    <RefseqLink
+      refseqId={
+        transcript.maneSelect || transcript.manePlusClinical || transcript.refseqTranscriptId ||
+        transcriptsById[transcript.transcriptId]?.refseqId
+      }
+    />
     {TRANSCRIPT_LABELS.map(({ shouldShow, ...labelProps }) => (
       shouldShow(transcript, transcriptsById) && (
         <Label key={labelProps.content} size="small" horizontal {...labelProps} />
