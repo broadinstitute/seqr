@@ -25,6 +25,7 @@ const getButtonBackgroundColor = (classification) => {
 }
 
 const VariantClassify = React.memo(({ variant, familyGuid }) => {
+  const { CAID } = variant
   const { hgvsc } = getVariantMainTranscript(variant)
   const { classify } = variant.acmgClassification || {}
   const buttonBackgroundColor = getButtonBackgroundColor(classify)
@@ -36,7 +37,7 @@ const VariantClassify = React.memo(({ variant, familyGuid }) => {
           {hgvsc && (
             <LoaderContainer>
               <React.Suspense fallback={<Loader />}>
-                <ClinGenVciLink hgvsc={hgvsc} />
+                <ClinGenVciLink CAID={CAID} hgvsc={hgvsc} />
               </React.Suspense>
             </LoaderContainer>
           )}

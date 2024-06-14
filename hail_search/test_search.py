@@ -65,6 +65,7 @@ PROJECT_2_VARIANT = {
     'sortedMotifFeatureConsequences': None,
     'sortedRegulatoryFeatureConsequences': None,
     '_sort': [1000010146],
+    'CAID': 'CA520798130',
 }
 
 GRCH37_VARIANT = {
@@ -121,6 +122,7 @@ GRCH37_VARIANT = {
     'mainTranscriptId': 'ENST00000420911',
     'selectedMainTranscriptId': None,
     '_sort': [7143270172],
+    'CAID': 'CA4540310',
 }
 
 FAMILY_3_VARIANT = deepcopy(VARIANT3)

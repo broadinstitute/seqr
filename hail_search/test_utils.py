@@ -144,6 +144,7 @@ VARIANT1 = {
     'mainTranscriptId': None,
     'selectedMainTranscriptId': None,
     '_sort': [1000010439],
+    'CAID': 'CA16717152',
 }
 VARIANT2 = {
     'variantId': '1-38724419-T-G',
@@ -247,6 +248,7 @@ VARIANT2 = {
     'sortedRegulatoryFeatureConsequences': None,
     'selectedMainTranscriptId': None,
     '_sort': [1038724419],
+    'CAID': None,
 }
 VARIANT3 = {
     'variantId': '1-91502721-G-A',
@@ -317,6 +319,7 @@ VARIANT3 = {
     'sortedRegulatoryFeatureConsequences': [{'biotype': 'promoter', 'consequenceTerms': ['regulatory_region_variant'], 'regulatoryFeatureId': 'ENSR00000009706'}],
     'selectedMainTranscriptId': None,
     '_sort': [1091502721],
+    'CAID': 'CA10960369',
 }
 VARIANT4 = {
     'variantId': '1-91511686-T-G',
@@ -389,6 +392,7 @@ VARIANT4 = {
     ],
     'selectedMainTranscriptId': None,
     '_sort': [1091511686],
+    'CAID': 'CA341062623',
 }
 
 VARIANT_LOOKUP_VARIANT = {
