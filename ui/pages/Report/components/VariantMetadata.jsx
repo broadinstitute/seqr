@@ -13,8 +13,6 @@ const COLUMNS = [
   ...VARIANT_METADATA_COLUMNS.slice(0, -1),
   { name: 'allele_balance_or_heteroplasmy_percentage' },
   { name: 'Clinvar allele ID', format: ({ clinvar }) => clinvar?.alleleId },
-  // eslint-disable-next-line camelcase
-  { name: 'ClinGen allele ID', format: ({ ClinGen_allele_ID }) => ClinGen_allele_ID },
   { name: 'ClinVar Clinical Significance', format: ({ clinvar }) => clinvarSignificance(clinvar).pathogenicity },
   { name: 'ClinVar gold star', format: ({ clinvar }) => clinvar?.goldStars },
   { name: 'known_condition_name' },

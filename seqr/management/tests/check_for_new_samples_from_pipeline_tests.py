@@ -287,7 +287,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertListEqual(annotation_updated_variant.saved_variant_json['familyGuids'], ['F000001_1'])
 
         annotation_updated_json = SavedVariant.objects.get(guid='SV0059956_11560662_f019313_1').saved_variant_json
-        self.assertEqual(len(annotation_updated_json), 19)
+        self.assertEqual(len(annotation_updated_json), 18)
         self.assertEqual(annotation_updated_json['updated_new_field'], 'updated_value')
         self.assertEqual(annotation_updated_json['rsid'], 'rs123')
         self.assertEqual(annotation_updated_json['mainTranscriptId'], 'ENST00000505820')
