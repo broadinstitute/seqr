@@ -183,10 +183,17 @@ class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
     @mock.patch("panelapp.panelapp_utils.requests.get")
     def test_get_all_genes_retries_success(self, mock_get_request):
         url = '{}/genes/?page=1'.format(PANEL_APP_API_URL_UK)
-        valid_response = Response()
-        valid_response.status_code = 200
-        valid_response._content = b'{"results": [{"panel": {"id": 1207, "name": "Acute intermittent porphyria"}}]}'
         request_error = MaxRetryError(pool=mock.MagicMock(), url=url)
-        mock_get_request.side_effect = [request_error] * 4 + [valid_response]
-        expected_res = {1207: [{'panel': {'id': 1207, 'name': 'Acute intermittent porphyria'}}]}
+        page_1 = Response()
+        page_1.status_code = 200
+        page_1._content = (b'{"next":"https://test-panelapp.url.uk/api/v1/genes/?page=2","results": [{"panel":'
+                           b'{"id": 1207, "name": "Acute intermittent porphyria"}}]}')
+        page_2 = Response()
+        page_2.status_code = 200
+        page_2._content = b'{"results": [{"panel": {"id": 1141, "name": "Acute rhabdomyolysis"}}]}'
+        mock_get_request.side_effect = [request_error] * 4 + [page_1] + [request_error] * 4 + [page_2]
+        expected_res = {
+            1207: [{'panel': {'id': 1207, 'name': 'Acute intermittent porphyria'}}],
+            1141: [{'panel': {'id': 1141, 'name': 'Acute rhabdomyolysis'}}],
+        }
         self.assertEqual(_get_all_genes(url, defaultdict(list)), expected_res)
