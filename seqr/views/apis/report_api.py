@@ -262,6 +262,7 @@ ALL_AIRTABLE_COLUMNS = DATA_TYPE_AIRTABLE_COLUMNS + list(CALLED_TABLE_COLUMNS) +
 AIRTABLE_QUERY_COLUMNS = set()
 AIRTABLE_QUERY_COLUMNS.update(CALLED_TABLE_COLUMNS)
 AIRTABLE_QUERY_COLUMNS.remove('md5sum')
+AIRTABLE_QUERY_COLUMNS.remove('aligned_dna_short_read_set_id')
 AIRTABLE_QUERY_COLUMNS.update(NO_DATA_TYPE_FIELDS)
 for data_type in GREGOR_DATA_TYPES:
     data_type_columns = set(DATA_TYPE_AIRTABLE_COLUMNS) - NO_DATA_TYPE_FIELDS - set(DATA_TYPE_OMIT[data_type])
@@ -586,6 +587,7 @@ def _get_airtable_row(data_type, airtable_metadata):
         'experiment_rna_short_read_id': experiment_short_read_id,
         'experiment_sample_id': collaborator_sample_id,
         'aligned_dna_short_read_id': aligned_short_read_id,
+        'aligned_dna_short_read_set_id': experiment_short_read_id,
         'aligned_rna_short_read_id': aligned_short_read_id,
         **airtable_metadata,
         **data_type_metadata,
