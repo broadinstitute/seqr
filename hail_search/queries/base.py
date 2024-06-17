@@ -148,16 +148,18 @@ class BaseHailTableQuery(object):
             for response_key, field in pop_config.items() if field is not None
         })
 
-    def _get_enum_lookup(self, field, subfield):
+    def _get_enum_lookup(self, field, subfield, nested_subfield=None):
         enum_field = self._enums.get(field, {})
         if subfield:
             enum_field = enum_field.get(subfield)
+        if nested_subfield:
+            enum_field = enum_field.get(nested_subfield)
         if enum_field is None:
             return None
         return {v: i for i, v in enumerate(enum_field)}
 
-    def _get_enum_terms_ids(self, field, subfield, terms):
-        enum = self._get_enum_lookup(field, subfield)
+    def _get_enum_terms_ids(self, field, subfield, terms, nested_subfield=None):
+        enum = self._get_enum_lookup(field, subfield, nested_subfield=nested_subfield)
         return {enum[t] for t in terms if enum.get(t) is not None}
 
     def _format_enum_response(self, k, enum):

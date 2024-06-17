@@ -6,6 +6,7 @@ from hail_search.queries.base import BaseHailTableQuery, PredictionPath
 from hail_search.queries.snv_indel_37 import SnvIndelHailTableQuery37
 
 EXTENDED_SPLICE_REGION_CONSEQUENCE = 'extended_intronic_splice_region_variant'
+UTR_ANNOTATOR_KEY = 'UTRAnnotator'
 
 
 class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
@@ -37,21 +38,31 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
     }
 
     def _get_allowed_consequence_ids(self, annotations):
-        consequence_ids = super()._get_allowed_consequence_ids(annotations)
-        if EXTENDED_SPLICE_REGION_CONSEQUENCE in (annotations.get('extended_splice_site') or []):
-            consequence_ids.add(EXTENDED_SPLICE_REGION_CONSEQUENCE)
-        return consequence_ids
+        return {
+            self.TRANSCRIPT_CONSEQUENCE_FIELD: super()._get_allowed_consequence_ids(annotations),
+            EXTENDED_SPLICE_REGION_CONSEQUENCE: EXTENDED_SPLICE_REGION_CONSEQUENCE in (annotations.get('extended_splice_site') or []),
+            UTR_ANNOTATOR_KEY: self._get_enum_terms_ids(
+                self.TRANSCRIPTS_FIELD, subfield='utrannotator', nested_subfield='fiveutr_consequence',
+                terms=(annotations.get(UTR_ANNOTATOR_KEY) or []),
+            )
+        }
 
     @staticmethod
     def _get_allowed_transcripts_filter(allowed_consequence_ids):
-        has_extended_splice = EXTENDED_SPLICE_REGION_CONSEQUENCE in allowed_consequence_ids
-        allowed_consequence_ids = allowed_consequence_ids - {EXTENDED_SPLICE_REGION_CONSEQUENCE}
-        allowed_consequence_filter = SnvIndelHailTableQuery37._get_allowed_transcripts_filter(allowed_consequence_ids)
+        allowed_consequence_filters = [SnvIndelHailTableQuery37._get_allowed_transcripts_filter(
+            allowed_consequence_ids[SnvIndelHailTableQuery37.TRANSCRIPT_CONSEQUENCE_FIELD]
+        )]
 
-        if not has_extended_splice:
-            return allowed_consequence_filter
+        if allowed_consequence_ids[EXTENDED_SPLICE_REGION_CONSEQUENCE]:
+            allowed_consequence_filters.append(lambda tc: tc.spliceregion.extended_intronic_splice_region_variant)
 
-        return lambda tc: allowed_consequence_filter(tc) | tc.spliceregion.extended_intronic_splice_region_variant
+        if allowed_consequence_ids[UTR_ANNOTATOR_KEY]:
+            utr_consequences = hl.set(allowed_consequence_ids[UTR_ANNOTATOR_KEY])
+            allowed_consequence_filters.append(lambda tc: utr_consequences.contains(tc.utrannotator.fiveutr_consequence_id))
+
+        return allowed_consequence_filters[0] if len(allowed_consequence_filters) == 1 else lambda tc: hl.any([
+            f(tc) for f in allowed_consequence_filters
+        ])
 
     def _get_annotation_override_filters(self, ht, annotation_overrides):
         annotation_filters = super()._get_annotation_override_filters(ht, annotation_overrides)
