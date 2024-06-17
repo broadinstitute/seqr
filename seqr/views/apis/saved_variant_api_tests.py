@@ -103,6 +103,7 @@ CREATE_VARIANT_JSON = {
     'projectGuid': 'R0001_1kg',
     'familyGuids': ['F000001_1', 'F000002_2'],
     'variantId': '2-61413835-AAAG-A',
+    'CAID': None,
 }
 
 CREATE_VARIANT_REQUEST_BODY = {
@@ -267,6 +268,7 @@ class SavedVariantAPITest(object):
         response_json = response.json()
         response_keys = {*SAVED_VARIANT_RESPONSE_KEYS}
         response_keys.remove('familiesByGuid')
+        response_keys.remove('transcriptsById')
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
         self.assertSetEqual(
