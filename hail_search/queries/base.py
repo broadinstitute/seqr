@@ -159,6 +159,8 @@ class BaseHailTableQuery(object):
         return {v: i for i, v in enumerate(enum_field)}
 
     def _get_enum_terms_ids(self, field, subfield, terms, nested_subfield=None):
+        if not terms:
+            return set()
         enum = self._get_enum_lookup(field, subfield, nested_subfield=nested_subfield)
         return {enum[t] for t in terms if enum.get(t) is not None}
 

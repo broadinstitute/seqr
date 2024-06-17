@@ -1,12 +1,12 @@
 from collections import OrderedDict
 import hail as hl
 
-from hail_search.constants import GENOME_VERSION_GRCh38, SCREEN_KEY, PREFILTER_FREQ_CUTOFF, ALPHAMISSENSE_SORT
+from hail_search.constants import GENOME_VERSION_GRCh38, SCREEN_KEY, PREFILTER_FREQ_CUTOFF, ALPHAMISSENSE_SORT, \
+    UTR_ANNOTATOR_KEY, EXTENDED_SPLICE_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath
 from hail_search.queries.snv_indel_37 import SnvIndelHailTableQuery37
 
 EXTENDED_SPLICE_REGION_CONSEQUENCE = 'extended_intronic_splice_region_variant'
-UTR_ANNOTATOR_KEY = 'UTRAnnotator'
 
 
 class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
@@ -50,7 +50,7 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
         if utr_consequence_ids:
             parsed_allowed_consequences[UTR_ANNOTATOR_KEY] = utr_consequence_ids
 
-        if EXTENDED_SPLICE_REGION_CONSEQUENCE in (annotations.get('extended_splice_site') or []):
+        if EXTENDED_SPLICE_REGION_CONSEQUENCE in (annotations.get(EXTENDED_SPLICE_KEY) or []):
             parsed_allowed_consequences[EXTENDED_SPLICE_REGION_CONSEQUENCE] = True
 
         return parsed_allowed_consequences
