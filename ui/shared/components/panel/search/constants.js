@@ -257,6 +257,19 @@ ANNOTATION_GROUPS.push({
   })),
 })
 
+const UTR_ANNOTATOR_GROUP = 'UTRAnnotator'
+const UTR_ANNOTATOR_VALUES = [
+  'premature_start_codon_gain', 'premature_start_codon_loss', 'stop_codon_gain', 'stop_codon_loss', 'uORF_frameshift',
+]
+ANNOTATION_GROUPS.push({
+  name: UTR_ANNOTATOR_GROUP,
+  groupLabel: UTR_ANNOTATOR_GROUP,
+  options: UTR_ANNOTATOR_VALUES.map(value => ({
+    value: `5_prime_UTR_${value}_variant`,
+    text: snakecaseToTitlecase(value),
+  })),
+})
+
 export const ALL_IMPACT_GROUPS = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
@@ -282,15 +295,12 @@ export const MODERATE_IMPACT_GROUPS = [
   VEP_GROUP_MISSENSE,
   VEP_GROUP_INFRAME,
 ]
+export const MODERATE_IMPACT_DISPLAY_GROUPS = [...MODERATE_IMPACT_GROUPS, SCREEN_GROUP]
 export const CODING_IMPACT_GROUPS = [
   VEP_GROUP_SYNONYMOUS,
   VEP_GROUP_EXTENDED_SPLICE_SITE,
 ]
-export const CODING_IMPACT_GROUPS_SCREEN = [
-  VEP_GROUP_SYNONYMOUS,
-  VEP_GROUP_EXTENDED_SPLICE_SITE,
-  SCREEN_GROUP,
-]
+export const CODNG_IMPACT_DISPLAY_GROUPS = [...CODING_IMPACT_GROUPS, UTR_ANNOTATOR_GROUP]
 export const ALL_ANNOTATION_FILTER = {
   text: 'All',
   vepGroups: ALL_IMPACT_GROUPS,
