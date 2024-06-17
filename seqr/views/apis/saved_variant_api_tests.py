@@ -268,6 +268,7 @@ class SavedVariantAPITest(object):
         response_json = response.json()
         response_keys = {*SAVED_VARIANT_RESPONSE_KEYS}
         response_keys.remove('familiesByGuid')
+        response_keys.remove('transcriptsById')
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
         self.assertSetEqual(

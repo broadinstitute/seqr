@@ -22,7 +22,7 @@ import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import RnaSeqJunctionOutliersTable from '../../table/RnaSeqJunctionOutliersTable'
 import { getOtherGeneNames } from '../genes/GeneDetail'
-import Transcripts, { ConsequenceDetails, ExtendedSpliceLabel } from './Transcripts'
+import Transcripts, { ConsequenceDetails, ExtendedSpliceLabel, isManeSelect } from './Transcripts'
 import VariantGenes, { GeneLabelContent, omimPhenotypesDetail } from './VariantGene'
 import {
   getLocus,
@@ -227,7 +227,7 @@ const shouldShowNonDefaultTranscriptInfoIcon = (variant, transcript, transcripts
   const allVariantTranscripts = Object.values(variant.transcripts || {}).flat() || []
   const canonical = allVariantTranscripts.find(t => t.canonical) || null
   const mane = allVariantTranscripts.find(
-    t => transcriptsById[t.transcriptId]?.isManeSelect || false,
+    t => isManeSelect(t, transcriptsById) || false,
   ) || null
 
   const result = canonical !== null &&
