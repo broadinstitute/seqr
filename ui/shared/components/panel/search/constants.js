@@ -247,6 +247,18 @@ export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([
 
 const SCREEN_GROUP = 'SCREEN'
 const SCREEN_VALUES = ['PLS', 'pELS', 'dELS', 'DNase-H3K4me3', 'CTCF-only', 'DNase-only', 'low-DNase']
+const UTR_ANNOTATOR_GROUP = 'UTRAnnotator'
+const UTR_ANNOTATOR_VALUES = [
+  'premature_start_codon_gain', 'premature_start_codon_loss', 'stop_codon_gain', 'stop_codon_loss', 'uORF_frameshift',
+]
+const MOTIF_GROUP = 'motif_features'
+const MOTIF_VALUES = [
+  'TFBS_ablation', 'TFBS_amplification', 'TF_binding_site_variant', 'TFBS_fusion', 'TFBS_translocation',
+]
+const REGULATORY_GROUP = 'regulatory_features'
+const REGULATORY_VALUES = [
+  'regulatory_region_ablation', 'regulatory_region_amplification', 'regulatory_region_variant', 'regulatory_region_fusion',
+]
 ANNOTATION_GROUPS.push({
   name: SCREEN_GROUP,
   groupLabel: SCREEN_GROUP,
@@ -255,17 +267,25 @@ ANNOTATION_GROUPS.push({
     text: SCREEN_LABELS[value] || value,
     description: 'SCREEN: Search Candidate cis-Regulatory Elements by ENCODE. Registry of cCREs V3’',
   })),
-})
-
-const UTR_ANNOTATOR_GROUP = 'UTRAnnotator'
-const UTR_ANNOTATOR_VALUES = [
-  'premature_start_codon_gain', 'premature_start_codon_loss', 'stop_codon_gain', 'stop_codon_loss', 'uORF_frameshift',
-]
-ANNOTATION_GROUPS.push({
+}, {
   name: UTR_ANNOTATOR_GROUP,
   groupLabel: UTR_ANNOTATOR_GROUP,
   options: UTR_ANNOTATOR_VALUES.map(value => ({
     value: `5_prime_UTR_${value}_variant`,
+    text: snakecaseToTitlecase(value),
+  })),
+}, {
+  name: MOTIF_GROUP,
+  groupLabel: snakecaseToTitlecase(MOTIF_GROUP),
+  options: MOTIF_VALUES.map(value => ({
+    value,
+    text: snakecaseToTitlecase(value),
+  })),
+}, {
+  name: REGULATORY_GROUP,
+  groupLabel: snakecaseToTitlecase(REGULATORY_GROUP),
+  options: REGULATORY_VALUES.map(value => ({
+    value,
     text: snakecaseToTitlecase(value),
   })),
 })
@@ -289,6 +309,8 @@ export const HIGH_IMPACT_GROUPS = [
 ]
 export const HIGH_IMPACT_GROUPS_SPLICE = [
   ...HIGH_IMPACT_GROUPS,
+  MOTIF_GROUP,
+  REGULATORY_GROUP,
   SPLICE_AI_FIELD,
 ]
 export const MODERATE_IMPACT_GROUPS = [
