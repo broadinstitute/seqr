@@ -90,11 +90,6 @@ def family_page_data(request, family_guid):
         'postDiscoveryOmimOptions': omim_map,
     })
 
-    outlier_individual_guids = sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA, is_active=True)\
-        .exclude(rnaseqoutlier__isnull=True, rnaseqspliceoutlier__isnull=True).values_list('individual__guid', flat=True)
-    for individual_guid in outlier_individual_guids:
-        response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
-
     tools_by_indiv = {}
     tools_agg = PhenotypePrioritization.objects.filter(individual__family=family).values('individual__guid').annotate(
         phenotypePrioritizationTools=ArrayAgg(
