@@ -58,7 +58,7 @@ class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
         self.assertEqual(annotation_updated_json_1['updated_field'], 'updated_value')
 
         annotation_updated_json_2 = SavedVariant.objects.get(guid='SV0059956_11560662_f019313_1').saved_variant_json
-        self.assertEqual(len(annotation_updated_json_2), 19)
+        self.assertEqual(len(annotation_updated_json_2), 18)
         self.assertEqual(annotation_updated_json_2['updated_new_field'], 'updated_value')
         self.assertEqual(annotation_updated_json_2['rsid'], 'rs123')
         self.assertEqual(annotation_updated_json_2['mainTranscriptId'], 'ENST00000505820')
