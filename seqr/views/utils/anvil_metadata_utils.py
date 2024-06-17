@@ -370,6 +370,7 @@ def _get_parsed_saved_discovery_variants_by_family(
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
             **{k: variant_json.get(k) for k in variant_fields + (variant_json_fields or [])},
+            'ClinGen_allele_ID': variant_json.get('CAID'),
             **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt']},
         }
         if include_metadata:

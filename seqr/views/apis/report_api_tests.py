@@ -494,6 +494,7 @@ MOCK_INVALID_DATA_MODEL = {
 }
 
 BASE_VARIANT_METADATA_ROW = {
+    'ClinGen_allele_ID': None,
     'MME': False,
     'additional_family_members_with_variant': '',
     'allele_balance_or_heteroplasmy_percentage': None,
@@ -609,11 +610,11 @@ GENETIC_FINDINGS_TABLE = [
         'Full', '', '', 'SR-ES', '', '', '', '', '', '', '',
     ], [
         'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh37', '1',
-        '248367227', 'TC', 'T', '', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
+        '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
         'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
     ], [
         'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '248367227', 'TC', 'T',
-        '', 'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown',
+        'CA1501729', 'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown',
         'Broad_NA20889_1_249045487', '', 'Candidate', 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant',
         'Partial', 'HP:0000501|HP:0000365', '', 'SR-ES', '', '', '', '', '', '', '',
     ], [
@@ -1203,6 +1204,7 @@ class ReportAPITest(AirtableTest):
             'additional_family_members_with_variant': 'HG00732',
             'alt': 'T',
             'chrom': '1',
+            'ClinGen_allele_ID': 'CA1501729',
             'clinvar': {'alleleId': None, 'clinicalSignificance': '', 'goldStars': None, 'variationId': None},
             'condition_id': 'MONDO:0044970',
             'condition_inheritance': None,
@@ -1229,6 +1231,7 @@ class ReportAPITest(AirtableTest):
             **BASE_VARIANT_METADATA_ROW,
             'alt': 'T',
             'chrom': '19',
+            'ClinGen_allele_ID': 'CA403171634',
             'condition_id': 'MONDO:0044970',
             'condition_inheritance': None,
             'displayName': '2',
@@ -1268,6 +1271,7 @@ class ReportAPITest(AirtableTest):
             'MME': True,
             'alt': 'T',
             'chrom': '1',
+            'ClinGen_allele_ID': 'CA1501729',
             'clinvar': {'alleleId': None, 'clinicalSignificance': '', 'goldStars': None, 'variationId': None},
             'condition_id': 'MONDO:0008788',
             'displayName': '12',
