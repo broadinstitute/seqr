@@ -3,8 +3,8 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Popup, Icon } from 'semantic-ui-react'
 
-import { HorizontalSpacer } from '../Spacers'
-import { DATASET_TYPE_SNV_INDEL_CALLS } from '../../utils/constants'
+import { HorizontalSpacer, VerticalSpacer } from '../Spacers'
+import { DATASET_TYPE_SNV_INDEL_CALLS, SAMPLE_TYPE_RNA } from '../../utils/constants'
 
 const Detail = styled.span`
   font-size: 11px;
@@ -33,9 +33,16 @@ const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) => (
         }
       </span>
     }
-    content={loadedSample ?
-      `data was${isOutdated ? ' previously ' : ''} ${hoverDetails ? `${hoverDetails} on ${new Date(loadedSample.loadedDate).toLocaleDateString()}` : 'loaded'}` :
-      'no data available'}
+    content={
+      <div>
+        {loadedSample ?
+          `data was${isOutdated ? ' previously ' : ''} ${hoverDetails ? `${hoverDetails} on ${new Date(loadedSample.loadedDate).toLocaleDateString()}` : 'loaded'}` :
+          'no data available'}
+        <VerticalSpacer height={5} />
+        {loadedSample?.sampleType && loadedSample.sampleType === SAMPLE_TYPE_RNA &&
+          loadedSample?.rnaSeqTypes?.length > 0 && `RNAseq methods: ${loadedSample.rnaSeqTypes.join(', ')}`}
+      </div>
+    }
     position="left center"
   />
 ))

@@ -23,7 +23,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model,  get_json_fo
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
     MME_TAG_NAME
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
-    PhenotypePrioritization, Project
+    PhenotypePrioritization, Project, RnaSeqOutlier, RnaSeqSpliceOutlier
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
 from seqr.views.utils.variant_utils import get_phenotype_prioritization, get_omim_intervals_query, DISCOVERY_CATEGORY
@@ -45,8 +45,21 @@ def family_page_data(request, family_guid):
     sample_models = Sample.objects.filter(individual__family=family)
     samples = get_json_for_samples(sample_models, project_guid=project.guid, family_guid=family_guid, skip_nested=True, is_analyst=is_analyst)
     response = {
-        'samplesByGuid': {s['sampleGuid']: s for s in samples},
+        'samplesByGuid': {s['sampleGuid']: {**s, 'rnaSeqTypes': []} for s in samples},
     }
+
+    # Add Rna Seq metadata to samples
+    rna_seq_models = [
+        (RnaSeqTpm, 'TPM'),
+        (RnaSeqOutlier, 'Outlier'),
+        (RnaSeqSpliceOutlier, 'Splice Outlier'),
+    ]
+    for model, rna_seq_type in rna_seq_models:
+        rna_seq_samples = model.objects.filter(
+            sample__in=sample_models, sample__is_active=True
+        ).values('sample__guid').distinct()
+        for rna_seq_sample in rna_seq_samples:
+            response['samplesByGuid'][rna_seq_sample['sample__guid']]['rnaSeqTypes'].append(rna_seq_type)
 
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
     family_response = response['familiesByGuid'][family_guid]
