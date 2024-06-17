@@ -1061,42 +1061,6 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001968',
   },
   {
-    description: 'A feature ablation whereby the deleted region includes a transcription factor binding site',
-    text: 'TFBS ablation',
-    value: 'TFBS_ablation',
-    so: 'SO:0001895',
-  },
-  {
-    description: 'A feature amplification of a region containing a transcription factor binding site',
-    text: 'TFBS amplification',
-    value: 'TFBS_amplification',
-    so: 'SO:0001892',
-  },
-  {
-    description: 'In regulatory region annotated by Ensembl',
-    text: 'TF binding site variant',
-    value: 'TF_binding_site_variant',
-    so: 'SO:0001782',
-  },
-  {
-    description: 'A sequence variant located within a regulatory region',
-    text: 'Regulatory region variant',
-    value: 'regulatory_region_variant',
-    so: 'SO:0001566',
-  },
-  {
-    description: 'A feature ablation whereby the deleted region includes a regulatory region',
-    text: 'Regulatory region ablation',
-    value: 'regulatory_region_ablation',
-    so: 'SO:0001894',
-  },
-  {
-    description: 'A feature amplification of a region containing a regulatory region',
-    text: 'Regulatory region amplification',
-    value: 'regulatory_region_amplification',
-    so: 'SO:0001891',
-  },
-  {
     description: 'A sequence variant that causes the extension of a genomic feature, with regard to the reference sequence',
     text: 'Feature elongation',
     value: 'feature_elongation',
