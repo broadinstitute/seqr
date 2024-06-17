@@ -121,7 +121,6 @@ AIRTABLE_GREGOR_RECORDS = {
         'mean_coverage_wgs': '42.4',
         'analysis_details': 'DOI:10.5281/zenodo.4469317',
         'called_variants_dna_short_read_id': 'SX2-3',
-        'aligned_dna_short_read_set_id': 'BCM_H7YG5DSX2',
         'called_variants_dna_file': 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
         'caller_software': 'gatk4.1.2',
         'variant_types': 'SNV',
@@ -141,7 +140,7 @@ AIRTABLE_GREGOR_RECORDS = {
       "fields": {
         'CollaboratorParticipantID': 'NA19679',
         'CollaboratorSampleID_rna': 'NA19679',
-        'SMID_rna': 'SM-N1P91',
+        'SMID_rna': ['rec2B67GmXpAkQW8z'],
         'seq_library_prep_kit_method_rna': 'Unknown',
         'library_prep_type_rna': 'stranded poly-A pulldown',
         'read_length_rna': '151',
@@ -206,7 +205,6 @@ AIRTABLE_GREGOR_RECORDS = {
         'mean_coverage_wgs': '36.1',
         'analysis_details': '',
         'called_variants_dna_short_read_id': '',
-        'aligned_dna_short_read_set_id': 'Broad_NA20888_D1',
         'called_variants_dna_file': '',
         'caller_software': 'NA',
         'variant_types': 'SNV',
@@ -339,7 +337,7 @@ MOCK_DATA_MODEL = {
             'table': 'aligned_dna_short_read_set',
             'required': 'CONDITIONAL (called_variants_dna_short_read)',
             'columns': [
-                {'column': 'aligned_dna_short_read_set_id', 'required': True},
+                {'column': 'aligned_dna_short_read_set_id', 'primary_key': True},
                 {'column': 'aligned_dna_short_read_id', 'required': True},
             ],
         },
@@ -1002,9 +1000,9 @@ class ReportAPITest(AirtableTest):
 
         self.assertEqual(len(read_set_file), num_airtable_rows)
         self.assertEqual(read_set_file[0], ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'])
-        self.assertIn(['BCM_H7YG5DSX2', 'Broad_exome_VCGS_FAM203_621_D2_1'], read_set_file)
-        self.assertIn(['Broad_NA20888_D1', 'Broad_exome_NA20888_1'], read_set_file)
-        self.assertEqual(['Broad_NA20888_D1', 'Broad_genome_NA20888_1_1'] in read_set_file, has_second_project)
+        self.assertIn(['Broad_exome_VCGS_FAM203_621_D2', 'Broad_exome_VCGS_FAM203_621_D2_1'], read_set_file)
+        self.assertIn(['Broad_exome_NA20888', 'Broad_exome_NA20888_1'], read_set_file)
+        self.assertEqual(['Broad_genome_NA20888_1', 'Broad_genome_NA20888_1_1'] in read_set_file, has_second_project)
 
         self.assertEqual(len(called_file), 2)
         self.assertEqual(called_file[0], [
@@ -1012,7 +1010,7 @@ class ReportAPITest(AirtableTest):
             'caller_software', 'variant_types', 'analysis_details',
         ])
         self.assertIn([
-            'SX2-3', 'BCM_H7YG5DSX2', 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
+            'SX2-3', 'Broad_exome_VCGS_FAM203_621_D2', 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
             '129c28163df082', 'gatk4.1.2', 'SNV', 'DOI:10.5281/zenodo.4469317',
         ], called_file)
 
@@ -1075,7 +1073,7 @@ class ReportAPITest(AirtableTest):
         }
         sample_ids.update(additional_samples or [])
         sample_filter = ','.join([f"{{CollaboratorSampleID}}='{sample_id}'" for sample_id in sorted(sample_ids)])
-        sample_fields = ['CollaboratorSampleID', 'SMID', 'CollaboratorParticipantID', 'Recontactable']
+        sample_fields = ['CollaboratorSampleID', 'CollaboratorParticipantID', 'Recontactable', 'SMID']
         self.assert_expected_airtable_call(len(mondo_ids), f"OR({sample_filter})", sample_fields)
         sample_ids -= {'NA19675_1', 'NA19679', 'NA20888'}
         secondary_sample_filter = ','.join([f"{{SeqrCollaboratorSampleID}}='{sample_id}'" for sample_id in sorted(sample_ids)])
@@ -1085,7 +1083,7 @@ class ReportAPITest(AirtableTest):
             'CollaboratorParticipantID', '5prime3prime_bias_rna', 'CollaboratorSampleID_rna', 'CollaboratorSampleID_wes',
             'CollaboratorSampleID_wgs', 'Primary_Biosample_rna', 'RIN_rna', 'SMID_rna', 'SMID_wes', 'SMID_wgs',
             'aligned_dna_short_read_file_wes', 'aligned_dna_short_read_file_wgs', 'aligned_dna_short_read_index_file_wes',
-            'aligned_dna_short_read_index_file_wgs', 'aligned_dna_short_read_set_id',
+            'aligned_dna_short_read_index_file_wgs',
             'aligned_rna_short_read_file', 'aligned_rna_short_read_index_file', 'alignment_log_file_rna',
             'alignment_software_dna', 'alignment_software_rna', 'analysis_details', 'called_variants_dna_file',
             'called_variants_dna_short_read_id', 'caller_software', 'date_data_generation_rna', 'date_data_generation_wes',
