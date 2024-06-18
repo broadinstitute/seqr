@@ -442,7 +442,13 @@ def gregor_export(request):
         (FINDINGS_TABLE, genetic_findings_rows),
     ]
 
-    files, warnings = _populate_gregor_files(file_data)
+    files, warnings, errors = _populate_gregor_files(file_data)
+
+    if errors and not request_json.get('overrideValidation'):
+        raise ErrorsWarningsException(errors, warnings)
+    else:
+        warnings = errors + warnings
+
     write_multiple_files_to_gs(files, file_path, request.user, file_format='tsv')
 
     return create_json_response({
@@ -700,10 +706,7 @@ def _populate_gregor_files(file_data):
         for column, config in table_config.items():
             _validate_column_data(column, file_name, data, column_validator=config, warnings=warnings, errors=errors)
 
-    if errors:
-        raise ErrorsWarningsException(errors, warnings)
-
-    return files, warnings
+    return files, warnings, errors
 
 
 def _load_data_model_validators():
