@@ -926,22 +926,14 @@ class ReportAPITest(AirtableTest):
         participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, \
         called_file, experiment_rna_file, aligned_rna_file, experiment_lookup_file, genetic_findings_file = files
 
-        self.assertEqual(len(participant_file), 16 if has_second_project else 14)
-        self.assertEqual(participant_file[0], PARTICIPANT_TABLE[0])
-        row = next(r for r in participant_file if r[0] == 'Broad_NA19675_1')
-        self.assertListEqual(PARTICIPANT_TABLE[1], row)
-        hispanic_row = next(r for r in participant_file if r[0] == 'Broad_HG00731')
-        self.assertListEqual(PARTICIPANT_TABLE[2], hispanic_row)
-        solved_row = next(r for r in participant_file if r[0] == 'Broad_NA20876')
-        self.assertIn(PARTICIPANT_TABLE[3], participant_file)
-        self.assertListEqual(PARTICIPANT_TABLE[4], solved_row)
-        multi_data_type_row = next(r for r in participant_file if r[0] == 'Broad_NA20888')
-        expected_row = PARTICIPANT_TABLE[5]
-        if not has_second_project:
-            expected_row = expected_row[:1] + ['Broad_1kg project nme with unide'] + expected_row[2:7] + [
-                'Broad_8'] + expected_row[8:13] + ['Female', '', '', '', ''] + expected_row[18:]
-        self.assertListEqual(expected_row, multi_data_type_row)
-        self.assertEqual(PARTICIPANT_TABLE[5] in participant_file, has_second_project)
+        single_project_row = PARTICIPANT_TABLE[5][:1] + ['Broad_1kg project nme with unide'] + PARTICIPANT_TABLE[5][2:7] + [
+                'Broad_8'] + PARTICIPANT_TABLE[5][8:13] + ['Female', '', '', '', ''] + PARTICIPANT_TABLE[5][18:]
+        self._assert_expected_file(
+            participant_file,
+            expected_rows=PARTICIPANT_TABLE if has_second_project else PARTICIPANT_TABLE[:5] + [single_project_row],
+            absent_rows=[single_project_row] if has_second_project else PARTICIPANT_TABLE[5:],
+            additional_calls=9 if has_second_project else 8,
+        )
 
         expected_rows = [
             ['family_id', 'consanguinity', 'consanguinity_detail'],
