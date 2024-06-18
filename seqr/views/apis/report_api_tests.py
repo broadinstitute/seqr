@@ -852,7 +852,10 @@ class ReportAPITest(AirtableTest):
             'warnings': validation_errors + validation_warnings,
         }
         self.assertDictEqual(response.json(), expected_response)
-        files = self._get_expected_gregor_files(mock_open, mock_subprocess, INVALID_MODEL_TABLES.keys())
+        participant_file, read_file, read_set_file, called_file, rna_file, findings_file = self._get_expected_gregor_files(
+            mock_open, mock_subprocess, INVALID_MODEL_TABLES.keys()
+        )
+        import pdb; pdb.set_trace()
 
         responses.calls.reset()
         mock_subprocess.reset_mock()
