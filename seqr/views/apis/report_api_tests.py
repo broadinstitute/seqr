@@ -943,137 +943,135 @@ class ReportAPITest(AirtableTest):
         self.assertListEqual(expected_row, multi_data_type_row)
         self.assertEqual(PARTICIPANT_TABLE[5] in participant_file, has_second_project)
 
-        self.assertEqual(len(family_file), 11 if has_second_project else 10)
-        self.assertEqual(family_file[0], [
-            'family_id', 'consanguinity', 'consanguinity_detail',
-        ])
-        self.assertIn(['Broad_1', 'Present', ''], family_file)
+        expected_rows = [
+            ['family_id', 'consanguinity', 'consanguinity_detail'],
+            ['Broad_1', 'Present', ''],
+        ]
+        absent_rows = []
         fam_8_row = ['Broad_8', 'Unknown', '']
         fam_11_row = ['Broad_11', 'None suspected', '']
         if has_second_project:
-            self.assertIn(fam_11_row, family_file)
-            self.assertNotIn(fam_8_row, family_file)
+            expected_rows.append(fam_11_row)
+            absent_rows.append(fam_8_row)
         else:
-            self.assertIn(fam_8_row, family_file)
-            self.assertNotIn(fam_11_row, family_file)
-
-        self.assertEqual(len(phenotype_file), 14 if has_second_project else 10)
-        self.assertEqual(phenotype_file[0], PHENOTYPE_TABLE[0])
-        for row in PHENOTYPE_TABLE[1:5]:
-            self.assertIn(row, phenotype_file)
-        for row in PHENOTYPE_TABLE[5:]:
-            self.assertEqual(row in phenotype_file, has_second_project)
-
-        self.assertEqual(len(analyte_file), 6 if has_second_project else 5)
-        self.assertEqual(analyte_file[0], [
-            'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
-            'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status',
-        ])
-        row = next(r for r in analyte_file if r[1] == 'Broad_NA19675_1')
-        self.assertListEqual(
-            ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No'],
-            row)
-        self.assertIn(
-            ['Broad_SM-N1P91', 'Broad_NA19679', 'RNA', '', 'CL: 0000057', '', '', 'Yes'], analyte_file)
-        self.assertIn(
-            ['Broad_SM-L5QMP', 'Broad_NA20888', '', '', '', '', '', 'No'], analyte_file)
-        self.assertEqual(
-            ['Broad_SM-L5QMWP', 'Broad_NA20888', '', '', '', '', '', 'No'] in analyte_file,
-            has_second_project
+            expected_rows.append(fam_8_row)
+            absent_rows.append(fam_11_row)
+        self._assert_expected_file(
+            family_file, expected_rows, absent_rows=absent_rows, additional_calls=8 if has_second_project else 7,
         )
 
-        num_airtable_rows = 4 if has_second_project else 3
-        self.assertEqual(len(experiment_file), num_airtable_rows)
-        self.assertEqual(experiment_file[0], EXPERIMENT_TABLE[0])
-        self.assertIn(EXPERIMENT_TABLE[1], experiment_file)
-        self.assertIn(EXPERIMENT_TABLE[2], experiment_file)
-        self.assertEqual(EXPERIMENT_TABLE[3] in experiment_file, has_second_project)
+        self._assert_expected_file(
+            phenotype_file,
+            expected_rows=PHENOTYPE_TABLE if has_second_project else PHENOTYPE_TABLE[:5],
+            absent_rows=None if has_second_project else PHENOTYPE_TABLE[5:],
+            additional_calls=7 if has_second_project else 5,
+        )
 
-        self.assertEqual(len(read_file), num_airtable_rows)
-        self.assertEqual(read_file[0], [
+        expected_rows = [
+            [
+                'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
+                'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status',
+            ],
+            ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No'],
+            ['Broad_SM-N1P91', 'Broad_NA19679', 'RNA', '', 'CL: 0000057', '', '', 'Yes'],
+            ['Broad_SM-L5QMP', 'Broad_NA20888', '', '', '', '', '', 'No'],
+        ]
+        absent_rows = []
+        (expected_rows if has_second_project else absent_rows).append(
+            ['Broad_SM-L5QMWP', 'Broad_NA20888', '', '', '', '', '', 'No']
+        )
+        self._assert_expected_file(analyte_file, expected_rows, absent_rows=absent_rows, additional_calls=1)
+
+        self._assert_expected_file(
+            experiment_file,
+            expected_rows=EXPERIMENT_TABLE if has_second_project else EXPERIMENT_TABLE[:3],
+            absent_rows=None if has_second_project else EXPERIMENT_TABLE[3:],
+        )
+
+        expected_rows = [[
             'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
             'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri', 'reference_assembly_details',
             'mean_coverage', 'alignment_software', 'analysis_details',  'quality_issues',
-        ])
-        self.assertIn([
-            'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
-            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
-            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai',
-            '129c28163df082', 'GRCh38', '', '', '', 'BWA-MEM-2.3', 'DOI:10.5281/zenodo.4469317', '',
-        ], read_file)
-        self.assertIn([
+        ], [
             'Broad_exome_NA20888_1', 'Broad_exome_NA20888',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888.crai', 'a6f6308866765ce8', 'GRCh38', '', '',
             '42.8', 'BWA-MEM-2.3', '', '',
-        ], read_file)
-        self.assertEqual([
+        ]]
+        absent_rows = []
+        (expected_rows if has_second_project else absent_rows).append([
              'Broad_genome_NA20888_1_1', 'Broad_genome_NA20888_1',
              'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888_1.cram',
              'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888_1.crai', '2aa33e8c32020b1c', 'GRCh38', '', '',
              '36.1', 'BWA-MEM-2.3', '', '',
-        ] in read_file, has_second_project)
+        ])
+        self._assert_expected_file(read_file, expected_rows, absent_rows=absent_rows, additional_calls=1)
 
-        self.assertEqual(len(read_set_file), num_airtable_rows)
-        self.assertEqual(read_set_file[0], ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'])
-        self.assertIn(['Broad_exome_VCGS_FAM203_621_D2', 'Broad_exome_VCGS_FAM203_621_D2_1'], read_set_file)
-        self.assertIn(['Broad_exome_NA20888', 'Broad_exome_NA20888_1'], read_set_file)
-        self.assertEqual(['Broad_genome_NA20888_1', 'Broad_genome_NA20888_1_1'] in read_set_file, has_second_project)
+        expected_rows = [
+            ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'],
+            ['Broad_exome_VCGS_FAM203_621_D2', 'Broad_exome_VCGS_FAM203_621_D2_1'],
+            ['Broad_exome_NA20888', 'Broad_exome_NA20888_1'],
+        ]
+        absent_rows = []
+        (expected_rows if has_second_project else absent_rows).append(
+            ['Broad_genome_NA20888_1', 'Broad_genome_NA20888_1_1']
+        )
+        self._assert_expected_file(read_set_file, expected_rows, absent_rows=absent_rows)
 
-        self.assertEqual(len(called_file), 2)
-        self.assertEqual(called_file[0], [
+        self._assert_expected_file(called_file, [[
             'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
             'caller_software', 'variant_types', 'analysis_details',
-        ])
-        self.assertIn([
+        ], [
             'SX2-3', 'Broad_exome_VCGS_FAM203_621_D2', 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
             '129c28163df082', 'gatk4.1.2', 'SNV', 'DOI:10.5281/zenodo.4469317',
-        ], called_file)
+        ]])
 
-        self.assertEqual(len(experiment_rna_file), 2)
-        self.assertEqual(experiment_rna_file[0], [
+        self._assert_expected_file(experiment_rna_file, [[
             'experiment_rna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
             'read_length', 'experiment_type', 'date_data_generation', 'sequencing_platform', 'library_prep_type',
             'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size', 'total_reads',
             'percent_rRNA', 'percent_mRNA', '5prime3prime_bias', 'percent_mtRNA', 'percent_Globin', 'percent_UMI',
             'percent_GC', 'percent_chrX_Y',
-        ])
-        self.assertEqual(experiment_rna_file[1], [
+        ], [
             'Broad_paired-end_NA19679', 'Broad_SM-N1P91', 'NA19679', 'Unknown', '151', 'paired-end', '2023-02-11',
             'NovaSeq', 'stranded poly-A pulldown', 'paired-end', 'LCSET-26942', '8.9818', '19480858', '106842386',
             '5.9', '80.2', '1.05', '', '', '', '', '',
-        ])
+        ]])
 
-        self.assertEqual(len(aligned_rna_file), 2)
-        self.assertEqual(aligned_rna_file[0], [
+        self._assert_expected_file(aligned_rna_file, [[
             'aligned_rna_short_read_id', 'experiment_rna_short_read_id', 'aligned_rna_short_read_file',
             'aligned_rna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri',
             'reference_assembly_details', 'mean_coverage', 'gene_annotation', 'gene_annotation_details',
             'alignment_software', 'alignment_log_file', 'alignment_postprocessing', 'percent_uniquely_aligned',
             'percent_multimapped', 'percent_unaligned', 'quality_issues'
-        ])
-        self.assertEqual(aligned_rna_file[1], [
+        ], [
             'Broad_paired-end_NA19679_1', 'Broad_paired-end_NA19679', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.crai', 'f6490b8ebdf2', 'GRCh38',
             'gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta', '', '', 'GENCODEv26', '',
             'STARv2.7.10b', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Log.final.out', '', '80.53', '17.08',
             '1.71', ''
-        ])
+        ]])
 
-        self.assertEqual(len(experiment_lookup_file), num_airtable_rows + 1)
-        self.assertEqual(experiment_lookup_file[0], EXPERIMENT_LOOKUP_TABLE[0])
-        self.assertIn(EXPERIMENT_LOOKUP_TABLE[1], experiment_lookup_file)
-        self.assertIn(EXPERIMENT_LOOKUP_TABLE[2], experiment_lookup_file)
-        self.assertIn(EXPERIMENT_LOOKUP_TABLE[3], experiment_lookup_file)
-        self.assertEqual(EXPERIMENT_LOOKUP_TABLE[4] in experiment_lookup_file, has_second_project)
+        self._assert_expected_file(
+            experiment_lookup_file,
+            expected_rows=EXPERIMENT_LOOKUP_TABLE if has_second_project else EXPERIMENT_LOOKUP_TABLE[:4],
+            absent_rows=None if has_second_project else EXPERIMENT_LOOKUP_TABLE[4:],
+        )
 
-        self.assertEqual(len(genetic_findings_file), 8 if has_second_project else 6)
-        self.assertEqual(genetic_findings_file[0], GENETIC_FINDINGS_TABLE[0])
-        self.assertIn(GENETIC_FINDINGS_TABLE[1], genetic_findings_file)
-        self.assertIn(GENETIC_FINDINGS_TABLE[2], genetic_findings_file)
-        if has_second_project:
-            self.assertIn(GENETIC_FINDINGS_TABLE[3], genetic_findings_file)
-            self.assertIn(GENETIC_FINDINGS_TABLE[4], genetic_findings_file)
+        self._assert_expected_file(
+            genetic_findings_file,
+            expected_rows=GENETIC_FINDINGS_TABLE if has_second_project else GENETIC_FINDINGS_TABLE[:3],
+            absent_rows=None if has_second_project else EXPERIMENT_LOOKUP_TABLE[3:],
+            additional_calls=3,
+        )
+
+    def _assert_expected_file(self, actual_rows, expected_rows, additional_calls=0, absent_rows=None):
+        self.assertEqual(len(actual_rows), len(expected_rows) + additional_calls)
+        self.assertEqual(expected_rows[0], actual_rows[0])
+        for row in expected_rows[1:]:
+            self.assertIn(row, actual_rows)
+        for row in absent_rows or []:
+            self.assertNotIn(row, actual_rows)
 
     def _test_expected_gregor_airtable_calls(self, additional_samples=None, additional_mondo_ids=None):
         mondo_ids = ['0044970'] + (additional_mondo_ids or [])
