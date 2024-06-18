@@ -817,12 +817,13 @@ class ReportAPITest(AirtableTest):
             'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "known_condition_name" in the "genetic_findings" table: Broad_HG00731_19_1912632, Broad_HG00731_19_1912633, Broad_HG00731_19_1912634, Broad_HG00731_1_248367227',
         ]
-        self.assertListEqual(response.json()['warnings'], [
+        validation_warnings = [
             'The following columns are specified as "enumeration" in the "participant" data model but are missing the allowed values definition: prior_testing',
             'The following columns are included in the "participant" data model but have an unsupported data type: internal_project_id (reference)',
             'The following columns are computed for the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, missing_variant_case, pmid_id',
-        ] + recommended_warnings)
-        self.assertListEqual(response.json()['errors'], [
+        ] + recommended_warnings
+        self.assertListEqual(response.json()['warnings'], validation_warnings)
+        validation_errors = [
             f'No data model found for "{file}" table' for file in reversed(EXPECTED_GREGOR_FILES) if file not in INVALID_MODEL_TABLES
         ] + [
             'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
@@ -838,28 +839,31 @@ class ReportAPITest(AirtableTest):
             'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)',
             'The following entries are missing required "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_NA19675_1_21_3343353',
             'The following entries have non-unique values for "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_exome_VCGS_FAM203_621_D2 (Broad_HG00731_19_1912632, Broad_HG00731_19_1912633, Broad_HG00731_19_1912634, Broad_HG00731_1_248367227)',
-        ])
+        ]
+        self.assertListEqual(response.json()['errors'], validation_errors)
 
-        responses.calls.reset()
-        mock_subprocess.reset_mock()
-        responses.add(responses.GET, MOCK_DATA_MODEL_URL, body=MOCK_DATA_MODEL_RESPONSE, status=200)
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        mock_open.reset_mock()
+        response = self.client.post(
+            url, content_type='application/json', data=json.dumps({**body, 'overrideValidation': True})
+        )
         self.assertEqual(response.status_code, 200)
         expected_response = {
             'info': ['Successfully validated and uploaded Gregor Report for 9 families'],
-            'warnings': recommended_warnings,
+            'warnings': validation_errors + validation_warnings,
         }
         self.assertDictEqual(response.json(), expected_response)
-        self._assert_expected_gregor_files(mock_open)
-        self._test_expected_gregor_airtable_calls()
+        files = self._get_expected_gregor_files(mock_open, mock_subprocess, INVALID_MODEL_TABLES.keys())
 
-        # test gsutil commands
-        mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),  # nosec
-            mock.call().wait(),
-            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),  # nosec
-            mock.call().wait(),
-        ])
+        responses.calls.reset()
+        mock_subprocess.reset_mock()
+        mock_open.reset_mock()
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, body=MOCK_DATA_MODEL_RESPONSE, status=200)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        expected_response['warnings'] = recommended_warnings
+        self.assertDictEqual(response.json(), expected_response)
+        self._assert_expected_gregor_files(mock_open, mock_subprocess)
+        self._test_expected_gregor_airtable_calls()
 
         # Test multiple project with shared sample IDs
         project = Project.objects.get(id=3)
@@ -887,6 +891,7 @@ class ReportAPITest(AirtableTest):
             },
         })
         mock_open.reset_mock()
+        mock_subprocess.reset_mock()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         expected_response['info'][0] = expected_response['info'][0].replace('9', '10')
@@ -895,18 +900,29 @@ class ReportAPITest(AirtableTest):
         expected_response['warnings'][2] = expected_response['warnings'][2].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
         expected_response['warnings'][3] = expected_response['warnings'][3].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
         self.assertDictEqual(response.json(), expected_response)
-        self._assert_expected_gregor_files(mock_open, has_second_project=True)
+        self._assert_expected_gregor_files(mock_open, mock_subprocess, has_second_project=True)
         self._test_expected_gregor_airtable_calls(additional_samples=['NA20885', 'NA20889'], additional_mondo_ids=['0008788'])
 
         self.check_no_analyst_no_access(url)
 
-    def _assert_expected_gregor_files(self, mock_open, has_second_project=False):
+    def _get_expected_gregor_files(self, mock_open, mock_subprocess, expected_files):
+        # test gsutil commands
+        mock_subprocess.assert_has_calls([
+            mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),  # nosec
+            mock.call().wait(),
+            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),  # nosec
+            mock.call().wait(),
+        ])
+
         self.assertListEqual(
-            mock_open.call_args_list, [mock.call(f'/mock/tmp/{file}.tsv', 'w') for file in EXPECTED_GREGOR_FILES])
-        files = [
+            mock_open.call_args_list, [mock.call(f'/mock/tmp/{file}.tsv', 'w') for file in expected_files])
+        return [
             [row.split('\t') for row in write_call.args[0].split('\n')]
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
         ]
+
+    def _assert_expected_gregor_files(self, mock_open, mock_subprocess, has_second_project=False):
+        files = self._get_expected_gregor_files(mock_open, mock_subprocess, EXPECTED_GREGOR_FILES)
         participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, \
         called_file, experiment_rna_file, aligned_rna_file, experiment_lookup_file, genetic_findings_file = files
 
