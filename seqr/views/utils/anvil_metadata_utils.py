@@ -624,7 +624,7 @@ def _get_mondo_condition_data(mondo_id):
             inheritance = HumanPhenotypeOntology.objects.get(hpo_id=inheritance['id']).name.replace(' inheritance', '')
         return {
             'known_condition_name': data['name'],
-            'condition_inheritance': inheritance,
+            'condition_inheritance': inheritance or 'Unknown',
         }
     except Exception:
         return {}
