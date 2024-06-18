@@ -361,7 +361,7 @@ def _get_parsed_saved_discovery_variants_by_family(
             variant_fields += ['svType', 'svName', 'end']
 
         parsed_variant = {
-            'chrom': chrom,
+            'chrom': 'MT' if chrom == 'M' else chrom,
             'pos': pos,
             'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
             'gene_id': gene_id,
