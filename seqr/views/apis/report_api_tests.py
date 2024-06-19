@@ -622,6 +622,20 @@ GENETIC_FINDINGS_TABLE = [
     ],
 ]
 
+READ_TABLE_HEADER = [
+    'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
+    'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri',
+    'reference_assembly_details', 'mean_coverage', 'alignment_software', 'analysis_details', 'quality_issues',
+]
+READ_SET_TABLE_HEADER = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
+RNA_TABLE_HEADER = [
+    'experiment_rna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
+    'read_length', 'experiment_type', 'date_data_generation', 'sequencing_platform', 'library_prep_type',
+    'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size', 'total_reads',
+    'percent_rRNA', 'percent_mRNA', '5prime3prime_bias', 'percent_mtRNA', 'percent_Globin', 'percent_UMI',
+    'percent_GC', 'percent_chrX_Y',
+]
+
 
 class ReportAPITest(AirtableTest):
 
@@ -852,10 +866,53 @@ class ReportAPITest(AirtableTest):
             'warnings': validation_errors + validation_warnings,
         }
         self.assertDictEqual(response.json(), expected_response)
-        participant_file, read_file, read_set_file, called_file, rna_file, findings_file = self._get_expected_gregor_files(
+        participant_file, read_file, read_set_file, rna_file, genetic_findings_file = self._get_expected_gregor_files(
             mock_open, mock_subprocess, INVALID_MODEL_TABLES.keys()
         )
-        import pdb; pdb.set_trace()
+        self._assert_expected_file(participant_file, [
+            [c for c in PARTICIPANT_TABLE[0] if c not in {'pmid_id', 'ancestry_detail', 'age_at_last_observation', 'missing_variant_case'}],
+            [
+            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
+            'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '', 'Middle Eastern or North African',
+            '', 'Affected', 'myopathy', '18', 'Unsolved',
+        ], [
+            'Broad_NA19678', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', 'Broad_1', '0', '0', '', '',
+            '', 'Male', '', '', '', 'Unaffected', 'myopathy', '', 'Unaffected',
+        ], [
+            'Broad_HG00731', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', 'Broad_2', 'Broad_HG00732',
+            'Broad_HG00733', '', 'Self', '', 'Female', '', '', 'Hispanic or Latino', 'Affected',
+            'microcephaly; seizures', '', 'Unsolved',
+        ]], additional_calls=10)
+        self._assert_expected_file(read_file, [READ_TABLE_HEADER, [
+            'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
+            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
+            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38', '', '',
+            '', 'BWA-MEM-2.3', 'DOI:10.5281/zenodo.4469317', '',
+        ]], additional_calls=1)
+        self._assert_expected_file(read_set_file, [
+            READ_SET_TABLE_HEADER,
+            ['Broad_exome_VCGS_FAM203_621_D2', 'Broad_exome_VCGS_FAM203_621_D2_1'],
+        ], additional_calls=1)
+        self._assert_expected_file(rna_file, [RNA_TABLE_HEADER, [
+            'Broad_paired-end_NA19679', 'Broad_SM-N1P91', 'NA19679', 'Unknown', '151', 'paired-end', '2023-02-11',
+            'NovaSeq', 'stranded poly-A pulldown', 'paired-end', 'LCSET-26942', '8.9818', '19480858', '106842386', '5.9',
+            '80.2', '1.05', '', '', '', '', '',
+        ]])
+        self._assert_expected_file(genetic_findings_file, [GENETIC_FINDINGS_TABLE[0], [
+            'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'SNV/INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
+            'RP11', 'ENST00000258436.5', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '',
+            'Candidate', 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120',
+            'Autosomal recessive|X-linked', 'Full', '', '', 'SR-ES', '', '', '', '', '', '', '',
+        ], [
+            'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh37', '1',
+            '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
+            'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
+        ], [
+            'Broad_HG00731_19_1912634', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh38', '19',
+            '1912634', 'C', 'T', 'CA403171634', 'OR4G11P', 'ENST00000371839', '', '', 'Heterozygous', '', 'unknown',
+            'Broad_HG00731_19_1912633', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES', '', '', '', '',
+            '', '', '',
+        ]], additional_calls=2)
 
         responses.calls.reset()
         mock_subprocess.reset_mock()
@@ -983,11 +1040,7 @@ class ReportAPITest(AirtableTest):
             absent_rows=None if has_second_project else EXPERIMENT_TABLE[3:],
         )
 
-        expected_rows = [[
-            'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
-            'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri', 'reference_assembly_details',
-            'mean_coverage', 'alignment_software', 'analysis_details',  'quality_issues',
-        ], [
+        expected_rows = [READ_TABLE_HEADER, [
             'Broad_exome_NA20888_1', 'Broad_exome_NA20888',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888.crai', 'a6f6308866765ce8', 'GRCh38', '', '',
@@ -1003,7 +1056,7 @@ class ReportAPITest(AirtableTest):
         self._assert_expected_file(read_file, expected_rows, absent_rows=absent_rows, additional_calls=1)
 
         expected_rows = [
-            ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'],
+            READ_SET_TABLE_HEADER,
             ['Broad_exome_VCGS_FAM203_621_D2', 'Broad_exome_VCGS_FAM203_621_D2_1'],
             ['Broad_exome_NA20888', 'Broad_exome_NA20888_1'],
         ]
@@ -1021,13 +1074,7 @@ class ReportAPITest(AirtableTest):
             '129c28163df082', 'gatk4.1.2', 'SNV', 'DOI:10.5281/zenodo.4469317',
         ]])
 
-        self._assert_expected_file(experiment_rna_file, [[
-            'experiment_rna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
-            'read_length', 'experiment_type', 'date_data_generation', 'sequencing_platform', 'library_prep_type',
-            'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size', 'total_reads',
-            'percent_rRNA', 'percent_mRNA', '5prime3prime_bias', 'percent_mtRNA', 'percent_Globin', 'percent_UMI',
-            'percent_GC', 'percent_chrX_Y',
-        ], [
+        self._assert_expected_file(experiment_rna_file, [RNA_TABLE_HEADER, [
             'Broad_paired-end_NA19679', 'Broad_SM-N1P91', 'NA19679', 'Unknown', '151', 'paired-end', '2023-02-11',
             'NovaSeq', 'stranded poly-A pulldown', 'paired-end', 'LCSET-26942', '8.9818', '19480858', '106842386',
             '5.9', '80.2', '1.05', '', '', '', '', '',
