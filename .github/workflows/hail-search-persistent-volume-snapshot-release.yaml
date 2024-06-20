@@ -28,6 +28,9 @@ on:
       volume_handle:
         required: true
 
+env:
+  CHART_NAME: "${{ inputs.environment == 'dev' && 'dev-' || '' }}broad-seqr"
+
 jobs:
   helm_update:
     runs-on: ubuntu-latest
@@ -46,13 +49,13 @@ jobs:
         uses: mikefarah/yq@v4.22.1
         with:
           cmd: >
-            yq -i '.global.hail_search.datasetVersions.${{ inputs.reference_genome }}/${{ inputs.dataset_type }} = "${{ inputs.version }}"' charts/${{ inputs.environment }}-broad-seqr/values.yaml
+            yq -i '.global.hail_search.datasetVersions.${{ inputs.reference_genome }}/${{ inputs.dataset_type }} = "${{ inputs.version }}"' charts/${{ env.CHART_NAME }}/values.yaml
 
       - name: update volume handle in the broad-seqr chart
         uses: mikefarah/yq@v4.22.1
         with:
           cmd: >
-            yq -i '.hail-search.persistentVolume.volumeHandle = "${{ inputs.volume_handle }}"' charts/${{ inputs.environment }}-broad-seqr/values.yaml
+            yq -i '.hail-search.persistentVolume.volumeHandle = "${{ inputs.volume_handle }}"' charts/${{ env.CHART_NAME }}/values.yaml
 
       - name: Commit and Push changes
         uses: Andro999b/push@v1.3
