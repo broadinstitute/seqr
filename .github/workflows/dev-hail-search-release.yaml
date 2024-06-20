@@ -47,11 +47,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: update image tag in the broad seqr chart
+      - name: update image tag in the dev broad seqr chart
         uses: mikefarah/yq@v4.22.1
         with:
           cmd: >
-            yq -i '.hail-search.image.tag = "${{ github.event.workflow_run.head_sha }}"' charts/broad-seqr/values-dev.yaml
+            yq -i '.hail-search.image.tag = "${{ github.event.workflow_run.head_sha }}"' charts/dev-broad-seqr/values.yaml
 
       - name: Commit and Push changes
         uses: Andro999b/push@v1.3

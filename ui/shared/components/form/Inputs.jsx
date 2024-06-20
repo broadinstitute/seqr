@@ -486,7 +486,7 @@ BooleanCheckbox.propTypes = {
 
 export const AlignedBooleanCheckbox = AlignedCheckboxGroup.withComponent(BooleanCheckbox)
 
-const BaseInlineToggle = styled(({ divided, fullHeight, asFormInput, padded, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
+const BaseInlineToggle = styled(({ divided, fullHeight, asFormInput, padded, inline = true, ...props }) => <BooleanCheckbox {...props} toggle inline={inline} />)`
   ${props => (props.asFormInput ?
     `label {
       font-weight: 700;

@@ -10,8 +10,9 @@ from typing import Callable, Iterable
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTagType
-from seqr.views.utils.airtable_utils import get_airtable_samples
+from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.utils.gene_utils import get_genes
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
@@ -360,7 +361,7 @@ def _get_parsed_saved_discovery_variants_by_family(
             variant_fields += ['svType', 'svName', 'end']
 
         parsed_variant = {
-            'chrom': chrom,
+            'chrom': 'MT' if chrom == 'M' else chrom,
             'pos': pos,
             'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
             'gene_id': gene_id,
@@ -370,6 +371,7 @@ def _get_parsed_saved_discovery_variants_by_family(
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
             **{k: variant_json.get(k) for k in variant_fields + (variant_json_fields or [])},
+            'ClinGen_allele_ID': variant_json.get('CAID'),
             **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt']},
         }
         if include_metadata:
@@ -543,10 +545,52 @@ SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'd
 LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
 
-def _get_sample_airtable_metadata(sample_ids, user, fields):
-    sample_records, _ = get_airtable_samples(
-        sample_ids, user, fields=fields or SINGLE_SAMPLE_FIELDS, list_fields=None if fields else LIST_SAMPLE_FIELDS,
+def _get_airtable_samples_for_id_field(sample_ids, id_field, fields, session):
+    raw_records = session.fetch_records(
+        'Samples', fields=[id_field] + fields,
+        or_filters={f'{{{id_field}}}': sample_ids},
     )
+
+    records_by_id = defaultdict(list)
+    for airtable_id, record in raw_records.items():
+        records_by_id[record[id_field]].append({**record, 'airtable_id': airtable_id})
+    return records_by_id
+
+
+def _get_sample_airtable_metadata(sample_ids, user, airtable_fields):
+    fields, list_fields = airtable_fields or [SINGLE_SAMPLE_FIELDS, LIST_SAMPLE_FIELDS]
+    all_fields = fields + list_fields
+
+    session = AirtableSession(user)
+    records_by_id = _get_airtable_samples_for_id_field(sample_ids, 'CollaboratorSampleID', all_fields, session)
+    missing = set(sample_ids) - set(records_by_id.keys())
+    if missing:
+        records_by_id.update(_get_airtable_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', all_fields, session))
+
+    sample_records = {}
+    for record_id, records in records_by_id.items():
+        parsed_record = {}
+        for field in fields:
+            record_field = {
+                record[field][0] if field == 'Collaborator' else record[field] for record in records if field in record
+            }
+            if len(record_field) > 1:
+                error = 'Found multiple airtable records for sample {} with mismatched values in field {}'.format(
+                    record_id, field)
+                raise ErrorsWarningsException([error])
+            if record_field:
+                parsed_record[field] = record_field.pop()
+        for field in list_fields:
+            parsed_record[field] = {} if airtable_fields else set()
+            for record in records:
+                if field in record:
+                    if airtable_fields:
+                        parsed_record[field][record['airtable_id']] = record[field]
+                    else:
+                        parsed_record[field].update(record[field])
+
+        sample_records[record_id] = parsed_record
+
     return sample_records
 
 
@@ -580,7 +624,7 @@ def _get_mondo_condition_data(mondo_id):
             inheritance = HumanPhenotypeOntology.objects.get(hpo_id=inheritance['id']).name.replace(' inheritance', '')
         return {
             'known_condition_name': data['name'],
-            'condition_inheritance': inheritance,
+            'condition_inheritance': inheritance or 'Unknown',
         }
     except Exception:
         return {}
