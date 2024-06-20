@@ -49,9 +49,12 @@ def get_all_user_group_options(request):
 @login_and_policies_required
 def get_project_collaborator_options(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
+    user_fields = {'display_name', 'username', 'email'}
     users = get_project_collaborators_by_username(
-        request.user, project, fields={'display_name', 'username', 'email'}, expand_user_groups=True,
+        request.user, project, fields=user_fields, expand_user_groups=True,
     )
+    if not users:
+        users = {request.user.username: get_json_for_user(request.user, user_fields)}
     return create_json_response(users)
 
 

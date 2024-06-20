@@ -60,6 +60,7 @@ class UsersAPITest(object):
         users.update(self.COLLABORATOR_JSON)
         users.pop('analysts@firecloud.org', None)
         self.assertDictEqual(response_json, users)
+        return url
 
     def test_get_all_collaborator_options(self):
         url = reverse(get_all_collaborator_options)
@@ -425,7 +426,7 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     _test_delete_collaborator_group_response = _assert_403_response
 
     def test_get_project_collaborator_options(self, *args, **kwargs):
-        super(AnvilUsersAPITest, self).test_get_project_collaborator_options(*args, **kwargs)
+        url = super(AnvilUsersAPITest, self).test_get_project_collaborator_options(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
         self.assertEqual(self.mock_get_ws_acl.call_count, 1)
         self.mock_get_ws_acl.assert_called_with(
@@ -436,6 +437,10 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_get_groups.assert_not_called()
         self.mock_get_group_members.assert_called_with(self.collaborator_user, 'Analysts', use_sa_credentials=True)
 
+        self.mock_get_ws_acl.side_effect = lambda *args: {}
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'test_user_collaborator': MAIN_COLLABORATOR_JSON['test_user_collaborator']})
 
     def test_set_password(self):
         super(AnvilUsersAPITest, self).test_set_password()

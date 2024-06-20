@@ -1927,6 +1927,7 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'phenotype_contribution' },
   { name: 'partial_contribution_explained' },
   { name: 'notes' },
+  { name: 'ClinGen_allele_ID' },
 ]
 
 // RNAseq sample tissue type mapping
