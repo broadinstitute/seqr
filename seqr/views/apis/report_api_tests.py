@@ -622,6 +622,20 @@ GENETIC_FINDINGS_TABLE = [
     ],
 ]
 
+READ_TABLE_HEADER = [
+    'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
+    'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri',
+    'reference_assembly_details', 'mean_coverage', 'alignment_software', 'analysis_details', 'quality_issues',
+]
+READ_SET_TABLE_HEADER = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
+RNA_TABLE_HEADER = [
+    'experiment_rna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
+    'read_length', 'experiment_type', 'date_data_generation', 'sequencing_platform', 'library_prep_type',
+    'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size', 'total_reads',
+    'percent_rRNA', 'percent_mRNA', '5prime3prime_bias', 'percent_mtRNA', 'percent_Globin', 'percent_UMI',
+    'percent_GC', 'percent_chrX_Y',
+]
+
 
 class ReportAPITest(AirtableTest):
 
@@ -817,12 +831,13 @@ class ReportAPITest(AirtableTest):
             'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_NA20870, Broad_NA20872, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
             'The following entries are missing recommended "known_condition_name" in the "genetic_findings" table: Broad_HG00731_19_1912632, Broad_HG00731_19_1912633, Broad_HG00731_19_1912634, Broad_HG00731_1_248367227',
         ]
-        self.assertListEqual(response.json()['warnings'], [
+        validation_warnings = [
             'The following columns are specified as "enumeration" in the "participant" data model but are missing the allowed values definition: prior_testing',
             'The following columns are included in the "participant" data model but have an unsupported data type: internal_project_id (reference)',
             'The following columns are computed for the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, missing_variant_case, pmid_id',
-        ] + recommended_warnings)
-        self.assertListEqual(response.json()['errors'], [
+        ] + recommended_warnings
+        self.assertListEqual(response.json()['warnings'], validation_warnings)
+        validation_errors = [
             f'No data model found for "{file}" table' for file in reversed(EXPECTED_GREGOR_FILES) if file not in INVALID_MODEL_TABLES
         ] + [
             'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
@@ -838,28 +853,77 @@ class ReportAPITest(AirtableTest):
             'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)',
             'The following entries are missing required "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_NA19675_1_21_3343353',
             'The following entries have non-unique values for "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_exome_VCGS_FAM203_621_D2 (Broad_HG00731_19_1912632, Broad_HG00731_19_1912633, Broad_HG00731_19_1912634, Broad_HG00731_1_248367227)',
-        ])
+        ]
+        self.assertListEqual(response.json()['errors'], validation_errors)
 
-        responses.calls.reset()
-        mock_subprocess.reset_mock()
-        responses.add(responses.GET, MOCK_DATA_MODEL_URL, body=MOCK_DATA_MODEL_RESPONSE, status=200)
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        mock_open.reset_mock()
+        response = self.client.post(
+            url, content_type='application/json', data=json.dumps({**body, 'overrideValidation': True})
+        )
         self.assertEqual(response.status_code, 200)
         expected_response = {
             'info': ['Successfully validated and uploaded Gregor Report for 9 families'],
-            'warnings': recommended_warnings,
+            'warnings': validation_errors + validation_warnings,
         }
         self.assertDictEqual(response.json(), expected_response)
-        self._assert_expected_gregor_files(mock_open)
-        self._test_expected_gregor_airtable_calls()
+        participant_file, read_file, read_set_file, rna_file, genetic_findings_file = self._get_expected_gregor_files(
+            mock_open, mock_subprocess, INVALID_MODEL_TABLES.keys()
+        )
+        self._assert_expected_file(participant_file, [
+            [c for c in PARTICIPANT_TABLE[0] if c not in {'pmid_id', 'ancestry_detail', 'age_at_last_observation', 'missing_variant_case'}],
+            [
+            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
+            'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '', 'Middle Eastern or North African',
+            '', 'Affected', 'myopathy', '18', 'Unsolved',
+        ], [
+            'Broad_NA19678', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', 'Broad_1', '0', '0', '', '',
+            '', 'Male', '', '', '', 'Unaffected', 'myopathy', '', 'Unaffected',
+        ], [
+            'Broad_HG00731', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', '', '', 'Broad_2', 'Broad_HG00732',
+            'Broad_HG00733', '', 'Self', '', 'Female', '', '', 'Hispanic or Latino', 'Affected',
+            'microcephaly; seizures', '', 'Unsolved',
+        ]], additional_calls=10)
+        self._assert_expected_file(read_file, [READ_TABLE_HEADER, [
+            'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
+            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
+            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38', '', '',
+            '', 'BWA-MEM-2.3', 'DOI:10.5281/zenodo.4469317', '',
+        ]], additional_calls=1)
+        self._assert_expected_file(read_set_file, [
+            READ_SET_TABLE_HEADER,
+            ['Broad_exome_VCGS_FAM203_621_D2', 'Broad_exome_VCGS_FAM203_621_D2_1'],
+        ], additional_calls=1)
+        self._assert_expected_file(rna_file, [RNA_TABLE_HEADER, [
+            'Broad_paired-end_NA19679', 'Broad_SM-N1P91', 'NA19679', 'Unknown', '151', 'paired-end', '2023-02-11',
+            'NovaSeq', 'stranded poly-A pulldown', 'paired-end', 'LCSET-26942', '8.9818', '19480858', '106842386', '5.9',
+            '80.2', '1.05', '', '', '', '', '',
+        ]])
+        self._assert_expected_file(genetic_findings_file, [GENETIC_FINDINGS_TABLE[0], [
+            'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'SNV/INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
+            'RP11', 'ENST00000258436.5', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '',
+            'Candidate', 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120',
+            'Autosomal recessive|X-linked', 'Full', '', '', 'SR-ES', '', '', '', '', '', '', '',
+        ], [
+            'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh37', '1',
+            '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
+            'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
+        ], [
+            'Broad_HG00731_19_1912634', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh38', '19',
+            '1912634', 'C', 'T', 'CA403171634', 'OR4G11P', 'ENST00000371839', '', '', 'Heterozygous', '', 'unknown',
+            'Broad_HG00731_19_1912633', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES', '', '', '', '',
+            '', '', '',
+        ]], additional_calls=2)
 
-        # test gsutil commands
-        mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),  # nosec
-            mock.call().wait(),
-            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),  # nosec
-            mock.call().wait(),
-        ])
+        responses.calls.reset()
+        mock_subprocess.reset_mock()
+        mock_open.reset_mock()
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, body=MOCK_DATA_MODEL_RESPONSE, status=200)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        expected_response['warnings'] = recommended_warnings
+        self.assertDictEqual(response.json(), expected_response)
+        self._assert_expected_gregor_files(mock_open, mock_subprocess)
+        self._test_expected_gregor_airtable_calls()
 
         # Test multiple project with shared sample IDs
         project = Project.objects.get(id=3)
@@ -887,6 +951,7 @@ class ReportAPITest(AirtableTest):
             },
         })
         mock_open.reset_mock()
+        mock_subprocess.reset_mock()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         expected_response['info'][0] = expected_response['info'][0].replace('9', '10')
@@ -895,169 +960,160 @@ class ReportAPITest(AirtableTest):
         expected_response['warnings'][2] = expected_response['warnings'][2].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
         expected_response['warnings'][3] = expected_response['warnings'][3].replace('Broad_NA20888', 'Broad_NA20885, Broad_NA20888, Broad_NA20889')
         self.assertDictEqual(response.json(), expected_response)
-        self._assert_expected_gregor_files(mock_open, has_second_project=True)
+        self._assert_expected_gregor_files(mock_open, mock_subprocess, has_second_project=True)
         self._test_expected_gregor_airtable_calls(additional_samples=['NA20885', 'NA20889'], additional_mondo_ids=['0008788'])
 
         self.check_no_analyst_no_access(url)
 
-    def _assert_expected_gregor_files(self, mock_open, has_second_project=False):
+    def _get_expected_gregor_files(self, mock_open, mock_subprocess, expected_files):
+        # test gsutil commands
+        mock_subprocess.assert_has_calls([
+            mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),  # nosec
+            mock.call().wait(),
+            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),  # nosec
+            mock.call().wait(),
+        ])
+
         self.assertListEqual(
-            mock_open.call_args_list, [mock.call(f'/mock/tmp/{file}.tsv', 'w') for file in EXPECTED_GREGOR_FILES])
-        files = [
+            mock_open.call_args_list, [mock.call(f'/mock/tmp/{file}.tsv', 'w') for file in expected_files])
+        return [
             [row.split('\t') for row in write_call.args[0].split('\n')]
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
         ]
+
+    def _assert_expected_gregor_files(self, mock_open, mock_subprocess, has_second_project=False):
+        files = self._get_expected_gregor_files(mock_open, mock_subprocess, EXPECTED_GREGOR_FILES)
         participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, \
         called_file, experiment_rna_file, aligned_rna_file, experiment_lookup_file, genetic_findings_file = files
 
-        self.assertEqual(len(participant_file), 16 if has_second_project else 14)
-        self.assertEqual(participant_file[0], PARTICIPANT_TABLE[0])
-        row = next(r for r in participant_file if r[0] == 'Broad_NA19675_1')
-        self.assertListEqual(PARTICIPANT_TABLE[1], row)
-        hispanic_row = next(r for r in participant_file if r[0] == 'Broad_HG00731')
-        self.assertListEqual(PARTICIPANT_TABLE[2], hispanic_row)
-        solved_row = next(r for r in participant_file if r[0] == 'Broad_NA20876')
-        self.assertIn(PARTICIPANT_TABLE[3], participant_file)
-        self.assertListEqual(PARTICIPANT_TABLE[4], solved_row)
-        multi_data_type_row = next(r for r in participant_file if r[0] == 'Broad_NA20888')
-        expected_row = PARTICIPANT_TABLE[5]
-        if not has_second_project:
-            expected_row = expected_row[:1] + ['Broad_1kg project nme with unide'] + expected_row[2:7] + [
-                'Broad_8'] + expected_row[8:13] + ['Female', '', '', '', ''] + expected_row[18:]
-        self.assertListEqual(expected_row, multi_data_type_row)
-        self.assertEqual(PARTICIPANT_TABLE[5] in participant_file, has_second_project)
+        single_project_row = PARTICIPANT_TABLE[5][:1] + ['Broad_1kg project nme with unide'] + PARTICIPANT_TABLE[5][2:7] + [
+                'Broad_8'] + PARTICIPANT_TABLE[5][8:13] + ['Female', '', '', '', ''] + PARTICIPANT_TABLE[5][18:]
+        self._assert_expected_file(
+            participant_file,
+            expected_rows=PARTICIPANT_TABLE if has_second_project else PARTICIPANT_TABLE[:5] + [single_project_row],
+            absent_rows=[single_project_row] if has_second_project else PARTICIPANT_TABLE[5:],
+            additional_calls=9 if has_second_project else 8,
+        )
 
-        self.assertEqual(len(family_file), 11 if has_second_project else 10)
-        self.assertEqual(family_file[0], [
-            'family_id', 'consanguinity', 'consanguinity_detail',
-        ])
-        self.assertIn(['Broad_1', 'Present', ''], family_file)
+        expected_rows = [
+            ['family_id', 'consanguinity', 'consanguinity_detail'],
+            ['Broad_1', 'Present', ''],
+        ]
+        absent_rows = []
         fam_8_row = ['Broad_8', 'Unknown', '']
         fam_11_row = ['Broad_11', 'None suspected', '']
         if has_second_project:
-            self.assertIn(fam_11_row, family_file)
-            self.assertNotIn(fam_8_row, family_file)
+            expected_rows.append(fam_11_row)
+            absent_rows.append(fam_8_row)
         else:
-            self.assertIn(fam_8_row, family_file)
-            self.assertNotIn(fam_11_row, family_file)
-
-        self.assertEqual(len(phenotype_file), 14 if has_second_project else 10)
-        self.assertEqual(phenotype_file[0], PHENOTYPE_TABLE[0])
-        for row in PHENOTYPE_TABLE[1:5]:
-            self.assertIn(row, phenotype_file)
-        for row in PHENOTYPE_TABLE[5:]:
-            self.assertEqual(row in phenotype_file, has_second_project)
-
-        self.assertEqual(len(analyte_file), 6 if has_second_project else 5)
-        self.assertEqual(analyte_file[0], [
-            'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
-            'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status',
-        ])
-        row = next(r for r in analyte_file if r[1] == 'Broad_NA19675_1')
-        self.assertListEqual(
-            ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No'],
-            row)
-        self.assertIn(
-            ['Broad_SM-N1P91', 'Broad_NA19679', 'RNA', '', 'CL: 0000057', '', '', 'Yes'], analyte_file)
-        self.assertIn(
-            ['Broad_SM-L5QMP', 'Broad_NA20888', '', '', '', '', '', 'No'], analyte_file)
-        self.assertEqual(
-            ['Broad_SM-L5QMWP', 'Broad_NA20888', '', '', '', '', '', 'No'] in analyte_file,
-            has_second_project
+            expected_rows.append(fam_8_row)
+            absent_rows.append(fam_11_row)
+        self._assert_expected_file(
+            family_file, expected_rows, absent_rows=absent_rows, additional_calls=8 if has_second_project else 7,
         )
 
-        num_airtable_rows = 4 if has_second_project else 3
-        self.assertEqual(len(experiment_file), num_airtable_rows)
-        self.assertEqual(experiment_file[0], EXPERIMENT_TABLE[0])
-        self.assertIn(EXPERIMENT_TABLE[1], experiment_file)
-        self.assertIn(EXPERIMENT_TABLE[2], experiment_file)
-        self.assertEqual(EXPERIMENT_TABLE[3] in experiment_file, has_second_project)
+        self._assert_expected_file(
+            phenotype_file,
+            expected_rows=PHENOTYPE_TABLE if has_second_project else PHENOTYPE_TABLE[:5],
+            absent_rows=None if has_second_project else PHENOTYPE_TABLE[5:],
+            additional_calls=7 if has_second_project else 5,
+        )
 
-        self.assertEqual(len(read_file), num_airtable_rows)
-        self.assertEqual(read_file[0], [
-            'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
-            'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri', 'reference_assembly_details',
-            'mean_coverage', 'alignment_software', 'analysis_details',  'quality_issues',
-        ])
-        self.assertIn([
-            'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
-            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
-            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai',
-            '129c28163df082', 'GRCh38', '', '', '', 'BWA-MEM-2.3', 'DOI:10.5281/zenodo.4469317', '',
-        ], read_file)
-        self.assertIn([
+        expected_rows = [
+            [
+                'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
+                'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status',
+            ],
+            ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No'],
+            ['Broad_SM-N1P91', 'Broad_NA19679', 'RNA', '', 'CL: 0000057', '', '', 'Yes'],
+            ['Broad_SM-L5QMP', 'Broad_NA20888', '', '', '', '', '', 'No'],
+        ]
+        absent_rows = []
+        (expected_rows if has_second_project else absent_rows).append(
+            ['Broad_SM-L5QMWP', 'Broad_NA20888', '', '', '', '', '', 'No']
+        )
+        self._assert_expected_file(analyte_file, expected_rows, absent_rows=absent_rows, additional_calls=1)
+
+        self._assert_expected_file(
+            experiment_file,
+            expected_rows=EXPERIMENT_TABLE if has_second_project else EXPERIMENT_TABLE[:3],
+            absent_rows=None if has_second_project else EXPERIMENT_TABLE[3:],
+        )
+
+        expected_rows = [READ_TABLE_HEADER, [
             'Broad_exome_NA20888_1', 'Broad_exome_NA20888',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888.crai', 'a6f6308866765ce8', 'GRCh38', '', '',
             '42.8', 'BWA-MEM-2.3', '', '',
-        ], read_file)
-        self.assertEqual([
+        ]]
+        absent_rows = []
+        (expected_rows if has_second_project else absent_rows).append([
              'Broad_genome_NA20888_1_1', 'Broad_genome_NA20888_1',
              'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888_1.cram',
              'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_NA20888_1.crai', '2aa33e8c32020b1c', 'GRCh38', '', '',
              '36.1', 'BWA-MEM-2.3', '', '',
-        ] in read_file, has_second_project)
+        ])
+        self._assert_expected_file(read_file, expected_rows, absent_rows=absent_rows, additional_calls=1)
 
-        self.assertEqual(len(read_set_file), num_airtable_rows)
-        self.assertEqual(read_set_file[0], ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'])
-        self.assertIn(['Broad_exome_VCGS_FAM203_621_D2', 'Broad_exome_VCGS_FAM203_621_D2_1'], read_set_file)
-        self.assertIn(['Broad_exome_NA20888', 'Broad_exome_NA20888_1'], read_set_file)
-        self.assertEqual(['Broad_genome_NA20888_1', 'Broad_genome_NA20888_1_1'] in read_set_file, has_second_project)
+        expected_rows = [
+            READ_SET_TABLE_HEADER,
+            ['Broad_exome_VCGS_FAM203_621_D2', 'Broad_exome_VCGS_FAM203_621_D2_1'],
+            ['Broad_exome_NA20888', 'Broad_exome_NA20888_1'],
+        ]
+        absent_rows = []
+        (expected_rows if has_second_project else absent_rows).append(
+            ['Broad_genome_NA20888_1', 'Broad_genome_NA20888_1_1']
+        )
+        self._assert_expected_file(read_set_file, expected_rows, absent_rows=absent_rows)
 
-        self.assertEqual(len(called_file), 2)
-        self.assertEqual(called_file[0], [
+        self._assert_expected_file(called_file, [[
             'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
             'caller_software', 'variant_types', 'analysis_details',
-        ])
-        self.assertIn([
+        ], [
             'SX2-3', 'Broad_exome_VCGS_FAM203_621_D2', 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
             '129c28163df082', 'gatk4.1.2', 'SNV', 'DOI:10.5281/zenodo.4469317',
-        ], called_file)
+        ]])
 
-        self.assertEqual(len(experiment_rna_file), 2)
-        self.assertEqual(experiment_rna_file[0], [
-            'experiment_rna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
-            'read_length', 'experiment_type', 'date_data_generation', 'sequencing_platform', 'library_prep_type',
-            'single_or_paired_ends', 'within_site_batch_name', 'RIN', 'estimated_library_size', 'total_reads',
-            'percent_rRNA', 'percent_mRNA', '5prime3prime_bias', 'percent_mtRNA', 'percent_Globin', 'percent_UMI',
-            'percent_GC', 'percent_chrX_Y',
-        ])
-        self.assertEqual(experiment_rna_file[1], [
+        self._assert_expected_file(experiment_rna_file, [RNA_TABLE_HEADER, [
             'Broad_paired-end_NA19679', 'Broad_SM-N1P91', 'NA19679', 'Unknown', '151', 'paired-end', '2023-02-11',
             'NovaSeq', 'stranded poly-A pulldown', 'paired-end', 'LCSET-26942', '8.9818', '19480858', '106842386',
             '5.9', '80.2', '1.05', '', '', '', '', '',
-        ])
+        ]])
 
-        self.assertEqual(len(aligned_rna_file), 2)
-        self.assertEqual(aligned_rna_file[0], [
+        self._assert_expected_file(aligned_rna_file, [[
             'aligned_rna_short_read_id', 'experiment_rna_short_read_id', 'aligned_rna_short_read_file',
             'aligned_rna_short_read_index_file', 'md5sum', 'reference_assembly', 'reference_assembly_uri',
             'reference_assembly_details', 'mean_coverage', 'gene_annotation', 'gene_annotation_details',
             'alignment_software', 'alignment_log_file', 'alignment_postprocessing', 'percent_uniquely_aligned',
             'percent_multimapped', 'percent_unaligned', 'quality_issues'
-        ])
-        self.assertEqual(aligned_rna_file[1], [
+        ], [
             'Broad_paired-end_NA19679_1', 'Broad_paired-end_NA19679', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Aligned.out.crai', 'f6490b8ebdf2', 'GRCh38',
             'gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta', '', '', 'GENCODEv26', '',
             'STARv2.7.10b', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/NA19679.Log.final.out', '', '80.53', '17.08',
             '1.71', ''
-        ])
+        ]])
 
-        self.assertEqual(len(experiment_lookup_file), num_airtable_rows + 1)
-        self.assertEqual(experiment_lookup_file[0], EXPERIMENT_LOOKUP_TABLE[0])
-        self.assertIn(EXPERIMENT_LOOKUP_TABLE[1], experiment_lookup_file)
-        self.assertIn(EXPERIMENT_LOOKUP_TABLE[2], experiment_lookup_file)
-        self.assertIn(EXPERIMENT_LOOKUP_TABLE[3], experiment_lookup_file)
-        self.assertEqual(EXPERIMENT_LOOKUP_TABLE[4] in experiment_lookup_file, has_second_project)
+        self._assert_expected_file(
+            experiment_lookup_file,
+            expected_rows=EXPERIMENT_LOOKUP_TABLE if has_second_project else EXPERIMENT_LOOKUP_TABLE[:4],
+            absent_rows=None if has_second_project else EXPERIMENT_LOOKUP_TABLE[4:],
+        )
 
-        self.assertEqual(len(genetic_findings_file), 8 if has_second_project else 6)
-        self.assertEqual(genetic_findings_file[0], GENETIC_FINDINGS_TABLE[0])
-        self.assertIn(GENETIC_FINDINGS_TABLE[1], genetic_findings_file)
-        self.assertIn(GENETIC_FINDINGS_TABLE[2], genetic_findings_file)
-        if has_second_project:
-            self.assertIn(GENETIC_FINDINGS_TABLE[3], genetic_findings_file)
-            self.assertIn(GENETIC_FINDINGS_TABLE[4], genetic_findings_file)
+        self._assert_expected_file(
+            genetic_findings_file,
+            expected_rows=GENETIC_FINDINGS_TABLE if has_second_project else GENETIC_FINDINGS_TABLE[:3],
+            absent_rows=None if has_second_project else EXPERIMENT_LOOKUP_TABLE[3:],
+            additional_calls=3,
+        )
+
+    def _assert_expected_file(self, actual_rows, expected_rows, additional_calls=0, absent_rows=None):
+        self.assertEqual(len(actual_rows), len(expected_rows) + additional_calls)
+        self.assertEqual(expected_rows[0], actual_rows[0])
+        for row in expected_rows[1:]:
+            self.assertIn(row, actual_rows)
+        for row in absent_rows or []:
+            self.assertNotIn(row, actual_rows)
 
     def _test_expected_gregor_airtable_calls(self, additional_samples=None, additional_mondo_ids=None):
         mondo_ids = ['0044970'] + (additional_mondo_ids or [])

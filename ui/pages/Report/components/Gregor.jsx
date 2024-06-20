@@ -2,13 +2,20 @@ import React from 'react'
 import { Header } from 'semantic-ui-react'
 
 import { validators } from 'shared/components/form/FormHelpers'
-import { ButtonRadioGroup } from 'shared/components/form/Inputs'
+import { ButtonRadioGroup, InlineToggle } from 'shared/components/form/Inputs'
 import UploadFormPage from 'shared/components/page/UploadFormPage'
 import { CONSENT_CODES } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 const FIELDS = [
-
+  {
+    name: 'overrideValidation',
+    label: 'Upload with Validation Errors',
+    component: InlineToggle,
+    asFormInput: true,
+    fullHeight: true,
+    inline: false,
+  },
   {
     name: 'deliveryPath',
     label: 'AnVIL Delivery Bucket Path',
