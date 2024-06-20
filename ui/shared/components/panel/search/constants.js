@@ -245,13 +245,13 @@ export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([
   name, options, groupLabel: snakecaseToTitlecase(name),
 }))
 
-const SCREEN_GROUP = 'SCREEN'
+export const SCREEN_GROUP = 'SCREEN'
 const SCREEN_VALUES = ['PLS', 'pELS', 'dELS', 'DNase-H3K4me3', 'CTCF-only', 'DNase-only', 'low-DNase']
-const UTR_ANNOTATOR_GROUP = 'UTRAnnotator'
+export const UTR_ANNOTATOR_GROUP = 'UTRAnnotator'
 const UTR_ANNOTATOR_VALUES = [
   'premature_start_codon_gain', 'premature_start_codon_loss', 'stop_codon_gain', 'stop_codon_loss', 'uORF_frameshift',
 ]
-const MOTIF_GROUP = 'motif_feature'
+export const MOTIF_GROUP = 'motif_feature'
 const MOTIF_VALUES = [
   {
     description: 'A feature ablation whereby the deleted region includes a transcription factor binding site',
@@ -282,7 +282,7 @@ const MOTIF_VALUES = [
     value: 'TFBS_translocation',
   },
 ]
-const REGULATORY_GROUP = 'regulatory_feature'
+export const REGULATORY_GROUP = 'regulatory_feature'
 const REGULATORY_VALUES = [
   {
     description: 'A sequence variant located within a regulatory region',

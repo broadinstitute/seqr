@@ -1,13 +1,22 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, Accordion, Header, Segment, Grid, Icon, Loader } from 'semantic-ui-react'
+import { Form, Accordion, Header, Segment, Grid, Icon, Loader, Table } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/FormHelpers'
-import { VEP_GROUP_OTHER, SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS } from 'shared/utils/constants'
+import {
+  VEP_GROUP_OTHER, SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS,
+  VEP_GROUP_NONSENSE,
+  VEP_GROUP_ESSENTIAL_SPLICE_SITE,
+  VEP_GROUP_FRAMESHIFT,
+  VEP_GROUP_MISSENSE,
+  VEP_GROUP_INFRAME,
+  VEP_GROUP_SYNONYMOUS,
+  VEP_GROUP_EXTENDED_SPLICE_SITE,
+} from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
@@ -28,6 +37,10 @@ import {
   MODERATE_IMPACT_DISPLAY_GROUPS,
   SV_GROUPS,
   LOCUS_FIELD_NAME,
+  MOTIF_GROUP,
+  REGULATORY_GROUP,
+  SCREEN_GROUP,
+  UTR_ANNOTATOR_GROUP,
 } from './constants'
 
 const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
@@ -88,10 +101,6 @@ const ExpandCollapseCategoryContainer = styled.span`
   top: -2em;
 `
 
-const LeftAligned = styled.div`
- text-align: left;
-`
-
 const LazyLabeledSlider = props => <React.Suspense fallback={<Loader />}><LabeledSlider {...props} /></React.Suspense>
 
 export const JsonSelectPropsWithAll = (options, all) => ({
@@ -141,23 +150,41 @@ export const inSilicoFieldLayout = groups => ([requireComponent, ...fieldCompone
   </Form.Field>
 )
 
-export const annotationFieldLayout = (annotationGroups, hideOther) => fieldComponents => [
-  ...annotationGroups.map(groups => (
-    <Form.Field key={groups[0]} width={3}>
-      {groups.map(group => (
-        <LeftAligned key={group}>
-          {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[group]]}
-          <VerticalSpacer height={20} />
-        </LeftAligned>
+// export const annotationFieldLayout = (annotationGroups, hideOther) => fieldComponents => [
+//   ...annotationGroups.map(groups => (
+//     <Form.Field key={groups[0]} width={3}>
+//       {groups.map(group => (
+//         <LeftAligned key={group}>
+//           {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[group]]}
+//           <VerticalSpacer height={20} />
+//         </LeftAligned>
+//       ))}
+//     </Form.Field>
+//   )),
+//   !hideOther ? (
+//     <Form.Field key={VEP_GROUP_OTHER} width={4}>
+//       {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[VEP_GROUP_OTHER]]}
+//     </Form.Field>
+//   ) : null,
+// ].filter(fields => fields)
+
+const annotationColSpan = ({ maxOptionsPerColumn, options = [] }) => Math.ceil(options.length / maxOptionsPerColumn)
+
+const annotationGroupDisplay = component => (
+  <Table.Cell colSpan={annotationColSpan(component.props)} content={component} />
+)
+
+export const annotationFieldLayout = annotationGroups => fieldComponents => (
+  <Form.Field>
+    <Table basic="very" columns={5}>
+      {annotationGroups.map(groups => (
+        <Table.Row key={groups[0]} verticalAlign="top">
+          {groups.map(group => annotationGroupDisplay(fieldComponents[ANNOTATION_GROUP_INDEX_MAP[group]]))}
+        </Table.Row>
       ))}
-    </Form.Field>
-  )),
-  !hideOther ? (
-    <Form.Field key={VEP_GROUP_OTHER} width={4}>
-      {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[VEP_GROUP_OTHER]]}
-    </Form.Field>
-  ) : null,
-].filter(fields => fields)
+    </Table>
+  </Form.Field>
+)
 
 const MAX_FREQ_COMPONENTS_PER_ROW = 4
 
@@ -182,9 +209,27 @@ export const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS_SPLICE,
-  fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
+  fieldProps: { control: AlignedCheckboxGroup, maxOptionsPerColumn: 7, format: val => val || [] },
   fieldLayout: annotationFieldLayout([
-    SV_GROUPS, HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_DISPLAY_GROUPS, CODING_IMPACT_DISPLAY_GROUPS,
+    [
+      VEP_GROUP_NONSENSE,
+      VEP_GROUP_ESSENTIAL_SPLICE_SITE,
+      VEP_GROUP_FRAMESHIFT,
+      VEP_GROUP_MISSENSE,
+      VEP_GROUP_INFRAME,
+    ], [
+      VEP_GROUP_SYNONYMOUS,
+      VEP_GROUP_EXTENDED_SPLICE_SITE,
+      VEP_GROUP_OTHER,
+    ],
+    [
+      MOTIF_GROUP,
+      REGULATORY_GROUP,
+      SCREEN_GROUP,
+      UTR_ANNOTATOR_GROUP,
+      SPLICE_AI_FIELD,
+    ],
+    SV_GROUPS,
   ]),
   helpText: 'Filter by reported annotation. Variants will be returned if they have ANY of the specified annotations, including if they have a Splice AI score above the threshold and no other annotations. This filter is overridden by the pathogenicity filter, so variants will be returned if they have the specified pathogenicity even if none of the annotation filters match.',
 }
