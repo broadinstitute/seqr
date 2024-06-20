@@ -300,7 +300,7 @@ def update_rna_seq(request):
         )
 
     if sample_guids_to_keys:
-        persist_temp_file(file_name_prefix, request.user, is_directory=True)
+        persist_temp_file(file_name_prefix, request.user)
 
     return create_json_response({
         'info': info,
