@@ -7,16 +7,7 @@ import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/FormHelpers'
-import {
-  VEP_GROUP_OTHER, SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS,
-  VEP_GROUP_NONSENSE,
-  VEP_GROUP_ESSENTIAL_SPLICE_SITE,
-  VEP_GROUP_FRAMESHIFT,
-  VEP_GROUP_MISSENSE,
-  VEP_GROUP_INFRAME,
-  VEP_GROUP_SYNONYMOUS,
-  VEP_GROUP_EXTENDED_SPLICE_SITE,
-} from 'shared/utils/constants'
+import { SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS } from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
@@ -32,15 +23,11 @@ import {
   QUALITY_FILTER_OPTIONS,
   ALL_QUALITY_FILTER,
   LOCATION_FIELDS,
-  CODING_IMPACT_DISPLAY_GROUPS,
-  HIGH_IMPACT_GROUPS_SPLICE,
-  MODERATE_IMPACT_DISPLAY_GROUPS,
+  CODING_OTHER_IMPACT_GROUPS,
+  HIGH_MODERATE_IMPACT_GROUPS,
+  ANNOTATION_OVERRIDE_GROUPS,
   SV_GROUPS,
   LOCUS_FIELD_NAME,
-  MOTIF_GROUP,
-  REGULATORY_GROUP,
-  SCREEN_GROUP,
-  UTR_ANNOTATOR_GROUP,
 } from './constants'
 
 const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
@@ -195,25 +182,7 @@ export const ANNOTATION_PANEL = {
   fields: ANNOTATION_GROUPS_SPLICE,
   fieldProps: { control: AlignedCheckboxGroup, maxOptionsPerColumn: 7, format: val => val || [] },
   fieldLayout: annotationFieldLayout([
-    [
-      VEP_GROUP_NONSENSE,
-      VEP_GROUP_ESSENTIAL_SPLICE_SITE,
-      VEP_GROUP_FRAMESHIFT,
-      VEP_GROUP_MISSENSE,
-      VEP_GROUP_INFRAME,
-    ], [
-      VEP_GROUP_SYNONYMOUS,
-      VEP_GROUP_EXTENDED_SPLICE_SITE,
-      VEP_GROUP_OTHER,
-    ],
-    [
-      SPLICE_AI_FIELD,
-      MOTIF_GROUP,
-      REGULATORY_GROUP,
-      SCREEN_GROUP,
-      UTR_ANNOTATOR_GROUP,
-    ],
-    SV_GROUPS,
+    HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS, ANNOTATION_OVERRIDE_GROUPS, SV_GROUPS,
   ]),
   noPadding: true,
   helpText: 'Filter by reported annotation. Variants will be returned if they have ANY of the specified annotations, including if they have a Splice AI score above the threshold and no other annotations. This filter is overridden by the pathogenicity filter, so variants will be returned if they have the specified pathogenicity even if none of the annotation filters match.',
