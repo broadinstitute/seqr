@@ -5,7 +5,7 @@ import json
 from collections import defaultdict
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Case, When, Value, Exists, OuterRef
 from django.db.models.fields.files import ImageFieldFile
 from django.db.models.functions import JSONObject, Concat, Upper, Substr
 
@@ -43,23 +43,25 @@ def family_page_data(request, family_guid):
     has_case_review_perm = has_case_review_permissions(project, request.user)
 
     sample_models = Sample.objects.filter(individual__family=family)
-    samples = get_json_for_samples(sample_models, project_guid=project.guid, family_guid=family_guid, skip_nested=True, is_analyst=is_analyst)
-    response = {
-        'samplesByGuid': {s['sampleGuid']: {**s, 'rnaSeqTypes': []} for s in samples},
+    additional_values = {
+        'rnaSeqTpm': Case(When(Exists(RnaSeqTpm.objects.filter(sample_id=OuterRef('pk'))), then=Value('TPM')), default=None),
+        'rnaSeqOutlier': Case(When(Exists(RnaSeqOutlier.objects.filter(sample_id=OuterRef('pk'))), then=Value('Outlier')), default=None),
+        'rnaSeqSpliceOutlier': Case(When(Exists(RnaSeqSpliceOutlier.objects.filter(sample_id=OuterRef('pk'))), then=Value('Splice Outlier')), default=None),
     }
+    samples = get_json_for_samples(
+        sample_models, project_guid=project.guid, family_guid=family_guid, skip_nested=True, is_analyst=is_analyst,
+        additional_values=additional_values
+    )
+    samples_by_guid = {}
+    for sample in samples:
+        tpm, outlier, splice_outlier = sample.pop('rnaSeqTpm'), sample.pop('rnaSeqOutlier'), sample.pop('rnaSeqSpliceOutlier')
+        if sample['sampleType'] == 'RNA':
+            sample['rnaSeqTypes'] = [value for value in [tpm, outlier, splice_outlier] if value]
+        samples_by_guid[sample['sampleGuid']] = sample
 
-    # Add Rna Seq metadata to samples
-    rna_seq_models = [
-        (RnaSeqTpm, 'TPM'),
-        (RnaSeqOutlier, 'Outlier'),
-        (RnaSeqSpliceOutlier, 'Splice Outlier'),
-    ]
-    for model, rna_seq_type in rna_seq_models:
-        rna_seq_samples = model.objects.filter(
-            sample__in=sample_models, sample__is_active=True
-        ).values('sample__guid').distinct()
-        for rna_seq_sample in rna_seq_samples:
-            response['samplesByGuid'][rna_seq_sample['sample__guid']]['rnaSeqTypes'].append(rna_seq_type)
+    response = {
+        'samplesByGuid': {s['sampleGuid']: s for s in samples},
+    }
 
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
     family_response = response['familiesByGuid'][family_guid]
