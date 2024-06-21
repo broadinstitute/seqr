@@ -4,9 +4,8 @@ APIs used to retrieve and modify Individual fields
 import json
 from collections import defaultdict
 from django.contrib.auth.models import User
-from django.contrib.postgres.aggregates import ArrayAgg, JSONBAgg, StringAgg
-from django.contrib.postgres.fields import ArrayField
-from django.db.models import Count, Q, Case, When, Value, CharField, F, Exists, OuterRef
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.db.models import Count, Q, Case, When, Value, Exists, OuterRef
 from django.db.models.fields.files import ImageFieldFile
 from django.db.models.functions import JSONObject, Concat, Upper, Substr
 
