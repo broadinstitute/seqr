@@ -88,6 +88,11 @@ const ExpandCollapseCategoryContainer = styled.span`
   top: -2em;
 `
 
+const CenteredTable = styled(Table)`
+  margin-left: auto !important;
+  margin-right: auto !important;
+`
+
 const LazyLabeledSlider = props => <React.Suspense fallback={<Loader />}><LabeledSlider {...props} /></React.Suspense>
 
 export const JsonSelectPropsWithAll = (options, all) => ({
@@ -145,15 +150,13 @@ const annotationGroupDisplay = component => (
 
 export const annotationFieldLayout = annotationGroups => fieldComponents => (
   <Form.Field>
-    <Segment basic padded>
-      <Table basic="very" collapsing>
-        {annotationGroups.map(groups => (
-          <Table.Row key={groups[0]} verticalAlign="top">
-            {groups.map(group => annotationGroupDisplay(fieldComponents[ANNOTATION_GROUP_INDEX_MAP[group]]))}
-          </Table.Row>
-        ))}
-      </Table>
-    </Segment>
+    <CenteredTable basic="very" collapsing>
+      {annotationGroups.map(groups => (
+        <Table.Row key={groups[0]} verticalAlign="top">
+          {groups.map(group => annotationGroupDisplay(fieldComponents[ANNOTATION_GROUP_INDEX_MAP[group]]))}
+        </Table.Row>
+      ))}
+    </CenteredTable>
   </Form.Field>
 )
 
