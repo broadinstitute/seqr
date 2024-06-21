@@ -175,7 +175,7 @@ tenacity==8.3.0
     # via -r requirements.in
 tqdm==4.66.3
     # via -r requirements.in
-urllib3==1.26.18
+urllib3==1.26.19
     # via
     #   elasticsearch
     #   requests
