@@ -45,9 +45,9 @@ def family_page_data(request, family_guid):
     sample_models = Sample.objects.filter(individual__family=family)
     additional_values = {
         'rnaSeqTypes': JSONObject(
-            hasRnaSeqTpm=Case(When(rnaseqtpm__isnull=False, then=True), default=False),
-            hasRnaSeqOutlier=Case(When(rnaseqoutlier__isnull=False, then=True), default=False),
-            hasRnaSeqSpliceOutlier=Case(When(rnaseqspliceoutlier__isnull=False, then=True), default=False),
+            hasRnaSeqTpm=Case(When(Exists(RnaSeqTpm.objects.filter(sample_id=OuterRef('pk'))), then=True), default=False),
+            hasRnaSeqOutlier=Case(When(Exists(RnaSeqOutlier.objects.filter(sample_id=OuterRef('pk'))), then=True), default=False),
+            hasRnaSeqSpliceOutlier=Case(When(Exists(RnaSeqSpliceOutlier.objects.filter(sample_id=OuterRef('pk'))), then=True), default=False),
         )
     }
     samples = get_json_for_samples(
