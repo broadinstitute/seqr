@@ -298,6 +298,13 @@ const VARIANT_LINKS = [
       `https://aggregator.bchresearch.org/variant.html?variant=${chrom}:${genomeVersion === GENOME_VERSION_37 ? pos : liftedOverPos}:${ref}:${alt}`
     ),
   },
+  {
+    name: 'LitVar2',
+    shouldShow: ({ CAID, rsid }) => !!CAID && !!rsid,
+    getHref: ({ CAID, rsid }) => (
+      `https://ncbi.nlm.nih.gov/research/litvar2/docsum?variant=litvar@${CAID}%23${rsid}%23%23&query=${CAID}`
+    ),
+  },
 ]
 
 const getSampleType = (genotypes) => {
