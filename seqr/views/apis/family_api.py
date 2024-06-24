@@ -44,19 +44,16 @@ def family_page_data(request, family_guid):
 
     sample_models = Sample.objects.filter(individual__family=family)
     additional_values = {
-        'rnaSeqTpm': Case(When(Exists(RnaSeqTpm.objects.filter(sample_id=OuterRef('pk'))), then=Value('TPM')), default=None),
-        'rnaSeqOutlier': Case(When(Exists(RnaSeqOutlier.objects.filter(sample_id=OuterRef('pk'))), then=Value('Outlier')), default=None),
-        'rnaSeqSpliceOutlier': Case(When(Exists(RnaSeqSpliceOutlier.objects.filter(sample_id=OuterRef('pk'))), then=Value('Splice Outlier')), default=None),
+        'rnaSeqTypes': JSONObject(
+            hasRnaSeqTpm=Case(When(rnaseqtpm__isnull=False, then=True), default=False),
+            hasRnaSeqOutlier=Case(When(rnaseqoutlier__isnull=False, then=True), default=False),
+            hasRnaSeqSpliceOutlier=Case(When(rnaseqspliceoutlier__isnull=False, then=True), default=False),
+        )
     }
     samples = get_json_for_samples(
         sample_models, project_guid=project.guid, family_guid=family_guid, skip_nested=True, is_analyst=is_analyst,
         additional_values=additional_values
     )
-    for sample in samples:
-        tpm, outlier, splice_outlier = sample.pop('rnaSeqTpm'), sample.pop('rnaSeqOutlier'), sample.pop('rnaSeqSpliceOutlier')
-        if sample['sampleType'] == 'RNA':
-            sample['rnaSeqTypes'] = [value for value in [tpm, outlier, splice_outlier] if value]
-
     response = {
         'samplesByGuid': {s['sampleGuid']: s for s in samples},
     }
