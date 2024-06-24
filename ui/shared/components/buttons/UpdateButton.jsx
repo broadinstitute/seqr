@@ -8,7 +8,7 @@ import Modal from '../modal/Modal'
 const UpdateButton = React.memo(({
   onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel,
   disabled, confirmDialog, submitButtonText, buttonFloated, trigger, formContainer = <div />, modalPopup,
-  decorators, formMetaId,
+  decorators, formMetaId, submitOnChange,
 }) => (
   <Modal
     title={modalTitle}
@@ -38,6 +38,7 @@ const UpdateButton = React.memo(({
           submitButtonText={submitButtonText}
           decorators={decorators}
           formMetaId={formMetaId}
+          submitOnChange={submitOnChange}
           confirmCloseIfNotSaved
         />
       ),
@@ -65,6 +66,7 @@ UpdateButton.propTypes = {
   formMetaId: PropTypes.string,
   trigger: PropTypes.node,
   decorators: PropTypes.arrayOf(PropTypes.func),
+  submitOnChange: PropTypes.bool,
 }
 
 export default UpdateButton
