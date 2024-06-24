@@ -741,7 +741,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
 
         dag_json = {
             'projects_to_run': [project.guid],
-            'callset_paths': ['gs://test_bucket/test_path.vcf'],
+            'callset_path': 'gs://test_bucket/test_path.vcf',
             'sample_source': 'AnVIL',
             'sample_type': 'WES',
             'reference_genome': genome_version,
@@ -824,7 +824,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             dag_id=self.DAG_NAME,
             dag=json.dumps({
                 'projects_to_run': [project.guid],
-                'callset_paths': ['gs://test_bucket/test_path.vcf'],
+                'callset_path': 'gs://test_bucket/test_path.vcf',
                 'sample_source': 'AnVIL',
                 'sample_type': 'WES',
                 'reference_genome': genome_version,
