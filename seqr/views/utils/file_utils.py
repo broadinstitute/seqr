@@ -127,14 +127,12 @@ def save_uploaded_file(request, process_records=None, allow_json=False):
     return uploaded_file_id, filename, json_records
 
 
-def persist_temp_file(file_name, user, is_directory=False):
+def persist_temp_file(file_name, user):
     if not anvil_enabled():
         return
 
     src_path = get_temp_file_path(file_name, is_local=True)
     dest_path = get_temp_file_path(file_name, is_local=False)
-    if is_directory:
-        src_path = f'{src_path}/*'
     mv_file_to_gs(src_path, dest_path, user)
 
 

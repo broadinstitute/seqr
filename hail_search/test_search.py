@@ -837,9 +837,10 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
-        annotations = {'SCREEN': ['CTCF-only', 'DNase-only']}
+        annotations = {'SCREEN': ['CTCF-only', 'DNase-only'], 'UTRAnnotator': ['5_prime_UTR_stop_codon_loss_variant']}
+        selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000408919'}
         await self._assert_expected_search(
-            [VARIANT1, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
+            [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
             sample_data=FAMILY_2_ALL_SAMPLE_DATA,
         )
 

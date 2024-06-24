@@ -53,7 +53,7 @@ pytz==2022.7.1
     #   django
 rcssmin==1.1.1
     # via django-compressor
-requests==2.32.0
+requests==2.32.2
     # via
     #   -c requirements.txt
     #   responses
@@ -74,7 +74,7 @@ tomli==2.0.1
     #   pyproject-hooks
 types-toml==0.10.8.5
     # via responses
-urllib3==1.26.18
+urllib3==1.26.19
     # via
     #   -c requirements.txt
     #   requests

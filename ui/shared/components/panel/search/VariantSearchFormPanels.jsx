@@ -23,9 +23,9 @@ import {
   QUALITY_FILTER_OPTIONS,
   ALL_QUALITY_FILTER,
   LOCATION_FIELDS,
-  CODING_IMPACT_GROUPS_SCREEN,
+  CODING_IMPACT_DISPLAY_GROUPS,
   HIGH_IMPACT_GROUPS_SPLICE,
-  MODERATE_IMPACT_GROUPS,
+  MODERATE_IMPACT_DISPLAY_GROUPS,
   SV_GROUPS,
   LOCUS_FIELD_NAME,
 } from './constants'
@@ -184,7 +184,7 @@ export const ANNOTATION_PANEL = {
   fields: ANNOTATION_GROUPS_SPLICE,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationFieldLayout([
-    SV_GROUPS, HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS_SCREEN,
+    SV_GROUPS, HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_DISPLAY_GROUPS, CODING_IMPACT_DISPLAY_GROUPS,
   ]),
   helpText: 'Filter by reported annotation. Variants will be returned if they have ANY of the specified annotations, including if they have a Splice AI score above the threshold and no other annotations. This filter is overridden by the pathogenicity filter, so variants will be returned if they have the specified pathogenicity even if none of the annotation filters match.',
 }

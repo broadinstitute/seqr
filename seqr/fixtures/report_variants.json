@@ -41,7 +41,8 @@
                 "ENSG00000135953": [
                     {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361"}
                 ]
-            }
+            },
+            "CAID": "CA403171634"
         },
         "family": 2
     }
@@ -88,7 +89,8 @@
                 "ENSG00000135953": [
                     {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361"}
                 ]
-            }
+            },
+            "CAID": "CA403171631"
         },
         "family": 2
     }
@@ -122,7 +124,8 @@
                     {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361",
                     "hgvsc": "c.586_587delinsTT", "hgvsp": "p.Ala196Leu"}
                 ]
-            }
+            },
+            "CAID": null
         },
         "family": 2
     }

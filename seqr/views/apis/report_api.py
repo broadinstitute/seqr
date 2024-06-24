@@ -196,9 +196,9 @@ GREGOR_DATA_TYPES = ['wgs', 'wes', 'rna']
 SMID_FIELD = 'SMID'
 PARTICIPANT_ID_FIELD = 'CollaboratorParticipantID'
 COLLABORATOR_SAMPLE_ID_FIELD = 'CollaboratorSampleID'
-ANALYTE_TABLE_COLUMNS = {
+ANALYTE_TABLE_COLUMNS = [
     'analyte_id', 'participant_id', 'analyte_type', 'primary_biosample', 'tissue_affected_status',
-}
+]
 EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
     'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
     'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
@@ -262,6 +262,7 @@ ALL_AIRTABLE_COLUMNS = DATA_TYPE_AIRTABLE_COLUMNS + list(CALLED_TABLE_COLUMNS) +
 AIRTABLE_QUERY_COLUMNS = set()
 AIRTABLE_QUERY_COLUMNS.update(CALLED_TABLE_COLUMNS)
 AIRTABLE_QUERY_COLUMNS.remove('md5sum')
+AIRTABLE_QUERY_COLUMNS.remove('aligned_dna_short_read_set_id')
 AIRTABLE_QUERY_COLUMNS.update(NO_DATA_TYPE_FIELDS)
 for data_type in GREGOR_DATA_TYPES:
     data_type_columns = set(DATA_TYPE_AIRTABLE_COLUMNS) - NO_DATA_TYPE_FIELDS - set(DATA_TYPE_OMIT[data_type])
@@ -376,12 +377,14 @@ def gregor_export(request):
     participant_rows = []
     family_map = {}
     genetic_findings_rows = []
+    smids_by_airtable_record_id = {}
 
     def _add_row(row, family_id, row_type):
         if row_type == FAMILY_ROW_TYPE:
             family_map[family_id] = row
         elif row_type == SUBJECT_ROW_TYPE:
             participant_rows.append({**row, 'consent_code': consent_code})
+            smids_by_airtable_record_id.update(row[SMID_FIELD] or {})
         elif row_type == DISCOVERY_ROW_TYPE and row:
             for variant in row:
                 genetic_findings_rows.append({
@@ -398,12 +401,12 @@ def gregor_export(request):
         get_additional_individual_fields=_get_participant_row,
         post_process_variant=_post_process_gregor_variant,
         include_svs=False,
-        airtable_fields=[SMID_FIELD, PARTICIPANT_ID_FIELD, 'Recontactable'],
+        airtable_fields=[[PARTICIPANT_ID_FIELD, 'Recontactable'], [SMID_FIELD]],
         include_mondo=True,
         proband_only_variants=True,
     )
 
-    airtable_metadata_by_participant = _get_gregor_airtable_data(participant_rows, request.user)
+    airtable_metadata_by_participant = _get_gregor_airtable_data(participant_rows, request.user, smids_by_airtable_record_id)
 
     phenotype_rows = []
     analyte_rows = []
@@ -412,8 +415,8 @@ def gregor_export(request):
     experiment_ids_by_participant = {}
     for participant in participant_rows:
         phenotype_rows += _parse_participant_phenotype_rows(participant)
-        analyte = {k: participant.pop(k) for k in ANALYTE_TABLE_COLUMNS}
-        participant['participant_id'] = analyte['participant_id']
+        analyte = {k: participant.pop(k) for k in [SMID_FIELD, *ANALYTE_TABLE_COLUMNS[2:]]}
+        analyte['participant_id'] = participant['participant_id']
 
         if not participant[PARTICIPANT_ID_FIELD]:
             continue
@@ -439,7 +442,13 @@ def gregor_export(request):
         (FINDINGS_TABLE, genetic_findings_rows),
     ]
 
-    files, warnings = _populate_gregor_files(file_data)
+    files, warnings, errors = _populate_gregor_files(file_data)
+
+    if errors and not request_json.get('overrideValidation'):
+        raise ErrorsWarningsException(errors, warnings)
+    else:
+        warnings = errors + warnings
+
     write_multiple_files_to_gs(files, file_path, request.user, file_format='tsv')
 
     return create_json_response({
@@ -477,13 +486,13 @@ def _parse_participant_phenotype_rows(participant):
 
 def _parse_participant_airtable_rows(analyte, airtable_metadata, data_types, experiment_ids_by_participant,
                                      analyte_rows, airtable_rows, experiment_lookup_rows):
-    has_analyte = False
+    smids = analyte.pop(SMID_FIELD)
     # airtable data
     for data_type in data_types:
         if data_type not in airtable_metadata:
             continue
         is_rna, row = _get_airtable_row(data_type, airtable_metadata)
-        has_analyte = True
+        smids = None
         analyte_rows.append({**analyte, **{k: row[k] for k in ANALYTE_TABLE_COLUMNS if k in row}})
         if not is_rna:
             experiment_ids_by_participant[analyte['participant_id']] = row['experiment_dna_short_read_id']
@@ -496,11 +505,11 @@ def _parse_participant_airtable_rows(analyte, airtable_metadata, data_types, exp
             {'participant_id': analyte['participant_id'], **_get_experiment_lookup_row(is_rna, row)}
         )
 
-    if analyte['analyte_id'] and not has_analyte:
-        analyte_rows.append(analyte)
+    if smids:
+        analyte_rows += [{**analyte, 'analyte_id': _get_analyte_id(smid)} for smid in smids.values()]
 
 
-def _get_gregor_airtable_data(participants, user):
+def _get_gregor_airtable_data(participants, user, smids_by_airtable_record_id):
     session = AirtableSession(user)
 
     airtable_metadata = session.fetch_records(
@@ -510,11 +519,25 @@ def _get_gregor_airtable_data(participants, user):
     )
 
     airtable_metadata_by_participant = {r[PARTICIPANT_ID_FIELD]: r for r in airtable_metadata.values()}
+    rna_metadata_by_smid_record = {}
     for data_type in GREGOR_DATA_TYPES:
         for r in airtable_metadata_by_participant.values():
             data_type_fields = [f for f in r if f.endswith(f'_{data_type}')]
             if data_type_fields:
-                r[data_type.upper()] = {f.replace(f'_{data_type}', ''): r.pop(f) for f in data_type_fields}
+                data_type_metadata = {f.replace(f'_{data_type}', ''): r.pop(f) for f in data_type_fields}
+                r[data_type.upper()] = data_type_metadata
+                if data_type == 'rna':
+                    smid_record_id = data_type_metadata[SMID_FIELD][0]
+                    if smid_record_id in smids_by_airtable_record_id:
+                        data_type_metadata[SMID_FIELD] = smids_by_airtable_record_id[smid_record_id]
+                    else:
+                        rna_metadata_by_smid_record[smid_record_id] = data_type_metadata
+
+    rna_sample_metadata = session.fetch_records(
+       'Samples', fields=[SMID_FIELD], or_filters={'RECORD_ID()': rna_metadata_by_smid_record.keys()}
+    )
+    for record_id, rna_metadata in rna_metadata_by_smid_record.items():
+        rna_metadata[SMID_FIELD] = rna_sample_metadata[record_id][SMID_FIELD]
 
     return airtable_metadata_by_participant
 
@@ -522,11 +545,11 @@ def _get_gregor_airtable_data(participants, user):
 def _get_participant_row(individual, airtable_sample, *args):
     participant = {
         'gregor_center': 'BROAD',
-        'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),
+        'prior_testing': '|'.join([gene.get('gene') or gene['comments'] for gene in individual.rejected_genes or []]),
         'recontactable': (airtable_sample or {}).get('Recontactable'),
         'missing_variant_case': 'No',
         PARTICIPANT_ID_FIELD: (airtable_sample or {}).get(PARTICIPANT_ID_FIELD),
-        'analyte_id': _get_analyte_id(airtable_sample or {}),
+        SMID_FIELD: (airtable_sample or {}).get(SMID_FIELD),
         'analyte_type': individual.get_analyte_type_display(),
         'primary_biosample': individual.get_primary_biosample_display(),
         'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
@@ -560,16 +583,17 @@ def _post_process_gregor_variant(row, gene_variants, **kwargs):
 
 
 def _get_airtable_row(data_type, airtable_metadata):
-    data_type_metadata = airtable_metadata[data_type]
+    data_type_metadata = airtable_metadata.pop(data_type)
     collaborator_sample_id = data_type_metadata[COLLABORATOR_SAMPLE_ID_FIELD]
     experiment_short_read_id = f'Broad_{data_type_metadata.get("experiment_type", "NA")}_{collaborator_sample_id}'
     aligned_short_read_id = f'{experiment_short_read_id}_1'
     row = {
-        'analyte_id': _get_analyte_id(data_type_metadata),
+        'analyte_id': _get_analyte_id(data_type_metadata.get(SMID_FIELD)),
         'experiment_dna_short_read_id': experiment_short_read_id,
         'experiment_rna_short_read_id': experiment_short_read_id,
         'experiment_sample_id': collaborator_sample_id,
         'aligned_dna_short_read_id': aligned_short_read_id,
+        'aligned_dna_short_read_set_id': experiment_short_read_id,
         'aligned_rna_short_read_id': aligned_short_read_id,
         **airtable_metadata,
         **data_type_metadata,
@@ -582,7 +606,7 @@ def _get_airtable_row(data_type, airtable_metadata):
             'primary_biosample': next((BIOSAMPLE_LOOKUP[b] for b in biosamples if b in BIOSAMPLE_LOOKUP), biosamples[0]),
         })
     else:
-        row['alignment_software'] = row['alignment_software_dna']
+        row['alignment_software'] = row.get('alignment_software_dna')
     return is_rna, row
 
 
@@ -590,8 +614,8 @@ def _format_gregor_id(id_string, default='0'):
     return f'Broad_{id_string}' if id_string else '0'
 
 
-def _get_analyte_id(airtable_metadata):
-    return _format_gregor_id(airtable_metadata.get(SMID_FIELD), default=None)
+def _get_analyte_id(smid):
+    return _format_gregor_id(smid, default=None)
 
 
 def _get_experiment_lookup_row(is_rna, row_data):
@@ -682,10 +706,7 @@ def _populate_gregor_files(file_data):
         for column, config in table_config.items():
             _validate_column_data(column, file_name, data, column_validator=config, warnings=warnings, errors=errors)
 
-    if errors:
-        raise ErrorsWarningsException(errors, warnings)
-
-    return files, warnings
+    return files, warnings, errors
 
 
 def _load_data_model_validators():

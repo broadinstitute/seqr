@@ -20,7 +20,7 @@ cffi==1.15.1
     # via cryptography
 charset-normalizer==3.0.1
     # via requests
-cryptography==42.0.6
+cryptography==42.0.8
     # via social-auth-core
 defusedxml==0.7.1
     # via
@@ -131,7 +131,7 @@ pytz==2022.7.1
     #   django-notifications-hq
 redis==4.5.4
     # via -r requirements.in
-requests==2.32.0
+requests==2.32.2
     # via
     #   -r requirements.in
     #   django-anymail
@@ -175,7 +175,7 @@ tenacity==8.3.0
     # via -r requirements.in
 tqdm==4.66.3
     # via -r requirements.in
-urllib3==1.26.18
+urllib3==1.26.19
     # via
     #   elasticsearch
     #   requests
