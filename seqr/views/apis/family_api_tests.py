@@ -31,7 +31,10 @@ INDIVIDUAL2_GUID = 'I000002_na19678'
 INDIVIDUAL3_GUID = 'I000003_na19679'
 
 INDIVIDUAL_GUIDS = [INDIVIDUAL_GUID, INDIVIDUAL2_GUID, INDIVIDUAL3_GUID]
+
+FAMILY_API_SAMPLE_FIELDS = {*SAMPLE_FIELDS, 'rnaSeqTypes'}
 SAMPLE_GUIDS = ['S000129_na19675', 'S000130_na19678', 'S000131_na19679', 'S000151_na19675_1', 'S000152_na19675_d2', 'S000153_na19679']
+
 
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -87,7 +90,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
 
         self.assertEqual(len(response_json['samplesByGuid']), 6)
-        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
+        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), FAMILY_API_SAMPLE_FIELDS)
         self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['samplesByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['samplesByGuid'].values()})
         self.assertEqual(len(individual['sampleGuids']), 3)
