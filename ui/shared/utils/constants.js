@@ -921,12 +921,6 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001822',
   },
   {
-    description: 'A feature amplification of a region containing a transcript',
-    text: 'Transcript amplification',
-    value: 'transcript_amplification',
-    so: 'SO:0001889',
-  },
-  {
     description: 'A sequence_variant which is predicted to change the protein encoded in the coding sequence',
     text: 'Protein Altering',
     value: 'protein_altering_variant',
@@ -1059,18 +1053,6 @@ const ORDERED_VEP_CONSEQUENCES = [
     text: 'Coding transcript variant',
     value: 'coding_transcript_variant',
     so: 'SO:0001968',
-  },
-  {
-    description: 'A sequence variant that causes the extension of a genomic feature, with regard to the reference sequence',
-    text: 'Feature elongation',
-    value: 'feature_elongation',
-    so: 'SO:0001907',
-  },
-  {
-    description: 'A sequence variant that causes the reduction of a genomic feature, with regard to the reference sequence',
-    text: 'Feature truncation',
-    value: 'feature_truncation',
-    so: 'SO:0001906',
   },
   {
     description: 'A sequence variant located in the intergenic region, between genes',
