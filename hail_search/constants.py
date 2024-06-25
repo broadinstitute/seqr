@@ -17,6 +17,8 @@ NEW_SV_FIELD = 'new_structural_variants'
 SCREEN_KEY = 'SCREEN'  # uses all caps to match filter provided by the seqr UI
 UTR_ANNOTATOR_KEY = 'UTRAnnotator'
 EXTENDED_SPLICE_KEY = 'extended_splice_site'
+MOTIF_FEATURES_KEY = 'motif_feature'
+REGULATORY_FEATURES_KEY = 'regulatory_feature'
 CLINVAR_KEY = 'clinvar'
 CLINVAR_MITO_KEY = 'clinvar_mito'
 HGMD_KEY = 'hgmd'
@@ -25,7 +27,7 @@ FAMILY_GUID_FIELD = 'familyGuids'
 GENOTYPES_FIELD = 'genotypes'
 
 ANNOTATION_OVERRIDE_FIELDS = [
-    SCREEN_KEY, SPLICE_AI_FIELD, NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD,
+    SCREEN_KEY, SPLICE_AI_FIELD, NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY,
 ]
 ALLOWED_TRANSCRIPTS = 'allowed_transcripts'
 ALLOWED_SECONDARY_TRANSCRIPTS = 'allowed_transcripts_secondary'

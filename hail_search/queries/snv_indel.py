@@ -2,7 +2,7 @@ from collections import OrderedDict
 import hail as hl
 
 from hail_search.constants import GENOME_VERSION_GRCh38, SCREEN_KEY, PREFILTER_FREQ_CUTOFF, ALPHAMISSENSE_SORT, \
-    UTR_ANNOTATOR_KEY, EXTENDED_SPLICE_KEY
+    UTR_ANNOTATOR_KEY, EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath
 from hail_search.queries.snv_indel_37 import SnvIndelHailTableQuery37
 
@@ -20,7 +20,9 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
         'gnomad_noncoding': PredictionPath('gnomad_non_coding_constraint', 'z_score'),
     }
     LIFTOVER_ANNOTATION_FIELDS = BaseHailTableQuery.LIFTOVER_ANNOTATION_FIELDS
-    ANNOTATION_OVERRIDE_FIELDS = SnvIndelHailTableQuery37.ANNOTATION_OVERRIDE_FIELDS + [SCREEN_KEY]
+    ANNOTATION_OVERRIDE_FIELDS = SnvIndelHailTableQuery37.ANNOTATION_OVERRIDE_FIELDS + [
+        SCREEN_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY,
+    ]
     FREQUENCY_PREFILTER_FIELDS = OrderedDict([
         (True, PREFILTER_FREQ_CUTOFF),
         ('is_gt_3_percent', 0.03),
@@ -81,5 +83,15 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
         if annotation_overrides.get(SCREEN_KEY):
             allowed_consequences = hl.set(self._get_enum_terms_ids(SCREEN_KEY.lower(), 'region_type', annotation_overrides[SCREEN_KEY]))
             annotation_filters.append(allowed_consequences.contains(ht.screen.region_type_ids.first()))
+
+        for feature_key in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
+            if annotation_overrides.get(feature_key):
+                field = f'sorted_{feature_key}_consequences'
+                allowed_consequences = hl.set(self._get_enum_terms_ids(
+                    field, self.TRANSCRIPT_CONSEQUENCE_FIELD, annotation_overrides[feature_key]),
+                )
+                annotation_filters.append(
+                    ht[field].any(lambda c: c.consequence_term_ids.any(allowed_consequences.contains))
+                )
 
         return annotation_filters
