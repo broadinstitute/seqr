@@ -351,7 +351,6 @@ def get_json_for_samples(samples, **kwargs):
 
     Args:
         samples (array): array of django models for the Samples.
-        additional_values (dict): additional values to include in the json
     Returns:
         array: array of json objects
     """
