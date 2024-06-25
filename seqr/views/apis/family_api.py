@@ -43,20 +43,21 @@ def family_page_data(request, family_guid):
     has_case_review_perm = has_case_review_permissions(project, request.user)
 
     sample_models = Sample.objects.filter(individual__family=family)
-    additional_values = {
-        'rnaSeqTypes': JSONObject(
-            hasRnaSeqTpm=Case(When(Exists(RnaSeqTpm.objects.filter(sample_id=OuterRef('pk'))), then=True), default=False),
-            hasRnaSeqOutlier=Case(When(Exists(RnaSeqOutlier.objects.filter(sample_id=OuterRef('pk'))), then=True), default=False),
-            hasRnaSeqSpliceOutlier=Case(When(Exists(RnaSeqSpliceOutlier.objects.filter(sample_id=OuterRef('pk'))), then=True), default=False),
-        )
-    }
     samples = get_json_for_samples(
-        sample_models, project_guid=project.guid, family_guid=family_guid, skip_nested=True, is_analyst=is_analyst,
-        additional_values=additional_values
+        sample_models, project_guid=project.guid, family_guid=family_guid, skip_nested=True, is_analyst=is_analyst
     )
     response = {
-        'samplesByGuid': {s['sampleGuid']: s for s in samples},
+        'samplesByGuid': {s['sampleGuid']: s for s in samples}
     }
+    rna_type_samples = {
+        'TPM': set(RnaSeqTpm.objects.filter(sample__in=sample_models).values_list('sample__guid', flat=True)),
+        'Expression Outlier': set(RnaSeqOutlier.objects.filter(sample__in=sample_models).values_list('sample__guid', flat=True)),
+        'Splice Outlier': set(RnaSeqSpliceOutlier.objects.filter(sample__in=sample_models).values_list('sample__guid', flat=True)),
+    }
+    for sample in response['samplesByGuid'].values():
+        sample['rnaSeqTypes'] = [
+            rnaseq_type for rnaseq_type, sample_ids in rna_type_samples.items() if sample['sampleGuid'] in sample_ids
+        ]
 
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
     family_response = response['familiesByGuid'][family_guid]

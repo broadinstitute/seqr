@@ -92,15 +92,9 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['samplesByGuid'].values()})
         self.assertEqual(len(individual['sampleGuids']), 3)
         self.assertTrue(set(individual['sampleGuids']).issubset(set(response_json['samplesByGuid'].keys())))
-        expected_rna_seq_types = [
-            {'hasRnaSeqTpm': False, 'hasRnaSeqOutlier': False, 'hasRnaSeqSpliceOutlier': False} for _ in range(3)
-        ] + [
-            {'hasRnaSeqTpm': True, 'hasRnaSeqOutlier': False, 'hasRnaSeqSpliceOutlier': True},
-            {'hasRnaSeqTpm': True, 'hasRnaSeqOutlier': True, 'hasRnaSeqSpliceOutlier': True},
-            {'hasRnaSeqTpm': False, 'hasRnaSeqOutlier': False, 'hasRnaSeqSpliceOutlier': True},
-        ]
-        self.assertListEqual(expected_rna_seq_types,
-            [response_json['samplesByGuid'][guid]['rnaSeqTypes'] for guid in SAMPLE_GUIDS]
+        self.assertListEqual(
+            [[], [], [], ['TPM', 'Splice Outlier'], ['TPM', 'Expression Outlier', 'Splice Outlier'], ['Splice Outlier']],
+            [response_json['samplesByGuid'][guid].get('rnaSeqTypes', {}) for guid in SAMPLE_GUIDS]
         )
 
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)

@@ -346,7 +346,7 @@ def _get_sample_json_kwargs(project_guid=None, family_guid=None, individual_guid
     return {'guid_key': 'sampleGuid', **additional_kwargs, **kwargs}
 
 
-def get_json_for_samples(samples, additional_values=None, **kwargs):
+def get_json_for_samples(samples, **kwargs):
     """Returns a JSON representation of the given list of Samples.
 
     Args:
@@ -356,7 +356,7 @@ def get_json_for_samples(samples, additional_values=None, **kwargs):
         array: array of json objects
     """
 
-    return get_json_for_queryset(samples, additional_values=additional_values, **_get_sample_json_kwargs(**kwargs))
+    return get_json_for_queryset(samples, **_get_sample_json_kwargs(**kwargs))
 
 
 def get_json_for_sample(sample, **kwargs):
