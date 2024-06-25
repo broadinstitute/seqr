@@ -1434,6 +1434,7 @@ const REVERSE_PRED_COLOR_MAP = [...PRED_COLOR_MAP].reverse()
 export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'cadd', group: CODING_IN_SILICO_GROUP, thresholds: [0.151, 22.8, 25.3, 28.1, undefined], min: 1, max: 99, fieldTitle: 'CADD', requiresCitation: true },
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, thresholds: [0.0161, 0.291, 0.644, 0.773, 0.932], fieldTitle: 'REVEL', requiresCitation: true },
+  { field: 'alphamissense', fieldTitle: 'AlphaMissense', displayOnly: true },
   { field: 'vest', thresholds: [undefined, 0.45, 0.764, 0.861, 0.965], fieldTitle: 'VEST', requiresCitation: true },
   { field: 'mut_pred', thresholds: [0.0101, 0.392, 0.737, 0.829, 0.932], fieldTitle: 'MutPred', requiresCitation: true },
   { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1.36, 1.828, undefined], max: 5, fieldTitle: 'MPC' },
@@ -1464,7 +1465,6 @@ export const ORDERED_PREDICTOR_FIELDS = [
     thresholds: [undefined, undefined, 2.18, 4, undefined],
     requiresCitation: true,
   },
-  { field: 'alphamissense', fieldTitle: 'AlphaMissense', displayOnly: true },
   { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP, fieldTitle: 'MitoTIP' },
   { field: 'hmtvar', thresholds: [undefined, undefined, 0.35, 0.35, undefined], fieldTitle: 'HmtVar' },
