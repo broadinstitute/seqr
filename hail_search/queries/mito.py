@@ -309,7 +309,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
     def _add_project_lookup_data(self, ht, annotation_fields, *args, **kwargs):
         # Get all the project-families for the looked up variant formatted as a dict of dicts:
         # {<project_guid>: {<family_guid>: True, <family_guid_2>: True}, <project_guid_2>: ...}
-        lookup_ht = self._read_table('single_variant.ht', use_ssd_dir=True, skip_missing_field='project_stats')
+        lookup_ht = self._read_table('lookup.ht', use_ssd_dir=True, skip_missing_field='project_stats')
         if lookup_ht is None:
             raise HTTPNotFound()
         variant_projects = lookup_ht.aggregate(hl.agg.take(
