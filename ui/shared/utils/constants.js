@@ -1876,6 +1876,23 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'ClinGen_allele_ID' },
 ]
 
+export const BASE_FAMILY_METADATA_COLUMNS = [
+  { name: 'pmid_id' },
+  { name: 'condition_id' },
+  { name: 'known_condition_name', secondaryExportColumn: 'disorders' },
+  { name: 'phenotype_description', style: { minWidth: '200px' } },
+  { name: 'analysis_groups' },
+  {
+    name: 'analysisStatus',
+    content: 'analysis_status',
+    format: ({ analysisStatus }) => FAMILY_ANALYSIS_STATUS_LOOKUP[analysisStatus]?.name,
+  },
+  { name: 'solve_status' },
+  { name: 'data_type' },
+  { name: 'date_data_generation', secondaryExportColumn: 'filter_flags' },
+  { name: 'consanguinity' },
+]
+
 // RNAseq sample tissue type mapping
 export const TISSUE_DISPLAY = {
   WB: 'Whole Blood',

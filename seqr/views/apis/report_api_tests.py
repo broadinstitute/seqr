@@ -513,6 +513,7 @@ BASE_VARIANT_METADATA_ROW = {
     'svType': None,
     'sv_name': None,
     'transcript': None,
+    # TODO missing internal_project_id
 }
 
 PARTICIPANT_TABLE = [
@@ -1195,6 +1196,7 @@ class ReportAPITest(AirtableTest):
             'analysisStatus': 'Q',
             'analysis_groups': '',
             'consanguinity': 'Unknown',
+            # TODO missing internal_project_id
         })
 
         # Test all projects
