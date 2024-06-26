@@ -308,11 +308,14 @@ class BaseHailTableQuery(object):
         project_hts = []
         sample_data = {}
         for project_guid, project_sample_data in project_samples.items():
-            project_ht = self._read_table(
-                f'projects/{project_guid}.ht',
-                use_ssd_dir=True,
-                skip_missing_field='family_entries' if skip_all_missing else None,
-            )
+            try:
+                project_ht = self._read_table(
+                    f'projects/{project_guid}.ht',
+                    use_ssd_dir=True,
+                    skip_missing_field='family_entries' if skip_all_missing else None,
+                )
+            except Exception:
+                project_ht = None
             if project_ht is None:
                 continue
             project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
