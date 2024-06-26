@@ -162,7 +162,9 @@ const CONTACT_FIELDS = [
 ]
 
 const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit, canSend }) => (
+  // when submitOnChange is true, no submit button is shown
   <UpdateButton
+    submitOnChange={!canSend}
     onSubmit={canSend && onSubmit}
     initialValues={defaultContactEmail}
     formFields={CONTACT_FIELDS}
@@ -173,7 +175,6 @@ const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit, canSe
     showErrorPanel
     submitButtonText="Send"
     buttonFloated="right"
-    submitOnChange={!canSend}
   />
 ))
 
