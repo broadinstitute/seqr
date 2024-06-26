@@ -182,11 +182,15 @@ def bulk_update_family_external_analysis(request):
 
 def _load_aip_data(data: dict, user: User):
     category_map = data['metadata']['categories']
+    projects = data['metadata'].get('projects')
     results = data['results']
+
+    if not projects:
+        raise ErrorsWarningsException(['No projects specified in the metadata'])
 
     family_id_map = defaultdict(list)
     for individual_id, family_id in Individual.objects.filter(
-        family__project__in=get_internal_projects(), individual_id__in=results.keys(),
+        family__project__in=get_internal_projects().filter(name__in=projects), individual_id__in=results.keys(),
     ).values_list('individual_id', 'family_id'):
         family_id_map[individual_id].append(family_id)
     errors = []
