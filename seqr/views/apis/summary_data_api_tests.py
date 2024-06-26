@@ -36,7 +36,7 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "projectGuid": "R0003_test",
     "num_saved_variants": 2,
     "solve_status": "Partially solved",
-    "sample_id": "NA20889",
+    "sample_id": "NA20889",  # unused
     "gene_known_for_phenotype-1": "Candidate",
     "gene_known_for_phenotype-2": "Candidate",
     "variant_inheritance-1": "unknown",
@@ -52,7 +52,7 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "sv_name-2": "DEL:chr1:249045487-249045898",
     "chrom-2": "1",
     "pos-2": 249045487,
-    'end-2': 249045898,
+    'end-2': 249045898,  # unused
     "maternal_id": "",
     "paternal_id": "",
     "maternal_guid": "",
@@ -71,7 +71,7 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "chrom-1": "1",
     "alt-1": "T",
     "gene_of_interest-1": "OR4G11P",
-    "gene_id-1": "ENSG00000240361",
+    "gene_id-1": "ENSG00000240361",  # unused
     'variant_reference_assembly-1': 'GRCh37',
     'variant_reference_assembly-2': 'GRCh37',
     "pmid_id": None,
@@ -96,16 +96,16 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'seqr_chosen_consequence-2': None,
     'gene_of_interest-2': None,
     'gene_id-2': None,
-    'svName-2': None,
+    'svName-2': None,  # unused
     'svType-1': None,
     'sv_name-1': None,
     'svName-1': None,
     'end-1': None,
-    'allele_balance_or_heteroplasmy_percentage-1': None,
+    'allele_balance_or_heteroplasmy_percentage-1': None,  # unused
     'allele_balance_or_heteroplasmy_percentage-2': None,
     'notes-1': None,
     'notes-2': None,
-    'tags-1': ['Tier 1 - Novel gene and phenotype'],
+    'tags-1': ['Tier 1 - Novel gene and phenotype'],  # unused
     'tags-2': ['Tier 1 - Novel gene and phenotype'],
     'phenotype_contribution-1': 'Partial',
     'phenotype_contribution-2': 'Full',

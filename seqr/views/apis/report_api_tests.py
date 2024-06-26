@@ -496,12 +496,12 @@ BASE_VARIANT_METADATA_ROW = {
     'MME': False,
     'additional_family_members_with_variant': '',
     'allele_balance_or_heteroplasmy_percentage': None,
-    'analysisStatus': 'Q',
-    'analysis_groups': '',
+    'analysisStatus': 'Q',  # unused
+    'analysis_groups': '',  # unused
     'clinvar': None,
     'condition_id': None,
-    'consanguinity': 'Unknown',
-    'end': None,
+    'consanguinity': 'Unknown',  # unused
+    'end': None,  # unused
     'hgvsc': '',
     'hgvsp': '',
     'method_of_discovery': 'SR-ES',
@@ -509,7 +509,7 @@ BASE_VARIANT_METADATA_ROW = {
     'phenotype_contribution': 'Full',
     'partial_contribution_explained': '',
     'seqr_chosen_consequence': None,
-    'svName': None,
+    'svName': None,  # unused
     'svType': None,
     'sv_name': None,
     'transcript': None,
@@ -1178,7 +1178,7 @@ class ReportAPITest(AirtableTest):
             'solve_status': 'Partially solved',
             'actual_inheritance': 'unknown',
             'condition_id': 'OMIM:616126',
-            'condition_inheritance': 'Autosomal recessive',
+            'condition_inheritance': 'Autosomal recessive',  # unused
             'known_condition_name': 'Immunodeficiency 38',
             'date_data_generation': '2017-02-05',
             'data_type': 'WES',
@@ -1266,7 +1266,7 @@ class ReportAPITest(AirtableTest):
             'familyGuid': 'F000002_2',
             'family_id': '2',
             'gene_of_interest': 'RP11',
-            'gene_id': 'ENSG00000135953',
+            'gene_id': 'ENSG00000135953',  # unused
             'gene_known_for_phenotype': 'Known',
             'genetic_findings_id': 'HG00731_1_248367227',
             'known_condition_name': 'mitochondrial disease',
@@ -1331,7 +1331,7 @@ class ReportAPITest(AirtableTest):
             'displayName': '12',
             'familyGuid': 'F000012_12',
             'family_id': '12',
-            'family_history': 'Yes',
+            'family_history': 'Yes',  # unused
             'gene_of_interest': 'OR4G11P',
             'gene_id': 'ENSG00000240361',
             'gene_known_for_phenotype': 'Candidate',
