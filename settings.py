@@ -128,10 +128,12 @@ USE_L10N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.10/howto/static-files/
+# https://docs.djangoproject.com/en/4.2/howto/static-files/
 STATIC_URL = '/static/'
-STATICFILES_DIRS = ['ui/dist']
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+    'ui/dist',
+]
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -262,6 +264,7 @@ else:
         'http://localhost:3000',
         'http://localhost:8000',
     )
+    # TODO: will docker build fail if STATICFILES_DIRS always contains both?
     # the collectstatic step in docker build runs without env variables set, and uncommenting these lines breaks the docker build
     # STATICFILES_DIRS.append(STATIC_ROOT)
     # STATIC_ROOT = None

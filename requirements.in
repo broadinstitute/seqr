@@ -1,4 +1,4 @@
-Django<3.3                        # core server-side framework
+Django==4.2                       # core server-side framework
 django-anymail                    # for sending emails using cloud-based mail service providers
 django-csp                        # for setting CSP headers
 django-guardian                   # object-level permissions for database records. Behind a major version due to missing Python 2 support
