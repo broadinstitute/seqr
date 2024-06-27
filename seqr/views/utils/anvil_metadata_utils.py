@@ -135,7 +135,7 @@ def _get_family_metadata(family_filter, family_fields, include_family_name_displ
             Value('\t'), Value(' '),
         ),
         analysisStatus=F('analysis_status'),
-        **(FAMILY_NAME_DISPLAY_VALUES if include_family_name_display else {}),
+        **(FAMILY_NAME_DISPLAY_VALUES if include_family_name_display or include_family_sample_metadata else {}),
         **{k: v['value'] for k, v in (family_fields or {}).items()}
     )
 

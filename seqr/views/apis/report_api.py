@@ -848,7 +848,7 @@ def family_metadata(request, project_guid):
 
     parse_anvil_metadata(
         projects, user=request.user, add_row=_add_row, omit_airtable=True, include_metadata=True,
-        include_family_name_display=True, include_family_sample_metadata=True, include_no_individual_families=True)
+        include_family_sample_metadata=True, include_no_individual_families=True)
 
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]
