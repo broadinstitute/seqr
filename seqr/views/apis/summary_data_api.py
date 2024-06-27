@@ -315,6 +315,8 @@ def individual_metadata(request, project_guid):
     parse_anvil_metadata(
         projects, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
         include_metadata=True,
+        include_family_name_display=True,
+        include_family_sample_metadata=True,
         omit_airtable=not include_airtable,
         mme_value=Value('Yes'),
         get_additional_individual_fields=lambda individual, airtable_metadata, has_dbgap_submission, maternal_ids, paternal_ids: {

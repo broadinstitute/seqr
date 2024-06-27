@@ -89,11 +89,10 @@ SUBJECT_ROW_TYPE = 'subject'
 SAMPLE_ROW_TYPE = 'sample'
 DISCOVERY_ROW_TYPE = 'discovery'
 
-METADATA_FAMILY_VALUES = {
+FAMILY_NAME_DISPLAY_VALUES = {
     'familyGuid': F('guid'),
     'projectGuid': F('project__guid'),
     'displayName': F('family_id'),
-    'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
 }
 
 METHOD_MAP = {
@@ -121,7 +120,11 @@ TRANSCRIPT_FIELDS = {
 }
 
 
-def _get_family_metadata(family_filter, family_fields, include_metadata, include_mondo, format_id):
+def _get_family_metadata(family_filter, family_fields, include_family_name_display, include_family_sample_metadata, include_mondo, format_id):
+    family_fields = {'analysis_groups': {
+        'value': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
+        'format': lambda f: '; '.join(f['analysis_groups']),
+    }} if include_family_sample_metadata else family_fields
     family_data = Family.objects.filter(**family_filter).distinct().order_by('id').values(
         'id', 'family_id', 'post_discovery_omim_numbers',
         *(['post_discovery_mondo_id'] if include_mondo else []),
@@ -132,14 +135,14 @@ def _get_family_metadata(family_filter, family_fields, include_metadata, include
             Value('\t'), Value(' '),
         ),
         analysisStatus=F('analysis_status'),
-        **(METADATA_FAMILY_VALUES if include_metadata else {}),  # TODO analysis_groups: individual/family, rest all
+        **(FAMILY_NAME_DISPLAY_VALUES if include_family_name_display else {}),
         **{k: v['value'] for k, v in (family_fields or {}).items()}
     )
 
     family_data_by_id = {}
     for f in family_data:
         family_id = f.pop('id')
-        analysis_status = f['analysisStatus'] if include_metadata else f.pop('analysisStatus')  # TODO individual/family
+        analysis_status = f['analysisStatus'] if include_family_sample_metadata else f.pop('analysisStatus')
         solve_status = ANALYSIS_SOLVE_STATUS_LOOKUP.get(analysis_status, Individual.UNSOLVED)
         f.update({
             'solve_status': Individual.SOLVE_STATUS_LOOKUP[solve_status],
@@ -147,8 +150,6 @@ def _get_family_metadata(family_filter, family_fields, include_metadata, include
         })
         if format_id:
             f.update({k: format_id(f[k]) for k in ['family_id', 'internal_project_id']})
-        if include_metadata:
-            f['analysis_groups'] = '; '.join(f['analysis_groups'])  # TODO individual/family
         family_data_by_id[family_id] = f
 
     return family_data_by_id
@@ -162,7 +163,7 @@ def parse_anvil_metadata(
         individual_samples: dict[Individual, Sample] = None, individual_data_types: dict[str, Iterable[str]] = None,
         airtable_fields: Iterable[str] = None, mme_value: Aggregate = None, include_svs: bool = True,
         variant_json_fields: Iterable[str] = None, variant_attr_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
-        include_no_individual_families: bool = False, omit_airtable: bool = False, include_metadata: bool = False,
+        include_no_individual_families: bool = False, omit_airtable: bool = False, include_metadata: bool = False, include_family_name_display: bool = False, include_family_sample_metadata: bool = False,
         include_discovery_sample_id: bool = False, include_mondo: bool = False, include_parent_mnvs: bool = False,
         proband_only_variants: bool = False):
 
@@ -171,7 +172,7 @@ def parse_anvil_metadata(
 
     family_data_by_id = _get_family_metadata(
         {'project__in': projects} if include_no_individual_families else {'individual__in': individual_samples},
-        family_fields, include_metadata, include_mondo, format_id
+        family_fields, include_family_name_display, include_family_sample_metadata, include_mondo, format_id
     )
 
     individuals_by_family_id = defaultdict(list)
@@ -243,7 +244,7 @@ def parse_anvil_metadata(
 
             participant_id = subject_row['participant_id']
             if sample:
-                sample_row = _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields)
+                sample_row = _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metadata, include_family_sample_metadata, get_additional_sample_fields)
                 add_row(sample_row, family_id, SAMPLE_ROW_TYPE)
 
             if proband_only_variants and individual.proband_relationship != Individual.SELF_RELATIONSHIP:
@@ -449,15 +450,14 @@ def anvil_export_airtable_fields(airtable_metadata, has_dbgap_submission):
     }
 
 
-def _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields=None):
+def _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metadata, include_family_sample_metadata, get_additional_sample_fields=None):
     sample_row = {
         'participant_id': participant_id,
         'sample_id': sample.sample_id,
     }
     if has_dbgap_submission:
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
-    if include_metadata:
-        # TODO individual/family, currently not in variant
+    if include_family_sample_metadata:
         sample_row.update({
             'data_type': sample.sample_type,
             'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),

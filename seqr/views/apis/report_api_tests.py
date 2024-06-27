@@ -497,8 +497,6 @@ BASE_VARIANT_METADATA_ROW = {
     'MME': False,
     'additional_family_members_with_variant': '',
     'allele_balance_or_heteroplasmy_percentage': None,
-    'analysisStatus': 'Q',  # unused
-    'analysis_groups': '',  # unused
     'clinvar': None,
     'condition_id': None,
     'consanguinity': 'Unknown',  # unused
