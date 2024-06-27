@@ -40,7 +40,7 @@ const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) => (
           'no data available'}
         <VerticalSpacer height={5} />
         {loadedSample.sampleType && loadedSample.sampleType === SAMPLE_TYPE_RNA &&
-          loadedSample.rnaSeqTypes?.length > 0 && `RNAseq methods: ${loadedSample.rnaSeqTypes.join(', ')}`}
+          loadedSample.isActive && `RNAseq methods: ${loadedSample.rnaSeqTypes.join(', ')}`}
       </div>
     }
     position="left center"
