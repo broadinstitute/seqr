@@ -499,7 +499,6 @@ BASE_VARIANT_METADATA_ROW = {
     'allele_balance_or_heteroplasmy_percentage': None,
     'clinvar': None,
     'condition_id': None,
-    'consanguinity': 'Unknown',  # unused
     'end': None,
     'hgvsc': '',
     'hgvsp': '',

@@ -208,12 +208,13 @@ def parse_anvil_metadata(
         subject_family_row = {k: family_subject_row.pop(k) for k in FAMILY_INDIVIDUAL_FIELDS}
         family_row = {
             'family_id': subject_family_row['family_id'],
-            'consanguinity': next((
-                'Present' if individual.consanguinity else 'None suspected'
-                for individual in family_individuals if individual.consanguinity is not None
-            ), 'Unknown'),
             **family_subject_row,
         }
+        if not include_family_name_display:
+            family_row['consanguinity'] = next((
+                'Present' if individual.consanguinity else 'None suspected'
+                for individual in family_individuals if individual.consanguinity is not None
+            ), 'Unknown')
         add_row(family_row, family_id, FAMILY_ROW_TYPE)
 
         for individual in family_individuals:
