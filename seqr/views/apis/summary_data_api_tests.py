@@ -505,9 +505,19 @@ class SummaryDataAPITest(AirtableTest):
         body['dataType'] = 'AIP'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['errors'], ['No projects specified in the metadata'])
+
+        aip_upload['metadata']['projects'] = ['1kg project nåme with uniçøde', 'Test Reprocessed Project']
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'], ['Unable to find the following individuals: SAM_123'])
 
-        aip_upload['results']['NA20889'] = aip_upload['results'].pop('SAM_123')
+        aip_upload['results']['NA20870'] = aip_upload['results'].pop('SAM_123')
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['errors'], ['The following individuals are found in multiple families: NA20870'])
+
+        aip_upload['results']['NA20889'] = aip_upload['results'].pop('NA20870')
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'], [

@@ -247,6 +247,67 @@ export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([
 
 const SCREEN_GROUP = 'SCREEN'
 const SCREEN_VALUES = ['PLS', 'pELS', 'dELS', 'DNase-H3K4me3', 'CTCF-only', 'DNase-only', 'low-DNase']
+const UTR_ANNOTATOR_GROUP = 'UTRAnnotator'
+const UTR_ANNOTATOR_VALUES = [
+  'premature_start_codon_gain', 'premature_start_codon_loss', 'stop_codon_gain', 'stop_codon_loss', 'uORF_frameshift',
+]
+const MOTIF_GROUP = 'motif_feature'
+const MOTIF_VALUES = [
+  {
+    description: 'A feature ablation whereby the deleted region includes a transcription factor binding site',
+    text: 'TFBS ablation',
+    value: 'TFBS_ablation',
+    so: 'SO:0001895',
+  },
+  {
+    description: 'A feature amplification of a region containing a transcription factor binding site',
+    text: 'TFBS amplification',
+    value: 'TFBS_amplification',
+    so: 'SO:0001892',
+  },
+  {
+    description: 'In regulatory region annotated by Ensembl',
+    text: 'TF binding site variant',
+    value: 'TF_binding_site_variant',
+    so: 'SO:0001782',
+  },
+  {
+    description: 'A fusion impacting a transcription factor binding site',
+    text: 'TFBS fusion',
+    value: 'TFBS_fusion',
+  },
+  {
+    description: 'A translocation impacting a transcription factor binding site',
+    text: 'TFBS translocation',
+    value: 'TFBS_translocation',
+  },
+]
+const REGULATORY_GROUP = 'regulatory_feature'
+const REGULATORY_VALUES = [
+  {
+    description: 'A sequence variant located within a regulatory region',
+    text: 'Regulatory region variant',
+    value: 'regulatory_region_variant',
+    so: 'SO:0001566',
+  },
+  {
+    description: 'A feature ablation whereby the deleted region includes a regulatory region',
+    text: 'Regulatory region ablation',
+    value: 'regulatory_region_ablation',
+    so: 'SO:0001894',
+  },
+  {
+    description: 'A feature amplification of a region containing a regulatory region',
+    text: 'Regulatory region amplification',
+    value: 'regulatory_region_amplification',
+    so: 'SO:0001891',
+  },
+  {
+    description: 'A fusion impacting a regulatory region',
+    text: 'Regulatory region fusion',
+    value: 'regulatory_region_fusion',
+  },
+]
 ANNOTATION_GROUPS.push({
   name: SCREEN_GROUP,
   groupLabel: SCREEN_GROUP,
@@ -255,9 +316,24 @@ ANNOTATION_GROUPS.push({
     text: SCREEN_LABELS[value] || value,
     description: 'SCREEN: Search Candidate cis-Regulatory Elements by ENCODE. Registry of cCREs V3’',
   })),
+}, {
+  name: UTR_ANNOTATOR_GROUP,
+  groupLabel: UTR_ANNOTATOR_GROUP,
+  options: UTR_ANNOTATOR_VALUES.map(value => ({
+    value: `5_prime_UTR_${value}_variant`,
+    text: snakecaseToTitlecase(value),
+  })),
+}, {
+  name: MOTIF_GROUP,
+  groupLabel: snakecaseToTitlecase(MOTIF_GROUP),
+  options: MOTIF_VALUES,
+}, {
+  name: REGULATORY_GROUP,
+  groupLabel: snakecaseToTitlecase(REGULATORY_GROUP),
+  options: REGULATORY_VALUES,
 })
 
-export const ALL_IMPACT_GROUPS = [
+const ALL_IMPACT_GROUPS = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
   VEP_GROUP_EXTENDED_SPLICE_SITE,
@@ -269,28 +345,32 @@ export const ALL_IMPACT_GROUPS = [
   VEP_GROUP_SV,
   VEP_GROUP_SV_CONSEQUENCES,
 ]
-export const HIGH_IMPACT_GROUPS = [
+const HIGH_IMPACT_GROUPS = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
   VEP_GROUP_FRAMESHIFT,
 ]
-export const HIGH_IMPACT_GROUPS_SPLICE = [
-  ...HIGH_IMPACT_GROUPS,
+export const ANNOTATION_OVERRIDE_GROUPS = [
   SPLICE_AI_FIELD,
+  MOTIF_GROUP,
+  REGULATORY_GROUP,
+  SCREEN_GROUP,
+  UTR_ANNOTATOR_GROUP,
 ]
-export const MODERATE_IMPACT_GROUPS = [
+export const HIGH_MODERATE_IMPACT_GROUPS = [
+  ...HIGH_IMPACT_GROUPS,
   VEP_GROUP_MISSENSE,
   VEP_GROUP_INFRAME,
 ]
-export const CODING_IMPACT_GROUPS = [
+const CODING_IMPACT_GROUPS = [
   VEP_GROUP_SYNONYMOUS,
   VEP_GROUP_EXTENDED_SPLICE_SITE,
 ]
-export const CODING_IMPACT_GROUPS_SCREEN = [
-  VEP_GROUP_SYNONYMOUS,
-  VEP_GROUP_EXTENDED_SPLICE_SITE,
-  SCREEN_GROUP,
+export const CODING_OTHER_IMPACT_GROUPS = [
+  ...CODING_IMPACT_GROUPS,
+  VEP_GROUP_OTHER,
 ]
+
 export const ALL_ANNOTATION_FILTER = {
   text: 'All',
   vepGroups: ALL_IMPACT_GROUPS,
@@ -304,11 +384,11 @@ export const ANNOTATION_FILTER_OPTIONS = [
   },
   {
     text: 'Moderate to High Impact',
-    vepGroups: HIGH_IMPACT_GROUPS.concat(MODERATE_IMPACT_GROUPS),
+    vepGroups: HIGH_MODERATE_IMPACT_GROUPS,
   },
   {
     text: 'All rare coding variants',
-    vepGroups: HIGH_IMPACT_GROUPS.concat(MODERATE_IMPACT_GROUPS).concat(CODING_IMPACT_GROUPS),
+    vepGroups: HIGH_MODERATE_IMPACT_GROUPS.concat(CODING_IMPACT_GROUPS),
   },
 ].map(({ vepGroups, ...option }) => ({
   ...option,

@@ -1525,7 +1525,7 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
 
     @staticmethod
     def _additional_expected_loading_subprocess_calls(file_path):
-        return [f'gsutil mv tmp/temp_uploads/{file_path}/* gs://seqr-scratch-temp/{file_path}']
+        return [f'gsutil mv tmp/temp_uploads/{file_path} gs://seqr-scratch-temp/{file_path}']
 
     def _assert_expected_es_status(self, response):
         self.assertEqual(response.status_code, 400)

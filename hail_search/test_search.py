@@ -82,9 +82,6 @@ GRCH37_VARIANT = {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
             'familyGuid': 'F000002_2', 'numAlt': 2, 'dp': 16, 'gq': 48, 'ab': 1,
-        }, 'I000005_hg00732': {
-            'sampleId': 'HG00732', 'sampleType': 'WGS', 'individualGuid': 'I000005_hg00732',
-            'familyGuid': 'F000002_2', 'numAlt': 0, 'dp': 2, 'gq': 6, 'ab': 0,
         }, 'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733',
             'familyGuid': 'F000002_2', 'numAlt': 1, 'dp': 49, 'gq': 99, 'ab': 0.6530612111091614,
@@ -837,9 +834,10 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         pathogenicity['clinvar'] = pathogenicity['clinvar'][:1]
-        annotations = {'SCREEN': ['CTCF-only', 'DNase-only']}
+        annotations = {'SCREEN': ['CTCF-only', 'DNase-only'], 'UTRAnnotator': ['5_prime_UTR_stop_codon_loss_variant']}
+        selected_transcript_variant_2 = {**VARIANT2, 'selectedMainTranscriptId': 'ENST00000408919'}
         await self._assert_expected_search(
-            [VARIANT1, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
+            [VARIANT1, selected_transcript_variant_2, VARIANT4, MITO_VARIANT3], pathogenicity=pathogenicity, annotations=annotations,
             sample_data=FAMILY_2_ALL_SAMPLE_DATA,
         )
 
@@ -894,6 +892,11 @@ class HailSearchTestCase(AioHTTPTestCase):
         await self._assert_expected_search(
             [VARIANT1, VARIANT3, VARIANT4, MITO_VARIANT1, MITO_VARIANT3],
             pathogenicity=pathogenicity, annotations=annotations, sample_data=FAMILY_2_ALL_SAMPLE_DATA,
+        )
+
+        annotations = {'motif_feature': ['TF_binding_site_variant'], 'regulatory_feature': ['regulatory_region_variant']}
+        await self._assert_expected_search(
+            [VARIANT3, VARIANT4], annotations=annotations, sample_data=FAMILY_2_VARIANT_SAMPLE_DATA,
         )
 
     async def test_secondary_annotations_filter(self):

@@ -1,7 +1,8 @@
 from collections import OrderedDict
 import hail as hl
 
-from hail_search.constants import GENOME_VERSION_GRCh38, SCREEN_KEY, PREFILTER_FREQ_CUTOFF, ALPHAMISSENSE_SORT
+from hail_search.constants import GENOME_VERSION_GRCh38, SCREEN_KEY, PREFILTER_FREQ_CUTOFF, ALPHAMISSENSE_SORT, \
+    UTR_ANNOTATOR_KEY, EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath
 from hail_search.queries.snv_indel_37 import SnvIndelHailTableQuery37
 
@@ -19,7 +20,9 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
         'gnomad_noncoding': PredictionPath('gnomad_non_coding_constraint', 'z_score'),
     }
     LIFTOVER_ANNOTATION_FIELDS = BaseHailTableQuery.LIFTOVER_ANNOTATION_FIELDS
-    ANNOTATION_OVERRIDE_FIELDS = SnvIndelHailTableQuery37.ANNOTATION_OVERRIDE_FIELDS + [SCREEN_KEY]
+    ANNOTATION_OVERRIDE_FIELDS = SnvIndelHailTableQuery37.ANNOTATION_OVERRIDE_FIELDS + [
+        SCREEN_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY,
+    ]
     FREQUENCY_PREFILTER_FIELDS = OrderedDict([
         (True, PREFILTER_FREQ_CUTOFF),
         ('is_gt_3_percent', 0.03),
@@ -37,21 +40,42 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
     }
 
     def _get_allowed_consequence_ids(self, annotations):
-        consequence_ids = super()._get_allowed_consequence_ids(annotations)
-        if EXTENDED_SPLICE_REGION_CONSEQUENCE in (annotations.get('extended_splice_site') or []):
-            consequence_ids.add(EXTENDED_SPLICE_REGION_CONSEQUENCE)
-        return consequence_ids
+        parsed_allowed_consequences = {}
+        allowed_consequence_ids = super()._get_allowed_consequence_ids(annotations)
+        if allowed_consequence_ids:
+            parsed_allowed_consequences[self.TRANSCRIPT_CONSEQUENCE_FIELD] = allowed_consequence_ids
+
+        utr_consequence_ids = self._get_enum_terms_ids(
+            self.TRANSCRIPTS_FIELD, subfield='utrannotator', nested_subfield='fiveutr_consequence',
+            terms=(annotations.get(UTR_ANNOTATOR_KEY) or []),
+        )
+        if utr_consequence_ids:
+            parsed_allowed_consequences[UTR_ANNOTATOR_KEY] = utr_consequence_ids
+
+        if EXTENDED_SPLICE_REGION_CONSEQUENCE in (annotations.get(EXTENDED_SPLICE_KEY) or []):
+            parsed_allowed_consequences[EXTENDED_SPLICE_REGION_CONSEQUENCE] = True
+
+        return parsed_allowed_consequences
 
     @staticmethod
     def _get_allowed_transcripts_filter(allowed_consequence_ids):
-        has_extended_splice = EXTENDED_SPLICE_REGION_CONSEQUENCE in allowed_consequence_ids
-        allowed_consequence_ids = allowed_consequence_ids - {EXTENDED_SPLICE_REGION_CONSEQUENCE}
-        allowed_consequence_filter = SnvIndelHailTableQuery37._get_allowed_transcripts_filter(allowed_consequence_ids)
+        allowed_consequence_filters = []
 
-        if not has_extended_splice:
-            return allowed_consequence_filter
+        consequence_ids = allowed_consequence_ids.get(SnvIndelHailTableQuery37.TRANSCRIPT_CONSEQUENCE_FIELD)
+        if consequence_ids:
+            allowed_consequence_filters.append(SnvIndelHailTableQuery37._get_allowed_transcripts_filter(consequence_ids))
 
-        return lambda tc: allowed_consequence_filter(tc) | tc.spliceregion.extended_intronic_splice_region_variant
+        utr_consequences = allowed_consequence_ids.get(UTR_ANNOTATOR_KEY)
+        if utr_consequences:
+            utr_consequences = hl.set(utr_consequences)
+            allowed_consequence_filters.append(lambda tc: utr_consequences.contains(tc.utrannotator.fiveutr_consequence_id))
+
+        if allowed_consequence_ids.get(EXTENDED_SPLICE_REGION_CONSEQUENCE):
+            allowed_consequence_filters.append(lambda tc: tc.spliceregion.extended_intronic_splice_region_variant)
+
+        return allowed_consequence_filters[0] if len(allowed_consequence_filters) == 1 else lambda tc: hl.any([
+            f(tc) for f in allowed_consequence_filters
+        ])
 
     def _get_annotation_override_filters(self, ht, annotation_overrides):
         annotation_filters = super()._get_annotation_override_filters(ht, annotation_overrides)
@@ -59,5 +83,15 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
         if annotation_overrides.get(SCREEN_KEY):
             allowed_consequences = hl.set(self._get_enum_terms_ids(SCREEN_KEY.lower(), 'region_type', annotation_overrides[SCREEN_KEY]))
             annotation_filters.append(allowed_consequences.contains(ht.screen.region_type_ids.first()))
+
+        for feature_key in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
+            if annotation_overrides.get(feature_key):
+                field = f'sorted_{feature_key}_consequences'
+                allowed_consequences = hl.set(self._get_enum_terms_ids(
+                    field, self.TRANSCRIPT_CONSEQUENCE_FIELD, annotation_overrides[feature_key]),
+                )
+                annotation_filters.append(
+                    ht[field].any(lambda c: c.consequence_term_ids.any(allowed_consequences.contains))
+                )
 
         return annotation_filters

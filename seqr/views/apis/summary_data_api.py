@@ -182,19 +182,31 @@ def bulk_update_family_external_analysis(request):
 
 def _load_aip_data(data: dict, user: User):
     category_map = data['metadata']['categories']
+    projects = data['metadata'].get('projects')
     results = data['results']
 
-    family_id_map = dict(Individual.objects.filter(
-        family__project__in=get_internal_projects(), individual_id__in=results.keys(),
-    ).values_list('individual_id', 'family_id'))
+    if not projects:
+        raise ErrorsWarningsException(['No projects specified in the metadata'])
+
+    family_id_map = defaultdict(list)
+    for individual_id, family_id in Individual.objects.filter(
+        family__project__in=get_internal_projects().filter(name__in=projects), individual_id__in=results.keys(),
+    ).values_list('individual_id', 'family_id'):
+        family_id_map[individual_id].append(family_id)
+    errors = []
     missing_individuals = set(results.keys()) - set(family_id_map.keys())
     if missing_individuals:
-        raise ErrorsWarningsException([f'Unable to find the following individuals: {", ".join(sorted(missing_individuals))}'])
+        errors.append(f'Unable to find the following individuals: {", ".join(sorted(missing_individuals))}')
+    multi_family_individuals = {individual_id for individual_id, families in family_id_map.items() if len(families) > 1}
+    if multi_family_individuals:
+        errors.append(f'The following individuals are found in multiple families: {", ".join(sorted(multi_family_individuals))}')
+    if errors:
+        raise ErrorsWarningsException(errors)
 
     family_variant_data = {}
     for family_id, variant_pred in results.items():
         family_variant_data.update({
-            (family_id_map[family_id], variant_id): pred for variant_id, pred in variant_pred.items()
+            (family_id_map[family_id][0], variant_id): pred for variant_id, pred in variant_pred.items()
         })
 
     today = datetime.now().strftime('%Y-%m-%d')
