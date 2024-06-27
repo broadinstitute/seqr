@@ -294,6 +294,9 @@ def individual_metadata(request, project_guid):
             collaborator = row.pop('Collaborator', None)
             if collaborator:
                 collaborator_map[row_key] = collaborator
+            is_additional_affected = row.pop('is_additional_affected')
+            if is_additional_affected:
+                family_rows_by_id[family_id]['family_history'] = 'Yes'
             race = row.pop('reported_race')
             ancestry_detail = row.pop('ancestry_detail')
             ethnicity = row.pop('reported_ethnicity')
@@ -320,6 +323,7 @@ def individual_metadata(request, project_guid):
             'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
             'paternal_guid': paternal_ids[1],
             'maternal_guid': maternal_ids[1],
+            'is_additional_affected': individual.affected == Individual.AFFECTED_STATUS_AFFECTED and individual.proband_relationship != Individual.SELF_RELATIONSHIP,
             **anvil_export_airtable_fields(airtable_metadata, has_dbgap_submission),
         },
     )

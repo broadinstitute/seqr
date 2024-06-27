@@ -204,10 +204,6 @@ def parse_anvil_metadata(
             family_subject_row, saved_variants, *condition_map, set_conditions_for_variants=proband_only_variants,
         )
 
-        affected_individuals = [
-            individual for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED
-        ] if include_metadata else []  # TODO individual only
-
         subject_family_row = {k: family_subject_row.pop(k) for k in FAMILY_INDIVIDUAL_FIELDS}
         family_row = {
             'family_id': subject_family_row['family_id'],
@@ -217,8 +213,6 @@ def parse_anvil_metadata(
             ), 'Unknown'),
             **family_subject_row,
         }
-        if len(affected_individuals) > 1:
-            family_row['family_history'] = 'Yes'
         add_row(family_row, family_id, FAMILY_ROW_TYPE)
 
         for individual in family_individuals:
