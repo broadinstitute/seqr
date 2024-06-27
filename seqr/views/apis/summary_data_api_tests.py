@@ -102,8 +102,6 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'allele_balance_or_heteroplasmy_percentage-2': None,
     'notes-1': None,
     'notes-2': None,
-    'tags-1': ['Tier 1 - Novel gene and phenotype'],  # unused
-    'tags-2': ['Tier 1 - Novel gene and phenotype'],
     'phenotype_contribution-1': 'Partial',
     'phenotype_contribution-2': 'Full',
     'partial_contribution_explained-1': 'HP:0000501|HP:0000365',
@@ -154,7 +152,6 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'alt-1': 'T',
     'chrom-1': '1',
     'gene_known_for_phenotype-1': 'Candidate',
-    'tags-1': ['Tier 1 - Novel gene and phenotype'],
     'phenotype_contribution-1': 'Full',
     'partial_contribution_explained-1': '',
     'pos-1': 248367227,

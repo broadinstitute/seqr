@@ -161,7 +161,7 @@ def parse_anvil_metadata(
         get_additional_individual_fields: Callable[[Individual, dict], dict] = None,
         individual_samples: dict[Individual, Sample] = None, individual_data_types: dict[str, Iterable[str]] = None,
         airtable_fields: Iterable[str] = None, mme_values: dict = None, include_svs: bool = True,
-        variant_json_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
+        variant_json_fields: Iterable[str] = None, variant_attr_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
         include_no_individual_families: bool = False, omit_airtable: bool = False, include_metadata: bool = False,
         include_discovery_sample_id: bool = False, include_mondo: bool = False, include_parent_mnvs: bool = False,
         proband_only_variants: bool = False):
@@ -184,7 +184,7 @@ def parse_anvil_metadata(
             sample_ids.add(sample.sample_id)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(
-        list(family_data_by_id.keys()), include_metadata, include_svs=include_svs, variant_json_fields=variant_json_fields,
+        list(family_data_by_id.keys()), include_metadata, include_svs, variant_json_fields, variant_attr_fields,
     )
 
     condition_map = _get_condition_map(family_data_by_id.values())
@@ -329,6 +329,7 @@ def _post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
 
 def _get_parsed_saved_discovery_variants_by_family(
         families: Iterable[Family], include_metadata: bool, include_svs: dict, variant_json_fields: list[str],
+        variant_attr_fields: list[str],
 ):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
@@ -372,12 +373,11 @@ def _get_parsed_saved_discovery_variants_by_family(
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
             **{k: variant_json.get(k) for k in variant_fields + (variant_json_fields or [])},
             'ClinGen_allele_ID': variant_json.get('CAID'),
-            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt']},
+            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt'] + (variant_attr_fields or [])},
         }
         if include_metadata:
             parsed_variant.update({
                 'seqr_chosen_consequence': main_transcript.get('majorConsequence'),  # TODO individual/variant, currently not in family
-                'tags': variant.tags,  # TODO variant only
             })
         variants.append(parsed_variant)
 
