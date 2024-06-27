@@ -82,9 +82,6 @@ GRCH37_VARIANT = {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
             'familyGuid': 'F000002_2', 'numAlt': 2, 'dp': 16, 'gq': 48, 'ab': 1,
-        }, 'I000005_hg00732': {
-            'sampleId': 'HG00732', 'sampleType': 'WGS', 'individualGuid': 'I000005_hg00732',
-            'familyGuid': 'F000002_2', 'numAlt': 0, 'dp': 2, 'gq': 6, 'ab': 0,
         }, 'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733',
             'familyGuid': 'F000002_2', 'numAlt': 1, 'dp': 49, 'gq': 99, 'ab': 0.6530612111091614,
