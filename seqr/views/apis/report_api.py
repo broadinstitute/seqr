@@ -847,8 +847,7 @@ def family_metadata(request, project_guid):
             family['inheritance_models'].update({v['variant_inheritance'] for v in row})
 
     parse_anvil_metadata(
-        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_metadata=True,
-        include_family_sample_metadata=True, include_no_individual_families=True)
+        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_family_sample_metadata=True, include_no_individual_families=True)
 
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]
@@ -947,7 +946,6 @@ def variant_metadata(request, project_guid):
         variant_json_fields=['clinvar', 'variantId'],
         variant_attr_fields=['tags'],
         mme_value=ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId'),
-        include_metadata=True,
         include_family_name_display=True,
         include_mondo=True,
         omit_airtable=True,

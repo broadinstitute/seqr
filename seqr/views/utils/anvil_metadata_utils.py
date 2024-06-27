@@ -163,7 +163,7 @@ def parse_anvil_metadata(
         individual_samples: dict[Individual, Sample] = None, individual_data_types: dict[str, Iterable[str]] = None,
         airtable_fields: Iterable[str] = None, mme_value: Aggregate = None, include_svs: bool = True,
         variant_json_fields: Iterable[str] = None, variant_attr_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
-        include_no_individual_families: bool = False, omit_airtable: bool = False, include_metadata: bool = False, include_family_name_display: bool = False, include_family_sample_metadata: bool = False,
+        include_no_individual_families: bool = False, omit_airtable: bool = False, include_family_name_display: bool = False, include_family_sample_metadata: bool = False,
         include_discovery_sample_id: bool = False, include_mondo: bool = False, include_parent_mnvs: bool = False,
         proband_only_variants: bool = False):
 
@@ -185,7 +185,7 @@ def parse_anvil_metadata(
             sample_ids.add(sample.sample_id)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(
-        list(family_data_by_id.keys()), include_metadata, include_svs, variant_json_fields, variant_attr_fields,
+        list(family_data_by_id.keys()), bool(mme_value), include_svs, variant_json_fields, variant_attr_fields,
     )
 
     condition_map = _get_condition_map(family_data_by_id.values())
@@ -372,7 +372,7 @@ def _get_parsed_saved_discovery_variants_by_family(
         }
         if include_metadata:
             parsed_variant.update({
-                'seqr_chosen_consequence': main_transcript.get('majorConsequence'),  # TODO individual/variant, currently not in family
+                'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
             })
         variants.append(parsed_variant)
 
@@ -380,7 +380,7 @@ def _get_parsed_saved_discovery_variants_by_family(
 
     saved_variants_by_family = defaultdict(list)
     for row in variants:
-        gene_id = row['gene_id'] if include_metadata else row.pop('gene_id')  # TODO individual only, currently not in family, add to variant?
+        gene_id = row['gene_id'] if include_metadata else row.pop('gene_id')
         row[GENE_COLUMN] = genes_by_id.get(gene_id, {}).get('geneSymbol')
         family_id = row.pop('family_id')
         saved_variants_by_family[family_id].append(row)
