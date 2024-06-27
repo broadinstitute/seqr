@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
-from django.db.models import F, Q, Value, CharField
+from django.db.models import F, Q, Value, CharField, Aggregate
 from django.db.models.functions import Replace
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -160,7 +160,7 @@ def parse_anvil_metadata(
         get_additional_sample_fields: Callable[[Sample, dict], dict] = None,
         get_additional_individual_fields: Callable[[Individual, dict], dict] = None,
         individual_samples: dict[Individual, Sample] = None, individual_data_types: dict[str, Iterable[str]] = None,
-        airtable_fields: Iterable[str] = None, mme_values: dict = None, include_svs: bool = True,
+        airtable_fields: Iterable[str] = None, mme_value: Aggregate = None, include_svs: bool = True,
         variant_json_fields: Iterable[str] = None, variant_attr_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
         include_no_individual_families: bool = False, omit_airtable: bool = False, include_metadata: bool = False,
         include_discovery_sample_id: bool = False, include_mondo: bool = False, include_parent_mnvs: bool = False,
@@ -192,8 +192,8 @@ def parse_anvil_metadata(
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
         list(sample_ids) or [i[0] for i in individual_ids_map.values()], user, airtable_fields)
 
-    matchmaker_individuals = {m['individual_id']: m for m in MatchmakerSubmission.objects.filter(
-        individual__in=individual_samples).values('individual_id', **(mme_values or {}))} if include_metadata else {}  #  TODO individual/variant, already dropped for family
+    matchmaker_individuals = {m['individual_id']: m['value'] for m in MatchmakerSubmission.objects.filter(
+        individual__in=individual_samples).values('individual_id', value=mme_value)} if mme_value else {}
 
     for family_id, family_subject_row in family_data_by_id.items():
         saved_variants = saved_variants_by_family[family_id]
@@ -233,7 +233,7 @@ def parse_anvil_metadata(
                 format_id,
             )
             if individual.id in matchmaker_individuals:
-                subject_row['MME'] = matchmaker_individuals[individual.id] if mme_values else 'Yes'
+                subject_row['MME'] = matchmaker_individuals[individual.id]
             subject_row.update(subject_family_row)
             if individual.solve_status:
                 subject_row['solve_status'] = Individual.SOLVE_STATUS_LOOKUP[individual.solve_status]
