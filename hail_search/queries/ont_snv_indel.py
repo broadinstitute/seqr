@@ -1,6 +1,6 @@
 from aiohttp.web import HTTPBadRequest
 
-from hail_search.constants import EXTENDED_SPLICE_KEY, UTR_ANNOTATOR_KEY
+from hail_search.constants import EXTENDED_SPLICE_KEY, UTR_ANNOTATOR_KEY, SCREEN_KEY
 from hail_search.queries.base import BaseHailTableQuery
 from hail_search.queries.snv_indel import SnvIndelHailTableQuery
 from hail_search.queries.snv_indel_37 import SnvIndelHailTableQuery37
@@ -11,6 +11,7 @@ class OntSnvIndelHailTableQuery(SnvIndelHailTableQuery):
     DATA_TYPE = 'ONT_SNV_INDEL'
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS
+    ANNOTATION_OVERRIDE_FIELDS = SnvIndelHailTableQuery37.ANNOTATION_OVERRIDE_FIELDS + [SCREEN_KEY]
 
     def _get_loaded_filter_ht(self, *args, **kwargs):
         return None

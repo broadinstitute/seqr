@@ -43,6 +43,7 @@ import {
   getMmeDefaultContactEmail,
   getMatchmakerContactNotes,
   getVariantGeneId,
+  getCurrentProject,
 } from '../selectors'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
 
@@ -160,12 +161,14 @@ const CONTACT_FIELDS = [
   { name: 'body', component: BaseSemanticInput, inputType: 'TextArea', rows: 12 },
 ]
 
-const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit }) => (
+const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit, canSend }) => (
+  // when submitOnChange is true, no submit button is shown
   <UpdateButton
-    onSubmit={onSubmit}
+    submitOnChange={!canSend}
+    onSubmit={canSend && onSubmit}
     initialValues={defaultContactEmail}
     formFields={CONTACT_FIELDS}
-    modalTitle={`Send Contact Email for Patient ${defaultContactEmail.patientId}`}
+    modalTitle={`${canSend ? 'Send' : 'Draft'} Contact Email for Patient ${defaultContactEmail.patientId}`}
     modalId={`contactEmail-${defaultContactEmail.patientId}`}
     buttonText="Contact Host"
     editIconName="mail"
@@ -178,10 +181,12 @@ const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit }) => 
 BaseContactHostButton.propTypes = {
   defaultContactEmail: PropTypes.object,
   onSubmit: PropTypes.func,
+  canSend: PropTypes.bool,
 }
 
 const mapContactButtonStateToProps = (state, ownProps) => ({
   defaultContactEmail: getMmeDefaultContactEmail(state, ownProps),
+  canSend: getCurrentProject(state).isAnalystProject,
 })
 
 const mapContactDispatchToProps = {
