@@ -30,7 +30,9 @@ class AnalysisGroupAPITest(AuthenticationTestCase):
 
         # send valid request to create analysis_group
         response = self.client.post(create_analysis_group_url, content_type='application/json', data=json.dumps({
-            'name': 'new_analysis_group', 'familyGuids': ['F000001_1', 'F000002_2']
+            'name': 'new_analysis_group', 'familyGuids': ['F000001_1', 'F000002_2'], 'uploadedFamilyIds': {
+                'info': ["Uploaded 2 families"], 'parsedData': [['F000001_1'], ['F000002_2']],
+            },
         }))
         self.assertEqual(response.status_code, 200)
         new_analysis_group_response = response.json()
