@@ -112,7 +112,7 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'partial_contribution_explained-1': 'HP:0000501|HP:0000365',
     'partial_contribution_explained-2': '',
     'condition_id': 'OMIM:616126',
-    'condition_inheritance': 'Autosomal recessive',
+    'condition_inheritance': 'Autosomal recessive',  # unused
     'known_condition_name': 'Immunodeficiency 38',
     'ClinGen_allele_ID-1': 'CA1501729',
     'ClinGen_allele_ID-2': None,
