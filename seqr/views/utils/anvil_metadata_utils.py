@@ -271,8 +271,9 @@ def _get_nested_variant_name(v):
 
 
 def _get_sv_name(variant_json):
+    sv_name = variant_json.pop('svName', None)
     if variant_json.get('svType'):
-        return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
+        return sv_name or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
     return None
 
 

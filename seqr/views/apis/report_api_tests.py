@@ -510,7 +510,6 @@ BASE_VARIANT_METADATA_ROW = {
     'phenotype_contribution': 'Full',
     'partial_contribution_explained': '',
     'seqr_chosen_consequence': None,
-    'svName': None,  # unused
     'svType': None,
     'sv_name': None,
     'transcript': None,

@@ -70,7 +70,7 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "chrom-1": "1",
     "alt-1": "T",
     "gene_of_interest-1": "OR4G11P",
-    "gene_id-1": "ENSG00000240361",  # unused
+    "gene_id-1": "ENSG00000240361",
     'variant_reference_assembly-1': 'GRCh37',
     'variant_reference_assembly-2': 'GRCh37',
     "pmid_id": None,
@@ -95,10 +95,8 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'seqr_chosen_consequence-2': None,
     'gene_of_interest-2': None,
     'gene_id-2': None,
-    'svName-2': None,  # unused
     'svType-1': None,
     'sv_name-1': None,
-    'svName-1': None,
     'end-1': None,
     'allele_balance_or_heteroplasmy_percentage-1': None,  # unused
     'allele_balance_or_heteroplasmy_percentage-2': None,
@@ -171,7 +169,6 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'hgvsp-1': '',
     'notes-1': None,
     'seqr_chosen_consequence-1': None,
-    'svName-1': None,
     'svType-1': None,
     'sv_name-1': None,
     'transcript-1': None,
