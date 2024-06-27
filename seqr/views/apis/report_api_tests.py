@@ -1179,7 +1179,7 @@ class ReportAPITest(AirtableTest):
             'solve_status': 'Partially solved',
             'actual_inheritance': 'unknown',
             'condition_id': 'OMIM:616126',
-            'condition_inheritance': 'Autosomal recessive',  # unused
+            'condition_inheritance': 'Autosomal recessive',
             'known_condition_name': 'Immunodeficiency 38',
             'date_data_generation': '2017-02-05',
             'data_type': 'WES',

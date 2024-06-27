@@ -1879,7 +1879,8 @@ export const VARIANT_METADATA_COLUMNS = [
 export const BASE_FAMILY_METADATA_COLUMNS = [
   { name: 'pmid_id' },
   { name: 'condition_id' },
-  { name: 'known_condition_name', secondaryExportColumn: 'disorders' },
+  { name: 'known_condition_name' },
+  { name: 'condition_inheritance', secondaryExportColumn: 'disorders' },
   { name: 'phenotype_description', style: { minWidth: '200px' } },
   { name: 'analysis_groups' },
   {
