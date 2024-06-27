@@ -492,6 +492,7 @@ MOCK_INVALID_DATA_MODEL = {
 }
 
 BASE_VARIANT_METADATA_ROW = {
+    'internal_project_id': '1kg project nåme with uniçøde',
     'ClinGen_allele_ID': None,
     'MME': False,
     'additional_family_members_with_variant': '',
@@ -513,7 +514,6 @@ BASE_VARIANT_METADATA_ROW = {
     'svType': None,
     'sv_name': None,
     'transcript': None,
-    # TODO missing internal_project_id
 }
 
 PARTICIPANT_TABLE = [
@@ -1173,6 +1173,7 @@ class ReportAPITest(AirtableTest):
         test_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000012_12')
         self.assertDictEqual(test_row, {
             'projectGuid': 'R0003_test',
+            'internal_project_id': 'Test Reprocessed Project',
             'familyGuid': 'F000012_12',
             'family_id': '12',
             'displayName': '12',
@@ -1196,7 +1197,6 @@ class ReportAPITest(AirtableTest):
             'analysisStatus': 'Q',
             'analysis_groups': '',
             'consanguinity': 'Unknown',
-            # TODO missing internal_project_id
         })
 
         # Test all projects
@@ -1212,6 +1212,7 @@ class ReportAPITest(AirtableTest):
         test_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000003_3')
         self.assertDictEqual(test_row, {
             'projectGuid': 'R0001_1kg',
+            'internal_project_id': '1kg project nåme with uniçøde',
             'familyGuid': 'F000003_3',
             'family_id': '3',
             'displayName': '3',
@@ -1345,6 +1346,7 @@ class ReportAPITest(AirtableTest):
             'partial_contribution_explained': 'HP:0000501|HP:0000365',
             'phenotype_contribution': 'Partial',
             'projectGuid': 'R0003_test',
+            'internal_project_id': 'Test Reprocessed Project',
             'ref': 'TC',
             'seqr_chosen_consequence': 'intron_variant',
             'tags': ['Tier 1 - Novel gene and phenotype'],
@@ -1372,6 +1374,7 @@ class ReportAPITest(AirtableTest):
             'participant_id': 'NA20889',
             'pos': 249045487,
             'projectGuid': 'R0003_test',
+            'internal_project_id': 'Test Reprocessed Project',
             'ref': None,
             'svType': 'DEL',
             'sv_name': 'DEL:chr1:249045487-249045898',

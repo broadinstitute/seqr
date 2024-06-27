@@ -54,7 +54,7 @@ const ReportTable = React.memo((
       striped
       collapsing
       horizontalScroll
-      downloadFileName={`${viewAllPages.find(({ path }) => path === projectGuid)?.downloadName || (data?.length && (data[0][PROJECT_ID_FIELD] || '').replace(/ /g, '_'))}_${new Date().toISOString().slice(0, 10)}_${fileName}`}
+      downloadFileName={`${viewAllPages.find(({ path }) => path === projectGuid)?.downloadName || (data?.length && data[0][PROJECT_ID_FIELD].replace(/ /g, '_'))}_${new Date().toISOString().slice(0, 10)}_${fileName}`}
       idField={idField}
       defaultSortColumn="family_id"
       emptyContent={projectGuid ? '0 cases found' : 'Select a project to view data'}
