@@ -1858,6 +1858,7 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'variant_reference_assembly' },
   { name: 'chrom' },
   { name: 'pos' },
+  { name: 'end' },
   { name: 'ref' },
   { name: 'alt' },
   { name: 'gene_of_interest' },

@@ -502,7 +502,7 @@ BASE_VARIANT_METADATA_ROW = {
     'clinvar': None,
     'condition_id': None,
     'consanguinity': 'Unknown',  # unused
-    'end': None,  # unused
+    'end': None,
     'hgvsc': '',
     'hgvsp': '',
     'method_of_discovery': 'SR-ES',

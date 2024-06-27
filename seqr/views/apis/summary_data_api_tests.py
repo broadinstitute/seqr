@@ -51,7 +51,7 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "sv_name-2": "DEL:chr1:249045487-249045898",
     "chrom-2": "1",
     "pos-2": 249045487,
-    'end-2': 249045898,  # unused
+    'end-2': 249045898,
     "maternal_id": "",
     "paternal_id": "",
     "maternal_guid": "",
