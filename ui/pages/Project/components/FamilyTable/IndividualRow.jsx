@@ -169,7 +169,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         />
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
-    {loadedSamples.some(sample => sample.rnaSeqTypes?.length > 0) && (
+    {loadedSamples.some(sample => sample.isActive && (sample.rnaSeqTypes.includes('Expression Outlier') || sample.rnaSeqTypes.includes('Splice Outlier'))) && (
       <div>
         <Link
           target="_blank"
