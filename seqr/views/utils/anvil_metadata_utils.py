@@ -267,11 +267,11 @@ def parse_anvil_metadata(
 
 
 def _get_nested_variant_name(v):
-    return _get_sv_name(v) or f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}"
+    return _get_sv_name(v, pop_sv_name=False) or f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}"
 
 
-def _get_sv_name(variant_json):
-    sv_name = variant_json.pop('svName', None)
+def _get_sv_name(variant_json, pop_sv_name=True):
+    sv_name = variant_json.pop('svName', None) if pop_sv_name else variant_json.get('svName')
     if variant_json.get('svType'):
         return sv_name or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
     return None
