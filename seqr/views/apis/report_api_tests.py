@@ -1264,7 +1264,7 @@ class ReportAPITest(AirtableTest):
             'familyGuid': 'F000002_2',
             'family_id': '2',
             'gene_of_interest': 'RP11',
-            'gene_id': 'ENSG00000135953',  # unused
+            'gene_id': 'ENSG00000135953',
             'gene_known_for_phenotype': 'Known',
             'genetic_findings_id': 'HG00731_1_248367227',
             'known_condition_name': 'mitochondrial disease',

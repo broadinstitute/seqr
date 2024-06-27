@@ -1861,7 +1861,7 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'end' },
   { name: 'ref' },
   { name: 'alt' },
-  { name: 'gene_of_interest' },
+  { name: 'gene_of_interest', secondaryExportColumn: 'gene_id' },
   { name: 'seqr_chosen_consequence' },
   { name: 'transcript' },
   { name: 'hgvsc' },

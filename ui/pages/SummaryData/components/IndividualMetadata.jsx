@@ -65,9 +65,9 @@ const getColumns = (data) => {
   const hasAirtable = data && data[0] && data[0][AIRTABLE_DBGAP_SUBMISSION_FIELD]
   return [...CORE_COLUMNS, ...(hasAirtable ? AIRTABLE_COLUMNS : [])].concat(
     ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_METADATA_COLUMNS.map(
-      ({ name, format, fieldName, ...col }) => ({
+      ({ name, format, fieldName, secondaryExportColumn, ...col }) => ({
         name: `${name}-${i + 1}`,
-        secondaryExportColumn: name === 'gene_of_interest' ? `gene_id-${i + 1}` : null,
+        secondaryExportColumn: secondaryExportColumn && `${secondaryExportColumn}-${i + 1}`,
         format: format ? row => format({ [fieldName]: row[`${fieldName}-${i + 1}`] }) : null,
         ...col,
       }),
