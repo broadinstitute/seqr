@@ -125,6 +125,7 @@ def _get_family_metadata(family_filter, family_fields, include_family_name_displ
         'value': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
         'format': lambda f: '; '.join(f['analysis_groups']),
     }} if include_family_sample_metadata else family_fields
+    include_family_name_display = include_family_name_display or include_family_sample_metadata
     family_data = Family.objects.filter(**family_filter).distinct().order_by('id').values(
         'id', 'family_id', 'post_discovery_omim_numbers',
         *(['post_discovery_mondo_id'] if include_mondo else []),
@@ -135,14 +136,14 @@ def _get_family_metadata(family_filter, family_fields, include_family_name_displ
             Value('\t'), Value(' '),
         ),
         analysisStatus=F('analysis_status'),
-        **(FAMILY_NAME_DISPLAY_VALUES if include_family_name_display or include_family_sample_metadata else {}),
+        **(FAMILY_NAME_DISPLAY_VALUES if include_family_name_display else {}),
         **{k: v['value'] for k, v in (family_fields or {}).items()}
     )
 
     family_data_by_id = {}
     for f in family_data:
         family_id = f.pop('id')
-        analysis_status = f['analysisStatus'] if include_family_sample_metadata else f.pop('analysisStatus')
+        analysis_status = f['analysisStatus'] if include_family_name_display else f.pop('analysisStatus')
         solve_status = ANALYSIS_SOLVE_STATUS_LOOKUP.get(analysis_status, Individual.UNSOLVED)
         f.update({
             'solve_status': Individual.SOLVE_STATUS_LOOKUP[solve_status],
