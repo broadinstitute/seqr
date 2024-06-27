@@ -98,8 +98,6 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'svType-1': None,
     'sv_name-1': None,
     'end-1': None,
-    'allele_balance_or_heteroplasmy_percentage-1': None,  # unused
-    'allele_balance_or_heteroplasmy_percentage-2': None,
     'notes-1': None,
     'notes-2': None,
     'phenotype_contribution-1': 'Partial',
@@ -159,7 +157,6 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'ref-1': 'TC',
     'zygosity-1': 'Heterozygous',
     'variant_reference_assembly-1': 'GRCh38',
-    'allele_balance_or_heteroplasmy_percentage-1': None,
     'gene_of_interest-1': None,
     'gene_id-1': None,
     'hgvsc-1': '',
