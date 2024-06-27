@@ -1189,7 +1189,7 @@ class ReportAPITest(AirtableTest):
             'other_individual_ids': 'NA20870; NA20888',
             'individual_count': 3,
             'family_structure': 'other',
-            'family_history': 'Yes',
+            'family_history': 'Yes',  # unused
             'genes': 'DEL:chr1:249045487-249045898; OR4G11P',
             'pmid_id': None,
             'phenotype_description': None,
@@ -1365,7 +1365,7 @@ class ReportAPITest(AirtableTest):
             'end': 249045898,
             'familyGuid': 'F000012_12',
             'family_id': '12',
-            'family_history': 'Yes',
+            'family_history': 'Yes',  # unused
             'gene_of_interest': None,
             'gene_id': None,
             'gene_known_for_phenotype': 'Candidate',

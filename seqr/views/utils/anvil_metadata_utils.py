@@ -132,14 +132,14 @@ def _get_family_metadata(family_filter, family_fields, include_metadata, include
             Value('\t'), Value(' '),
         ),
         analysisStatus=F('analysis_status'),
-        **(METADATA_FAMILY_VALUES if include_metadata else {}),
+        **(METADATA_FAMILY_VALUES if include_metadata else {}),  # TODO analysis_groups: individual/family, rest all
         **{k: v['value'] for k, v in (family_fields or {}).items()}
     )
 
     family_data_by_id = {}
     for f in family_data:
         family_id = f.pop('id')
-        analysis_status = f['analysisStatus'] if include_metadata else f.pop('analysisStatus')
+        analysis_status = f['analysisStatus'] if include_metadata else f.pop('analysisStatus')  # TODO individual/family
         solve_status = ANALYSIS_SOLVE_STATUS_LOOKUP.get(analysis_status, Individual.UNSOLVED)
         f.update({
             'solve_status': Individual.SOLVE_STATUS_LOOKUP[solve_status],
@@ -148,13 +148,12 @@ def _get_family_metadata(family_filter, family_fields, include_metadata, include
         if format_id:
             f.update({k: format_id(f[k]) for k in ['family_id', 'internal_project_id']})
         if include_metadata:
-            f['analysis_groups'] = '; '.join(f['analysis_groups'])
+            f['analysis_groups'] = '; '.join(f['analysis_groups'])  # TODO individual/family
         family_data_by_id[family_id] = f
 
     return family_data_by_id
 
 
-# TODO clean up args
 def parse_anvil_metadata(
         projects: Iterable[Project], user: User, add_row: Callable[[dict, str, str], None],
         max_loaded_date: str = None, family_fields: dict = None, format_id: Callable[[str], str] = lambda s: s,
@@ -194,7 +193,7 @@ def parse_anvil_metadata(
         list(sample_ids) or [i[0] for i in individual_ids_map.values()], user, airtable_fields)
 
     matchmaker_individuals = {m['individual_id']: m for m in MatchmakerSubmission.objects.filter(
-        individual__in=individual_samples).values('individual_id', **(mme_values or {}))} if include_metadata else {}
+        individual__in=individual_samples).values('individual_id', **(mme_values or {}))} if include_metadata else {}  #  TODO individual/variant, already dropped for family
 
     for family_id, family_subject_row in family_data_by_id.items():
         saved_variants = saved_variants_by_family[family_id]
@@ -207,7 +206,7 @@ def parse_anvil_metadata(
 
         affected_individuals = [
             individual for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED
-        ] if include_metadata else []
+        ] if include_metadata else []  # TODO individual only
 
         subject_family_row = {k: family_subject_row.pop(k) for k in FAMILY_INDIVIDUAL_FIELDS}
         family_row = {
@@ -377,8 +376,8 @@ def _get_parsed_saved_discovery_variants_by_family(
         }
         if include_metadata:
             parsed_variant.update({
-                'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
-                'tags': variant.tags,
+                'seqr_chosen_consequence': main_transcript.get('majorConsequence'),  # TODO individual/variant, currently not in family
+                'tags': variant.tags,  # TODO variant only
             })
         variants.append(parsed_variant)
 
@@ -386,7 +385,7 @@ def _get_parsed_saved_discovery_variants_by_family(
 
     saved_variants_by_family = defaultdict(list)
     for row in variants:
-        gene_id = row['gene_id'] if include_metadata else row.pop('gene_id')
+        gene_id = row['gene_id'] if include_metadata else row.pop('gene_id')  # TODO individual only, currently not in family, add to variant?
         row[GENE_COLUMN] = genes_by_id.get(gene_id, {}).get('geneSymbol')
         family_id = row.pop('family_id')
         saved_variants_by_family[family_id].append(row)
@@ -464,6 +463,7 @@ def _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metad
     if has_dbgap_submission:
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
     if include_metadata:
+        # TODO individual/family, currently not in variant
         sample_row.update({
             'data_type': sample.sample_type,
             'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
