@@ -36,7 +36,6 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "projectGuid": "R0003_test",
     "num_saved_variants": 2,
     "solve_status": "Partially solved",
-    "sample_id": "NA20889",  # unused
     "gene_known_for_phenotype-1": "Candidate",
     "gene_known_for_phenotype-2": "Candidate",
     "variant_inheritance-1": "unknown",
@@ -126,7 +125,6 @@ EXPECTED_SAMPLE_METADATA_ROW = {
 EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
 EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'participant_id': 'NA21234',
-    'sample_id': 'NA21234',
     'familyGuid': 'F000014_14',
     'family_id': '14',
     'displayName': '14',

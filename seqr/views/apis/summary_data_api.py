@@ -289,24 +289,25 @@ def individual_metadata(request, project_guid):
                 parsed_row = {'{}-{}'.format(k, i + 1): v for k, v in discovery_row.items()}
                 parsed_row['num_saved_variants'] = len(row)
                 rows_by_subject_family_id[(participant_id, family_id)].update(parsed_row)
-        else:
+        elif row_type == SUBJECT_ROW_TYPE:
             row_key = (row['participant_id'], family_id)
             collaborator = row.pop('Collaborator', None)
             if collaborator:
                 collaborator_map[row_key] = collaborator
-            if row_type == SUBJECT_ROW_TYPE:
-                race = row.pop('reported_race')
-                ancestry_detail = row.pop('ancestry_detail')
-                ethnicity = row.pop('reported_ethnicity')
-                row['ancestry'] = ethnicity or ancestry_detail or race
-            if 'features' in row:
-                row.update({
-                    'hpo_present': [feature['id'] for feature in row.pop('features') or []],
-                    'hpo_absent': [feature['id'] for feature in row.pop('absent_features') or []],
-                })
-                all_features.update(row['hpo_present'])
-                all_features.update(row['hpo_absent'])
+            race = row.pop('reported_race')
+            ancestry_detail = row.pop('ancestry_detail')
+            ethnicity = row.pop('reported_ethnicity')
+            row['ancestry'] = ethnicity or ancestry_detail or race
+            row.update({
+                'hpo_present': [feature['id'] for feature in row.pop('features') or []],
+                'hpo_absent': [feature['id'] for feature in row.pop('absent_features') or []],
+            })
+            all_features.update(row['hpo_present'])
+            all_features.update(row['hpo_absent'])
             rows_by_subject_family_id[row_key].update(row)
+        else:
+            row.pop('sample_id')
+            rows_by_subject_family_id[(row['participant_id'], family_id)].update(row)
 
     parse_anvil_metadata(
         projects, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
