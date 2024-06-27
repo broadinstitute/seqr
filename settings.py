@@ -127,18 +127,6 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-    'ui/dist',
-]
-STATICFILES_FINDERS = (
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-)
-
 # If specified, store data in the named GCS bucket and use the gcloud storage backend.
 # Else, fall back to a path on the local filesystem.
 GCS_MEDIA_ROOT_BUCKET = os.environ.get('GCS_MEDIA_ROOT_BUCKET')
@@ -264,7 +252,7 @@ else:
         'http://localhost:3000',
         'http://localhost:8000',
     )
-    # TODO: will docker build fail if STATICFILES_DIRS always contains both?
+    # TODO: ?
     # the collectstatic step in docker build runs without env variables set, and uncommenting these lines breaks the docker build
     # STATICFILES_DIRS.append(STATIC_ROOT)
     # STATIC_ROOT = None
@@ -275,6 +263,22 @@ else:
     HIJACK_ALLOW_GET_REQUESTS = True
     HIJACK_LOGIN_REDIRECT_URL = '/'
     TEMPLATE_DIRS.append('ui')
+
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/4.2/howto/static-files/
+STATIC_URL = '/static/'
+STATICFILES_DIRS = ['ui/dist']
+if DEBUG:
+    STATICFILES_DIRS.append(os.path.join(BASE_DIR, 'static'))
+else:
+    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+STATICFILES_FINDERS = (
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+)
+
 
 TEMPLATES = [
     {
