@@ -73,15 +73,30 @@ class ProjectAPITest(object):
 
         # check that project was created
         new_project = Project.objects.get(name='new_project')
-        self.assertEqual(new_project.description, 'new project description')
-        self.assertEqual(new_project.genome_version, '38')
-        self.assertEqual(new_project.consent_code, 'H')
-        self.assertTrue(new_project.is_demo)
-        self.assertFalse(new_project.is_mme_enabled)
         self.assertEqual(new_project.created_by, self.pm_user)
         self.assertEqual(new_project.projectcategory_set.count(), 0)
         expected_workspace_name = self.CREATE_PROJECT_JSON.get('workspaceName')
-        self.assertEqual(new_project.workspace_name, expected_workspace_name)
+        self.assertDictEqual({k: getattr(new_project, k) for k in new_project._meta.json_fields}, {
+            'guid': mock.ANY,
+            'name': 'new_project',
+            'description': 'new project description',
+            'workspace_namespace': self.CREATE_PROJECT_JSON.get('workspaceNamespace'),
+            'workspace_name': expected_workspace_name,
+            'has_case_review': False,
+            'enable_hgmd': False,
+            'is_demo': True,
+            'all_user_demo': False,
+            'consent_code': 'H',
+            'created_date': mock.ANY,
+            'last_modified_date': mock.ANY,
+            'last_accessed_date': mock.ANY,
+            'genome_version': '38',
+            'is_mme_enabled': False,
+            'mme_contact_institution': 'Broad Center for Mendelian Genomics',
+            'mme_primary_data_owner': 'Samantha Baxter',
+            'mme_contact_url': 'mailto:matchmaker@broadinstitute.org',
+            'vlm_contact_email': 'vlm@broadinstitute.org',
+        })
         self._check_created_project_groups(new_project)
 
         project_guid = new_project.guid
