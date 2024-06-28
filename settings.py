@@ -352,6 +352,8 @@ MME_DEFAULT_CONTACT_INSTITUTION = 'Broad Center for Mendelian Genomics'
 MME_DEFAULT_CONTACT_EMAIL = 'matchmaker@broadinstitute.org'
 MME_DEFAULT_CONTACT_HREF = 'mailto:{}'.format(MME_DEFAULT_CONTACT_EMAIL)
 
+VLM_DEFAULT_CONTACT_EMAIL = 'vlm@broadinstitute.org'
+
 MME_CONFIG_DIR = os.environ.get('MME_CONFIG_DIR', '')
 MME_NODES = {}
 if MME_CONFIG_DIR:

@@ -17,7 +17,8 @@ from seqr.utils.logging_utils import log_model_update, log_model_bulk_update, Se
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
-from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF, MME_DEFAULT_CONTACT_INSTITUTION
+from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF, MME_DEFAULT_CONTACT_INSTITUTION, \
+    VLM_DEFAULT_CONTACT_EMAIL
 
 logger = SeqrLogger(__name__)
 
@@ -195,6 +196,8 @@ class Project(ModelWithGUID):
     mme_primary_data_owner = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_NAME)
     mme_contact_url = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_HREF)
     mme_contact_institution = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_INSTITUTION)
+
+    vlm_contact_email = models.TextField(null=True, blank=True, default=VLM_DEFAULT_CONTACT_EMAIL)
 
     has_case_review = models.BooleanField(default=False)
     enable_hgmd = models.BooleanField(default=False)
