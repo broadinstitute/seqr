@@ -400,6 +400,7 @@ def gregor_export(request):
         format_id=_format_gregor_id,
         get_additional_individual_fields=_get_participant_row,
         post_process_variant=_post_process_gregor_variant,
+        include_parent_mnvs=True, # TODO flag needed?
         include_svs=False,
         airtable_fields=[[PARTICIPANT_ID_FIELD, 'Recontactable'], [SMID_FIELD]],
         include_mondo=True,
@@ -576,7 +577,7 @@ def _get_phenotype_row(feature):
     }
 
 
-def _post_process_gregor_variant(row, gene_variants, **kwargs):
+def _post_process_gregor_variant(row, gene_variants):
     return {'linked_variant': next(
         v['genetic_findings_id'] for v in gene_variants if v['genetic_findings_id'] != row['genetic_findings_id']
     ) if len(gene_variants) > 1 else None}
