@@ -252,7 +252,7 @@ def parse_anvil_metadata(
             if proband_only_variants and individual.proband_relationship != Individual.SELF_RELATIONSHIP:
                 continue
             discovery_row = _get_genetic_findings_rows(
-                saved_variants, individual, participant_id=participant_id,
+                saved_variants, individual, subject_family_row, participant_id=participant_id,
                 format_id=format_id, omit_parent_mnvs=omit_parent_mnvs,
                 individual_data_types=(individual_data_types or {}).get(participant_id),
                 family_individuals=family_individuals if proband_only_variants else None,
@@ -467,7 +467,7 @@ def _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metad
     return sample_row
 
 
-def _get_genetic_findings_rows(rows: list[dict], individual: Individual, participant_id: str,
+def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_row: dict, participant_id: str,
                               individual_data_types: Iterable[str], family_individuals: dict[str, str],
                               post_process_variant: Callable[[dict, list[dict]], dict],
                               format_id: Callable[[str], str], omit_parent_mnvs: bool, sample: Sample) -> list[dict]:
@@ -510,13 +510,17 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, partici
         del row['genotypes']
 
         gene_variants = variants_by_gene[row[GENE_COLUMN]]
-        discovery_notes = None
+        notes = []
         if len(gene_variants) > 2:
             discovery_notes = _get_discovery_notes(row, gene_variants, omit_parent_mnvs)
             if discovery_notes is None:
                 to_remove.append(row)
                 continue
-        row['notes'] = discovery_notes
+            else:
+                notes.append(discovery_notes)
+        if family_row['pmid_id']:
+            notes.append(f'This individual is published in PMID{family_row["pmid_id"]}')
+        row['notes'] = '. '.join(notes)
 
         if post_process_variant:
             row.update(post_process_variant(row, gene_variants))
