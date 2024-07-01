@@ -149,7 +149,6 @@ if GCS_MEDIA_ROOT_BUCKET:
     STORAGES['default'] = {
         "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
     }
-    DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
     GS_BUCKET_NAME = GCS_MEDIA_ROOT_BUCKET
     GS_DEFAULT_ACL = 'publicRead'
     MEDIA_ROOT = False
