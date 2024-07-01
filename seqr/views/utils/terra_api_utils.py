@@ -103,14 +103,8 @@ def _safe_get_social(user):
     if not google_auth_enabled() or not hasattr(user, 'social_auth'):
         return None
 
-    social_auth = user.social_auth.filter(provider=SOCIAL_AUTH_PROVIDER)
-    if not social_auth:
-        return None
-
-    social = social_auth.first()
-    if isinstance(social.extra_data, str):  # JSONField extra_data is returned as a string
-        social.extra_data = json.loads(social.extra_data)
-    return social
+    social = user.social_auth.filter(provider=SOCIAL_AUTH_PROVIDER)
+    return social.first() if social else None
 
 
 def _get_social_access_token(user):

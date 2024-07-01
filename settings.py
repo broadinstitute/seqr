@@ -376,6 +376,7 @@ SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL = 'seqr_loading_notifications'
 #########################################################
 #  Social auth specific settings
 #########################################################
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
 SOCIAL_AUTH_GOOGLE_OAUTH2_IGNORE_DEFAULT_SCOPE = True
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.profile',
