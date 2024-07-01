@@ -559,14 +559,27 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
         response_json = response.json()
-        self.assertEqual(project.guid, response_json['projectGuid'])
-        self.assertListEqual(
-            [project.genome_version, project.description, project.workspace_namespace, project.workspace_name],
-            ['38', 'A test project', TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
-
-        self.assertListEqual(
-            [project.mme_contact_institution, project.mme_primary_data_owner, project.mme_contact_url],
-            ['Broad Center for Mendelian Genomics', 'Test Manager User', 'mailto:test_user_manager@test.com'])
+        self.assertDictEqual({k: getattr(project, k) for k in project._meta.json_fields}, {
+            'guid': response_json['projectGuid'],
+            'name': TEST_NO_PROJECT_WORKSPACE_NAME,
+            'description': 'A test project',
+            'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
+            'workspace_name': TEST_NO_PROJECT_WORKSPACE_NAME,
+            'has_case_review': False,
+            'enable_hgmd': False,
+            'is_demo': False,
+            'all_user_demo': False,
+            'consent_code': None,
+            'created_date': mock.ANY,
+            'last_modified_date': mock.ANY,
+            'last_accessed_date': mock.ANY,
+            'genome_version': '38',
+            'is_mme_enabled': True,
+            'mme_contact_institution': 'Broad Center for Mendelian Genomics',
+            'mme_primary_data_owner': 'Test Manager User',
+            'mme_contact_url': 'mailto:test_user_manager@test.com',
+            'vlm_contact_email': 'test_user_manager@test.com',
+        })
 
         self._assert_valid_operation(project, test_add_data=False)
 
