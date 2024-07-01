@@ -108,7 +108,7 @@ def _safe_get_social(user):
         return None
 
     social = social_auth.first()
-    if type(social.extra_data) is str:  # JSONField extra_data is returned as a string
+    if isinstance(social.extra_data, str):  # JSONField extra_data is returned as a string
         social.extra_data = json.loads(social.extra_data)
     return social
 
