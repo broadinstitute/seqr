@@ -73,10 +73,8 @@ def is_google_authenticated(user):
 def remove_token(user):
     social = _safe_get_social(user)
     if social and social.extra_data:
-        extra_data = json.loads(social.extra_data)
-        extra_data.pop('access_token', None)
-        extra_data['expires'] = 0
-        social.extra_data = extra_data
+        social.extra_data.pop('access_token', None)
+        social.extra_data['expires'] = 0
         social.save()
 
 
@@ -86,7 +84,7 @@ def is_anvil_authenticated(user):
 
     social = _safe_get_social(user)
     if social and social.extra_data:
-        return json.loads(social.extra_data).get('access_token', '') != ''
+        return social.extra_data.get('access_token', '') != ''
 
     return False
 
@@ -105,14 +103,19 @@ def _safe_get_social(user):
     if not google_auth_enabled() or not hasattr(user, 'social_auth'):
         return None
 
-    social = user.social_auth.filter(provider=SOCIAL_AUTH_PROVIDER)
-    return social.first() if social else None
+    social_auth = user.social_auth.filter(provider=SOCIAL_AUTH_PROVIDER)
+    if not social_auth:
+        return None
+
+    social = social_auth.first()
+    if type(social.extra_data) is str:  # JSONField extra_data is returned as a string
+        social.extra_data = json.loads(social.extra_data)
+    return social
 
 
 def _get_social_access_token(user):
     social = _safe_get_social(user)
-    extra_data = json.loads(social.extra_data)
-    if (extra_data['auth_time'] + extra_data['expires'] - 10) <= int(
+    if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(
             time.time()):  # token expired or expiring?
         strategy = load_strategy()
         logger.info('Refreshing access token', user)
@@ -121,7 +124,7 @@ def _get_social_access_token(user):
         except Exception as ee:
             logger.warning('Refresh token failed. {}'.format(str(ee)), user)
             raise TerraRefreshTokenFailedException('Refresh token failed. {}'.format(str(ee)))
-    return extra_data['access_token']
+    return social.extra_data['access_token']
 
 
 def _get_service_account_access_token():
