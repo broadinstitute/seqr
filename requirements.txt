@@ -26,7 +26,7 @@ defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
-django==4.2
+django==4.2.13
     # via
     #   -r requirements.in
     #   django-anymail
@@ -107,7 +107,7 @@ protobuf==3.20.2
     # via
     #   google-api-core
     #   googleapis-common-protos
-psycopg2==2.9.5
+psycopg==3.2.1
     # via -r requirements.in
 pyasn1==0.4.8
     # via
@@ -173,6 +173,8 @@ tenacity==8.3.0
     # via -r requirements.in
 tqdm==4.66.3
     # via -r requirements.in
+typing-extensions==4.12.2
+    # via psycopg
 urllib3==1.26.19
     # via
     #   elasticsearch

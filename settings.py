@@ -2,7 +2,7 @@ import json
 import os
 import random
 import string
-import subprocess # nosec
+import subprocess  # nosec
 
 from ssl import create_default_context
 
@@ -16,7 +16,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 #  Django settings
 #########################################################
 
-# Password validation - https://docs.djangoproject.com/en/1.10/ref/settings/#auth-password-validators
+# Password validation - https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -71,7 +71,7 @@ ALLOWED_HOSTS = ['*']
 
 CSRF_COOKIE_NAME = 'csrf_token'
 CSRF_COOKIE_HTTPONLY = False
-SESSION_COOKIE_AGE = 86400 # seconds in 1 day
+SESSION_COOKIE_AGE = 86400  # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 SECURE_BROWSER_XSS_FILTER = True
 
@@ -127,10 +127,28 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/4.2/howto/static-files/
+STATIC_URL = '/static/'
+STATICFILES_DIRS = ['ui/dist']
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_FINDERS = (
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+)
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 # If specified, store data in the named GCS bucket and use the gcloud storage backend.
 # Else, fall back to a path on the local filesystem.
 GCS_MEDIA_ROOT_BUCKET = os.environ.get('GCS_MEDIA_ROOT_BUCKET')
 if GCS_MEDIA_ROOT_BUCKET:
+    STORAGES['default'] = {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+    }
     DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
     GS_BUCKET_NAME = GCS_MEDIA_ROOT_BUCKET
     GS_DEFAULT_ACL = 'publicRead'
@@ -209,7 +227,7 @@ ROOT_URLCONF = 'seqr.urls'
 LOGOUT_URL = '/logout'
 
 POSTGRES_DB_CONFIG = {
-    'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    'ENGINE': 'django.db.backends.postgresql',
     'HOST': os.environ.get('POSTGRES_SERVICE_HOSTNAME', 'localhost'),
     'PORT': int(os.environ.get('POSTGRES_SERVICE_PORT', '5432')),
     'USER': os.environ.get('POSTGRES_USERNAME', 'postgres'),
@@ -252,10 +270,6 @@ else:
         'http://localhost:3000',
         'http://localhost:8000',
     )
-    # TODO: ?
-    # the collectstatic step in docker build runs without env variables set, and uncommenting these lines breaks the docker build
-    # STATICFILES_DIRS.append(STATIC_ROOT)
-    # STATIC_ROOT = None
     CORS_ALLOW_CREDENTIALS = True
     CORS_REPLACE_HTTPS_REFERER = True
     # django-hijack plugin
@@ -263,22 +277,6 @@ else:
     HIJACK_ALLOW_GET_REQUESTS = True
     HIJACK_LOGIN_REDIRECT_URL = '/'
     TEMPLATE_DIRS.append('ui')
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-STATIC_URL = '/static/'
-STATICFILES_DIRS = ['ui/dist']
-if DEBUG:
-    STATICFILES_DIRS.append(os.path.join(BASE_DIR, 'static'))
-else:
-    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-
-STATICFILES_FINDERS = (
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-)
-
 
 TEMPLATES = [
     {
@@ -289,7 +287,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',  # required for admin template
-                'django.template.context_processors.request',   # must be enabled in DjangoTemplates (TEMPLATES) in order to use the admin navigation sidebar
+                'django.template.context_processors.request',  # must be enabled in DjangoTemplates (TEMPLATES) in order to use the admin navigation sidebar
                 'social_django.context_processors.backends',  # required for social_auth, same for below
                 'social_django.context_processors.login_redirect',
             ],

@@ -1,4 +1,4 @@
-Django==4.2                       # core server-side framework
+Django==4.2.13                    # core server-side framework
 django-anymail                    # for sending emails using cloud-based mail service providers
 django-csp                        # for setting CSP headers
 django-guardian                   # object-level permissions for database records. Behind a major version due to missing Python 2 support
@@ -14,7 +14,7 @@ gunicorn                          # web server
 jmespath
 openpyxl                          # library for reading/writing Excel files
 pillow                            # required dependency of Djagno ImageField-type database records
-psycopg2                          # postgres database access
+psycopg                           # postgres database access
 pyliftover                        # GRCh37/GRCh38 liftover
 requests                          # simpler way to make http requests
 redis<4.6                         # client lib for the redis in-memory database - used for caching server-side objects
