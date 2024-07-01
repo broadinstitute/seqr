@@ -165,7 +165,7 @@ def parse_anvil_metadata(
         airtable_fields: Iterable[str] = None, mme_value: Aggregate = None, include_svs: bool = True,
         variant_json_fields: Iterable[str] = None, variant_attr_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
         include_no_individual_families: bool = False, omit_airtable: bool = False, include_family_name_display: bool = False, include_family_sample_metadata: bool = False,
-        include_discovery_sample_id: bool = False, include_mondo: bool = False, include_parent_mnvs: bool = False,
+        include_discovery_sample_id: bool = False, include_mondo: bool = False, omit_parent_mnvs: bool = False,
         proband_only_variants: bool = False):
 
     individual_samples = individual_samples or (_get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
@@ -253,7 +253,7 @@ def parse_anvil_metadata(
                 continue
             discovery_row = _get_genetic_findings_rows(
                 saved_variants, individual, participant_id=participant_id,
-                format_id=format_id, include_parent_mnvs=include_parent_mnvs,
+                format_id=format_id, omit_parent_mnvs=omit_parent_mnvs,
                 individual_data_types=(individual_data_types or {}).get(participant_id),
                 family_individuals=family_individuals if proband_only_variants else None,
                 sample=sample if include_discovery_sample_id else None,
@@ -305,9 +305,9 @@ def _get_genotype_zygosity(genotype):
     return None
 
 
-def _get_discovery_notes(v, gene_variants, include_parent_mnvs):
+def _get_discovery_notes(variant, gene_variants, omit_parent_mnvs):
     parent_mnv = next((v for v in gene_variants if len(v['individual_genotype']) == 1), gene_variants[0])
-    if parent_mnv['genetic_findings_id'] == v['genetic_findings_id'] and not include_parent_mnvs:
+    if parent_mnv['genetic_findings_id'] == variant['genetic_findings_id'] and omit_parent_mnvs:
         return None
     variant_type = 'complex structural' if parent_mnv.get('svType') else 'multinucleotide'
     parent_name = _get_nested_variant_name(parent_mnv)
@@ -470,7 +470,7 @@ def _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metad
 def _get_genetic_findings_rows(rows: list[dict], individual: Individual, participant_id: str,
                               individual_data_types: Iterable[str], family_individuals: dict[str, str],
                               post_process_variant: Callable[[dict, list[dict]], dict],
-                              format_id: Callable[[str], str], include_parent_mnvs: bool, sample: Sample) -> list[dict]:
+                              format_id: Callable[[str], str], omit_parent_mnvs: bool, sample: Sample) -> list[dict]:
     parsed_rows = []
     variants_by_gene = defaultdict(list)
     for row in (rows or []):
@@ -512,7 +512,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, partici
         gene_variants = variants_by_gene[row[GENE_COLUMN]]
         discovery_notes = None
         if len(gene_variants) > 2:
-            discovery_notes = _get_discovery_notes(row, gene_variants, include_parent_mnvs)
+            discovery_notes = _get_discovery_notes(row, gene_variants, omit_parent_mnvs)
             if discovery_notes is None:
                 to_remove.append(row)
                 continue
