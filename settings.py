@@ -136,18 +136,15 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 )
-STORAGES = {
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
 
 # If specified, store data in the named GCS bucket and use the gcloud storage backend.
 # Else, fall back to a path on the local filesystem.
 GCS_MEDIA_ROOT_BUCKET = os.environ.get('GCS_MEDIA_ROOT_BUCKET')
 if GCS_MEDIA_ROOT_BUCKET:
-    STORAGES['default'] = {
-        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+        }
     }
     GS_BUCKET_NAME = GCS_MEDIA_ROOT_BUCKET
     GS_DEFAULT_ACL = 'publicRead'
