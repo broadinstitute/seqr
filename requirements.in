@@ -5,7 +5,7 @@ django-guardian                   # object-level permissions for database record
 django-hijack                     # allows admins to login as other user
 django-notifications-hq           # notification app
 django-cors-headers               # allows CORS requests for client-side development
-django-storages[google]==1.11.1   # alternative GCS storage backend for the django media_root
+django-storages[google]==1.14.3   # alternative GCS storage backend for the django media_root
 social-auth-app-django            # the package for Django to authenticate users with social medieas
 social-auth-core                  # the Python social authentication package. Required by social-auth-app-django
 elasticsearch==7.9.1              # elasticsearch client
