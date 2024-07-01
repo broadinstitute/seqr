@@ -609,6 +609,10 @@ GENETIC_FINDINGS_TABLE = [
         '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
         'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
     ], [
+        'Broad_HG00731_19_1912634', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh38', '19',
+        '1912634', 'C', 'T', 'CA403171634', 'OR4G11P', 'ENST00000371839', '', '', 'Heterozygous', '', 'unknown',
+        'Broad_HG00731_19_1912633', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES', '', '', '', '', '', '', '',
+    ], [
         'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '248367227', 'TC', 'T',
         'CA1501729', 'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown',
         'Broad_NA20889_1_249045487', '', 'Candidate', 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant',
@@ -1100,9 +1104,9 @@ class ReportAPITest(AirtableTest):
 
         self._assert_expected_file(
             genetic_findings_file,
-            expected_rows=GENETIC_FINDINGS_TABLE if has_second_project else GENETIC_FINDINGS_TABLE[:3],
-            absent_rows=None if has_second_project else EXPERIMENT_LOOKUP_TABLE[3:],
-            additional_calls=3,
+            expected_rows=GENETIC_FINDINGS_TABLE if has_second_project else GENETIC_FINDINGS_TABLE[:4],
+            absent_rows=None,
+            additional_calls=2,
         )
 
     def _assert_expected_file(self, actual_rows, expected_rows, additional_calls=0, absent_rows=None):
