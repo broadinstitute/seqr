@@ -23,7 +23,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model,  get_json_fo
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
     MME_TAG_NAME
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
-    PhenotypePrioritization, Project
+    PhenotypePrioritization, Project, RnaSeqOutlier, RnaSeqSpliceOutlier
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
 from seqr.views.utils.variant_utils import get_phenotype_prioritization, get_omim_intervals_query, DISCOVERY_CATEGORY
@@ -43,10 +43,21 @@ def family_page_data(request, family_guid):
     has_case_review_perm = has_case_review_permissions(project, request.user)
 
     sample_models = Sample.objects.filter(individual__family=family)
-    samples = get_json_for_samples(sample_models, project_guid=project.guid, family_guid=family_guid, skip_nested=True, is_analyst=is_analyst)
+    samples = get_json_for_samples(
+        sample_models, project_guid=project.guid, family_guid=family_guid, skip_nested=True, is_analyst=is_analyst
+    )
     response = {
-        'samplesByGuid': {s['sampleGuid']: s for s in samples},
+        'samplesByGuid': {s['sampleGuid']: s for s in samples}
     }
+    rna_type_samples = {
+        'TPM': set(RnaSeqTpm.objects.filter(sample__in=sample_models).values_list('sample__guid', flat=True)),
+        'Expression Outlier': set(RnaSeqOutlier.objects.filter(sample__in=sample_models).values_list('sample__guid', flat=True)),
+        'Splice Outlier': set(RnaSeqSpliceOutlier.objects.filter(sample__in=sample_models).values_list('sample__guid', flat=True)),
+    }
+    for sample in response['samplesByGuid'].values():
+        sample['rnaSeqTypes'] = [
+            rnaseq_type for rnaseq_type, sample_ids in rna_type_samples.items() if sample['sampleGuid'] in sample_ids
+        ]
 
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
     family_response = response['familiesByGuid'][family_guid]
@@ -76,11 +87,6 @@ def family_page_data(request, family_guid):
         'detailsLoaded': True,
         'postDiscoveryOmimOptions': omim_map,
     })
-
-    outlier_individual_guids = sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA, is_active=True)\
-        .exclude(rnaseqoutlier__isnull=True, rnaseqspliceoutlier__isnull=True).values_list('individual__guid', flat=True)
-    for individual_guid in outlier_individual_guids:
-        response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
 
     tools_by_indiv = {}
     tools_agg = PhenotypePrioritization.objects.filter(individual__family=family).values('individual__guid').annotate(
