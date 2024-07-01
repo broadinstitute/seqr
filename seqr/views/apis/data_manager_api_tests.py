@@ -1588,9 +1588,7 @@ class LoadDataAPITest(AirflowTestCase):
         "R0001_1kg",
         "R0004_non_analyst_project"
     ],
-    "callset_paths": [
-        "gs://test_bucket/mito_callset.mt"
-    ],
+    "callset_path": "gs://test_bucket/mito_callset.mt",
     "sample_source": "Broad_Internal",
     "sample_type": "WGS",
     "reference_genome": "GRCh38"
