@@ -34,7 +34,7 @@ def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type
     project_guids = sorted([p.guid for p in projects])
     updated_variables = {
         'projects_to_run': project_guids,
-        'callset_paths': [data_path],
+        'callset_path': data_path,
         'sample_source': 'Broad_Internal' if is_internal else 'AnVIL',
         'sample_type': sample_type,
         'reference_genome': GENOME_VERSION_LOOKUP[genome_version],

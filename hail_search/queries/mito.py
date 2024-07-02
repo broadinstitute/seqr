@@ -331,7 +331,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         annotation_fields.update({
             'familyGenotypes': lambda r: hl.dict(r.family_entries.map(
-                lambda entries: (entries.first().familyGuid, entries.map(self._get_sample_genotype))
+                lambda entries: (entries.first().familyGuid, entries.filter(hl.is_defined).map(self._get_sample_genotype))
             )),
         })
 

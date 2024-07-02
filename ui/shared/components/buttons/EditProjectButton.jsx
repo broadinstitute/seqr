@@ -3,6 +3,8 @@ import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 
 import { updateProject } from 'redux/rootReducer'
+import { BaseSemanticInput } from '../form/Inputs'
+import { validators } from '../form/FormHelpers'
 import UpdateButton from './UpdateButton'
 import {
   EDITABLE_PROJECT_FIELDS,
@@ -11,10 +13,49 @@ import {
   MATCHMAKER_CONTACT_URL_FIELD,
 } from '../../utils/constants'
 
-const MATCHMAKER_PROJECT_FIELDS = [
+const setBoolVal = onChange => data => onChange(data.checked ? null : 'vlm@broadinstitute.org')
+
+const VlmContactInput = ({ value, onChange, ...props }) => ([
+  <BaseSemanticInput
+    {...props}
+    key="email"
+    inputType="Input"
+    label="Variant Matching Contact Email"
+    value={value}
+    onChange={onChange}
+    disabled={!value}
+    inline
+    width={9}
+  />,
+  <BaseSemanticInput
+    {...props}
+    key="disable"
+    label="Disable Contact for Variant Matches"
+    inputType="Checkbox"
+    checked={!value}
+    onChange={setBoolVal(onChange)}
+    inline
+    width={7}
+  />,
+])
+
+VlmContactInput.propTypes = {
+  value: PropTypes.string,
+  onChange: PropTypes.func,
+}
+
+const VLM_CONTACT_FIELD = {
+  name: 'vlmContactEmail',
+  parse: val => val || null,
+  format: val => val || '',
+  validate: value => (!value ? undefined : validators.requiredEmail(value)),
+  component: VlmContactInput,
+}
+
+const MATCHMAKER_PROJECT_FIELDS = [VLM_CONTACT_FIELD, ...[
   { ...MATCHMAKER_CONTACT_NAME_FIELD, name: 'mmePrimaryDataOwner' },
   { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'mmeContactUrl' },
-].map(({ label, ...field }) => ({ ...field, label: `Matchmaker ${label}` }))
+].map(({ label, ...field }) => ({ ...field, label: `Matchmaker ${label}` }))]
 
 // Field mapping based on whether project has matchmaker and user is a PM. Usage: FIELD_LOOKUP[isMmeEnabled][isPm]
 const FIELD_LOOKUP = {

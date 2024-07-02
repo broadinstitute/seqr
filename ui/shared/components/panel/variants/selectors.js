@@ -309,10 +309,11 @@ export const getSavedVariantExportConfig = createSelector(
   getAnalysisGroupsByGuid,
   getVariantTagsByGuid,
   getVariantNotesByGuid,
+  getGenesById,
   (state, props) => props.project,
   getSavedVariantTableState,
   (state, props) => props.match.params,
-  (analysisGroupsByGuid, tagsByGuid, notesByGuid, project, tableState, params) => {
+  (analysisGroupsByGuid, tagsByGuid, notesByGuid, genesById, project, tableState, params) => {
     if (project && project.isDemo && !project.allUserDemo) {
       // Do not allow downloads for demo projects
       return null
@@ -329,7 +330,7 @@ export const getSavedVariantExportConfig = createSelector(
       getHeaders: state => getSavedVariantExportHeaders(state, { project, match: { params } }),
       processRow: variant => ([
         ...VARIANT_EXPORT_DATA.map(config => (
-          config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid) : variant[config.header])),
+          config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid, genesById) : variant[config.header])),
         ...Object.values(variant.genotypes).reduce(
           (acc, { sampleId, numAlt, gq, ab }) => ([...acc, sampleId, numAlt, gq, ab]), [],
         ),

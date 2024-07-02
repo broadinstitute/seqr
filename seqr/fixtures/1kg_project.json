@@ -20,6 +20,7 @@
     "has_case_review": true,
 	"mme_primary_data_owner": "PI",
     "mme_contact_url": "mailto:test@broadinstitute.org,matchmaker@broadinstitute.org",
+    "vlm_contact_email": "test@broadinstitute.org,vlm@broadinstitute.org",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },
@@ -41,6 +42,7 @@
 	"can_view_group": 3,
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
+    "vlm_contact_email": "vlm@broadinstitute.org",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },
@@ -63,6 +65,7 @@
     "is_demo": true,
 	"mme_primary_data_owner": "",
     "mme_contact_url": "mailto:seqr-test@gmail.com,test@broadinstitute.org",
+    "vlm_contact_email": "seqr-test@gmail.com,test@broadinstitute.org",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },
@@ -81,6 +84,7 @@
 	    "last_accessed_date": "2017-09-15T18:15:50.827Z",
         "consent_code": "H",
         "genome_version": "38",
+        "vlm_contact_email": "vlm@broadinstitute.org",
     "workspace_name": "anvil-non-analyst-project 1000 Genomes Demo",
     "workspace_namespace": "ext-data"
     }

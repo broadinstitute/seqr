@@ -659,7 +659,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         dag_variable_overrides = self._get_dag_variable_overrides(additional_tasks_check)
         dag_variables = {
             'projects_to_run': [dag_variable_overrides['project']] if 'project' in dag_variable_overrides else self.PROJECTS,
-            'callset_paths': [f'gs://test_bucket/{dag_variable_overrides["callset_path"]}'],
+            'callset_path': f'gs://test_bucket/{dag_variable_overrides["callset_path"]}',
             'sample_source': dag_variable_overrides['sample_source'],
             'sample_type': dag_variable_overrides['sample_type'],
             'reference_genome': dag_variable_overrides.get('reference_genome', 'GRCh38'),
@@ -738,7 +738,7 @@ PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
     'isMmeEnabled', 'workspaceName', 'workspaceNamespace', 'hasCaseReview', 'enableHgmd', 'isDemo', 'allUserDemo',
-    'userIsCreator', 'consentCode', 'isAnalystProject',
+    'userIsCreator', 'consentCode', 'isAnalystProject', 'vlmContactEmail',
 }
 
 ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
