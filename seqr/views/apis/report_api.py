@@ -14,7 +14,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, \
     FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, \
-    EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, GENE_COLUMN
+    EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, GENE_COLUMN, FAMILY_INDIVIDUAL_FIELDS
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
@@ -847,7 +847,7 @@ def family_metadata(request, project_guid):
             family['inheritance_models'].update({v['variant_inheritance'] for v in row})
 
     parse_anvil_metadata(
-        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_metadata=True, include_no_individual_families=True)
+        projects, user=request.user, add_row=_add_row, omit_airtable=True, include_family_sample_metadata=True, include_no_individual_families=True)
 
     for family_id, f in families_by_id.items():
         individuals_by_id = family_individuals[family_id]
@@ -864,7 +864,7 @@ def family_metadata(request, project_guid):
             individuals_ids -= set(known_ids.values())
         individual = proband or next(iter(individuals_by_id.values()), None)
         if individual:
-            f.update({k: individual[k] for k in ['phenotype_description', 'pmid_id', 'solve_status']})
+            f.update({k: individual[k] for k in FAMILY_INDIVIDUAL_FIELDS})
 
         sorted_samples = sorted(individuals_by_id.values(), key=lambda x: x.get('date_data_generation', ''))
         earliest_sample = next((s for s in [proband or {}] + sorted_samples if s.get('date_data_generation')), {})
@@ -926,11 +926,12 @@ def variant_metadata(request, project_guid):
             families_by_id[family_id] = row
         elif row_type == SUBJECT_ROW_TYPE:
             participant_mme[row['participant_id']] = row.get('MME', {})
+            families_by_id[family_id]['internal_project_id'] = row['internal_project_id']
         elif row_type == DISCOVERY_ROW_TYPE:
             family = families_by_id[family_id]
             for variant in row:
                 variant_rows.append({
-                    'MME': variant.pop('variantId') in participant_mme[variant['participant_id']].get('variant_ids', []),
+                    'MME': variant.pop('variantId') in (participant_mme[variant['participant_id']] or []),
                     'phenotype_contribution': 'Full',
                     **family,
                     **variant,
@@ -943,8 +944,9 @@ def variant_metadata(request, project_guid):
         individual_data_types={i.individual_id: i.data_types for i in individuals},
         add_row=_add_row,
         variant_json_fields=['clinvar', 'variantId'],
-        mme_values={'variant_ids': ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId')},
-        include_metadata=True,
+        variant_attr_fields=['tags'],
+        mme_value=ArrayAgg('matchmakersubmissiongenes__saved_variant__saved_variant_json__variantId'),
+        include_family_name_display=True,
         include_mondo=True,
         omit_airtable=True,
         proband_only_variants=True,
