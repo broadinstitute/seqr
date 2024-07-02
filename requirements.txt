@@ -38,6 +38,7 @@ django==4.2.13
     #   django-notifications-hq
     #   django-storages
     #   jsonfield
+    #   social-auth-app-django
 django-anymail==9.0
     # via -r requirements.in
 django-cors-headers==3.13.0
@@ -117,7 +118,7 @@ pyasn1-modules==0.2.8
     # via google-auth
 pycparser==2.21
     # via cffi
-pyjwt==2.6.0
+pyjwt==2.8.0
     # via social-auth-core
 pyliftover==0.4
     # via -r requirements.in
@@ -157,9 +158,9 @@ slacker==0.14.0
     # via -r requirements.in
 slugify==0.0.1
     # via -r requirements.in
-social-auth-app-django==5.0.0
+social-auth-app-django==5.4.1
     # via -r requirements.in
-social-auth-core==4.3.0
+social-auth-core==4.5.4
     # via
     #   -r requirements.in
     #   social-auth-app-django
