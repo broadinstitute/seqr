@@ -104,7 +104,7 @@ class LogRequestMiddleware(MiddlewareMixin):
         # conforms to the httpRequest json spec for stackdriver: https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#HttpRequest
         http_json = {
             'requestMethod': request.method,
-            'requestUrl': request.get_raw_uri(),
+            'requestUrl': request.build_absolute_uri(),
             'status': response.status_code,
             'responseSize': len(response.content) if hasattr(response, 'content') else request.META.get('CONTENT_LENGTH'),
             'userAgent': request.META.get('HTTP_USER_AGENT'),

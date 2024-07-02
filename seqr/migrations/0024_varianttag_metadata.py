@@ -2,6 +2,7 @@
 from collections import defaultdict
 from django.contrib.postgres.aggregates import StringAgg
 from django.db import migrations, models
+from django.db.models import TextField
 from django.db.models.functions import Concat
 from django.utils import timezone
 from seqr.utils.logging_utils import log_model_update, log_model_bulk_update, SeqrLogger
@@ -120,7 +121,11 @@ def merge_duplicate_tags(apps, schema_editor):
     db_alias = schema_editor.connection.alias
 
     updated_tags = VariantTag.objects.using(db_alias).filter(variant_tag_type__name__in=SANGER_TAGS.values()).annotate(
-        group_id=Concat('variant_tag_type__guid', StringAgg('saved_variants__guid', ',', ordering='saved_variants__guid')))
+        group_id=Concat(
+            'variant_tag_type__guid',
+            StringAgg('saved_variants__guid', ',', ordering='saved_variants__guid'),
+            output_field=TextField()
+        ))
     if not updated_tags:
         logger.info('No updated tags found, skipping validation tag merging', user=None)
         return
