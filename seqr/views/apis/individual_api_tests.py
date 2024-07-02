@@ -994,7 +994,7 @@ class IndividualAPITest(object):
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_import_gregor_metadata(self, mock_subprocess):
         genetic_findings_table = deepcopy(GENETIC_FINDINGS_TABLE)
-        genetic_findings_table[2] = genetic_findings_table[2][:11] + genetic_findings_table[3][11:14] + \
+        genetic_findings_table[2] = genetic_findings_table[2][:11] + genetic_findings_table[4][11:14] + \
                                     genetic_findings_table[2][14:]
         self._set_metadata_file_iter(mock_subprocess, genetic_findings_table)
 
@@ -1021,7 +1021,7 @@ class IndividualAPITest(object):
                 'Created 1 new families, 3 new individuals',
                 'Updated 1 existing families, 1 existing individuals',
                 'Skipped 0 unchanged individuals',
-                'Loaded 3 new and 0 updated findings tags',
+                'Loaded 4 new and 0 updated findings tags',
             ],
         }})
 
@@ -1036,7 +1036,7 @@ class IndividualAPITest(object):
             'metadataTitle': None,
             'color': '#c25fc4',
             'order': 0.5,
-            'numTags': 4,
+            'numTags': 5,
         })
 
         self.assertEqual(len(response_json['familiesByGuid']), 2)
@@ -1047,7 +1047,7 @@ class IndividualAPITest(object):
 
         self.assertDictEqual(response_json['familyTagTypeCounts'], {
             'F000012_12': {'GREGoR Finding': 3, 'MME Submission': 2, 'Tier 1 - Novel gene and phenotype': 1},
-            new_family_guid: {'GREGoR Finding': 1},
+            new_family_guid: {'GREGoR Finding': 2},
         })
 
         self.assertEqual(len(response_json['individualsByGuid']), 4)
@@ -1126,7 +1126,7 @@ class IndividualAPITest(object):
             'saved_variant_json__transcripts', 'saved_variant_json__genotypes', 'saved_variant_json__mainTranscriptId',
             'saved_variant_json__hgvsc',
         )
-        self.assertEqual(len(saved_variants), 3)
+        self.assertEqual(len(saved_variants), 4)
         self.assertDictEqual(saved_variants[0], {
             'guid': 'SV0000006_1248367227_r0003_tes',
             'variant_id': '1-248367227-TC-T',
@@ -1220,12 +1220,12 @@ class IndividualAPITest(object):
                 'Created 0 new families, 0 new individuals',
                 'Updated 0 existing families, 0 existing individuals',
                 'Skipped 4 unchanged individuals',
-                'Loaded 1 new and 2 updated findings tags',
+                'Loaded 1 new and 3 updated findings tags',
             ],
         }})
         self.assertDictEqual(response_json['individualsByGuid'], {})
 
-        no_gene_saved_variant_json = SavedVariant.objects.get(family__guid=new_family_guid).saved_variant_json
+        no_gene_saved_variant_json = SavedVariant.objects.get(family__guid=new_family_guid, variant_id='1-248367227-TC-T').saved_variant_json
         self.assertDictEqual(no_gene_saved_variant_json['transcripts'], {})
         self.assertDictEqual(no_gene_saved_variant_json['genotypes'], new_family_genotypes)
         self.assertNotIn('mainTranscriptId', no_gene_saved_variant_json)
