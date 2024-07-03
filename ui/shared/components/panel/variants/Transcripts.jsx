@@ -156,19 +156,13 @@ const transcriptIdDetails = (transcript, variant, { transcriptsById, project, up
   </div>
 )
 
-export const ExtendedSpliceLabel = ({ spliceregion }) => (spliceregion?.extended_intronic_splice_region_variant ? (
-  <Label size="small" horizontal color="yellow" content="Extended Intronic Splice Region" />
-) : null)
-
-ExtendedSpliceLabel.propTypes = {
-  spliceregion: PropTypes.object,
-}
-
-const transcriptConsequenceDetails = ({ utrannotator, ...transcript }) => (
+const transcriptConsequenceDetails = ({ utrannotator, spliceregion }) => (
   <div>
     {utrannotator?.fiveutrConsequence && <HeaderLabel>UTRAnnotator:</HeaderLabel>}
     {utrannotator?.fiveutrConsequence}
-    <ExtendedSpliceLabel {...transcript} />
+    {spliceregion?.extended_intronic_splice_region_variant && (
+      <HeaderLabel>Extended Intronic Splice Region</HeaderLabel>
+    )}
   </div>
 )
 
