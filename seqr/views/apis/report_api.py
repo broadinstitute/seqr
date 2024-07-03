@@ -160,7 +160,7 @@ def anvil_export(request, project_guid):
 
     max_loaded_date = request.GET.get('loadedBefore') or (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
     parse_anvil_metadata(
-        [project], request.user, _add_row, max_loaded_date=max_loaded_date, include_discovery_sample_id=True,
+        [project], request.user, _add_row, max_loaded_date=max_loaded_date, include_discovery_sample_id=True, omit_parent_mnvs=True,
         get_additional_individual_fields=lambda individual, airtable_metadata, has_dbgap_submission, *args: {
             'congenital_status': Individual.ONSET_AGE_LOOKUP[individual.onset_age] if individual.onset_age else 'Unknown',
             **anvil_export_airtable_fields(airtable_metadata, has_dbgap_submission),
@@ -576,7 +576,7 @@ def _get_phenotype_row(feature):
     }
 
 
-def _post_process_gregor_variant(row, gene_variants, **kwargs):
+def _post_process_gregor_variant(row, gene_variants):
     return {'linked_variant': next(
         v['genetic_findings_id'] for v in gene_variants if v['genetic_findings_id'] != row['genetic_findings_id']
     ) if len(gene_variants) > 1 else None}
@@ -950,7 +950,6 @@ def variant_metadata(request, project_guid):
         include_mondo=True,
         omit_airtable=True,
         proband_only_variants=True,
-        include_parent_mnvs=True,
     )
 
     return create_json_response({'rows': variant_rows})
