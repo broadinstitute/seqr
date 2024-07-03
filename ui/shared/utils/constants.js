@@ -781,6 +781,8 @@ const VEP_SV_TYPES = [
   },
 ]
 
+export const EXTENDED_INTRONIC_DESCRIPTION = "A variant which falls in the first 9 bases of the 5' end of intron or the within the last 9 bases of the 3' end of intron"
+
 const VEP_SV_CONSEQUENCES = [
   {
     description: 'A loss of function effect',
@@ -963,7 +965,7 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0002169',
   },
   {
-    description: 'A variant flagged in the extended intronic splice region by the SpiceRegion plugin',
+    description: EXTENDED_INTRONIC_DESCRIPTION,
     text: 'Extended Intronic Splice Region',
     value: 'extended_intronic_splice_region_variant',
     group: VEP_GROUP_EXTENDED_SPLICE_SITE,
