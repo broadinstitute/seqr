@@ -17,7 +17,7 @@ const FeatureUpdatesFeed = ({ entries }) => (
       <Header.Subheader>
         This page serves as an announcement hub for new seqr functionality, sourced from this
         &nbsp;
-        <a href="https://github.com/broadinstitute/seqr/discussions/categories/feature-updates">GitHub Discussion</a>
+        <a href="https://github.com/populationgenomics/seqr/discussions/categories/feature-updates">GitHub Discussion</a>
         .
       </Header.Subheader>
     </Header>
