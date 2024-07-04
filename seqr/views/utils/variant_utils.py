@@ -14,6 +14,7 @@ from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, L
     RnaSeqTpm, PhenotypePrioritization, Project, Sample, VariantTag, VariantTagType
 from seqr.utils.search.utils import get_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
+from seqr.utils.redis_utils import get_escaped_redis_key
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
@@ -222,12 +223,12 @@ def reset_cached_search_results(project, reset_index_metadata=False):
         if project:
             result_guids = [res.guid for res in VariantSearchResults.objects.filter(families__project=project)]
             for guid in result_guids:
-                keys_to_delete += redis_client.keys(pattern='search_results__{}*'.format(guid))
+                keys_to_delete += redis_client.keys(pattern=get_escaped_redis_key('search_results__{}*'.format(guid)))
         else:
-            keys_to_delete = redis_client.keys(pattern='search_results__*')
-        keys_to_delete += redis_client.keys(pattern='variant_lookup_results__*')
+            keys_to_delete = redis_client.keys(pattern=get_escaped_redis_key('search_results__*'))
+        keys_to_delete += redis_client.keys(pattern=get_escaped_redis_key('variant_lookup_results__*'))
         if reset_index_metadata:
-            keys_to_delete += redis_client.keys(pattern='index_metadata__*')
+            keys_to_delete += redis_client.keys(pattern=get_escaped_redis_key('index_metadata__*'))
         if keys_to_delete:
             redis_client.delete(*keys_to_delete)
             logger.info('Reset {} cached results'.format(len(keys_to_delete)))

@@ -1,7 +1,8 @@
 import json
 import mock
 from unittest import TestCase
-from seqr.utils.redis_utils import safe_redis_set_json, safe_redis_get_json
+from seqr.utils import redis_utils
+from seqr.utils.redis_utils import get_escaped_redis_key, safe_redis_set_json, safe_redis_get_json
 
 
 @mock.patch('seqr.utils.redis_utils.logger')
@@ -55,3 +56,12 @@ class RedisUtilsTest(TestCase):
         mock_redis.side_effect = Exception('invalid redis')
         safe_redis_set_json('test_key', {'a': 1})
         mock_logger.error.assert_called_with('Unable to write to redis host localhost: invalid redis')
+
+    def test_get_escaped_redis_key(self, mock_redis, mock_logger):
+        # Test when DEPLOYMENT_TYPE is set
+        with mock.patch.object(redis_utils, 'DEPLOYMENT_TYPE', 'prod'):
+            self.assertEqual(get_escaped_redis_key('test_key'), 'prod:test_key')
+
+        # Test when DEPLOYMENT_TYPE is not set
+        with mock.patch.object(redis_utils, 'DEPLOYMENT_TYPE', None):
+            self.assertEqual(get_escaped_redis_key('test_key'), 'test_key')
