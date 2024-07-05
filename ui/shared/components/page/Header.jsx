@@ -28,7 +28,7 @@ const PageHeader = React.memo(({ user, onSubmit }) => (
       <Menu.Item key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
     ] : null }
     <Menu.Item key="spacer" position="right" />
-    <Menu.Item key="feature_updates" as={Link} to={FEATURE_UPDATES_PATH} content="Feature Updates (NEW)" />
+    <Menu.Item key="feature_updates" as={Link} to={FEATURE_UPDATES_PATH} content="CPG seqr Updates" />
     {Object.keys(user).length ? [
       <Dropdown
         item
