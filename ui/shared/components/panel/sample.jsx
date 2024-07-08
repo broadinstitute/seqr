@@ -39,7 +39,7 @@ const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) => (
           `data was${isOutdated ? ' previously ' : ''} ${hoverDetails ? `${hoverDetails} on ${new Date(loadedSample.loadedDate).toLocaleDateString()}` : 'loaded'}` :
           'no data available'}
         <VerticalSpacer height={5} />
-        {loadedSample.sampleType && loadedSample.sampleType === SAMPLE_TYPE_RNA &&
+        {loadedSample?.sampleType && loadedSample.sampleType === SAMPLE_TYPE_RNA &&
           loadedSample.isActive && `RNAseq methods: ${loadedSample.rnaSeqTypes.join(', ')}`}
       </div>
     }

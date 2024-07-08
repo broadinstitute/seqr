@@ -1,9 +1,11 @@
 # _seqr_ Changes
 
 ## dev
-* Add VLM contact for Projects (REQUIRES DB MIGRATION)
 
 ## 6/11/24
+* Add VLM contact for Projects (REQUIRES DB MIGRATION)
+
+## 7/8/24
 * Add "Partial Phenotype Contribution" functional tag (REQUIRES DB MIGRATION)
 
 ## 5/24/24
