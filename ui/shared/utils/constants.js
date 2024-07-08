@@ -781,6 +781,8 @@ const VEP_SV_TYPES = [
   },
 ]
 
+export const EXTENDED_INTRONIC_DESCRIPTION = "A variant which falls in the first 9 bases of the 5' end of intron or the within the last 9 bases of the 3' end of intron"
+
 const VEP_SV_CONSEQUENCES = [
   {
     description: 'A loss of function effect',
@@ -963,7 +965,7 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0002169',
   },
   {
-    description: 'A variant flagged in the extended intronic splice region by the SpiceRegion plugin',
+    description: EXTENDED_INTRONIC_DESCRIPTION,
     text: 'Extended Intronic Splice Region',
     value: 'extended_intronic_splice_region_variant',
     group: VEP_GROUP_EXTENDED_SPLICE_SITE,
@@ -1863,9 +1865,10 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'variant_reference_assembly' },
   { name: 'chrom' },
   { name: 'pos' },
+  { name: 'end' },
   { name: 'ref' },
   { name: 'alt' },
-  { name: 'gene_of_interest' },
+  { name: 'gene_of_interest', secondaryExportColumn: 'gene_id' },
   { name: 'seqr_chosen_consequence' },
   { name: 'transcript' },
   { name: 'hgvsc' },
@@ -1879,6 +1882,24 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'partial_contribution_explained' },
   { name: 'notes' },
   { name: 'ClinGen_allele_ID' },
+]
+
+export const BASE_FAMILY_METADATA_COLUMNS = [
+  { name: 'pmid_id' },
+  { name: 'condition_id' },
+  { name: 'known_condition_name' },
+  { name: 'condition_inheritance', secondaryExportColumn: 'disorders' },
+  { name: 'phenotype_description', style: { minWidth: '200px' } },
+  { name: 'analysis_groups' },
+  {
+    name: 'analysisStatus',
+    content: 'analysis_status',
+    format: ({ analysisStatus }) => FAMILY_ANALYSIS_STATUS_LOOKUP[analysisStatus]?.name,
+  },
+  { name: 'solve_status' },
+  { name: 'data_type' },
+  { name: 'date_data_generation', secondaryExportColumn: 'filter_flags' },
+  { name: 'consanguinity' },
 ]
 
 // RNAseq sample tissue type mapping

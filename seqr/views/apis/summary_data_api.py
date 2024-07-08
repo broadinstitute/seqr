@@ -298,32 +298,37 @@ def individual_metadata(request, project_guid):
         elif row_type == DISCOVERY_ROW_TYPE:
             for i, discovery_row in enumerate(row):
                 participant_id = discovery_row.pop('participant_id')
-                parsed_row = {'{}-{}'.format(k, i + 1): v for k, v in discovery_row.items()}
+                parsed_row = {'{}-{}'.format(k, i + 1): v for k, v in discovery_row.items() if k != 'allele_balance_or_heteroplasmy_percentage'}
                 parsed_row['num_saved_variants'] = len(row)
                 rows_by_subject_family_id[(participant_id, family_id)].update(parsed_row)
-        else:
+        elif row_type == SUBJECT_ROW_TYPE:
             row_key = (row['participant_id'], family_id)
             collaborator = row.pop('Collaborator', None)
             if collaborator:
                 collaborator_map[row_key] = collaborator
-            if row_type == SUBJECT_ROW_TYPE:
-                race = row.pop('reported_race')
-                ancestry_detail = row.pop('ancestry_detail')
-                ethnicity = row.pop('reported_ethnicity')
-                row['ancestry'] = ethnicity or ancestry_detail or race
-            if 'features' in row:
-                row.update({
-                    'hpo_present': [feature['id'] for feature in row.pop('features') or []],
-                    'hpo_absent': [feature['id'] for feature in row.pop('absent_features') or []],
-                })
-                all_features.update(row['hpo_present'])
-                all_features.update(row['hpo_absent'])
+            is_additional_affected = row.pop('is_additional_affected')
+            if is_additional_affected:
+                family_rows_by_id[family_id]['family_history'] = 'Yes'
+            race = row.pop('reported_race')
+            ancestry_detail = row.pop('ancestry_detail')
+            ethnicity = row.pop('reported_ethnicity')
+            row['ancestry'] = ethnicity or ancestry_detail or race
+            row.update({
+                'hpo_present': [feature['id'] for feature in row.pop('features') or []],
+                'hpo_absent': [feature['id'] for feature in row.pop('absent_features') or []],
+            })
+            all_features.update(row['hpo_present'])
+            all_features.update(row['hpo_absent'])
             rows_by_subject_family_id[row_key].update(row)
+        else:
+            row.pop('sample_id')
+            rows_by_subject_family_id[(row['participant_id'], family_id)].update(row)
 
     parse_anvil_metadata(
         projects, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
-        include_metadata=True,
+        include_family_sample_metadata=True,
         omit_airtable=not include_airtable,
+        mme_value=Value('Yes'),
         get_additional_individual_fields=lambda individual, airtable_metadata, has_dbgap_submission, maternal_ids, paternal_ids: {
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
             'individual_guid': individual.guid,
@@ -331,6 +336,7 @@ def individual_metadata(request, project_guid):
             'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
             'paternal_guid': paternal_ids[1],
             'maternal_guid': maternal_ids[1],
+            'is_additional_affected': individual.affected == Individual.AFFECTED_STATUS_AFFECTED and individual.proband_relationship != Individual.SELF_RELATIONSHIP,
             **anvil_export_airtable_fields(airtable_metadata, has_dbgap_submission),
         },
     )

@@ -22,7 +22,7 @@ import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import RnaSeqJunctionOutliersTable from '../../table/RnaSeqJunctionOutliersTable'
 import { getOtherGeneNames } from '../genes/GeneDetail'
-import Transcripts, { ConsequenceDetails, ExtendedSpliceLabel, isManeSelect } from './Transcripts'
+import Transcripts, { ConsequenceDetails, isManeSelect } from './Transcripts'
 import VariantGenes, { GeneLabelContent, omimPhenotypesDetail } from './VariantGene'
 import {
   getLocus,
@@ -35,6 +35,7 @@ import {
 } from './VariantUtils'
 import {
   GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS,
+  EXTENDED_INTRONIC_DESCRIPTION,
 } from '../../../utils/constants'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 
@@ -639,7 +640,12 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcripts
           <Label color="red" horizontal size="tiny">High Constraint Region</Label>
         </span>
       )}
-      <ExtendedSpliceLabel {...mainTranscript} />
+      {mainTranscript.spliceregion?.extended_intronic_splice_region_variant && (
+        <div>
+          <b>Extended Intronic Splice Region</b>
+          <Popup trigger={<HelpIcon />} content={EXTENDED_INTRONIC_DESCRIPTION} />
+        </div>
+      )}
       {mainTranscript.utrannotator?.fiveutrConsequence && (
         <div>
           <b>UTRAnnotator: &nbsp;</b>
