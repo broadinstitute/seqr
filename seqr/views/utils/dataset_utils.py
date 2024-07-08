@@ -570,8 +570,7 @@ def _notify_rna_loading(model_cls, sample_projects, internal_projects):
     data_type = RNA_MODEL_DISPLAY_NAME[model_cls]
     for project_agg in sample_projects:
         new_ids = project_agg["new_sample_ids"]
-        url = f'{BASE_URL}project/{project_agg["guid"]}/project_page'
-        project_link = f'<a href={url}>{project_agg["name"]}</a>'
+        project_link = f'<{BASE_URL}project/{project_agg["guid"]}/project_page|{project_agg["name"]}>'
         safe_post_to_slack(
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
             f'{len(new_ids)} new RNA {data_type} samples are loaded in {project_link}\n```{", ".join(new_ids)}```'

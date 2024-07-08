@@ -1032,11 +1032,10 @@ class DataManagerAPITest(AirtableTest):
         mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
-                f'0 new RNA {params["message_data_type"]} samples are loaded in <a href=https://test-seqr.org/project/R0001_1kg/project_page>1kg project nåme with uniçøde</a>\n``````',
+                f'0 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>\n``````',
             ), mock.call(
                 'seqr-data-loading',
-                f'1 new RNA {params["message_data_type"]} samples are loaded in <a href=https://test-seqr.org/project/'
-                f'R0003_test/project_page>Test Reprocessed Project</a>\n```NA20888```',
+                f'1 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/R0003_test/project_page|Test Reprocessed Project>\n```NA20888```',
             ),
         ])
         self.assertEqual(mock_send_email.call_count, 2)
@@ -1282,7 +1281,7 @@ class DataManagerAPITest(AirtableTest):
             {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'Lirical data for 1 sample(s)'},
             {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'Lirical data for 1 sample(s)',
              'project_guid': 'R0003_test', 'project_name': 'Test Reprocessed Project'}
-        ])
+        ], has_html=True)
 
         # Test uploading new data
         self.reset_logs()
@@ -1311,16 +1310,16 @@ class DataManagerAPITest(AirtableTest):
         self.assertListEqual(saved_data, EXPECTED_UPDATED_LIRICAL_DATA)
         self._assert_expected_notifications(mock_send_email, [
             {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'Lirical data for 2 sample(s)'},
-        ])
+        ], has_html=True)
 
     @staticmethod
-    def _assert_expected_notifications(mock_send_email, expected_notifs: list[dict]):
+    def _assert_expected_notifications(mock_send_email, expected_notifs: list[dict], has_html=False):
         calls = []
         for notif_dict in expected_notifs:
             project_guid = notif_dict.get('project_guid', PROJECT_GUID)
             project_name = notif_dict.get('project_name', '1kg project nåme with uniçøde')
             url = f'https://test-seqr.org/project/{project_guid}/project_page'
-            project_link = f'<a href={url}>{project_name}</a>'
+            project_link = f'<a href={url}>{project_name}</a>' if has_html else f'<{url}|{project_name}>'
             expected_email_body = (
                 f'Dear seqr user,\n\nThis is to notify you that {notif_dict["email_body"]} '
                 f'has been loaded in seqr project {project_link}\n\nAll the best,\nThe seqr team'
