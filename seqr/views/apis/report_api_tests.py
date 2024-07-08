@@ -492,24 +492,22 @@ MOCK_INVALID_DATA_MODEL = {
 }
 
 BASE_VARIANT_METADATA_ROW = {
+    'internal_project_id': '1kg project nåme with uniçøde',
     'ClinGen_allele_ID': None,
     'MME': False,
     'additional_family_members_with_variant': '',
     'allele_balance_or_heteroplasmy_percentage': None,
     'analysisStatus': 'Q',
-    'analysis_groups': '',
     'clinvar': None,
     'condition_id': None,
-    'consanguinity': 'Unknown',
     'end': None,
     'hgvsc': '',
     'hgvsp': '',
     'method_of_discovery': 'SR-ES',
-    'notes': None,
+    'notes': '',
     'phenotype_contribution': 'Full',
     'partial_contribution_explained': '',
     'seqr_chosen_consequence': None,
-    'svName': None,
     'svType': None,
     'sv_name': None,
     'transcript': None,
@@ -605,11 +603,17 @@ GENETIC_FINDINGS_TABLE = [
         'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'SNV/INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
         'RP11', 'ENST00000258436.5', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '', 'Candidate',
         'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120', 'Autosomal recessive|X-linked',
-        'Full', '', '', 'SR-ES', '', '', '', '', '', '', '',
+        'Full', '', '', 'SR-ES', 'This individual is published in PMID34415322', '', '', '', '', '', '',
     ], [
         'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh37', '1',
         '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
         'MONDO:0044970', '', 'Uncertain', '', 'Broad_HG00732', 'SR-ES', '', '', '', '', '', '', '',
+    ], [
+        'Broad_HG00731_19_1912634', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh38', '19',
+        '1912634', 'C', 'T', 'CA403171634', 'OR4G11P', 'ENST00000371839', '', '', 'Heterozygous', '', 'unknown',
+        'Broad_HG00731_19_1912633', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES',
+        'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
+        '', '', '', '', '', '',
     ], [
         'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '248367227', 'TC', 'T',
         'CA1501729', 'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown',
@@ -742,7 +746,7 @@ class ReportAPITest(AirtableTest):
         self.assertIn([
             '21_3343353_NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436.5',
-            '-', '-', '-', '-'], discovery_file)
+            '-', '-', '-', 'This individual is published in PMID34415322'], discovery_file)
         self.assertIn([
             '19_1912633_HG00731', 'HG00731', 'HG00731', 'OR4G11P', 'Known', 'unknown', 'Heterozygous', 'GRCh38', '19',
             '1912633', 'G', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
@@ -902,7 +906,8 @@ class ReportAPITest(AirtableTest):
             'Broad_NA19675_1_21_3343353', 'Broad_NA19675_1', '', 'SNV/INDEL', 'GRCh37', '21', '3343353', 'GAGA', 'G', '',
             'RP11', 'ENST00000258436.5', 'c.375_377delTCT', 'p.Leu126del', 'Heterozygous', '', 'de novo', '', '',
             'Candidate', 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects', 'OMIM:615120',
-            'Autosomal recessive|X-linked', 'Full', '', '', 'SR-ES', '', '', '', '', '', '', '',
+            'Autosomal recessive|X-linked', 'Full', '', '', 'SR-ES', 'This individual is published in PMID34415322',
+            '', '', '', '', '', '',
         ], [
             'Broad_HG00731_1_248367227', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh37', '1',
             '248367227', 'TC', 'T', 'CA1501729', 'RP11', '', '', '', 'Homozygous', '', 'paternal', '', '', 'Known', '',
@@ -910,8 +915,9 @@ class ReportAPITest(AirtableTest):
         ], [
             'Broad_HG00731_19_1912634', 'Broad_HG00731', 'Broad_exome_VCGS_FAM203_621_D2', 'SNV/INDEL', 'GRCh38', '19',
             '1912634', 'C', 'T', 'CA403171634', 'OR4G11P', 'ENST00000371839', '', '', 'Heterozygous', '', 'unknown',
-            'Broad_HG00731_19_1912633', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES', '', '', '', '',
-            '', '', '',
+            'Broad_HG00731_19_1912633', '', 'Known', '', 'MONDO:0044970', '', 'Full', '', '', 'SR-ES',
+            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T',
+            '', '', '', '', '', '',
         ]], additional_calls=2)
 
         responses.calls.reset()
@@ -1102,9 +1108,9 @@ class ReportAPITest(AirtableTest):
 
         self._assert_expected_file(
             genetic_findings_file,
-            expected_rows=GENETIC_FINDINGS_TABLE if has_second_project else GENETIC_FINDINGS_TABLE[:3],
-            absent_rows=None if has_second_project else EXPERIMENT_LOOKUP_TABLE[3:],
-            additional_calls=3,
+            expected_rows=GENETIC_FINDINGS_TABLE if has_second_project else GENETIC_FINDINGS_TABLE[:4],
+            absent_rows=None,
+            additional_calls=2,
         )
 
     def _assert_expected_file(self, actual_rows, expected_rows, additional_calls=0, absent_rows=None):
@@ -1172,6 +1178,7 @@ class ReportAPITest(AirtableTest):
         test_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000012_12')
         self.assertDictEqual(test_row, {
             'projectGuid': 'R0003_test',
+            'internal_project_id': 'Test Reprocessed Project',
             'familyGuid': 'F000012_12',
             'family_id': '12',
             'displayName': '12',
@@ -1188,7 +1195,6 @@ class ReportAPITest(AirtableTest):
             'other_individual_ids': 'NA20870; NA20888',
             'individual_count': 3,
             'family_structure': 'other',
-            'family_history': 'Yes',
             'genes': 'DEL:chr1:249045487-249045898; OR4G11P',
             'pmid_id': None,
             'phenotype_description': None,
@@ -1210,6 +1216,7 @@ class ReportAPITest(AirtableTest):
         test_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000003_3')
         self.assertDictEqual(test_row, {
             'projectGuid': 'R0001_1kg',
+            'internal_project_id': '1kg project nåme with uniçøde',
             'familyGuid': 'F000003_3',
             'family_id': '3',
             'displayName': '3',
@@ -1253,6 +1260,36 @@ class ReportAPITest(AirtableTest):
         self.assertListEqual(list(response_json.keys()), ['rows'])
         row_ids = ['NA19675_1_21_3343353', 'HG00731_1_248367227', 'HG00731_19_1912634', 'HG00731_19_1912633', 'HG00731_19_1912632']
         self.assertListEqual([r['genetic_findings_id'] for r in response_json['rows']], row_ids)
+        self.assertDictEqual(response_json['rows'][0], {
+            **BASE_VARIANT_METADATA_ROW,
+            'alt': 'G',
+            'chrom': '21',
+            'clinvar': {'alleleId': None, 'clinicalSignificance': '', 'goldStars': None, 'variationId': None},
+            'condition_id': 'OMIM:615120',
+            'condition_inheritance': 'Autosomal recessive|X-linked',
+            'displayName': '1',
+            'familyGuid': 'F000001_1',
+            'family_id': '1',
+            'gene_of_interest': 'RP11',
+            'gene_id': 'ENSG00000135953',
+            'gene_known_for_phenotype': 'Candidate',
+            'genetic_findings_id': 'NA19675_1_21_3343353',
+            'hgvsc': 'c.375_377delTCT',
+            'hgvsp': 'p.Leu126del',
+            'known_condition_name': 'Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects',
+            'MME': True,
+            'notes': 'This individual is published in PMID34415322',
+            'participant_id': 'NA19675_1',
+            'pos': 3343353,
+            'projectGuid': 'R0001_1kg',
+            'ref': 'GAGA',
+            'seqr_chosen_consequence': 'inframe_deletion',
+            'tags': ['Tier 1 - Novel gene and phenotype'],
+            'transcript': 'ENST00000258436.5',
+            'variant_inheritance': 'de novo',
+            'variant_reference_assembly': 'GRCh37',
+            'zygosity': 'Heterozygous',
+        })
         expected_row = {
             **BASE_VARIANT_METADATA_ROW,
             'additional_family_members_with_variant': 'HG00732',
@@ -1331,7 +1368,6 @@ class ReportAPITest(AirtableTest):
             'displayName': '12',
             'familyGuid': 'F000012_12',
             'family_id': '12',
-            'family_history': 'Yes',
             'gene_of_interest': 'OR4G11P',
             'gene_id': 'ENSG00000240361',
             'gene_known_for_phenotype': 'Candidate',
@@ -1343,6 +1379,7 @@ class ReportAPITest(AirtableTest):
             'partial_contribution_explained': 'HP:0000501|HP:0000365',
             'phenotype_contribution': 'Partial',
             'projectGuid': 'R0003_test',
+            'internal_project_id': 'Test Reprocessed Project',
             'ref': 'TC',
             'seqr_chosen_consequence': 'intron_variant',
             'tags': ['Tier 1 - Novel gene and phenotype'],
@@ -1362,7 +1399,6 @@ class ReportAPITest(AirtableTest):
             'end': 249045898,
             'familyGuid': 'F000012_12',
             'family_id': '12',
-            'family_history': 'Yes',
             'gene_of_interest': None,
             'gene_id': None,
             'gene_known_for_phenotype': 'Candidate',
@@ -1370,6 +1406,7 @@ class ReportAPITest(AirtableTest):
             'participant_id': 'NA20889',
             'pos': 249045487,
             'projectGuid': 'R0003_test',
+            'internal_project_id': 'Test Reprocessed Project',
             'ref': None,
             'svType': 'DEL',
             'sv_name': 'DEL:chr1:249045487-249045898',

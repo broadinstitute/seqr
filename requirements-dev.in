@@ -1,7 +1,7 @@
 -c requirements.txt # use the generated reqs as a constraint
 coverage<5.2
 django-compressor
-django-debug-toolbar<3.3  # https://github.com/jazzband/django-debug-toolbar
+django-debug-toolbar      # https://github.com/jazzband/django-debug-toolbar
 mock                      # mock objects for unit tests
 pip-tools                 # tool for managing our python dependency tree
 responses                 # mock HTTP responses for unit tests

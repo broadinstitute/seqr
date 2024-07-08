@@ -26,7 +26,7 @@ defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
-django==3.2.25
+django==4.2.13
     # via
     #   -r requirements.in
     #   django-anymail
@@ -38,6 +38,7 @@ django==3.2.25
     #   django-notifications-hq
     #   django-storages
     #   jsonfield
+    #   social-auth-app-django
 django-anymail==9.0
     # via -r requirements.in
 django-cors-headers==3.13.0
@@ -107,7 +108,7 @@ protobuf==3.20.2
     # via
     #   google-api-core
     #   googleapis-common-protos
-psycopg2==2.9.5
+psycopg==3.2.1
     # via -r requirements.in
 pyasn1==0.4.8
     # via
@@ -117,7 +118,7 @@ pyasn1-modules==0.2.8
     # via google-auth
 pycparser==2.21
     # via cffi
-pyjwt==2.6.0
+pyjwt==2.8.0
     # via social-auth-core
 pyliftover==0.4
     # via -r requirements.in
@@ -126,9 +127,7 @@ python-dateutil==2.8.2
 python3-openid==3.2.0
     # via social-auth-core
 pytz==2022.7.1
-    # via
-    #   django
-    #   django-notifications-hq
+    # via django-notifications-hq
 redis==4.5.4
     # via -r requirements.in
 requests==2.32.2
@@ -159,9 +158,9 @@ slacker==0.14.0
     # via -r requirements.in
 slugify==0.0.1
     # via -r requirements.in
-social-auth-app-django==5.0.0
+social-auth-app-django==5.4.1
     # via -r requirements.in
-social-auth-core==4.3.0
+social-auth-core==4.5.4
     # via
     #   -r requirements.in
     #   social-auth-app-django
@@ -175,6 +174,8 @@ tenacity==8.3.0
     # via -r requirements.in
 tqdm==4.66.3
     # via -r requirements.in
+typing-extensions==4.12.2
+    # via psycopg
 urllib3==1.26.19
     # via
     #   elasticsearch

@@ -32,6 +32,10 @@ INDIVIDUAL3_GUID = 'I000003_na19679'
 
 INDIVIDUAL_GUIDS = [INDIVIDUAL_GUID, INDIVIDUAL2_GUID, INDIVIDUAL3_GUID]
 
+FAMILY_API_SAMPLE_FIELDS = {*SAMPLE_FIELDS, 'rnaSeqTypes'}
+SAMPLE_GUIDS = ['S000129_na19675', 'S000130_na19678', 'S000131_na19679', 'S000151_na19675_1', 'S000152_na19675_d2', 'S000153_na19679']
+
+
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
@@ -69,8 +73,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
-        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData',
-                             'phenotypePrioritizationTools'}
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'phenotypePrioritizationTools'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
         self.assertListEqual([
@@ -83,19 +86,19 @@ class FamilyAPITest(AuthenticationTestCase):
         ],
             [response_json['individualsByGuid'][guid].get('phenotypePrioritizationTools') for guid in INDIVIDUAL_GUIDS]
         )
-        self.assertListEqual(
-            [True, False, True],
-            [response_json['individualsByGuid'][guid].get('hasRnaOutlierData', False) for guid in INDIVIDUAL_GUIDS]
-        )
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
 
         self.assertEqual(len(response_json['samplesByGuid']), 6)
-        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
+        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), FAMILY_API_SAMPLE_FIELDS)
         self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['samplesByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['samplesByGuid'].values()})
         self.assertEqual(len(individual['sampleGuids']), 3)
         self.assertTrue(set(individual['sampleGuids']).issubset(set(response_json['samplesByGuid'].keys())))
+        self.assertListEqual(
+            [[], [], [], ['TPM', 'Splice Outlier'], ['TPM', 'Expression Outlier', 'Splice Outlier'], ['Splice Outlier']],
+            [response_json['samplesByGuid'][guid].get('rnaSeqTypes', {}) for guid in SAMPLE_GUIDS]
+        )
 
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
         self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
