@@ -5,7 +5,7 @@ from django.utils import timezone
 from tqdm import tqdm
 
 from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
-from seqr.utils.communication_utils import safe_post_to_slack
+from seqr.utils.communication_utils import safe_post_to_slack, send_project_notification
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
@@ -519,7 +519,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     info.append(message)
     logger.info(message, user)
 
-    _notify_rna_loading(model_cls, sample_projects)
+    _notify_rna_loading(model_cls, sample_projects, projects)
 
     for warning in warnings:
         logger.warning(warning, user)
@@ -564,7 +564,9 @@ RNA_MODEL_DISPLAY_NAME = {
   RnaSeqTpm: 'Expression',
 }
 
-def _notify_rna_loading(model_cls, sample_projects):
+
+def _notify_rna_loading(model_cls, sample_projects, internal_projects):
+    projects_by_name = {project.name: project for project in internal_projects}
     data_type = RNA_MODEL_DISPLAY_NAME[model_cls]
     for project_agg in sample_projects:
         new_ids = project_agg["new_sample_ids"]
@@ -572,6 +574,16 @@ def _notify_rna_loading(model_cls, sample_projects):
         safe_post_to_slack(
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
             f'{len(new_ids)} new RNA {data_type} samples are loaded in {project_link}\n```{", ".join(new_ids)}```'
+        )
+        email = (
+            f'This is to notify you that data for {len(new_ids)} new RNA {data_type} sample(s) '
+            f'has been loaded in seqr project {project_link}'
+        )
+        send_project_notification(
+            project=projects_by_name[project_agg["name"]],
+            notification=f'Loaded {len(new_ids)} new RNA {data_type} sample(s)',
+            email=email,
+            subject=f'New RNA {data_type} data available in seqr',
         )
 
 

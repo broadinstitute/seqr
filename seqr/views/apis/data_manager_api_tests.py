@@ -16,7 +16,6 @@ from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
-SEQR_URL = 'https://seqr.broadinstitute.org/'
 PROJECT_GUID = 'R0001_1kg'
 
 ES_CAT_ALLOCATION=[{
@@ -873,6 +872,7 @@ class DataManagerAPITest(AirtableTest):
     @mock.patch('seqr.views.utils.dataset_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.dataset_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @mock.patch('seqr.views.utils.file_utils.tempfile.gettempdir', lambda: 'tmp/')
+    @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.views.utils.dataset_utils.safe_post_to_slack')
     @mock.patch('seqr.views.apis.data_manager_api.datetime')
     @mock.patch('seqr.views.apis.data_manager_api.os.mkdir')
@@ -881,7 +881,7 @@ class DataManagerAPITest(AirtableTest):
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     def _test_update_rna_seq(self, data_type, mock_open, mock_subprocess, mock_load_uploaded_file,
-                            mock_rename, mock_mkdir, mock_datetime, mock_send_slack):
+                            mock_rename, mock_mkdir, mock_datetime, mock_send_slack, mock_send_email):
         url = reverse(update_rna_seq)
         self.check_pm_login(url)
 
@@ -966,6 +966,7 @@ class DataManagerAPITest(AirtableTest):
         self._has_expected_file_loading_logs('gs://rna_data/muscle_samples.tsv.gz', info=info, warnings=warnings, user=self.pm_user)
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
         mock_send_slack.assert_not_called()
+        mock_send_email.assert_not_called()
         self.assertEqual(mock_subprocess.call_count, 2)
         mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [  # nosec
             f'gsutil ls {body["file"]}',
@@ -1034,9 +1035,16 @@ class DataManagerAPITest(AirtableTest):
                 f'0 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>\n``````',
             ), mock.call(
                 'seqr-data-loading',
-                f'1 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/'
-                f'R0003_test/project_page|Test Reprocessed Project>\n```NA20888```',
+                f'1 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/R0003_test/project_page|Test Reprocessed Project>\n```NA20888```',
             ),
+        ])
+        self.assertEqual(mock_send_email.call_count, 2)
+        self._assert_expected_notifications(mock_send_email, [
+            {'data_type': f'RNA {params["message_data_type"]}', 'user': self.data_manager_user,
+             'email_body': f'data for 0 new RNA {params["message_data_type"]} sample(s)'},
+            {'data_type': f'RNA {params["message_data_type"]}', 'user': self.data_manager_user,
+             'email_body': f'data for 1 new RNA {params["message_data_type"]} sample(s)',
+             'project_guid': 'R0003_test', 'project_name': 'Test Reprocessed Project'}
         ])
 
         # test database models are correct
@@ -1187,7 +1195,7 @@ class DataManagerAPITest(AirtableTest):
     def _join_data(cls, data):
         return ['\t'.join(line).encode('utf-8') for line in data]
 
-    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', SEQR_URL)
+    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.models.random')
     @mock.patch('seqr.utils.communication_utils.send_html_email')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1270,10 +1278,10 @@ class DataManagerAPITest(AirtableTest):
         self.assertListEqual(saved_data, EXPECTED_LIRICAL_DATA)
         mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)  # nosec
         self._assert_expected_notifications(mock_send_email, [
-            {'tool': 'lirical', 'num_samples': 1, 'user': self.data_manager_user},
-            {'tool': 'lirical', 'num_samples': 1, 'user': self.data_manager_user,
+            {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'Lirical data for 1 sample(s)'},
+            {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'Lirical data for 1 sample(s)',
              'project_guid': 'R0003_test', 'project_name': 'Test Reprocessed Project'}
-        ])
+        ], has_html=True)
 
         # Test uploading new data
         self.reset_logs()
@@ -1301,25 +1309,25 @@ class DataManagerAPITest(AirtableTest):
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_UPDATED_LIRICAL_DATA)
         self._assert_expected_notifications(mock_send_email, [
-            {'tool': 'lirical', 'num_samples': 2, 'user': self.data_manager_user},
-        ])
+            {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'Lirical data for 2 sample(s)'},
+        ], has_html=True)
 
     @staticmethod
-    def _assert_expected_notifications(mock_send_email, expected_notifs: list[dict]):
+    def _assert_expected_notifications(mock_send_email, expected_notifs: list[dict], has_html=False):
         calls = []
         for notif_dict in expected_notifs:
             project_guid = notif_dict.get('project_guid', PROJECT_GUID)
             project_name = notif_dict.get('project_name', '1kg project nåme with uniçøde')
-            url = f'{SEQR_URL}project/{project_guid}/project_page'
-            project_link = f'<a href={url}>{project_name}</a>'
-            email = (
-                f'This is to notify you that {notif_dict["tool"].title()} data for {notif_dict["num_samples"]} sample(s) '
-                f'has been loaded in seqr project {project_link}'
+            url = f'https://test-seqr.org/project/{project_guid}/project_page'
+            project_link = f'<a href={url}>{project_name}</a>' if has_html else f'<{url}|{project_name}>'
+            expected_email_body = (
+                f'Dear seqr user,\n\nThis is to notify you that {notif_dict["email_body"]} '
+                f'has been loaded in seqr project {project_link}\n\nAll the best,\nThe seqr team'
             )
             calls.append(
                 mock.call(
-                    email_body=f'Dear seqr user,\n\n{email}\n\nAll the best,\nThe seqr team',
-                    subject=f'New {notif_dict["tool"].title()} data available in seqr',
+                    email_body=expected_email_body,
+                    subject=f'New {notif_dict["data_type"]} data available in seqr',
                     to=['test_user_manager@test.com'],
                     process_message=_set_bulk_notification_stream,
                 )
