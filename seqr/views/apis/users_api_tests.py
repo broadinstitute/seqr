@@ -134,7 +134,7 @@ class UsersAPITest(object):
     Test Manager User has added you as a collaborator in seqr.
 
     Please click this link to set up your account:
-    /login/set_password/{password_token}
+    http://localhost/login/set_password/{password_token}
 
     Thanks!
     """.format(password_token=user.password)

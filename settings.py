@@ -299,7 +299,7 @@ SEQR_VERSION = 'v1.0'
 SEQR_PRIVACY_VERSION = float(os.environ.get('SEQR_PRIVACY_VERSION', 1.1))
 SEQR_TOS_VERSION = float(os.environ.get('SEQR_TOS_VERSION', 1.2))
 
-BASE_URL = os.environ.get("BASE_URL", "http://localhost")
+BASE_URL = os.environ.get("BASE_URL", "http://localhost/")
 CSRF_TRUSTED_ORIGINS = [BASE_URL]
 GA_TOKEN_ID = os.environ.get("GA_TOKEN_ID")
 
