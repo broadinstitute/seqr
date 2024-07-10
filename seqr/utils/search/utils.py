@@ -72,6 +72,7 @@ def get_search_backend_status():
 
 
 def _get_filtered_search_samples(search_filter, active_only=True):
+    # TODO no RNA filtering needed
     samples = Sample.objects.filter(elasticsearch_index__isnull=False, **search_filter)
     if active_only:
         samples = samples.filter(is_active=True)

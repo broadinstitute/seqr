@@ -413,6 +413,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     rna_tpm = None
     if include_individual_gene_scores:
         present_family_genes = {k: v for k, v in family_genes.items() if v}
+        # TODO use RNA model
         rna_sample_family_map = dict(Sample.objects.filter(
             individual__family__guid__in=present_family_genes.keys(), sample_type=Sample.SAMPLE_TYPE_RNA, is_active=True,
         ).values_list('id', 'individual__family__guid'))

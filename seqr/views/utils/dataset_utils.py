@@ -45,6 +45,7 @@ def _find_or_create_samples(
         tissue_type=None,
         sample_data=None,
 ):
+    # TOD cleanup from RNA
     sample_params = {'sample_type': sample_type, 'dataset_type': dataset_type, 'tissue_type': tissue_type}
     sample_params.update(sample_data or {})
 
@@ -198,6 +199,7 @@ def match_and_update_search_samples(
         projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
         sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
 ):
+    # TODO clean up RNA usages
     samples_guids, individual_ids, remaining_sample_keys, loaded_date = _find_or_create_samples(
         sample_project_tuples=sample_project_tuples,
         projects=projects,
@@ -454,6 +456,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
 
     def update_sample_models():
         if samples_to_create:
+            # TODO handle RNA
             new_sample_models = _create_samples(
                 samples_to_create.values(),
                 user=user,

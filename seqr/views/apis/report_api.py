@@ -54,6 +54,7 @@ def seqr_stats(request):
 
     grouped_sample_counts = defaultdict(dict)
     for project_key, projects in project_models.items():
+        # TODO handle RNA?
         samples_counts = _get_sample_counts(Sample.objects.filter(individual__family__project__in=projects))
         for k, v in samples_counts.items():
             grouped_sample_counts[k][project_key] = v

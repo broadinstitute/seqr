@@ -316,6 +316,7 @@ def _get_sample_file_path(file_dir, sample_guid):
 
 @pm_or_data_manager_required
 def load_rna_seq_sample_data(request, sample_guid):
+    # TODO migrate to RNA
     sample = Sample.objects.get(guid=sample_guid)
     logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
 

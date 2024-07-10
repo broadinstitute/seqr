@@ -189,6 +189,7 @@ def delete_individuals(project, individual_guids, user):
     if errors:
         raise ErrorsWarningsException(errors)
 
+    # TODO handle RNA
     Sample.bulk_delete(user, individual__in=individuals_to_delete)
     IgvSample.bulk_delete(user, individual__in=individuals_to_delete)
     MatchmakerResult.bulk_delete(user, submission__individual__in=individuals_to_delete, submission__deleted_date__isnull=False)

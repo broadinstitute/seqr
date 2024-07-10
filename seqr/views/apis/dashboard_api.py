@@ -59,6 +59,7 @@ def _get_projects_json(user):
             projects_by_guid[project_guid]['analysisStatusCounts'] = {}
         projects_by_guid[project_guid]['analysisStatusCounts'][agg['analysis_status']] = agg['count']
 
+    # TODO handle RNA
     sample_type_status_counts = Sample.objects.filter(individual__family__project__in=projects, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
     ).values(
         'individual__family__project__guid', 'sample_type',

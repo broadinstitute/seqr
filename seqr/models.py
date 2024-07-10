@@ -714,22 +714,22 @@ class Sample(ModelWithGUID):
         (NO_TISSUE_TYPE, 'None'),
     )
 
-    individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
+    individual = models.ForeignKey('Individual', on_delete=models.PROTECT)  # used
 
-    sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
-    dataset_type = models.CharField(max_length=13, choices=DATASET_TYPE_CHOICES)
+    sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)  # used Sample
+    dataset_type = models.CharField(max_length=13, choices=DATASET_TYPE_CHOICES)  # used Sample
 
-    tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES)
+    tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES)  # used RNA
 
     # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
-    sample_id = models.TextField(db_index=True)
+    sample_id = models.TextField(db_index=True)  # used Sample
 
-    elasticsearch_index = models.TextField(db_index=True, null=True)
-    data_source = models.TextField(null=True)
+    elasticsearch_index = models.TextField(db_index=True, null=True)  # used Sample
+    data_source = models.TextField(null=True)  # used
 
     # sample status
-    is_active = models.BooleanField(default=False)
-    loaded_date = models.DateTimeField()
+    is_active = models.BooleanField(default=False)  # used
+    loaded_date = models.DateTimeField()  # used
 
     def __unicode__(self):
         return self.sample_id.strip()
@@ -742,6 +742,8 @@ class Sample(ModelWithGUID):
            'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date',
            'elasticsearch_index',
        ]
+       # Sample: 'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date', 'elasticsearch_index',
+       # RNA: 'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date', 'elasticsearch_index',
 
 
 class IgvSample(ModelWithGUID):

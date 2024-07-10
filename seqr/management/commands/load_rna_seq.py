@@ -38,6 +38,7 @@ class Command(BaseCommand):
             data_type, options['input_file'], _save_sample_data,
             mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
 
+        # TODO
         sample_models_by_guid = {
             s.guid: s for s in Sample.objects.filter(guid__in=possible_sample_guids_to_keys)
         }

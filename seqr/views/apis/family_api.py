@@ -42,6 +42,7 @@ def family_page_data(request, family_guid):
     is_analyst = user_is_analyst(request.user)
     has_case_review_perm = has_case_review_permissions(project, request.user)
 
+    # TODO handle RNA?
     sample_models = Sample.objects.filter(individual__family=family)
     samples = get_json_for_samples(
         sample_models, project_guid=project.guid, family_guid=family_guid, skip_nested=True, is_analyst=is_analyst
