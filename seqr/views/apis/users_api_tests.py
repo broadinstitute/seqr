@@ -134,7 +134,7 @@ class UsersAPITest(object):
     Test Manager User has added you as a collaborator in seqr.
 
     Please click this link to set up your account:
-    http://localhost/login/set_password/{password_token}
+    /login/set_password/{password_token}
 
     Thanks!
     """.format(password_token=user.password)
@@ -353,7 +353,7 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
         Hi there Test User--
 
         Please click this link to reset your seqr password:
-        http://localhost/login/set_password/pbkdf2_sha256%2430000%24y85kZgvhQ539%24jrEC3L1IhCezUx3Itp%2B14w%2FT7U6u5XUxtpBZXKv8eh4%3D?reset=true
+        /login/set_password/pbkdf2_sha256%2430000%24y85kZgvhQ539%24jrEC3L1IhCezUx3Itp%2B14w%2FT7U6u5XUxtpBZXKv8eh4%3D?reset=true
         """
         mock_send_mail.assert_called_with(
             'Reset your seqr password',
