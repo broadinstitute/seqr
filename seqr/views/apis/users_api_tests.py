@@ -353,7 +353,7 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
         Hi there Test User--
 
         Please click this link to reset your seqr password:
-        /login/set_password/pbkdf2_sha256%2430000%24y85kZgvhQ539%24jrEC3L1IhCezUx3Itp%2B14w%2FT7U6u5XUxtpBZXKv8eh4%3D?reset=true
+        http://localhost/login/set_password/pbkdf2_sha256%2430000%24y85kZgvhQ539%24jrEC3L1IhCezUx3Itp%2B14w%2FT7U6u5XUxtpBZXKv8eh4%3D?reset=true
         """
         mock_send_mail.assert_called_with(
             'Reset your seqr password',
