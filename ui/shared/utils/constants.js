@@ -377,6 +377,7 @@ export const CATEGORY_FAMILY_FILTERS = {
     {
       value: `${SHOW_DATA_LOADED}_RNA`,
       name: 'Data Loaded - RNA',
+      // TODO use RNA sample models
       createFilter: hasMatchingSampleFilter(({ sampleType }) => sampleType === SAMPLE_TYPE_RNA),
     },
     ...[DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS].map(dataType => ({

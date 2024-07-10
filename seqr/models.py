@@ -742,8 +742,9 @@ class Sample(ModelWithGUID):
            'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date',
            'elasticsearch_index',
        ]
-       # Sample: 'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date', 'elasticsearch_index',
-       # RNA: 'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date', 'elasticsearch_index',
+       # Unneeded JS fields
+       # Sample: 'created_date', 'elasticsearch_index',
+       # RNA: 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'elasticsearch_index',
 
 
 class IgvSample(ModelWithGUID):

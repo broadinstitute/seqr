@@ -63,7 +63,7 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
-export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
+const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
 const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
   if (!acc[o.familyGuid]) {
@@ -148,6 +148,7 @@ export const getSamplesByFamily = createSelector(
   sortedSamples => groupByFamilyGuid(sortedSamples || []),
 )
 
+// TODO only used for search samples, simplify to single boolean isActive
 export const getHasActiveSearchableSampleByFamily = createSelector(
   getSamplesByFamily,
   samplesByFamily => Object.entries(samplesByFamily).reduce(
@@ -182,7 +183,7 @@ export const getProjectDatasetTypes = createSelector(
     (acc, { projectGuid, datasetTypes }) => ({
       ...acc,
       [projectGuid]: datasetTypes || [...new Set(Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
-        ({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex,
+        ({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex, // TODO remove search sample filtering
       ).map(({ datasetType }) => datasetType))],
     }), {},
   ),

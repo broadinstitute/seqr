@@ -16,6 +16,7 @@ const iconColor = (loadedSample, isOutdated) => {
   return isOutdated ? 'grey' : 'green'
 }
 
+// TODO configure for both RNA and non-RNA samples?
 const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) => (
   <Popup
     trigger={

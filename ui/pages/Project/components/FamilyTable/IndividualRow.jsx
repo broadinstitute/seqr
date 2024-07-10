@@ -169,6 +169,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         />
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
+    {/* TODO RNA only */}
     {loadedSamples.some(sample => sample.isActive && (sample.rnaSeqTypes.includes('Expression Outlier') || sample.rnaSeqTypes.includes('Splice Outlier'))) && (
       <div>
         <Link
@@ -184,6 +185,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
     )}
     {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShow }) => shouldShow(individual)).map(
       ({ modalName, title, modalSize, linkText, component }) => {
+        // TODO cleanup
         const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
         const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
         return (
@@ -540,6 +542,7 @@ class IndividualRow extends React.PureComponent {
     const { project, individual, mmeSubmission, samplesByGuid, tableName, updateIndividualPedigree } = this.props
     const { displayName, sex, affected, createdDate, sampleGuids } = individual
 
+    // TODO also show RNA samples
     let loadedSamples = sampleGuids.map(
       sampleGuid => samplesByGuid[sampleGuid],
     )
