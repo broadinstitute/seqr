@@ -252,10 +252,14 @@ TEMPLATE_DIRS = [
 ]
 
 DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE')
-if DEPLOYMENT_TYPE in {'prod', 'dev'}:
+if DEPLOYMENT_TYPE == 'prod':
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     DEBUG = False
+elif DEPLOYMENT_TYPE == 'dev':
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    DEBUG = True
 else:
     DEBUG = True
     # Enable CORS and hijak for local development
