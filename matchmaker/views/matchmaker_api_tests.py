@@ -437,7 +437,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
  - From Reza Maroofian at institution St Georges, University of London with genes RP11 with phenotypes HP:0012469 (Infantile spasms).
     
-    http://localhost/test_forgot_password/project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
+    http://localhost/project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
         self.assertEqual(mock_slacker.call_count, 3)
         mock_slacker.assert_called_with(MOCK_SLACK_TOKEN)
