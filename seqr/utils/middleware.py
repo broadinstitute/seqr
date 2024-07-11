@@ -184,12 +184,12 @@ class DebugCSRFMiddleware:
         )
 
     def __call__(self, request):
-        logger.debug(f'request META: {request.META}')
+        logger.info(f'request META: {request.META}')
         request_origin = request.META.get('HTTP_ORIGIN')
         good_origin = self.good_origin(request)
-        logger.debug(f'request get_host: {request.get_host()}')
-        logger.debug(f'request is_secure: {request.is_secure()}')
-        logger.debug(f'request_origin": {request_origin}')
-        logger.debug(f'good_origin": {good_origin}')
-        logger.debug(f'settings CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}')
+        logger.info(f'request get_host: {request.get_host()}')
+        logger.info(f'request is_secure: {request.is_secure()}')
+        logger.info(f'request_origin": {request_origin}')
+        logger.info(f'good_origin": {good_origin}')
+        logger.info(f'settings CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}')
         return self.get_response(request)
