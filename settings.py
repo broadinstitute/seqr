@@ -54,10 +54,11 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'seqr.utils.middleware.DebugCSRFMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.common.CommonMiddleware',
     'csp.middleware.CSPMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'seqr.utils.middleware.CacheControlMiddleware',
@@ -260,6 +261,7 @@ if DEPLOYMENT_TYPE in {'prod', 'dev'}:
     DEBUG = False
 else:
     DEBUG = True
+    CSRF_TRUSTED_ORIGINS = []
     # Enable CORS and hijak for local development
     INSTALLED_APPS += ['corsheaders', 'hijack']
     MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')

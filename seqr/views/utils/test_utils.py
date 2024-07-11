@@ -250,8 +250,8 @@ class AuthenticationTestCase(TestCase):
         self._log_stream.truncate(0)
         self._log_stream.seek(0)
 
-    def assert_json_logs(self, user, expected):
-        logs = self._log_stream.getvalue().split('\n')
+    def assert_json_logs(self, user, expected, log_start_idx=7):
+        logs = self._log_stream.getvalue().split('\n')[log_start_idx:]
         for i, (message, extra) in enumerate(expected):
             extra = extra or {}
             validate = extra.pop('validate', None)
