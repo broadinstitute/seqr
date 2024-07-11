@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from anymail.exceptions import AnymailError
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.core.handlers.exception import get_exception_response
@@ -189,7 +191,9 @@ class DebugCSRFMiddleware:
         good_origin = self.good_origin(request)
         logger.info(f'request get_host: {request.get_host()}', request.user)
         logger.info(f'request is_secure: {request.is_secure()}', request.user)
-        logger.info(f'request_origin": {request_origin}', request.user)
-        logger.info(f'good_origin": {good_origin}', request.user)
+        logger.info(f'request_origin: {request_origin}', request.user)
+        logger.info(f'good_origin: {good_origin}', request.user)
         logger.info(f'settings CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}', request.user)
+        parsed_origin = urlparse(request_origin)
+        logger.info(f'parsed request origin: {parsed_origin}', request.user)
         return self.get_response(request)
