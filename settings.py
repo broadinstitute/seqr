@@ -256,7 +256,7 @@ BASE_URL = os.environ.get("BASE_URL", "/")
 if DEPLOYMENT_TYPE in {'prod', 'dev'}:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    CSRF_TRUSTED_ORIGINS = [BASE_URL]
+    CSRF_TRUSTED_ORIGINS = [BASE_URL, BASE_URL.replace('https', 'http')]
     DEBUG = False
 else:
     DEBUG = True
