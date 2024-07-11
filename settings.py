@@ -261,6 +261,7 @@ if DEPLOYMENT_TYPE in {'prod', 'dev'}:
     DEBUG = False
 else:
     DEBUG = True
+    CSRF_TRUSTED_ORIGINS = []
     # Enable CORS and hijak for local development
     INSTALLED_APPS += ['corsheaders', 'hijack']
     MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
