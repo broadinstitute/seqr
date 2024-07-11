@@ -76,6 +76,9 @@ class TerraApiUtilsHelpersCase(AuthenticationTestCase):
 class TerraApiUtilsCallsCase(AuthenticationTestCase):
     fixtures = ['users', 'social_auth']
 
+    def assert_json_logs(self, user, expected_logs):
+        super().assert_json_logs(user, expected_logs, log_start_idx=0)
+
     def _check_exceptions(self, path, func, args, kwargs=None, responses_body=None):
         url = f'{TEST_TERRA_API_ROOT_URL}{path}'
         kwargs = kwargs or {}
