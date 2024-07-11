@@ -4,7 +4,7 @@ from django.db.models import Count, F, Q
 from django.utils import timezone
 from tqdm import tqdm
 
-from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
+from seqr.models import Sample, Individual, Family, Project, RnaSample, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
 from seqr.utils.communication_utils import safe_post_to_slack, send_project_notification
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import SeqrLogger
@@ -285,8 +285,8 @@ SPLICE_OUTLIER_HEADER_COLS.update({
     PROJECT_COL: 'projectName', SAMPLE_ID_COL: SAMPLE_ID_HEADER_COL, GENE_ID_COL: GENE_ID_HEADER_COL,
 })
 
-REVERSE_TISSUE_TYPE = dict(Sample.TISSUE_TYPE_CHOICES)
-TISSUE_TYPE_MAP = {v: k for k, v in REVERSE_TISSUE_TYPE.items() if k != Sample.NO_TISSUE_TYPE}
+REVERSE_TISSUE_TYPE = dict(RnaSample.TISSUE_TYPE_CHOICES)
+TISSUE_TYPE_MAP = {v: k for k, v in REVERSE_TISSUE_TYPE.items()}
 
 
 def _get_splice_id(row):
