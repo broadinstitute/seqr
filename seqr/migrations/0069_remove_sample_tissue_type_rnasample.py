@@ -126,6 +126,26 @@ class Migration(migrations.Migration):
                 ('individual', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='seqr.individual')),
             ],
         ),
+        migrations.AlterUniqueTogether(
+            name='rnaseqoutlier',
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name='rnaseqspliceoutlier',
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name='rnaseqtpm',
+            unique_together=set(),
+        ),
+        migrations.RemoveIndex(
+            model_name='rnaseqoutlier',
+            name='seqr_rnaseq_sample__bdd363_idx',
+        ),
+        migrations.RemoveIndex(
+            model_name='rnaseqtpm',
+            name='seqr_rnaseq_sample__e7153a_idx',
+        ),
         migrations.RunPython(create_new_rna_samples, reverse_code=merge_old_new_rna_samples),
         migrations.AlterField(
             model_name='rnaseqoutlier',
@@ -141,6 +161,26 @@ class Migration(migrations.Migration):
             model_name='rnaseqtpm',
             name='sample',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='seqr.rnasample'),
+        ),
+        migrations.AlterUniqueTogether(
+            name='rnaseqoutlier',
+            unique_together={('sample', 'gene_id')},
+        ),
+        migrations.AlterUniqueTogether(
+            name='rnaseqspliceoutlier',
+            unique_together={('sample', 'gene_id', 'chrom', 'start', 'end', 'strand', 'type')},
+        ),
+        migrations.AlterUniqueTogether(
+            name='rnaseqtpm',
+            unique_together={('sample', 'gene_id')},
+        ),
+        migrations.AddIndex(
+            model_name='rnaseqoutlier',
+            index=models.Index(fields=['sample_id', 'gene_id'], name='seqr_rnaseq_sample__bdd363_idx'),
+        ),
+        migrations.AddIndex(
+            model_name='rnaseqtpm',
+            index=models.Index(fields=['sample_id', 'gene_id'], name='seqr_rnaseq_sample__e7153a_idx'),
         ),
         migrations.RunPython(remove_old_rna_samples, reverse_code=migrations.RunPython.noop),
         migrations.RemoveField(
