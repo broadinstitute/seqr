@@ -9,7 +9,7 @@ import re
 
 SAMPLE_FIELDS = ['last_modified_date', 'tissue_type', 'is_active', 'created_by_id', 'individual_id']
 
-DATA_TYPE_MODELS = [('S', 'RnaSeqSpliceOutlier'), ('E', 'RnaSeqOutlier'), ('T', 'RnaSeqTpm')]
+DATA_TYPE_MODELS = {'S': 'RnaSeqSpliceOutlier', 'E': 'RnaSeqOutlier', 'T': 'RnaSeqTpm'}
 
 
 def create_new_rna_samples(apps, schema_editor):
@@ -17,16 +17,17 @@ def create_new_rna_samples(apps, schema_editor):
     RnaSample = apps.get_model('seqr', 'RnaSample')
     db_alias = schema_editor.connection.alias
 
-    data_type_sample_ids = {
-        dt: set(apps.get_model('seqr', model).objects.using(db_alias).values_list('sample_id', flat=True).distinct())
-        for dt, model in DATA_TYPE_MODELS
-    }
+    data_type_sample_ids = [
+        (dt, set(apps.get_model('seqr', model).objects.using(db_alias).values_list('sample_id', flat=True).distinct()))
+        for dt, model in DATA_TYPE_MODELS.items()
+    ]
+    data_type_sample_ids = [(dt, sample_ids) for dt, sample_ids in data_type_sample_ids if sample_ids]
 
     samples = Sample.objects.using(db_alias).filter(sample_type='RNA')
     rna_samples = []
     old_id_to_new_guid = {}
     for sample in samples:
-        data_types = [dt for dt, sample_ids in data_type_sample_ids.items() if sample.id in sample_ids]
+        data_types = [dt for dt, sample_ids in data_type_sample_ids if sample.id in sample_ids]
         if not data_types:
             data_types.append(next(
                 dt for dt, dt_name in [('S', 'fraser'), ('E', 'outrider'), ('T', 'tpm')] if dt_name in sample.data_source
@@ -48,9 +49,9 @@ def create_new_rna_samples(apps, schema_editor):
         print(f'Migrated {len(rna_samples)} RnaSamples')
 
     guid_to_new_id = dict(RnaSample.objects.using(db_alias).values_list('guid', 'id'))
-    for data_type, rna_model_name in DATA_TYPE_MODELS:
+    for data_type, old_sample_ids in data_type_sample_ids:
+        rna_model_name = DATA_TYPE_MODELS[data_type]
         rna_cls = apps.get_model('seqr', rna_model_name)
-        old_sample_ids = data_type_sample_ids[data_type]
         print(f'Updating sample foreign keys for {len(old_sample_ids)} {rna_model_name} samples')
         import time
         # TODO need slight performance improvement
