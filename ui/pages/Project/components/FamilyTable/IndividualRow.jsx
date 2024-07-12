@@ -22,7 +22,7 @@ import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
 import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import {
-  AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
+  AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED, INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_LOOKUP,
 } from 'shared/utils/constants'
 
@@ -118,17 +118,6 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const SHOW_DATA_MODAL_CONFIG = [
-  {
-    shouldShow: individual => individual.phenotypePrioritizationTools.length > 0,
-    component: PhenotypePrioritizedGenes,
-    modalName: ({ individualId }) => `PHENOTYPE-PRIORITIZATION-${individualId}`,
-    title: ({ individualId }) => `Phenotype Prioritized Genes: ${individualId}`,
-    modalSize: 'large',
-    linkText: 'Show Phenotype Prioritized Genes',
-  },
-]
-
 const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) => (
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
     <VerticalSpacer height={5} />
@@ -182,25 +171,17 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
     {individual.phenotypePrioritizationTools.map(
       tool => <div key={tool.tool}><Sample loadedSample={tool} /></div>,
     )}
-    {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShow }) => shouldShow(individual)).map(
-      ({ modalName, title, modalSize, linkText, component }) => {
-        const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
-        const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
-        return (
-          <Modal
-            key={modalName(titleIds)}
-            modalName={modalName(titleIds)}
-            title={title(titleIds)}
-            size={modalSize}
-            trigger={<ButtonLink padding="0 0 0 0" content={linkText} />}
-          >
-            <React.Suspense fallback={<Loader />}>
-              {React.createElement(component,
-                { familyGuid: individual.familyGuid, individualGuid: individual.individualGuid }) }
-            </React.Suspense>
-          </Modal>
-        )
-      },
+    {individual.phenotypePrioritizationTools.length > 0 && (
+      <Modal
+        modalName={`PHENOTYPE-PRIORITIZATION-${individual.individualId}`}
+        title={`Phenotype Prioritized Genes: ${individual.individualId}`}
+        size="large"
+        trigger={<ButtonLink padding="0 0 0 0" content="Show Phenotype Prioritized Genes" />}
+      >
+        <React.Suspense fallback={<Loader />}>
+          <PhenotypePrioritizedGenes familyGuid={individual.familyGuid} individualGuid={individual.individualGuid} />
+        </React.Suspense>
+      </Modal>
     )}
   </div>
 ))
