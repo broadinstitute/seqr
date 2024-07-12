@@ -9,26 +9,24 @@ import re
 
 SAMPLE_FIELDS = ['last_modified_date', 'tissue_type', 'is_active', 'created_by_id', 'individual_id']
 
+DATA_TYPE_MODELS = [('S', 'RnaSeqSpliceOutlier'), ('E', 'RnaSeqOutlier'), ('T', 'RnaSeqTpm')]
+
 
 def create_new_rna_samples(apps, schema_editor):
     Sample = apps.get_model('seqr', 'Sample')
     RnaSample = apps.get_model('seqr', 'RnaSample')
-    RnaSeqTpm = apps.get_model('seqr', 'RnaSeqTpm')
-    RnaSeqSpliceOutlier = apps.get_model('seqr', 'RnaSeqSpliceOutlier')
-    RnaSeqOutlier = apps.get_model('seqr', 'RnaSeqOutlier')
     db_alias = schema_editor.connection.alias
 
-    tpm_sample_ids = set(RnaSeqTpm.objects.using(db_alias).values_list('sample_id', flat=True).distinct())
-    splice_outlier_sample_ids = set(RnaSeqSpliceOutlier.objects.using(db_alias).values_list('sample_id', flat=True).distinct())
-    expression_outlier_sample_ids = set(RnaSeqOutlier.objects.using(db_alias).values_list('sample_id', flat=True).distinct())
+    data_type_sample_ids = {
+        dt: set(apps.get_model('seqr', model).objects.using(db_alias).values_list('sample_id', flat=True).distinct())
+        for dt, model in DATA_TYPE_MODELS
+    }
 
     samples = Sample.objects.using(db_alias).filter(sample_type='RNA')
     rna_samples = []
     old_id_to_new_guid = {}
     for sample in samples:
-        data_types = [dt for dt, sample_ids in [
-            ('S', splice_outlier_sample_ids), ('E', expression_outlier_sample_ids), ('T', tpm_sample_ids)
-        ] if sample.id in sample_ids]
+        data_types = [dt for dt, sample_ids in data_type_sample_ids.items() if sample.id in sample_ids]
         if not data_types:
             data_types.append(next(
                 dt for dt, dt_name in [('S', 'fraser'), ('E', 'outrider'), ('T', 'tpm')] if dt_name in sample.data_source
@@ -50,20 +48,17 @@ def create_new_rna_samples(apps, schema_editor):
         print(f'Migrated {len(rna_samples)} RnaSamples')
 
     guid_to_new_id = dict(RnaSample.objects.using(db_alias).values_list('guid', 'id'))
-    for data_type, rna_model_name in [('S', 'RnaSeqSpliceOutlier'), ('E', 'RnaSeqOutlier'), ('T', 'RnaSeqTpm')]:
+    for data_type, rna_model_name in DATA_TYPE_MODELS:
         rna_cls = apps.get_model('seqr', rna_model_name)
-        total = rna_cls.objects.using(db_alias).count()
-        updated = 0
-        paginator = Paginator(rna_cls.objects.using(db_alias).order_by('id').all(), 5000)
-        for page_number in paginator.page_range:
-            page = paginator.page(page_number)
-            updates = []
-            for rna_data in page.object_list:
-                rna_data.sample_id = guid_to_new_id[old_id_to_new_guid[(rna_data.sample_id, data_type)]]
-                updates.append(rna_data)
-            rna_cls.objects.using(db_alias).bulk_update(updates, ['sample_id'])
-            updated += len(updates)
-            print(f'Updated {rna_model_name} sample foreign key: {updated}/{total}')
+        old_sample_ids = data_type_sample_ids[data_type]
+        print(f'Updating sample foreign keys for {len(old_sample_ids)} {rna_model_name} samples')
+        import time
+        # TODO need slight performance improvement
+        for old_sample_id in old_sample_ids:
+            start = time.perf_counter()
+            new_sample_id = guid_to_new_id[old_id_to_new_guid[(old_sample_id, data_type)]]
+            updated = rna_cls.objects.using(db_alias).filter(sample_id=old_sample_id).update(sample_id=new_sample_id)
+            print(f'{time.perf_counter()-start:0.4f}s: Updated {updated} {rna_model_name} sample foreign keys')
 
 
 def merge_old_new_rna_samples(apps, schema_editor):
