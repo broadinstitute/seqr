@@ -44,11 +44,13 @@ def create_new_rna_samples(apps, schema_editor):
                 data_source=sample.data_source or sample.elasticsearch_index,
                 **{field: getattr(sample, field) for field in SAMPLE_FIELDS},
             ))
+
+    guid_to_new_id = {}
     if rna_samples:
-        RnaSample.objects.using(db_alias).bulk_create(rna_samples)
+        rna_sample_models = RnaSample.objects.using(db_alias).bulk_create(rna_samples)
+        guid_to_new_id = {s.guid: s.id for s in rna_sample_models}
         print(f'Migrated {len(rna_samples)} RnaSamples')
 
-    guid_to_new_id = dict(RnaSample.objects.using(db_alias).values_list('guid', 'id'))
     for data_type, old_sample_ids in data_type_sample_ids:
         rna_model_name = DATA_TYPE_MODELS[data_type]
         rna_cls = apps.get_model('seqr', rna_model_name)
