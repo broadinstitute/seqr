@@ -52,7 +52,7 @@ def add_data_type_rna_samples(apps, schema_editor):
     data_samples = splice_outlier_samples | tpm_outlier_samples | expression_outlier_samples
     no_data_samples = rna_samples.exclude(id__in=data_samples)
     if no_data_samples:
-        for data_type, substring in [('S', 'splice'), ('T', 'tpm'), ('E', 'expression')]:
+        for data_type, substring in [('S', 'fraser'), ('T', 'tpm'), ('E', 'outrider')]:
             count = _update_sample_data_type(no_data_samples.filter(data_source__icontains=substring), data_type)
             print(f'Inferred data type for {count} inactive {substring} samples')
 
