@@ -2,8 +2,8 @@
 
 from django.conf import settings
 from django.db import migrations, models
-from django.db.models import F, Value
-from django.db.models.functions import Coalesce, Concat, Left, Replace
+from django.db.models import F
+from django.db.models.functions import Coalesce
 import django.db.models.deletion
 import django.utils.timezone
 
