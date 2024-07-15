@@ -335,7 +335,7 @@ def _validate_rna_header(header, column_map):
 
 
 def _load_rna_seq_file(
-        file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, match_sample,
+        file_path, user, potential_loaded_samples, update_sample_models, save_data, match_sample,
         column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
 ):
 
@@ -390,7 +390,7 @@ def _load_rna_seq_file(
 
         for gene_id in row_gene_ids:
             row_dict = {**row_dict, GENE_ID_COL: gene_id}
-            save_sample_data(sample_key, row_dict)
+            save_data(sample_key, row_dict)
 
     errors, warnings = _process_rna_errors(
         gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples,
@@ -479,12 +479,6 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
         for guid in to_delete_sample_individuals:
             existing_samples_by_guid[guid]['dataSource'] = data_source
 
-    def save_sample_data(sample_key, sample_data):
-        if not sample_data:
-            return
-
-        save_data(sample_key, sample_data)
-
     def match_sample(sample_key, unmatched_samples, sample_id_to_individual_id_mapping):
         if sample_key in potential_samples:
             sample = potential_samples[sample_key]
@@ -503,7 +497,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
                 unmatched_samples.add(sample_key)
 
     warnings, not_loaded_count = _load_rna_seq_file(
-        file_path, user, potential_loaded_samples, update_sample_models, save_sample_data, match_sample,
+        file_path, user, potential_loaded_samples, update_sample_models, save_data, match_sample,
         *args, **kwargs)
     message = f'Parsed {len(sample_guid_keys_to_load) + not_loaded_count} RNA-seq samples'
     info = [message]
