@@ -387,9 +387,10 @@ def _load_rna_seq_file(
         if any(row_gene_ids):
             gene_ids.update(row_gene_ids)
 
-        _match_sample(
-            sample_key, unmatched_samples, potential_samples, existing_samples_by_guid, individual_data_by_key,
-            sample_guid_keys_to_load, samples_to_create, sample_id_to_individual_id_mapping)
+        if not _match_existing_sample(sample_key, potential_samples, existing_samples_by_guid, sample_guid_keys_to_load):
+            _match_new_sample(
+                sample_key, samples_to_create, unmatched_samples, individual_data_by_key, sample_id_to_individual_id_mapping,
+            )
 
         if missing_required_fields or (unmatched_samples and not ignore_extra_samples) or (sample_key in unmatched_samples):
             # If there are definite errors, do not process/save data, just continue to check for additional errors
@@ -469,15 +470,18 @@ def _update_sample_models(model_cls, user, data_source, samples_to_create, sampl
     return set(to_delete_sample_individuals.values())
 
 
-def _match_sample(sample_key, unmatched_samples, potential_samples, existing_samples_by_guid, individual_data_by_key,
-                  sample_guid_keys_to_load, samples_to_create, sample_id_to_individual_id_mapping):
-    if sample_key in potential_samples:
-        sample = potential_samples[sample_key]
-        sample_guid = sample['guid']
-        existing_samples_by_guid[sample_guid] = sample
-        sample_guid_keys_to_load[sample_guid] = sample_key
-        return
+def _match_existing_sample(sample_key, potential_samples, existing_samples_by_guid, sample_guid_keys_to_load):
+    if sample_key not in potential_samples:
+        return False
 
+    sample = potential_samples[sample_key]
+    sample_guid = sample['guid']
+    existing_samples_by_guid[sample_guid] = sample
+    sample_guid_keys_to_load[sample_guid] = sample_key
+    return True
+
+
+def _match_new_sample(sample_key, samples_to_create, unmatched_samples, individual_data_by_key, sample_id_to_individual_id_mapping):
     if sample_key not in samples_to_create and sample_key not in unmatched_samples:
         individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
         if individual_key in individual_data_by_key:
