@@ -485,14 +485,16 @@ def _match_existing_sample(sample_key, potential_samples, existing_samples_by_gu
 
 
 def _match_new_sample(sample_key, samples_to_create, unmatched_samples, individual_data_by_key, sample_id_to_individual_id_mapping):
-    if sample_key not in samples_to_create and sample_key not in unmatched_samples:
-        individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
-        if individual_key in individual_data_by_key:
-            samples_to_create[sample_key] = _get_new_sample_args(
-                sample_key, individual_data_by_key[individual_key], key_fields=['tissue_type'],
-            )
-        else:
-            unmatched_samples.add(sample_key)
+    if sample_key in samples_to_create or sample_key in unmatched_samples:
+        return
+
+    individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
+    if individual_key in individual_data_by_key:
+        samples_to_create[sample_key] = _get_new_sample_args(
+            sample_key, individual_data_by_key[individual_key], key_fields=['tissue_type'],
+        )
+    else:
+        unmatched_samples.add(sample_key)
 
 
 def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
