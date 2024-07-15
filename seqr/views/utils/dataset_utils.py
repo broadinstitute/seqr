@@ -335,9 +335,8 @@ def _validate_rna_header(header, column_map):
 
 
 def _load_rna_seq_file(
-        file_path, user, model_cls, data_source, potential_loaded_samples, save_data, potential_samples,
-        existing_samples_by_guid, individual_data_by_key, sample_guid_keys_to_load, samples_to_create,
-        prev_loaded_individual_ids, column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
+        file_path, user, model_cls, data_source, potential_samples, save_data, individual_data_by_key,
+        column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
 ):
 
     sample_id_to_individual_id_mapping = {}
@@ -351,8 +350,13 @@ def _load_rna_seq_file(
     if allow_missing_gene:
         required_column_map = {k: v for k, v in required_column_map.items() if v != GENE_ID_COL}
 
+    potential_loaded_samples = {key for key, s in potential_samples.items() if s['dataSource'] == data_source and s['active']}
+
     loaded_samples = set()
     unmatched_samples = set()
+    existing_samples_by_guid = {}
+    samples_to_create = {}
+    sample_guid_keys_to_load = {}
     missing_required_fields = defaultdict(set)
     gene_ids = set()
     for line in tqdm(parsed_f, unit=' rows'):
@@ -402,11 +406,10 @@ def _load_rna_seq_file(
     if errors:
         raise ErrorsWarningsException(errors)
 
-    _update_sample_models(
-        model_cls, user, data_source, samples_to_create, sample_guid_keys_to_load, existing_samples_by_guid,
-        prev_loaded_individual_ids)
+    prev_loaded_individual_ids = _update_sample_models(
+        model_cls, user, data_source, samples_to_create, sample_guid_keys_to_load, existing_samples_by_guid)
 
-    return warnings, len(loaded_samples) + len(unmatched_samples)
+    return warnings, len(loaded_samples) + len(unmatched_samples), sample_guid_keys_to_load, prev_loaded_individual_ids
 
 
 def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ignore_extra_samples, loaded_samples):
@@ -437,7 +440,7 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
 
 
 def _update_sample_models(model_cls, user, data_source, samples_to_create, sample_guid_keys_to_load,
-                          existing_samples_by_guid, prev_loaded_individual_ids):
+                          existing_samples_by_guid):
     if samples_to_create:
         new_sample_models = _create_samples(
             samples_to_create.values(),
@@ -455,7 +458,6 @@ def _update_sample_models(model_cls, user, data_source, samples_to_create, sampl
         guid: s['individual_id'] for guid, s in existing_samples_by_guid.items()
         if s['model_count'] > 0 and s['dataSource'] != data_source
     }
-    prev_loaded_individual_ids.update(to_delete_sample_individuals.values())
     to_delete = model_cls.objects.filter(sample__guid__in=to_delete_sample_individuals.keys())
     if to_delete:
         model_cls.bulk_delete(user, to_delete)
@@ -463,6 +465,8 @@ def _update_sample_models(model_cls, user, data_source, samples_to_create, sampl
     Sample.bulk_update(user, {'data_source': data_source, 'is_active': False}, guid__in=existing_samples_by_guid)
     for guid in to_delete_sample_individuals:
         existing_samples_by_guid[guid]['dataSource'] = data_source
+
+    return set(to_delete_sample_individuals.values())
 
 
 def _match_sample(sample_key, unmatched_samples, potential_samples, existing_samples_by_guid, individual_data_by_key,
@@ -497,17 +501,10 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
             'active': F('is_active'),
         },
     )
-    potential_loaded_samples = {key for key, s in potential_samples.items() if s['dataSource'] == data_source and s['active']}
     individual_data_by_key = _get_individuals_by_key(projects)
 
-    prev_loaded_individual_ids = set()
-    sample_guid_keys_to_load = {}
-    existing_samples_by_guid = {}
-    samples_to_create = {}
-
-    warnings, not_loaded_count = _load_rna_seq_file(
-        file_path, user, model_cls, data_source, potential_loaded_samples, save_data, potential_samples,
-        existing_samples_by_guid, individual_data_by_key, sample_guid_keys_to_load, samples_to_create, prev_loaded_individual_ids,
+    warnings, not_loaded_count, sample_guid_keys_to_load, prev_loaded_individual_ids = _load_rna_seq_file(
+        file_path, user, model_cls, data_source, potential_samples, save_data, individual_data_by_key,
         *args, **kwargs)
     message = f'Parsed {len(sample_guid_keys_to_load) + not_loaded_count} RNA-seq samples'
     info = [message]
