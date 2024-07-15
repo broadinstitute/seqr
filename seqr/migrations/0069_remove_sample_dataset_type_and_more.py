@@ -37,7 +37,17 @@ def merge_samples(apps, schema_editor):
     Sample = apps.get_model('seqr', 'Sample')
     NonRnaSample = apps.get_model('seqr', 'NonRnaSample')
     db_alias = schema_editor.connection.alias
-    # TODO
+
+    Sample.objects.all().update(loaded_date=F('created_date'))
+
+    non_rna_samples = []
+    for sample in NonRnaSample.objects.using(db_alias).all():
+        sample.pk = None
+        sample.id = None
+        non_rna_samples.append(sample)
+    if non_rna_samples:
+        Sample.objects.using(db_alias).bulk_create(non_rna_samples, batch_size=1000)
+        print(f'Moved {len(non_rna_samples)} Non-RNA Samples')
 
 
 class Migration(migrations.Migration):
