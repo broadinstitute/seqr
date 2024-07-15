@@ -10,7 +10,7 @@ asgiref==3.6.0
     #   django
 build==0.10.0
     # via pip-tools
-certifi==2023.7.22
+certifi==2024.7.4
     # via
     #   -c requirements.txt
     #   requests
@@ -81,3 +81,5 @@ wheel==0.38.4
 # The following packages are considered to be unsafe in a requirements file:
 # pip
 # setuptools
+setuptools>=70.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
