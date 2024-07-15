@@ -45,7 +45,7 @@ def _find_or_create_samples(
         tissue_type=None,
         sample_data=None,
 ):
-    # TOD cleanup from RNA
+    # TODO cleanup from RNA
     sample_params = {'sample_type': sample_type, 'dataset_type': dataset_type, 'tissue_type': tissue_type}
     sample_params.update(sample_data or {})
 

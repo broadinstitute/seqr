@@ -281,7 +281,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Unable to delete individuals with active MME submission: NA19675_1',
-            'Unable to delete individuals with active search sample: HG00731, HG00732, HG00733, NA19675_1, NA19678, NA19679',
+            'Unable to delete individuals with active search sample: HG00731, HG00732, HG00733, NA19675_1, NA19678',
         ])
 
         # Test success

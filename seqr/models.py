@@ -758,7 +758,7 @@ class RnaSample(ModelWithGUID):
     is_active = models.BooleanField(default=False)
 
     def __unicode__(self):
-        return f'{self.data_type}_{self.indiviudal.individual_id}'
+        return f'{self.data_type}_{self.individual.individual_id}'
 
     GUID_PREFIX = 'RS'
 
