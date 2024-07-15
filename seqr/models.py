@@ -731,10 +731,13 @@ class Sample(ModelWithGUID):
 
 class RnaSample(ModelWithGUID):
 
+    DATA_TYPE_TPM = 'T'
+    DATA_TYPE_EXPRESSION_OUTLIER = 'E'
+    DATA_TYPE_SPLICE_OUTLIER = 'S'
     DATA_TYPE_CHOICES = (
-        ('T', 'TPM'),
-        ('E', 'Expression Outlier'),
-        ('S', 'Splice Outlier'),
+        (DATA_TYPE_TPM, 'TPM'),
+        (DATA_TYPE_EXPRESSION_OUTLIER, 'Expression Outlier'),
+        (DATA_TYPE_SPLICE_OUTLIER, 'Splice Outlier'),
     )
     DATA_TYPE_LOOKUP = dict(DATA_TYPE_CHOICES)
 
