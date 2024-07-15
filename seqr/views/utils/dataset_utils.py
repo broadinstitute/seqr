@@ -42,17 +42,19 @@ def _find_or_create_samples(
         sample_id_to_individual_id_mapping,
         raise_no_match_error=False,
         raise_unmatched_error_template=None,
-        tissue_type=None,
         sample_data=None,
 ):
-    # TODO cleanup from RNA
-    sample_params = {'sample_type': sample_type, 'dataset_type': dataset_type, 'tissue_type': tissue_type}
+    sample_params = {'sample_type': sample_type, 'dataset_type': dataset_type}
     sample_params.update(sample_data or {})
 
-    samples_by_key = _get_matched_samples_by_key(
-        projects, sample_id__in={sample_id for sample_id, _ in sample_project_tuples}, **sample_params,
-    )
-
+    samples_by_key = {
+        (s.pop('sample_id'), s.pop('individual__family__project__name')): s
+        for s in Sample.objects.filter(
+            individual__family__project__in=projects,
+            sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
+            **sample_params
+        ).values('guid', 'individual_id', 'sample_id', 'individual__family__project__name')
+    }
     existing_samples = {
         key: s for key, s in samples_by_key.items() if key in sample_project_tuples
     }
@@ -113,6 +115,7 @@ def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
 
 
 def _get_matched_samples_by_key(projects, key_fields=None, values=None, **sample_params):
+    # TODO inline this function
     return _get_sample_models_by_key(samples=Sample.objects.filter(
         individual__family__project__in=projects,
         **sample_params
@@ -120,6 +123,7 @@ def _get_matched_samples_by_key(projects, key_fields=None, values=None, **sample
 
 
 def _get_sample_models_by_key(samples, key_fields=None, values=None):
+    # TODO inline this function?
     return {
         (s.pop('sample_id'), s.pop('individual__family__project__name'), *[s[field] for field in (key_fields or [])]): s
         for s in samples.values('guid', 'individual_id', 'sample_id', 'tissue_type', 'individual__family__project__name', **(values or {}))
@@ -199,7 +203,6 @@ def match_and_update_search_samples(
         projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
         sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
 ):
-    # TODO clean up RNA usages
     samples_guids, individual_ids, remaining_sample_keys, loaded_date = _find_or_create_samples(
         sample_project_tuples=sample_project_tuples,
         projects=projects,
@@ -209,7 +212,6 @@ def match_and_update_search_samples(
         raise_unmatched_error_template=raise_unmatched_error_template,
         sample_type=sample_type,
         dataset_type=dataset_type,
-        tissue_type=Sample.NO_TISSUE_TYPE,
         sample_data=sample_data,
     )
 
