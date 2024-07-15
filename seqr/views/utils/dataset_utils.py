@@ -347,7 +347,7 @@ def _validate_rna_header(header, column_map):
 
 
 def _load_rna_seq_file(
-        file_path, user, model_cls, data_source, potential_samples, save_data, individual_data_by_key,
+        file_path, user, model_cls, potential_samples, save_data, individual_data_by_key,
         column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
 ):
 
@@ -362,6 +362,7 @@ def _load_rna_seq_file(
     if allow_missing_gene:
         required_column_map = {k: v for k, v in required_column_map.items() if v != GENE_ID_COL}
 
+    data_source = file_path.split('/')[-1].split('_-_')[-1]
     potential_loaded_samples = {key for key, s in potential_samples.items() if s['dataSource'] == data_source and s['active']}
 
     loaded_samples = set()
@@ -496,7 +497,6 @@ def _match_new_sample(sample_key, samples_to_create, unmatched_samples, individu
 
 def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     projects = get_internal_projects()
-    data_source = file_path.split('/')[-1].split('_-_')[-1]
 
     key_fields = ['tissue_type']
     potential_samples = _get_matched_samples_by_key(
@@ -510,8 +510,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
     individual_data_by_key = _get_individuals_by_key(projects)
 
     warnings, not_loaded_count, sample_guid_keys_to_load, prev_loaded_individual_ids = _load_rna_seq_file(
-        file_path, user, model_cls, data_source, potential_samples, save_data, individual_data_by_key,
-        *args, **kwargs)
+        file_path, user, model_cls, potential_samples, save_data, individual_data_by_key, *args, **kwargs)
     message = f'Parsed {len(sample_guid_keys_to_load) + not_loaded_count} RNA-seq samples'
     info = [message]
     logger.info(message, user)
