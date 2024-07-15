@@ -114,19 +114,10 @@ def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
     return Sample.bulk_create(user, new_samples)
 
 
-def _get_matched_samples_by_key(projects, key_fields=None, values=None, **sample_params):
-    # TODO inline this function
-    return _get_sample_models_by_key(samples=Sample.objects.filter(
-        individual__family__project__in=projects,
-        **sample_params
-    ), key_fields=key_fields, values=values)
-
-
-def _get_sample_models_by_key(samples, key_fields=None, values=None):
-    # TODO inline this function?
+def _get_sample_models_by_key(samples, values=None):
     return {
-        (s.pop('sample_id'), s.pop('individual__family__project__name'), *[s[field] for field in (key_fields or [])]): s
-        for s in samples.values('guid', 'individual_id', 'sample_id', 'tissue_type', 'individual__family__project__name', **(values or {}))
+        (s.pop('individual__individual_id'), s.pop('individual__family__project__name'), s['tissue_type']): s
+        for s in samples.values('guid', 'individual_id', 'individual__individual_id', 'tissue_type', 'individual__family__project__name', **(values or {}))
     }
 
 
@@ -300,16 +291,19 @@ RNA_DATA_TYPE_CONFIGS = {
     'outlier': {
         'model_class': RnaSeqOutlier,
         'columns': RNA_OUTLIER_COLUMNS,
+        'data_type': RnaSample.DATA_TYPE_EXPRESSION_OUTLIER,
         'additional_kwargs': {},
     },
     'tpm': {
         'model_class': RnaSeqTpm,
         'columns': TPM_HEADER_COLS,
+        'data_type': RnaSample.DATA_TYPE_TPM,
         'additional_kwargs': {},
     },
     'splice_outlier': {
         'model_class': RnaSeqSpliceOutlier,
         'columns': SPLICE_OUTLIER_HEADER_COLS,
+        'data_type': RnaSample.DATA_TYPE_SPLICE_OUTLIER,
         'additional_kwargs': {
             'allow_missing_gene': True,
         },
@@ -323,7 +317,7 @@ RNA_DATA_TYPE_CONFIGS = {
 
 def load_rna_seq(data_type, *args, **kwargs):
     config = RNA_DATA_TYPE_CONFIGS[data_type]
-    return _load_rna_seq(config['model_class'], *args, config['columns'], **config['additional_kwargs'], **kwargs)
+    return _load_rna_seq(config['model_class'], config['data_type'], *args, config['columns'], **config['additional_kwargs'], **kwargs)
 
 
 def _validate_rna_header(header, column_map):
@@ -435,19 +429,17 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
     return errors, warnings
 
 
-def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
+def _load_rna_seq(model_cls, data_type, file_path, save_data, *args, user=None, **kwargs):
+    # TODO Sample to RnaSample, fix logic
     projects = get_internal_projects()
     data_source = file_path.split('/')[-1].split('_-_')[-1]
 
-    key_fields = ['tissue_type']
-    potential_samples = _get_matched_samples_by_key(
-        projects, sample_type=Sample.SAMPLE_TYPE_RNA, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        key_fields=key_fields, values={
+    potential_samples = _get_sample_models_by_key(
+        samples=RnaSample.objects.filter(individual__family__project__in=projects, data_type=data_type), values={
             'dataSource': F('data_source'),
             'model_count': Count(model_cls.__name__.lower()),
             'active': F('is_active'),
-        },
-    )
+        })
     potential_loaded_samples = {key for key, s in potential_samples.items() if s['dataSource'] == data_source and s['active']}
     individual_data_by_key = _get_individuals_by_key(projects)
 
@@ -458,7 +450,6 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
 
     def update_sample_models():
         if samples_to_create:
-            # TODO handle RNA
             new_sample_models = _create_samples(
                 samples_to_create.values(),
                 user=user,
@@ -467,7 +458,7 @@ def _load_rna_seq(model_cls, file_path, save_data, *args, user=None, **kwargs):
                 dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
             )
             new_sample_ids = [s.id for s in new_sample_models]
-            sample_key_map = _get_sample_models_by_key(Sample.objects.filter(id__in=new_sample_ids), key_fields=key_fields)
+            sample_key_map = _get_sample_models_by_key(Sample.objects.filter(id__in=new_sample_ids))
             sample_guid_keys_to_load.update({s['guid']: sample_key for sample_key, s in sample_key_map.items()})
 
         # Delete old data
