@@ -252,14 +252,12 @@ TEMPLATE_DIRS = [
 ]
 
 DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE')
-if DEPLOYMENT_TYPE == 'prod':
+BASE_URL = os.environ.get("BASE_URL", "/")
+if DEPLOYMENT_TYPE in {'prod', 'dev'}:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    CSRF_TRUSTED_ORIGINS = [BASE_URL.rstrip('/')]
     DEBUG = False
-elif DEPLOYMENT_TYPE == 'dev':
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    DEBUG = True
 else:
     DEBUG = True
     # Enable CORS and hijak for local development
@@ -303,7 +301,6 @@ SEQR_VERSION = 'v1.0'
 SEQR_PRIVACY_VERSION = float(os.environ.get('SEQR_PRIVACY_VERSION', 1.1))
 SEQR_TOS_VERSION = float(os.environ.get('SEQR_TOS_VERSION', 1.2))
 
-BASE_URL = os.environ.get("BASE_URL", "/")
 GA_TOKEN_ID = os.environ.get("GA_TOKEN_ID")
 
 SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
