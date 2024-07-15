@@ -348,6 +348,7 @@ def _load_rna_seq_file(
         file_path, user, model_cls, potential_samples, save_data, individual_data_by_key,
         column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
 ):
+    # TODO Sample to RnaSample, fix logic
 
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
@@ -496,7 +497,6 @@ def _match_new_sample(sample_key, samples_to_create, unmatched_samples, individu
 
 
 def _load_rna_seq(model_cls, data_type, file_path, save_data, *args, user=None, **kwargs):
-    # TODO Sample to RnaSample, fix logic
     projects = get_internal_projects()
 
     potential_samples = _get_sample_models_by_key(
@@ -514,10 +514,10 @@ def _load_rna_seq(model_cls, data_type, file_path, save_data, *args, user=None, 
     info = [message]
     logger.info(message, user)
 
-    sample_projects = Project.objects.filter(family__individual__sample__guid__in=sample_guid_keys_to_load).values(
+    sample_projects = Project.objects.filter(family__individual__rnasample__guid__in=sample_guid_keys_to_load).values(
         'guid', 'name', new_sample_ids=ArrayAgg(
-            'family__individual__sample__sample_id', distinct=True, ordering='family__individual__sample__sample_id',
-            filter=~Q(family__individual__id__in=prev_loaded_individual_ids) if prev_loaded_individual_ids else None
+            'family__individual__individual_id', distinct=True, ordering='family__individual__individual_id',
+            filter=~Q(family__individual_id__in=prev_loaded_individual_ids) if prev_loaded_individual_ids else None
         ))
     project_names = ', '.join(sorted([project['name'] for project in sample_projects]))
     message = f'Attempted data loading for {len(sample_guid_keys_to_load)} RNA-seq samples in the following {len(sample_projects)} projects: {project_names}'
