@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from datetime import datetime, timedelta
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Value
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
 import re
@@ -22,7 +22,7 @@ from seqr.views.utils.permissions_utils import analyst_required, get_project_and
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
-from seqr.models import Project, Family, Sample, Individual
+from seqr.models import Project, Family, Sample, RnaSample, Individual
 from settings import GREGOR_DATA_MODEL_URL
 
 
@@ -54,8 +54,11 @@ def seqr_stats(request):
 
     grouped_sample_counts = defaultdict(dict)
     for project_key, projects in project_models.items():
-        # TODO handle RNA?
         samples_counts = _get_sample_counts(Sample.objects.filter(individual__family__project__in=projects))
+        samples_counts.update(_get_sample_counts(
+            RnaSample.objects.filter(individual__family__project__in=projects).annotate(sample_type=Value('RNA')),
+            data_type_key='data_type')
+        )
         for k, v in samples_counts.items():
             grouped_sample_counts[k][project_key] = v
 
@@ -71,10 +74,10 @@ def seqr_stats(request):
     })
 
 
-def _get_sample_counts(sample_q):
-    samples_agg = sample_q.filter(is_active=True).values('sample_type', 'dataset_type').annotate(count=Count('*'))
+def _get_sample_counts(sample_q, data_type_key='dataset_type'):
+    samples_agg = sample_q.filter(is_active=True).values('sample_type', data_type_key).annotate(count=Count('*'))
     return {
-        f'{sample_agg["sample_type"]}__{sample_agg["dataset_type"]}': sample_agg['count'] for sample_agg in samples_agg
+        f'{sample_agg["sample_type"]}__{sample_agg[data_type_key]}': sample_agg['count'] for sample_agg in samples_agg
     }
 
 
@@ -463,6 +466,8 @@ def _get_individual_data_types(projects):
     individual_data_types = defaultdict(set)
     for individual_db_id, sample_type in sample_types:
         individual_data_types[individual_db_id].add(sample_type)
+    for individual_db_id in RnaSample.objects.filter(individual__family__project__in=projects).values_list('individual_id', flat=True):
+        individual_data_types[individual_db_id].add('RNA')
     individuals = Individual.objects.filter(id__in=individual_data_types).prefetch_related(
         'family__project', 'mother', 'father')
 

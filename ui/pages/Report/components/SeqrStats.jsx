@@ -22,6 +22,12 @@ const COLUMN_MAP = {
     DEMO_COLUMN,
   ],
 }
+const DATA_TITLE_LOOKUP = {
+  T: ' TPM',
+  E: ' Expression Outlier',
+  S: ' Splice Outlier',
+  ...DATASET_TITLE_LOOKUP,
+}
 
 const SeqrStats = React.memo(({ stats, error, loading, load, user }) => (
   <div>
@@ -46,7 +52,7 @@ const SeqrStats = React.memo(({ stats, error, loading, load, user }) => (
           <Table.Row key={sampleTypes}>
             <Table.HeaderCell
               textAlign="right"
-              content={`${sampleTypes.split('__')[0]}${DATASET_TITLE_LOOKUP[sampleTypes.split('__')[1]] || ''} samples`}
+              content={`${sampleTypes.split('__')[0]}${DATA_TITLE_LOOKUP[sampleTypes.split('__')[1]] || ''} samples`}
             />
             {COLUMN_MAP[user.isAnvil].map(({ key }) => (
               <Table.Cell key={key} content={stats.sampleCountsByType[sampleTypes][key]} />

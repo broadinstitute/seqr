@@ -690,6 +690,7 @@ class Sample(ModelWithGUID):
         (SAMPLE_TYPE_WES, 'Exome'),
         (SAMPLE_TYPE_WGS, 'Whole Genome'),
     )
+    SAMPLE_TYPE_LOOKUP = dict(SAMPLE_TYPE_CHOICES)
 
     DATASET_TYPE_VARIANT_CALLS = 'SNV_INDEL'
     DATASET_TYPE_SV_CALLS = 'SV'
