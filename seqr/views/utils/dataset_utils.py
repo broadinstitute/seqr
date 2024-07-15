@@ -111,6 +111,18 @@ def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
     return Sample.bulk_create(user, new_samples)
 
 
+def _create_rna_samples(sample_data, sample_guid_keys_to_load, **kwargs):
+    new_sample_models = _create_samples(
+        sample_data,
+        sample_type=Sample.SAMPLE_TYPE_RNA,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        **kwargs,
+    )
+    new_sample_ids = [s.id for s in new_sample_models]
+    sample_key_map = _get_sample_models_by_key(Sample.objects.filter(id__in=new_sample_ids), key_fields=['tissue_type'])
+    sample_guid_keys_to_load.update({s['guid']: sample_key for sample_key, s in sample_key_map.items()})
+
+
 def _get_matched_samples_by_key(projects, key_fields=None, values=None, **sample_params):
     return _get_sample_models_by_key(samples=Sample.objects.filter(
         individual__family__project__in=projects,
@@ -407,8 +419,10 @@ def _load_rna_seq_file(
     if errors:
         raise ErrorsWarningsException(errors)
 
-    prev_loaded_individual_ids = _update_sample_models(
-        model_cls, user, data_source, samples_to_create, sample_guid_keys_to_load, existing_samples_by_guid)
+    if samples_to_create:
+        _create_rna_samples(samples_to_create.values(), sample_guid_keys_to_load, user=user, data_source=data_source)
+
+    prev_loaded_individual_ids = _update_existing_sample_models(model_cls, user, data_source, existing_samples_by_guid)
 
     return warnings, len(loaded_samples) + len(unmatched_samples), sample_guid_keys_to_load, prev_loaded_individual_ids
 
@@ -440,19 +454,7 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
     return errors, warnings
 
 
-def _update_sample_models(model_cls, user, data_source, samples_to_create, sample_guid_keys_to_load,
-                          existing_samples_by_guid):
-    if samples_to_create:
-        new_sample_models = _create_samples(
-            samples_to_create.values(),
-            user=user,
-            data_source=data_source,
-            sample_type=Sample.SAMPLE_TYPE_RNA,
-            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        )
-        new_sample_ids = [s.id for s in new_sample_models]
-        sample_key_map = _get_sample_models_by_key(Sample.objects.filter(id__in=new_sample_ids), key_fields=['tissue_type'])
-        sample_guid_keys_to_load.update({s['guid']: sample_key for sample_key, s in sample_key_map.items()})
+def _update_existing_sample_models(model_cls, user, data_source, existing_samples_by_guid):
 
     # Delete old data
     to_delete_sample_individuals = {
