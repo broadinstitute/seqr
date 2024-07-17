@@ -30,9 +30,9 @@ const NoWrap = styled.div`
 
 const BaseFirstSample = React.memo(({ firstFamilySample, compact, hasActiveVariantSample }) => (
   <Sample
-    loadedSample={firstFamilySample}
     hoverDetails={compact ? 'first loaded' : null}
     isOutdated={!hasActiveVariantSample}
+    {...(firstFamilySample || {})}
   />
 ))
 

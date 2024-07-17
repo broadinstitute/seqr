@@ -115,18 +115,21 @@ export const DATASET_TYPE_SNV_INDEL_CALLS = 'SNV_INDEL'
 export const DATASET_TYPE_SV_CALLS = 'SV'
 export const DATASET_TYPE_MITO_CALLS = 'MITO'
 
+export const DATA_TYPE_TPM = 'T'
+export const DATA_TYPE_EXPRESSION_OUTLIER = 'E'
+export const DATA_TYPE_SPLICE_OUTLIER = 'S'
+
 export const DATASET_TITLE_LOOKUP = {
   [DATASET_TYPE_SV_CALLS]: ' SV',
   [DATASET_TYPE_MITO_CALLS]: ' Mitochondria',
   ONT_SNV_INDEL: ' ONT',
-  T: ' TPM',
-  E: ' Expression Outlier',
-  S: ' Splice Outlier',
+  [DATA_TYPE_TPM]: ' TPM',
+  [DATA_TYPE_EXPRESSION_OUTLIER]: ' Expression Outlier',
+  [DATA_TYPE_SPLICE_OUTLIER]: ' Splice Outlier',
 }
 
 export const SAMPLE_TYPE_EXOME = 'WES'
 export const SAMPLE_TYPE_GENOME = 'WGS'
-export const SAMPLE_TYPE_RNA = 'RNA' // TODO remove
 
 export const SAMPLE_TYPE_OPTIONS = [
   { value: SAMPLE_TYPE_EXOME, text: 'Exome' },
