@@ -29,7 +29,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 
-from seqr.models import Sample, Individual, Project, PhenotypePrioritization
+from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
 
@@ -316,9 +316,8 @@ def _get_sample_file_path(file_dir, sample_guid):
 
 @pm_or_data_manager_required
 def load_rna_seq_sample_data(request, sample_guid):
-    # TODO migrate to RNA
-    sample = Sample.objects.get(guid=sample_guid)
-    logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
+    sample = RnaSample.objects.get(guid=sample_guid)
+    logger.info(f'Loading outlier data for {sample.individual.individual_id}', request.user)
 
     request_json = json.loads(request.body)
     file_name = request_json['fileName']

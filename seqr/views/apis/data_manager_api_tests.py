@@ -1153,7 +1153,7 @@ class DataManagerAPITest(AirtableTest):
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {'error': 'Data for this sample was not properly parsed. Please re-upload the data'})
                 self.assert_json_logs(self.pm_user, [
-                    (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
+                    ('Loading outlier data for NA19675_1', None),
                     *not_found_logs,
                     (f'No saved temp data found for {sample_guid} with file prefix {file_name}', {
                         'severity': 'ERROR', '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
@@ -1176,7 +1176,7 @@ class DataManagerAPITest(AirtableTest):
                 subprocess_logs = self._get_expected_read_file_subprocess_calls(file_name, sample_guid)
 
                 self.assert_json_logs(self.pm_user, [
-                    (f'Loading outlier data for {params["loaded_data_row"][0]}', None),
+                    ('Loading outlier data for NA19675_1', None),
                     *subprocess_logs,
                     (f'create {model_cls.__name__}s', {'dbUpdate': {
                         'dbEntity': model_cls.__name__, 'numEntities': num_models, 'parentEntityIds': [sample_guid],
