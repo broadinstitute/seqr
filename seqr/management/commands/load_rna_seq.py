@@ -1,8 +1,9 @@
 import logging
 from collections import defaultdict
 from django.core.management.base import BaseCommand
+from django.db.models import F
 
-from seqr.models import Sample
+from seqr.models import RnaSample
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.dataset_utils import load_rna_seq, post_process_rna_data, RNA_DATA_TYPE_CONFIGS
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -38,9 +39,8 @@ class Command(BaseCommand):
             data_type, options['input_file'], _save_sample_data,
             mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
 
-        # TODO
         sample_models_by_guid = {
-            s.guid: s for s in Sample.objects.filter(guid__in=possible_sample_guids_to_keys)
+            s.guid: s for s in RnaSample.objects.filter(guid__in=possible_sample_guids_to_keys).annotate(sample_id=F('individual__individual_id'))
         }
         errors = []
         sample_guids = []
