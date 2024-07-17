@@ -88,8 +88,10 @@ def _find_or_create_samples(
 
         # create new Sample records for Individual records that matches
         new_sample_args = {
-            sample_key: _get_new_sample_args(sample_key, individual)
-            for sample_key, individual in sample_id_to_individual_record.items()
+            sample_key: {
+                'individual_id': individual['id'],
+                'sample_id': sample_key[0],
+            } for sample_key, individual in sample_id_to_individual_record.items()
         }
         individual_ids.update({sample['individual_id'] for sample in new_sample_args.values()})
         new_sample_models = _create_samples(
@@ -106,7 +108,6 @@ def _find_or_create_samples(
 def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
     new_samples = [
         Sample(
-            created_date=timezone.now(),
             loaded_date=loaded_date,
             **created_sample_data,
             **kwargs,
@@ -114,22 +115,19 @@ def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
     return Sample.bulk_create(user, new_samples)
 
 
-def _create_rna_samples(sample_data, sample_guid_keys_to_load, **kwargs):
-    new_sample_models = _create_samples(
-        sample_data,
-        sample_type=Sample.SAMPLE_TYPE_RNA,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        **kwargs,
-    )
+def _create_rna_samples(sample_data, sample_guid_keys_to_load, user, **kwargs):
+    new_samples = [RnaSample(**sample, **kwargs) for sample in sample_data]
+    new_sample_models = RnaSample.bulk_create(user, new_samples)
     new_sample_ids = [s.id for s in new_sample_models]
-    sample_key_map = _get_sample_models_by_key(Sample.objects.filter(id__in=new_sample_ids), key_fields=['tissue_type'])
+    sample_key_map = _get_rna_sample_data_by_key(id__in=new_sample_ids)
     sample_guid_keys_to_load.update({s['guid']: sample_key for sample_key, s in sample_key_map.items()})
 
 
-def _get_sample_models_by_key(samples, values=None):
+def _get_rna_sample_data_by_key(values=None, **kwargs):
+    key_fields = ['individual__individual_id', 'individual__family__project__name', 'tissue_type']
     return {
-        (s.pop('individual__individual_id'), s.pop('individual__family__project__name'), s['tissue_type']): s
-        for s in samples.values('guid', 'individual_id', 'individual__individual_id', 'tissue_type', 'individual__family__project__name', **(values or {}))
+        tuple(s.pop(k) for k in key_fields): s
+        for s in RnaSample.objects.filter(**kwargs).values('guid', *key_fields, **(values or {}))
     }
 
 
@@ -145,14 +143,6 @@ def _get_individuals_by_key(projects, matched_individual_ids=None):
 
 def _get_individual_key(sample_key, sample_id_to_individual_id_mapping):
     return ((sample_id_to_individual_id_mapping or {}).get(sample_key[0], sample_key[0]), sample_key[1])
-
-
-def _get_new_sample_args(sample_key, individual_data, key_fields=None):
-    return {
-        'individual_id': individual_data['id'],
-        'sample_id': sample_key[0],
-        **{key_field: sample_key[i+2] for i, key_field in enumerate(key_fields or [])}
-    }
 
 
 def _validate_samples_families(samples_guids, included_family_guids, sample_type, dataset_type, expected_families=None):
@@ -345,11 +335,9 @@ def _validate_rna_header(header, column_map):
 
 
 def _load_rna_seq_file(
-        file_path, user, model_cls, potential_samples, save_data, individual_data_by_key,
+        file_path, data_source, user, data_type, model_cls, potential_samples, save_data, individual_data_by_key,
         column_map, mapping_file=None, allow_missing_gene=False, ignore_extra_samples=False,
 ):
-    # TODO Sample to RnaSample, fix logic
-
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
@@ -361,12 +349,9 @@ def _load_rna_seq_file(
     if allow_missing_gene:
         required_column_map = {k: v for k, v in required_column_map.items() if v != GENE_ID_COL}
 
-    data_source = file_path.split('/')[-1].split('_-_')[-1]
-    potential_loaded_samples = {key for key, s in potential_samples.items() if s['dataSource'] == data_source and s['active']}
-
     loaded_samples = set()
     unmatched_samples = set()
-    existing_samples_by_guid = {}
+    updated_individual_ids = set()
     samples_to_create = {}
     sample_guid_keys_to_load = {}
     missing_required_fields = defaultdict(set)
@@ -388,8 +373,9 @@ def _load_rna_seq_file(
         project = row_dict.pop(PROJECT_COL, None) or row[PROJECT_COL]
         sample_key = (sample_id, project, tissue_type)
 
-        if sample_key in potential_loaded_samples:
-            loaded_samples.add(sample_key)
+        potential_sample = potential_samples.get(sample_key)
+        if (potential_sample or {}).get('active'):
+            loaded_samples.add(potential_sample['guid'])
             continue
 
         if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
@@ -399,9 +385,11 @@ def _load_rna_seq_file(
         if any(row_gene_ids):
             gene_ids.update(row_gene_ids)
 
-        if not _match_existing_sample(sample_key, potential_samples, existing_samples_by_guid, sample_guid_keys_to_load):
+        if potential_sample:
+            sample_guid_keys_to_load[potential_sample['guid']] = sample_key
+        else:
             _match_new_sample(
-                sample_key, samples_to_create, unmatched_samples, individual_data_by_key, sample_id_to_individual_id_mapping,
+                sample_key, samples_to_create, unmatched_samples, updated_individual_ids, individual_data_by_key, sample_id_to_individual_id_mapping,
             )
 
         if missing_required_fields or (unmatched_samples and not ignore_extra_samples) or (sample_key in unmatched_samples):
@@ -420,9 +408,9 @@ def _load_rna_seq_file(
         raise ErrorsWarningsException(errors)
 
     if samples_to_create:
-        _create_rna_samples(samples_to_create.values(), sample_guid_keys_to_load, user=user, data_source=data_source)
+        _create_rna_samples(samples_to_create.values(), sample_guid_keys_to_load, user, data_source=data_source, data_type=data_type)
 
-    prev_loaded_individual_ids = _update_existing_sample_models(model_cls, user, data_source, existing_samples_by_guid)
+    prev_loaded_individual_ids = _update_existing_sample_models(model_cls, user, data_type, updated_individual_ids, loaded_samples)
 
     return warnings, len(loaded_samples) + len(unmatched_samples), sample_guid_keys_to_load, prev_loaded_individual_ids
 
@@ -454,62 +442,50 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
     return errors, warnings
 
 
-def _update_existing_sample_models(model_cls, user, data_source, existing_samples_by_guid):
+def _update_existing_sample_models(model_cls, user, data_type, individual_ids, loaded_samples):
+    inactivate_samples = RnaSample.objects.filter(
+        individual_id__in=individual_ids,
+        is_active=True,
+        data_type=data_type,
+    ).exclude(guid__in=loaded_samples)
+    prev_loaded_individual_ids = set(inactivate_samples.values_list('individual_id', flat=True))
+
+    inactivate_sample_guids = RnaSample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
 
     # Delete old data
-    to_delete_sample_individuals = {
-        guid: s['individual_id'] for guid, s in existing_samples_by_guid.items()
-        if s['model_count'] > 0 and s['dataSource'] != data_source
-    }
-    to_delete = model_cls.objects.filter(sample__guid__in=to_delete_sample_individuals.keys())
+    to_delete = model_cls.objects.filter(sample__guid__in=inactivate_sample_guids)
     if to_delete:
         model_cls.bulk_delete(user, to_delete)
 
-    Sample.bulk_update(user, {'data_source': data_source, 'is_active': False}, guid__in=existing_samples_by_guid)
-    for guid in to_delete_sample_individuals:
-        existing_samples_by_guid[guid]['dataSource'] = data_source
-
-    return set(to_delete_sample_individuals.values())
+    return prev_loaded_individual_ids
 
 
-def _match_existing_sample(sample_key, potential_samples, existing_samples_by_guid, sample_guid_keys_to_load):
-    if sample_key not in potential_samples:
-        return False
-
-    sample = potential_samples[sample_key]
-    sample_guid = sample['guid']
-    existing_samples_by_guid[sample_guid] = sample
-    sample_guid_keys_to_load[sample_guid] = sample_key
-    return True
-
-
-def _match_new_sample(sample_key, samples_to_create, unmatched_samples, individual_data_by_key, sample_id_to_individual_id_mapping):
+def _match_new_sample(sample_key, samples_to_create, unmatched_samples, updated_individual_ids, individual_data_by_key, sample_id_to_individual_id_mapping):
     if sample_key in samples_to_create or sample_key in unmatched_samples:
         return
 
     individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
     if individual_key in individual_data_by_key:
-        samples_to_create[sample_key] = _get_new_sample_args(
-            sample_key, individual_data_by_key[individual_key], key_fields=['tissue_type'],
-        )
+        individual_id = individual_data_by_key[individual_key]['id']
+        samples_to_create[sample_key] = {'individual_id': individual_id, 'tissue_type': sample_key[2]}
+        updated_individual_ids.add(individual_id)
     else:
         unmatched_samples.add(sample_key)
 
 
 def _load_rna_seq(model_cls, data_type, file_path, save_data, *args, user=None, **kwargs):
     projects = get_internal_projects()
+    data_source = file_path.split('/')[-1].split('_-_')[-1]
 
-    potential_samples = _get_sample_models_by_key(
-        samples=RnaSample.objects.filter(individual__family__project__in=projects, data_type=data_type), values={
-            'dataSource': F('data_source'),
-            'model_count': Count(model_cls.__name__.lower()),
+    potential_samples = _get_rna_sample_data_by_key(
+        individual__family__project__in=projects, data_type=data_type, data_source=data_source, values={
             'active': F('is_active'),
         },
     )
     individual_data_by_key = _get_individuals_by_key(projects)
 
     warnings, not_loaded_count, sample_guid_keys_to_load, prev_loaded_individual_ids = _load_rna_seq_file(
-        file_path, user, model_cls, potential_samples, save_data, individual_data_by_key, *args, **kwargs)
+        file_path, data_source, user, data_type, model_cls, potential_samples, save_data, individual_data_by_key, *args, **kwargs)
     message = f'Parsed {len(sample_guid_keys_to_load) + not_loaded_count} RNA-seq samples'
     info = [message]
     logger.info(message, user)
