@@ -299,7 +299,6 @@ def project_individuals(request, project_guid):
 @login_and_policies_required
 def project_samples(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
-    # TODO handle RNA?
     samples = Sample.objects.filter(individual__family__project=project)
 
     return create_json_response({

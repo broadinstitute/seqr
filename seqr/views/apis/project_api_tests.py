@@ -471,7 +471,7 @@ class ProjectAPITest(object):
         response_keys = {'samplesByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
-        self.assertEqual(len(response_json['samplesByGuid']), 20)
+        self.assertEqual(len(response_json['samplesByGuid']), 17)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
 
         # Test empty project
