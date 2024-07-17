@@ -9,7 +9,7 @@ import { loadProjectAnalysisGroups } from 'redux/utils/reducerUtils'
 import {
   getSamplesByFamily,
   getUserOptionsIsLoading,
-  getHasActiveSearchableSampleByFamily,
+  getHasActiveSearchSampleByFamily,
   getUserOptions,
   getProjectAnalysisGroupOptions,
   getAnalysisGroupsByFamily,
@@ -44,7 +44,7 @@ BaseFirstSample.propTypes = {
 
 const mapSampleDispatchToProps = (state, ownProps) => ({
   firstFamilySample: (getSamplesByFamily(state)[ownProps.familyGuid] || [])[0],
-  hasActiveVariantSample: (getHasActiveSearchableSampleByFamily(state)[ownProps.familyGuid] || {}).isActive,
+  hasActiveVariantSample: getHasActiveSearchSampleByFamily(state)[ownProps.familyGuid],
 })
 
 export const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)

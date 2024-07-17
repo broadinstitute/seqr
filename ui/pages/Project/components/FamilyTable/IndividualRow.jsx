@@ -160,7 +160,6 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         </Link>
       </div>
     )}
-    {/* TODO */}
     {individual.phenotypePrioritizationTools.map(
       ({ tool, loadedDate }) => (
         <div key={tool}><Sample sampleType={snakecaseToTitlecase(tool)} loadedDate={loadedDate} /></div>

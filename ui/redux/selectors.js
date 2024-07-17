@@ -148,16 +148,12 @@ export const getSamplesByFamily = createSelector(
   sortedSamples => groupByFamilyGuid(sortedSamples || []),
 )
 
-// TODO only used for search samples, simplify to single boolean isActive
-export const getHasActiveSearchableSampleByFamily = createSelector(
+export const getHasActiveSearchSampleByFamily = createSelector(
   getSamplesByFamily,
   samplesByFamily => Object.entries(samplesByFamily).reduce(
     (acc, [familyGuid, familySamples]) => ({
       ...acc,
-      [familyGuid]: {
-        isActive: familySamples.some(({ isActive }) => isActive),
-        isSearchable: familySamples.some(({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex),
-      },
+      [familyGuid]: familySamples.some(({ isActive }) => isActive),
     }), {},
   ),
 )
@@ -183,7 +179,7 @@ export const getProjectDatasetTypes = createSelector(
     (acc, { projectGuid, datasetTypes }) => ({
       ...acc,
       [projectGuid]: datasetTypes || [...new Set(Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
-        ({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex, // TODO remove search sample filtering
+        ({ isActive }) => isActive,
       ).map(({ datasetType }) => datasetType))],
     }), {},
   ),
