@@ -75,7 +75,6 @@ class FamilyAPITest(AuthenticationTestCase):
         individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'phenotypePrioritizationTools', 'rnaSample'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
-        self.maxDiff = None
         self.assertListEqual([
             [
                 {'loadedDate': '2024-05-02T06:42:55.397Z', 'tool': 'exomiser'},
@@ -91,7 +90,7 @@ class FamilyAPITest(AuthenticationTestCase):
             None,
             {'loadedDate': '2017-02-05T06:14:55.397Z', 'dataTypes': ['S']},
         ],
-            [response_json['individualsByGuid'][guid].get('rnaSample') for guid in INDIVIDUAL_GUIDS]
+            [response_json['individualsByGuid'][guid]['rnaSample'] for guid in INDIVIDUAL_GUIDS]
         )
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
