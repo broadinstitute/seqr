@@ -199,6 +199,9 @@ def project_families(request, project_guid):
 
     phenotype_priority_families = set(PhenotypePrioritization.objects.filter(
         individual__family_id__in=families_by_id).values_list('individual__family_id', flat=True).distinct())
+    rna_families = set(RnaSample.objects.filter(
+        individual__family_id__in=families_by_id, is_active=True,
+    ).values_list('individual__family_id', flat=True).distinct())
     family_individuals = Individual.objects.filter(family_id__in=families_by_id).values('family_id').annotate(
         caseReviewStatuses=ArrayAgg('case_review_status', distinct=True, filter=~Q(case_review_status='')),
         caseReviewStatusLastModified=Max('case_review_status_last_modified_date'),
@@ -215,6 +218,7 @@ def project_families(request, project_guid):
         families_by_id[family_id].update({
             'individualGuids': sorted(id_guid_map.values()),
             'hasPhenotypePrioritization': family_id in phenotype_priority_families,
+            'hasRna': family_id in rna_families,
             'hasRequiredMetadata': individual_agg.pop('metadata_count') > 0,
             'parents': [
                 {'paternalGuid': id_guid_map.get(p['father_id']), 'maternalGuid': id_guid_map.get(p['mother_id'])}

@@ -372,14 +372,13 @@ export const CATEGORY_FAMILY_FILTERS = {
     {
       value: `${SHOW_DATA_LOADED}_RNA`,
       name: 'Data Loaded - RNA',
-      // TODO use RNA sample models
-      createFilter: hasMatchingSampleFilter(({ sampleType }) => sampleType === SAMPLE_TYPE_RNA),
+      createFilter: family => family.hasRna,
     },
     ...[DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS].map(dataType => ({
       value: `${SHOW_DATA_LOADED}_${dataType}`,
       name: `Data Loaded -${DATASET_TITLE_LOOKUP[dataType]}`,
       createFilter: hasMatchingSampleFilter(
-        ({ sampleType, datasetType }) => sampleType !== SAMPLE_TYPE_RNA && datasetType === dataType,
+        ({ datasetType }) => datasetType === dataType,
       ),
     })),
     {

@@ -322,7 +322,7 @@ class ProjectAPITest(object):
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
-        self.assertEqual(len(response_json['samplesByGuid']), 19)
+        self.assertEqual(len(response_json['samplesByGuid']), 16)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
@@ -384,7 +384,7 @@ class ProjectAPITest(object):
         family_3 = response_json['familiesByGuid']['F000003_3']
         family_fields = {
             'individualGuids', 'discoveryTags', 'caseReviewStatuses', 'caseReviewStatusLastModified', 'hasRequiredMetadata',
-            'parents', 'hasPhenotypePrioritization',
+            'parents', 'hasPhenotypePrioritization', 'hasRna',
         }
         family_fields.update(SUMMARY_FAMILY_FIELDS)
         self.assertSetEqual(set(family_1.keys()), family_fields)
@@ -401,6 +401,8 @@ class ProjectAPITest(object):
         self.assertListEqual(family_3['parents'], [])
         self.assertEqual(family_1['hasPhenotypePrioritization'], True)
         self.assertFalse(family_3['hasPhenotypePrioritization'], False)
+        self.assertEqual(family_1['hasRna'], True)
+        self.assertFalse(family_3['hasRna'], False)
 
         self.assertListEqual(family_3['discoveryTags'], [])
         self.assertSetEqual({tag['variantGuid'] for tag in family_1['discoveryTags']}, {'SV0000001_2103343353_r0390_100'})
