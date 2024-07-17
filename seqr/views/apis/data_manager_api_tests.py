@@ -13,7 +13,7 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirflowTestCase, AirtableTest
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
-from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
+from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSample, Project, PhenotypePrioritization
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 PROJECT_GUID = 'R0001_1kg'
@@ -703,6 +703,7 @@ class DataManagerAPITest(AirtableTest):
     RNA_DATA_TYPE_PARAMS = {
         'outlier': {
             'model_cls': RnaSeqOutlier,
+            'data_type': 'E',
             'message_data_type': 'Expression Outlier',
             'header': ['sampleID', 'project', 'geneID', 'tissue', 'detail', 'pValue', 'padjust', 'zScore'],
             'optional_headers': ['detail'],
@@ -736,6 +737,7 @@ class DataManagerAPITest(AirtableTest):
         },
         'tpm': {
             'model_cls': RnaSeqTpm,
+            'data_type': 'T',
             'message_data_type': 'Expression',
             'header': ['sample_id', 'project', 'gene_id', 'individual_id', 'tissue', 'TPM'],
             'optional_headers': ['individual_id'],
@@ -771,6 +773,7 @@ class DataManagerAPITest(AirtableTest):
         },
         'splice_outlier': {
             'model_cls': RnaSeqSpliceOutlier,
+            'data_type': 'S',
             'message_data_type': 'Splice Outlier',
             'header': ['sampleID', 'projectName', 'geneID', 'chrom', 'start', 'end', 'strand', 'type', 'pValue', 'pAdjust',
                        'deltaIntronJaccardIndex', 'counts', 'meanCounts', 'totalCounts', 'meanTotalCounts', 'tissue', 'rareDiseaseSamplesWithThisJunction',
@@ -849,13 +852,11 @@ class DataManagerAPITest(AirtableTest):
 
         self.assert_json_logs(user, expected_logs)
 
-    def _check_rna_sample_model(self, individual_id, data_source, tissue_type, is_active_sample=True):
-        rna_samples = Sample.objects.filter(individual_id=individual_id, sample_type='RNA', tissue_type=tissue_type)
+    def _check_rna_sample_model(self, individual_id, data_source, data_type, tissue_type, is_active_sample=True):
+        rna_samples = RnaSample.objects.filter(individual_id=individual_id, tissue_type=tissue_type, data_type=data_type)
         self.assertEqual(len(rna_samples), 1)
         sample = rna_samples.first()
         self.assertEqual(sample.is_active, is_active_sample)
-        self.assertIsNone(sample.elasticsearch_index)
-        self.assertEqual(sample.sample_type, 'RNA')
         self.assertEqual(sample.tissue_type, tissue_type)
         self.assertEqual(sample.data_source, data_source)
         return sample.guid
@@ -923,12 +924,6 @@ class DataManagerAPITest(AirtableTest):
                      f'{", ".join(sorted([col for col in header if col not in params["optional_headers"]]))}',
         })
 
-        missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
-        _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Unable to find matches for the following samples: NA19675_D2 (1kg project nåme with uniçøde), NA19675_D3 (1kg project nåme with uniçøde)'], 'warnings': None})
-
         mapping_body = {'mappingFile': {'uploadedFileId': 'map.tsv'}}
         body.update(mapping_body)
         mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
@@ -937,6 +932,12 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'error': 'Must contain 2 columns: a'})
 
         mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
+        missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
+        _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['Unable to find matches for the following samples: NA19675_D3 (1kg project nåme with uniçøde)'], 'warnings': None})
+
         unknown_gene_id_row1 = loaded_data_row[:2] + ['NOT_A_GENE_ID1'] + loaded_data_row[3:]
         unknown_gene_id_row2 = loaded_data_row[:2] + ['NOT_A_GENE_ID2'] + loaded_data_row[3:]
         _set_file_iter_stdout([header, unknown_gene_id_row1, unknown_gene_id_row2])
@@ -991,12 +992,12 @@ class DataManagerAPITest(AirtableTest):
             self.assertDictEqual(response_json, {'info': info, 'warnings': warnings or [], 'sampleGuids': mock.ANY,
                                                  'fileName': file_name})
             new_sample_guid = self._check_rna_sample_model(
-                individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz',
+                individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz', data_type=params['data_type'],
                 tissue_type=params.get('sample_tissue_type'), is_active_sample=False,
             )
             self.assertTrue(new_sample_guid in response_json['sampleGuids'])
-            additional_logs = [(f'create {num_created_samples} Samples', {'dbUpdate': {
-                'dbEntity': 'Sample', 'updateType': 'bulk_create',
+            additional_logs = [(f'create {num_created_samples} RnaSamples', {'dbUpdate': {
+                'dbEntity': 'RnaSample', 'updateType': 'bulk_create',
                 'entityIds': response_json['sampleGuids'] if num_created_samples > 1 else [new_sample_guid],
             }})] + (additional_logs or [])
             self._has_expected_file_loading_logs(
@@ -1018,13 +1019,13 @@ class DataManagerAPITest(AirtableTest):
         deleted_count = params.get('deleted_count', params['initial_model_count'])
         response_json, new_sample_guid = _test_basic_data_loading(
             params['new_data'], params["num_parsed_samples"], 2, 16, body,
-            '1kg project nåme with uniçøde, Test Reprocessed Project', warnings=warnings,
+            '1kg project nåme with uniçøde, Test Reprocessed Project', warnings=warnings, num_created_samples=2,
             additional_logs=[
                 (f'delete {model_cls.__name__}s', {'dbUpdate': {
                     'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
                    'parentEntityIds': [params['sample_guid']], 'updateType': 'bulk_delete'}}),
-                ('update 1 Samples', {'dbUpdate': {
-                    'dbEntity': 'Sample', 'entityIds': [params['sample_guid']],
+                ('update 1 RnaSamples', {'dbUpdate': {
+                    'dbEntity': 'RnaSample', 'entityIds': [params['sample_guid']],
                     'updateType': 'bulk_update', 'updateFields': ['data_source', 'is_active']}}),
             ])
         self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
@@ -1049,7 +1050,7 @@ class DataManagerAPITest(AirtableTest):
 
         # test database models are correct
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
-        sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz',
+        sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz', data_type=params['data_type'],
                                                    tissue_type=params.get('sample_tissue_type'), is_active_sample=False)
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
@@ -1101,7 +1102,7 @@ class DataManagerAPITest(AirtableTest):
         response_json, new_sample_guid = _test_basic_data_loading(data, 2, 2, new_sample_individual_id, body,
                                                                   '1kg project nåme with uniçøde')
         second_tissue_sample_guid = self._check_rna_sample_model(
-            individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz',
+            individual_id=new_sample_individual_id, data_source='new_muscle_samples.tsv.gz', data_type=params['data_type'],
             tissue_type='M' if params.get('sample_tissue_type') == 'F' else 'F', is_active_sample=False,
         )
         self.assertTrue(second_tissue_sample_guid != new_sample_guid)

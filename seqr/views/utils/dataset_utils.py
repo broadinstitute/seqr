@@ -369,17 +369,17 @@ def _load_rna_seq_file(
         if missing_cols:
             continue
 
+        if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
+            sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
+
         tissue_type = TISSUE_TYPE_MAP[row[TISSUE_COL]]
         project = row_dict.pop(PROJECT_COL, None) or row[PROJECT_COL]
-        sample_key = (sample_id, project, tissue_type)
+        sample_key = ((sample_id_to_individual_id_mapping or {}).get(sample_id, sample_id), project, tissue_type)
 
         potential_sample = potential_samples.get(sample_key)
         if (potential_sample or {}).get('active'):
             loaded_samples.add(potential_sample['guid'])
             continue
-
-        if row.get(INDIV_ID_COL) and sample_id not in sample_id_to_individual_id_mapping:
-            sample_id_to_individual_id_mapping[sample_id] = row[INDIV_ID_COL]
 
         row_gene_ids = row_dict[GENE_ID_COL].split(';')
         if any(row_gene_ids):
@@ -389,7 +389,7 @@ def _load_rna_seq_file(
             sample_guid_keys_to_load[potential_sample['guid']] = sample_key
         else:
             _match_new_sample(
-                sample_key, samples_to_create, unmatched_samples, updated_individual_ids, individual_data_by_key, sample_id_to_individual_id_mapping,
+                sample_key, samples_to_create, unmatched_samples, updated_individual_ids, individual_data_by_key,
             )
 
         if missing_required_fields or (unmatched_samples and not ignore_extra_samples) or (sample_key in unmatched_samples):
@@ -460,11 +460,11 @@ def _update_existing_sample_models(model_cls, user, data_type, individual_ids, l
     return prev_loaded_individual_ids
 
 
-def _match_new_sample(sample_key, samples_to_create, unmatched_samples, updated_individual_ids, individual_data_by_key, sample_id_to_individual_id_mapping):
+def _match_new_sample(sample_key, samples_to_create, unmatched_samples, updated_individual_ids, individual_data_by_key):
     if sample_key in samples_to_create or sample_key in unmatched_samples:
         return
 
-    individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
+    individual_key = sample_key[:2]
     if individual_key in individual_data_by_key:
         individual_id = individual_data_by_key[individual_key]['id']
         samples_to_create[sample_key] = {'individual_id': individual_id, 'tissue_type': sample_key[2]}
