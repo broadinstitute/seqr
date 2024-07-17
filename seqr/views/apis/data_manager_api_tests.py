@@ -440,6 +440,8 @@ AIRTABLE_PDO_RECORDS = {
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class DataManagerAPITest(AirtableTest):
 
+    maxDiff = None  # TODO remove
+
     @urllib3_responses.activate
     def test_elasticsearch_status(self):
         url = reverse(elasticsearch_status)
@@ -886,6 +888,8 @@ class DataManagerAPITest(AirtableTest):
         url = reverse(update_rna_seq)
         self.check_pm_login(url)
 
+        self.maxDiff = None  # TODO remove
+
         params = self.RNA_DATA_TYPE_PARAMS[data_type]
         model_cls = params['model_cls']
         header = params['header']
@@ -1021,12 +1025,12 @@ class DataManagerAPITest(AirtableTest):
             params['new_data'], params["num_parsed_samples"], 2, 16, body,
             '1kg project nåme with uniçøde, Test Reprocessed Project', warnings=warnings, num_created_samples=2,
             additional_logs=[
+                ('update 1 RnaSamples', {'dbUpdate': {
+                    'dbEntity': 'RnaSample', 'entityIds': [params['sample_guid']],
+                    'updateType': 'bulk_update', 'updateFields': ['is_active']}}),
                 (f'delete {model_cls.__name__}s', {'dbUpdate': {
                     'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
                    'parentEntityIds': [params['sample_guid']], 'updateType': 'bulk_delete'}}),
-                ('update 1 RnaSamples', {'dbUpdate': {
-                    'dbEntity': 'RnaSample', 'entityIds': [params['sample_guid']],
-                    'updateType': 'bulk_update', 'updateFields': ['data_source', 'is_active']}}),
             ])
         self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
         self.assertEqual(mock_send_slack.call_count, 2)
