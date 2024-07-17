@@ -16,7 +16,7 @@ import Modal from 'shared/components/modal/Modal'
 import DataTable from 'shared/components/table/DataTable'
 import { ButtonLink, HelpIcon } from 'shared/components/StyledComponents'
 import {
-  SAMPLE_TYPE_LOOKUP,
+  SAMPLE_TYPE_OPTIONS,
   GENOME_VERSION_LOOKUP,
   DATASET_TITLE_LOOKUP,
   ANVIL_URL,
@@ -58,6 +58,13 @@ const FAMILY_STRUCTURE_HOVER = {
   4: 'A family with two parents and two children',
   5: 'A family with two parents and three or more other family members',
 }
+
+const SAMPLE_TYPE_LOOKUP = SAMPLE_TYPE_OPTIONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    ...{ [opt.value]: opt.text },
+  }), {},
+)
 
 const DetailSection = React.memo(({ title, content, button }) => (
   <div>
@@ -294,7 +301,7 @@ const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, us
     const [sampleType, datasetType] = sampleTypeKey.split('__')
     return {
       key: sampleTypeKey,
-      title: `${SAMPLE_TYPE_LOOKUP[sampleType].text}${DATASET_TITLE_LOOKUP[datasetType] || ''} Datasets`,
+      title: `${SAMPLE_TYPE_LOOKUP[sampleType] || sampleType}${DATASET_TITLE_LOOKUP[datasetType] || ''} Datasets`,
       content: <DatasetSection loadedSampleCounts={loadedSampleCounts} />,
     }
   }).sort((a, b) => a.title.localeCompare(b.title))
