@@ -271,8 +271,9 @@ SAMPLE_SV_WGS_QC_DATA = [
     b'NA19678	FALSE\n',
 ]
 
-RNA_MUSCLE_SAMPLE_GUID = 'S000152_na19675_d2'
-RNA_SPLICE_SAMPLE_GUID = 'S000151_na19675_1'
+RNA_TPM_MUSCLE_SAMPLE_GUID = 'RS000162_T_na19675_d2'
+RNA_OUTLIER_MUSCLE_SAMPLE_GUID = 'RS000172_E_na19675_d2'
+RNA_SPLICE_SAMPLE_GUID = 'RS000151_S_na19675_1'
 PLACEHOLDER_GUID = 'S0000100'
 RNA_FILE_ID = 'gs://rna_data/new_muscle_samples.tsv.gz'
 SAMPLE_GENE_OUTLIER_DATA = [
@@ -311,11 +312,11 @@ SAMPLE_GENE_SPLICE_DATA2 = {
         'rare_disease_samples_with_this_junction': '1', 'rare_disease_samples_total': '20', 'gene_id': '',
     }
 RNA_OUTLIER_SAMPLE_DATA = {
-    RNA_MUSCLE_SAMPLE_GUID: '\n'.join([json.dumps(row) for row in SAMPLE_GENE_OUTLIER_DATA]) + '\n',
+    RNA_OUTLIER_MUSCLE_SAMPLE_GUID: '\n'.join([json.dumps(row) for row in SAMPLE_GENE_OUTLIER_DATA]) + '\n',
     PLACEHOLDER_GUID: json.dumps({'gene_id': 'ENSG00000240361', 'p_value': '0.04', 'p_adjust': '0.112', 'z_score': '1.9'}) + '\n',
 }
 RNA_TPM_SAMPLE_DATA = {
-    RNA_MUSCLE_SAMPLE_GUID: '\n'.join([json.dumps(row) for row in SAMPLE_GENE_TPM_DATA]) + '\n',
+    RNA_TPM_MUSCLE_SAMPLE_GUID: '\n'.join([json.dumps(row) for row in SAMPLE_GENE_TPM_DATA]) + '\n',
     PLACEHOLDER_GUID: json.dumps({'gene_id': 'ENSG00000240361', 'tpm': '0.112'}) + '\n',
 }
 RNA_SPLICE_SAMPLE_DATA = {
@@ -439,8 +440,6 @@ AIRTABLE_PDO_RECORDS = {
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class DataManagerAPITest(AirtableTest):
-
-    maxDiff = None  # TODO remove
 
     @urllib3_responses.activate
     def test_elasticsearch_status(self):
@@ -735,7 +734,7 @@ class DataManagerAPITest(AirtableTest):
             'expected_models_json': [
                 ('ENSG00000240361', 0.13, 0.01, -3.1), ('ENSG00000233750', 0.0000057, 0.064, 7.8),
             ],
-            'sample_guid': RNA_MUSCLE_SAMPLE_GUID,
+            'sample_guid': RNA_OUTLIER_MUSCLE_SAMPLE_GUID,
         },
         'tpm': {
             'model_cls': RnaSeqTpm,
@@ -770,7 +769,7 @@ class DataManagerAPITest(AirtableTest):
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.0)],
-            'sample_guid': RNA_MUSCLE_SAMPLE_GUID,
+            'sample_guid': RNA_TPM_MUSCLE_SAMPLE_GUID,
             'mismatch_field': 'tpm',
         },
         'splice_outlier': {
@@ -855,12 +854,13 @@ class DataManagerAPITest(AirtableTest):
         self.assert_json_logs(user, expected_logs)
 
     def _check_rna_sample_model(self, individual_id, data_source, data_type, tissue_type, is_active_sample=True):
-        rna_samples = RnaSample.objects.filter(individual_id=individual_id, tissue_type=tissue_type, data_type=data_type)
+        rna_samples = RnaSample.objects.filter(
+            individual_id=individual_id, tissue_type=tissue_type, data_source=data_source, data_type=data_type,
+        )
         self.assertEqual(len(rna_samples), 1)
         sample = rna_samples.first()
         self.assertEqual(sample.is_active, is_active_sample)
         self.assertEqual(sample.tissue_type, tissue_type)
-        self.assertEqual(sample.data_source, data_source)
         return sample.guid
 
     def test_update_rna_outlier(self, *args, **kwargs):
@@ -887,8 +887,6 @@ class DataManagerAPITest(AirtableTest):
                             mock_rename, mock_mkdir, mock_datetime, mock_send_slack, mock_send_email):
         url = reverse(update_rna_seq)
         self.check_pm_login(url)
-
-        self.maxDiff = None  # TODO remove
 
         params = self.RNA_DATA_TYPE_PARAMS[data_type]
         model_cls = params['model_cls']
@@ -1032,7 +1030,7 @@ class DataManagerAPITest(AirtableTest):
                     'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
                    'parentEntityIds': [params['sample_guid']], 'updateType': 'bulk_delete'}}),
             ])
-        self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
+        self.assertFalse(params['sample_guid'] in response_json['sampleGuids'])
         self.assertEqual(mock_send_slack.call_count, 2)
         mock_send_slack.assert_has_calls([
             mock.call(
@@ -1071,8 +1069,8 @@ class DataManagerAPITest(AirtableTest):
         mock_mkdir.assert_any_call(f'tmp/temp_uploads/{file_path}')
         filename = f'tmp/temp_uploads/{file_path}/{new_sample_guid}.json.gz'
         expected_files = {
-            f'tmp/temp_uploads/{file_path}/{new_sample_guid if sample_guid == PLACEHOLDER_GUID else sample_guid}.json.gz': data
-            for sample_guid, data in params['parsed_file_data'].items()
+            f'tmp/temp_uploads/{file_path}/{new_sample_guid if guid == PLACEHOLDER_GUID else sample_guid}.json.gz': data
+            for guid, data in params['parsed_file_data'].items()
         }
         self.assertIn(filename, expected_files)
         file_rename = self._assert_expected_file_open(mock_rename, mock_open, expected_files.keys())
@@ -1135,7 +1133,7 @@ class DataManagerAPITest(AirtableTest):
 
     def test_load_rna_seq_sample_data(self):
 
-        url = reverse(load_rna_seq_sample_data, args=[RNA_MUSCLE_SAMPLE_GUID])
+        url = reverse(load_rna_seq_sample_data, args=[RNA_TPM_MUSCLE_SAMPLE_GUID])
         self.check_pm_login(url)
 
         for data_type, params in self.RNA_DATA_TYPE_PARAMS.items():
