@@ -493,7 +493,7 @@ def _load_rna_seq(model_cls, data_type, file_path, save_data, *args, user=None, 
     sample_projects = Project.objects.filter(family__individual__rnasample__guid__in=sample_guid_keys_to_load).values(
         'guid', 'name', new_sample_ids=ArrayAgg(
             'family__individual__individual_id', distinct=True, ordering='family__individual__individual_id',
-            filter=~Q(family__individual_id__in=prev_loaded_individual_ids) if prev_loaded_individual_ids else None
+            filter=~Q(family__individual__id__in=prev_loaded_individual_ids) if prev_loaded_individual_ids else None
         ))
     project_names = ', '.join(sorted([project['name'] for project in sample_projects]))
     message = f'Attempted data loading for {len(sample_guid_keys_to_load)} RNA-seq samples in the following {len(sample_projects)} projects: {project_names}'

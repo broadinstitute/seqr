@@ -927,8 +927,16 @@ class DataManagerAPITest(AirtableTest):
         _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Unable to find matches for the following samples: NA19675_D3 (1kg project nåme with uniçøde)'], 'warnings': None})
+        self.assertDictEqual(response.json(), {'errors': ['Unable to find matches for the following samples: NA19675_D2 (1kg project nåme with uniçøde), NA19675_D3 (1kg project nåme with uniçøde)'], 'warnings': None})
 
+        mapping_body = {'mappingFile': {'uploadedFileId': 'map.tsv'}}
+        body.update(mapping_body)
+        mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Must contain 2 columns: a'})
+
+        mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
         unknown_gene_id_row1 = loaded_data_row[:2] + ['NOT_A_GENE_ID1'] + loaded_data_row[3:]
         unknown_gene_id_row2 = loaded_data_row[:2] + ['NOT_A_GENE_ID2'] + loaded_data_row[3:]
         _set_file_iter_stdout([header, unknown_gene_id_row1, unknown_gene_id_row2])
@@ -941,13 +949,6 @@ class DataManagerAPITest(AirtableTest):
             response = self.client.post(url, content_type='application/json', data=json.dumps(body))
             self.assertEqual(response.status_code, 400)
             self.assertEqual(response.json()['errors'][0], 'Samples missing required "gene_id": NA19675_D2')
-
-        mapping_body = {'mappingFile': {'uploadedFileId': 'map.tsv'}}
-        mapping_body.update(body)
-        mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
-        response = self.client.post(url, content_type='application/json', data=json.dumps(mapping_body))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'error': 'Must contain 2 columns: a'})
 
         # Test already loaded data
         mock_send_slack.reset_mock()
@@ -1008,7 +1009,6 @@ class DataManagerAPITest(AirtableTest):
         mock_open.reset_mock()
         mock_subprocess.reset_mock()
         self.reset_logs()
-        mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
         mock_files = defaultdict(mock.MagicMock)
         mock_open.side_effect = lambda file_name, *args: mock_files[file_name]
         body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
