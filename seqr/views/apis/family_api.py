@@ -82,7 +82,7 @@ def family_page_data(request, family_guid):
     tools_by_indiv = defaultdict(list)
     tools_agg = PhenotypePrioritization.objects.filter(individual__family=family).values('individual__guid', 'tool').annotate(
         loadedDate=Max('created_date'),
-    )
+    ).order_by('tool')
     for agg in tools_agg:
         tools_by_indiv[agg.pop('individual__guid')].append(agg)
 
