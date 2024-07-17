@@ -12,7 +12,7 @@ from django.utils import timezone
 from notifications.models import Notification
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, FamilyNote, PhenotypePrioritization, CAN_EDIT
+from seqr.models import Project, Family, Individual, Sample, RnaSample, FamilyNote, PhenotypePrioritization, CAN_EDIT
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
@@ -231,18 +231,19 @@ def project_families(request, project_guid):
 def project_overview(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    # TODO handle RNA?
-    sample_models = Sample.objects.filter(individual__family__project=project)
+    sample_load_counts, sample_models = _sample_load_counts(
+        Sample, project, 'sample_type', 'dataset_type', loadedDate=TruncDate('loaded_date'),
+    )
+    rna_sample_load_counts, _ = _sample_load_counts(
+        RnaSample, project, sample_type=Value('RNA'), dataset_type=F('data_type'), loadedDate=TruncDate('created_date'),
+    )
 
     first_loaded_samples = sample_models.order_by('individual__family', 'loaded_date').distinct('individual__family').values_list('id', flat=True)
     samples = sample_models.filter(Q(is_active=True) | Q(id__in=first_loaded_samples))
     samples_by_guid = {s['sampleGuid']: s for s in get_json_for_samples(samples, project_guid=project_guid)}
 
-    sample_load_counts = sample_models.values(
-        'sample_type', 'dataset_type', loadedDate=TruncDate('loaded_date'),
-    ).order_by('loadedDate').annotate(familyCounts=ArrayAgg('individual__family__guid'))
     grouped_sample_counts = defaultdict(list)
-    for s in sample_load_counts:
+    for s in sample_load_counts + rna_sample_load_counts:
         s['familyCounts'] = {f: s['familyCounts'].count(f) for f in s['familyCounts']}
         grouped_sample_counts[f'{s.pop("sample_type")}__{s.pop("dataset_type")}'].append(s)
 
@@ -262,6 +263,13 @@ def project_overview(request, project_guid):
     })
 
     return create_json_response(response)
+
+
+def _sample_load_counts(sample_cls, project, *args, **kwargs):
+    sample_models = sample_cls.objects.filter(individual__family__project=project)
+    return list(sample_models.values(*args, **kwargs).order_by('loadedDate').annotate(
+        familyCounts=ArrayAgg('individual__family__guid'))
+    ), sample_models
 
 
 @login_and_policies_required
