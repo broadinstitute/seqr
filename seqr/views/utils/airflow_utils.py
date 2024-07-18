@@ -9,7 +9,7 @@ import json
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Individual, Sample, Project
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.file_utils import does_file_exist
+from seqr.utils.file_utils import does_file_exist, run_gsutil_with_wait
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from settings import AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
@@ -41,7 +41,9 @@ def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type
     }
 
     upload_info = _upload_data_loading_files(
-        projects, is_internal, user, genome_version, sample_type, individual_ids=individual_ids, additional_project_files=additional_project_files)
+        projects, is_internal, user, genome_version, sample_type, dataset_type=dataset_type,
+        individual_ids=individual_ids, additional_project_files=additional_project_files,
+    )
 
     try:
         _check_dag_running_state(dag_name)
@@ -107,7 +109,7 @@ def _dag_dataset_type(sample_type: str, dataset_type: str):
 
 
 def _upload_data_loading_files(projects: list[Project], is_internal: bool,
-                               user: User, genome_version: str, sample_type: str, callset: str = 'Internal',
+                               user: User, genome_version: str, sample_type: str, dataset_type: str = None, callset: str = 'Internal',
                                individual_ids: list[str] = None, additional_project_files: dict = None):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
@@ -130,6 +132,9 @@ def _upload_data_loading_files(projects: list[Project], is_internal: bool,
         try:
             files, file_suffixes = _parse_project_upload_files(project_guid, rows, file_annotations.keys(), additional_project_files)
             write_multiple_files_to_gs(files, gs_path, user, file_format='tsv', file_suffixes=file_suffixes)
+            if dataset_type:
+                additional_gs_path = _get_gs_pedigree_path(genome_version, sample_type, dataset_type)
+                run_gsutil_with_wait(f'rsync -r {gs_path}', additional_gs_path, user)
         except Exception as e:
             logger.error(f'Uploading Pedigree to Google Storage failed. Errors: {e}', user, detail=rows)
         info.append(f'Pedigree file has been uploaded to {gs_path}')
@@ -151,6 +156,10 @@ def _get_dag_project_gs_path(project: str, genome_version: str, sample_type: str
     dag_name = f'RDG_{sample_type}_Broad_{callset}' if is_internal else f'AnVIL_{sample_type}'
     dag_path = f'{SEQR_DATASETS_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_name}'
     return f'{dag_path}/base/projects/{project}/' if is_internal else f'{dag_path}/{project}/base/'
+
+
+def _get_gs_pedigree_path(genome_version: str, sample_type: str, dataset_type: str):
+    return f'gs://seqr-loading-temp/v03/{GENOME_VERSION_LOOKUP[genome_version]}/{sample_type}/{dataset_type}/pedigrees/'
 
 
 def _wait_for_dag_variable_update(dag_id, projects):
