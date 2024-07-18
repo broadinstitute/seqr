@@ -1687,8 +1687,9 @@ class LoadDataAPITest(AirflowTestCase):
             self.assertEqual(len(files[3]), 3)
             self.assertListEqual(files[3], [['s'], ['NA21234'], ['NA21987']])
 
-        self.assertEqual(len(files[0]), 15)
-        self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS)
+        num_rows = 4 if has_project_subset else 15
+        self.assertEqual(len(files[0]), num_rows)
+        self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
         ped_file = files[2 if has_project_subset else 1]
         self.assertEqual(len(ped_file), 3)
         self.assertListEqual(ped_file, [
