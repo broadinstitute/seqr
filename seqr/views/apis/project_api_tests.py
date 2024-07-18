@@ -380,27 +380,36 @@ class ProjectAPITest(object):
 
         family_1 = response_json['familiesByGuid']['F000001_1']
         family_3 = response_json['familiesByGuid']['F000003_3']
+        empty_family = response_json['familiesByGuid']['F000013_13']
         family_fields = {
             'individualGuids', 'discoveryTags', 'caseReviewStatuses', 'caseReviewStatusLastModified', 'hasRequiredMetadata',
             'parents', 'hasPhenotypePrioritization',
         }
         family_fields.update(SUMMARY_FAMILY_FIELDS)
         self.assertSetEqual(set(family_1.keys()), family_fields)
+        self.assertSetEqual(set(empty_family.keys()), family_fields)
 
         self.assertEqual(len(family_1['individualGuids']), 3)
         self.assertEqual(len(family_3['individualGuids']), 1)
+        self.assertEqual(len(empty_family['individualGuids']), 0)
         self.assertListEqual(family_1['caseReviewStatuses'], ['A', 'I', 'U'])
         self.assertListEqual(family_3['caseReviewStatuses'], [])
+        self.assertListEqual(empty_family['caseReviewStatuses'], [])
         self.assertEqual(family_1['caseReviewStatusLastModified'], '2017-03-12T22:34:49.964Z')
         self.assertIsNone(family_3['caseReviewStatusLastModified'])
+        self.assertIsNone(empty_family['caseReviewStatusLastModified'])
         self.assertTrue(family_1['hasRequiredMetadata'])
         self.assertFalse(family_3['hasRequiredMetadata'])
+        self.assertFalse(empty_family['hasRequiredMetadata'])
         self.assertListEqual(family_1['parents'], [{'maternalGuid': 'I000003_na19679', 'paternalGuid': 'I000002_na19678'}])
         self.assertListEqual(family_3['parents'], [])
+        self.assertListEqual(empty_family['parents'], [])
         self.assertEqual(family_1['hasPhenotypePrioritization'], True)
         self.assertFalse(family_3['hasPhenotypePrioritization'], False)
+        self.assertFalse(empty_family['hasPhenotypePrioritization'], False)
 
         self.assertListEqual(family_3['discoveryTags'], [])
+        self.assertListEqual(empty_family['discoveryTags'], [])
         self.assertSetEqual({tag['variantGuid'] for tag in family_1['discoveryTags']}, {'SV0000001_2103343353_r0390_100'})
         self.assertSetEqual(
             {tag['variantGuid'] for tag in response_json['familiesByGuid']['F000002_2']['discoveryTags']},
