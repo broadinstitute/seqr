@@ -1662,7 +1662,10 @@ class LoadDataAPITest(AirflowTestCase):
             'errors': ['The following families have previously loaded samples absent from airtable: 14 (NA21234)'],
         })
 
-        body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': sample_ids[:2]})]
+        body['projects'] = [
+            json.dumps({'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19678', 'NA19679']}),
+            json.dumps({**PROJECT_OPTION, 'sampleIds': sample_ids[:2]}),
+        ]
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
@@ -1677,14 +1680,16 @@ class LoadDataAPITest(AirflowTestCase):
             [row.split('\t') for row in write_call.args[0].split('\n')]
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
         ]
-        self.assertEqual(len(files), 2)
+        self.assertEqual(len(files), 4 if has_project_subset else 2)
         if has_project_subset:
-            self.assertEqual(len(files[1]), 3)
-            self.assertListEqual(files[1], [['s'], ['NA21234'], ['NA21987']])
-        else:
-            self.assertEqual(len(files[0]), 15)
-            self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS)
-        ped_file = files[0 if has_project_subset else 1]
+            self.assertEqual(len(files[1]), 4)
+            self.assertListEqual(files[1], [['s'], ['NA19675_1'], ['NA19678'], ['NA19679']])
+            self.assertEqual(len(files[3]), 3)
+            self.assertListEqual(files[3], [['s'], ['NA21234'], ['NA21987']])
+
+        self.assertEqual(len(files[0]), 15)
+        self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS)
+        ped_file = files[2 if has_project_subset else 1]
         self.assertEqual(len(ped_file), 3)
         self.assertListEqual(ped_file, [
             PEDIGREE_HEADER,
