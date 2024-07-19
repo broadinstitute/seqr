@@ -104,3 +104,21 @@ class AirtableSession(object):
 
         if response_json.get('offset'):
             self._populate_records(record_type, records, offset=response_json['offset'])
+
+    def _get_samples_for_id_field(self, sample_ids, id_field, fields):
+        raw_records = self.fetch_records(
+            'Samples', fields=[id_field] + fields,
+            or_filters={f'{{{id_field}}}': sample_ids},
+        )
+
+        records_by_id = defaultdict(list)
+        for airtable_id, record in raw_records.items():
+            records_by_id[record[id_field]].append({**record, 'airtable_id': airtable_id})
+        return records_by_id
+
+    def get_samples_for_sample_ids(self, sample_ids, fields):
+        records_by_id = self._get_samples_for_id_field(sample_ids, 'CollaboratorSampleID', fields)
+        missing = set(sample_ids) - set(records_by_id.keys())
+        if missing:
+            records_by_id.update(self._get_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', fields))
+        return records_by_id

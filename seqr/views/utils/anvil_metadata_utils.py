@@ -550,27 +550,11 @@ SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'd
 LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
 
-def _get_airtable_samples_for_id_field(sample_ids, id_field, fields, session):
-    raw_records = session.fetch_records(
-        'Samples', fields=[id_field] + fields,
-        or_filters={f'{{{id_field}}}': sample_ids},
-    )
-
-    records_by_id = defaultdict(list)
-    for airtable_id, record in raw_records.items():
-        records_by_id[record[id_field]].append({**record, 'airtable_id': airtable_id})
-    return records_by_id
-
-
 def _get_sample_airtable_metadata(sample_ids, user, airtable_fields):
     fields, list_fields = airtable_fields or [SINGLE_SAMPLE_FIELDS, LIST_SAMPLE_FIELDS]
     all_fields = fields + list_fields
 
-    session = AirtableSession(user)
-    records_by_id = _get_airtable_samples_for_id_field(sample_ids, 'CollaboratorSampleID', all_fields, session)
-    missing = set(sample_ids) - set(records_by_id.keys())
-    if missing:
-        records_by_id.update(_get_airtable_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', all_fields, session))
+    records_by_id = AirtableSession(user).get_samples_for_sample_ids(sample_ids, all_fields)
 
     sample_records = {}
     for record_id, records in records_by_id.items():
