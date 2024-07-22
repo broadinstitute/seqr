@@ -1704,9 +1704,10 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             fields=['SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
 
+        mock_subprocess.reset_mock()
         responses.calls.reset()
         responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS, status=200)
-        body['projects'] = [  # TODO
+        body['projects'] = [
             json.dumps({'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19679']}),
             json.dumps({**PROJECT_OPTION, 'sampleIds': sample_ids[:2]}),
         ]
@@ -1714,7 +1715,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
-        self._has_expected_gs_calls(mock_open, 'SNV_INDEL', has_project_subset=True)
+        self._has_expected_gs_calls(mock_open, 'SNV_INDEL', sample_type='WES', has_project_subset=True)
         self.assert_expected_airtable_call(
             call_index=0,
             filter_formula="OR({CollaboratorSampleID}='NA19678')",
@@ -1722,9 +1723,8 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         )
 
     def _has_expected_gs_calls(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False, **kwargs):
-        projects = self.PROJECTS[1:] if has_project_subset else self.PROJECTS
         mock_open.assert_has_calls([
-            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in projects
+            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in self.PROJECTS
         ], any_order=True)
         files = [
             [row.split('\t') for row in write_call.args[0].split('\n')]
@@ -1733,7 +1733,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(len(files), 4 if has_project_subset else 2)
         if has_project_subset:
             self.assertEqual(len(files[1]), 4)
-            self.assertListEqual(files[1], [['s'], ['NA19675_1'], ['NA19678'], ['NA19679']])
+            self.assertListEqual(files[1], [['s'], ['NA19675_1'], ['NA19679'], ['NA19678']])
             self.assertEqual(len(files[3]), 3)
             self.assertListEqual(files[3], [['s'], ['NA21234'], ['NA21987']])
 
@@ -1752,10 +1752,10 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             mock.call(
                 f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/',
                 stdout=-1, stderr=-2, shell=True,  # nosec
-            ) for project in projects
+            ) for project in self.PROJECTS
         ] + [
             mock.call(
                 f'gsutil rsync -r gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/ gs://seqr-loading-temp/v03/GRCh38/{sample_type}/{dataset_type}/pedigrees/',
                 stdout=-1, stderr=-2, shell=True,  # nosec
-            ) for project in projects
+            ) for project in self.PROJECTS
         ], any_order=True)

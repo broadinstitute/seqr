@@ -527,7 +527,6 @@ def load_data(request):
             project_guid: (f'{project_guid}_ids', ['s'], [{'s': sample_id} for sample_id in sample_ids])
             for project_guid, sample_ids in project_samples.items()
         }
-        import pdb; pdb.set_trace()
 
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
     trigger_data_loading(
@@ -577,6 +576,7 @@ def _get_valid_project_samples(project_samples, sample_type, user):
     for (project, sample_id), individual in missing_samples.items():
         if (project, sample_id) in loaded_samples:
             individual_ids.append(individual['id'])
+            project_samples[project].append(sample_id)
         else:
             missing_family_samples[(project, individual['family_name'])].append(sample_id)
 
