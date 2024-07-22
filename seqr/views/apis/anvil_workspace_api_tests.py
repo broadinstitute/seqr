@@ -516,6 +516,9 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         self.mock_mv_file = patcher.start()
         self.mock_mv_file.return_value = True
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.run_gsutil_with_wait')
+        self.mock_gsutil = patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
         mock_tempdir = patcher.start()
         mock_tempdir.return_value.__enter__.return_value = TEMP_PATH
@@ -734,9 +737,13 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             '\n'.join(['\t'.join(row) for row in [header] + rows])
         )
 
+        gs_path = f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base/'
         self.mock_mv_file.assert_called_with(
-            f'{TEMP_PATH}/*', f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base/',
-            self.manager_user
+            f'{TEMP_PATH}/*', gs_path, self.manager_user
+        )
+
+        self.mock_gsutil.assert_called_with(
+            f'rsync -r {gs_path}', f'gs://seqr-loading-temp/v03/{genome_version}/WES/SNV_INDEL/pedigrees/', self.manager_user,
         )
 
         self.assert_airflow_calls(additional_tasks_check=test_add_data)
