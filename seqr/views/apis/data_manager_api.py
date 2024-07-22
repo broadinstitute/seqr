@@ -527,6 +527,7 @@ def load_data(request):
             project_guid: (f'{project_guid}_ids', ['s'], [{'s': sample_id} for sample_id in sample_ids])
             for project_guid, sample_ids in project_samples.items()
         }
+        import pdb; pdb.set_trace()
 
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
     trigger_data_loading(
