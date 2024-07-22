@@ -469,9 +469,9 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings', 'uploadedFileId'})
 
-        url = reverse(edit_families_handler, args=[PROJECT_GUID])
+        edit_url = reverse(edit_families_handler, args=[PROJECT_GUID])
 
-        response = self.client.post(url, content_type='application/json',
+        response = self.client.post(edit_url, content_type='application/json',
                 data=json.dumps({'uploadedFileId': response_json['uploadedFileId']}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -487,8 +487,18 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(family_2['description'], 'family two description')
         self.assertEqual(family_2['familyId'], '2')
 
+        internal_field_data = b'Family ID	External Data\n\
+"11"	""\n\
+"12"	"ONT lrGS; BioNano"'
+        response = self.client.post(url,  {'f': SimpleUploadedFile('families.tsv', internal_field_data)})
+        self.assertEqual(response.status_code, 200)
+        response = self.client.post(
+            edit_url, content_type='application/json', data=json.dumps({'uploadedFileId': response.json()['uploadedFileId']}))
+        self.assertEqual(response.status_code, 403)
+
         # Test PM permission
         url = reverse(receive_families_table_handler, args=[PM_REQUIRED_PROJECT_GUID])
+        edit_url = reverse(edit_families_handler, args=[PM_REQUIRED_PROJECT_GUID])
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
 
@@ -498,8 +508,14 @@ class FamilyAPITest(AuthenticationTestCase):
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
 
-        response = self.client.post(url, {'f': SimpleUploadedFile('families.tsv', 'Family ID\n1'.encode('utf-8'))})
+        response = self.client.post(url,  {'f': SimpleUploadedFile('families.tsv', internal_field_data)})
         self.assertEqual(response.status_code, 200)
+        response = self.client.post(
+            edit_url, content_type='application/json', data=json.dumps({'uploadedFileId': response.json()['uploadedFileId']}))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(response_json['familiesByGuid']['F000011_11']['externalData'], [])
+        self.assertListEqual(response_json['familiesByGuid']['F000012_12']['externalData'], ['L', 'B'])
 
     def test_create_update_and_delete_family_note(self):
         # create the note

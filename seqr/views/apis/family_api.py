@@ -397,7 +397,7 @@ def update_family_analysis_groups(request, family_guid):
 
 EXTERNAL_DATA_LOOKUP = {v: k for k, v in Family.EXTERNAL_DATA_CHOICES}
 PARSE_FAMILY_TABLE_FIELDS = {
-    'externalData': lambda data_type: [EXTERNAL_DATA_LOOKUP[dt.strip()] for dt in (data_type or '').split(';')],
+    'externalData': lambda data_type: [EXTERNAL_DATA_LOOKUP[dt.strip()] for dt in (data_type or '').split(';') if dt],
 }
 
 

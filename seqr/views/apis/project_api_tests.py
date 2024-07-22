@@ -382,7 +382,7 @@ class ProjectAPITest(object):
         family_3 = response_json['familiesByGuid']['F000003_3']
         family_fields = {
             'individualGuids', 'discoveryTags', 'caseReviewStatuses', 'caseReviewStatusLastModified', 'hasRequiredMetadata',
-            'parents', 'hasPhenotypePrioritization',
+            'parents', 'hasPhenotypePrioritization', 'externalData',
         }
         family_fields.update(SUMMARY_FAMILY_FIELDS)
         self.assertSetEqual(set(family_1.keys()), family_fields)
@@ -399,6 +399,8 @@ class ProjectAPITest(object):
         self.assertListEqual(family_3['parents'], [])
         self.assertEqual(family_1['hasPhenotypePrioritization'], True)
         self.assertFalse(family_3['hasPhenotypePrioritization'], False)
+        self.assertListEqual(family_1['externalData'], ['M'])
+        self.assertListEqual(family_3['externalData'], [])
 
         self.assertListEqual(family_3['discoveryTags'], [])
         self.assertSetEqual({tag['variantGuid'] for tag in family_1['discoveryTags']}, {'SV0000001_2103343353_r0390_100'})
