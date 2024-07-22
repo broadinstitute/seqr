@@ -95,5 +95,21 @@
         "created": "2020-03-12T23:09:54.180Z",
         "modified": "2020-03-12T23:09:54.180Z"
     }
+}, {
+    "model": "social_django.usersocialauth",
+    "pk": 7,
+    "fields": {
+        "user": 16,
+        "provider": "google-oauth2",
+        "uid": "test_data_manager@broadinstitute.org",
+        "extra_data": {
+            "expires": 3599,
+            "auth_time": 1603287741,
+            "token_type": "Bearer",
+            "access_token": "ya29.EXAMPLE"
+        },
+        "created": "2020-03-12T23:09:54.180Z",
+        "modified": "2020-03-12T23:09:54.180Z"
+    }
 }
 ]

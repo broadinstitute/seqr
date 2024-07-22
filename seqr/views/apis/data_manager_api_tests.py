@@ -435,6 +435,30 @@ AIRTABLE_PDO_RECORDS = {
         },
     ]
 }
+AIRTABLE_SAMPLE_RECORDS = {
+    'records': [
+        {
+            'id': 'recW24C2CJW5lT64K',
+            'fields': {
+                'CollaboratorSampleID': 'NA19678',
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
+                'PDOStatus': ['Available in seqr'],
+            }
+        },
+    ],
+}
+AIRTABLE_SECONDARY_SAMPLE_RECORDS = {
+    'records': [
+        {
+            'id': 'recW24C2CJW5lT64K',
+            'fields': {
+                'SeqrCollaboratorSampleID': 'NA21234',
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'],
+                'PDOStatus': ['Hold for phenotips'],
+            }
+        },
+    ],
+}
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -1497,7 +1521,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
     DAG_NAME = 'v03_pipeline-MITO'
     SECOND_DAG_NAME = 'v03_pipeline-GCNV'
@@ -1653,21 +1677,49 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
         sample_ids = PROJECT_SAMPLES_OPTION['sampleIds']
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [sample_ids[1]]})]
+        airtable_samples_url = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples'
+        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS, status=200)
+        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SECONDARY_SAMPLE_RECORDS, status=200)
+
+        # Non-Broad users can not access airtable
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 403)
+
+        responses.calls.reset()
+        self.login_data_manager_user()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
             'errors': ['The following families have previously loaded samples absent from airtable: 14 (NA21234)'],
         })
+        self.assert_expected_airtable_call(
+            call_index=0,
+            filter_formula="OR({CollaboratorSampleID}='NA21234')",
+            fields=['CollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
+        )
+        self.assert_expected_airtable_call(
+            call_index=1,
+            filter_formula="OR({SeqrCollaboratorSampleID}='NA21234')",
+            fields=['SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
+        )
 
-        body['projects'] = [
-            json.dumps({'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19678', 'NA19679']}),
+        responses.calls.reset()
+        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS, status=200)
+        body['projects'] = [  # TODO
+            json.dumps({'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19679']}),
             json.dumps({**PROJECT_OPTION, 'sampleIds': sample_ids[:2]}),
         ]
+        body['sampleType'] = 'WES'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
         self._has_expected_gs_calls(mock_open, 'SNV_INDEL', has_project_subset=True)
+        self.assert_expected_airtable_call(
+            call_index=0,
+            filter_formula="OR({CollaboratorSampleID}='NA19678')",
+            fields=['CollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
+        )
 
     def _has_expected_gs_calls(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False, **kwargs):
         projects = self.PROJECTS[1:] if has_project_subset else self.PROJECTS
