@@ -189,7 +189,7 @@ def project_families(request, project_guid):
     families = family_models.values(
         'id', 'description',
         **{_to_camel_case(field): F(field) for field in [
-            'family_id', 'analysis_status', 'created_date', 'coded_phenotype', 'mondo_id',
+            'family_id', 'analysis_status', 'created_date', 'coded_phenotype', 'mondo_id', 'external_data',
         ]},
         familyGuid=F('guid'),
         projectGuid=Value(project_guid),
