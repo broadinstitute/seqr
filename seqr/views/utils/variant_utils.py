@@ -109,7 +109,7 @@ def saved_variants_dataset_type_filter(dataset_type):
         dataset_filter['alt__isnull'] = True
     else:
         # Filter out manual variants with invalid characters, such as those used for STRs
-        dataset_filter['alt__regex'] = '^[ACGT]$'
+        dataset_filter['alt__regex'] = '^[ACGT]+$'
     return dataset_filter
 
 
