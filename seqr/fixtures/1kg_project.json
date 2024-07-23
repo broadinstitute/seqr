@@ -1970,8 +1970,8 @@
         "xpos": 1001562437,
         "xpos_end": 1003124874,
         "ref": "G",
-        "alt": "C",
-        "variant_id": "1-1562437-G-C",
+        "alt": "CA",
+        "variant_id": "1-1562437-G-CA",
         "saved_variant_json": {
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
             "liftedOverGenomeVersion": "38",
