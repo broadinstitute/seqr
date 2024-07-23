@@ -13,7 +13,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Project, CAN_EDIT, Sample
+from seqr.models import Project, CAN_EDIT, Sample, Individual
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
@@ -250,10 +250,26 @@ def _parse_uploaded_pedigree(request_json, project=None):
     missing_samples = [record['individualId'] for record in pedigree_records
                        if record['individualId'] not in request_json['vcfSamples']]
 
+    errors = []
     if missing_samples:
-        error = 'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
-                ', '.join(missing_samples))
-        raise ErrorsWarningsException([error], [])
+        errors.append('The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
+                ', '.join(missing_samples)))
+
+    records_by_family = defaultdict(list)
+    for record in pedigree_records:
+        records_by_family[record[JsonConstants.FAMILY_ID_COLUMN]].append(record)
+
+    no_affected_families = []
+    for family_id, records in records_by_family.items():
+        affected = [record for record in records if record[JsonConstants.AFFECTED_COLUMN] == Individual.AFFECTED_STATUS_AFFECTED]
+        if not affected:
+            no_affected_families.append(family_id)
+
+    if no_affected_families:
+        errors.append('The following families do not have any affected individuals: {}'.format(', '.join(no_affected_families)))
+
+    if errors:
+        raise ErrorsWarningsException(errors, [])
 
     return pedigree_records
 
