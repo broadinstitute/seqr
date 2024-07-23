@@ -151,7 +151,7 @@ def parse_hpo_terms(hpo_term_string):
     if not hpo_term_string:
         return []
     terms = {hpo_term.strip() for hpo_term in re.sub(r'\(.*?\)', '', hpo_term_string).replace(',', ';').split(';')}
-    return[{'id': term for term in terms if term}]
+    return[{'id': term} for term in terms if term]
 
 
 def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None, update_features=False):
