@@ -263,7 +263,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
 
         # Test SavedVariant model updated
-        for i, variant_id in enumerate([['1', 1562437, 'G', 'C'], ['1', 46859832, 'G', 'A']]):
+        for i, variant_id in enumerate([['1', 1562437, 'G', 'CA'], ['1', 46859832, 'G', 'A']]):
             multi_lookup_request = responses.calls[3+i].request
             self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_HOST}:5000/multi_lookup')
             self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')

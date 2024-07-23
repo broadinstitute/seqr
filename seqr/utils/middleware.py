@@ -1,5 +1,3 @@
-from urllib.parse import urlparse
-
 from anymail.exceptions import AnymailError
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.core.handlers.exception import get_exception_response
@@ -17,7 +15,7 @@ from seqr.utils.search.utils import ERROR_LOG_EXCEPTIONS, SEARCH_EXCEPTION_ERROR
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.terra_api_utils import TerraAPIException
-from settings import DEBUG, LOGIN_URL, CSRF_TRUSTED_ORIGINS
+from settings import DEBUG, LOGIN_URL
 
 logger = SeqrLogger()
 
@@ -172,28 +170,3 @@ class CacheControlMiddleware(MiddlewareMixin):
         add_never_cache_headers(response)
         response['Pragma'] = 'no-cache'
         return response
-
-
-class DebugCSRFMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    @staticmethod
-    def good_origin(request):
-        return "%s://%s" % (
-            "https" if request.is_secure() else "http",
-            request.get_host(),
-        )
-
-    def __call__(self, request):
-        logger.info(f'request META: {request.META}', request.user)
-        request_origin = request.META.get('HTTP_ORIGIN')
-        good_origin = self.good_origin(request)
-        logger.info(f'request get_host: {request.get_host()}', request.user)
-        logger.info(f'request is_secure: {request.is_secure()}', request.user)
-        logger.info(f'request_origin: {request_origin}', request.user)
-        logger.info(f'good_origin: {good_origin}', request.user)
-        logger.info(f'settings CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}', request.user)
-        parsed_origin = urlparse(request_origin)
-        logger.info(f'parsed request origin: {parsed_origin}', request.user)
-        return self.get_response(request)
