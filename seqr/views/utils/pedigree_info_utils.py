@@ -244,7 +244,7 @@ def _parse_header_columns(header, allow_id_update, update_features):
 def _format_value(value, column):
     format_func = JsonConstants.FORMAT_COLUMNS.get(column)
     if format_func:
-        if (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
+        if (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN, JsonConstants.FEATURES}):
             value = format_func(value)
             if value is None and column not in JsonConstants.NULLABLE_COLUMNS:
                 raise ValueError()
