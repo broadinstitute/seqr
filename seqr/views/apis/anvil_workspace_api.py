@@ -243,7 +243,7 @@ def _parse_uploaded_pedigree(request_json, project=None):
     # Parse families/individuals in the uploaded pedigree file
     json_records = load_uploaded_file(request_json['uploadedFileId'])
     pedigree_records, _ = parse_basic_pedigree_table(
-        project, json_records, 'uploaded pedigree file', required_columns=[
+        project, json_records, 'uploaded pedigree file', update_features=True, required_columns=[
             JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN,
         ])
 
@@ -259,11 +259,10 @@ def _parse_uploaded_pedigree(request_json, project=None):
     for record in pedigree_records:
         records_by_family[record[JsonConstants.FAMILY_ID_COLUMN]].append(record)
 
-    no_affected_families = []
-    for family_id, records in records_by_family.items():
-        affected = [record for record in records if record[JsonConstants.AFFECTED_COLUMN] == Individual.AFFECTED_STATUS_AFFECTED]
-        if not affected:
-            no_affected_families.append(family_id)
+    no_affected_families = [
+        family_id for family_id, records in records_by_family.items()
+        if not any(record[JsonConstants.AFFECTED_COLUMN] == Individual.AFFECTED_STATUS_AFFECTED for record in records)
+    ]
 
     if no_affected_families:
         errors.append('The following families do not have any affected individuals: {}'.format(', '.join(no_affected_families)))
@@ -278,6 +277,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     # add families and individuals according to the uploaded individual records
     pedigree_json, sample_ids = add_or_update_individuals_and_families(
         project, individual_records=pedigree_records, user=user, get_update_json=get_pedigree_json, get_updated_individual_ids=True,
+        allow_features_update=True,
     )
     num_updated_individuals = len(sample_ids)
     sample_ids.update(previous_loaded_ids or [])
