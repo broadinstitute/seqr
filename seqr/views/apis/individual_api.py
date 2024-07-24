@@ -22,8 +22,8 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_fo
     GREGOR_FINDING_TAG_TYPE
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
-    is_internal_anvil_project, pm_or_data_manager_required, check_workspace_perm
+    get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, external_anvil_project_can_edit, \
+    pm_or_data_manager_required, check_workspace_perm
 from seqr.views.utils.project_context_utils import add_project_tag_type_counts
 from seqr.views.utils.individual_utils import delete_individuals, add_or_update_individuals_and_families
 from seqr.views.utils.variant_utils import bulk_create_tagged_variants
@@ -118,11 +118,6 @@ def _get_parsed_features(features):
     return list(parsed_features.values())
 
 
-def _anvil_project_can_edit_pedigree(project, user):
-    return project_has_anvil(project) and has_project_permissions(project, user, can_edit=True) and not \
-        is_internal_anvil_project(project)
-
-
 @login_and_policies_required
 def edit_individuals_handler(request, project_guid):
     """Modify one or more Individual records.
@@ -153,7 +148,7 @@ def edit_individuals_handler(request, project_guid):
     """
 
     project = get_project_and_check_pm_permissions(project_guid, request.user,
-                                                   override_permission_func=_anvil_project_can_edit_pedigree)
+                                                   override_permission_func=external_anvil_project_can_edit)
 
     request_json = json.loads(request.body)
 
@@ -230,7 +225,7 @@ def delete_individuals_handler(request, project_guid):
 
     # validate request
     project = get_project_and_check_pm_permissions(project_guid, request.user,
-                                                   override_permission_func=_anvil_project_can_edit_pedigree)
+                                                   override_permission_func=external_anvil_project_can_edit)
 
     request_json = json.loads(request.body)
     individuals_list = request_json.get('individuals')
