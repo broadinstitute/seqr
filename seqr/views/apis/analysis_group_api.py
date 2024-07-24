@@ -55,6 +55,7 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
     valid_families = set()
 
     def _validate_families(request_json):
+        request_json.pop('uploadedFamilyIds', None)
         family_guids = request_json.pop('familyGuids')
         families = Family.objects.filter(guid__in=family_guids).only('guid')
         if len(families) != len(family_guids):

@@ -11,8 +11,8 @@ import traceback
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqTpm, PhenotypePrioritization, Project, Sample, VariantTag, VariantTagType
-from seqr.utils.search.utils import get_variants_for_variant_ids
+    RnaSeqTpm, PhenotypePrioritization, Project, Sample, RnaSample, VariantTag, VariantTagType
+from seqr.utils.search.utils import get_variants_for_variant_ids, backend_specific_call
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
@@ -109,7 +109,7 @@ def saved_variants_dataset_type_filter(dataset_type):
         dataset_filter['alt__isnull'] = True
     else:
         # Filter out manual variants with invalid characters, such as those used for STRs
-        dataset_filter['alt__regex'] = '^[ACGT]$'
+        dataset_filter['alt__regex'] = '^[ACGT]+$'
     return dataset_filter
 
 
@@ -239,6 +239,12 @@ def get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs)
     return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
 
 
+def _requires_transcript_metadata(variant):
+    if isinstance(variant, list):
+        return _requires_transcript_metadata(variant[0])
+    return variant.get('genomeVersion') != GENOME_VERSION_GRCh38 or variant.get('chrom', '').startswith('M')
+
+
 def _saved_variant_genes_transcripts(variants):
     family_genes = defaultdict(set)
     gene_ids = set()
@@ -249,7 +255,8 @@ def _saved_variant_genes_transcripts(variants):
         for var in variant:
             for gene_id, transcripts in var.get('transcripts', {}).items():
                 gene_ids.add(gene_id)
-                transcript_ids.update([t['transcriptId'] for t in transcripts if t.get('transcriptId')])
+                if backend_specific_call(lambda v: True, _requires_transcript_metadata)(variant):
+                    transcript_ids.update([t['transcriptId'] for t in transcripts if t.get('transcriptId')])
             for family_guid in var['familyGuids']:
                 family_genes[family_guid].update(var.get('transcripts', {}).keys())
 
@@ -263,7 +270,7 @@ def _saved_variant_genes_transcripts(variants):
             TranscriptInfo.objects.filter(transcript_id__in=transcript_ids),
             nested_fields=[{'fields': ('refseqtranscript', 'refseq_id'), 'key': 'refseqId'}]
         )
-    }
+    } if transcript_ids else None
 
     return genes, transcripts, family_genes
 
@@ -378,7 +385,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values(), request.user)
         response.update(discovery_response)
 
-    response['transcriptsById'] = transcripts
+    if transcripts:
+        response['transcriptsById'] = transcripts
     response['locusListsByGuid'] = _add_locus_lists(
         projects, genes, add_list_detail=add_locus_list_detail, user=request.user)
 
@@ -405,8 +413,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     rna_tpm = None
     if include_individual_gene_scores:
         present_family_genes = {k: v for k, v in family_genes.items() if v}
-        rna_sample_family_map = dict(Sample.objects.filter(
-            individual__family__guid__in=present_family_genes.keys(), sample_type=Sample.SAMPLE_TYPE_RNA, is_active=True,
+        rna_sample_family_map = dict(RnaSample.objects.filter(
+            individual__family__guid__in=present_family_genes.keys(), is_active=True,
         ).values_list('id', 'individual__family__guid'))
         response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), rna_sample_family_map.keys())
         rna_tpm = _get_family_has_rna_tpm(present_family_genes, genes.keys(), rna_sample_family_map)

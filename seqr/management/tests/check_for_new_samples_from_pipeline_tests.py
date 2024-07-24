@@ -263,7 +263,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
 
         # Test SavedVariant model updated
-        for i, variant_id in enumerate([['1', 1562437, 'G', 'C'], ['1', 46859832, 'G', 'A']]):
+        for i, variant_id in enumerate([['1', 1562437, 'G', 'CA'], ['1', 46859832, 'G', 'A']]):
             multi_lookup_request = responses.calls[3+i].request
             self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_HOST}:5000/multi_lookup')
             self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
@@ -283,7 +283,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         annotation_updated_variant = next(v for v in updated_variants if v.guid == 'SV0000002_1248367227_r0390_100')
         self.assertEqual(len(reloaded_variant.saved_variant_json), 3)
         self.assertListEqual(reloaded_variant.saved_variant_json['familyGuids'], ['F000014_14'])
-        self.assertEqual(len(annotation_updated_variant.saved_variant_json), 18)
+        self.assertEqual(len(annotation_updated_variant.saved_variant_json), 19)
         self.assertListEqual(annotation_updated_variant.saved_variant_json['familyGuids'], ['F000001_1'])
 
         annotation_updated_json = SavedVariant.objects.get(guid='SV0059956_11560662_f019313_1').saved_variant_json

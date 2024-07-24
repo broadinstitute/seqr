@@ -10,7 +10,7 @@ asgiref==3.6.0
     #   django
 build==0.10.0
     # via pip-tools
-certifi==2023.7.22
+certifi==2024.7.4
     # via
     #   -c requirements.txt
     #   requests
@@ -22,7 +22,7 @@ click==8.1.3
     # via pip-tools
 coverage==5.1
     # via -r requirements-dev.in
-django==3.2.25
+django==4.2.14
     # via
     #   -c requirements.txt
     #   django-appconf
@@ -47,13 +47,9 @@ pip-tools==6.12.2
     # via -r requirements-dev.in
 pyproject-hooks==1.0.0
     # via build
-pytz==2022.7.1
-    # via
-    #   -c requirements.txt
-    #   django
 rcssmin==1.1.1
     # via django-compressor
-requests==2.32.0
+requests==2.32.2
     # via
     #   -c requirements.txt
     #   responses
@@ -74,7 +70,7 @@ tomli==2.0.1
     #   pyproject-hooks
 types-toml==0.10.8.5
     # via responses
-urllib3==1.26.18
+urllib3==1.26.19
     # via
     #   -c requirements.txt
     #   requests
@@ -87,3 +83,4 @@ wheel==0.38.4
 # The following packages are considered to be unsafe in a requirements file:
 # pip
 # setuptools
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability

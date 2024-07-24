@@ -516,6 +516,9 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         self.mock_mv_file = patcher.start()
         self.mock_mv_file.return_value = True
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airflow_utils.run_gsutil_with_wait')
+        self.mock_gsutil = patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
         mock_tempdir = patcher.start()
         mock_tempdir.return_value.__enter__.return_value = TEMP_PATH
@@ -559,14 +562,27 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
         response_json = response.json()
-        self.assertEqual(project.guid, response_json['projectGuid'])
-        self.assertListEqual(
-            [project.genome_version, project.description, project.workspace_namespace, project.workspace_name],
-            ['38', 'A test project', TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
-
-        self.assertListEqual(
-            [project.mme_contact_institution, project.mme_primary_data_owner, project.mme_contact_url],
-            ['Broad Center for Mendelian Genomics', 'Test Manager User', 'mailto:test_user_manager@test.com'])
+        self.assertDictEqual({k: getattr(project, k) for k in project._meta.json_fields}, {
+            'guid': response_json['projectGuid'],
+            'name': TEST_NO_PROJECT_WORKSPACE_NAME,
+            'description': 'A test project',
+            'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
+            'workspace_name': TEST_NO_PROJECT_WORKSPACE_NAME,
+            'has_case_review': False,
+            'enable_hgmd': False,
+            'is_demo': False,
+            'all_user_demo': False,
+            'consent_code': None,
+            'created_date': mock.ANY,
+            'last_modified_date': mock.ANY,
+            'last_accessed_date': mock.ANY,
+            'genome_version': '38',
+            'is_mme_enabled': True,
+            'mme_contact_institution': 'Broad Center for Mendelian Genomics',
+            'mme_primary_data_owner': 'Test Manager User',
+            'mme_contact_url': 'mailto:test_user_manager@test.com',
+            'vlm_contact_email': 'test_user_manager@test.com',
+        })
 
         self._assert_valid_operation(project, test_add_data=False)
 
@@ -721,9 +737,13 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             '\n'.join(['\t'.join(row) for row in [header] + rows])
         )
 
+        gs_path = f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base/'
         self.mock_mv_file.assert_called_with(
-            f'{TEMP_PATH}/*', f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base/',
-            self.manager_user
+            f'{TEMP_PATH}/*', gs_path, self.manager_user
+        )
+
+        self.mock_gsutil.assert_called_with(
+            f'rsync -r {gs_path}', f'gs://seqr-loading-temp/v03/{genome_version}/WES/SNV_INDEL/pedigrees/', self.manager_user,
         )
 
         self.assert_airflow_calls(additional_tasks_check=test_add_data)
@@ -741,7 +761,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
 
         dag_json = {
             'projects_to_run': [project.guid],
-            'callset_paths': ['gs://test_bucket/test_path.vcf'],
+            'callset_path': 'gs://test_bucket/test_path.vcf',
             'sample_source': 'AnVIL',
             'sample_type': 'WES',
             'reference_genome': genome_version,
@@ -824,7 +844,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             dag_id=self.DAG_NAME,
             dag=json.dumps({
                 'projects_to_run': [project.guid],
-                'callset_paths': ['gs://test_bucket/test_path.vcf'],
+                'callset_path': 'gs://test_bucket/test_path.vcf',
                 'sample_source': 'AnVIL',
                 'sample_type': 'WES',
                 'reference_genome': genome_version,

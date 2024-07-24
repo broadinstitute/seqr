@@ -212,10 +212,11 @@ const SV_FIELDS = [
   },
 ].map(formatField)
 
-const BaseCreateVariantButton = React.memo(({ variantType, family, user, ...props }) => (
-  user.isAnalyst ? (
+const BaseCreateVariantButton = React.memo(({ variantType, family, user, project, ...props }) => (
+  (project.isAnalystProject ? user.isAnalyst : project.canEdit) ? (
     <UpdateButton
       key={`manual${variantType}`}
+      initialValues={project}
       modalTitle={`Add a Manual ${variantType} for Family ${family.displayName}`}
       modalId={`${family.familyGuid}-addVariant-${variantType || 'SNV'}`}
       formMetaId={family.familyGuid}
@@ -232,13 +233,14 @@ BaseCreateVariantButton.propTypes = {
   variantType: PropTypes.string,
   family: PropTypes.object,
   user: PropTypes.object,
+  project: PropTypes.object,
   formFields: PropTypes.arrayOf(PropTypes.object),
   onSubmit: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
   user: getUser(state),
-  initialValues: getCurrentProject(state),
+  project: getCurrentProject(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({

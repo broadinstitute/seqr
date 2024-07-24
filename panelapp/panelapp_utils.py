@@ -115,15 +115,17 @@ def _get_all_panels(panels_url, all_results):
         return _get_all_panels(next_page, all_results)
 
 
-@retry(
-    retry=retry_if_exception_type(MaxRetryError),
-    wait=wait_exponential(multiplier=1, min=4, max=10),
-    stop=stop_after_attempt(5),
-)
 def _get_all_genes(genes_url: str, results_by_panel_id: dict):
-    resp = requests.get(genes_url, timeout=REQUEST_TIMEOUT_S)
-    resp_json = resp.json()
+    @retry(
+        retry=retry_if_exception_type(MaxRetryError),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        stop=stop_after_attempt(5),
+    )
+    def _get(url):
+        resp = requests.get(url, timeout=REQUEST_TIMEOUT_S)
+        return resp.json()
 
+    resp_json = _get(genes_url)
     for result in resp_json.get('results', []):
         if result.get('panel'):
             panel_id = result['panel']['id']

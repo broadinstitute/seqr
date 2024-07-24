@@ -27,7 +27,7 @@ class ReloadSavedVariantJsonTest(TestCase):
 
         family_1 = Family.objects.get(id=1)
         mock_get_variants.assert_called_with(
-            [family_1], ['1-1562437-G-C', '1-46859832-G-A','21-3343353-GAGA-G'], user=None, user_email='manage_command')
+            [family_1], ['1-1562437-G-CA', '1-46859832-G-A','21-3343353-GAGA-G'], user=None, user_email='manage_command')
 
         logger_info_calls = [
             mock.call('Updated 3 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
@@ -45,7 +45,7 @@ class ReloadSavedVariantJsonTest(TestCase):
         family_2 = Family.objects.get(id=2)
         mock_get_variants.assert_has_calls([
             mock.call(
-                [family_1, family_2], ['1-1562437-G-C', '1-248367227-TC-T', '1-46859832-G-A', '21-3343353-GAGA-G'], user=None, user_email='manage_command',
+                [family_1, family_2], ['1-1562437-G-CA', '1-248367227-TC-T', '1-46859832-G-A', '21-3343353-GAGA-G'], user=None, user_email='manage_command',
             ),
             mock.call([Family.objects.get(id=12)], ['1-248367227-TC-T', 'prefix_19107_DEL'], user=None, user_email='manage_command'),
             mock.call([Family.objects.get(id=14)], ['1-248367227-TC-T'], user=None, user_email='manage_command')
@@ -72,7 +72,7 @@ class ReloadSavedVariantJsonTest(TestCase):
                      PROJECT_GUID,
                      '--family-guid={}'.format(FAMILY_GUID))
 
-        mock_get_variants.assert_called_with([family_1], ['1-1562437-G-C', '1-46859832-G-A', '21-3343353-GAGA-G'], user=None, user_email='manage_command')
+        mock_get_variants.assert_called_with([family_1], ['1-1562437-G-CA', '1-46859832-G-A', '21-3343353-GAGA-G'], user=None, user_email='manage_command')
 
         logger_info_calls = [
             mock.call('Reload Summary: '),

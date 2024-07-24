@@ -23,7 +23,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissio
     add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR, AIP_TAG_TYPE
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required, get_project_and_check_permissions, get_internal_projects
-from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, DISCOVERY_ROW_TYPE
+from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.variant_utils import get_variants_response, bulk_create_tagged_variants, DISCOVERY_CATEGORY
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
@@ -182,19 +182,31 @@ def bulk_update_family_external_analysis(request):
 
 def _load_aip_data(data: dict, user: User):
     category_map = data['metadata']['categories']
+    projects = data['metadata'].get('projects')
     results = data['results']
 
-    family_id_map = dict(Individual.objects.filter(
-        family__project__in=get_internal_projects(), individual_id__in=results.keys(),
-    ).values_list('individual_id', 'family_id'))
+    if not projects:
+        raise ErrorsWarningsException(['No projects specified in the metadata'])
+
+    family_id_map = defaultdict(list)
+    for individual_id, family_id in Individual.objects.filter(
+        family__project__in=get_internal_projects().filter(name__in=projects), individual_id__in=results.keys(),
+    ).values_list('individual_id', 'family_id'):
+        family_id_map[individual_id].append(family_id)
+    errors = []
     missing_individuals = set(results.keys()) - set(family_id_map.keys())
     if missing_individuals:
-        raise ErrorsWarningsException([f'Unable to find the following individuals: {", ".join(sorted(missing_individuals))}'])
+        errors.append(f'Unable to find the following individuals: {", ".join(sorted(missing_individuals))}')
+    multi_family_individuals = {individual_id for individual_id, families in family_id_map.items() if len(families) > 1}
+    if multi_family_individuals:
+        errors.append(f'The following individuals are found in multiple families: {", ".join(sorted(multi_family_individuals))}')
+    if errors:
+        raise ErrorsWarningsException(errors)
 
     family_variant_data = {}
     for family_id, variant_pred in results.items():
         family_variant_data.update({
-            (family_id_map[family_id], variant_id): pred for variant_id, pred in variant_pred.items()
+            (family_id_map[family_id][0], variant_id): pred for variant_id, pred in variant_pred.items()
         })
 
     today = datetime.now().strftime('%Y-%m-%d')
@@ -285,39 +297,47 @@ def individual_metadata(request, project_guid):
             family_rows_by_id[family_id] = row
         elif row_type == DISCOVERY_ROW_TYPE:
             for i, discovery_row in enumerate(row):
-                del discovery_row['gene_ids']
                 participant_id = discovery_row.pop('participant_id')
-                parsed_row = {'{}-{}'.format(k, i + 1): v for k, v in discovery_row.items()}
+                parsed_row = {'{}-{}'.format(k, i + 1): v for k, v in discovery_row.items() if k != 'allele_balance_or_heteroplasmy_percentage'}
                 parsed_row['num_saved_variants'] = len(row)
                 rows_by_subject_family_id[(participant_id, family_id)].update(parsed_row)
-        else:
+        elif row_type == SUBJECT_ROW_TYPE:
             row_key = (row['participant_id'], family_id)
             collaborator = row.pop('Collaborator', None)
             if collaborator:
                 collaborator_map[row_key] = collaborator
-            if row_type == SUBJECT_ROW_TYPE:
-                race = row.pop('reported_race')
-                ancestry_detail = row.pop('ancestry_detail')
-                ethnicity = row.pop('reported_ethnicity')
-                row['ancestry'] = ethnicity or ancestry_detail or race
-            if 'features' in row:
-                row.update({
-                    'hpo_present': [feature['id'] for feature in row.pop('features') or []],
-                    'hpo_absent': [feature['id'] for feature in row.pop('absent_features') or []],
-                })
-                all_features.update(row['hpo_present'])
-                all_features.update(row['hpo_absent'])
+            is_additional_affected = row.pop('is_additional_affected')
+            if is_additional_affected:
+                family_rows_by_id[family_id]['family_history'] = 'Yes'
+            race = row.pop('reported_race')
+            ancestry_detail = row.pop('ancestry_detail')
+            ethnicity = row.pop('reported_ethnicity')
+            row['ancestry'] = ethnicity or ancestry_detail or race
+            row.update({
+                'hpo_present': [feature['id'] for feature in row.pop('features') or []],
+                'hpo_absent': [feature['id'] for feature in row.pop('absent_features') or []],
+            })
+            all_features.update(row['hpo_present'])
+            all_features.update(row['hpo_absent'])
             rows_by_subject_family_id[row_key].update(row)
+        else:
+            row.pop('sample_id')
+            rows_by_subject_family_id[(row['participant_id'], family_id)].update(row)
 
     parse_anvil_metadata(
         projects, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
-        include_metadata=True,
+        include_family_sample_metadata=True,
         omit_airtable=not include_airtable,
-        get_additional_individual_fields=lambda individual, airtable_metadata: {
+        mme_value=Value('Yes'),
+        get_additional_individual_fields=lambda individual, airtable_metadata, has_dbgap_submission, maternal_ids, paternal_ids: {
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
             'individual_guid': individual.guid,
             'disorders': individual.disorders,
             'filter_flags': json.dumps(individual.filter_flags) if individual.filter_flags else '',
+            'paternal_guid': paternal_ids[1],
+            'maternal_guid': maternal_ids[1],
+            'is_additional_affected': individual.affected == Individual.AFFECTED_STATUS_AFFECTED and individual.proband_relationship != Individual.SELF_RELATIONSHIP,
+            **anvil_export_airtable_fields(airtable_metadata, has_dbgap_submission),
         },
     )
 

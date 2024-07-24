@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
-from django.db.models import F, Q, Value, CharField
+from django.db.models import F, Q, Value, CharField, Aggregate
 from django.db.models.functions import Replace
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -10,8 +10,9 @@ from typing import Callable, Iterable
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTagType
-from seqr.views.utils.airtable_utils import get_airtable_samples
+from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.utils.gene_utils import get_genes
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import get_search_samples
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
@@ -88,17 +89,18 @@ SUBJECT_ROW_TYPE = 'subject'
 SAMPLE_ROW_TYPE = 'sample'
 DISCOVERY_ROW_TYPE = 'discovery'
 
-METADATA_FAMILY_VALUES = {
+FAMILY_NAME_DISPLAY_VALUES = {
     'familyGuid': F('guid'),
     'projectGuid': F('project__guid'),
     'displayName': F('family_id'),
-    'analysis_groups': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
 }
 
 METHOD_MAP = {
     Sample.SAMPLE_TYPE_WES: 'SR-ES',
     Sample.SAMPLE_TYPE_WGS: 'SR-GS',
 }
+
+FAMILY_INDIVIDUAL_FIELDS = ['family_id', 'internal_project_id', 'phenotype_description', 'pmid_id', 'solve_status']
 
 
 def _format_hgvs(hgvs, *args):
@@ -118,7 +120,12 @@ TRANSCRIPT_FIELDS = {
 }
 
 
-def _get_family_metadata(family_filter, family_fields, include_metadata, include_mondo, format_id):
+def _get_family_metadata(family_filter, family_fields, include_family_name_display, include_family_sample_metadata, include_mondo, format_id):
+    family_fields = {'analysis_groups': {
+        'value': ArrayAgg('analysisgroup__name', distinct=True, filter=Q(analysisgroup__isnull=False)),
+        'format': lambda f: '; '.join(f['analysis_groups']),
+    }} if include_family_sample_metadata else family_fields
+    include_family_name_display = include_family_name_display or include_family_sample_metadata
     family_data = Family.objects.filter(**family_filter).distinct().order_by('id').values(
         'id', 'family_id', 'post_discovery_omim_numbers',
         *(['post_discovery_mondo_id'] if include_mondo else []),
@@ -129,38 +136,36 @@ def _get_family_metadata(family_filter, family_fields, include_metadata, include
             Value('\t'), Value(' '),
         ),
         analysisStatus=F('analysis_status'),
-        **(METADATA_FAMILY_VALUES if include_metadata else {}),
+        **(FAMILY_NAME_DISPLAY_VALUES if include_family_name_display else {}),
         **{k: v['value'] for k, v in (family_fields or {}).items()}
     )
 
     family_data_by_id = {}
     for f in family_data:
         family_id = f.pop('id')
-        solve_status = ANALYSIS_SOLVE_STATUS_LOOKUP.get(f['analysisStatus'], Individual.UNSOLVED)
+        analysis_status = f['analysisStatus'] if include_family_name_display else f.pop('analysisStatus')
+        solve_status = ANALYSIS_SOLVE_STATUS_LOOKUP.get(analysis_status, Individual.UNSOLVED)
         f.update({
             'solve_status': Individual.SOLVE_STATUS_LOOKUP[solve_status],
             **{k: v['format'](f) for k, v in (family_fields or {}).items()},
         })
         if format_id:
             f.update({k: format_id(f[k]) for k in ['family_id', 'internal_project_id']})
-        if include_metadata:
-            f['analysis_groups'] = '; '.join(f['analysis_groups'])
         family_data_by_id[family_id] = f
 
     return family_data_by_id
 
 
-# TODO clean up args
 def parse_anvil_metadata(
         projects: Iterable[Project], user: User, add_row: Callable[[dict, str, str], None],
         max_loaded_date: str = None, family_fields: dict = None, format_id: Callable[[str], str] = lambda s: s,
         get_additional_sample_fields: Callable[[Sample, dict], dict] = None,
         get_additional_individual_fields: Callable[[Individual, dict], dict] = None,
         individual_samples: dict[Individual, Sample] = None, individual_data_types: dict[str, Iterable[str]] = None,
-        airtable_fields: Iterable[str] = None, mme_values: dict = None, variant_filter: dict = None,
-        variant_json_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
-        include_no_individual_families: bool = False, omit_airtable: bool = False, include_metadata: bool = False,
-        include_discovery_sample_id: bool = False, include_mondo: bool = False, include_parent_mnvs: bool = False,
+        airtable_fields: Iterable[str] = None, mme_value: Aggregate = None, include_svs: bool = True,
+        variant_json_fields: Iterable[str] = None, variant_attr_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
+        include_no_individual_families: bool = False, omit_airtable: bool = False, include_family_name_display: bool = False, include_family_sample_metadata: bool = False,
+        include_discovery_sample_id: bool = False, include_mondo: bool = False, omit_parent_mnvs: bool = False,
         proband_only_variants: bool = False):
 
     individual_samples = individual_samples or (_get_loaded_before_date_project_individual_samples(projects, max_loaded_date) \
@@ -168,7 +173,7 @@ def parse_anvil_metadata(
 
     family_data_by_id = _get_family_metadata(
         {'project__in': projects} if include_no_individual_families else {'individual__in': individual_samples},
-        family_fields, include_metadata, include_mondo, format_id
+        family_fields, include_family_name_display, include_family_sample_metadata, include_mondo, format_id
     )
 
     individuals_by_family_id = defaultdict(list)
@@ -181,7 +186,7 @@ def parse_anvil_metadata(
             sample_ids.add(sample.sample_id)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(
-        list(family_data_by_id.keys()), variant_filter=variant_filter, variant_json_fields=variant_json_fields,
+        list(family_data_by_id.keys()), bool(mme_value), include_svs, variant_json_fields, variant_attr_fields,
     )
 
     condition_map = _get_condition_map(family_data_by_id.values())
@@ -189,8 +194,8 @@ def parse_anvil_metadata(
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
         list(sample_ids) or [i[0] for i in individual_ids_map.values()], user, airtable_fields)
 
-    matchmaker_individuals = {m['individual_id']: m for m in MatchmakerSubmission.objects.filter(
-        individual__in=individual_samples).values('individual_id', **(mme_values or {}))} if include_metadata else {}
+    matchmaker_individuals = {m['individual_id']: m['value'] for m in MatchmakerSubmission.objects.filter(
+        individual__in=individual_samples).values('individual_id', value=mme_value)} if mme_value else {}
 
     for family_id, family_subject_row in family_data_by_id.items():
         saved_variants = saved_variants_by_family[family_id]
@@ -201,18 +206,16 @@ def parse_anvil_metadata(
             family_subject_row, saved_variants, *condition_map, set_conditions_for_variants=proband_only_variants,
         )
 
-        affected_individuals = [individual for individual in family_individuals if individual.affected == Individual.AFFECTED_STATUS_AFFECTED]
-
+        subject_family_row = {k: family_subject_row.pop(k) for k in FAMILY_INDIVIDUAL_FIELDS}
         family_row = {
-            'family_id': family_subject_row['family_id'],
-            'consanguinity': next((
-                'Present' if individual.consanguinity else 'None suspected'
-                for individual in family_individuals if individual.consanguinity is not None
-            ), 'Unknown'),
+            'family_id': subject_family_row['family_id'],
             **family_subject_row,
         }
-        if len(affected_individuals) > 1:
-            family_row['family_history'] = 'Yes'
+        if not include_family_name_display:
+            family_row['consanguinity'] = next((
+                'Present' if individual.consanguinity else 'None suspected'
+                for individual in family_individuals if individual.consanguinity is not None
+            ), 'Unknown')
         add_row(family_row, family_id, FAMILY_ROW_TYPE)
 
         for individual in family_individuals:
@@ -233,8 +236,8 @@ def parse_anvil_metadata(
                 format_id,
             )
             if individual.id in matchmaker_individuals:
-                subject_row['MME'] = matchmaker_individuals[individual.id] if mme_values else 'Yes'
-            subject_row.update(family_subject_row)
+                subject_row['MME'] = matchmaker_individuals[individual.id]
+            subject_row.update(subject_family_row)
             if individual.solve_status:
                 subject_row['solve_status'] = Individual.SOLVE_STATUS_LOOKUP[individual.solve_status]
             elif individual.affected != Individual.AFFECTED_STATUS_AFFECTED:
@@ -243,14 +246,14 @@ def parse_anvil_metadata(
 
             participant_id = subject_row['participant_id']
             if sample:
-                sample_row = _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields)
+                sample_row = _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metadata, include_family_sample_metadata, get_additional_sample_fields)
                 add_row(sample_row, family_id, SAMPLE_ROW_TYPE)
 
             if proband_only_variants and individual.proband_relationship != Individual.SELF_RELATIONSHIP:
                 continue
             discovery_row = _get_genetic_findings_rows(
-                saved_variants, individual, participant_id=participant_id,
-                format_id=format_id, include_parent_mnvs=include_parent_mnvs,
+                saved_variants, individual, subject_family_row, participant_id=participant_id,
+                format_id=format_id, omit_parent_mnvs=omit_parent_mnvs,
                 individual_data_types=(individual_data_types or {}).get(participant_id),
                 family_individuals=family_individuals if proband_only_variants else None,
                 sample=sample if include_discovery_sample_id else None,
@@ -260,12 +263,13 @@ def parse_anvil_metadata(
 
 
 def _get_nested_variant_name(v):
-    return _get_sv_name(v) or f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}"
+    return _get_sv_name(v, pop_sv_name=False) or f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}"
 
 
-def _get_sv_name(variant_json):
+def _get_sv_name(variant_json, pop_sv_name=True):
+    sv_name = variant_json.pop('svName', None) if pop_sv_name else variant_json.get('svName')
     if variant_json.get('svType'):
-        return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
+        return sv_name or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
     return None
 
 
@@ -301,33 +305,28 @@ def _get_genotype_zygosity(genotype):
     return None
 
 
-def _post_process_variant_metadata(v, gene_variants, include_parent_mnvs=False):
-    discovery_notes = None
-    if len(gene_variants) > 2:
-        parent_mnv = next((v for v in gene_variants if len(v['individual_genotype']) == 1), gene_variants[0])
-        if parent_mnv['genetic_findings_id'] == v['genetic_findings_id'] and not include_parent_mnvs:
-            return None
-        variant_type = 'complex structural' if parent_mnv.get('svType') else 'multinucleotide'
-        parent_name = _get_nested_variant_name(parent_mnv)
-        parent_details = [parent_mnv[key] for key in ['hgvsc', 'hgvsp'] if parent_mnv.get(key)]
-        parent = f'{parent_name} ({", ".join(parent_details)})' if parent_details else parent_name
-        mnv_names = [_get_nested_variant_name(v) for v in gene_variants]
-        nested_mnvs = sorted([v for v in mnv_names if v != parent_name])
-        discovery_notes = f'The following variants are part of the {variant_type} variant {parent}: {", ".join(nested_mnvs)}'
-    return {
-        'sv_name': _get_sv_name(v),
-        'notes': discovery_notes,
-    }
+def _get_discovery_notes(variant, gene_variants, omit_parent_mnvs):
+    parent_mnv = next((v for v in gene_variants if len(v['individual_genotype']) == 1), gene_variants[0])
+    if parent_mnv['genetic_findings_id'] == variant['genetic_findings_id'] and omit_parent_mnvs:
+        return None
+    variant_type = 'complex structural' if parent_mnv.get('svType') else 'multinucleotide'
+    parent_name = _get_nested_variant_name(parent_mnv)
+    parent_details = [parent_mnv[key] for key in ['hgvsc', 'hgvsp'] if parent_mnv.get(key)]
+    parent = f'{parent_name} ({", ".join(parent_details)})' if parent_details else parent_name
+    mnv_names = [_get_nested_variant_name(v) for v in gene_variants]
+    nested_mnvs = sorted([v for v in mnv_names if v != parent_name])
+    return f'The following variants are part of the {variant_type} variant {parent}: {", ".join(nested_mnvs)}'
 
 
 def _get_parsed_saved_discovery_variants_by_family(
-        families: Iterable[Family], variant_filter: dict, variant_json_fields: list[str],
+        families: Iterable[Family], include_metadata: bool, include_svs: dict, variant_json_fields: list[str],
+        variant_attr_fields: list[str],
 ):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
     project_saved_variants = SavedVariant.objects.filter(
         varianttag__variant_tag_type__in=tag_types, family__id__in=families,
-        **(variant_filter or {}),
+        **({} if include_svs else {'alt__isnull': False}),
     ).order_by('created_date').distinct().annotate(
         tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True),
         partial_hpo_terms=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Partial Phenotype Contribution')),
@@ -349,26 +348,40 @@ def _get_parsed_saved_discovery_variants_by_family(
             phenotype_contribution = 'Uncertain'
             partial_hpo_terms = ''
 
-        variants.append({
-            'chrom': chrom,
+        variant_fields = ['genotypes']
+        if include_svs:
+            variant_fields += ['svType', 'svName', 'end']
+
+        parsed_variant = {
+            'chrom': 'MT' if chrom == 'M' else chrom,
             'pos': pos,
             'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant_json['genomeVersion']],
             'gene_id': gene_id,
             'gene_ids': [gene_id] if gene_id else variant_json.get('transcripts', {}).keys(),
-            'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
             'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.tags else 'Candidate',
             'phenotype_contribution': phenotype_contribution,
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
-            **{k: variant_json.get(k) for k in ['genotypes', 'svType', 'svName', 'end'] + (variant_json_fields or [])},
-            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt', 'tags']},
-        })
+            **{k: variant_json.get(k) for k in variant_fields + (variant_json_fields or [])},
+            'ClinGen_allele_ID': variant_json.get('CAID'),
+            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt'] + (variant_attr_fields or [])},
+        }
+        if include_metadata:
+            parsed_variant.update({
+                'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
+            })
+        if include_svs:
+            parsed_variant.update({
+                'sv_name': _get_sv_name(parsed_variant),
+            })
+        variants.append(parsed_variant)
 
     genes_by_id = get_genes(gene_ids)
 
     saved_variants_by_family = defaultdict(list)
     for row in variants:
-        row[GENE_COLUMN] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol')
+        gene_id = row['gene_id'] if include_metadata else row.pop('gene_id')
+        row[GENE_COLUMN] = genes_by_id.get(gene_id, {}).get('geneSymbol')
         family_id = row.pop('family_id')
         saved_variants_by_family[family_id].append(row)
 
@@ -414,32 +427,37 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, indivi
         'absent_features': individual.absent_features,
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
         'paternal_id': format_id(paternal_ids[0]),
-        'paternal_guid': paternal_ids[1],
         'maternal_id': format_id(maternal_ids[0]),
-        'maternal_guid': maternal_ids[1],
     }
     if airtable_metadata is not None:
-        sequencing = airtable_metadata.get('SequencingProduct') or set()
         subject_row.update({
-            'dbgap_submission': 'Yes' if has_dbgap_submission else 'No',
             'dbgap_study_id': airtable_metadata.get('dbgap_study_id', '') if has_dbgap_submission else '',
             'dbgap_subject_id': airtable_metadata.get('dbgap_subject_id', '') if has_dbgap_submission else '',
-            'multiple_datasets': 'Yes' if len(sequencing) > 1 or (
-            len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS) else 'No',
         })
     if get_additional_individual_fields:
-        subject_row.update(get_additional_individual_fields(individual, airtable_metadata))
+        subject_row.update(get_additional_individual_fields(individual, airtable_metadata, has_dbgap_submission, maternal_ids, paternal_ids))
     return subject_row
 
 
-def _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metadata, include_metadata, get_additional_sample_fields=None):
+def anvil_export_airtable_fields(airtable_metadata, has_dbgap_submission):
+    if airtable_metadata is None:
+        return {}
+    sequencing = airtable_metadata.get('SequencingProduct') or set()
+    return {
+        'dbgap_submission': 'Yes' if has_dbgap_submission else 'No',
+        'multiple_datasets': 'Yes' if len(sequencing) > 1 or (
+                len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS) else 'No',
+    }
+
+
+def _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metadata, include_family_sample_metadata, get_additional_sample_fields=None):
     sample_row = {
         'participant_id': participant_id,
         'sample_id': sample.sample_id,
     }
     if has_dbgap_submission:
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
-    if include_metadata:
+    if include_family_sample_metadata:
         sample_row.update({
             'data_type': sample.sample_type,
             'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
@@ -449,10 +467,10 @@ def _get_sample_row(sample, participant_id, has_dbgap_submission, airtable_metad
     return sample_row
 
 
-def _get_genetic_findings_rows(rows: list[dict], individual: Individual, participant_id: str,
+def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_row: dict, participant_id: str,
                               individual_data_types: Iterable[str], family_individuals: dict[str, str],
                               post_process_variant: Callable[[dict, list[dict]], dict],
-                              format_id: Callable[[str], str], include_parent_mnvs: bool, sample: Sample) -> list[dict]:
+                              format_id: Callable[[str], str], omit_parent_mnvs: bool, sample: Sample) -> list[dict]:
     parsed_rows = []
     variants_by_gene = defaultdict(list)
     for row in (rows or []):
@@ -480,7 +498,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, partici
                 ])
             if individual_data_types is not None:
                 parsed_row['method_of_discovery'] = '|'.join([
-                    METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type != Sample.SAMPLE_TYPE_RNA
+                    METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type in Sample.SAMPLE_TYPE_LOOKUP
                 ])
             if sample is not None:
                 parsed_row['sample_id'] = sample.sample_id
@@ -490,12 +508,22 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, partici
     to_remove = []
     for row in parsed_rows:
         del row['genotypes']
-        process_func = post_process_variant or _post_process_variant_metadata
-        update = process_func(row, variants_by_gene[row[GENE_COLUMN]], include_parent_mnvs=include_parent_mnvs)
-        if update:
-            row.update(update)
-        else:
-            to_remove.append(row)
+
+        gene_variants = variants_by_gene[row[GENE_COLUMN]]
+        notes = []
+        if len(gene_variants) > 2:
+            discovery_notes = _get_discovery_notes(row, gene_variants, omit_parent_mnvs)
+            if discovery_notes is None:
+                to_remove.append(row)
+                continue
+            else:
+                notes.append(discovery_notes)
+        if family_row['pmid_id']:
+            notes.append(f'This individual is published in PMID{family_row["pmid_id"]}')
+        row['notes'] = '. '.join(notes)
+
+        if post_process_variant:
+            row.update(post_process_variant(row, gene_variants))
 
     return [row for row in parsed_rows if row not in to_remove]
 
@@ -522,10 +550,52 @@ SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'd
 LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
 
-def _get_sample_airtable_metadata(sample_ids, user, fields):
-    sample_records, _ = get_airtable_samples(
-        sample_ids, user, fields=fields or SINGLE_SAMPLE_FIELDS, list_fields=None if fields else LIST_SAMPLE_FIELDS,
+def _get_airtable_samples_for_id_field(sample_ids, id_field, fields, session):
+    raw_records = session.fetch_records(
+        'Samples', fields=[id_field] + fields,
+        or_filters={f'{{{id_field}}}': sample_ids},
     )
+
+    records_by_id = defaultdict(list)
+    for airtable_id, record in raw_records.items():
+        records_by_id[record[id_field]].append({**record, 'airtable_id': airtable_id})
+    return records_by_id
+
+
+def _get_sample_airtable_metadata(sample_ids, user, airtable_fields):
+    fields, list_fields = airtable_fields or [SINGLE_SAMPLE_FIELDS, LIST_SAMPLE_FIELDS]
+    all_fields = fields + list_fields
+
+    session = AirtableSession(user)
+    records_by_id = _get_airtable_samples_for_id_field(sample_ids, 'CollaboratorSampleID', all_fields, session)
+    missing = set(sample_ids) - set(records_by_id.keys())
+    if missing:
+        records_by_id.update(_get_airtable_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', all_fields, session))
+
+    sample_records = {}
+    for record_id, records in records_by_id.items():
+        parsed_record = {}
+        for field in fields:
+            record_field = {
+                record[field][0] if field == 'Collaborator' else record[field] for record in records if field in record
+            }
+            if len(record_field) > 1:
+                error = 'Found multiple airtable records for sample {} with mismatched values in field {}'.format(
+                    record_id, field)
+                raise ErrorsWarningsException([error])
+            if record_field:
+                parsed_record[field] = record_field.pop()
+        for field in list_fields:
+            parsed_record[field] = {} if airtable_fields else set()
+            for record in records:
+                if field in record:
+                    if airtable_fields:
+                        parsed_record[field][record['airtable_id']] = record[field]
+                    else:
+                        parsed_record[field].update(record[field])
+
+        sample_records[record_id] = parsed_record
+
     return sample_records
 
 
@@ -559,7 +629,7 @@ def _get_mondo_condition_data(mondo_id):
             inheritance = HumanPhenotypeOntology.objects.get(hpo_id=inheritance['id']).name.replace(' inheritance', '')
         return {
             'known_condition_name': data['name'],
-            'condition_inheritance': inheritance,
+            'condition_inheritance': inheritance or 'Unknown',
         }
     except Exception:
         return {}
@@ -576,8 +646,9 @@ def _update_conditions(family_subject_row, variants, omim_conditions, mondo_cond
             c for mim_number in mim_numbers for c in omim_conditions[mim_number][None]
             if c['chrom'] == v['chrom'] and c['start'] <= v['pos'] <= c['end']
         ]
+        gene_ids = v.pop('gene_ids')
         for mim_number in mim_numbers:
-            for gene_id in v['gene_ids']:
+            for gene_id in gene_ids:
                 variant_conditions += omim_conditions[mim_number][gene_id]
 
         if set_conditions_for_variants:

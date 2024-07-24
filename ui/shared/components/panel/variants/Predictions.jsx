@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Icon, Transition, Popup } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
-import { ORDERED_PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, predictionFieldValue, getVariantMainGeneId } from 'shared/utils/constants'
+import { ORDERED_PREDICTOR_FIELDS, coloredIcon, predictorColorRanges, predictionFieldValue, getVariantMainGeneId, getVariantMainTranscript } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
@@ -109,6 +109,14 @@ class Predictions extends React.PureComponent {
         field: 'primate_ai',
         thresholds: [undefined, undefined, gene.primateAi.percentile25.toPrecision(3),
           gene.primateAi.percentile75.toPrecision(3), undefined],
+      }
+    }
+    const mainTranscript = getVariantMainTranscript(variant)
+    if (mainTranscript?.alphamissense?.pathogenicity) {
+      genePredictors.alphamissense = {
+        field: 'alphamissense',
+        fieldValue: mainTranscript.alphamissense.pathogenicity,
+        thresholds: [0.34, 0.34, 0.564, 0.564],
       }
     }
 

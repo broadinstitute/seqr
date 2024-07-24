@@ -330,12 +330,35 @@ const selectCheckbox = (onChange, value, option) => ({ checked }) => {
   }
 }
 
+const chunkArray = (arr, maxChunkSize) => {
+  const numChunks = Math.ceil(arr.length / maxChunkSize)
+  const chunkSize = Math.ceil(arr.length / numChunks)
+  return [...Array(numChunks).keys().map(i => arr.slice(i * chunkSize, (i + 1) * chunkSize))]
+}
+
 export const CheckboxGroup = React.memo((props) => {
-  const { value, label, groupLabel, onChange, ...baseProps } = props
+  const { value, label, groupLabel, onChange, maxOptionsPerColumn, ...baseProps } = props
   const options = props.options.map(styledOption)
   const numSelected = options.filter(opt => value.includes(opt.value)).length
-  return (
-    <List>
+  const optionGroups = maxOptionsPerColumn && options.length > maxOptionsPerColumn ?
+    chunkArray(options, maxOptionsPerColumn) : [options]
+  const optionLists = optionGroups.map(optionGroup => (
+    <List.List key={optionGroup[0].key}>
+      {optionGroup.map(option => (
+        <List.Item key={option.key}>
+          <BaseSemanticInput
+            {...baseProps}
+            inputType="Checkbox"
+            checked={value.includes(option.value)}
+            label={helpLabel(option.text, option.description)}
+            onChange={selectCheckbox(onChange, value, option)}
+          />
+        </List.Item>
+      ))}
+    </List.List>
+  ))
+  const mainList = (
+    <List key={optionGroups[0][0].key}>
       <List.Item>
         <List.Header>
           <BaseSemanticInput
@@ -347,22 +370,12 @@ export const CheckboxGroup = React.memo((props) => {
             onChange={selectAll(onChange, value, options)}
           />
         </List.Header>
-        <List.List>
-          {options.map(option => (
-            <List.Item key={option.key}>
-              <BaseSemanticInput
-                {...baseProps}
-                inputType="Checkbox"
-                checked={value.includes(option.value)}
-                label={helpLabel(option.text, option.description)}
-                onChange={selectCheckbox(onChange, value, option)}
-              />
-            </List.Item>
-          ))}
-        </List.List>
+        {optionLists[0]}
       </List.Item>
     </List>
   )
+  return optionLists.length > 1 ?
+    [mainList, ...optionLists.slice(1)].map(c => <Form.Field inline>{c}</Form.Field>) : mainList
 })
 
 CheckboxGroup.propTypes = {
@@ -372,6 +385,7 @@ CheckboxGroup.propTypes = {
   label: PropTypes.node,
   groupLabel: PropTypes.node,
   horizontalGrouped: PropTypes.bool,
+  maxOptionsPerColumn: PropTypes.number,
 }
 
 export const AlignedCheckboxGroup = styled(CheckboxGroup)`
@@ -486,7 +500,7 @@ BooleanCheckbox.propTypes = {
 
 export const AlignedBooleanCheckbox = AlignedCheckboxGroup.withComponent(BooleanCheckbox)
 
-const BaseInlineToggle = styled(({ divided, fullHeight, asFormInput, padded, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
+const BaseInlineToggle = styled(({ divided, fullHeight, asFormInput, padded, inline = true, ...props }) => <BooleanCheckbox {...props} toggle inline={inline} />)`
   ${props => (props.asFormInput ?
     `label {
       font-weight: 700;

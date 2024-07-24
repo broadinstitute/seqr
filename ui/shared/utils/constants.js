@@ -115,28 +115,26 @@ export const DATASET_TYPE_SNV_INDEL_CALLS = 'SNV_INDEL'
 export const DATASET_TYPE_SV_CALLS = 'SV'
 export const DATASET_TYPE_MITO_CALLS = 'MITO'
 
+export const DATA_TYPE_TPM = 'T'
+export const DATA_TYPE_EXPRESSION_OUTLIER = 'E'
+export const DATA_TYPE_SPLICE_OUTLIER = 'S'
+
 export const DATASET_TITLE_LOOKUP = {
   [DATASET_TYPE_SV_CALLS]: ' SV',
   [DATASET_TYPE_MITO_CALLS]: ' Mitochondria',
   ONT_SNV_INDEL: ' ONT',
+  [DATA_TYPE_TPM]: ' TPM',
+  [DATA_TYPE_EXPRESSION_OUTLIER]: ' Expression Outlier',
+  [DATA_TYPE_SPLICE_OUTLIER]: ' Splice Outlier',
 }
 
 export const SAMPLE_TYPE_EXOME = 'WES'
 export const SAMPLE_TYPE_GENOME = 'WGS'
-export const SAMPLE_TYPE_RNA = 'RNA'
 
 export const SAMPLE_TYPE_OPTIONS = [
   { value: SAMPLE_TYPE_EXOME, text: 'Exome' },
   { value: SAMPLE_TYPE_GENOME, text: 'Genome' },
-  { value: SAMPLE_TYPE_RNA, text: 'RNA-seq' },
 ]
-
-export const SAMPLE_TYPE_LOOKUP = SAMPLE_TYPE_OPTIONS.reduce(
-  (acc, opt) => ({
-    ...acc,
-    ...{ [opt.value]: opt },
-  }), {},
-)
 
 // ANALYSIS STATUS
 
@@ -377,13 +375,13 @@ export const CATEGORY_FAMILY_FILTERS = {
     {
       value: `${SHOW_DATA_LOADED}_RNA`,
       name: 'Data Loaded - RNA',
-      createFilter: hasMatchingSampleFilter(({ sampleType }) => sampleType === SAMPLE_TYPE_RNA),
+      createFilter: family => family.hasRna,
     },
     ...[DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS].map(dataType => ({
       value: `${SHOW_DATA_LOADED}_${dataType}`,
       name: `Data Loaded -${DATASET_TITLE_LOOKUP[dataType]}`,
       createFilter: hasMatchingSampleFilter(
-        ({ sampleType, datasetType }) => sampleType !== SAMPLE_TYPE_RNA && datasetType === dataType,
+        ({ datasetType }) => datasetType === dataType,
       ),
     })),
     {
@@ -781,6 +779,8 @@ const VEP_SV_TYPES = [
   },
 ]
 
+export const EXTENDED_INTRONIC_DESCRIPTION = "A variant which falls in the first 9 bases of the 5' end of intron or the within the last 9 bases of the 3' end of intron"
+
 const VEP_SV_CONSEQUENCES = [
   {
     description: 'A loss of function effect',
@@ -900,13 +900,6 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001578',
   },
   {
-    description: 'A codon variant that changes at least one base of the first codon of a transcript',
-    text: 'Initiator codon',
-    value: 'initiator_codon_variant',
-    group: VEP_GROUP_MISSENSE,
-    so: 'SO:0001582',
-  },
-  {
     description: 'A codon variant that changes at least one base of the canonical start codon.',
     text: 'Start lost',
     value: 'start_lost',
@@ -928,12 +921,6 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001822',
   },
   {
-    description: 'A feature amplification of a region containing a transcript',
-    text: 'Transcript amplification',
-    value: 'transcript_amplification',
-    so: 'SO:0001889',
-  },
-  {
     description: 'A sequence_variant which is predicted to change the protein encoded in the coding sequence',
     text: 'Protein Altering',
     value: 'protein_altering_variant',
@@ -948,11 +935,38 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001583',
   },
   {
+    description: 'A sequence variant that causes a change at the 5th base pair after the start of the intron in the orientation of the transcript',
+    text: 'Splice donor 5th base',
+    value: 'splice_donor_5th_base_variant',
+    group: VEP_GROUP_EXTENDED_SPLICE_SITE,
+    so: 'SO:0001787',
+  },
+  {
     description: 'A sequence variant in which a change has occurred within the region of the splice site, either within 1-3 bases of the exon or 3-8 bases of the intron',
     text: 'Splice region',
     value: 'splice_region_variant',
     group: VEP_GROUP_EXTENDED_SPLICE_SITE,
     so: 'SO:0001630',
+  },
+  {
+    description: "A sequence variant that falls in the region between the 3rd and 6th base after splice junction (5' end of intron)",
+    text: 'Splice donor region',
+    value: 'splice_donor_region_variant',
+    group: VEP_GROUP_EXTENDED_SPLICE_SITE,
+    so: 'SO:0002170',
+  },
+  {
+    description: "A sequence variant that falls in the polypyrimidine tract at 3' end of intron between 17 and 3 bases from the end (acceptor -3 to acceptor -17)",
+    text: 'Splice polypyrimidine tract',
+    value: 'splice_polypyrimidine_tract_variant',
+    group: VEP_GROUP_EXTENDED_SPLICE_SITE,
+    so: 'SO:0002169',
+  },
+  {
+    description: EXTENDED_INTRONIC_DESCRIPTION,
+    text: 'Extended Intronic Splice Region',
+    value: 'extended_intronic_splice_region_variant',
+    group: VEP_GROUP_EXTENDED_SPLICE_SITE,
   },
   {
     description: 'A sequence variant where at least one base of the final codon of an incompletely annotated transcript is changed',
@@ -966,6 +980,13 @@ const ORDERED_VEP_CONSEQUENCES = [
     value: 'synonymous_variant',
     group: VEP_GROUP_SYNONYMOUS,
     so: 'SO:0001819',
+  },
+  {
+    description: 'A sequence variant where at least one base in the start codon is changed, but the start remains',
+    text: 'Start retained',
+    value: 'start_retained_variant',
+    group: VEP_GROUP_SYNONYMOUS,
+    so: 'SO:0002019',
   },
   {
     description: 'A sequence variant where at least one base in the terminator codon is changed, but the terminator remains',
@@ -1028,58 +1049,22 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001619',
   },
   {
-    description: 'A feature ablation whereby the deleted region includes a transcription factor binding site',
-    text: 'TFBS ablation',
-    value: 'TFBS_ablation',
-    so: 'SO:0001895',
-  },
-  {
-    description: 'A feature amplification of a region containing a transcription factor binding site',
-    text: 'TFBS amplification',
-    value: 'TFBS_amplification',
-    so: 'SO:0001892',
-  },
-  {
-    description: 'In regulatory region annotated by Ensembl',
-    text: 'TF binding site variant',
-    value: 'TF_binding_site_variant',
-    so: 'SO:0001782',
-  },
-  {
-    description: 'A sequence variant located within a regulatory region',
-    text: 'Regulatory region variant',
-    value: 'regulatory_region_variant',
-    so: 'SO:0001566',
-  },
-  {
-    description: 'A feature ablation whereby the deleted region includes a regulatory region',
-    text: 'Regulatory region ablation',
-    value: 'regulatory_region_ablation',
-    so: 'SO:0001894',
-  },
-  {
-    description: 'A feature amplification of a region containing a regulatory region',
-    text: 'Regulatory region amplification',
-    value: 'regulatory_region_amplification',
-    so: 'SO:0001891',
-  },
-  {
-    description: 'A sequence variant that causes the extension of a genomic feature, with regard to the reference sequence',
-    text: 'Feature elongation',
-    value: 'feature_elongation',
-    so: 'SO:0001907',
-  },
-  {
-    description: 'A sequence variant that causes the reduction of a genomic feature, with regard to the reference sequence',
-    text: 'Feature truncation',
-    value: 'feature_truncation',
-    so: 'SO:0001906',
+    description: 'A transcript variant of a protein coding gene',
+    text: 'Coding transcript variant',
+    value: 'coding_transcript_variant',
+    so: 'SO:0001968',
   },
   {
     description: 'A sequence variant located in the intergenic region, between genes',
     text: 'Intergenic variant',
     value: 'intergenic_variant',
     so: 'SO:0001628',
+  },
+  {
+    description: 'A sequence_variant is a non exact copy of a sequence_feature or genome exhibiting one or more sequence_alteration',
+    text: 'Sequence variant',
+    value: 'sequence_variant',
+    so: 'SO:0001060',
   },
 ]
 
@@ -1151,6 +1136,7 @@ const SORT_BY_SPLICE_AI = 'SPLICE_AI'
 const SORT_BY_EIGEN = 'EIGEN'
 const SORT_BY_MPC = 'MPC'
 const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
+const SORT_BY_ALPHAMISSENSE = 'ALPHAMISSENSE'
 const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
 const SORT_BY_SIZE = 'SIZE'
 
@@ -1225,10 +1211,19 @@ const populationComparator =
 const predictionComparator =
   prediction => (a, b) => ((b.predictions || {})[prediction] || -1) - ((a.predictions || {})[prediction] || -1)
 
+const getTranscriptValues = (transcripts, getValue) => (
+  Object.values(transcripts || {}).flat().map(getValue).filter(val => val)
+)
+
 const getConsequenceRank = ({ transcripts, svType }) => (
-  transcripts ? Math.min(...Object.values(transcripts || {}).flat().map(
+  transcripts ? Math.min(...getTranscriptValues(
+    transcripts,
     ({ majorConsequence }) => VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence],
-  ).filter(val => val)) : VEP_CONSEQUENCE_ORDER_LOOKUP[svType]
+  )) : VEP_CONSEQUENCE_ORDER_LOOKUP[svType]
+)
+
+const getAlphamissenseRank = ({ transcripts }) => Math.max(
+  ...getTranscriptValues(transcripts, t => t.alphamissense?.pathogenicity),
 )
 
 const getPrioritizedGeneTopRank = (variant, genesById, individualGeneDataByFamilyGene) => Math.min(...Object.keys(
@@ -1268,6 +1263,11 @@ const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_MPC, text: 'MPC', comparator: predictionComparator('mpc') },
   { value: SORT_BY_SPLICE_AI, text: 'SpliceAI', comparator: predictionComparator('splice_ai') },
   { value: SORT_BY_PRIMATE_AI, text: 'PrimateAI', comparator: predictionComparator('primate_ai') },
+  {
+    value: SORT_BY_ALPHAMISSENSE,
+    text: 'AlphaMissense',
+    comparator: (a, b) => getAlphamissenseRank(b) - getAlphamissenseRank(a),
+  },
   {
     value: SORT_BY_PATHOGENICITY,
     text: 'Pathogenicity',
@@ -1416,6 +1416,7 @@ const REVERSE_PRED_COLOR_MAP = [...PRED_COLOR_MAP].reverse()
 export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'cadd', group: CODING_IN_SILICO_GROUP, thresholds: [0.151, 22.8, 25.3, 28.1, undefined], min: 1, max: 99, fieldTitle: 'CADD', requiresCitation: true },
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, thresholds: [0.0161, 0.291, 0.644, 0.773, 0.932], fieldTitle: 'REVEL', requiresCitation: true },
+  { field: 'alphamissense', fieldTitle: 'AlphaMissense', displayOnly: true },
   { field: 'vest', thresholds: [undefined, 0.45, 0.764, 0.861, 0.965], fieldTitle: 'VEST', requiresCitation: true },
   { field: 'mut_pred', thresholds: [0.0101, 0.392, 0.737, 0.829, 0.932], fieldTitle: 'MutPred', requiresCitation: true },
   { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1.36, 1.828, undefined], max: 5, fieldTitle: 'MPC' },
@@ -1453,9 +1454,9 @@ export const ORDERED_PREDICTOR_FIELDS = [
 
 export const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
 export const predictionFieldValue = (
-  predictions, { field, thresholds, reverseThresholds, indicatorMap, infoField, infoTitle },
+  predictions, { field, fieldValue, thresholds, reverseThresholds, indicatorMap, infoField, infoTitle },
 ) => {
-  let value = predictions[field]
+  let value = fieldValue || predictions[field]
   if (value === null || value === undefined) {
     return { value }
   }
@@ -1487,6 +1488,8 @@ export const predictorColorRanges = (thresholds, requiresCitation, reverseThresh
         range = ` >= ${thresholds[i - 1]}`
       } else if (prevUndefined) {
         range = ` < ${thresholds[i]}`
+      } else if (thresholds[i - 1] === thresholds[i]) {
+        return null
       } else {
         range = ` ${thresholds[i - 1]} - ${thresholds[i]}`
       }
@@ -1528,14 +1531,19 @@ const getPopAf = population => (variant) => {
   return (populationData || {}).af
 }
 
+const getVariantGene = (variant, tagsByGuid, notesByGuid, genesById) => {
+  const { geneId } = getVariantMainTranscript(variant)
+  return genesById[geneId]?.geneSymbol || geneId
+}
+
 export const VARIANT_EXPORT_DATA = [
   { header: 'chrom' },
   { header: 'pos' },
   { header: 'ref' },
   { header: 'alt' },
-  { header: 'gene', getVal: variant => getVariantMainTranscript(variant).geneSymbol },
+  { header: 'gene', getVal: getVariantGene },
   { header: 'worst_consequence', getVal: variant => getVariantMainTranscript(variant).majorConsequence },
-  { header: 'callset_freq', getVal: getPopAf('callset') },
+  { header: 'callset_freq', getVal: variant => getPopAf('callset')(variant) || getPopAf('seqr')(variant) },
   { header: 'exac_freq', getVal: getPopAf('exac') },
   { header: 'gnomad_genomes_freq', getVal: getPopAf('gnomad_genomes') },
   { header: 'gnomad_exomes_freq', getVal: getPopAf('gnomad_exomes') },
@@ -1551,7 +1559,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => getVariantMainTranscript(variant).hgvsc },
   { header: 'hgvsp', getVal: variant => getVariantMainTranscript(variant).hgvsp },
-  { header: 'clinvar_clinical_significance', getVal: variant => (variant.clinvar || {}).clinicalSignificance },
+  { header: 'clinvar_clinical_significance', getVal: variant => (variant.clinvar || {}).clinicalSignificance || (variant.clinvar || {}).pathogenicity },
   { header: 'clinvar_gold_stars', getVal: variant => (variant.clinvar || {}).goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
   { header: 'project' },
@@ -1855,9 +1863,10 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'variant_reference_assembly' },
   { name: 'chrom' },
   { name: 'pos' },
+  { name: 'end' },
   { name: 'ref' },
   { name: 'alt' },
-  { name: 'gene_of_interest' },
+  { name: 'gene_of_interest', secondaryExportColumn: 'gene_id' },
   { name: 'seqr_chosen_consequence' },
   { name: 'transcript' },
   { name: 'hgvsc' },
@@ -1870,6 +1879,25 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'phenotype_contribution' },
   { name: 'partial_contribution_explained' },
   { name: 'notes' },
+  { name: 'ClinGen_allele_ID' },
+]
+
+export const BASE_FAMILY_METADATA_COLUMNS = [
+  { name: 'pmid_id' },
+  { name: 'condition_id' },
+  { name: 'known_condition_name' },
+  { name: 'condition_inheritance', secondaryExportColumn: 'disorders' },
+  { name: 'phenotype_description', style: { minWidth: '200px' } },
+  { name: 'analysis_groups' },
+  {
+    name: 'analysisStatus',
+    content: 'analysis_status',
+    format: ({ analysisStatus }) => FAMILY_ANALYSIS_STATUS_LOOKUP[analysisStatus]?.name,
+  },
+  { name: 'solve_status' },
+  { name: 'data_type' },
+  { name: 'date_data_generation', secondaryExportColumn: 'filter_flags' },
+  { name: 'consanguinity' },
 ]
 
 // RNAseq sample tissue type mapping

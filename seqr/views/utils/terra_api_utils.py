@@ -102,9 +102,7 @@ def _get_call_args(path, headers=None, root_url=None):
 def _safe_get_social(user):
     if not google_auth_enabled() or not hasattr(user, 'social_auth'):
         return None
-
-    social = user.social_auth.filter(provider=SOCIAL_AUTH_PROVIDER)
-    return social.first() if social else None
+    return user.social_auth.filter(provider=SOCIAL_AUTH_PROVIDER).first()
 
 
 def _get_social_access_token(user):

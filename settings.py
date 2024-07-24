@@ -2,7 +2,7 @@ import json
 import os
 import random
 import string
-import subprocess # nosec
+import subprocess  # nosec
 
 from ssl import create_default_context
 
@@ -16,7 +16,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 #  Django settings
 #########################################################
 
-# Password validation - https://docs.djangoproject.com/en/1.10/ref/settings/#auth-password-validators
+# Password validation - https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -71,7 +71,7 @@ ALLOWED_HOSTS = ['*']
 
 CSRF_COOKIE_NAME = 'csrf_token'
 CSRF_COOKIE_HTTPONLY = False
-SESSION_COOKIE_AGE = 86400 # seconds in 1 day
+SESSION_COOKIE_AGE = 86400  # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 SECURE_BROWSER_XSS_FILTER = True
 
@@ -128,7 +128,7 @@ USE_L10N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.10/howto/static-files/
+# https://docs.djangoproject.com/en/4.2/howto/static-files/
 STATIC_URL = '/static/'
 STATICFILES_DIRS = ['ui/dist']
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
@@ -136,12 +136,16 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 )
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}
+}
 
 # If specified, store data in the named GCS bucket and use the gcloud storage backend.
 # Else, fall back to a path on the local filesystem.
 GCS_MEDIA_ROOT_BUCKET = os.environ.get('GCS_MEDIA_ROOT_BUCKET')
 if GCS_MEDIA_ROOT_BUCKET:
-    DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
+    STORAGES['default'] = {'BACKEND': 'storages.backends.gcloud.GoogleCloudStorage'}
     GS_BUCKET_NAME = GCS_MEDIA_ROOT_BUCKET
     GS_DEFAULT_ACL = 'publicRead'
     MEDIA_ROOT = False
@@ -219,7 +223,7 @@ ROOT_URLCONF = 'seqr.urls'
 LOGOUT_URL = '/logout'
 
 POSTGRES_DB_CONFIG = {
-    'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    'ENGINE': 'django.db.backends.postgresql',
     'HOST': os.environ.get('POSTGRES_SERVICE_HOSTNAME', 'localhost'),
     'PORT': int(os.environ.get('POSTGRES_SERVICE_PORT', '5432')),
     'USER': os.environ.get('POSTGRES_USERNAME', 'postgres'),
@@ -248,9 +252,11 @@ TEMPLATE_DIRS = [
 ]
 
 DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE')
+BASE_URL = os.environ.get("BASE_URL", "/")
 if DEPLOYMENT_TYPE in {'prod', 'dev'}:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    CSRF_TRUSTED_ORIGINS = [BASE_URL.rstrip('/')]
     DEBUG = False
 else:
     DEBUG = True
@@ -262,9 +268,6 @@ else:
         'http://localhost:3000',
         'http://localhost:8000',
     )
-    # the collectstatic step in docker build runs without env variables set, and uncommenting these lines breaks the docker build
-    # STATICFILES_DIRS.append(STATIC_ROOT)
-    # STATIC_ROOT = None
     CORS_ALLOW_CREDENTIALS = True
     CORS_REPLACE_HTTPS_REFERER = True
     # django-hijack plugin
@@ -282,7 +285,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',  # required for admin template
-                'django.template.context_processors.request',   # must be enabled in DjangoTemplates (TEMPLATES) in order to use the admin navigation sidebar
+                'django.template.context_processors.request',  # must be enabled in DjangoTemplates (TEMPLATES) in order to use the admin navigation sidebar
                 'social_django.context_processors.backends',  # required for social_auth, same for below
                 'social_django.context_processors.login_redirect',
             ],
@@ -298,7 +301,6 @@ SEQR_VERSION = 'v1.0'
 SEQR_PRIVACY_VERSION = float(os.environ.get('SEQR_PRIVACY_VERSION', 1.1))
 SEQR_TOS_VERSION = float(os.environ.get('SEQR_TOS_VERSION', 1.2))
 
-BASE_URL = os.environ.get("BASE_URL", "/")
 GA_TOKEN_ID = os.environ.get("GA_TOKEN_ID")
 
 SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
@@ -352,6 +354,8 @@ MME_DEFAULT_CONTACT_INSTITUTION = 'Broad Center for Mendelian Genomics'
 MME_DEFAULT_CONTACT_EMAIL = 'matchmaker@broadinstitute.org'
 MME_DEFAULT_CONTACT_HREF = 'mailto:{}'.format(MME_DEFAULT_CONTACT_EMAIL)
 
+VLM_DEFAULT_CONTACT_EMAIL = 'vlm@broadinstitute.org'
+
 MME_CONFIG_DIR = os.environ.get('MME_CONFIG_DIR', '')
 MME_NODES = {}
 if MME_CONFIG_DIR:
@@ -375,6 +379,7 @@ SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL = 'seqr_loading_notifications'
 #########################################################
 #  Social auth specific settings
 #########################################################
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
 SOCIAL_AUTH_GOOGLE_OAUTH2_IGNORE_DEFAULT_SCOPE = True
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.profile',

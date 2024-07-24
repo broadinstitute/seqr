@@ -4,13 +4,12 @@ import mock
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from seqr.models import Sample, RnaSeqTpm, RnaSeqOutlier
+from seqr.models import RnaSample, RnaSeqTpm, RnaSeqOutlier
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 RNA_FILE_ID = 'all_tissue_tpms.tsv.gz'
 MAPPING_FILE_ID = 'mapping.tsv'
-EXISTING_SAMPLE_GUID = 'S000152_na19675_d2'
 
 
 class LoadRnaSeqTest(AuthenticationTestCase):
@@ -48,14 +47,10 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             f'Unable to find matches for the following samples: {unmatched_samples}',
         ])
 
-    def _assert_expected_existing_sample(self, data_source):
-        existing_sample = Sample.objects.get(individual_id=1, sample_id='NA19675_D2', sample_type='RNA')
-        self.assertEqual(existing_sample.guid, EXISTING_SAMPLE_GUID)
-        self.assertEqual(existing_sample.sample_id, 'NA19675_D2')
+    def _assert_expected_existing_sample(self, data_type, data_source, guid, tissue_type='M'):
+        existing_sample = RnaSample.objects.get(individual_id=1, data_type=data_type, data_source=data_source, tissue_type=tissue_type)
+        self.assertEqual(existing_sample.guid, guid)
         self.assertTrue(existing_sample.is_active)
-        self.assertIsNone(existing_sample.elasticsearch_index)
-        self.assertEqual(existing_sample.tissue_type, 'M')
-        self.assertEqual(existing_sample.data_source, data_source)
         return existing_sample
 
     @mock.patch('seqr.views.utils.dataset_utils.logger')
@@ -85,13 +80,12 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         self.assertEqual(RnaSeqOutlier.objects.count(), 3)
 
         # Test database models
-        existing_sample = self._assert_expected_existing_sample('muscle_samples.tsv.gz')
-        existing_rna_samples = Sample.objects.filter(sample_type='RNA', rnaseqtpm__isnull=False)
+        existing_sample = self._assert_expected_existing_sample('T', 'muscle_samples.tsv.gz', 'RS000162_T_na19675_d2')
+        existing_rna_samples = RnaSample.objects.filter(rnaseqtpm__isnull=False)
 
-        new_sample = Sample.objects.get(individual_id=2, sample_type='RNA')
-        self.assertEqual(new_sample.sample_id, 'NA19678_D1')
+        new_sample = RnaSample.objects.get(individual_id=2)
+        self.assertEqual(new_sample.data_type, 'T')
         self.assertTrue(new_sample.is_active)
-        self.assertIsNone(new_sample.elasticsearch_index)
         self.assertEqual(new_sample.data_source, 'all_tissue_tpms.tsv.gz')
         self.assertEqual(new_sample.tissue_type, 'WB')
 
@@ -102,7 +96,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         self.assertEqual(models.get(sample=new_sample, gene_id='ENSG00000233750').tpm, 6.04)
 
         self.mock_logger.info.assert_has_calls([
-            mock.call('create 1 RnaSeqTpm for NA19678_D1'),
+            mock.call('create 1 RnaSeqTpm for NA19678'),
             mock.call('DONE'),
         ])
         mock_utils_logger.warning.assert_has_calls([
@@ -112,13 +106,13 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         # Test a new sample created for a mismatched tissue and a row with 0.0 tpm
         self.mock_gzip_file_iter.return_value[1] = 'NA19678_D1\t1kg project nåme with uniçøde\tNA19678\tENSG00000233750\t0.0\tfibroblasts\n'
         call_command('load_rna_seq', 'tpm', 'new_file.tsv.gz', '--ignore-extra-samples')
-        models = RnaSeqTpm.objects.select_related('sample').filter(sample__sample_id='NA19678_D1')
+        models = RnaSeqTpm.objects.select_related('sample').filter(sample__individual_id=2)
         self.assertEqual(models.count(), 2)
         self.assertSetEqual(set(models.values_list('sample__tissue_type', flat=True)), {'F', 'WB'})
         self.assertEqual(models.get(gene_id='ENSG00000233750', sample__tissue_type='F').tpm, 0.0)
         self.assertEqual(models.values('sample').distinct().count(), 2)
         self.mock_logger.info.assert_has_calls([
-            mock.call('create 1 RnaSeqTpm for NA19678_D1'),
+            mock.call('create 1 RnaSeqTpm for NA19678'),
             mock.call('DONE'),
         ])
 
@@ -128,9 +122,9 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             expected_columns='geneID, pValue, padjust, project, sampleID, tissue, zScore',
             file_data=[
                 'sampleID\tproject\tgeneID\tdetail\tpValue\tpadjust\tzScore\ttissue\n',
-                'NA19675_D2\t1kg project nåme with uniçøde\tENSG00000240361\tdetail1\t0.01\t0.13\t-3.1\tmuscle\n',
-                'NA19675_D2\t1kg project nåme with uniçøde\tENSG00000240361\tdetail2\t0.01\t0.13\t-3.1\tmuscle\n',
-                'NA19675_D2\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\tmuscle\n',
+                'NA19675_1\t1kg project nåme with uniçøde\tENSG00000240361\tdetail1\t0.01\t0.13\t-3.1\tmuscle\n',
+                'NA19675_1\t1kg project nåme with uniçøde\tENSG00000240361\tdetail2\t0.01\t0.13\t-3.1\tmuscle\n',
+                'NA19675_1\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\tmuscle\n',
                 'NA19675_D3\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\tmuscle\n',
                 'NA19675_D4\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\tmuscle\n',
             ],
@@ -144,7 +138,8 @@ class LoadRnaSeqTest(AuthenticationTestCase):
 
         call_command('load_rna_seq', 'outlier', RNA_FILE_ID, '--ignore-extra-samples')
 
-        sample = self._assert_expected_existing_sample('all_tissue_tpms.tsv.gz')
+        sample = self._assert_expected_existing_sample('E', 'all_tissue_tpms.tsv.gz', guid=mock.ANY)
+        self.assertFalse(RnaSample.objects.get(guid='RS000172_E_na19675_d2').is_active)
 
         models = RnaSeqOutlier.objects.all()
         self.assertEqual(models.count(), 2)
@@ -153,6 +148,6 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             ('ENSG00000240361', 0.13, 0.01, -3.1), ('ENSG00000233750', 0.0000057, 0.064, 7.8),
         ])
         self.mock_logger.info.assert_has_calls([
-            mock.call('create 2 RnaSeqOutlier for NA19675_D2'),
+            mock.call('create 2 RnaSeqOutlier for NA19675_1'),
             mock.call('DONE'),
         ])

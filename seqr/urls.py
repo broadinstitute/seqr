@@ -8,7 +8,8 @@ from seqr.views.status import status_view
 from seqr.views.apis.dataset_api import add_variants_dataset_handler
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, LOGIN_URL, DEBUG, \
     API_POLICY_REQUIRED_URL
-from django.conf.urls import url, include
+from django.conf.urls import include
+from django.urls import re_path, path
 from django.contrib import admin
 from django.views.generic.base import RedirectView
 import django.views.static
@@ -358,25 +359,26 @@ api_endpoints = {
     'matchmaker/v1/metrics': external_api.mme_metrics_proxy,
 }
 
-urlpatterns = [url('^status', status_view)]
+urlpatterns = [path('status', status_view)]
 
 # anvil workspace
 anvil_workspace_url = 'workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)'
-urlpatterns += [url("^%(anvil_workspace_url)s$" % locals(), anvil_workspace_page)]
+urlpatterns += [re_path(r"^%(anvil_workspace_url)s$" % locals(), anvil_workspace_page)]
 
 # core react page templates
-urlpatterns += [url("^%(url_endpoint)s$" % locals(), main_app) for url_endpoint in react_app_pages]
-urlpatterns += [url("^%(url_endpoint)s$" % locals(), no_login_main_app) for url_endpoint in no_login_react_app_pages]
+urlpatterns += [re_path(r"^%(url_endpoint)s$" % locals(), main_app) for url_endpoint in react_app_pages]
+urlpatterns += [re_path(r"^%(url_endpoint)s$" % locals(), no_login_main_app) for url_endpoint in no_login_react_app_pages]
 
 # api
 for url_endpoint, handler_function in api_endpoints.items():
-    urlpatterns.append( url("^api/%(url_endpoint)s$" % locals(), handler_function) )
+    urlpatterns.append(re_path(r"^api/%(url_endpoint)s$" % locals(), handler_function))
+
 
 # login/ logout
 urlpatterns += [
-    url('^logout$', logout_view),
-    url(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error),
-    url(API_POLICY_REQUIRED_URL.lstrip('/'), policies_required_error),
+    path('logout', logout_view),
+    path(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error),
+    path(API_POLICY_REQUIRED_URL.lstrip('/'), policies_required_error),
 ]
 
 handler401 = 'seqr.views.apis.auth_api.app_login_required_error'
@@ -389,12 +391,12 @@ kibana_urls = '^(?:{})'.format('|'.join([
 ]))
 
 urlpatterns += [
-    url(kibana_urls, proxy_to_kibana, name='proxy_to_kibana'),
+    re_path(kibana_urls, proxy_to_kibana, name='proxy_to_kibana'),
 ]
 
 urlpatterns += [
-    url(r'^admin/login/$', RedirectView.as_view(url=LOGIN_URL, permanent=True, query_string=True)),
-    url(r'^admin/', admin.site.urls),
+    re_path(r'^admin/login/$', RedirectView.as_view(url=LOGIN_URL, permanent=True, query_string=True)),
+    re_path(r'^admin/', admin.site.urls),
 ]
 
 # The /media urlpattern is not needed if we are storing static media in a GCS bucket,
@@ -402,23 +404,23 @@ urlpatterns += [
 # instead, set MEDIA_ROOT in settings.py to that local path, and then this urlpattern will be enabled.
 if MEDIA_ROOT:
     urlpatterns += [
-        url(r'^media/(?P<path>.*)$', django.views.static.serve, {
+        re_path(r'^media/(?P<path>.*)$', django.views.static.serve, {
             'document_root': MEDIA_ROOT,
         }),
     ]
 
 urlpatterns += [
-    url('', include('social_django.urls')),
+    path('', include('social_django.urls')),
 ]
 
 if DEBUG:
     urlpatterns += [
-        url(r'^hijack/', include('hijack.urls')),
+        re_path(r'^hijack/', include('hijack.urls')),
     ]
 
 # django debug toolbar
 if ENABLE_DJANGO_DEBUG_TOOLBAR:
     import debug_toolbar
     urlpatterns = [
-        url(r'^__debug__/', include(debug_toolbar.urls)),
+        re_path(r'^__debug__/', include(debug_toolbar.urls)),
     ] + urlpatterns

@@ -74,7 +74,6 @@ class BaseHailTableQuery(object):
         'transcripts': {
             'response_key': 'transcripts',
             'empty_array': True,
-            'format_value': lambda value: value.rename({k: _to_camel_case(k) for k in value.keys()}),
             'format_array_values': lambda values, *args: values.group_by(lambda t: t.geneId),
         },
     }
@@ -149,22 +148,30 @@ class BaseHailTableQuery(object):
             for response_key, field in pop_config.items() if field is not None
         })
 
-    def _get_enum_lookup(self, field, subfield):
+    def _get_enum_lookup(self, field, subfield, nested_subfield=None):
         enum_field = self._enums.get(field, {})
         if subfield:
             enum_field = enum_field.get(subfield)
+        if nested_subfield:
+            enum_field = enum_field.get(nested_subfield)
         if enum_field is None:
             return None
         return {v: i for i, v in enumerate(enum_field)}
 
-    def _get_enum_terms_ids(self, field, subfield, terms):
-        enum = self._get_enum_lookup(field, subfield)
+    def _get_enum_terms_ids(self, field, subfield, terms, nested_subfield=None):
+        if not terms:
+            return set()
+        enum = self._get_enum_lookup(field, subfield, nested_subfield=nested_subfield)
         return {enum[t] for t in terms if enum.get(t) is not None}
 
     def _format_enum_response(self, k, enum):
         enum_config = self.ENUM_ANNOTATION_FIELDS.get(k, {})
         value = lambda r: self._format_enum(r, k, enum, ht_globals=self._globals, **enum_config)
         return enum_config.get('response_key', _to_camel_case(k)), value
+
+    @staticmethod
+    def _camelcase_value(value):
+        return value.rename({k: _to_camel_case(k) for k in value.keys()})
 
     @classmethod
     def _format_enum(cls, r, field, enum, empty_array=False, format_array_values=None, **kwargs):
@@ -175,29 +182,33 @@ class BaseHailTableQuery(object):
         if hasattr(value, 'map'):
             if empty_array:
                 value = hl.or_else(value, hl.empty_array(value.dtype.element_type))
-            value = value.map(lambda x: cls._enum_field(field, x, enum, **kwargs))
+            value = value.map(lambda x: cls._enum_field(field, x, enum, **kwargs, format_value=cls._camelcase_value))
             if format_array_values:
                 value = format_array_values(value, r)
             return value
 
         return cls._enum_field(field, value, enum, **kwargs)
 
-    @staticmethod
-    def _enum_field(field_name, value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, enum_keys=None, include_version=False, **kwargs):
+    @classmethod
+    def _enum_field(cls, field_name, value, enum, ht_globals=None, annotate_value=None, format_value=None, drop_fields=None, enum_keys=None, include_version=False, **kwargs):
         annotations = {}
         drop = [] + (drop_fields or [])
         value_keys = value.keys()
         for field in (enum_keys or enum.keys()):
             field_enum = enum[field]
+            is_nested_struct = field in value_keys
             is_array = f'{field}_ids' in value_keys
-            value_field = f"{field}_id{'s' if is_array else ''}"
-            drop.append(value_field)
 
-            enum_array = hl.array(field_enum)
-            if is_array:
-                annotations[f'{field}s'] = value[value_field].map(lambda v: enum_array[v])
+            if is_nested_struct:
+                annotations[field] = cls._enum_field(field, value[field], field_enum, format_value=format_value)
             else:
-                annotations[field] = enum_array[value[value_field]]
+                value_field = f"{field}_id{'s' if is_array else ''}"
+                drop.append(value_field)
+                enum_array = hl.array(field_enum)
+                if is_array:
+                    annotations[f'{field}s'] = value[value_field].map(lambda v: enum_array[v])
+                else:
+                    annotations[field] = enum_array[value[value_field]]
 
         if include_version:
             annotations['version'] = ht_globals['versions'][field_name]
@@ -642,7 +653,7 @@ class BaseHailTableQuery(object):
         return parsed_intervals
 
     def _should_add_chr_prefix(self):
-        return True
+        return self.GENOME_VERSION == GENOME_VERSION_GRCh38
 
     def _filter_by_frequency(self, ht, frequencies, pathogenicity):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.POPULATIONS}
@@ -1020,13 +1031,17 @@ class BaseHailTableQuery(object):
             sort_expressions = self._get_sort_expressions(ht, self._sort) + sort_expressions
         return sort_expressions
 
+    @staticmethod
+    def _format_prediction_sort_value(value):
+        return hl.or_else(-hl.float64(value), 0)
+
     def _get_sort_expressions(self, ht, sort):
         if sort in self.SORTS:
             return self.SORTS[sort](ht)
 
         if sort in self.PREDICTION_FIELDS_CONFIG:
             prediction_path = self.PREDICTION_FIELDS_CONFIG[sort]
-            return [hl.or_else(-hl.float64(ht[prediction_path.source][prediction_path.field]), 0)]
+            return [self._format_prediction_sort_value(ht[prediction_path.source][prediction_path.field])]
 
         if sort == OMIM_SORT:
             return self._omim_sort(ht, hl.set(set(self._sort_metadata)))

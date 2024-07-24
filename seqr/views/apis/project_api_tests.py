@@ -73,15 +73,30 @@ class ProjectAPITest(object):
 
         # check that project was created
         new_project = Project.objects.get(name='new_project')
-        self.assertEqual(new_project.description, 'new project description')
-        self.assertEqual(new_project.genome_version, '38')
-        self.assertEqual(new_project.consent_code, 'H')
-        self.assertTrue(new_project.is_demo)
-        self.assertFalse(new_project.is_mme_enabled)
         self.assertEqual(new_project.created_by, self.pm_user)
         self.assertEqual(new_project.projectcategory_set.count(), 0)
         expected_workspace_name = self.CREATE_PROJECT_JSON.get('workspaceName')
-        self.assertEqual(new_project.workspace_name, expected_workspace_name)
+        self.assertDictEqual({k: getattr(new_project, k) for k in new_project._meta.json_fields}, {
+            'guid': mock.ANY,
+            'name': 'new_project',
+            'description': 'new project description',
+            'workspace_namespace': self.CREATE_PROJECT_JSON.get('workspaceNamespace'),
+            'workspace_name': expected_workspace_name,
+            'has_case_review': False,
+            'enable_hgmd': False,
+            'is_demo': True,
+            'all_user_demo': False,
+            'consent_code': 'H',
+            'created_date': mock.ANY,
+            'last_modified_date': mock.ANY,
+            'last_accessed_date': mock.ANY,
+            'genome_version': '38',
+            'is_mme_enabled': False,
+            'mme_contact_institution': 'Broad Center for Mendelian Genomics',
+            'mme_primary_data_owner': 'Samantha Baxter',
+            'mme_contact_url': 'mailto:matchmaker@broadinstitute.org',
+            'vlm_contact_email': 'vlm@broadinstitute.org',
+        })
         self._check_created_project_groups(new_project)
 
         project_guid = new_project.guid
@@ -300,12 +315,14 @@ class ProjectAPITest(object):
             }],
             'WES__SV': [{'familyCounts': {'F000002_2': 3}, 'loadedDate': '2018-02-05'}],
             'WES__MITO': [{'familyCounts': {'F000002_2': 1}, 'loadedDate': '2022-02-05'}],
-            'RNA__SNV_INDEL': [{'familyCounts': {'F000001_1': 3}, 'loadedDate': '2017-02-05'}],
+            'RNA__S': [{'familyCounts': {'F000001_1': 3}, 'loadedDate': '2017-02-05'}],
+            'RNA__T': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
+            'RNA__E': [{'familyCounts': {'F000001_1': 1}, 'loadedDate': '2017-02-05'}],
         })
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
-        self.assertEqual(len(response_json['samplesByGuid']), 19)
+        self.assertEqual(len(response_json['samplesByGuid']), 16)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
@@ -365,27 +382,39 @@ class ProjectAPITest(object):
 
         family_1 = response_json['familiesByGuid']['F000001_1']
         family_3 = response_json['familiesByGuid']['F000003_3']
+        empty_family = response_json['familiesByGuid']['F000013_13']
         family_fields = {
             'individualGuids', 'discoveryTags', 'caseReviewStatuses', 'caseReviewStatusLastModified', 'hasRequiredMetadata',
-            'parents', 'hasPhenotypePrioritization',
+            'parents', 'hasPhenotypePrioritization', 'hasRna',
         }
         family_fields.update(SUMMARY_FAMILY_FIELDS)
         self.assertSetEqual(set(family_1.keys()), family_fields)
+        self.assertSetEqual(set(empty_family.keys()), family_fields)
 
         self.assertEqual(len(family_1['individualGuids']), 3)
         self.assertEqual(len(family_3['individualGuids']), 1)
+        self.assertEqual(len(empty_family['individualGuids']), 0)
         self.assertListEqual(family_1['caseReviewStatuses'], ['A', 'I', 'U'])
         self.assertListEqual(family_3['caseReviewStatuses'], [])
+        self.assertListEqual(empty_family['caseReviewStatuses'], [])
         self.assertEqual(family_1['caseReviewStatusLastModified'], '2017-03-12T22:34:49.964Z')
         self.assertIsNone(family_3['caseReviewStatusLastModified'])
+        self.assertIsNone(empty_family['caseReviewStatusLastModified'])
         self.assertTrue(family_1['hasRequiredMetadata'])
         self.assertFalse(family_3['hasRequiredMetadata'])
+        self.assertFalse(empty_family['hasRequiredMetadata'])
         self.assertListEqual(family_1['parents'], [{'maternalGuid': 'I000003_na19679', 'paternalGuid': 'I000002_na19678'}])
         self.assertListEqual(family_3['parents'], [])
+        self.assertListEqual(empty_family['parents'], [])
         self.assertEqual(family_1['hasPhenotypePrioritization'], True)
         self.assertFalse(family_3['hasPhenotypePrioritization'], False)
+        self.assertFalse(empty_family['hasPhenotypePrioritization'], False)
+        self.assertEqual(family_1['hasRna'], True)
+        self.assertFalse(family_3['hasRna'], False)
+        self.assertFalse(empty_family['hasRna'], False)
 
         self.assertListEqual(family_3['discoveryTags'], [])
+        self.assertListEqual(empty_family['discoveryTags'], [])
         self.assertSetEqual({tag['variantGuid'] for tag in family_1['discoveryTags']}, {'SV0000001_2103343353_r0390_100'})
         self.assertSetEqual(
             {tag['variantGuid'] for tag in response_json['familiesByGuid']['F000002_2']['discoveryTags']},
@@ -454,7 +483,7 @@ class ProjectAPITest(object):
         response_keys = {'samplesByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
-        self.assertEqual(len(response_json['samplesByGuid']), 20)
+        self.assertEqual(len(response_json['samplesByGuid']), 17)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
 
         # Test empty project

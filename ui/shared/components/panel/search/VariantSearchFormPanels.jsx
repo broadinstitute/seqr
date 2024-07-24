@@ -1,13 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, Accordion, Header, Segment, Grid, Icon, Loader } from 'semantic-ui-react'
+import { Form, Accordion, Header, Segment, Grid, Icon, Loader, Table } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/FormHelpers'
-import { VEP_GROUP_OTHER, SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS } from 'shared/utils/constants'
+import { SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS } from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
@@ -23,9 +23,9 @@ import {
   QUALITY_FILTER_OPTIONS,
   ALL_QUALITY_FILTER,
   LOCATION_FIELDS,
-  CODING_IMPACT_GROUPS_SCREEN,
-  HIGH_IMPACT_GROUPS_SPLICE,
-  MODERATE_IMPACT_GROUPS,
+  CODING_OTHER_IMPACT_GROUPS,
+  HIGH_MODERATE_IMPACT_GROUPS,
+  ANNOTATION_OVERRIDE_GROUPS,
   SV_GROUPS,
   LOCUS_FIELD_NAME,
 } from './constants'
@@ -88,8 +88,9 @@ const ExpandCollapseCategoryContainer = styled.span`
   top: -2em;
 `
 
-const LeftAligned = styled.div`
- text-align: left;
+const CenteredTable = styled(Table)`
+  margin-left: auto !important;
+  margin-right: auto !important;
 `
 
 const LazyLabeledSlider = props => <React.Suspense fallback={<Loader />}><LabeledSlider {...props} /></React.Suspense>
@@ -141,23 +142,23 @@ export const inSilicoFieldLayout = groups => ([requireComponent, ...fieldCompone
   </Form.Field>
 )
 
-export const annotationFieldLayout = (annotationGroups, hideOther) => fieldComponents => [
-  ...annotationGroups.map(groups => (
-    <Form.Field key={groups[0]} width={3}>
-      {groups.map(group => (
-        <LeftAligned key={group}>
-          {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[group]]}
-          <VerticalSpacer height={20} />
-        </LeftAligned>
+const annotationColSpan = ({ maxOptionsPerColumn, options = [] }) => Math.ceil(options.length / maxOptionsPerColumn)
+
+const annotationGroupDisplay = component => (
+  <Table.Cell colSpan={annotationColSpan(component.props)} content={component} />
+)
+
+export const annotationFieldLayout = annotationGroups => fieldComponents => (
+  <Form.Field>
+    <CenteredTable basic="very" collapsing>
+      {annotationGroups.map(groups => (
+        <Table.Row key={groups[0]} verticalAlign="top">
+          {groups.map(group => annotationGroupDisplay(fieldComponents[ANNOTATION_GROUP_INDEX_MAP[group]]))}
+        </Table.Row>
       ))}
-    </Form.Field>
-  )),
-  !hideOther ? (
-    <Form.Field key={VEP_GROUP_OTHER} width={4}>
-      {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[VEP_GROUP_OTHER]]}
-    </Form.Field>
-  ) : null,
-].filter(fields => fields)
+    </CenteredTable>
+  </Form.Field>
+)
 
 const MAX_FREQ_COMPONENTS_PER_ROW = 4
 
@@ -182,10 +183,11 @@ export const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS_SPLICE,
-  fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
+  fieldProps: { control: AlignedCheckboxGroup, maxOptionsPerColumn: 7, format: val => val || [] },
   fieldLayout: annotationFieldLayout([
-    SV_GROUPS, HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS_SCREEN,
+    HIGH_MODERATE_IMPACT_GROUPS, CODING_OTHER_IMPACT_GROUPS, ANNOTATION_OVERRIDE_GROUPS, SV_GROUPS,
   ]),
+  noPadding: true,
   helpText: 'Filter by reported annotation. Variants will be returned if they have ANY of the specified annotations, including if they have a Splice AI score above the threshold and no other annotations. This filter is overridden by the pathogenicity filter, so variants will be returned if they have the specified pathogenicity even if none of the annotation filters match.',
 }
 
@@ -264,7 +266,7 @@ const formatField = (field, name, esEnabled, { formatNoEsLabel, ...fieldProps })
   label: (!esEnabled && formatNoEsLabel) ? formatNoEsLabel(field.label) : field.label,
 })
 
-const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayout, esEnabled }) => {
+const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayout, esEnabled, noPadding }) => {
   const fieldComponents = fields && configuredFields(
     { fields: fields.map(field => formatField(field, name, esEnabled, fieldProps || {})) },
   )
@@ -277,9 +279,9 @@ const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayo
         </i>
       )}
       <Form.Group widths="equal">
-        <Form.Field width={2} />
+        {!noPadding && <Form.Field width={2} />}
         {fieldLayout ? fieldLayout(fieldComponents) : fieldComponents}
-        <Form.Field width={2} />
+        {!noPadding && <Form.Field width={2} />}
       </Form.Group>
     </div>
   )
@@ -292,6 +294,7 @@ PanelContent.propTypes = {
   helpText: PropTypes.node,
   fieldLayout: PropTypes.func,
   esEnabled: PropTypes.bool,
+  noPadding: PropTypes.bool,
 }
 
 class VariantSearchFormPanels extends React.PureComponent {

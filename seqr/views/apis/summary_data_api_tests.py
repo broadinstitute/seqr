@@ -36,7 +36,6 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "projectGuid": "R0003_test",
     "num_saved_variants": 2,
     "solve_status": "Partially solved",
-    "sample_id": "NA20889",
     "gene_known_for_phenotype-1": "Candidate",
     "gene_known_for_phenotype-2": "Candidate",
     "variant_inheritance-1": "unknown",
@@ -96,17 +95,11 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'seqr_chosen_consequence-2': None,
     'gene_of_interest-2': None,
     'gene_id-2': None,
-    'svName-2': None,
     'svType-1': None,
     'sv_name-1': None,
-    'svName-1': None,
     'end-1': None,
-    'allele_balance_or_heteroplasmy_percentage-1': None,
-    'allele_balance_or_heteroplasmy_percentage-2': None,
-    'notes-1': None,
-    'notes-2': None,
-    'tags-1': ['Tier 1 - Novel gene and phenotype'],
-    'tags-2': ['Tier 1 - Novel gene and phenotype'],
+    'notes-1': '',
+    'notes-2': '',
     'phenotype_contribution-1': 'Partial',
     'phenotype_contribution-2': 'Full',
     'partial_contribution_explained-1': 'HP:0000501|HP:0000365',
@@ -114,6 +107,8 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'condition_id': 'OMIM:616126',
     'condition_inheritance': 'Autosomal recessive',
     'known_condition_name': 'Immunodeficiency 38',
+    'ClinGen_allele_ID-1': 'CA1501729',
+    'ClinGen_allele_ID-2': None,
 }
 EXPECTED_SAMPLE_METADATA_ROW = {
     "dbgap_submission": "No",
@@ -124,7 +119,6 @@ EXPECTED_SAMPLE_METADATA_ROW = {
 EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
 EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'participant_id': 'NA21234',
-    'sample_id': 'NA21234',
     'familyGuid': 'F000014_14',
     'family_id': '14',
     'displayName': '14',
@@ -156,7 +150,6 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'alt-1': 'T',
     'chrom-1': '1',
     'gene_known_for_phenotype-1': 'Candidate',
-    'tags-1': ['Tier 1 - Novel gene and phenotype'],
     'phenotype_contribution-1': 'Full',
     'partial_contribution_explained-1': '',
     'pos-1': 248367227,
@@ -164,18 +157,17 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'ref-1': 'TC',
     'zygosity-1': 'Heterozygous',
     'variant_reference_assembly-1': 'GRCh38',
-    'allele_balance_or_heteroplasmy_percentage-1': None,
     'gene_of_interest-1': None,
     'gene_id-1': None,
     'hgvsc-1': '',
     'hgvsp-1': '',
-    'notes-1': None,
+    'notes-1': '',
     'seqr_chosen_consequence-1': None,
-    'svName-1': None,
     'svType-1': None,
     'sv_name-1': None,
     'transcript-1': None,
     'analysis_groups': '',
+    'ClinGen_allele_ID-1': 'CA1501729',
 }
 
 AIRTABLE_SAMPLE_RECORDS = {
@@ -325,7 +317,7 @@ class SummaryDataAPITest(AirtableTest):
 
         response = self.client.get('{}?gene=ENSG00000135953'.format(url))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {k: {} for k in SAVED_VARIANT_RESPONSE_KEYS})
+        self.assertDictEqual(response.json(), {k: {} for k in SAVED_VARIANT_RESPONSE_KEYS if k != 'transcriptsById'})
 
         self.login_manager()
         response = self.client.get(url)
@@ -502,9 +494,19 @@ class SummaryDataAPITest(AirtableTest):
         body['dataType'] = 'AIP'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['errors'], ['No projects specified in the metadata'])
+
+        aip_upload['metadata']['projects'] = ['1kg project nåme with uniçøde', 'Test Reprocessed Project']
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'], ['Unable to find the following individuals: SAM_123'])
 
-        aip_upload['results']['NA20889'] = aip_upload['results'].pop('SAM_123')
+        aip_upload['results']['NA20870'] = aip_upload['results'].pop('SAM_123')
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['errors'], ['The following individuals are found in multiple families: NA20870'])
+
+        aip_upload['results']['NA20889'] = aip_upload['results'].pop('NA20870')
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['errors'], [
@@ -679,10 +681,10 @@ class SummaryDataAPITest(AirtableTest):
         responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Collaborator'.format(AIRTABLE_URL),
                       json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
         response = self.client.get(include_airtable_url)
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(
-            response.json()['error'],
-            'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(
+            response.json()['errors'],
+            ['Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id'])
         self.assertEqual(len(responses.calls), 4)
         first_formula = "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888')"
         expected_fields = [

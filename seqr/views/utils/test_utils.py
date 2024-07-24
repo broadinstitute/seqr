@@ -29,6 +29,8 @@ class AuthenticationTestCase(TestCase):
     AUTHENTICATED_USER = 'authenticated'
     NO_POLICY_USER = 'no_policy'
 
+    ES_HOSTNAME = 'testhost'
+
     super_user = None
     analyst_user = None
     pm_user = None
@@ -40,6 +42,9 @@ class AuthenticationTestCase(TestCase):
     no_policy_user = None
 
     def setUp(self):
+        patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', self.ES_HOSTNAME)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.permissions_utils.SEQR_PRIVACY_VERSION', 2.1)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -506,6 +511,8 @@ def get_group_members_side_effect(user, group, use_sa_credentials=False):
 
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
+    ES_HOSTNAME = ''
+
     # mock the terra apis
     def setUp(self):
         patcher = mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
@@ -652,7 +659,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         dag_variable_overrides = self._get_dag_variable_overrides(additional_tasks_check)
         dag_variables = {
             'projects_to_run': [dag_variable_overrides['project']] if 'project' in dag_variable_overrides else self.PROJECTS,
-            'callset_paths': [f'gs://test_bucket/{dag_variable_overrides["callset_path"]}'],
+            'callset_path': f'gs://test_bucket/{dag_variable_overrides["callset_path"]}',
             'sample_source': dag_variable_overrides['sample_source'],
             'sample_type': dag_variable_overrides['sample_type'],
             'reference_genome': dag_variable_overrides.get('reference_genome', 'GRCh38'),
@@ -731,7 +738,7 @@ PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
     'isMmeEnabled', 'workspaceName', 'workspaceNamespace', 'hasCaseReview', 'enableHgmd', 'isDemo', 'allUserDemo',
-    'userIsCreator', 'consentCode', 'isAnalystProject',
+    'userIsCreator', 'consentCode', 'isAnalystProject', 'vlmContactEmail',
 }
 
 ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
@@ -786,7 +793,7 @@ INTERNAL_INDIVIDUAL_FIELDS.update(CORE_INTERNAL_INDIVIDUAL_FIELDS)
 
 SAMPLE_FIELDS = {
     'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
-    'loadedDate', 'datasetType', 'elasticsearchIndex',
+    'loadedDate', 'datasetType',
 }
 
 IGV_SAMPLE_FIELDS = {
@@ -796,7 +803,7 @@ IGV_SAMPLE_FIELDS = {
 SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId', 'acmgClassification'}
 SAVED_VARIANT_DETAIL_FIELDS = {
     'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
-    'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'genotypes', 'hgmd',
+    'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'genotypes', 'hgmd', 'CAID',
     'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar', 'acmgClassification'
 }
 SAVED_VARIANT_DETAIL_FIELDS.update(SAVED_VARIANT_FIELDS)

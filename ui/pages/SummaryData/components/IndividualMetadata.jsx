@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import { getUser } from 'redux/selectors'
 import { BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
 import LoadReportTable from 'shared/components/table/LoadReportTable'
-import { FAMILY_ANALYSIS_STATUS_LOOKUP, VARIANT_METADATA_COLUMNS } from 'shared/utils/constants'
+import { VARIANT_METADATA_COLUMNS, BASE_FAMILY_METADATA_COLUMNS } from 'shared/utils/constants'
 
 const ALL_PROJECTS_PATH = 'all'
 const GREGOR_PROJECT_PATH = 'gregor'
@@ -31,29 +31,16 @@ const AIRTABLE_FIELDS = [
 
 const CORE_COLUMNS = [
   { name: 'participant_id', secondaryExportColumn: 'individual_guid' },
-  { name: 'pmid_id' },
   { name: 'paternal_id', secondaryExportColumn: 'paternal_guid' },
   { name: 'maternal_id', secondaryExportColumn: 'maternal_guid' },
   { name: 'proband_relationship' },
   { name: 'sex' },
   { name: 'ancestry' },
-  { name: 'condition_id' },
-  { name: 'known_condition_name', secondaryExportColumn: 'disorders' },
   { name: 'affected_status' },
   { name: 'hpo_present', style: { minWidth: '400px' } },
   { name: 'hpo_absent', style: { minWidth: '400px' } },
-  { name: 'phenotype_description', style: { minWidth: '200px' } },
-  { name: 'analysis_groups' },
-  {
-    name: 'analysisStatus',
-    content: 'analysis_status',
-    format: ({ analysisStatus }) => FAMILY_ANALYSIS_STATUS_LOOKUP[analysisStatus]?.name,
-  },
-  { name: 'solve_status' },
   { name: 'MME' },
-  { name: 'data_type' },
-  { name: 'date_data_generation', secondaryExportColumn: 'filter_flags' },
-  { name: 'consanguinity' },
+  ...BASE_FAMILY_METADATA_COLUMNS,
   { name: 'family_history' },
 ]
 
@@ -78,9 +65,9 @@ const getColumns = (data) => {
   const hasAirtable = data && data[0] && data[0][AIRTABLE_DBGAP_SUBMISSION_FIELD]
   return [...CORE_COLUMNS, ...(hasAirtable ? AIRTABLE_COLUMNS : [])].concat(
     ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_METADATA_COLUMNS.map(
-      ({ name, format, fieldName, ...col }) => ({
+      ({ name, format, fieldName, secondaryExportColumn, ...col }) => ({
         name: `${name}-${i + 1}`,
-        secondaryExportColumn: name === 'gene_of_interest' ? `gene_id-${i + 1}` : null,
+        secondaryExportColumn: secondaryExportColumn && `${secondaryExportColumn}-${i + 1}`,
         format: format ? row => format({ [fieldName]: row[`${fieldName}-${i + 1}`] }) : null,
         ...col,
       }),

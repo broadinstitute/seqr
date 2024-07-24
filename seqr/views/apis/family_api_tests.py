@@ -32,6 +32,9 @@ INDIVIDUAL3_GUID = 'I000003_na19679'
 
 INDIVIDUAL_GUIDS = [INDIVIDUAL_GUID, INDIVIDUAL2_GUID, INDIVIDUAL3_GUID]
 
+SAMPLE_GUIDS = ['S000129_na19675', 'S000130_na19678', 'S000131_na19679']
+
+
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
@@ -69,32 +72,34 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
-        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData',
-                             'phenotypePrioritizationTools'}
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'phenotypePrioritizationTools', 'rnaSample'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
         self.assertListEqual([
             [
-                {'loadedDate': '2024-05-02T06:42:55.397+00:00', 'sampleType': 'Exomiser'},
-                {'loadedDate': '2024-05-02T06:42:55.397+00:00', 'sampleType': 'Lirical'}
+                {'loadedDate': '2024-05-02T06:42:55.397Z', 'tool': 'exomiser'},
+                {'loadedDate': '2024-05-02T06:42:55.397Z', 'tool': 'lirical'}
             ], [
-                {'loadedDate': '2024-05-02T06:42:55.397+00:00', 'sampleType': 'Lirical'}
+                {'loadedDate': '2024-05-02T06:42:55.397Z', 'tool': 'lirical'}
             ], []
         ],
             [response_json['individualsByGuid'][guid].get('phenotypePrioritizationTools') for guid in INDIVIDUAL_GUIDS]
         )
-        self.assertListEqual(
-            [True, False, True],
-            [response_json['individualsByGuid'][guid].get('hasRnaOutlierData', False) for guid in INDIVIDUAL_GUIDS]
+        self.assertListEqual([
+            {'loadedDate': '2017-02-05T06:35:55.397Z', 'dataTypes': ['E', 'S', 'T']},
+            None,
+            {'loadedDate': '2017-02-05T06:14:55.397Z', 'dataTypes': ['S']},
+        ],
+            [response_json['individualsByGuid'][guid]['rnaSample'] for guid in INDIVIDUAL_GUIDS]
         )
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
 
-        self.assertEqual(len(response_json['samplesByGuid']), 6)
+        self.assertEqual(len(response_json['samplesByGuid']), 3)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['samplesByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['samplesByGuid'].values()})
-        self.assertEqual(len(individual['sampleGuids']), 3)
+        self.assertEqual(len(individual['sampleGuids']), 1)
         self.assertTrue(set(individual['sampleGuids']).issubset(set(response_json['samplesByGuid'].keys())))
 
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
@@ -278,7 +283,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Unable to delete individuals with active MME submission: NA19675_1',
-            'Unable to delete individuals with active search sample: HG00731, HG00732, HG00733, NA19675_1, NA19678, NA19679',
+            'Unable to delete individuals with active search sample: HG00731, HG00732, HG00733, NA19675_1, NA19678',
         ])
 
         # Test success

@@ -93,6 +93,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
             **BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts'],
             'annotate_value': lambda transcript, *args: {'major_consequence': transcript.consequence_terms.first()},
             'drop_fields': ['consequence_terms'],
+            'format_array_values': lambda values, *args: BaseHailTableQuery.ENUM_ANNOTATION_FIELDS['transcripts']['format_array_values'](values).map_values(
+                lambda transcripts: hl.enumerate(transcripts).starmap(lambda i, t: t.annotate(transcriptRank=i))
+            ),
         }
     }
 
@@ -328,7 +331,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         annotation_fields.update({
             'familyGenotypes': lambda r: hl.dict(r.family_entries.map(
-                lambda entries: (entries.first().familyGuid, entries.map(self._get_sample_genotype))
+                lambda entries: (entries.first().familyGuid, entries.filter(hl.is_defined).map(self._get_sample_genotype))
             )),
         })
 
