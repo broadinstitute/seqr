@@ -22,9 +22,11 @@ import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
 import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import {
-  AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
-  INDIVIDUAL_FIELD_AFFECTED, INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_LOOKUP,
+  AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
+  INDIVIDUAL_FIELD_AFFECTED, INDIVIDUAL_FIELD_FEATURES, INDIVIDUAL_FIELD_LOOKUP, DATASET_TITLE_LOOKUP,
+  DATA_TYPE_EXPRESSION_OUTLIER, DATA_TYPE_SPLICE_OUTLIER,
 } from 'shared/utils/constants'
+import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid, getMmeSubmissionsByGuid } from 'redux/selectors'
@@ -118,17 +120,6 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const SHOW_DATA_MODAL_CONFIG = [
-  {
-    shouldShow: individual => individual.phenotypePrioritizationTools.length > 0,
-    component: PhenotypePrioritizedGenes,
-    modalName: ({ individualId }) => `PHENOTYPE-PRIORITIZATION-${individualId}`,
-    title: ({ individualId }) => `Phenotype Prioritized Genes: ${individualId}`,
-    modalSize: 'large',
-    linkText: 'Show Phenotype Prioritized Genes',
-  },
-]
-
 const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) => (
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
     <VerticalSpacer height={5} />
@@ -149,7 +140,42 @@ MmeStatusLabel.propTypes = {
 const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) => (
   <div>
     {loadedSamples.map(
-      sample => <div key={sample.sampleGuid}><Sample loadedSample={sample} isOutdated={!sample.isActive} /></div>,
+      sample => <div key={sample.sampleGuid}><Sample {...sample} isOutdated={!sample.isActive} /></div>,
+    )}
+    {individual.rnaSample && (
+      <Sample
+        sampleType="RNA"
+        loadedDate={individual.rnaSample.loadedDate}
+        hoverContent={`RNAseq methods: ${individual.rnaSample.dataTypes.map(dt => DATASET_TITLE_LOOKUP[dt].trim()).join(', ')}`}
+      />
+    )}
+    {individual.rnaSample && (individual.rnaSample.dataTypes.includes(DATA_TYPE_EXPRESSION_OUTLIER) ||
+      individual.rnaSample.dataTypes.includes(DATA_TYPE_SPLICE_OUTLIER)) && (
+      <div>
+        <Link
+          target="_blank"
+          to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/rnaseq_results/${individual.individualGuid}`}
+        >
+          RNAseq Results
+        </Link>
+      </div>
+    )}
+    {individual.phenotypePrioritizationTools.map(
+      ({ tool, loadedDate }) => (
+        <div key={tool}><Sample sampleType={snakecaseToTitlecase(tool)} loadedDate={loadedDate} /></div>
+      ),
+    )}
+    {individual.phenotypePrioritizationTools.length > 0 && (
+      <Modal
+        modalName={`PHENOTYPE-PRIORITIZATION-${individual.individualId}`}
+        title={`Phenotype Prioritized Genes: ${individual.individualId}`}
+        size="large"
+        trigger={<ButtonLink padding="0 0 0 0" content="Show Phenotype Prioritized Genes" />}
+      >
+        <React.Suspense fallback={<Loader />}>
+          <PhenotypePrioritizedGenes familyGuid={individual.familyGuid} individualGuid={individual.individualGuid} />
+        </React.Suspense>
+      </Modal>
     )}
     {mmeSubmission && (
       mmeSubmission.deletedDate ? (
@@ -168,39 +194,6 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
           }
         />
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
-    )}
-    {loadedSamples.some(sample => sample.isActive && (sample.rnaSeqTypes.includes('Expression Outlier') || sample.rnaSeqTypes.includes('Splice Outlier'))) && (
-      <div>
-        <Link
-          target="_blank"
-          to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/rnaseq_results/${individual.individualGuid}`}
-        >
-          RNAseq Results
-        </Link>
-      </div>
-    )}
-    {individual.phenotypePrioritizationTools.map(
-      tool => <div key={tool.tool}><Sample loadedSample={tool} /></div>,
-    )}
-    {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShow }) => shouldShow(individual)).map(
-      ({ modalName, title, modalSize, linkText, component }) => {
-        const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
-        const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
-        return (
-          <Modal
-            key={modalName(titleIds)}
-            modalName={modalName(titleIds)}
-            title={title(titleIds)}
-            size={modalSize}
-            trigger={<ButtonLink padding="0 0 0 0" content={linkText} />}
-          >
-            <React.Suspense fallback={<Loader />}>
-              {React.createElement(component,
-                { familyGuid: individual.familyGuid, individualGuid: individual.individualGuid }) }
-            </React.Suspense>
-          </Modal>
-        )
-      },
     )}
   </div>
 ))

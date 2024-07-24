@@ -81,7 +81,7 @@ def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=N
 
 def mv_file_to_gs(local_path, gs_path, user=None):
     command = 'mv {}'.format(local_path)
-    _run_gsutil_with_wait(command, gs_path, user)
+    run_gsutil_with_wait(command, gs_path, user)
 
 
 def get_gs_file_list(gs_path, user=None, check_subfolders=True, allow_missing=False):
@@ -99,7 +99,7 @@ def get_gs_file_list(gs_path, user=None, check_subfolders=True, allow_missing=Fa
     return [line for line in all_lines if is_google_bucket_file_path(line)]
 
 
-def _run_gsutil_with_wait(command, gs_path, user=None):
+def run_gsutil_with_wait(command, gs_path, user=None):
     process = _run_gsutil_command(command, gs_path, user=user)
     if process.wait() != 0:
         errors = [line.decode('utf-8').strip() for line in process.stdout]

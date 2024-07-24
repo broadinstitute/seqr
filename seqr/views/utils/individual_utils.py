@@ -4,7 +4,7 @@ APIs for retrieving, updating, creating, and deleting Individual records
 from collections import defaultdict
 
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
-from seqr.models import Sample, IgvSample, Individual, Family, FamilyNote
+from seqr.models import Sample, IgvSample, RnaSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_individual_parents, create_model_from_json, \
@@ -191,6 +191,7 @@ def delete_individuals(project, individual_guids, user):
 
     Sample.bulk_delete(user, individual__in=individuals_to_delete)
     IgvSample.bulk_delete(user, individual__in=individuals_to_delete)
+    RnaSample.bulk_delete(user, individual__in=individuals_to_delete)
     MatchmakerResult.bulk_delete(user, submission__individual__in=individuals_to_delete, submission__deleted_date__isnull=False)
     MatchmakerSubmission.bulk_delete(user, individual__in=individuals_to_delete, deleted_date__isnull=False)
 

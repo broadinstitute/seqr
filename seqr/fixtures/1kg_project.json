@@ -904,7 +904,6 @@
         "individual": 1,
         "sample_type": "WES",
         "dataset_type": "SNV_INDEL",
-        "tissue_type": "X",
         "sample_id": "NA19675",
         "is_active": true,
         "elasticsearch_index": "test_index",
@@ -923,7 +922,6 @@
         "individual": 2,
         "sample_type": "WES",
         "dataset_type": "SNV_INDEL",
-        "tissue_type": "X",
         "sample_id": "NA19678",
         "is_active": true,
         "elasticsearch_index": "test_index_old",
@@ -931,22 +929,18 @@
     }
 },
 {
-    "model": "seqr.sample",
+    "model": "seqr.rnasample",
     "pk": 153,
     "fields": {
-        "guid": "S000153_na19679",
-        "created_date": "2017-02-05T06:42:55.397Z",
+        "guid": "RS000153_S_na19679",
+        "created_date": "2017-02-05T06:14:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 3,
-        "sample_type": "RNA",
-        "dataset_type": "SNV_INDEL",
-        "sample_id": "NA19679_S",
         "is_active": true,
-        "elasticsearch_index":null,
         "tissue_type": "F",
         "data_source": "fibs_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:14:55.397Z"
+        "data_type": "S"
     }
 },
 {
@@ -962,7 +956,6 @@
         "sample_type": "WES",
         "is_active": false,
         "elasticsearch_index": "test_index",
-        "tissue_type": "X",
         "individual": 3,
         "dataset_type": "SNV_INDEL",
         "loaded_date": "2017-02-05T06:15:55.397Z"
@@ -982,7 +975,6 @@
         "is_active": true,
         "individual": 4,
         "dataset_type": "SNV_INDEL",
-        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:16:55.397Z"
     }
 },
@@ -1000,7 +992,6 @@
         "is_active": true,
         "individual": 5,
         "dataset_type": "SNV_INDEL",
-        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:17:55.397Z"
     }
 },
@@ -1018,7 +1009,6 @@
         "is_active": true,
         "individual": 6,
         "dataset_type": "SNV_INDEL",
-        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:18:55.397Z"
     }
 },
@@ -1036,7 +1026,6 @@
         "is_active": true,
         "individual": 7,
         "dataset_type": "SNV_INDEL",
-        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:19:55.397Z"
     }
 },
@@ -1054,7 +1043,6 @@
         "individual": 8,
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
-        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:20:55.397Z"
     }
 },
@@ -1072,7 +1060,6 @@
         "is_active": true,
         "individual": 9,
         "dataset_type": "SNV_INDEL",
-        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:21:55.397Z"
     }
 },
@@ -1090,7 +1077,6 @@
         "individual": 10,
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
-        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:22:55.397Z"
     }
 },
@@ -1109,7 +1095,6 @@
         "individual": 11,
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
-        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:23:55.397Z"
     }
 },
@@ -1128,7 +1113,6 @@
     	"individual": 12,
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
-        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:24:55.397Z"
     }
 },
@@ -1147,7 +1131,6 @@
     	"individual": 14,
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
-        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:25:55.397Z"
     }
 },
@@ -1165,7 +1148,6 @@
         "is_active": true,
         "individual": 15,
         "dataset_type": "SNV_INDEL",
-        "tissue_type": "X",
         "loaded_date": "2020-02-05T06:26:55.397Z"
     }
 },
@@ -1184,7 +1166,6 @@
         "individual": 16,
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
-        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:27:55.397Z"
     }
 },
@@ -1204,7 +1185,6 @@
         "dataset_type": "SNV_INDEL",
         "elasticsearch_index": "1kg.vcf.gz",
         "data_source": "auto__2023-08-08",
-        "tissue_type": "X",
         "loaded_date": "2017-02-05T06:28:55.397Z"
     }
 },
@@ -1222,7 +1202,6 @@
         "is_active": true,
         "individual": 4,
         "dataset_type": "SV",
-        "tissue_type": "X",
         "loaded_date": "2018-02-05T06:29:55.397Z"
     }
 },
@@ -1240,7 +1219,6 @@
         "is_active": true,
         "individual": 5,
         "dataset_type": "SV",
-        "tissue_type": "X",
         "loaded_date": "2018-02-05T06:30:55.397Z"
     }
 },
@@ -1296,48 +1274,85 @@
     }
 },
 {
-    "model": "seqr.sample",
+    "model": "seqr.rnasample",
     "pk": 151,
     "fields": {
-        "guid": "S000151_na19675_1",
-        "created_date": "2017-02-05T06:42:55.397Z",
+        "guid": "RS000151_S_na19675_1",
+        "created_date": "2017-02-05T06:34:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 1,
-        "sample_type": "RNA",
-        "dataset_type": "SNV_INDEL",
-        "sample_id": "NA19675_1",
         "is_active": true,
-        "elasticsearch_index":null,
         "tissue_type": "F",
         "data_source": "muscle_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:34:55.397Z"
+        "data_type": "S"
     }
 },
 {
-    "model": "seqr.sample",
+    "model": "seqr.rnasample",
     "pk": 152,
     "fields": {
-        "guid": "S000152_na19675_d2",
-        "created_date": "2017-02-05T06:42:55.397Z",
+        "guid": "RS000152_S_na19675_d2",
+        "created_date": "2017-02-05T06:35:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 1,
-        "sample_type": "RNA",
-        "dataset_type": "SNV_INDEL",
-        "sample_id": "NA19675_D2",
         "is_active": true,
-        "elasticsearch_index":null,
         "tissue_type": "M",
         "data_source": "muscle_samples.tsv.gz",
-        "loaded_date": "2017-02-05T06:35:55.397Z"
+        "data_type": "S"
+    }
+},
+{
+    "model": "seqr.rnasample",
+    "pk": 161,
+    "fields": {
+        "guid": "RS000161_T_na19675_1",
+        "created_date": "2017-02-05T06:34:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 1,
+        "is_active": true,
+        "tissue_type": "F",
+        "data_source": "muscle_samples.tsv.gz",
+        "data_type": "T"
+    }
+},
+{
+    "model": "seqr.rnasample",
+    "pk": 162,
+    "fields": {
+        "guid": "RS000162_T_na19675_d2",
+        "created_date": "2017-02-05T06:35:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 1,
+        "is_active": true,
+        "tissue_type": "M",
+        "data_source": "muscle_samples.tsv.gz",
+        "data_type": "T"
+    }
+},
+{
+    "model": "seqr.rnasample",
+    "pk": 172,
+    "fields": {
+        "guid": "RS000172_E_na19675_d2",
+        "created_date": "2017-02-05T06:35:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 1,
+        "is_active": true,
+        "tissue_type": "M",
+        "data_source": "muscle_samples.tsv.gz",
+        "data_type": "E"
     }
 },
 {
     "model": "seqr.rnaseqoutlier",
     "pk": 1,
     "fields": {
-        "sample": 152,
+        "sample": 172,
         "gene_id": "ENSG00000135953",
         "z_score": 7.31,
         "p_value": 0.00000000000948,
@@ -1348,7 +1363,7 @@
     "model": "seqr.rnaseqoutlier",
     "pk": 2,
     "fields": {
-        "sample": 152,
+        "sample": 172,
         "gene_id": "ENSG00000240361",
         "z_score": -4.08,
         "p_value": 5.88,
@@ -1359,7 +1374,7 @@
     "model": "seqr.rnaseqoutlier",
     "pk": 3,
     "fields": {
-        "sample": 152,
+        "sample": 172,
         "gene_id": "ENSG00000268903",
         "z_score": 7.08,
         "p_value": 0.000000000588,
@@ -1370,7 +1385,7 @@
     "model": "seqr.rnaseqtpm",
     "pk": 3,
     "fields": {
-        "sample": 152,
+        "sample": 162,
         "gene_id": "ENSG00000135953",
         "tpm": 8.38
     }
@@ -1379,7 +1394,7 @@
     "model": "seqr.rnaseqtpm",
     "pk": 4,
     "fields": {
-        "sample": 151,
+        "sample": 161,
         "gene_id": "ENSG00000135953",
         "tpm": 1.01
     }
@@ -1387,7 +1402,7 @@
     "model": "seqr.rnaseqtpm",
     "pk": 5,
     "fields": {
-        "sample": 152,
+        "sample": 162,
         "gene_id": "ENSG00000227232",
         "tpm": 9.1
     }
@@ -1395,7 +1410,7 @@
     "model": "seqr.rnaseqtpm",
     "pk": 6,
     "fields": {
-        "sample": 152,
+        "sample": 162,
         "gene_id": "ENSG00000233653",
         "tpm": 1.03
     }
@@ -1970,8 +1985,8 @@
         "xpos": 1001562437,
         "xpos_end": 1003124874,
         "ref": "G",
-        "alt": "C",
-        "variant_id": "1-1562437-G-C",
+        "alt": "CA",
+        "variant_id": "1-1562437-G-CA",
         "saved_variant_json": {
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
             "liftedOverGenomeVersion": "38",
