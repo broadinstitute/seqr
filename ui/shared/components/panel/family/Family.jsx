@@ -223,11 +223,11 @@ class Family extends React.PureComponent {
     })
   }
 
-  familyHeader = (displayName) => {
+  familyHeader = () => {
     const { family, showFamilyPageLink } = this.props
     const content = showFamilyPageLink ?
-      <Link to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>{displayName}</Link> :
-      displayName
+      <Link to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
+      family.displayName
     return <InlineHeader size="small" content={content} />
   }
 
@@ -247,7 +247,7 @@ class Family extends React.PureComponent {
     if (!hidePedigree) {
       const familyHeader = (
         <BaseFieldView
-          field="displayName"
+          field="familyId"
           idField="familyGuid"
           initialValues={family}
           fieldDisplay={this.familyHeader}
