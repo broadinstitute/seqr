@@ -19,7 +19,7 @@ import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/str
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchableSampleByFamily, getSelectableTagTypesByProject,
+  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchSampleByFamily, getSelectableTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
   getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual,
   getRnaSeqDataByIndividual, familyPassesFilters, getAnalysisGroupGuid, getCurrentAnalysisGroupFamilyGuids,
@@ -757,8 +757,8 @@ export const getPageHeaderEntityLinks = createSelector(
   getPageHeaderAnalysisGroup,
   (state, props) => getSearchType(props.match.params),
   getProjectAnalysisGroupFamiliesByGuid,
-  getHasActiveSearchableSampleByFamily,
-  (project, family, analysisGroup, searchType, familiesByGuid, hasActiveSearchableSampleByFamilyGuid) => {
+  getHasActiveSearchSampleByFamily,
+  (project, family, analysisGroup, searchType, familiesByGuid, hasActiveSearchSampleByFamilyGuid) => {
     if (!project) {
       return null
     }
@@ -772,7 +772,7 @@ export const getPageHeaderEntityLinks = createSelector(
 
     const familiesToConsider = searchType === 'family' ? [family.familyGuid] : Object.keys(familiesByGuid)
     const disabled = familiesToConsider.every(
-      familyGuid => !(hasActiveSearchableSampleByFamilyGuid[familyGuid] || {}).isSearchable,
+      familyGuid => !hasActiveSearchSampleByFamilyGuid[familyGuid],
     )
     const entityLinks = [{
       to: `/variant_search/${searchType === 'analysis_group' ? `project/${project.projectGuid}/` : ''}${searchType}/${searchId}`,

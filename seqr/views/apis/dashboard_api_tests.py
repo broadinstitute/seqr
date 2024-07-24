@@ -13,6 +13,16 @@ DASHBOARD_PROJECT_FIELDS = {
 DASHBOARD_PROJECT_FIELDS.update(PROJECT_FIELDS)
 DASHBOARD_PROJECT_FIELDS.remove('canEdit')
 
+EXPECTED_DASHBOARD_PROJECT = {
+    'numIndividuals': 14,
+    'numFamilies': 11,
+    'sampleTypeCounts': {'RNA': 2, 'WES': 13},
+    'numVariantTags': 4,
+    'analysisStatusCounts': {'ES': 1, 'Q': 9, 'S_ng': 1},
+    **{k: mock.ANY for k in PROJECT_FIELDS if k != 'canEdit'},
+}
+
+
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json')
 class DashboardPageTest(object):
 
@@ -42,6 +52,7 @@ class DashboardPageTest(object):
         )
         self.assertSetEqual({p['userIsCreator'] for p in response_json['projectsByGuid'].values()}, {False})
         self.assertFalse(any('userCanDelete' in p for p in response_json['projectsByGuid'].values()))
+        self.assertDictEqual(response_json['projectsByGuid']['R0001_1kg'], EXPECTED_DASHBOARD_PROJECT)
         mock_get_redis.assert_called_with('projects__test_user_collaborator')
         mock_set_redis.assert_called_with(
             'projects__test_user_collaborator', list(response_json['projectsByGuid'].keys()), expire=300)

@@ -9,7 +9,7 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max, F, Q
+from django.db.models import Max, F, Q, Count
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
@@ -18,6 +18,7 @@ from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_exists
 
 from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
@@ -29,7 +30,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 
-from seqr.models import Sample, Individual, Project, PhenotypePrioritization
+from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
 
@@ -316,8 +317,8 @@ def _get_sample_file_path(file_dir, sample_guid):
 
 @pm_or_data_manager_required
 def load_rna_seq_sample_data(request, sample_guid):
-    sample = Sample.objects.get(guid=sample_guid)
-    logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
+    sample = RnaSample.objects.get(guid=sample_guid)
+    logger.info(f'Loading outlier data for {sample.individual.individual_id}', request.user)
 
     request_json = json.loads(request.body)
     file_name = request_json['fileName']
@@ -514,14 +515,67 @@ def load_data(request):
         missing = sorted(set(project_samples.keys()) - {p.guid for p in project_models})
         return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
 
+    additional_project_files = None
+    individual_ids = None
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+        individual_ids = _get_valid_project_samples(project_samples, sample_type)
+        additional_project_files = {
+            project_guid: (f'{project_guid}_ids', ['s'], [{'s': sample_id} for sample_id in sample_ids])
+            for project_guid, sample_ids in project_samples.items()
+        }
+
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
     trigger_data_loading(
         project_models, sample_type, dataset_type, request_json['filePath'], request.user, success_message,
         SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
-        is_internal=True, project_samples=project_samples if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else None,
+        is_internal=True, individual_ids=individual_ids, additional_project_files=additional_project_files,
     )
 
     return create_json_response({'success': True})
+
+
+def _get_valid_project_samples(project_samples, sample_type):
+    individuals = {
+        (i['project'], i['individual_id']): i for i in Individual.objects.filter(family__project__guid__in=project_samples).values(
+            'id', 'individual_id',
+            project=F('family__project__guid'),
+            family_name=F('family__family_id'),
+            sampleCount=Count('sample', filter=Q(sample__is_active=True) & Q(sample__sample_type=sample_type)),
+        )
+    }
+
+    errors = []
+    individual_ids = []
+    missing_samples = set()
+    airtable_families = set()
+    for project, sample_ids in project_samples.items():
+        for sample_id in sample_ids:
+            individual = individuals.get((project, sample_id))
+            if individual:
+                airtable_families.add((project, individual['family_name']))
+                individual_ids.append(individual['id'])
+            else:
+                missing_samples.add(sample_id)
+
+    if missing_samples:
+        errors.append(f'The following samples are included in airtable but missing from seqr: {", ".join(missing_samples)}')
+
+    missing_family_samples = defaultdict(list)
+    for (project, sample_id), individual in individuals.items():
+        family_key = (project, individual['family_name'])
+        if sample_id not in project_samples[project] and family_key in airtable_families and individual['sampleCount']:
+            missing_family_samples[family_key].append(sample_id)
+
+    if missing_family_samples:
+        family_errors = [
+            f'{family} ({", ".join(sorted(samples))})' for (_, family), samples in missing_family_samples.items()
+        ]
+        errors.append(f'The following families have previously loaded samples absent from airtable: {"; ".join(family_errors)}')
+
+    if errors:
+        raise ErrorsWarningsException(errors)
+
+    return individual_ids
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

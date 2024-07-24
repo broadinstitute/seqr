@@ -122,7 +122,7 @@ const SAMPLE_TYPE_FIELD = {
   name: 'sampleType',
   label: 'Sample Type',
   component: RadioGroup,
-  options: SAMPLE_TYPE_OPTIONS.slice(0, 2),
+  options: SAMPLE_TYPE_OPTIONS,
   validate: validators.required,
 }
 

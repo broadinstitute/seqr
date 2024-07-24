@@ -3,8 +3,8 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Popup, Icon } from 'semantic-ui-react'
 
-import { HorizontalSpacer, VerticalSpacer } from '../Spacers'
-import { DATASET_TYPE_SNV_INDEL_CALLS, SAMPLE_TYPE_RNA } from '../../utils/constants'
+import { HorizontalSpacer } from '../Spacers'
+import { DATASET_TYPE_SNV_INDEL_CALLS } from '../../utils/constants'
 
 const Detail = styled.span`
   font-size: 11px;
@@ -16,18 +16,18 @@ const iconColor = (loadedSample, isOutdated) => {
   return isOutdated ? 'grey' : 'green'
 }
 
-const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) => (
+const Sample = React.memo(({ sampleType, datasetType, loadedDate, hoverContent, isOutdated, hoverDetails }) => (
   <Popup
     trigger={
       <span>
-        <Icon size="small" name="circle" color={iconColor(loadedSample, isOutdated)} />
-        {loadedSample && <b>{loadedSample.sampleType}</b>}
-        {loadedSample && loadedSample.datasetType && loadedSample.datasetType !== DATASET_TYPE_SNV_INDEL_CALLS && ` - ${loadedSample.datasetType}`}
+        <Icon size="small" name="circle" color={iconColor(sampleType, isOutdated)} />
+        {sampleType && <b>{sampleType}</b>}
+        {datasetType && datasetType !== DATASET_TYPE_SNV_INDEL_CALLS && ` - ${datasetType}`}
         {
-          !hoverDetails && (loadedSample ? (
+          !hoverDetails && (loadedDate ? (
             <Detail>
               <HorizontalSpacer width={6} />
-              {`LOADED ${new Date(loadedSample.loadedDate).toLocaleDateString().toUpperCase()}`}
+              {`LOADED ${new Date(loadedDate).toLocaleDateString().toUpperCase()}`}
             </Detail>
           ) : <small>NO LOADED DATA</small>)
         }
@@ -35,12 +35,10 @@ const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) => (
     }
     content={
       <div>
-        {loadedSample ?
-          `data was${isOutdated ? ' previously ' : ''} ${hoverDetails ? `${hoverDetails} on ${new Date(loadedSample.loadedDate).toLocaleDateString()}` : 'loaded'}` :
-          'no data available'}
-        <VerticalSpacer height={5} />
-        {loadedSample?.sampleType && loadedSample.sampleType === SAMPLE_TYPE_RNA &&
-          loadedSample.isActive && `RNAseq methods: ${loadedSample.rnaSeqTypes.join(', ')}`}
+        {!hoverContent && (loadedDate ?
+          `data was${isOutdated ? ' previously ' : ''} ${hoverDetails ? `${hoverDetails} on ${new Date(loadedDate).toLocaleDateString()}` : 'loaded'}` :
+          'no data available')}
+        {hoverContent}
       </div>
     }
     position="left center"
@@ -48,7 +46,10 @@ const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) => (
 ))
 
 Sample.propTypes = {
-  loadedSample: PropTypes.object,
+  sampleType: PropTypes.string,
+  datasetType: PropTypes.string,
+  loadedDate: PropTypes.string,
+  hoverContent: PropTypes.string,
   isOutdated: PropTypes.bool,
   hoverDetails: PropTypes.string,
 }
