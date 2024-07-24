@@ -315,12 +315,14 @@ class ProjectAPITest(object):
             }],
             'WES__SV': [{'familyCounts': {'F000002_2': 3}, 'loadedDate': '2018-02-05'}],
             'WES__MITO': [{'familyCounts': {'F000002_2': 1}, 'loadedDate': '2022-02-05'}],
-            'RNA__SNV_INDEL': [{'familyCounts': {'F000001_1': 3}, 'loadedDate': '2017-02-05'}],
+            'RNA__S': [{'familyCounts': {'F000001_1': 3}, 'loadedDate': '2017-02-05'}],
+            'RNA__T': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
+            'RNA__E': [{'familyCounts': {'F000001_1': 1}, 'loadedDate': '2017-02-05'}],
         })
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
-        self.assertEqual(len(response_json['samplesByGuid']), 19)
+        self.assertEqual(len(response_json['samplesByGuid']), 16)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
@@ -383,7 +385,7 @@ class ProjectAPITest(object):
         empty_family = response_json['familiesByGuid']['F000013_13']
         family_fields = {
             'individualGuids', 'discoveryTags', 'caseReviewStatuses', 'caseReviewStatusLastModified', 'hasRequiredMetadata',
-            'parents', 'hasPhenotypePrioritization',
+            'parents', 'hasPhenotypePrioritization', 'hasRna',
         }
         family_fields.update(SUMMARY_FAMILY_FIELDS)
         self.assertSetEqual(set(family_1.keys()), family_fields)
@@ -407,6 +409,9 @@ class ProjectAPITest(object):
         self.assertEqual(family_1['hasPhenotypePrioritization'], True)
         self.assertFalse(family_3['hasPhenotypePrioritization'], False)
         self.assertFalse(empty_family['hasPhenotypePrioritization'], False)
+        self.assertEqual(family_1['hasRna'], True)
+        self.assertFalse(family_3['hasRna'], False)
+        self.assertFalse(empty_family['hasRna'], False)
 
         self.assertListEqual(family_3['discoveryTags'], [])
         self.assertListEqual(empty_family['discoveryTags'], [])
@@ -478,7 +483,7 @@ class ProjectAPITest(object):
         response_keys = {'samplesByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
-        self.assertEqual(len(response_json['samplesByGuid']), 20)
+        self.assertEqual(len(response_json['samplesByGuid']), 17)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
 
         # Test empty project

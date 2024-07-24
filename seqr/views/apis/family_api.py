@@ -5,7 +5,7 @@ import json
 from collections import defaultdict
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.db.models.fields.files import ImageFieldFile
 from django.db.models.functions import JSONObject, Concat, Upper, Substr
 
@@ -23,7 +23,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model,  get_json_fo
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
     MME_TAG_NAME
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
-    PhenotypePrioritization, Project, RnaSeqOutlier, RnaSeqSpliceOutlier
+    PhenotypePrioritization, Project, RnaSeqOutlier, RnaSeqSpliceOutlier, RnaSample
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
 from seqr.views.utils.variant_utils import get_phenotype_prioritization, get_omim_intervals_query, DISCOVERY_CATEGORY
@@ -49,15 +49,6 @@ def family_page_data(request, family_guid):
     response = {
         'samplesByGuid': {s['sampleGuid']: s for s in samples}
     }
-    rna_type_samples = {
-        'TPM': set(RnaSeqTpm.objects.filter(sample__in=sample_models).values_list('sample__guid', flat=True)),
-        'Expression Outlier': set(RnaSeqOutlier.objects.filter(sample__in=sample_models).values_list('sample__guid', flat=True)),
-        'Splice Outlier': set(RnaSeqSpliceOutlier.objects.filter(sample__in=sample_models).values_list('sample__guid', flat=True)),
-    }
-    for sample in response['samplesByGuid'].values():
-        sample['rnaSeqTypes'] = [
-            rnaseq_type for rnaseq_type, sample_ids in rna_type_samples.items() if sample['sampleGuid'] in sample_ids
-        ]
 
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
     family_response = response['familiesByGuid'][family_guid]
@@ -88,23 +79,24 @@ def family_page_data(request, family_guid):
         'postDiscoveryOmimOptions': omim_map,
     })
 
-    tools_by_indiv = {}
-    tools_agg = PhenotypePrioritization.objects.filter(individual__family=family).values('individual__guid').annotate(
-        phenotypePrioritizationTools=ArrayAgg(
-            JSONObject(
-                sampleType=Concat(Upper(Substr('tool', 1, 1)), Substr('tool', 2)),
-                loadedDate='created_date'),
-            distinct=True
-        ))
-    for indiv_record in tools_agg:
-        individual_guid = indiv_record.get('individual__guid')
-        tools_by_indiv[individual_guid] = indiv_record.get('phenotypePrioritizationTools')
+    tools_by_indiv = defaultdict(list)
+    tools_agg = PhenotypePrioritization.objects.filter(individual__family=family).values('individual__guid', 'tool').annotate(
+        loadedDate=Max('created_date'),
+    ).order_by('tool')
+    for agg in tools_agg:
+        tools_by_indiv[agg.pop('individual__guid')].append(agg)
+
+    rna_agg = RnaSample.objects.filter(individual__family=family, is_active=True).values('individual__guid').annotate(
+        loadedDate=Max('created_date'), dataTypes=ArrayAgg('data_type', distinct=True, ordering='data_type'),
+    )
+    rna_samples_by_individual = {agg.pop('individual__guid'): agg for agg in rna_agg}
 
     submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(individual__family=family))
     individual_mme_submission_guids = {s['individualGuid']: s['submissionGuid'] for s in submissions}
     for individual in response['individualsByGuid'].values():
         individual['mmeSubmissionGuid'] = individual_mme_submission_guids.get(individual['individualGuid'])
         individual['phenotypePrioritizationTools'] = tools_by_indiv.get(individual['individualGuid'], [])
+        individual['rnaSample'] = rna_samples_by_individual.get(individual['individualGuid'])
     response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
     return create_json_response(response)

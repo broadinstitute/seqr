@@ -128,6 +128,7 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
+            model.created_date = timezone.now()
             model.guid = model._format_guid(random.randint(10**(cls.GUID_PRECISION-1), 10**cls.GUID_PRECISION))  # nosec
         models = cls.objects.bulk_create(new_models)
         log_model_bulk_update(logger, models, user, 'create')
@@ -686,12 +687,11 @@ class Sample(ModelWithGUID):
 
     SAMPLE_TYPE_WES = 'WES'
     SAMPLE_TYPE_WGS = 'WGS'
-    SAMPLE_TYPE_RNA = 'RNA'
     SAMPLE_TYPE_CHOICES = (
         (SAMPLE_TYPE_WES, 'Exome'),
         (SAMPLE_TYPE_WGS, 'Whole Genome'),
-        (SAMPLE_TYPE_RNA, 'RNA'),
     )
+    SAMPLE_TYPE_LOOKUP = dict(SAMPLE_TYPE_CHOICES)
 
     DATASET_TYPE_VARIANT_CALLS = 'SNV_INDEL'
     DATASET_TYPE_SV_CALLS = 'SV'
@@ -704,22 +704,10 @@ class Sample(ModelWithGUID):
     )
     DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
-    NO_TISSUE_TYPE = 'X'
-    TISSUE_TYPE_CHOICES = (
-        ('WB', 'whole_blood'),
-        ('F', 'fibroblasts'),
-        ('M', 'muscle'),
-        ('L', 'lymphocytes'),
-        ('A', 'airway_cultured_epithelium'),
-        (NO_TISSUE_TYPE, 'None'),
-    )
-
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
 
     sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
     dataset_type = models.CharField(max_length=13, choices=DATASET_TYPE_CHOICES)
-
-    tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES)
 
     # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
     sample_id = models.TextField(db_index=True)
@@ -740,8 +728,43 @@ class Sample(ModelWithGUID):
     class Meta:
        json_fields = [
            'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date',
-           'elasticsearch_index',
        ]
+
+
+class RnaSample(ModelWithGUID):
+
+    DATA_TYPE_TPM = 'T'
+    DATA_TYPE_EXPRESSION_OUTLIER = 'E'
+    DATA_TYPE_SPLICE_OUTLIER = 'S'
+    DATA_TYPE_CHOICES = (
+        (DATA_TYPE_TPM, 'TPM'),
+        (DATA_TYPE_EXPRESSION_OUTLIER, 'Expression Outlier'),
+        (DATA_TYPE_SPLICE_OUTLIER, 'Splice Outlier'),
+    )
+    DATA_TYPE_LOOKUP = dict(DATA_TYPE_CHOICES)
+
+    TISSUE_TYPE_CHOICES = (
+        ('WB', 'whole_blood'),
+        ('F', 'fibroblasts'),
+        ('M', 'muscle'),
+        ('L', 'lymphocytes'),
+        ('A', 'airway_cultured_epithelium'),
+    )
+
+    individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
+
+    data_type = models.CharField(max_length=1, choices=DATA_TYPE_CHOICES)
+    tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES)
+    data_source = models.TextField()
+    is_active = models.BooleanField(default=False)
+
+    def __unicode__(self):
+        return f'{self.data_type}_{self.individual.individual_id}'
+
+    GUID_PREFIX = 'RS'
+
+    class Meta:
+       json_fields = ['guid', 'created_date', 'data_type', 'is_active']
 
 
 class IgvSample(ModelWithGUID):
@@ -1136,10 +1159,10 @@ class BulkOperationBase(models.Model):
         abstract = True
 
 
-class DeletableSampleMetadataModel(BulkOperationBase):
+class DeletableRnaSampleMetadataModel(BulkOperationBase):
     PARENT_FIELD = 'sample'
 
-    sample = models.ForeignKey('Sample', on_delete=models.CASCADE)
+    sample = models.ForeignKey('RnaSample', on_delete=models.CASCADE)
     gene_id = models.CharField(max_length=20)  # ensembl ID
 
     def __unicode__(self):
@@ -1149,7 +1172,7 @@ class DeletableSampleMetadataModel(BulkOperationBase):
         abstract = True
 
 
-class RnaSeqOutlier(DeletableSampleMetadataModel):
+class RnaSeqOutlier(DeletableRnaSampleMetadataModel):
     MAX_SIGNIFICANT_P_ADJUST = 0.05
 
     p_value = models.FloatField()
@@ -1164,7 +1187,7 @@ class RnaSeqOutlier(DeletableSampleMetadataModel):
         indexes = [models.Index(fields=['sample_id', 'gene_id']), models.Index(fields=['p_adjust'])]
 
 
-class RnaSeqTpm(DeletableSampleMetadataModel):
+class RnaSeqTpm(DeletableRnaSampleMetadataModel):
     tpm = models.FloatField()
 
     class Meta:
@@ -1175,7 +1198,7 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
         indexes = [models.Index(fields=['sample_id', 'gene_id'])]
 
 
-class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
+class RnaSeqSpliceOutlier(DeletableRnaSampleMetadataModel):
     MAX_SIGNIFICANT_P_ADJUST = 0.3
     SIGNIFICANCE_ABS_VALUE_THRESHOLDS = {'delta_intron_jaccard_index': 0.1}
     STRAND_CHOICES = (
