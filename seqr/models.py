@@ -124,12 +124,12 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         log_model_update(logger, self, user, 'delete')
 
     @classmethod
-    def bulk_create(cls, user, new_models):
+    def bulk_create(cls, user, new_models, **kwargs):
         """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
             model.guid = model._format_guid(random.randint(10**(cls.GUID_PRECISION-1), 10**cls.GUID_PRECISION))  # nosec
-        models = cls.objects.bulk_create(new_models)
+        models = cls.objects.bulk_create(new_models, **kwargs)
         log_model_bulk_update(logger, models, user, 'create')
         return models
 
@@ -1116,11 +1116,11 @@ class BulkOperationBase(models.Model):
         logger.info(f'{update_type} {db_entity}s', user, db_update=db_update)
 
     @classmethod
-    def bulk_create(cls, user, new_models):
+    def bulk_create(cls, user, new_models, **kwargs):
         """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
-        models = cls.objects.bulk_create(new_models)
+        models = cls.objects.bulk_create(new_models, **kwargs)
         cls.log_model_no_guid_bulk_update(models, user, 'create')
         return models
 
