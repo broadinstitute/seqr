@@ -336,7 +336,7 @@ def load_rna_seq_sample_data(request, sample_guid):
         return create_json_response({'error': error}, status=400)
 
     model_cls = config['model_class']
-    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_rows])
+    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_rows], batch_size=1000)
     update_model_from_json(sample, {'is_active': True}, user=request.user)
 
     return create_json_response({'success': True})
