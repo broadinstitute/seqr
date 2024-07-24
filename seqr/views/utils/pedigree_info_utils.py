@@ -83,7 +83,7 @@ def parse_basic_pedigree_table(project, parsed_file, filename, required_columns=
     rows, header = _parse_pedigree_table_rows(parsed_file, filename)
     return _parse_pedigree_table_json(
         project, rows, header=header, fail_on_warnings=True, allow_id_update=False,
-        required_columns=required_columns, update_features=update_features, 
+        required_columns=required_columns, update_features=update_features,
     )
 
 
@@ -858,7 +858,7 @@ class JsonConstants:
             (code for code, uberon_code in Individual.BIOSAMPLE_CHOICES if value.startswith(uberon_code)), None),
         ANALYTE_TYPE: Individual.ANALYTE_REVERSE_LOOKUP.get,
         TISSUE_AFFECTED_STATUS: lambda value: {'Yes': True, 'No': False, 'Unknown': None}[value],
-        FEATURES: lambda value: parse_hpo_terms(value),
+        FEATURES: parse_hpo_terms,
     }
     FORMAT_COLUMNS.update({col: json.loads for col in JSON_COLUMNS})
 
