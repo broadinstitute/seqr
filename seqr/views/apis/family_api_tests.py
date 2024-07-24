@@ -11,7 +11,8 @@ from seqr.views.apis.family_api import update_family_pedigree_image, update_fami
     update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, \
     receive_families_table_handler, create_family_note, update_family_note, delete_family_note, family_page_data, \
     family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data, get_family_phenotype_gene_scores
-from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
+    FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
 from seqr.models import FamilyAnalysedBy, AnalysisGroup
@@ -35,8 +36,7 @@ INDIVIDUAL_GUIDS = [INDIVIDUAL_GUID, INDIVIDUAL2_GUID, INDIVIDUAL3_GUID]
 SAMPLE_GUIDS = ['S000129_na19675', 'S000130_na19678', 'S000131_na19679']
 
 
-class FamilyAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'reference_data']
+class FamilyAPITest(object):
 
     def test_family_page_data(self):
         url = reverse(family_page_data, args=[FAMILY_GUID])
@@ -253,6 +253,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 403)
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__eq__.side_effect = lambda s: s == 'project-managers'
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'families': [{'familyGuid': 'F000012_12'}]}))
@@ -307,6 +308,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 403)
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__eq__.side_effect = lambda s: s == 'project-managers'
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'families': [{'familyGuid': 'F000012_12'}]}))
@@ -436,6 +438,17 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()[FAMILY_GUID]['analysisStatusLastModifiedBy'], 'Test Collaborator User')
 
+        # Test External AnVIL projects
+        external_family_url = reverse(update_family_fields_handler, args=['F000014_14'])
+        response = self.client.post(external_family_url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertEqual(response_json['F000014_14']['description'], 'Updated description')
+        self.assertEqual(response_json['F000014_14'][FAMILY_ID_FIELD], 'new_id' if self._anvil_enabled() else '14')
+
+    def _anvil_enabled(self):
+        return not self.ES_HOSTNAME
+
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_receive_families_table_handler(self, mock_pm_group):
         url = reverse(receive_families_table_handler, args=[PROJECT_GUID])
@@ -499,6 +512,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 403)
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__eq__.side_effect = lambda s: s == 'project-managers'
 
         response = self.client.post(url, {'f': SimpleUploadedFile('families.tsv', 'Family ID\n1'.encode('utf-8'))})
         self.assertEqual(response.status_code, 200)
@@ -607,3 +621,11 @@ class FamilyAPITest(AuthenticationTestCase):
                 }
             }
         })
+
+
+class LocalFamilyAPITest(AuthenticationTestCase, FamilyAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data']
+
+
+class AnvilFamilyAPITest(AnvilAuthenticationTestCase, FamilyAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data']
