@@ -452,6 +452,7 @@ class FamilyAPITest(object):
     def _anvil_enabled(self):
         return not self.ES_HOSTNAME
 
+    @mock.patch('seqr.views.utils.file_utils.mv_file_to_gs', lambda *args: True)
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_receive_families_table_handler(self, mock_pm_group):
         url = reverse(receive_families_table_handler, args=[PROJECT_GUID])
