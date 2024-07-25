@@ -35,6 +35,8 @@ import {
 import { FirstSample, AnalystEmailDropdown, AnalysedBy, AnalysisGroups, analysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
 
+const FAMILY_NAME_FIELD_PROPS = { label: 'Name' }
+
 const ASSIGNED_ANALYST_EDIT_FIELDS = [
   {
     name: 'assigned_analyst_username',
@@ -221,25 +223,38 @@ class Family extends React.PureComponent {
     })
   }
 
+  familyHeader = () => {
+    const { family, showFamilyPageLink } = this.props
+    const content = showFamilyPageLink ?
+      <Link to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
+      family.displayName
+    return <InlineHeader size="small" content={content} />
+  }
+
   render() {
     const {
       project, family, fields, rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
-      showFamilyPageLink, annotation, hidePedigree, toggleDetails,
+      annotation, hidePedigree, toggleDetails, updateFamily: dispatchUpdateFamily,
     } = this.props
 
     if (!family) {
       return <div>Family Not Found</div>
     }
 
+    const isEditable = !disableEdit && project.canEdit
+
     let leftContent = null
     if (!hidePedigree) {
       const familyHeader = (
-        <InlineHeader
-          key="name"
-          size="small"
-          content={showFamilyPageLink ?
-            <Link to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
-            family.displayName}
+        <BaseFieldView
+          field="familyId"
+          idField="familyGuid"
+          initialValues={family}
+          fieldDisplay={this.familyHeader}
+          isEditable={isEditable && !!project.workspaceName && !project.isAnalystProject}
+          formFieldProps={FAMILY_NAME_FIELD_PROPS}
+          modalTitle={`Edit Family ${family.displayName}`}
+          onSubmit={dispatchUpdateFamily}
         />
       )
       leftContent = (
@@ -256,7 +271,7 @@ class Family extends React.PureComponent {
                 key="pedigree"
                 family={family}
                 disablePedigreeZoom={disablePedigreeZoom}
-                isEditable={!disableEdit && project.canEdit}
+                isEditable={isEditable}
               />
             </span>
           )}
