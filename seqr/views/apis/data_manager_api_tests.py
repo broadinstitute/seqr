@@ -1460,6 +1460,7 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
 
+    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated', lambda x: True)
     @responses.activate
     def test_get_loaded_projects(self):
@@ -1589,6 +1590,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         }
 
     @responses.activate
+    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
     def test_load_data(self, mock_temp_dir, mock_open):

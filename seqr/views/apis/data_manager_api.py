@@ -498,7 +498,7 @@ def _fetch_airtable_loadable_project_samples(user):
     project_samples = defaultdict(set)
     for pdo in pdos.values():
         project_guid = re.match(
-            'https://seqr.broadinstitute.org/project/([^/]+)/project_page', pdo['SeqrProjectURL'],
+            f'{BASE_URL}project/([^/]+)/project_page', pdo['SeqrProjectURL'],
         ).group(1)
         project_samples[project_guid].update([
             sample_id for sample_id in pdo['PassingCollaboratorSampleIDs'] + pdo['SeqrIDs'] if sample_id
@@ -592,16 +592,16 @@ def _get_valid_project_samples(project_samples, sample_type, user):
     return individual_ids
 
 
-def _get_loaded_samples(sample_keys, user):
-    sample_ids = [sample_id for _, sample_id in sample_keys]
+def _get_loaded_samples(project_samples, user):
+    sample_ids = [sample_id for _, sample_id in project_samples]
     samples_by_id = AirtableSession(user).get_samples_for_sample_ids(sample_ids, ['PDOStatus', 'SeqrProject'])
-    return [(project, sample_id) for project, sample_id in sample_keys if any(
+    return [(project, sample_id) for project, sample_id in project_samples if any(
         _is_loaded_airtable_sample(s, project) for s in samples_by_id.get(sample_id, [])
     )]
 
 
 def _is_loaded_airtable_sample(sample, project_guid):
-    return f'https://seqr.broadinstitute.org/project/{project_guid}/project_page' in sample['SeqrProject'] and any(
+    return f'{BASE_URL}project/{project_guid}/project_page' in sample['SeqrProject'] and any(
         status in AVAILABLE_PDO_STATUSES for status in sample['PDOStatus'])
 
 
