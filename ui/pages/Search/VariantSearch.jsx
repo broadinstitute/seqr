@@ -28,7 +28,7 @@ const VariantSearch = ({ match }) => (
       <Grid.Column width={16}>
         <Switch>
           <Route path={SEARCH_FORM_PAGES.map(pagePath => `${match.url}/${pagePath}`)} component={VariantSearchForm} />
-          <Route path={`${match.url}/families/:families`} component={NoEditProjectsVariantSearchForm} />
+          <Route path={`${match.url}/families/:familiesHash`} component={NoEditProjectsVariantSearchForm} />
           <Route path={`${match.url}/${SINGLE_VARIANT_RESULTS_PATH}`} />
           <Route path={match.url} exact component={VariantSearchForm} />
           <Route component={Error404} />
