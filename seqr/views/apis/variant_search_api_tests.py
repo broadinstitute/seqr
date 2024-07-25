@@ -1025,15 +1025,18 @@ def assert_no_list_ws_has_al(self, acl_call_count, group_call_count, workspace_n
     assert_ws_has_al(self, acl_call_count, group_call_count, workspace_name)
 
 
-def assert_has_list_ws(self):
-    self.mock_list_workspaces.assert_has_calls([
+def assert_has_list_ws(self, has_data_manager=False):
+    calls = [
         mock.call(self.no_access_user),
         mock.call(self.collaborator_user),
-    ])
+    ]
+    if has_data_manager:
+        calls.insert(1, mock.call(self.data_manager_user))
+    self.mock_list_workspaces.assert_has_calls(calls)
 
 
-def assert_no_al_has_list_ws(self, group_count=1):
-    assert_has_list_ws(self)
+def assert_no_al_has_list_ws(self, group_count=1, has_data_manager=False):
+    assert_has_list_ws(self, has_data_manager)
     self.mock_get_ws_access_level.assert_not_called()
     assert_workspace_calls(self, group_count)
 
@@ -1067,7 +1070,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
-        assert_no_al_has_list_ws(self, group_count=3)
+        assert_no_al_has_list_ws(self, group_count=3, has_data_manager=True)
 
     def test_query_all_project_families_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)

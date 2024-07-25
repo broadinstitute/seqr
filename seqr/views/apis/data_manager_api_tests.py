@@ -11,7 +11,7 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree, validate_callset, \
     get_loaded_projects, load_data
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirflowTestCase, AirtableTest
+from seqr.views.utils.test_utils import AuthenticationTestCase, AirflowTestCase, AirtableTest
 from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSample, Project, PhenotypePrioritization
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
@@ -435,6 +435,30 @@ AIRTABLE_PDO_RECORDS = {
             }
         },
     ]
+}
+AIRTABLE_SAMPLE_RECORDS = {
+    'records': [
+        {
+            'id': 'recW24C2CJW5lT64K',
+            'fields': {
+                'CollaboratorSampleID': 'NA19678',
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
+                'PDOStatus': ['Available in seqr'],
+            }
+        },
+    ],
+}
+AIRTABLE_SECONDARY_SAMPLE_RECORDS = {
+    'records': [
+        {
+            'id': 'recW24C2CJW5lT64K',
+            'fields': {
+                'SeqrCollaboratorSampleID': 'NA21234',
+                'SeqrProject': ['https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'],
+                'PDOStatus': ['Hold for phenotips'],
+            }
+        },
+    ],
 }
 
 
@@ -1436,6 +1460,7 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
 
+    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated', lambda x: True)
     @responses.activate
     def test_get_loaded_projects(self):
@@ -1498,8 +1523,14 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_file_iter.return_value += stdout
 
 
-class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data']
+@mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+
+    DAG_NAME = 'v03_pipeline-MITO'
+    SECOND_DAG_NAME = 'v03_pipeline-GCNV'
+    LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
+    PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1550,16 +1581,6 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
         # Test relies on the local-only project data, and has no real difference for local/ non-local behavior
         pass
 
-
-@mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-class LoadDataAPITest(AirflowTestCase):
-    fixtures = ['users', 'social_auth', '1kg_project']
-
-    DAG_NAME = 'v03_pipeline-MITO'
-    SECOND_DAG_NAME = 'v03_pipeline-GCNV'
-    LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
-    PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
-
     @staticmethod
     def _get_dag_variable_overrides(*args, **kwargs):
         return {
@@ -1569,16 +1590,19 @@ class LoadDataAPITest(AirflowTestCase):
         }
 
     @responses.activate
+    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_load_data(self, mock_subprocess, mock_temp_dir, mock_open):
+    def test_load_data(self, mock_temp_dir, mock_open):
         url = reverse(load_data)
         self.check_pm_login(url)
 
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
-        mock_subprocess.return_value.wait.return_value = 0
-        mock_subprocess.return_value.communicate.return_value = b'', b'File not found'
+        mock_subprocess = mock.MagicMock()
+        self.mock_subprocess.side_effect = None
+        self.mock_subprocess.return_value = mock_subprocess
+        mock_subprocess.wait.return_value = 0
+        mock_subprocess.communicate.return_value = b'', b'File not found'
         body = {'filePath': 'gs://test_bucket/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'projects': [
             json.dumps({'projectGuid': 'R0001_1kg'}), json.dumps(PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
         ]}
@@ -1592,7 +1616,7 @@ class LoadDataAPITest(AirflowTestCase):
         self.assertDictEqual(response.json(), {'success': True})
 
         self.assert_airflow_calls()
-        self._has_expected_gs_calls(mock_subprocess, mock_open, 'MITO')
+        self._has_expected_gs_calls(mock_open, 'MITO')
 
         dag_json = """{
     "projects_to_run": [
@@ -1621,7 +1645,7 @@ class LoadDataAPITest(AirflowTestCase):
         mock_open.reset_mock()
         responses.calls.reset()
         mock_subprocess.reset_mock()
-        mock_subprocess.return_value.communicate.return_value = b'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_SV/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v01/\ngs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_GCNV/v02/', b''
+        mock_subprocess.communicate.return_value = b'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_SV/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v01/\ngs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_GCNV/v02/', b''
 
         body.update({'datasetType': 'SV', 'filePath': 'gs://test_bucket/sv_callset.vcf', 'sampleType': 'WES'})
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1629,7 +1653,7 @@ class LoadDataAPITest(AirflowTestCase):
         self.assertDictEqual(response.json(), {'success': True})
 
         self.assert_airflow_calls(trigger_error=True, secondary_dag_name=self.SECOND_DAG_NAME)
-        self._has_expected_gs_calls(mock_subprocess, mock_open, 'SV', is_second_dag=True, sample_type='WES')
+        self._has_expected_gs_calls(mock_open, 'SV', is_second_dag=True, sample_type='WES')
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
         errors = [call.args[0] for call in self.mock_airflow_logger.error.call_args_list]
@@ -1658,26 +1682,54 @@ class LoadDataAPITest(AirflowTestCase):
 
         sample_ids = PROJECT_SAMPLES_OPTION['sampleIds']
         body['projects'] = [json.dumps({**PROJECT_OPTION, 'sampleIds': [sample_ids[1]]})]
+        airtable_samples_url = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples'
+        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS, status=200)
+        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SECONDARY_SAMPLE_RECORDS, status=200)
+
+        # Non-Broad users can not access airtable
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 403)
+
+        responses.calls.reset()
+        self.login_data_manager_user()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
             'errors': ['The following families have previously loaded samples absent from airtable: 14 (NA21234)'],
         })
+        self.assert_expected_airtable_call(
+            call_index=0,
+            filter_formula="OR({CollaboratorSampleID}='NA21234')",
+            fields=['CollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
+        )
+        self.assert_expected_airtable_call(
+            call_index=1,
+            filter_formula="OR({SeqrCollaboratorSampleID}='NA21234')",
+            fields=['SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
+        )
 
+        mock_subprocess.reset_mock()
+        responses.calls.reset()
+        responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS, status=200)
         body['projects'] = [
-            json.dumps({'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19678', 'NA19679']}),
+            json.dumps({'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19679']}),
             json.dumps({**PROJECT_OPTION, 'sampleIds': sample_ids[:2]}),
         ]
+        body['sampleType'] = 'WES'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
-        self._has_expected_gs_calls(mock_subprocess, mock_open, 'SNV_INDEL', has_project_subset=True)
+        self._has_expected_gs_calls(mock_open, 'SNV_INDEL', sample_type='WES', has_project_subset=True)
+        self.assert_expected_airtable_call(
+            call_index=0,
+            filter_formula="OR({CollaboratorSampleID}='NA19678')",
+            fields=['CollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
+        )
 
-    def _has_expected_gs_calls(self, mock_subprocess, mock_open, dataset_type, sample_type='WGS', has_project_subset=False, **kwargs):
-        projects = self.PROJECTS[1:] if has_project_subset else self.PROJECTS
+    def _has_expected_gs_calls(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False, **kwargs):
         mock_open.assert_has_calls([
-            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in projects
+            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in self.PROJECTS
         ], any_order=True)
         files = [
             [row.split('\t') for row in write_call.args[0].split('\n')]
@@ -1686,7 +1738,7 @@ class LoadDataAPITest(AirflowTestCase):
         self.assertEqual(len(files), 4 if has_project_subset else 2)
         if has_project_subset:
             self.assertEqual(len(files[1]), 4)
-            self.assertListEqual(files[1], [['s'], ['NA19675_1'], ['NA19678'], ['NA19679']])
+            self.assertListEqual(files[1], [['s'], ['NA19675_1'], ['NA19679'], ['NA19678']])
             self.assertEqual(len(files[3]), 3)
             self.assertListEqual(files[3], [['s'], ['NA21234'], ['NA21987']])
 
@@ -1701,14 +1753,14 @@ class LoadDataAPITest(AirflowTestCase):
             ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
         ])
 
-        mock_subprocess.assert_has_calls([
+        self.mock_subprocess.assert_has_calls([
             mock.call(
                 f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/',
                 stdout=-1, stderr=-2, shell=True,  # nosec
-            ) for project in projects
+            ) for project in self.PROJECTS
         ] + [
             mock.call(
                 f'gsutil rsync -r gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/ gs://seqr-loading-temp/v03/GRCh38/{sample_type}/{dataset_type}/pedigrees/',
                 stdout=-1, stderr=-2, shell=True,  # nosec
-            ) for project in projects
+            ) for project in self.PROJECTS
         ], any_order=True)
