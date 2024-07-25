@@ -17,7 +17,8 @@ from settings import AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHAN
 logger = SeqrLogger(__name__)
 
 AIRFLOW_AUTH_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
-SEQR_DATASETS_GS_PATH = 'gs://seqr-datasets/v02'
+SEQR_V2_DATASETS_GS_PATH = 'gs://seqr-datasets/v02'
+SEQR_V3_PEDIGREE_GS_PATH = 'gs://seqr-loading-temp/v03'
 
 
 class DagRunningException(Exception):
@@ -68,7 +69,7 @@ def write_data_loading_pedigree(project: Project, user: User):
         project.guid, project.genome_version, sample_type, is_internal=callset != 'AnVIL', callset=callset,
     ))), None)
     if not match:
-        raise ValueError(f'No {SEQR_DATASETS_GS_PATH} project directory found for {project.guid}')
+        raise ValueError(f'No {SEQR_V2_DATASETS_GS_PATH} project directory found for {project.guid}')
     callset, sample_type = match
     _upload_data_loading_files(
         [project], is_internal=callset != 'AnVIL', user=user, genome_version=project.genome_version,
@@ -154,12 +155,12 @@ def _parse_project_upload_files(project_guid, rows, header, additional_project_f
 
 def _get_dag_project_gs_path(project: str, genome_version: str, sample_type: str, is_internal: bool, callset: str):
     dag_name = f'RDG_{sample_type}_Broad_{callset}' if is_internal else f'AnVIL_{sample_type}'
-    dag_path = f'{SEQR_DATASETS_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_name}'
+    dag_path = f'{SEQR_V2_DATASETS_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_name}'
     return f'{dag_path}/base/projects/{project}/' if is_internal else f'{dag_path}/{project}/base/'
 
 
 def _get_gs_pedigree_path(genome_version: str, sample_type: str, dataset_type: str):
-    return f'gs://seqr-loading-temp/v03/{GENOME_VERSION_LOOKUP[genome_version]}/{sample_type}/{dataset_type}/pedigrees/'
+    return f'{SEQR_V3_PEDIGREE_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{sample_type}/{dataset_type}/pedigrees/'
 
 
 def _wait_for_dag_variable_update(dag_id, projects):

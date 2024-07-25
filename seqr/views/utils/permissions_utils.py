@@ -145,6 +145,11 @@ def project_has_anvil(project):
     return anvil_enabled() and bool(project.workspace_namespace and project.workspace_name)
 
 
+def external_anvil_project_can_edit(project, user):
+    return project_has_anvil(project) and has_project_permissions(project, user, can_edit=True) and not \
+        is_internal_anvil_project(project)
+
+
 def _map_anvil_seqr_permission(anvil_permission):
     if anvil_permission.get('pending'):
         return None

@@ -115,28 +115,26 @@ export const DATASET_TYPE_SNV_INDEL_CALLS = 'SNV_INDEL'
 export const DATASET_TYPE_SV_CALLS = 'SV'
 export const DATASET_TYPE_MITO_CALLS = 'MITO'
 
+export const DATA_TYPE_TPM = 'T'
+export const DATA_TYPE_EXPRESSION_OUTLIER = 'E'
+export const DATA_TYPE_SPLICE_OUTLIER = 'S'
+
 export const DATASET_TITLE_LOOKUP = {
   [DATASET_TYPE_SV_CALLS]: ' SV',
   [DATASET_TYPE_MITO_CALLS]: ' Mitochondria',
   ONT_SNV_INDEL: ' ONT',
+  [DATA_TYPE_TPM]: ' TPM',
+  [DATA_TYPE_EXPRESSION_OUTLIER]: ' Expression Outlier',
+  [DATA_TYPE_SPLICE_OUTLIER]: ' Splice Outlier',
 }
 
 export const SAMPLE_TYPE_EXOME = 'WES'
 export const SAMPLE_TYPE_GENOME = 'WGS'
-export const SAMPLE_TYPE_RNA = 'RNA'
 
 export const SAMPLE_TYPE_OPTIONS = [
   { value: SAMPLE_TYPE_EXOME, text: 'Exome' },
   { value: SAMPLE_TYPE_GENOME, text: 'Genome' },
-  { value: SAMPLE_TYPE_RNA, text: 'RNA-seq' },
 ]
-
-export const SAMPLE_TYPE_LOOKUP = SAMPLE_TYPE_OPTIONS.reduce(
-  (acc, opt) => ({
-    ...acc,
-    ...{ [opt.value]: opt },
-  }), {},
-)
 
 // ANALYSIS STATUS
 
@@ -377,13 +375,13 @@ export const CATEGORY_FAMILY_FILTERS = {
     {
       value: `${SHOW_DATA_LOADED}_RNA`,
       name: 'Data Loaded - RNA',
-      createFilter: hasMatchingSampleFilter(({ sampleType }) => sampleType === SAMPLE_TYPE_RNA),
+      createFilter: family => family.hasRna,
     },
     ...[DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS].map(dataType => ({
       value: `${SHOW_DATA_LOADED}_${dataType}`,
       name: `Data Loaded -${DATASET_TITLE_LOOKUP[dataType]}`,
       createFilter: hasMatchingSampleFilter(
-        ({ sampleType, datasetType }) => sampleType !== SAMPLE_TYPE_RNA && datasetType === dataType,
+        ({ datasetType }) => datasetType === dataType,
       ),
     })),
     {

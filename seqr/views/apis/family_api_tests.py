@@ -11,7 +11,8 @@ from seqr.views.apis.family_api import update_family_pedigree_image, update_fami
     update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, \
     receive_families_table_handler, create_family_note, update_family_note, delete_family_note, family_page_data, \
     family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data, get_family_phenotype_gene_scores
-from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
+    FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
 from seqr.models import FamilyAnalysedBy, AnalysisGroup
@@ -32,12 +33,10 @@ INDIVIDUAL3_GUID = 'I000003_na19679'
 
 INDIVIDUAL_GUIDS = [INDIVIDUAL_GUID, INDIVIDUAL2_GUID, INDIVIDUAL3_GUID]
 
-FAMILY_API_SAMPLE_FIELDS = {*SAMPLE_FIELDS, 'rnaSeqTypes'}
-SAMPLE_GUIDS = ['S000129_na19675', 'S000130_na19678', 'S000131_na19679', 'S000151_na19675_1', 'S000152_na19675_d2', 'S000153_na19679']
+SAMPLE_GUIDS = ['S000129_na19675', 'S000130_na19678', 'S000131_na19679']
 
 
-class FamilyAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'reference_data']
+class FamilyAPITest(object):
 
     def test_family_page_data(self):
         url = reverse(family_page_data, args=[FAMILY_GUID])
@@ -73,32 +72,35 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
-        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'phenotypePrioritizationTools'}
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'phenotypePrioritizationTools', 'rnaSample'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
         self.assertListEqual([
             [
-                {'loadedDate': '2024-05-02T06:42:55.397+00:00', 'sampleType': 'Exomiser'},
-                {'loadedDate': '2024-05-02T06:42:55.397+00:00', 'sampleType': 'Lirical'}
+                {'loadedDate': '2024-05-02T06:42:55.397Z', 'tool': 'exomiser'},
+                {'loadedDate': '2024-05-02T06:42:55.397Z', 'tool': 'lirical'}
             ], [
-                {'loadedDate': '2024-05-02T06:42:55.397+00:00', 'sampleType': 'Lirical'}
+                {'loadedDate': '2024-05-02T06:42:55.397Z', 'tool': 'lirical'}
             ], []
         ],
             [response_json['individualsByGuid'][guid].get('phenotypePrioritizationTools') for guid in INDIVIDUAL_GUIDS]
         )
+        self.assertListEqual([
+            {'loadedDate': '2017-02-05T06:35:55.397Z', 'dataTypes': ['E', 'S', 'T']},
+            None,
+            {'loadedDate': '2017-02-05T06:14:55.397Z', 'dataTypes': ['S']},
+        ],
+            [response_json['individualsByGuid'][guid]['rnaSample'] for guid in INDIVIDUAL_GUIDS]
+        )
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
 
-        self.assertEqual(len(response_json['samplesByGuid']), 6)
-        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), FAMILY_API_SAMPLE_FIELDS)
+        self.assertEqual(len(response_json['samplesByGuid']), 3)
+        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['samplesByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['samplesByGuid'].values()})
-        self.assertEqual(len(individual['sampleGuids']), 3)
+        self.assertEqual(len(individual['sampleGuids']), 1)
         self.assertTrue(set(individual['sampleGuids']).issubset(set(response_json['samplesByGuid'].keys())))
-        self.assertListEqual(
-            [[], [], [], ['TPM', 'Splice Outlier'], ['TPM', 'Expression Outlier', 'Splice Outlier'], ['Splice Outlier']],
-            [response_json['samplesByGuid'][guid].get('rnaSeqTypes', {}) for guid in SAMPLE_GUIDS]
-        )
 
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
         self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
@@ -251,6 +253,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 403)
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__eq__.side_effect = lambda s: s == 'project-managers'
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'families': [{'familyGuid': 'F000012_12'}]}))
@@ -281,7 +284,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Unable to delete individuals with active MME submission: NA19675_1',
-            'Unable to delete individuals with active search sample: HG00731, HG00732, HG00733, NA19675_1, NA19678, NA19679',
+            'Unable to delete individuals with active search sample: HG00731, HG00732, HG00733, NA19675_1, NA19678',
         ])
 
         # Test success
@@ -305,6 +308,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 403)
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__eq__.side_effect = lambda s: s == 'project-managers'
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'families': [{'familyGuid': 'F000012_12'}]}))
@@ -424,6 +428,7 @@ class FamilyAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertEqual(response_json[FAMILY_GUID]['description'], 'Updated description')
         self.assertEqual(response_json[FAMILY_GUID][FAMILY_ID_FIELD], '1')
+        self.assertEqual(response_json[FAMILY_GUID]['displayName'], '1')
         self.assertEqual(response_json[FAMILY_GUID]['analysisStatus'], 'C')
         self.assertEqual(response_json[FAMILY_GUID]['analysisStatusLastModifiedBy'], 'Test Collaborator User')
         self.assertEqual(response_json[FAMILY_GUID]['analysisStatusLastModifiedDate'], '2020-01-01T00:00:00')
@@ -434,6 +439,20 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()[FAMILY_GUID]['analysisStatusLastModifiedBy'], 'Test Collaborator User')
 
+        # Test External AnVIL projects
+        external_family_url = reverse(update_family_fields_handler, args=['F000014_14'])
+        response = self.client.post(external_family_url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertEqual(response_json['F000014_14']['description'], 'Updated description')
+        expected_id = 'new_id' if self._anvil_enabled() else '14'
+        self.assertEqual(response_json['F000014_14'][FAMILY_ID_FIELD], expected_id)
+        self.assertEqual(response_json['F000014_14']['displayName'], expected_id)
+
+    def _anvil_enabled(self):
+        return not self.ES_HOSTNAME
+
+    @mock.patch('seqr.views.utils.file_utils.anvil_enabled', lambda: False)
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_receive_families_table_handler(self, mock_pm_group):
         url = reverse(receive_families_table_handler, args=[PROJECT_GUID])
@@ -497,6 +516,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 403)
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__eq__.side_effect = lambda s: s == 'project-managers'
 
         response = self.client.post(url, {'f': SimpleUploadedFile('families.tsv', 'Family ID\n1'.encode('utf-8'))})
         self.assertEqual(response.status_code, 200)
@@ -605,3 +625,11 @@ class FamilyAPITest(AuthenticationTestCase):
                 }
             }
         })
+
+
+class LocalFamilyAPITest(AuthenticationTestCase, FamilyAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data']
+
+
+class AnvilFamilyAPITest(AnvilAuthenticationTestCase, FamilyAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data']

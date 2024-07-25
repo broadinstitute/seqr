@@ -498,7 +498,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_
                 ])
             if individual_data_types is not None:
                 parsed_row['method_of_discovery'] = '|'.join([
-                    METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type != Sample.SAMPLE_TYPE_RNA
+                    METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type in Sample.SAMPLE_TYPE_LOOKUP
                 ])
             if sample is not None:
                 parsed_row['sample_id'] = sample.sample_id

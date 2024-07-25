@@ -1453,7 +1453,9 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
             'WES__MITO': {'non_demo': 1},
             'WES__SV': {'non_demo': 3},
             'WGS__SV': {'non_demo': 1},
-            'RNA__SNV_INDEL': {'non_demo': 3},
+            'RNA__S': {'non_demo': 3},
+            'RNA__T': {'non_demo': 2},
+            'RNA__E': {'non_demo': 1},
         },
     }
 
@@ -1470,6 +1472,8 @@ class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
             'WES__MITO': {'internal': 1},
             'WES__SV': {'internal': 3},
             'WGS__SV': {'external': 1},
-            'RNA__SNV_INDEL': {'internal': 3},
+            'RNA__S': {'internal': 3},
+            'RNA__T': {'internal': 2},
+            'RNA__E': {'internal': 1},
         },
     }

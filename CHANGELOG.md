@@ -2,6 +2,9 @@
 
 ## dev
 
+## 7/24/24
+* Split RNA Sample models (REQUIRES DB MIGRATION)
+
 ## 7/8/24
 * Add VLM contact for Projects (REQUIRES DB MIGRATION)
 

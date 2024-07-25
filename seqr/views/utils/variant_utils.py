@@ -11,7 +11,7 @@ import traceback
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqTpm, PhenotypePrioritization, Project, Sample, VariantTag, VariantTagType
+    RnaSeqTpm, PhenotypePrioritization, Project, Sample, RnaSample, VariantTag, VariantTagType
 from seqr.utils.search.utils import get_variants_for_variant_ids, backend_specific_call
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.utils.xpos_utils import get_xpos
@@ -109,7 +109,7 @@ def saved_variants_dataset_type_filter(dataset_type):
         dataset_filter['alt__isnull'] = True
     else:
         # Filter out manual variants with invalid characters, such as those used for STRs
-        dataset_filter['alt__regex'] = '^[ACGT]$'
+        dataset_filter['alt__regex'] = '^[ACGT]+$'
     return dataset_filter
 
 
@@ -413,8 +413,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     rna_tpm = None
     if include_individual_gene_scores:
         present_family_genes = {k: v for k, v in family_genes.items() if v}
-        rna_sample_family_map = dict(Sample.objects.filter(
-            individual__family__guid__in=present_family_genes.keys(), sample_type=Sample.SAMPLE_TYPE_RNA, is_active=True,
+        rna_sample_family_map = dict(RnaSample.objects.filter(
+            individual__family__guid__in=present_family_genes.keys(), is_active=True,
         ).values_list('id', 'individual__family__guid'))
         response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), rna_sample_family_map.keys())
         rna_tpm = _get_family_has_rna_tpm(present_family_genes, genes.keys(), rna_sample_family_map)

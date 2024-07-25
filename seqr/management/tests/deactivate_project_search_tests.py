@@ -31,7 +31,7 @@ class DeactivateProjectSearchTest(TestCase):
         # Test success
         mock_input.return_value = 'y'
         call_command('deactivate_project_search', PROJECT_GUID)
-        mock_logger.info.assert_called_with('Deactivated 14 samples')
+        mock_logger.info.assert_called_with('Deactivated 11 samples')
 
         active_samples = Sample.objects.filter(individual__family__project__guid=PROJECT_GUID, is_active=True)
         self.assertEqual(active_samples.count(), 0)

@@ -10,7 +10,7 @@ import {
   getFamilyDetailsLoading,
   getSortedIndividualsByFamily,
   getGenesById,
-  getHasActiveSearchableSampleByFamily,
+  getHasActiveSearchSampleByFamily,
 } from 'redux/selectors'
 import { FAMILY_DETAIL_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
 import { Error404 } from 'shared/components/page/Errors'
@@ -112,7 +112,7 @@ BaseVariantDetail.propTypes = {
 const mapVariantDetailStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   genesById: getGenesById(state),
-  hasActiveVariantSample: (getHasActiveSearchableSampleByFamily(state)[ownProps.family.familyGuid] || {}).isSearchable,
+  hasActiveVariantSample: getHasActiveSearchSampleByFamily(state)[ownProps.family.familyGuid],
   loading: getFamilyVariantSummaryLoading(state),
   tagTypeCounts: getFamilyTagTypeCounts(state)[ownProps.family.familyGuid] || {},
 })
