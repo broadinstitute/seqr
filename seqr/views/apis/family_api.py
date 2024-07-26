@@ -392,6 +392,12 @@ def update_family_analysis_groups(request, family_guid):
     })
 
 
+EXTERNAL_DATA_LOOKUP = {v: k for k, v in Family.EXTERNAL_DATA_CHOICES}
+PARSE_FAMILY_TABLE_FIELDS = {
+    'externalData': lambda data_type: [EXTERNAL_DATA_LOOKUP[dt.strip()] for dt in (data_type or '').split(';') if dt],
+}
+
+
 @login_and_policies_required
 def receive_families_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of families. This handler
@@ -422,10 +428,12 @@ def receive_families_table_handler(request, project_guid):
                 column_map['mondoId'] = i
             elif 'description' in key:
                 column_map['description'] = i
+            elif 'external' in key and 'data' in key:
+                column_map['externalData'] = i
         if FAMILY_ID_FIELD not in column_map:
             raise ValueError('Invalid header, missing family id column')
 
-        return [{column: row[index] if isinstance(index, int) else next((row[i] for i in index if row[i]), None)
+        return [{column: PARSE_FAMILY_TABLE_FIELDS.get(column, lambda v: v)(row[index])
                 for column, index in column_map.items()} for row in records[1:]]
 
     try:

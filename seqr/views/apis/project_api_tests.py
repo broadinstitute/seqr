@@ -385,7 +385,7 @@ class ProjectAPITest(object):
         empty_family = response_json['familiesByGuid']['F000013_13']
         family_fields = {
             'individualGuids', 'discoveryTags', 'caseReviewStatuses', 'caseReviewStatusLastModified', 'hasRequiredMetadata',
-            'parents', 'hasPhenotypePrioritization', 'hasRna',
+            'parents', 'hasPhenotypePrioritization', 'hasRna', 'externalData',
         }
         family_fields.update(SUMMARY_FAMILY_FIELDS)
         self.assertSetEqual(set(family_1.keys()), family_fields)
@@ -412,6 +412,10 @@ class ProjectAPITest(object):
         self.assertEqual(family_1['hasRna'], True)
         self.assertFalse(family_3['hasRna'], False)
         self.assertFalse(empty_family['hasRna'], False)
+        self.assertListEqual(family_1['externalData'], ['M'])
+        self.assertListEqual(family_3['externalData'], [])
+        self.assertListEqual(empty_family['externalData'], [])
+
 
         self.assertListEqual(family_3['discoveryTags'], [])
         self.assertListEqual(empty_family['discoveryTags'], [])

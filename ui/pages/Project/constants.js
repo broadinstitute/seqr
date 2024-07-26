@@ -20,6 +20,7 @@ import {
   FAMILY_FIELD_MONDO_ID,
   FAMILY_FIELD_SAVED_VARIANTS,
   FAMILY_FIELD_NAME_LOOKUP,
+  FAMILY_FIELD_EXTERNAL_DATA,
   INDIVIDUAL_FIELD_ID,
   INDIVIDUAL_FIELD_PATERNAL_ID,
   INDIVIDUAL_FIELD_MATERNAL_ID,
@@ -37,6 +38,7 @@ import {
   FAMILY_NOTES_FIELDS,
   SNP_DATA_TYPE,
   MME_TAG_NAME,
+  FAMILY_EXTERNAL_DATA_LOOKUP,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -421,6 +423,10 @@ const FAMILY_FIELD_CONFIGS = Object.entries({
   [FAMILY_FIELD_ANALYSED_BY]: { format: analysedBy => analysedBy.map(o => o.createdBy).join(',') },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { width: 4, description: "High level summary of the family's phenotype/disease" },
   [FAMILY_FIELD_MONDO_ID]: { width: 3, description: 'MONDO Disease Ontology ID' },
+  [FAMILY_FIELD_EXTERNAL_DATA]: {
+    description: 'Data types available external to seqr',
+    format: externalData => externalData.map(dataType => FAMILY_EXTERNAL_DATA_LOOKUP[dataType]?.name || dataType).join('; '),
+  },
   ...FAMILY_NOTES_FIELDS.reduce((acc, { id }) => ({ ...acc, [id]: { format: formatNotes } }), {}),
 }).reduce((acc, [field, config]) => ({ ...acc, [field]: { label: FAMILY_FIELD_NAME_LOOKUP[field], ...config } }), {})
 
@@ -447,6 +453,7 @@ export const FAMILY_BULK_EDIT_EXPORT_DATA = [
   FAMILY_FIELD_DESCRIPTION,
   FAMILY_FIELD_CODED_PHENOTYPE,
   FAMILY_FIELD_MONDO_ID,
+  FAMILY_FIELD_EXTERNAL_DATA,
 ].map(exportConfigForField(FAMILY_FIELD_CONFIGS))
 
 export const INDIVIDUAL_FIELDS = [
