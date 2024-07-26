@@ -238,6 +238,17 @@ const FAQS = [
     },
   }, {
     [ENGLISH]: {
+      header: 'Q. Which browsers are supported for seqr?',
+      content: `seqr is only supported in Google Chrome. While it may sometimes function in other browsers, to ensure 
+      reliable behavior you should only use seqr in Chrome`,
+    },
+    [SPANISH]: {
+      header: 'P: ¿Cuáles navegadores son compatibles con seqr?',
+      content: `seqr solamente es compatible con Google Chrome. Aunque a veces puede funcionar en otros navegadores, 
+      para garantizar un funcionamiento fiable sólo debe usar seqr en Chrome.`,
+    },
+  }, {
+    [ENGLISH]: {
       header: 'Q. How can I set up seqr locally?',
       content: (
         <div>
