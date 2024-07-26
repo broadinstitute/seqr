@@ -145,9 +145,9 @@ const callsetChange = (onChange, initialValues) => val => onChange(
   { ...initialValues, [THIS_CALLSET_FREQUENCY]: val, [SV_CALLSET_FREQUENCY]: val },
 )
 
-const freqChange = (onChange, initialValues) => val => onChange(FREQUENCIES.filter(
+const freqChange = onChange => val => onChange(FREQUENCIES.filter(
   ({ name }) => name !== THIS_CALLSET_FREQUENCY && name !== SV_CALLSET_FREQUENCY,
-).reduce((acc, { name }) => ({ ...acc, [name]: val }), initialValues || {}))
+).reduce((acc, { name }) => ({ ...acc, [name]: val }), {}))
 
 export const HeaderFrequencyFilter = ({ value, onChange, esEnabled, ...props }) => {
   const { callset, sv_callset: svCallset, ...freqValues } = value || {}
@@ -155,7 +155,7 @@ export const HeaderFrequencyFilter = ({ value, onChange, esEnabled, ...props }) 
 
   const onCallsetChange = callsetChange(onChange, freqValues)
 
-  const onFreqChange = freqChange(onChange, value)
+  const onFreqChange = freqChange(onChange)
   const callsetTitle = esEnabled ? 'Callset' : 'seqr'
 
   return (
