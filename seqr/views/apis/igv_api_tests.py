@@ -124,8 +124,8 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertListEqual(
             response_json['info'], ['Parsed 3 rows in 2 individuals from samples.csv', 'No change detected for 1 rows'])
         self.assertListEqual(sorted(response_json['updates'], key=lambda o: o['individualGuid']), [
-            {'individualGuid': 'I000001_na19675', 'individualId': 'NA19675_1', 'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675'},
-            {'individualGuid': 'I000003_na19679', 'individualId': 'NA19679', 'filePath': 'gs://readviz/NA19679.bam', 'sampleId': None},
+            {'individualGuid': 'I000001_na19675', 'individualId': 'NA19675_1', 'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'indexFilePath': None, 'sampleId': 'NA19675'},
+            {'individualGuid': 'I000003_na19679', 'individualId': 'NA19679', 'filePath': 'gs://readviz/NA19679.bam', 'indexFilePath': None, 'sampleId': None},
         ])
 
         # test data manager access
@@ -147,7 +147,7 @@ class IgvAPITest(AuthenticationTestCase):
         request_data = json.dumps({'mappingFile': {'uploadedFileId': uploaded_file_id}})
         pm_projects_rows = [
             ['1kg project nåme with uniçøde', 'NA19675_1', 'gs://readviz/batch_10.dcr.bed.gz', 'NA19675'],
-            ['1kg project nåme with uniçøde', 'NA19675_1', 'gs://readviz/NA19675_1.bam'],
+            ['1kg project nåme with uniçøde', 'NA19675_1', 'gs://readviz/NA19675_1.bam', 'gs://readviz-index/NA19675_1.bai'],
             ['1kg project nåme with uniçøde', 'NA20870', 'gs://readviz/NA20870.cram'],
             ['Test Reprocessed Project', 'NA20885', 'gs://readviz/NA20885.cram'],
         ]
@@ -177,21 +177,26 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertListEqual(response_json['warnings'], [])
         self.assertListEqual(response_json['info'], ['Parsed 4 rows in 3 individuals', 'No change detected for 1 rows'])
         updates = [
-            {'individualGuid': 'I000001_na19675', 'individualId': 'NA19675_1', 'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675'},
-            {'individualGuid': 'I000001_na19675', 'individualId': 'NA19675_1', 'filePath': 'gs://readviz/NA19675_1.bam', 'sampleId': None},
-            {'individualGuid': 'I000015_na20885', 'individualId': 'NA20885', 'filePath': 'gs://readviz/NA20885.cram', 'sampleId': None},
+            {'individualGuid': 'I000001_na19675', 'individualId': 'NA19675_1', 'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'indexFilePath': None, 'sampleId': 'NA19675'},
+            {'individualGuid': 'I000001_na19675', 'individualId': 'NA19675_1', 'filePath': 'gs://readviz/NA19675_1.bam',
+             'indexFilePath': 'gs://readviz-index/NA19675_1.bai', 'sampleId': None},
+            {'individualGuid': 'I000015_na20885', 'individualId': 'NA20885', 'filePath': 'gs://readviz/NA20885.cram', 'indexFilePath': None, 'sampleId': None},
         ]
         self.assertListEqual(sorted(response_json['updates'], key=lambda o: o['individualGuid']), updates)
 
         # test data manager access
         self.login_data_manager_user()
+        rows[2].append('gs://readviz-index/NA20870.crai')
         mock_load_uploaded_file.return_value = rows
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json['info'], ['Parsed 5 rows in 4 individuals', 'No change detected for 1 rows'])
-        self.assertListEqual(sorted(response_json['updates'], key=lambda o: o['individualGuid']), updates + [
-            {'individualGuid': 'I000018_na21234', 'individualId': 'NA21234', 'filePath': 'gs://readviz/NA21234.cram', 'sampleId': None}
+        self.assertListEqual(response_json['info'], ['Parsed 5 rows in 4 individuals'])
+        self.assertListEqual(sorted(response_json['updates'], key=lambda o: o['individualGuid']), updates[:2] + [
+            {'individualGuid': 'I000007_na20870', 'individualId': 'NA20870', 'sampleId': None,
+             'filePath': 'gs://readviz/NA20870.cram', 'indexFilePath': 'gs://readviz-index/NA20870.crai'},
+            updates[2],
+            {'individualGuid': 'I000018_na21234', 'individualId': 'NA21234', 'filePath': 'gs://readviz/NA21234.cram', 'indexFilePath': None, 'sampleId': None}
         ])
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -206,7 +211,7 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'request must contain fields: filePath')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'filePath': 'invalid_path.txt',
+            'filePath': 'invalid_path.txt', 'indexFilePath': None,
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
@@ -216,31 +221,40 @@ class IgvAPITest(AuthenticationTestCase):
         mock_local_file_exists.return_value = False
         mock_subprocess.return_value.wait.return_value = 1
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'filePath': '/readviz/NA19675_new.cram',
+            'filePath': '/readviz/NA19675_new.cram', 'indexFilePath': None,
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Error accessing "/readviz/NA19675_new.cram"')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'filePath': 'gs://readviz/NA19675_new.cram',
+            'filePath': 'gs://readviz/NA19675_new.cram', 'indexFilePath': None,
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Error accessing "gs://readviz/NA19675_new.cram"')
 
-        # Send valid request
         mock_local_file_exists.return_value = True
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'filePath': '/readviz/NA19675.new.cram', 'indexFilePath': 'gs://readviz/NA19675_new.crai',
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Error accessing "gs://readviz/NA19675_new.crai"')
+
+        # Send valid request
         mock_subprocess.return_value.wait.return_value = 0
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'filePath': '/readviz/NA19675.new.cram',
+            'filePath': '/readviz/NA19675.new.cram', 'indexFilePath': '/readviz-index/NA19675.cram.crai',
         }))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'igvSamplesByGuid': {'S000145_na19675': {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
-            'familyGuid': 'F000001_1', 'filePath': '/readviz/NA19675.new.cram', 'sampleId': None, 'sampleType': 'alignment'}}})
-        mock_local_file_exists.assert_called_with('/readviz/NA19675.new.cram')
+            'familyGuid': 'F000001_1', 'filePath': '/readviz/NA19675.new.cram',
+            'indexFilePath': '/readviz-index/NA19675.cram.crai', 'sampleId': None, 'sampleType': 'alignment'}}})
+        mock_local_file_exists.assert_has_calls([
+            mock.call('/readviz/NA19675.new.cram'), mock.call('/readviz-index/NA19675.cram.crai'),
+        ])
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675',
+            'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675', 'indexFilePath': None,
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -250,7 +264,7 @@ class IgvAPITest(AuthenticationTestCase):
         sample_guid = next(iter(response_json['igvSamplesByGuid']))
         self.assertDictEqual(response_json['igvSamplesByGuid'][sample_guid], {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': sample_guid,
-            'familyGuid': 'F000001_1',  'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675', 'sampleType': 'gcnv'})
+            'familyGuid': 'F000001_1',  'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'indexFilePath': None, 'sampleId': 'NA19675', 'sampleType': 'gcnv'})
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertSetEqual(
             set(response_json['individualsByGuid']['I000001_na19675']['igvSampleGuids']),
@@ -269,7 +283,7 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertDictEqual(response_json['igvSamplesByGuid'][junctions_sample_guid], {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': junctions_sample_guid,
             'familyGuid': 'F000001_1',  'filePath': 'gs://readviz/batch_10.junctions.bed.gz', 'sampleId': 'NA19675',
-            'sampleType': 'spliceJunctions'})
+            'indexFilePath': None, 'sampleType': 'spliceJunctions'})
 
         # test data manager access
         self.login_data_manager_user()

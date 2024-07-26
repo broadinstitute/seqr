@@ -32,7 +32,15 @@ def _process_alignment_records(rows, num_id_cols=1, **kwargs):
     parsed_records = defaultdict(list)
     for row in rows:
         row_id = row[0] if num_id_cols == 1 else tuple(row[:num_id_cols])
-        parsed_records[row_id].append({'filePath': row[num_id_cols], 'sampleId': row[num_cols] if len(row) > num_cols else None})
+        file_path = row[num_id_cols]
+        sample_id = None
+        index_file_path = None
+        if len(row) > num_cols:
+            if file_path.endswith(GCNV_FILE_EXTENSIONS):
+                sample_id = row[num_cols]
+            else:
+                index_file_path = row[num_cols]
+        parsed_records[row_id].append({'filePath': row[num_id_cols], 'sampleId': sample_id, 'indexFilePath': index_file_path})
     return parsed_records
 
 
@@ -50,8 +58,11 @@ def _process_igv_table_handler(parse_uploaded_file, get_valid_matched_individual
         info.append(message)
 
         existing_sample_files = defaultdict(set)
+        existing_sample_index_files = defaultdict(set)
         for sample in IgvSample.objects.select_related('individual').filter(individual__in=matched_individuals.keys()):
             existing_sample_files[sample.individual].add(sample.file_path)
+            if sample.index_file_path:
+                existing_sample_index_files[sample.individual].add(sample.index_file_path)
 
         num_unchanged_rows = 0
         all_updates = []
@@ -60,6 +71,7 @@ def _process_igv_table_handler(parse_uploaded_file, get_valid_matched_individual
                 dict(individualGuid=individual.guid, individualId=individual.individual_id, **update)
                 for update in updates
                 if update['filePath'] not in existing_sample_files[individual]
+                   or (update['indexFilePath'] and update['indexFilePath'] not in existing_sample_index_files)
             ]
             all_updates += changed_updates
             num_unchanged_rows += len(updates) - len(changed_updates)
@@ -134,6 +146,8 @@ SAMPLE_TYPE_MAP = [
     ('bed.gz', IgvSample.SAMPLE_TYPE_GCNV),
 ]
 
+GCNV_FILE_EXTENSIONS = tuple(ext for ext, sample_type in SAMPLE_TYPE_MAP if sample_type == IgvSample.SAMPLE_TYPE_GCNV)
+
 
 @pm_or_data_manager_required
 def update_individual_igv_sample(request, individual_guid):
@@ -154,10 +168,15 @@ def update_individual_igv_sample(request, individual_guid):
                 file_path, ', '.join([suffix for suffix, _ in SAMPLE_TYPE_MAP])))
         if not does_file_exist(file_path, user=request.user):
             raise Exception('Error accessing "{}"'.format(file_path))
+        if request_json.get('indexFilePath') and not does_file_exist(request_json['indexFilePath'], user=request.user):
+            raise Exception('Error accessing "{}"'.format(request_json['indexFilePath']))
 
         sample, created = get_or_create_model_from_json(
             IgvSample, create_json={'individual': individual, 'sample_type': sample_type},
-            update_json={'file_path': file_path, 'sample_id': request_json.get('sampleId')}, user=request.user)
+            update_json={
+                'file_path': file_path,
+                **{field: request_json.get(field) for field in ['sampleId', 'indexFilePath']}
+            }, user=request.user)
 
         response = {
             'igvSamplesByGuid': {

@@ -785,6 +785,7 @@ class IgvSample(ModelWithGUID):
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
     sample_type = models.CharField(max_length=15, choices=SAMPLE_TYPE_CHOICES)
     file_path = models.TextField()
+    index_file_path = models.TextField(null=True, blank=True)
     sample_id = models.TextField(null=True)
 
     def __unicode__(self):
@@ -796,7 +797,7 @@ class IgvSample(ModelWithGUID):
     class Meta:
         unique_together = ('individual', 'sample_type')
 
-        json_fields = ['guid', 'file_path', 'sample_type', 'sample_id']
+        json_fields = ['guid', 'file_path', 'index_file_path', 'sample_type', 'sample_id']
 
 
 class SavedVariant(ModelWithGUID):

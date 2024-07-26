@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Adds index_file_path to IGV Sample model (REQUIRES DB MIGRATION)
 
 ## 7/24/24
 * Split RNA Sample models (REQUIRES DB MIGRATION)
