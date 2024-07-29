@@ -15,17 +15,19 @@ from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, SEQR_SLACK_LOADING_N
 
 LOAD_SAMPLE_DATA = [
     ["Family ID", "Individual ID", "Previous Individual ID", "Paternal ID", "Maternal ID", "Sex", "Affected Status",
-     "Notes", "familyNotes"],
-    ["1", " NA19675_1 ", "NA19675_1 ", "NA19678 ", "", "Female", "Affected", "A affected individual, test1-zsf", ""],
-    ["1", "NA19678", "", "", "", "Male", "Unaffected", "a individual note", ""],
-    ["21", " HG00735", "", "", "", "Unknown", "Unknown", "", "a new family"]]
+     "HPO Terms", "Notes", "familyNotes"],
+    ["1", " NA19675_1 ", "NA19675_1 ", "NA19678 ", "", "Female", "Affected", "HP:0012469 (Infantile spasms); HP:0011675 (Arrhythmia)", "A affected individual, test1-zsf", ""],
+    ["1", "NA19678", "", "", "", "Male", "Unaffected", "", "a individual note", ""],
+    ["21", " HG00735", "", "", "", "Unknown", "Affected", "HP:0001508,HP:0001508", "", "a new family"]]
 
-BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "A affected individual, test1-zsf", ""]]
-INVALID_ADDED_SAMPLE_DATA = [['22', 'HG00731', 'HG00731', '', '', 'Female', 'Affected', '', '']]
+BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "", "A affected individual, test1-zsf", ""],
+                   ["1", "NA19681", "", "", "", "Male", "Affected", "HP:0100258", "", ""]]
+INVALID_ADDED_SAMPLE_DATA = [['22', 'HG00731', 'HG00731', '', '', 'Female', 'Affected', 'HP:0011675', '', '']]
 
-MISSING_REQUIRED_SAMPLE_DATA = [["21", "HG00736", "", "", "", "", "", "", ""]]
+MISSING_REQUIRED_SAMPLE_DATA = [["21", "HG00736", "", "", "", "", "", "", "", ""]]
 
-LOAD_SAMPLE_DATA_EXTRA_SAMPLE = LOAD_SAMPLE_DATA + [["1", "NA19679", "", "", "", "Male", "Affected", "", ""]]
+LOAD_SAMPLE_DATA_EXTRA_SAMPLE = LOAD_SAMPLE_DATA + [["1", "NA19679", "", "", "", "Male", "Affected", "HP:0011675", "", ""],
+                                                    ["22", "HG00736", "", "", "", "Unknown", "Unknown", "", "", ""]]
 
 FILE_DATA = [
     '##fileformat=VCFv4.2\n',
@@ -468,7 +470,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
 
 
 class LoadAnvilDataAPITest(AirflowTestCase):
-    fixtures = ['users', 'social_auth', '1kg_project']
+    fixtures = ['users', 'social_auth', 'reference_data', '1kg_project']
 
     LOADING_PROJECT_GUID = f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
     DAG_NAME = 'v03_pipeline-SNV_INDEL'
@@ -676,7 +678,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
-        self.assertListEqual(response_json['errors'], ['Missing required columns: Affected, Sex'])
+        self.assertListEqual(response_json['errors'], ['Missing required columns: Affected, HPO Terms, Sex'])
 
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA + MISSING_REQUIRED_SAMPLE_DATA
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
@@ -690,6 +692,8 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertListEqual(response_json['errors'], [
+            'NA19674 is affected but has no HPO terms',
+            'NA19681 has invalid HPO terms: HP:0100258',
             'NA19679 is the mother of NA19674 but is not included. Make sure to create an additional record with NA19679 as the Individual ID',
         ])
 
@@ -699,7 +703,8 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertEqual(response_json['errors'],
-                         ['The following samples are included in the pedigree file but are missing from the VCF: NA19679'])
+                         ['The following samples are included in the pedigree file but are missing from the VCF: NA19679, HG00736',
+                          'The following families do not have any affected individuals: 22'])
 
     def _assert_valid_operation(self, project, test_add_data=True):
         genome_version = 'GRCh37' if test_add_data else 'GRCh38'
@@ -798,19 +803,21 @@ class LoadAnvilDataAPITest(AirflowTestCase):
 
         individual_model_data = list(Individual.objects.filter(family__project=project).values(
             'family__family_id', 'individual_id', 'mother__individual_id', 'father__individual_id', 'sex', 'affected', 'notes',
+            'features',
         ))
         self.assertEqual(len(individual_model_data), 15 if test_add_data else 3)
         self.assertIn({
             'family__family_id': '21', 'individual_id': 'HG00735', 'mother__individual_id': None,
-            'father__individual_id': None, 'sex': 'U', 'affected': 'U', 'notes': None,
+            'father__individual_id': None, 'sex': 'U', 'affected': 'A', 'notes': None, 'features': [{'id': 'HP:0001508'}],
         }, individual_model_data)
         self.assertIn({
             'family__family_id': '1', 'individual_id': 'NA19675_1', 'mother__individual_id': None,
             'father__individual_id': 'NA19678', 'sex': 'F', 'affected': 'A', 'notes': 'A affected individual, test1-zsf',
+            'features': [{'id': 'HP:0012469'}, {'id': 'HP:0011675'}],
         }, individual_model_data)
         self.assertIn({
             'family__family_id': '1', 'individual_id': 'NA19678', 'mother__individual_id': None,
-            'father__individual_id': None, 'sex': 'M', 'affected': 'N', 'notes': 'a individual note'
+            'father__individual_id': None, 'sex': 'M', 'affected': 'N', 'notes': 'a individual note', 'features': [],
         }, individual_model_data)
 
     def _test_mv_file_and_triggering_dag_exception(self, url, workspace, sample_data, genome_version, request_body, num_samples=None):

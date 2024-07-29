@@ -20,7 +20,8 @@ from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _t
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_individuals, add_individual_hpo_details, \
     _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username, INDIVIDUAL_DISPLAY_NAME_EXPR, \
     GREGOR_FINDING_TAG_TYPE
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, parse_hpo_terms, \
+    get_valid_hpo_terms, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, external_anvil_project_can_edit, \
     pm_or_data_manager_required, check_workspace_perm
@@ -382,7 +383,7 @@ INDIVIDUAL_ID_COL = 'individual_id'
 INDIVIDUAL_GUID_COL = 'individual_guid'
 HPO_TERM_NUMBER_COL = 'hpo_number'
 AFFECTED_FEATURE_COL = 'affected'
-FEATURES_COL = 'features'
+FEATURES_COL = JsonConstants.FEATURES
 ABSENT_FEATURES_COL = 'absent_features'
 BIRTH_COL = 'birth_year'
 DEATH_COL = 'death_year'
@@ -435,8 +436,8 @@ def _gene_list_value(val):
 
 
 INDIVIDUAL_METADATA_FIELDS = {
-    FEATURES_COL: lambda val: [{'id': feature} for feature in set(val)],
-    ABSENT_FEATURES_COL: lambda val: [{'id': feature} for feature in val],
+    FEATURES_COL: list,
+    ABSENT_FEATURES_COL: list,
     BIRTH_COL: int,
     DEATH_COL: int,
     ONSET_AGE_COL: lambda val: Individual.ONSET_AGE_REVERSE_LOOKUP[val],
@@ -466,7 +467,7 @@ def _nested_val(nested_key):
 
 def _get_phenotips_features(observed):
     def get_observed_features(features):
-        return [feature['id'] for feature in features if feature['observed'] == observed]
+        return [{'id': feature['id']} for feature in features if feature['observed'] == observed]
     return get_observed_features
 
 PHENOTIPS_JSON_FIELD_MAP = {
@@ -587,8 +588,8 @@ def _process_hpo_records(records, filename, project, user):
 
         if FEATURES_COL in column_map or ABSENT_FEATURES_COL in column_map:
             for row in row_dicts:
-                row[FEATURES_COL] = _parse_hpo_terms(row.get(FEATURES_COL))
-                row[ABSENT_FEATURES_COL] = _parse_hpo_terms(row.get(ABSENT_FEATURES_COL))
+                row[FEATURES_COL] = parse_hpo_terms(row.get(FEATURES_COL))
+                row[ABSENT_FEATURES_COL] = parse_hpo_terms(row.get(ABSENT_FEATURES_COL))
 
         elif HPO_TERM_NUMBER_COL in column_map:
             aggregate_rows = defaultdict(lambda: {FEATURES_COL: set(), ABSENT_FEATURES_COL: set()})
@@ -603,30 +604,20 @@ def _process_hpo_records(records, filename, project, user):
                 aggregate_entry.update({k: v for k, v in row.items() if v})
 
             row_dicts = [
-                {**entry, FEATURES_COL: list(entry[FEATURES_COL]), ABSENT_FEATURES_COL: list(entry[ABSENT_FEATURES_COL])}
+                {**entry, **{col: [{'id': feature} for feature in entry[col]] for col in [FEATURES_COL, ABSENT_FEATURES_COL]}}
                 for entry in aggregate_rows.values()
             ]
 
     return _parse_individual_hpo_terms(row_dicts, project, user)
 
 
-def _parse_hpo_terms(hpo_term_string):
-    if not hpo_term_string:
-        return []
-    return [hpo_term.strip() for hpo_term in re.sub(r'\(.*?\)', '', hpo_term_string).replace(',', ';').split(';')]
-
-
 def _has_same_features(individual, present_features, absent_features):
-    return {feature['id'] for feature in individual.features or []} == set(present_features or []) and \
-           {feature['id'] for feature in individual.absent_features or []} == set(absent_features or [])
+    return {feature['id'] for feature in individual.features or []} == {feature['id'] for feature in present_features or []} and \
+           {feature['id'] for feature in individual.absent_features or []} == {feature['id'] for feature in absent_features or []}
 
 
 def _get_valid_hpo_terms(json_records):
-    all_hpo_terms = set()
-    for record in json_records:
-        all_hpo_terms.update(record.get(FEATURES_COL, []))
-        all_hpo_terms.update(record.get(ABSENT_FEATURES_COL, []))
-    return set(HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms).values_list('hpo_id', flat=True))
+    return get_valid_hpo_terms(json_records, additional_feature_columns=[ABSENT_FEATURES_COL])
 
 
 def _parse_individual_hpo_terms(json_records, project, user):
@@ -699,14 +690,11 @@ def _get_record_individual(record, individual_lookup):
 
 def _remove_invalid_hpo_terms(record, hpo_terms):
     invalid_terms = set()
-    for feature in record.get(FEATURES_COL, []):
-        if feature not in hpo_terms:
-            invalid_terms.add(feature)
-            record[FEATURES_COL].remove(feature)
-    for feature in record.get(ABSENT_FEATURES_COL, []):
-        if feature not in hpo_terms:
-            invalid_terms.add(feature)
-            record[ABSENT_FEATURES_COL].remove(feature)
+    for col in [FEATURES_COL, ABSENT_FEATURES_COL]:
+        for feature in record.get(col, []):
+            if feature['id'] not in hpo_terms:
+                invalid_terms.add(feature['id'])
+                record[col].remove(feature)
     return invalid_terms
 
 
@@ -853,12 +841,12 @@ def import_gregor_metadata(request, project_guid):
         lambda r: r['participant_id'] in individuals_by_participant and r['ontology'] == 'HPO' and r['presence'] in {'Present', 'Absent'},
     ):
         col = FEATURES_COL if row['presence'] == 'Present' else ABSENT_FEATURES_COL
-        individuals_by_participant[row['participant_id']][col].append(row['term_id'])
+        individuals_by_participant[row['participant_id']][col].append({'id': row['term_id']})
     hpo_terms = _get_valid_hpo_terms(individuals)
     invalid_hpo_terms = set()
     for row in individuals:
         invalid_hpo_terms.update(_remove_invalid_hpo_terms(row, hpo_terms))
-        row.update({k: INDIVIDUAL_METADATA_FIELDS[k](v) for k, v in row.items() if k in [FEATURES_COL, ABSENT_FEATURES_COL]})
+        row.update({k: row[k] for k in [FEATURES_COL, ABSENT_FEATURES_COL] if k in row})
     if invalid_hpo_terms:
         warnings.append(f"Skipped the following unrecognized HPO terms: {', '.join(sorted(invalid_hpo_terms))}")
 
