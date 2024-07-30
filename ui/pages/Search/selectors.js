@@ -10,6 +10,7 @@ import {
   getCurrentSearchParams,
   getUser,
   getProjectDatasetTypes,
+  getSearchFamiliesByHash,
 } from 'redux/selectors'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
@@ -66,9 +67,10 @@ export const getProjectFamilies = createSelector(
 
 export const getMultiProjectFamilies = createSelector(
   (state, props) => props.match.params,
-  params => ({
-    projectFamilies: params.families.split(':').map(f => f.split(';')).map(
-      ([projectGuid, familyGuids]) => ({ projectGuid, familyGuids: familyGuids.split(',') }),
+  getSearchFamiliesByHash,
+  (params, searchFamiliesByHash) => ({
+    projectFamilies: Object.entries(searchFamiliesByHash[params.familiesHash] || {}).map(
+      ([projectGuid, familyGuids]) => ({ projectGuid, familyGuids }),
     ),
   }),
 )

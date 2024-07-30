@@ -1,7 +1,9 @@
 import React from 'react'
-import { NavLink } from 'react-router-dom'
+import { connect } from 'react-redux'
+import PropTypes from 'prop-types'
 import { Divider, Button, Header } from 'semantic-ui-react'
 
+import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import { NoHoverFamilyLink } from 'shared/components/buttons/FamilyLink'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import { Phenotypes } from 'shared/components/panel/MatchmakerPanel'
@@ -12,7 +14,6 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { GENOME_VERSION_LOOKUP } from 'shared/utils/constants'
 
 const SEARCH_CATEGORIES = ['hpo_terms']
-const MAX_SEARCH_FAMILIES = 500
 const ID_FIELD = 'individualGuid'
 const COLUMNS = [
   {
@@ -30,7 +31,9 @@ const COLUMNS = [
 
 class Hpo extends React.PureComponent {
 
-  static propTypes = {}
+  static propTypes = {
+    navigateSearch: PropTypes.func.isRequired,
+  }
 
   state = {
     data: [],
@@ -71,6 +74,7 @@ class Hpo extends React.PureComponent {
 
   render() {
     const { terms, data, loading, error } = this.state
+    const { navigateSearch } = this.props
 
     const familiesByGenomeVersion = data.reduce((acc, { familyData }) => {
       if (!acc[familyData.genomeVersion]) {
@@ -84,9 +88,9 @@ class Hpo extends React.PureComponent {
       (acc, families) => acc + Object.keys(families).length, 0,
     )
 
-    const genomeSearchPaths = Object.entries(familiesByGenomeVersion).map(([genomeVersion, familyAcc]) => {
+    const genomeProjectFamilies = Object.entries(familiesByGenomeVersion).map(([genomeVersion, familyAcc]) => {
       const families = Object.entries(familyAcc)
-      const searchPath = families.length < MAX_SEARCH_FAMILIES ? Object.entries(families.reduce(
+      const projectFamilies = families.reduce(
         (acc, [familyGuid, projectGuid]) => {
           if (!acc[projectGuid]) {
             acc[projectGuid] = []
@@ -94,8 +98,8 @@ class Hpo extends React.PureComponent {
           acc[projectGuid].push(familyGuid)
           return acc
         }, {},
-      )).map(([projectGuid, familyGuids]) => `${projectGuid};${familyGuids.join(',')}`).join(':') : ''
-      return [genomeVersion, searchPath]
+      )
+      return [genomeVersion, projectFamilies]
     })
 
     return (
@@ -124,14 +128,12 @@ class Hpo extends React.PureComponent {
           <Header size="medium">
             <Header.Content>{`${numFamilies} Families, ${data.length} Individuals`}</Header.Content>
             <Header.Subheader>
-              {genomeSearchPaths.map(([genomeVersion, searchPath]) => (
+              {genomeProjectFamilies.map(([genomeVersion, projectFamilies]) => (
                 <span key={genomeVersion}>
                   {`${GENOME_VERSION_LOOKUP[genomeVersion]}: `}
                   <ButtonLink
-                    as={NavLink}
-                    disabled={!searchPath}
-                    target="_blank"
-                    to={`/variant_search/families/${searchPath}`}
+                    onClick={navigateSearch}
+                    projectFamilies={projectFamilies}
                   >
                     {`Variant Search - ${Object.keys(familiesByGenomeVersion[genomeVersion]).length} Families`}
                   </ButtonLink>
@@ -155,4 +157,16 @@ class Hpo extends React.PureComponent {
 
 }
 
-export default Hpo
+const mapDispatchToProps = dispatch => ({
+  navigateSearch: (e, { projectFamilies }) => {
+    e.stopPropagation()
+    dispatch(navigateSavedHashedSearch(
+      projectFamilies,
+      resultsLink => window.open(resultsLink, '_blank'),
+      '/variant_search/families',
+      'searchFamiliesByHash',
+    ))
+  },
+})
+
+export default connect(null, mapDispatchToProps)(Hpo)
