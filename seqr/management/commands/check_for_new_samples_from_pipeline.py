@@ -108,7 +108,7 @@ class Command(BaseCommand):
             )
             project_families = project_sample_data['family_guids']
             updated_families.update(project_families)
-            updated_project_families.append((project.id, project.name, project_families))
+            updated_project_families.append((project.id, project.name, project.genome_version, project_families))
 
         # Send failure notifications
         failed_family_samples = metadata.get('failed_family_samples', {})
@@ -154,8 +154,8 @@ class Command(BaseCommand):
             updated_annotation_samples = updated_annotation_samples.filter(sample_type=data_type.split('_')[1])
 
         variant_models = get_saved_variants(
+            genome_version, dataset_type=dataset_type,
             family_guids=updated_annotation_samples.values_list('individual__family__guid', flat=True).distinct(),
-            dataset_type=dataset_type, genome_version=genome_version,
         )
 
         if not variant_models:
