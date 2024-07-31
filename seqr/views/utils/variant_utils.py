@@ -66,13 +66,24 @@ def update_projects_saved_variant_json(projects, user_email, **kwargs):
     return updated_variants_by_id
 
 
-def update_project_saved_variant_json(project_id, family_guids=None, dataset_type=None, user=None, user_email=None):
-    saved_variants = SavedVariant.objects.filter(family__project_id=project_id).select_related('family')
+def get_saved_variants(project_id=None, family_guids=None, dataset_type=None, genome_version=None):
+    saved_variants = SavedVariant.objects.all()
+    if project_id:
+        saved_variants = saved_variants.filter(family__project_id=project_id)
     if family_guids:
         saved_variants = saved_variants.filter(family__guid__in=family_guids)
-
     if dataset_type:
         saved_variants = saved_variants.filter(**saved_variants_dataset_type_filter(dataset_type))
+    if genome_version:
+        db_genome_version = genome_version.replace('GRCh', '')
+        saved_variants = saved_variants.filter(
+            Q(saved_variant_json__genomeVersion__isnull=True) | Q(saved_variant_json__genomeVersion=db_genome_version)
+        )
+    return saved_variants
+
+
+def update_project_saved_variant_json(project_id, family_guids=None, dataset_type=None, user=None, user_email=None):
+    saved_variants = get_saved_variants(project_id, family_guids, dataset_type).select_related('family')
 
     if not saved_variants:
         return None
