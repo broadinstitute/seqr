@@ -303,7 +303,7 @@ def update_saved_variant_json(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     reset_cached_search_results(project)
     try:
-        updated_saved_variant_guids = update_project_saved_variant_json(project.id, user=request.user)
+        updated_saved_variant_guids = update_project_saved_variant_json(project.id, project.genome_version, user=request.user)
     except Exception as e:
         logger.error('Unable to reset saved variant json for {}: {}'.format(project_guid, e))
         updated_saved_variant_guids = []

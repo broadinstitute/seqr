@@ -906,7 +906,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Unable to find the following variant(s): not_variant'})
 
-    @mock.patch('seqr.views.utils.variant_utils.MAX_VARIANTS_FETCH', 3)
+    @mock.patch('seqr.views.utils.variant_utils.MAX_VARIANTS_FETCH', 2)
     @mock.patch('seqr.utils.search.utils.es_backend_enabled')
     @mock.patch('seqr.views.apis.saved_variant_api.logger')
     @mock.patch('seqr.views.utils.variant_utils.get_variants_for_variant_ids')
@@ -925,12 +925,12 @@ class SavedVariantAPITest(object):
         self.assertDictEqual(
             response.json(),
             {'SV0000002_1248367227_r0390_100': None, 'SV0000001_2103343353_r0390_100': None,
-            'SV0059957_11562437_f019313_1': None, 'SV0059956_11560662_f019313_1': None}
+            'SV0059956_11560662_f019313_1': None}
         )
 
         families = [Family.objects.get(guid='F000001_1'), Family.objects.get(guid='F000002_2')]
         mock_get_variants.assert_has_calls([
-            mock.call(families, ['1-1562437-G-CA', '1-248367227-TC-T', '1-46859832-G-A'], user=self.manager_user, user_email=None),
+            mock.call(families, ['1-248367227-TC-T', '1-46859832-G-A'], user=self.manager_user, user_email=None),
             mock.call(families, ['21-3343353-GAGA-G'], user=self.manager_user, user_email=None),
         ])
         mock_logger.error.assert_not_called()

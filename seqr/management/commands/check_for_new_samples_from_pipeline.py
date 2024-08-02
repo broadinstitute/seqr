@@ -15,7 +15,7 @@ from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
-    saved_variants_dataset_type_filter
+    get_saved_variants
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ class Command(BaseCommand):
             )
             project_families = project_sample_data['family_guids']
             updated_families.update(project_families)
-            updated_project_families.append((project.id, project.name, project_families))
+            updated_project_families.append((project.id, project.name, project.genome_version, project_families))
 
         # Send failure notifications
         failed_family_samples = metadata.get('failed_family_samples', {})
@@ -153,10 +153,10 @@ class Command(BaseCommand):
         if is_sv:
             updated_annotation_samples = updated_annotation_samples.filter(sample_type=data_type.split('_')[1])
 
-        variant_models = SavedVariant.objects.filter(
-            family_id__in=updated_annotation_samples.values_list('individual__family', flat=True).distinct(),
-            **saved_variants_dataset_type_filter(dataset_type),
-        ).filter(Q(saved_variant_json__genomeVersion__isnull=True) | Q(saved_variant_json__genomeVersion=db_genome_version))
+        variant_models = get_saved_variants(
+            genome_version, dataset_type=dataset_type,
+            family_guids=updated_annotation_samples.values_list('individual__family__guid', flat=True).distinct(),
+        )
 
         if not variant_models:
             logger.info('No additional saved variants to update')
