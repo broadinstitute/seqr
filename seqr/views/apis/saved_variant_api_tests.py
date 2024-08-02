@@ -25,10 +25,12 @@ COMPOUND_HET_1_GUID = 'SV0059956_11560662_f019313_1'
 COMPOUND_HET_2_GUID = 'SV0059957_11562437_f019313_1'
 GENE_GUID_2 = 'ENSG00000197530'
 
+VARIANT_TAG_RESPONSE_KEYS = {
+    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
+}
 SAVED_VARIANT_RESPONSE_KEYS = {
-    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'familiesByGuid',
+    *VARIANT_TAG_RESPONSE_KEYS, 'familiesByGuid', 'omimIntervals',
     'genesById', 'locusListsByGuid', 'rnaSeqData', 'mmeSubmissionsByGuid', 'transcriptsById', 'phenotypeGeneScores',
-    'omimIntervals',
 }
 
 COMPOUND_HET_3_JSON = {
@@ -235,6 +237,10 @@ class SavedVariantAPITest(object):
         # get variants with no tags for whole project
         response = self.client.get('{}?includeNoteVariants=true'.format(url))
         self.assertEqual(response.status_code, 200)
+        no_families_response_keys = {*SAVED_VARIANT_RESPONSE_KEYS}
+        no_families_response_keys.remove('familiesByGuid')
+        no_families_response_keys.remove('transcriptsById')
+        self.assertSetEqual(set(response.json().keys()), no_families_response_keys)
         variants = response.json()['savedVariantsByGuid']
         self.assertSetEqual(set(variants.keys()), {COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID})
         self.assertListEqual(variants[COMPOUND_HET_1_GUID]['tagGuids'], [])
@@ -266,10 +272,7 @@ class SavedVariantAPITest(object):
         response = self.client.get(url.replace(PROJECT_GUID, 'R0003_test'))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        response_keys = {*SAVED_VARIANT_RESPONSE_KEYS}
-        response_keys.remove('familiesByGuid')
-        response_keys.remove('transcriptsById')
-        self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertSetEqual(set(response_json.keys()), no_families_response_keys)
 
         self.assertSetEqual(
             set(response_json['savedVariantsByGuid'].keys()),
@@ -329,6 +332,17 @@ class SavedVariantAPITest(object):
         self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['discoveryTags'], discovery_tags)
         self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['familyGuids'], ['F000002_2'])
         self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2', 'F000012_12'})
+
+        # Test empty project
+        empty_project_url = url.replace(PROJECT_GUID, 'R0002_empty')
+        response = self.client.get(empty_project_url)
+        self.assertEqual(response.status_code, 200)
+        empty_response = {k: {} for k in VARIANT_TAG_RESPONSE_KEYS}
+        self.assertDictEqual(response.json(), empty_response)
+
+        response = self.client.get(f'{empty_project_url}?loadProjectTagTypes=true&loadFamilyContext=true')
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), empty_response)
 
     def test_create_saved_variant(self):
         create_saved_variant_url = reverse(create_saved_variant_handler)
@@ -410,9 +424,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'genesById',
-        })
+        self.assertSetEqual(set(response_json.keys()), {*VARIANT_TAG_RESPONSE_KEYS, 'genesById'})
         self.assertEqual(len(response_json['savedVariantsByGuid']), 1)
         variant_guid = next(iter(response_json['savedVariantsByGuid']))
 
@@ -999,8 +1011,10 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)
         self.mock_list_workspaces.assert_called_with(self.analyst_user)
         self.mock_get_ws_access_level.assert_called_with(
+            mock.ANY, 'my-seqr-billing', 'empty')
+        self.mock_get_ws_access_level.assert_any_call(
             mock.ANY, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 15)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 17)
         self.mock_get_groups.assert_has_calls([mock.call(self.collaborator_user), mock.call(self.analyst_user)])
         self.assertEqual(self.mock_get_groups.call_count, 11)
         self.mock_get_ws_acl.assert_not_called()

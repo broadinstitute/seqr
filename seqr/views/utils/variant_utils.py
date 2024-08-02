@@ -383,6 +383,9 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         if saved_variants is not None else {'savedVariantsByGuid': {}}
 
     variants = list(response['savedVariantsByGuid'].values()) if response_variants is None else response_variants
+    if not variants:
+        return response
+
     genes, transcripts, family_genes = _saved_variant_genes_transcripts(variants)
 
     projects = Project.objects.filter(family__guid__in=family_genes.keys()).distinct()
