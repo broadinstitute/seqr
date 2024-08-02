@@ -813,7 +813,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         self.assertIn({
             'family__family_id': '1', 'individual_id': 'NA19675_1', 'mother__individual_id': None,
             'father__individual_id': 'NA19678', 'sex': 'F', 'affected': 'A', 'notes': 'A affected individual, test1-zsf',
-            'features': [{'id': 'HP:0012469'}, {'id': 'HP:0011675'}],
+            'features': [{'id': 'HP:0011675'}, {'id': 'HP:0012469'}],
         }, individual_model_data)
         self.assertIn({
             'family__family_id': '1', 'individual_id': 'NA19678', 'mother__individual_id': None,
