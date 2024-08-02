@@ -116,7 +116,7 @@ Before running seqr, make sure the following are currently running/ started:
   - If you want ES running but do not need production data/ are working with a standalone seqr instance, 
   use docker-compose
     ```bash
-    docker-compose up elasticsearch
+    docker compose up elasticsearch
     ```
     
 ### Run ui asset server
