@@ -336,7 +336,7 @@ def load_rna_seq_sample_data(request, sample_guid):
         return create_json_response({'error': error}, status=400)
 
     model_cls = config['model_class']
-    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_rows])
+    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_rows], batch_size=1000)
     update_model_from_json(sample, {'is_active': True}, user=request.user)
 
     return create_json_response({'success': True})
@@ -451,6 +451,10 @@ LOADABLE_PDO_STATUSES = [
     'On hold for phenotips, but ready to load',
     'Methods (Loading)',
 ]
+AVAILABLE_PDO_STATUSES = {
+    'Available in seqr',
+    'Historic',
+}
 
 
 @pm_or_data_manager_required
@@ -494,7 +498,7 @@ def _fetch_airtable_loadable_project_samples(user):
     project_samples = defaultdict(set)
     for pdo in pdos.values():
         project_guid = re.match(
-            'https://seqr.broadinstitute.org/project/([^/]+)/project_page', pdo['SeqrProjectURL'],
+            f'{BASE_URL}project/([^/]+)/project_page', pdo['SeqrProjectURL'],
         ).group(1)
         project_samples[project_guid].update([
             sample_id for sample_id in pdo['PassingCollaboratorSampleIDs'] + pdo['SeqrIDs'] if sample_id
@@ -518,7 +522,7 @@ def load_data(request):
     additional_project_files = None
     individual_ids = None
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        individual_ids = _get_valid_project_samples(project_samples, sample_type)
+        individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
         additional_project_files = {
             project_guid: (f'{project_guid}_ids', ['s'], [{'s': sample_id} for sample_id in sample_ids])
             for project_guid, sample_ids in project_samples.items()
@@ -534,7 +538,7 @@ def load_data(request):
     return create_json_response({'success': True})
 
 
-def _get_valid_project_samples(project_samples, sample_type):
+def _get_valid_project_samples(project_samples, sample_type, user):
     individuals = {
         (i['project'], i['individual_id']): i for i in Individual.objects.filter(family__project__guid__in=project_samples).values(
             'id', 'individual_id',
@@ -560,11 +564,21 @@ def _get_valid_project_samples(project_samples, sample_type):
     if missing_samples:
         errors.append(f'The following samples are included in airtable but missing from seqr: {", ".join(missing_samples)}')
 
-    missing_family_samples = defaultdict(list)
+    missing_samples = {}
     for (project, sample_id), individual in individuals.items():
         family_key = (project, individual['family_name'])
         if sample_id not in project_samples[project] and family_key in airtable_families and individual['sampleCount']:
-            missing_family_samples[family_key].append(sample_id)
+            missing_samples[(project, sample_id)] = individual
+
+    loaded_samples = _get_loaded_samples(missing_samples.keys(), user) if missing_samples else []
+
+    missing_family_samples = defaultdict(list)
+    for (project, sample_id), individual in missing_samples.items():
+        if (project, sample_id) in loaded_samples:
+            individual_ids.append(individual['id'])
+            project_samples[project].append(sample_id)
+        else:
+            missing_family_samples[(project, individual['family_name'])].append(sample_id)
 
     if missing_family_samples:
         family_errors = [
@@ -576,6 +590,19 @@ def _get_valid_project_samples(project_samples, sample_type):
         raise ErrorsWarningsException(errors)
 
     return individual_ids
+
+
+def _get_loaded_samples(project_samples, user):
+    sample_ids = [sample_id for _, sample_id in project_samples]
+    samples_by_id = AirtableSession(user).get_samples_for_sample_ids(sample_ids, ['PDOStatus', 'SeqrProject'])
+    return [(project, sample_id) for project, sample_id in project_samples if any(
+        _is_loaded_airtable_sample(s, project) for s in samples_by_id.get(sample_id, [])
+    )]
+
+
+def _is_loaded_airtable_sample(sample, project_guid):
+    return f'{BASE_URL}project/{project_guid}/project_page' in sample['SeqrProject'] and any(
+        status in AVAILABLE_PDO_STATUSES for status in sample['PDOStatus'])
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

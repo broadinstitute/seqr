@@ -26,10 +26,12 @@ EXPECTED_MME_DETAILS_METRICS = {
     u'dateGenerated': '2020-04-27'
 }
 
+VARIANT_TAG_RESPONSE_KEYS = {
+    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
+}
 SAVED_VARIANT_RESPONSE_KEYS = {
-    'projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById',
-    'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid', 'familyNotesByGuid',
-    'mmeSubmissionsByGuid', 'transcriptsById',
+    *VARIANT_TAG_RESPONSE_KEYS, 'projectsByGuid', 'locusListsByGuid', 'genesById',
+    'individualsByGuid', 'familiesByGuid', 'familyNotesByGuid', 'mmeSubmissionsByGuid', 'transcriptsById',
 }
 
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
@@ -317,7 +319,7 @@ class SummaryDataAPITest(AirtableTest):
 
         response = self.client.get('{}?gene=ENSG00000135953'.format(url))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {k: {} for k in SAVED_VARIANT_RESPONSE_KEYS if k != 'transcriptsById'})
+        self.assertDictEqual(response.json(), {k: {} for k in VARIANT_TAG_RESPONSE_KEYS})
 
         self.login_manager()
         response = self.client.get(url)

@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { getProjectsByGuid, getFamiliesByGuid, getAnalysisGroupsByGuid, getSearchesByHash } from 'redux/selectors'
+import { getProjectsByGuid, getFamiliesByGuid, getAnalysisGroupsByGuid, getSearchesByHash, getSearchFamiliesByHash } from 'redux/selectors'
 import PageHeaderLayout from 'shared/components/page/PageHeaderLayout'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -19,7 +19,14 @@ const PAGE_CONFIGS = {
     entity: analysisGroupsByGuid[entityGuid],
     entityUrlPath: `analysis_group/${entityGuid}`,
   }),
-  families: entityGuid => ({ description: `Searching in ${entityGuid.split(/[,:]/).length} Families` }),
+  families: (entityGuid, p, f, a, s, searchFamiliesByHash) => {
+    const numFamilies = Object.values(searchFamiliesByHash[entityGuid] || {}).reduce(
+      (acc, familyGuids) => acc + familyGuids.length, 0,
+    )
+    return {
+      description: `Searching in ${numFamilies} Families`,
+    }
+  },
   results: (entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash) => {
     const { projectFamilies } = searchesByHash[entityGuid] || {}
     let pageType
@@ -62,12 +69,15 @@ const PAGE_CONFIGS = {
   variant: entityGuid => ({ entity: { name: entityGuid } }),
 }
 
-const getPageHeaderProps = ({ projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash, match }) => {
+const getPageHeaderProps = (
+  { projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash, searchFamiliesByHash, match },
+) => {
   const { pageType, entityGuid, subPageType, subEntityGuid } = match.params
 
   const breadcrumbIdSections = []
   const { entity, entityUrlPath, actualPageType, description } = PAGE_CONFIGS[subPageType || pageType](
     subEntityGuid || entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash,
+    searchFamiliesByHash,
   )
   if (entity) {
     const project = projectsByGuid[entity.projectGuid || entityGuid]
@@ -90,6 +100,7 @@ PageHeader.propTypes = {
   familiesByGuid: PropTypes.object,
   analysisGroupsByGuid: PropTypes.object,
   searchesByHash: PropTypes.object,
+  searchFamiliesByHash: PropTypes.object,
   match: PropTypes.object,
 }
 
@@ -98,6 +109,7 @@ const mapStateToProps = state => ({
   familiesByGuid: getFamiliesByGuid(state),
   analysisGroupsByGuid: getAnalysisGroupsByGuid(state),
   searchesByHash: getSearchesByHash(state),
+  searchFamiliesByHash: getSearchFamiliesByHash(state),
 })
 
 export default connect(mapStateToProps)(PageHeader)

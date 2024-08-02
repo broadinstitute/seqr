@@ -2,11 +2,13 @@
 import difflib
 import os
 import json
+import re
 import tempfile
 import openpyxl as xl
 from collections import defaultdict
 from datetime import date
 
+from reference_data.models import HumanPhenotypeOntology
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
@@ -77,9 +79,12 @@ def parse_pedigree_table(parsed_file, filename, user, project):
     return json_records, warnings
 
 
-def parse_basic_pedigree_table(project, parsed_file, filename, required_columns=None):
+def parse_basic_pedigree_table(project, parsed_file, filename, required_columns=None, update_features=False):
     rows, header = _parse_pedigree_table_rows(parsed_file, filename)
-    return _parse_pedigree_table_json(project, rows, header=header, fail_on_warnings=True, required_columns=required_columns, allow_id_update=False)
+    return _parse_pedigree_table_json(
+        project, rows, header=header, fail_on_warnings=True, allow_id_update=False,
+        required_columns=required_columns, update_features=update_features,
+    )
 
 
 def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
@@ -110,15 +115,15 @@ def _parse_pedigree_table_rows(parsed_file, filename, header=None, rows=None):
         raise ErrorsWarningsException(['Error while parsing file: {}. {}'.format(filename, e)], [])
 
 
-def _parse_pedigree_table_json(project, rows, header=None, column_map=None, errors=None, fail_on_warnings=False, required_columns=None, allow_id_update=True):
+def _parse_pedigree_table_json(project, rows, header=None, column_map=None, errors=None, fail_on_warnings=False, required_columns=None, allow_id_update=True, update_features=False):
     # convert to json and validate
-    column_map = column_map or (_parse_header_columns(header, allow_id_update) if header else None)
+    column_map = column_map or (_parse_header_columns(header, allow_id_update, update_features) if header else None)
     if column_map:
-        json_records = _convert_fam_file_rows_to_json(column_map, rows, required_columns=required_columns)
+        json_records = _convert_fam_file_rows_to_json(column_map, rows, required_columns=required_columns, update_features=update_features)
     else:
         json_records = rows
 
-    warnings = validate_fam_file_records(project, json_records, fail_on_warnings=fail_on_warnings, errors=errors)
+    warnings = validate_fam_file_records(project, json_records, fail_on_warnings=fail_on_warnings, errors=errors, update_features=update_features)
     return json_records, warnings
 
 
@@ -142,7 +147,14 @@ def _parse_affected(affected):
     return None
 
 
-def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
+def parse_hpo_terms(hpo_term_string):
+    if not hpo_term_string:
+        return []
+    terms = {hpo_term.strip() for hpo_term in re.sub(r'\(.*?\)', '', hpo_term_string).replace(',', ';').split(';')}
+    return[{'id': term} for term in sorted(terms) if term]
+
+
+def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None, update_features=False):
     """Parse the values in rows and convert them to a json representation.
 
     Args:
@@ -170,10 +182,11 @@ def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
         ValueError: if there are unexpected values or row sizes
     """
     required_columns = [JsonConstants.FAMILY_ID_COLUMN, JsonConstants.INDIVIDUAL_ID_COLUMN] + (required_columns or [])
-    missing_cols = set(required_columns) - set(column_map.values())
+    missing_cols = [_to_title_case(_to_snake_case(col)) for col in set(required_columns) - set(column_map.values())]
+    if update_features and JsonConstants.FEATURES not in column_map.values():
+        missing_cols.append('HPO Terms')
     if missing_cols:
-        raise ErrorsWarningsException(
-            [f"Missing required columns: {', '.join([_to_title_case(_to_snake_case(col)) for col in sorted(missing_cols)])}"])
+        raise ErrorsWarningsException([f"Missing required columns: {', '.join(sorted(missing_cols))}"])
 
     json_results = []
     errors = []
@@ -200,7 +213,7 @@ def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
     return json_results
 
 
-def _parse_header_columns(header, allow_id_update):
+def _parse_header_columns(header, allow_id_update, update_features):
     column_map = {}
     for key in header:
         column = None
@@ -215,6 +228,8 @@ def _parse_header_columns(header, allow_id_update):
         elif 'indiv' in key and 'previous' in key:
             if allow_id_update:
                 column = JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN
+        elif update_features and 'hpo' in key and 'term' in key:
+            column = JsonConstants.FEATURES
         else:
             column = next((
                 col for col, substrings in JsonConstants.COLUMN_SUBSTRINGS
@@ -229,7 +244,7 @@ def _parse_header_columns(header, allow_id_update):
 def _format_value(value, column):
     format_func = JsonConstants.FORMAT_COLUMNS.get(column)
     if format_func:
-        if (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
+        if (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN, JsonConstants.FEATURES}):
             value = format_func(value)
             if value is None and column not in JsonConstants.NULLABLE_COLUMNS:
                 raise ValueError()
@@ -238,7 +253,7 @@ def _format_value(value, column):
     return value
 
 
-def validate_fam_file_records(project, records, fail_on_warnings=False, errors=None, clear_invalid_values=False):
+def validate_fam_file_records(project, records, fail_on_warnings=False, errors=None, clear_invalid_values=False, update_features=False):
     """Basic validation such as checking that parents have the same family id as the child, etc.
 
     Args:
@@ -258,6 +273,8 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
 
     loaded_individual_families = dict(Individual.objects.filter(
         family__project=project, sample__is_active=True).values_list('individual_id', 'family__family_id'))
+
+    hpo_terms = get_valid_hpo_terms(records) if update_features else None
 
     errors = errors or []
     warnings = []
@@ -298,6 +315,14 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
         ]:
             _validate_parent(r, *parent, individual_id, family_id, records_by_id, warnings, errors, clear_invalid_values)
 
+        if update_features:
+            features = r[JsonConstants.FEATURES] or []
+            if not features and r[JsonConstants.AFFECTED_COLUMN] == Individual.AFFECTED_STATUS_AFFECTED:
+                errors.append(f'{individual_id} is affected but has no HPO terms')
+            invalid_features = {feature['id'] for feature in features if feature['id'] not in hpo_terms}
+            if invalid_features:
+                errors.append(f'{individual_id} has invalid HPO terms: {", ".join(sorted(invalid_features))}')
+
     errors += [
         f'{individual_id} is included as {count} separate records, but must be unique within the project'
         for individual_id, count in individual_id_counts.items() if count > 1
@@ -309,6 +334,15 @@ def validate_fam_file_records(project, records, fail_on_warnings=False, errors=N
     if errors:
         raise ErrorsWarningsException(errors, warnings)
     return warnings
+
+
+def get_valid_hpo_terms(records, additional_feature_columns=None):
+    all_hpo_terms = set()
+    for record in records:
+        all_hpo_terms.update({feature['id'] for feature in record.get(JsonConstants.FEATURES, [])})
+        for col in (additional_feature_columns or []):
+            all_hpo_terms.update({feature['id'] for feature in record.get(col, [])})
+    return set(HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms).values_list('hpo_id', flat=True))
 
 
 def _validate_parent(row, parent_id_type, parent_id_field, expected_sex, individual_id, family_id, records_by_id, warnings, errors, clear_invalid_values):
@@ -808,6 +842,7 @@ class JsonConstants:
     PRIMARY_BIOSAMPLE = 'primaryBiosample'
     ANALYTE_TYPE = 'analyteType'
     TISSUE_AFFECTED_STATUS = 'tissueAffectedStatus'
+    FEATURES = 'features'
 
     JSON_COLUMNS = {MATERNAL_ETHNICITY, PATERNAL_ETHNICITY, BIRTH_YEAR, DEATH_YEAR, ONSET_AGE, AFFECTED_RELATIVES}
     NULLABLE_COLUMNS = {TISSUE_AFFECTED_STATUS}
@@ -823,6 +858,7 @@ class JsonConstants:
             (code for code, uberon_code in Individual.BIOSAMPLE_CHOICES if value.startswith(uberon_code)), None),
         ANALYTE_TYPE: Individual.ANALYTE_REVERSE_LOOKUP.get,
         TISSUE_AFFECTED_STATUS: lambda value: {'Yes': True, 'No': False, 'Unknown': None}[value],
+        FEATURES: parse_hpo_terms,
     }
     FORMAT_COLUMNS.update({col: json.loads for col in JSON_COLUMNS})
 

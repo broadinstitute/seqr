@@ -31,10 +31,10 @@ SEQR_DIR=$(pwd)
 
 wget https://raw.githubusercontent.com/broadinstitute/seqr/master/docker-compose.yml
 
-docker-compose up -d seqr   # start up the seqr docker image in the background after also starting other components it depends on (postgres, redis, elasticsearch). This may take 10+ minutes.
-docker-compose logs -f seqr  # (optional) continuously print seqr logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs. 
+docker compose up -d seqr   # start up the seqr docker image in the background after also starting other components it depends on (postgres, redis, elasticsearch). This may take 10+ minutes.
+docker compose logs -f seqr  # (optional) continuously print seqr logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs. 
 
-docker-compose exec seqr python manage.py createsuperuser  # create a seqr Admin user 
+docker compose exec seqr python manage.py createsuperuser  # create a seqr Admin user 
 
 open http://localhost     # open the seqr landing page in your browser. Log in to seqr using the email and password from the previous step
 ```
@@ -45,15 +45,15 @@ Updating your local installation of seqr involves pulling the latest version of 
 
 ```bash
 # run this from the directory containing your docker-compose.yml file
-docker-compose pull
-docker-compose up -d seqr
+docker compose pull
+docker compose up -d seqr
 
-docker-compose logs -f seqr  # (optional) continuously print seqr logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs. 
+docker compose logs -f seqr  # (optional) continuously print seqr logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs. 
 ```
 
 To update reference data in seqr, such as OMIM, HPO, etc., run the following
 ```bash
-docker-compose exec seqr ./manage.py update_all_reference_data --use-cached-omim --skip-gencode
+docker compose exec seqr ./manage.py update_all_reference_data --use-cached-omim --skip-gencode
 ```
    
 ### Annotating and loading VCF callsets 
@@ -79,7 +79,7 @@ The steps below describe how to annotate a callset and then load it into your on
    
 1. start a pipeline-runner container which has the necessary tools and environment for starting and submitting jobs to a Dataproc cluster.
    ```bash
-   docker-compose up -d pipeline-runner            # start the pipeline-runner container 
+   docker compose up -d pipeline-runner            # start the pipeline-runner container 
    ```
    
 1. if you haven't already, upload reference data to your own google bucket. 
@@ -88,7 +88,7 @@ This is expected to take a while
    ```bash
    BUILD_VERSION=38                 # can be 37 or 38
     
-   docker-compose exec pipeline-runner copy_reference_data_to_gs.sh $BUILD_VERSION $GS_BUCKET
+   docker compose exec pipeline-runner copy_reference_data_to_gs.sh $BUILD_VERSION $GS_BUCKET
    
    ```
    Periodically, you may want to update the reference data in order to get the latest versions of these annotations. 
@@ -115,7 +115,7 @@ annotations, but you will need to re-load previously loaded projects to get the 
     
    INPUT_FILE_PATH=/${GS_FILE_PATH}/${FILENAME}  
     
-   docker-compose exec pipeline-runner load_data_dataproc.sh $BUILD_VERSION $SAMPLE_TYPE $INDEX_NAME $GS_BUCKET $INPUT_FILE_PATH
+   docker compose exec pipeline-runner load_data_dataproc.sh $BUILD_VERSION $SAMPLE_TYPE $INDEX_NAME $GS_BUCKET $INPUT_FILE_PATH
    
    ``` 
    
@@ -138,13 +138,13 @@ The steps below describe how to annotate a callset and then load it into your on
 
 1. start a pipeline-runner container
    ```bash
-   docker-compose up -d pipeline-runner            # start the pipeline-runner container 
+   docker compose up -d pipeline-runner            # start the pipeline-runner container 
    ```
 
 1. authenticate into your google cloud account.
 This is required for hail to access buckets hosted on gcloud.
    ```bash
-   docker-compose exec pipeline-runner  gcloud auth application-default login
+   docker compose exec pipeline-runner  gcloud auth application-default login
    ```
    
 1. if you haven't already, download VEP and other reference data to the docker image's mounted directories. 
@@ -153,7 +153,7 @@ This is expected to take a while
    ```bash
    BUILD_VERSION=38                 # can be 37 or 38
     
-   docker-compose exec pipeline-runner download_reference_data.sh $BUILD_VERSION
+   docker compose exec pipeline-runner download_reference_data.sh $BUILD_VERSION
    
    ``` 
    Periodically, you may want to update the reference data in order to get the latest versions of these annotations. 
@@ -163,12 +163,12 @@ annotations, but you will need to re-load previously loaded projects to get the 
    BUILD_VERSION=38                 # can be 37 or 38
    
    # Update clinvar 
-   docker-compose exec pipeline-runner rm -rf "/seqr-reference-data/GRCh${BUILD_VERSION}/clinvar.GRCh${BUILD_VERSION}.ht"
-   docker-compose exec pipeline-runner gsutil rsync -r "gs://seqr-reference-data/GRCh${BUILD_VERSION}/clinvar/clinvar.GRCh${BUILD_VERSION}.ht" "/seqr-reference-data/GRCh${BUILD_VERSION}/clinvar.GRCh${BUILD_VERSION}.ht"
+   docker compose exec pipeline-runner rm -rf "/seqr-reference-data/GRCh${BUILD_VERSION}/clinvar.GRCh${BUILD_VERSION}.ht"
+   docker compose exec pipeline-runner gsutil rsync -r "gs://seqr-reference-data/GRCh${BUILD_VERSION}/clinvar/clinvar.GRCh${BUILD_VERSION}.ht" "/seqr-reference-data/GRCh${BUILD_VERSION}/clinvar.GRCh${BUILD_VERSION}.ht"
   
    # Update all other reference data
-   docker-compose exec pipeline-runner rm -rf "/seqr-reference-data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
-   docker-compose exec pipeline-runner gsutil rsync -r "gs://seqr-reference-data/GRCh${BUILD_VERSION}/all_reference_data/combined_reference_data_grch${BUILD_VERSION}.ht" "/seqr-reference-data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
+   docker compose exec pipeline-runner rm -rf "/seqr-reference-data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
+   docker compose exec pipeline-runner gsutil rsync -r "gs://seqr-reference-data/GRCh${BUILD_VERSION}/all_reference_data/combined_reference_data_grch${BUILD_VERSION}.ht" "/seqr-reference-data/GRCh${BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht"
     ```
 
 1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
@@ -179,7 +179,7 @@ annotations, but you will need to re-load previously loaded projects to get the 
     
    INPUT_FILE_PATH=${FILE_PATH}/${FILENAME}  
     
-   docker-compose exec pipeline-runner load_data.sh $BUILD_VERSION $SAMPLE_TYPE $INDEX_NAME $INPUT_FILE_PATH
+   docker compose exec pipeline-runner load_data.sh $BUILD_VERSION $SAMPLE_TYPE $INDEX_NAME $INPUT_FILE_PATH
    
    ``` 
 

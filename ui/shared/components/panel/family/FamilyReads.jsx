@@ -30,6 +30,8 @@ const IGV = React.lazy(() => import('../../graph/IGV'))
 
 const MIN_LOCUS_RANGE_SIZE = 100
 
+const igvUrl = (sample, field = 'filePath') => `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample[field])}`
+
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
     <span id={`${individual.displayName}-${type}`}>
@@ -38,9 +40,7 @@ const getTrackOptions = (type, sample, individual) => {
     </span>,
   )
 
-  const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.filePath)}`
-
-  return { url, name, type, ...TRACK_OPTIONS[type] }
+  return { url: igvUrl(sample), name, type, ...TRACK_OPTIONS[type] }
 }
 
 const getSampleColor = individual => (individual.affected === AFFECTED ? 'red' : 'blue')
@@ -75,7 +75,7 @@ const getIgvTracks = (igvSampleIndividuals, sortedIndividuals, sampleTypes) => {
           if (sample.filePath.endsWith('.cram')) {
             Object.assign(track, {
               format: 'cram',
-              indexURL: `${track.url}.crai`,
+              indexURL: sample.indexFilePath ? igvUrl(sample, 'indexFilePath') : `${track.url}.crai`,
             })
           } else {
             Object.assign(track, BAM_TRACK_OPTIONS)

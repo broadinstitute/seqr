@@ -124,13 +124,13 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         log_model_update(logger, self, user, 'delete')
 
     @classmethod
-    def bulk_create(cls, user, new_models):
+    def bulk_create(cls, user, new_models, **kwargs):
         """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
             model.created_date = timezone.now()
             model.guid = model._format_guid(random.randint(10**(cls.GUID_PRECISION-1), 10**cls.GUID_PRECISION))  # nosec
-        models = cls.objects.bulk_create(new_models)
+        models = cls.objects.bulk_create(new_models, **kwargs)
         log_model_bulk_update(logger, models, user, 'create')
         return models
 
@@ -785,6 +785,7 @@ class IgvSample(ModelWithGUID):
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
     sample_type = models.CharField(max_length=15, choices=SAMPLE_TYPE_CHOICES)
     file_path = models.TextField()
+    index_file_path = models.TextField(null=True, blank=True)
     sample_id = models.TextField(null=True)
 
     def __unicode__(self):
@@ -796,7 +797,7 @@ class IgvSample(ModelWithGUID):
     class Meta:
         unique_together = ('individual', 'sample_type')
 
-        json_fields = ['guid', 'file_path', 'sample_type', 'sample_id']
+        json_fields = ['guid', 'file_path', 'index_file_path', 'sample_type', 'sample_id']
 
 
 class SavedVariant(ModelWithGUID):
@@ -1139,11 +1140,11 @@ class BulkOperationBase(models.Model):
         logger.info(f'{update_type} {db_entity}s', user, db_update=db_update)
 
     @classmethod
-    def bulk_create(cls, user, new_models):
+    def bulk_create(cls, user, new_models, **kwargs):
         """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
-        models = cls.objects.bulk_create(new_models)
+        models = cls.objects.bulk_create(new_models, **kwargs)
         cls.log_model_no_guid_bulk_update(models, user, 'create')
         return models
 

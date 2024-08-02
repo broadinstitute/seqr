@@ -25,7 +25,7 @@ from seqr.views.utils.project_context_utils import add_families_context, familie
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
     PhenotypePrioritization, Project, RnaSeqOutlier, RnaSeqSpliceOutlier, RnaSample
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
-    login_and_policies_required, user_is_analyst, has_case_review_permissions
+    login_and_policies_required, user_is_analyst, has_case_review_permissions, external_anvil_project_can_edit
 from seqr.views.utils.variant_utils import get_phenotype_prioritization, get_omim_intervals_query, DISCOVERY_CATEGORY
 from seqr.utils.xpos_utils import get_chrom_pos
 
@@ -269,13 +269,18 @@ def update_family_fields_handler(request, family_guid):
     check_project_permissions(family.project, request.user)
 
     request_json = json.loads(request.body)
+    immutable_keys = [] if external_anvil_project_can_edit(family.project, request.user) else ['family_id']
     update_family_from_json(family, request_json, user=request.user, allow_unknown_keys=True, immutable_keys=[
-        'family_id', 'display_name',
-    ])
+        'display_name',
+    ] + immutable_keys)
 
     return create_json_response({
-        family.guid: _get_json_for_model(family, user=request.user)
+        family.guid: _get_json_for_model(family, user=request.user, process_result=_set_display_name)
     })
+
+
+def _set_display_name(family_json, family_model):
+    family_json['displayName'] = family_model.display_name or family_model.family_id
 
 
 @login_and_policies_required
@@ -387,6 +392,12 @@ def update_family_analysis_groups(request, family_guid):
     })
 
 
+EXTERNAL_DATA_LOOKUP = {v: k for k, v in Family.EXTERNAL_DATA_CHOICES}
+PARSE_FAMILY_TABLE_FIELDS = {
+    'externalData': lambda data_type: [EXTERNAL_DATA_LOOKUP[dt.strip()] for dt in (data_type or '').split(';') if dt],
+}
+
+
 @login_and_policies_required
 def receive_families_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of families. This handler
@@ -417,10 +428,12 @@ def receive_families_table_handler(request, project_guid):
                 column_map['mondoId'] = i
             elif 'description' in key:
                 column_map['description'] = i
+            elif 'external' in key and 'data' in key:
+                column_map['externalData'] = i
         if FAMILY_ID_FIELD not in column_map:
             raise ValueError('Invalid header, missing family id column')
 
-        return [{column: row[index] if isinstance(index, int) else next((row[i] for i in index if row[i]), None)
+        return [{column: PARSE_FAMILY_TABLE_FIELDS.get(column, lambda v: v)(row[index])
                 for column, index in column_map.items()} for row in records[1:]]
 
     try:

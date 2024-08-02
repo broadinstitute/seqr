@@ -187,11 +187,11 @@ export const updateGeneNote = values => updateEntity(
   values, RECEIVE_DATA, `/api/gene_info/${values.geneId || values.gene_id}/note`, 'noteGuid',
 )
 
-export const navigateSavedHashedSearch = (search, navigateSearch, resultsPath) => (dispatch) => {
+export const navigateSavedHashedSearch = (search, navigateSearch, resultsPath, hashKey) => (dispatch) => {
   // lazy load object-hash library as it is not used anywhere else
   import('object-hash').then((hash) => {
     const searchHash = hash.default.MD5(search)
-    dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: search } } })
+    dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { [hashKey || 'searchesByHash']: { [searchHash]: search } } })
     navigateSearch(`${resultsPath || '/variant_search/results'}/${searchHash}`)
   })
 }
@@ -343,6 +343,7 @@ const rootReducer = combineReducers({
   variantNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantNotesByGuid'),
   variantFunctionalDataByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantFunctionalDataByGuid'),
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
+  searchFamiliesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchFamiliesByHash'),
   searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
   searchGeneBreakdown: createObjectsByIdReducer(RECEIVE_SEARCH_GENE_BREAKDOWN, 'searchGeneBreakdown'),

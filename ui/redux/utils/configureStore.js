@@ -5,7 +5,7 @@ import { loadState, saveState } from 'shared/utils/localStorage'
 
 const PERSISTING_STATE = [
   'projectsTableState', 'familyTableState', 'savedVariantTableState', 'variantSearchDisplay', 'searchesByHash',
-  'familyTableFilterState',
+  'familyTableFilterState', 'searchFamiliesByHash',
 ]
 
 const persistStoreMiddleware = store => next => (action) => {

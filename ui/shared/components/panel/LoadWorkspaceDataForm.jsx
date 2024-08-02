@@ -12,6 +12,8 @@ import {
   FILE_FORMATS,
   INDIVIDUAL_CORE_EXPORT_DATA,
   INDIVIDUAL_ID_EXPORT_DATA,
+  INDIVIDUAL_HPO_EXPORT_DATA,
+  INDIVIDUAL_FIELD_FEATURES,
   INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED,
   SAMPLE_TYPE_OPTIONS,
@@ -43,16 +45,19 @@ export const WORKSPACE_REQUIREMENTS = [
 ]
 
 const NON_ID_REQUIRED_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
+const HPO_FIELD = { ...INDIVIDUAL_HPO_EXPORT_DATA[0], header: 'HPO Terms' }
 
 const FIELD_DESCRIPTIONS = {
   [FAMILY_FIELD_ID]: 'Family ID',
   [INDIVIDUAL_FIELD_ID]: 'Individual ID (needs to match the VCF ids)',
   [INDIVIDUAL_FIELD_SEX]: 'Male, Female, or Unknown',
   [INDIVIDUAL_FIELD_AFFECTED]: 'Affected, Unaffected, or Unknown',
+  [INDIVIDUAL_FIELD_FEATURES]: 'Semi-colon separated list of HPO terms. Required for affected individuals only.',
 }
 const REQUIRED_FIELDS = [
   ...INDIVIDUAL_ID_EXPORT_DATA,
   ...INDIVIDUAL_CORE_EXPORT_DATA.filter(({ field }) => NON_ID_REQUIRED_FIELDS.includes(field)),
+  HPO_FIELD,
 ].map(config => ({ ...config, description: FIELD_DESCRIPTIONS[config.field] }))
 
 const OPTIONAL_FIELDS = INDIVIDUAL_CORE_EXPORT_DATA.filter(({ field }) => !NON_ID_REQUIRED_FIELDS.includes(field))
@@ -60,7 +65,7 @@ const OPTIONAL_FIELDS = INDIVIDUAL_CORE_EXPORT_DATA.filter(({ field }) => !NON_I
 const BLANK_EXPORT = {
   filename: 'individuals_template',
   rawData: [],
-  headers: [...INDIVIDUAL_ID_EXPORT_DATA, ...INDIVIDUAL_CORE_EXPORT_DATA].map(config => config.header),
+  headers: [...INDIVIDUAL_ID_EXPORT_DATA, ...INDIVIDUAL_CORE_EXPORT_DATA, HPO_FIELD].map(config => config.header),
   processRow: val => val,
 }
 
@@ -68,11 +73,11 @@ const DEMO_EXPORT = {
   ...BLANK_EXPORT,
   filename: 'demo_individuals',
   rawData: [
-    ['FAM1', 'FAM1_1', 'FAM1_2', 'FAM1_3', 'Male', 'Affected', ''],
-    ['FAM1', 'FAM1_4', 'FAM1_2', 'FAM1_3', '', 'Affected', 'an affected sibling'],
-    ['FAM1', 'FAM1_2', '', '', 'Male', 'Unaffected', ''],
-    ['FAM1', 'FAM1_3', '', '', 'Female', '', 'affected status of mother unknown'],
-    ['FAM2', 'FAM2_1', '', '', 'Female', 'Affected', 'a proband-only family'],
+    ['FAM1', 'FAM1_1', 'FAM1_2', 'FAM1_3', 'Male', 'Affected', '', 'HP:0001324 (Muscle weakness)'],
+    ['FAM1', 'FAM1_4', 'FAM1_2', 'FAM1_3', '', 'Affected', 'an affected sibling', 'HP:0001250 (Seizure); HP:0001324 (Muscle weakness)'],
+    ['FAM1', 'FAM1_2', '', '', 'Male', 'Unaffected', '', ''],
+    ['FAM1', 'FAM1_3', '', '', 'Female', 'Unknown', 'affected status of mother unknown', ''],
+    ['FAM2', 'FAM2_1', '', '', 'Female', 'Affected', 'a proband-only family', 'HP:0001263 (Global developmental delay)'],
   ],
 }
 
