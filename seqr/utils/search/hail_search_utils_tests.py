@@ -18,7 +18,7 @@ MOCK_HOST = 'http://test-hail-host'
 
 SV_WGS_SAMPLE_DATA = [{
     'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project',
-    'affected': 'A', 'sample_id': 'NA21234',
+    'affected': 'A', 'sample_id': 'NA21234', 'sample_type': 'WGS',
 }]
 
 EXPECTED_MITO_SAMPLE_DATA = deepcopy(FAMILY_2_MITO_SAMPLE_DATA)

@@ -296,7 +296,8 @@ class BaseHailTableQuery(object):
     def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, n_partitions=MAX_PARTITIONS, **kwargs):
         if len(project_samples) == 1:
             project_guid = list(project_samples.keys())[0]
-            project_ht = self._read_table(f'projects/{project_guid}.ht', use_ssd_dir=True)
+            sample_type = list(project_samples[project_guid].values())[0][0]['sample_type']
+            project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
             return self._filter_entries_table(project_ht, project_samples[project_guid], **kwargs)
 
         # Need to chunk tables or else evaluating table globals throws LineTooLong exception
@@ -308,8 +309,9 @@ class BaseHailTableQuery(object):
         project_hts = []
         sample_data = {}
         for project_guid, project_sample_data in project_samples.items():
+            sample_type = list(project_sample_data.values())[0][0]['sample_type']
             project_ht = self._read_table(
-                f'projects/{project_guid}.ht',
+                f'projects/{sample_type}/{project_guid}.ht',
                 use_ssd_dir=True,
                 skip_missing_field='family_entries' if skip_all_missing else None,
             )
@@ -338,7 +340,8 @@ class BaseHailTableQuery(object):
         if num_families == 1:
             family_sample_data = list(project_samples.values())[0]
             family_guid = list(family_sample_data.keys())[0]
-            family_ht = self._read_table(f'families/{family_guid}.ht', use_ssd_dir=True)
+            sample_type = family_sample_data[family_guid][0]['sample_type']
+            family_ht = self._read_table(f'families/{sample_type}/{family_guid}.ht', use_ssd_dir=True)
             family_ht = family_ht.transmute(family_entries=[family_ht.entries])
             family_ht = family_ht.annotate_globals(
                 family_guids=[family_guid], family_samples={family_guid: family_ht.sample_ids},
