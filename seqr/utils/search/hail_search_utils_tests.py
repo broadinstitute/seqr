@@ -151,7 +151,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
-            search_fields=['annotations', 'annotations_secondary'], omit_sample_type='SV_WES',
+            search_fields=['annotations', 'annotations_secondary'], omit_data_type='SV_WES',
         )
 
         self.search_model.search['inheritance']['mode'] = 'x_linked_recessive'
@@ -159,7 +159,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self._test_expected_search_call(
             inheritance_mode='x_linked_recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
             search_fields=['annotations', 'annotations_secondary'], sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX,
-            omit_sample_type='SV_WES',
+            omit_data_type='SV_WES',
         )
 
         self.results_model.families.set(Family.objects.filter(id__in=[2, 11, 14]))
@@ -313,7 +313,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[], variant_keys=['prefix_19107_DEL'],
-            num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='SNV_INDEL')
+            num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_data_type='SNV_INDEL')
 
         get_single_variant(self.families, 'M-10195-C-A', user=self.user)
         self._test_minimal_search_call(

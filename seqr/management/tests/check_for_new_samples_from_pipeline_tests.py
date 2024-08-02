@@ -213,11 +213,11 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             EXISTING_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4,
         }, has_additional_requests=True, reload_calls=[
             {**search_body, 'sample_data': {'SNV_INDEL': [
-                {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889'},
-                {'individual_guid': 'I000016_na20888', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20888'},
+                {'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'},
+                {'individual_guid': 'I000016_na20888', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20888', 'sample_type': 'WES'},
             ]}},
             {**search_body, 'sample_data': {'SNV_INDEL': [
-                {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234'},
+                {'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project', 'affected': 'A', 'sample_id': 'NA21234', 'sample_type': 'WES'},
             ]}},
         ], reload_annotations_logs=[
             'Reloading shared annotations for 3 SNV_INDEL GRCh38 saved variants (3 unique)', 'Fetched 1 additional variants', 'Fetched 1 additional variants', 'Updated 2 saved variants',
@@ -383,7 +383,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         }
         self._test_success('GRCh37/GCNV', metadata, dataset_type='SV', sample_guids={f'S00000{GUID_ID}_na20872', f'S00000{GUID_ID}_na20889'}, reload_calls=[{
             'genome_version': 'GRCh37', 'num_results': 1, 'variant_ids': [], 'variant_keys': ['prefix_19107_DEL'],
-            'sample_data': {'SV_WES': [{'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889'}]},
+            'sample_data': {'SV_WES': [{'individual_guid': 'I000017_na20889', 'family_guid': 'F000012_12', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_id': 'NA20889', 'sample_type': 'WES'}]},
         }], reload_annotations_logs=['No additional saved variants to update'])
 
         self.mock_send_slack.assert_has_calls([
