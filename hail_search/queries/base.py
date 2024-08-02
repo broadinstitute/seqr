@@ -305,7 +305,7 @@ class BaseHailTableQuery(object):
             # for variant search, project_samples looks like
             #   {<project_guid>: {<family_guid>: [<sample_data>, <sample_data>, ...], <family_guid_2>: ...}, <project_guid_2>: ...}
             first_family_samples = list(project_samples[project_guid].values())[0]
-            if type(first_family_samples) is bool:
+            if isinstance(first_family_samples, bool):
                 project_ht = (
                     self._read_table(f'projects/WES/{project_guid}.ht', use_ssd_dir=True) or
                     self._read_table(f'projects/WGS/{project_guid}.ht', use_ssd_dir=True)
