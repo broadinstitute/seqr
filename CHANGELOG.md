@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 8/2/24
 * Adds index_file_path to IGV Sample model (REQUIRES DB MIGRATION)
 
 ## 7/24/24

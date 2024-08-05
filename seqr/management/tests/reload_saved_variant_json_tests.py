@@ -27,12 +27,12 @@ class ReloadSavedVariantJsonTest(TestCase):
 
         family_1 = Family.objects.get(id=1)
         mock_get_variants.assert_called_with(
-            [family_1], ['1-1562437-G-CA', '1-46859832-G-A','21-3343353-GAGA-G'], user=None, user_email='manage_command')
+            [family_1], ['1-46859832-G-A','21-3343353-GAGA-G'], user=None, user_email='manage_command')
 
         logger_info_calls = [
-            mock.call('Updated 3 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
+            mock.call('Updated 2 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call('Reload Summary: '),
-            mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 3 variants')
+            mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 2 variants')
         ]
         mock_logger.info.assert_has_calls(logger_info_calls)
         mock_get_variants.reset_mock()
@@ -45,7 +45,7 @@ class ReloadSavedVariantJsonTest(TestCase):
         family_2 = Family.objects.get(id=2)
         mock_get_variants.assert_has_calls([
             mock.call(
-                [family_1, family_2], ['1-1562437-G-CA', '1-248367227-TC-T', '1-46859832-G-A', '21-3343353-GAGA-G'], user=None, user_email='manage_command',
+                [family_1, family_2], ['1-248367227-TC-T', '1-46859832-G-A', '21-3343353-GAGA-G'], user=None, user_email='manage_command',
             ),
             mock.call([Family.objects.get(id=12)], ['1-248367227-TC-T', 'prefix_19107_DEL'], user=None, user_email='manage_command'),
             mock.call([Family.objects.get(id=14)], ['1-248367227-TC-T'], user=None, user_email='manage_command')
@@ -53,11 +53,11 @@ class ReloadSavedVariantJsonTest(TestCase):
 
         logger_info_calls = [
             mock.call('Reloading saved variants in 4 projects'),
-            mock.call('Updated 4 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
+            mock.call('Updated 3 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call('Updated 2 variants for project Test Reprocessed Project'),
             mock.call('Updated 1 variants for project Non-Analyst Project'),
             mock.call('Reload Summary: '),
-            mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 4 variants'),
+            mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 3 variants'),
             mock.call('  Test Reprocessed Project: Updated 2 variants'),
             mock.call('  Non-Analyst Project: Updated 1 variants'),
             mock.call('Skipped the following 1 project with no saved variants: Empty Project'),
@@ -72,7 +72,7 @@ class ReloadSavedVariantJsonTest(TestCase):
                      PROJECT_GUID,
                      '--family-guid={}'.format(FAMILY_GUID))
 
-        mock_get_variants.assert_called_with([family_1], ['1-1562437-G-CA', '1-46859832-G-A', '21-3343353-GAGA-G'], user=None, user_email='manage_command')
+        mock_get_variants.assert_called_with([family_1], ['1-46859832-G-A', '21-3343353-GAGA-G'], user=None, user_email='manage_command')
 
         logger_info_calls = [
             mock.call('Reload Summary: '),

@@ -193,9 +193,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
         # Update fixture data to allow testing edge cases
         Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
-        sv = SavedVariant.objects.get(guid='SV0000002_1248367227_r0390_100')
-        sv.saved_variant_json['genomeVersion'] = '38'
-        sv.save()
+        svs = SavedVariant.objects.filter(guid__in=['SV0000002_1248367227_r0390_100', 'SV0000006_1248367227_r0003_tes'])
+        for sv in svs:
+            sv.saved_variant_json['genomeVersion'] = '38'
+            sv.save()
 
         with self.assertRaises(ValueError) as ce:
             call_command('check_for_new_samples_from_pipeline', 'GRCh38/SNV_INDEL', 'auto__2023-08-08')
