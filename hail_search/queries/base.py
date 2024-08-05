@@ -325,7 +325,7 @@ class BaseHailTableQuery(object):
         sample_data = {}
         for project_guid, project_sample_data in project_samples.items():
             first_family_samples = list(project_sample_data.values())[0]
-            if type(first_family_samples) is bool:
+            if isinstance(first_family_samples, bool):
                 project_ht = (
                     self._read_table(f'projects/WES/{project_guid}.ht', use_ssd_dir=True) or
                     self._read_table(f'projects/WGS/{project_guid}.ht', use_ssd_dir=True)
