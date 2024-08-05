@@ -57,7 +57,7 @@ FAMILY_5_SAMPLE = {
 }
 ALL_AFFECTED_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_5_SAMPLE)
 FAMILY_11_SAMPLE = {
-    'sample_id': 'NA20885', 'individual_guid': 'I000015_na20885', 'family_guid': 'F000011_11', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_type': 'WGS',
+    'sample_id': 'NA20885', 'individual_guid': 'I000015_na20885', 'family_guid': 'F000011_11', 'project_guid': 'R0003_test', 'affected': 'A', 'sample_type': 'WES',
 }
 MULTI_PROJECT_SAMPLE_DATA = deepcopy(FAMILY_2_VARIANT_SAMPLE_DATA)
 MULTI_PROJECT_SAMPLE_DATA['SNV_INDEL'].append(FAMILY_11_SAMPLE)
