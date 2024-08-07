@@ -1,7 +1,6 @@
 from aiohttp.web import HTTPBadRequest, HTTPNotFound
 from collections import defaultdict, namedtuple
 import hail as hl
-import hailtop.fs as hfs
 import logging
 import os
 
@@ -267,9 +266,6 @@ class BaseHailTableQuery(object):
         return f'{SSD_DATASETS_DIR if use_ssd_dir else DATASETS_DIR}/{cls.GENOME_VERSION}/{cls.DATA_TYPE}/{path}'
 
     def _read_table(self, path, drop_globals=None, use_ssd_dir=False, skip_missing_field=None):
-        if not hfs.exists(self._get_table_path(path, use_ssd_dir=use_ssd_dir)):
-            return None
-
         table_path = self._get_table_path(path, use_ssd_dir=use_ssd_dir)
         if 'variant_ht' in self._load_table_kwargs:
             ht = self._query_table_annotations(self._load_table_kwargs['variant_ht'], table_path)
@@ -301,18 +297,12 @@ class BaseHailTableQuery(object):
         if len(project_samples) == 1:
             project_guid = list(project_samples.keys())[0]
             # for variant lookup, project_samples looks like
-            #   {<project_guid>: {<family_guid>: True, <family_guid_2>: True}, <project_guid_2>: ...}
+            #   {<project_guid>: {<family_guid>: {<sample_type>: True}, {<family_guid>: {<sample_type_2>: True}}, <project_guid_2>: ...}
             # for variant search, project_samples looks like
             #   {<project_guid>: {<family_guid>: {<sample_type>: [<sample_data>, <sample_data>, ...], <sample_type_2>: ...}, <family_guid_2>: ...}, <project_guid_2>: ...}
             first_family_samples = list(project_samples[project_guid].values())[0]
-            if isinstance(first_family_samples, bool):
-                project_ht = (
-                    self._read_table(f'projects/WES/{project_guid}.ht', use_ssd_dir=True) or
-                    self._read_table(f'projects/WGS/{project_guid}.ht', use_ssd_dir=True)
-                )
-            else:
-                sample_type = list(first_family_samples.keys())[0]
-                project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
+            sample_type = list(first_family_samples.keys())[0]
+            project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
             return self._filter_entries_table(project_ht, project_samples[project_guid], **kwargs)
 
         # Need to chunk tables or else evaluating table globals throws LineTooLong exception
@@ -325,14 +315,8 @@ class BaseHailTableQuery(object):
         sample_data = {}
         for project_guid, project_sample_data in project_samples.items():
             first_family_samples = list(project_sample_data.values())[0]
-            if isinstance(first_family_samples, bool):
-                project_ht = (
-                    self._read_table(f'projects/WES/{project_guid}.ht', use_ssd_dir=True) or
-                    self._read_table(f'projects/WGS/{project_guid}.ht', use_ssd_dir=True)
-                )
-            else:
-                sample_type = list(first_family_samples.keys())[0]
-                project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
+            sample_type = list(first_family_samples.keys())[0]
+            project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
 
             if project_ht is None:
                 continue
@@ -415,11 +399,13 @@ class BaseHailTableQuery(object):
     def _filter_entries_table(self, ht, sample_data, inheritance_filter=None, quality_filter=None, **kwargs):
         ht = self._prefilter_entries_table(ht, **kwargs)
 
-        # Temporarily flatten sample data for each sample_type into one list of samples
+        # Temporarily reset sample_data
         for family_guid, samples_by_sample_type in sample_data.items():
-            if isinstance(samples_by_sample_type, dict):
+            if isinstance(list(samples_by_sample_type.values())[0], list):
                 samples = [s for samples in samples_by_sample_type.values() for s in samples]
                 sample_data[family_guid] = samples
+            else:
+                sample_data[family_guid] = True
 
         ht, sorted_family_sample_data = self._add_entry_sample_families(ht, sample_data)
 

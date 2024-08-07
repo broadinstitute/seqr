@@ -1,5 +1,6 @@
 from aiohttp.web import HTTPNotFound
 import hail as hl
+import hailtop.fs as hfs
 import logging
 
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
@@ -308,7 +309,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def _add_project_lookup_data(self, ht, annotation_fields, *args, **kwargs):
         # Get all the project-families for the looked up variant formatted as a dict of dicts:
-        # {<project_guid>: {<family_guid>: True, <family_guid_2>: True}, <project_guid_2>: ...}
+        # {<project_guid>: {<family_guid>: {<sample_type>: True}, {<family_guid_2>: {<sample_type_2>: True}}, <project_guid_2>: ...}
         lookup_ht = self._read_table('lookup.ht', use_ssd_dir=True, skip_missing_field='project_stats')
         if lookup_ht is None:
             raise HTTPNotFound()
@@ -325,6 +326,15 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 hl.dict(family_indices.map(lambda j: (lookup_ht.project_families[project_guid][j], True))),
             ))), 1),
         )[0]
+
+        for project_guid, families in variant_projects.items():
+            if hfs.exists(self._get_table_path(f'projects/WES/{project_guid}.ht', use_ssd_dir=True)):
+                sample_type = 'WES'
+            else:
+                sample_type = 'WGS'
+            for family_guid in families:
+                families[family_guid] = {sample_type: True}
+
         # Variant can be present in the lookup table with only ref calls, so is still not present in any projects
         if not variant_projects:
             raise HTTPNotFound()

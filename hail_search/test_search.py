@@ -28,7 +28,7 @@ PROJECT_2_VARIANT = {
     'familyGuids': ['F000011_11'],
     'genotypes': {
         'I000015_na20885': {
-            'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+            'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'dp': 8, 'gq': 14, 'ab': 0.875,
         }
     },
