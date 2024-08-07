@@ -83,8 +83,8 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         call_command('check_for_new_samples_from_pipeline', path, 'auto__2023-08-08')
 
         self.mock_subprocess.assert_has_calls([mock.call(command, stdout=-1, stderr=-2, shell=True) for command in [
-            f'gsutil ls gs://seqr-hail-search-data/v03/{path}/runs/auto__2023-08-08/_SUCCESS',
-            f'gsutil cat gs://seqr-hail-search-data/v03/{path}/runs/auto__2023-08-08/metadata.json',
+            f'gsutil ls gs://seqr-hail-search-data/v3.1/{path}/runs/auto__2023-08-08/_SUCCESS',
+            f'gsutil cat gs://seqr-hail-search-data/v3.1/{path}/runs/auto__2023-08-08/metadata.json',
         ]], any_order=True)
 
         self.mock_logger.info.assert_has_calls([

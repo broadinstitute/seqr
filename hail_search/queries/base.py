@@ -288,10 +288,10 @@ class BaseHailTableQuery(object):
 
     def _parse_sample_data(self, sample_data):
         families = set()
-        project_samples = defaultdict(lambda: defaultdict(list))
+        project_samples = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         for s in sample_data:
             families.add(s['family_guid'])
-            project_samples[s['project_guid']][s['family_guid']].append(s)
+            project_samples[s['project_guid']][s['family_guid']][s['sample_type']].append(s)
 
         num_families = len(families)
         logger.info(f'Loading {self.DATA_TYPE} data for {num_families} families in {len(project_samples)} projects')
@@ -303,7 +303,7 @@ class BaseHailTableQuery(object):
             # for variant lookup, project_samples looks like
             #   {<project_guid>: {<family_guid>: True, <family_guid_2>: True}, <project_guid_2>: ...}
             # for variant search, project_samples looks like
-            #   {<project_guid>: {<family_guid>: [<sample_data>, <sample_data>, ...], <family_guid_2>: ...}, <project_guid_2>: ...}
+            #   {<project_guid>: {<family_guid>: {<sample_type>: [<sample_data>, <sample_data>, ...], <sample_type_2>: ...}, <family_guid_2>: ...}, <project_guid_2>: ...}
             first_family_samples = list(project_samples[project_guid].values())[0]
             if isinstance(first_family_samples, bool):
                 project_ht = (
@@ -311,7 +311,7 @@ class BaseHailTableQuery(object):
                     self._read_table(f'projects/WGS/{project_guid}.ht', use_ssd_dir=True)
                 )
             else:
-                sample_type = first_family_samples[0]['sample_type']
+                sample_type = list(first_family_samples.keys())[0]
                 project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
             return self._filter_entries_table(project_ht, project_samples[project_guid], **kwargs)
 
@@ -331,7 +331,7 @@ class BaseHailTableQuery(object):
                     self._read_table(f'projects/WGS/{project_guid}.ht', use_ssd_dir=True)
                 )
             else:
-                sample_type = first_family_samples[0]['sample_type']
+                sample_type = list(first_family_samples.keys())[0]
                 project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
 
             if project_ht is None:
@@ -359,7 +359,7 @@ class BaseHailTableQuery(object):
         if num_families == 1:
             family_sample_data = list(project_samples.values())[0]
             family_guid = list(family_sample_data.keys())[0]
-            sample_type = family_sample_data[family_guid][0]['sample_type']
+            sample_type = list(family_sample_data[family_guid].keys())[0]
             family_ht = self._read_table(f'families/{sample_type}/{family_guid}.ht', use_ssd_dir=True)
             family_ht = family_ht.transmute(family_entries=[family_ht.entries])
             family_ht = family_ht.annotate_globals(
@@ -414,6 +414,11 @@ class BaseHailTableQuery(object):
 
     def _filter_entries_table(self, ht, sample_data, inheritance_filter=None, quality_filter=None, **kwargs):
         ht = self._prefilter_entries_table(ht, **kwargs)
+
+        # Temporarily flatten sample data for each sample_type into one list of samples
+        for family_guid, samples_by_sample_type in sample_data.items():
+            samples = [s for samples in samples_by_sample_type.values() for s in samples]
+            sample_data[family_guid] = samples
 
         ht, sorted_family_sample_data = self._add_entry_sample_families(ht, sample_data)
 
