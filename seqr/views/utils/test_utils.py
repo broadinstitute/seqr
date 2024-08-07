@@ -568,6 +568,7 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
 
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
+DAG_NAME = 'LOADING_PIPELINE'
 PROJECT_GUID = 'R0001_1kg'
 
 
@@ -575,7 +576,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
     ADDITIONAL_REQUEST_COUNT = 0
 
     def setUp(self):
-        self._dag_url = f'{MOCK_AIRFLOW_URL}/api/v1/dags/{self.DAG_NAME}'
+        self._dag_url = f'{MOCK_AIRFLOW_URL}/api/v1/dags/{DAG_NAME}'
 
         # check dag running state
         responses.add(responses.GET, f'{self._dag_url}/dagRuns', json={
@@ -591,8 +592,8 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         responses.add(responses.POST, f'{self._dag_url}/dagRuns', json={})
         # update variables
         responses.add(
-            responses.PATCH, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{self.DAG_NAME}',
-            json={'key': self.DAG_NAME, 'value': 'updated variables'},
+            responses.PATCH, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{DAG_NAME}',
+            json={'key': DAG_NAME, 'value': 'updated variables'},
         )
         # get task id
         self.add_dag_tasks_response(['R0006_test'])
@@ -625,7 +626,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             tasks += [
                 {'task_id': 'create_dataproc_cluster'},
                 {'task_id': f'pyspark_compute_project_{project}'},
-                {'task_id': f'pyspark_compute_variants_{self.DAG_NAME}'},
+                {'task_id': f'pyspark_compute_variants_{DAG_NAME}'},
                 {'task_id': f'pyspark_export_project_{project}'},
                 {'task_id': 'scale_dataproc_cluster'},
                 {'task_id': f'skip_compute_project_subset_{project}'}
@@ -634,17 +635,17 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'tasks': tasks, 'total_entries': len(tasks),
         })
 
-    def set_dag_trigger_error_response(self):
-        responses.replace(responses.GET, f'{self._dag_url}/dagRuns', json={'dag_runs': [{
+    def set_dag_trigger_error_response(self, status=200):
+        responses.replace(responses.GET, f'{self._dag_url}/dagRuns', status=status, json={'dag_runs': [{
             'conf': {},
-            'dag_id': self.DAG_NAME,
+            'dag_id': DAG_NAME,
             'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
             'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00',
             'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00',
             'state': 'running'}
         ]})
 
-    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, secondary_dag_name=None):
+    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None):
         self.mock_airflow_logger.info.assert_not_called()
 
         # Test triggering anvil dags
@@ -662,15 +663,15 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'callset_path': f'gs://test_bucket/{dag_variable_overrides["callset_path"]}',
             'sample_source': dag_variable_overrides['sample_source'],
             'sample_type': dag_variable_overrides['sample_type'],
+            'dataset_type': dataset_type or dag_variable_overrides['dataset_type'],
             'reference_genome': dag_variable_overrides.get('reference_genome', 'GRCh38'),
         }
-        self._assert_airflow_calls(self.DAG_NAME, dag_variables, call_count, secondary_dag_name)
+        self._assert_airflow_calls(dag_variables, call_count)
 
-    def _assert_airflow_calls(self, dag_name, dag_variables, call_count, secondary_dag_name, offset=0):
+    def _assert_airflow_calls(self, dag_variables, call_count, offset=0):
         dag_url = self._dag_url
 
         # check dag running state
-        dag_url = self._dag_url.replace(dag_name, secondary_dag_name) if secondary_dag_name else dag_url
         self.assertEqual(responses.calls[offset].request.url, f'{dag_url}/dagRuns')
         self.assertEqual(responses.calls[offset].request.method, "GET")
 
@@ -678,10 +679,10 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             return
 
         # update variables
-        self.assertEqual(responses.calls[offset+1].request.url, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{dag_name}')
+        self.assertEqual(responses.calls[offset+1].request.url, f'{MOCK_AIRFLOW_URL}/api/v1/variables/{DAG_NAME}')
         self.assertEqual(responses.calls[offset+1].request.method, 'PATCH')
         self.assertDictEqual(json.loads(responses.calls[offset+1].request.body), {
-            'key': dag_name,
+            'key': DAG_NAME,
             'value': json.dumps(dag_variables),
         })
 
