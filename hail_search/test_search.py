@@ -146,7 +146,7 @@ PROJECT_2_VARIANT1 = deepcopy(VARIANT1)
 PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
 PROJECT_2_VARIANT1['genotypes'] = {
     'I000015_na20885': {
-        'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+        'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
         'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0,
     },
 }
@@ -156,7 +156,7 @@ MULTI_PROJECT_VARIANT1['genotypes'].update(PROJECT_2_VARIANT1['genotypes'])
 MULTI_PROJECT_VARIANT2 = deepcopy(VARIANT2)
 MULTI_PROJECT_VARIANT2['familyGuids'].append('F000011_11')
 MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = {
-    'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+    'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
     'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5,
 }
 

@@ -417,8 +417,9 @@ class BaseHailTableQuery(object):
 
         # Temporarily flatten sample data for each sample_type into one list of samples
         for family_guid, samples_by_sample_type in sample_data.items():
-            samples = [s for samples in samples_by_sample_type.values() for s in samples]
-            sample_data[family_guid] = samples
+            if isinstance(samples_by_sample_type, dict):
+                samples = [s for samples in samples_by_sample_type.values() for s in samples]
+                sample_data[family_guid] = samples
 
         ht, sorted_family_sample_data = self._add_entry_sample_families(ht, sample_data)
 
