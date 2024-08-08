@@ -1,6 +1,7 @@
+import os
+
 from aiohttp.web import HTTPNotFound
 import hail as hl
-import hailtop.fs as hfs
 import logging
 
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
@@ -328,7 +329,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         )[0]
 
         for project_guid, families in variant_projects.items():
-            if hfs.exists(self._get_table_path(f'projects/WES/{project_guid}.ht', use_ssd_dir=True)):
+            if os.path.exists(self._get_table_path(f'projects/WES/{project_guid}.ht')):
                 sample_type = 'WES'
             else:
                 sample_type = 'WGS'
