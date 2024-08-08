@@ -944,7 +944,7 @@ MITO_VARIANT3 = {
 
 LOCATION_SEARCH = {
     'gene_ids': ['ENSG00000177000', 'ENSG00000097046'],
-    'intervals': ['2:1234-5678', '7:1-11100', '1:11785723-11806455', '1:91500851-91525764'],
+    'intervals': [['2', 1234, 5678], ['7', 1, 11100], ['1', 11785723, 11806455], ['1', 91500851, 91525764]],
 }
 EXCLUDE_LOCATION_SEARCH = {'intervals': LOCATION_SEARCH['intervals'], 'exclude_intervals': True}
 VARIANT_ID_SEARCH = {'variant_ids': [['1', 10439, 'AC', 'A'], ['1', 91511686, 'TCA', 'G']], 'rs_ids': []}
