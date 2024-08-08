@@ -648,7 +648,6 @@ class BaseHailTableQuery(object):
             intervals = [(chrom, start, end) for chrom, (start, end) in super_intervals.items()]
 
         parsed_intervals = [
-            #hl.eval(hl.parse_locus_interval(interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
             hl.eval(hl.locus_interval(*interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
             for interval in intervals
         ]
