@@ -259,7 +259,7 @@ class BaseHailTableQuery(object):
         parsed_intervals = self._parse_intervals(intervals, **kwargs)
         parsed_annotations = self._parse_annotations(annotations, annotations_secondary, **kwargs)
         self.import_filtered_table(
-            *self._parse_sample_data(sample_data), parsed_intervals=parsed_intervals, parsed_annotations=parsed_annotations, **kwargs)
+            *self._parse_sample_data(sample_data), parsed_intervals=parsed_intervals, raw_intervals=intervals, parsed_annotations=parsed_annotations, **kwargs)
 
     @classmethod
     def _get_table_path(cls, path, use_ssd_dir=False):

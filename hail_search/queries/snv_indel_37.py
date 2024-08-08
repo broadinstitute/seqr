@@ -73,10 +73,11 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
         ('is_gt_10_percent', 0.1),
     ])
 
-    def _prefilter_entries_table(self, ht, *args, **kwargs):
+    def _prefilter_entries_table(self, ht, *args, raw_intervals=None, **kwargs):
         ht = super()._prefilter_entries_table(ht, *args, **kwargs)
-        if True:
-        #if 'variant_ht' not in self._load_table_kwargs and not self._load_table_kwargs.get('_filter_intervals'):
+        load_table_intervals = self._load_table_kwargs.get('_intervals') or []
+        no_interval_prefilter = not load_table_intervals or len(raw_intervals) > len(load_table_intervals)
+        if 'variant_ht' not in self._load_table_kwargs and no_interval_prefilter:
             af_ht = self._get_loaded_filter_ht(
                 GNOMAD_GENOMES_FIELD, 'high_af_variants.ht', self._get_gnomad_af_prefilter, **kwargs)
             if af_ht:
