@@ -630,8 +630,10 @@ class BaseHailTableQuery(object):
 
         raw_intervals = intervals
         if self._should_add_chr_prefix():
+            # TODO handle [] notation?
             intervals = [
-                f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
+                #f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
+                [f'chr{interval[0]}', *interval[1:]]
                 for interval in (intervals or [])
             ]
 
@@ -640,10 +642,14 @@ class BaseHailTableQuery(object):
             intervals = (intervals or []) + [reference_genome.x_contigs[0]]
 
         if len(intervals) > MAX_GENE_INTERVALS and len(intervals) == len(gene_ids or []):
-            return []
+            super_intervals = defaultdict(lambda: (1e9, 0))
+            for chrom, start, end in intervals:
+                super_intervals[chrom] = (min(super_intervals[chrom][0], start), max(super_intervals[chrom][1], end))
+            intervals = [(chrom, start, end) for chrom, (start, end) in super_intervals.items()]
 
         parsed_intervals = [
-            hl.eval(hl.parse_locus_interval(interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
+            #hl.eval(hl.parse_locus_interval(interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
+            hl.eval(hl.locus_interval(*interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
             for interval in intervals
         ]
         invalid_intervals = [raw_intervals[i] for i, interval in enumerate(parsed_intervals) if interval is None]

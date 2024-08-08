@@ -192,7 +192,8 @@ def _parse_location_search(search):
             for gene in genes.values()
         ]
         parsed_intervals = [_format_interval(**interval) for interval in intervals or []] + [
-            '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
+            # '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
+            [gene['chrom'], gene['start'], gene['end']] for gene in gene_coords]
         if Sample.DATASET_TYPE_MITO_CALLS in search['sample_data'] and not exclude_locations:
             chromosomes = {gene['chrom'] for gene in gene_coords + (intervals or [])}
             if 'M' not in chromosomes:
@@ -214,7 +215,8 @@ def _format_interval(chrom=None, start=None, end=None, offset=None, **kwargs):
         offset_pos = int((end - start) * offset)
         start = max(start - offset_pos, MIN_POS)
         end = min(end + offset_pos, MAX_POS)
-    return f'{chrom}:{start}-{end}'
+    return (chrom, start, end)
+    #return f'{chrom}:{start}-{end}'
 
 
 def _validate_expected_families(results, expected_families):

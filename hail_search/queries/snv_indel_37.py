@@ -75,7 +75,8 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
 
     def _prefilter_entries_table(self, ht, *args, **kwargs):
         ht = super()._prefilter_entries_table(ht, *args, **kwargs)
-        if 'variant_ht' not in self._load_table_kwargs and not self._load_table_kwargs.get('_filter_intervals'):
+        if True:
+        #if 'variant_ht' not in self._load_table_kwargs and not self._load_table_kwargs.get('_filter_intervals'):
             af_ht = self._get_loaded_filter_ht(
                 GNOMAD_GENOMES_FIELD, 'high_af_variants.ht', self._get_gnomad_af_prefilter, **kwargs)
             if af_ht:
