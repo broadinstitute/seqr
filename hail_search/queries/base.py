@@ -399,7 +399,7 @@ class BaseHailTableQuery(object):
     def _filter_entries_table(self, ht, sample_data, inheritance_filter=None, quality_filter=None, **kwargs):
         ht = self._prefilter_entries_table(ht, **kwargs)
 
-        # Temporarily reset sample_data
+        # Temporarily reset sample_data until full blended eS/GS support is added
         for family_guid, samples_by_sample_type in sample_data.items():
             if isinstance(list(samples_by_sample_type.values())[0], list):
                 samples = [s for samples in samples_by_sample_type.values() for s in samples]
