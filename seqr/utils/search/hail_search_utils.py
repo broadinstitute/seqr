@@ -1,4 +1,5 @@
 from collections import defaultdict
+
 from django.db.models import F, Min, Count
 from urllib3.connectionpool import connection_from_url
 
@@ -152,9 +153,8 @@ def _get_sample_data(samples, inheritance_filter=None, inheritance_mode=None, **
     sample_data_by_data_type = defaultdict(list)
     for s in sample_data:
         dataset_type = s.pop('dataset_type')
-        sample_type = s.pop('sample_type')
-        s['sample_id'] = s.pop('individual__individual_id')
-        data_type_key = search_data_type(dataset_type, sample_type)
+        s['sample_id'] = s.pop('individual__individual_id')  # Note: set sample_id to individual_id
+        data_type_key = search_data_type(dataset_type, s['sample_type'])
         sample_data_by_data_type[data_type_key].append(s)
 
     return sample_data_by_data_type
