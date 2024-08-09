@@ -14,7 +14,7 @@ SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 
 # Number of filtered genes at which pre-filtering a table by gene-intervals does not improve performance
 # Estimated based on behavior for several representative gene lists
-MAX_GENE_INTERVALS = 100
+MAX_GENE_INTERVALS = int(os.environ.get('MAX_GENE_INTERVALS', 100))
 
 # Optimal number of entry table partitions, balancing parallelization with partition overhead
 # Experimentally determined based on compound het search performance:
