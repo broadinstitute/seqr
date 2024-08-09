@@ -647,10 +647,18 @@ class BaseHailTableQuery(object):
             intervals = [[f'chr{interval[0]}', *interval[1:]] for interval in (intervals or [])]
 
         if len(intervals) > MAX_GENE_INTERVALS and len(intervals) == len(gene_ids or []):
-            super_intervals = defaultdict(lambda: (1e9, 0))
-            for chrom, start, end in intervals:
-                super_intervals[chrom] = (min(super_intervals[chrom][0], start), max(super_intervals[chrom][1], end))
-            intervals = [(chrom, start, end) for chrom, (start, end) in super_intervals.items()]
+            intervals = sorted(intervals)
+            distance = 100000
+            while len(intervals) > MAX_GENE_INTERVALS:
+                merged_intervals = [intervals[0]]
+                for chrom, start, end in intervals[1:]:
+                    prev_chrom, prev_start, prev_end = merged_intervals[-1]
+                    if chrom == prev_chrom and start - prev_end < distance:
+                        merged_intervals[-1] = (chrom, prev_start, max(prev_end, end))
+                    else:
+                        merged_intervals.append((chrom, start, end))
+                intervals = merged_intervals
+                distance += 100000
 
         parsed_intervals = [
             hl.eval(hl.locus_interval(*interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
