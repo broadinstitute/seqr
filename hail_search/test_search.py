@@ -602,9 +602,9 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         await self._assert_expected_search(
-            [GRCH37_VARIANT], intervals=['7:143268894-143271480'], genome_version='GRCh37', sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
+            [GRCH37_VARIANT], intervals=[['7', 143268894, 143271480]], genome_version='GRCh37', sample_data=FAMILY_2_VARIANT_SAMPLE_DATA)
 
-        sv_intervals = ['1:9310023-9380264', '17:38717636-38724781']
+        sv_intervals = [['1', 9310023, 9380264], ['17', 38717636, 38724781]]
         await self._assert_expected_search(
             [GCNV_VARIANT3, GCNV_VARIANT4], intervals=sv_intervals, gene_ids=['ENSG00000275023'], omit_sample_type='SNV_INDEL',
         )
@@ -651,7 +651,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         # For gene search, return SVs annotated in gene even if they fall outside the gene interval
-        nearest_tss_gene_intervals = ['1:9292894-9369532']
+        nearest_tss_gene_intervals = [['1', 9292894, 9369532]]
         await self._assert_expected_search(
             [SV_VARIANT1], sample_data=SV_WGS_SAMPLE_DATA, intervals=nearest_tss_gene_intervals,
         )
@@ -1074,12 +1074,12 @@ class HailSearchTestCase(AioHTTPTestCase):
         self.assertEqual(reason, 'The following samples are available in seqr but missing the loaded data: NA19675_1, NA19678')
 
         search_body = get_hail_search_body(
-            intervals=LOCATION_SEARCH['intervals'] + ['1:1-99999999999'], omit_sample_type='SV_WES',
+            intervals=LOCATION_SEARCH['intervals'] + [['1', 1, 999999999]], omit_sample_type='SV_WES',
         )
         async with self.client.request('POST', '/search', json=search_body) as resp:
             self.assertEqual(resp.status, 400)
             reason = resp.reason
-        self.assertEqual(reason, 'Invalid intervals: 1:1-99999999999')
+        self.assertEqual(reason, 'Invalid intervals: 1:1-999999999')
 
     async def test_sort(self):
         await self._assert_expected_search(

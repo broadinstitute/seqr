@@ -630,16 +630,7 @@ class BaseHailTableQuery(object):
 
         raw_intervals = intervals
         if self._should_add_chr_prefix():
-            # TODO handle [] notation?
-            intervals = [
-                #f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
-                [f'chr{interval[0]}', *interval[1:]]
-                for interval in (intervals or [])
-            ]
-
-        if is_x_linked:
-            reference_genome = hl.get_reference(self.GENOME_VERSION)
-            intervals = (intervals or []) + [reference_genome.x_contigs[0]]
+            intervals = [[f'chr{interval[0]}', *interval[1:]] for interval in (intervals or [])]
 
         if len(intervals) > MAX_GENE_INTERVALS and len(intervals) == len(gene_ids or []):
             super_intervals = defaultdict(lambda: (1e9, 0))
@@ -649,11 +640,18 @@ class BaseHailTableQuery(object):
 
         parsed_intervals = [
             hl.eval(hl.locus_interval(*interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
-            for interval in intervals
+            for interval in (intervals or [])
         ]
         invalid_intervals = [raw_intervals[i] for i, interval in enumerate(parsed_intervals) if interval is None]
         if invalid_intervals:
-            raise HTTPBadRequest(reason=f'Invalid intervals: {", ".join(invalid_intervals)}')
+            error_interval = ', '.join([f'{chrom}:{start}-{end}' for chrom, start, end in invalid_intervals])
+            raise HTTPBadRequest(reason=f'Invalid intervals: {error_interval}')
+
+        if is_x_linked:
+            reference_genome = hl.get_reference(self.GENOME_VERSION)
+            parsed_intervals.append(
+                hl.eval(hl.parse_locus_interval(reference_genome.x_contigs[0], reference_genome=self.GENOME_VERSION))
+            )
 
         return parsed_intervals
 
