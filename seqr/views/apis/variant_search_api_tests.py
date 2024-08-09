@@ -809,7 +809,7 @@ class VariantSearchAPITest(object):
                 'I0_F0_1-10439-AC-A': {'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'sampleType': 'WES'},
                 'I1_F0_1-10439-AC-A': {'ab': 0.0, 'dp': 24, 'gq': 0, 'numAlt': 0, 'sampleType': 'WES'},
                 'I2_F0_1-10439-AC-A': {'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 1, 'sampleType': 'WES'},
-                'I0_F1_1-10439-AC-A': {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'sampleType': 'WGS'},
+                'I0_F1_1-10439-AC-A': {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'sampleType': 'WES'},
             },
         }
         del expected_variant['familyGenotypes']

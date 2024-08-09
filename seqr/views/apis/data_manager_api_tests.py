@@ -1527,8 +1527,6 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
-    DAG_NAME = 'v03_pipeline-MITO'
-    SECOND_DAG_NAME = 'v03_pipeline-GCNV'
     LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
     PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
 
@@ -1587,6 +1585,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'callset_path': 'mito_callset.mt',
             'sample_source': 'Broad_Internal',
             'sample_type': 'WGS',
+            'dataset_type': 'MITO',
         }
 
     @responses.activate
@@ -1626,6 +1625,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     "callset_path": "gs://test_bucket/mito_callset.mt",
     "sample_source": "Broad_Internal",
     "sample_type": "WGS",
+    "dataset_type": "MITO",
     "reference_genome": "GRCh38"
 }"""
         message = f"""*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
@@ -1634,12 +1634,13 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
         Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project/
 
-        DAG {self.DAG_NAME} is triggered with following:
+        DAG LOADING_PIPELINE is triggered with following:
         ```{dag_json}```
     """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message)
 
         # Test loading trigger error
+        self.set_dag_trigger_error_response(status=400)
         self.mock_authorized_session.reset_mock()
         self.mock_slack.reset_mock()
         mock_open.reset_mock()
@@ -1652,19 +1653,19 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
-        self.assert_airflow_calls(trigger_error=True, secondary_dag_name=self.SECOND_DAG_NAME)
+        self.assert_airflow_calls(trigger_error=True, dataset_type='GCNV')
         self._has_expected_gs_calls(mock_open, 'SV', is_second_dag=True, sample_type='WES')
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
         errors = [call.args[0] for call in self.mock_airflow_logger.error.call_args_list]
         for error in errors:
-            self.assertRegex(error, 'Connection refused by Responses')
+            self.assertRegex(error, '400 Client Error: Bad Request')
 
         dag_json = dag_json.replace('mito_callset.mt', 'sv_callset.vcf').replace(
             'WGS', 'WES').replace('MITO', 'GCNV').replace('v01', 'v03')
         error_message = f"""ERROR triggering internal WES SV loading: {errors[0]}
         
-        DAG {self.SECOND_DAG_NAME} should be triggered with following: 
+        DAG LOADING_PIPELINE should be triggered with following: 
         ```{dag_json}```
         """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)

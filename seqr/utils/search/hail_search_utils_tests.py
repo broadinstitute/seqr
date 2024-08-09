@@ -18,7 +18,7 @@ MOCK_HOST = 'http://test-hail-host'
 
 SV_WGS_SAMPLE_DATA = [{
     'individual_guid': 'I000018_na21234', 'family_guid': 'F000014_14', 'project_guid': 'R0004_non_analyst_project',
-    'affected': 'A', 'sample_id': 'NA21234',
+    'affected': 'A', 'sample_id': 'NA21234', 'sample_type': 'WGS',
 }]
 
 EXPECTED_MITO_SAMPLE_DATA = deepcopy(FAMILY_2_MITO_SAMPLE_DATA)
@@ -151,7 +151,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             inheritance_mode='recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
-            search_fields=['annotations', 'annotations_secondary'], omit_sample_type='SV_WES',
+            search_fields=['annotations', 'annotations_secondary'], omit_data_type='SV_WES',
         )
 
         self.search_model.search['inheritance']['mode'] = 'x_linked_recessive'
@@ -159,7 +159,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         self._test_expected_search_call(
             inheritance_mode='x_linked_recessive', dataset_type='SNV_INDEL', secondary_dataset_type='SNV_INDEL',
             search_fields=['annotations', 'annotations_secondary'], sample_data=EXPECTED_SAMPLE_DATA_WITH_SEX,
-            omit_sample_type='SV_WES',
+            omit_data_type='SV_WES',
         )
 
         self.results_model.families.set(Family.objects.filter(id__in=[2, 11, 14]))
@@ -313,7 +313,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         get_single_variant(self.families, 'prefix_19107_DEL', user=self.user)
         self._test_minimal_search_call(
             variant_ids=[], variant_keys=['prefix_19107_DEL'],
-            num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_sample_type='SNV_INDEL')
+            num_results=1, sample_data=EXPECTED_SAMPLE_DATA, omit_data_type='SNV_INDEL')
 
         get_single_variant(self.families, 'M-10195-C-A', user=self.user)
         self._test_minimal_search_call(

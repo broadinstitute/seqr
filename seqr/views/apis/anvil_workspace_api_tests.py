@@ -473,7 +473,6 @@ class LoadAnvilDataAPITest(AirflowTestCase):
     fixtures = ['users', 'social_auth', 'reference_data', '1kg_project']
 
     LOADING_PROJECT_GUID = f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
-    DAG_NAME = 'v03_pipeline-SNV_INDEL'
     ADDITIONAL_REQUEST_COUNT = 1
 
     @staticmethod
@@ -483,6 +482,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             'callset_path': 'test_path.vcf',
             'sample_source': 'AnVIL',
             'sample_type': 'WES',
+            'dataset_type': 'SNV_INDEL',
         }
         if additional_tasks_check:
             variables.update({
@@ -769,6 +769,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             'callset_path': 'gs://test_bucket/test_path.vcf',
             'sample_source': 'AnVIL',
             'sample_type': 'WES',
+            'dataset_type': 'SNV_INDEL',
             'reference_genome': genome_version,
         }
         sample_summary = '3 new'
@@ -780,11 +781,10 @@ class LoadAnvilDataAPITest(AirflowTestCase):
 
         Pedigree file has been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/
 
-        DAG {dag_id} is triggered with following:
+        DAG LOADING_PIPELINE is triggered with following:
         ```{dag}```
     """.format(guid=project.guid, version=genome_version, workspace_name=project.workspace_name,
                    project_name=project.name, sample_summary=sample_summary,
-               dag_id=self.DAG_NAME,
                dag=json.dumps(dag_json, indent=4),
                )
         self.mock_slack.assert_called_with(
@@ -837,23 +837,23 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             self.manager_user, detail=sample_data)
         self.mock_api_logger.error.assert_not_called()
         self.mock_airflow_logger.warning.assert_called_with(
-            f'{self.DAG_NAME} is running and cannot be triggered again.', self.manager_user)
+            'LOADING_PIPELINE DAG is running and cannot be triggered again.', self.manager_user)
         self.mock_airtable_logger.error.assert_called_with(
             f'Airtable create "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: '
             f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', self.manager_user)
 
-        slack_message_on_failure = """ERROR triggering AnVIL loading for project {guid}: {dag_id} is running and cannot be triggered again.
+        slack_message_on_failure = """ERROR triggering AnVIL loading for project {guid}: LOADING_PIPELINE DAG is running and cannot be triggered again.
         
-        DAG {dag_id} should be triggered with following: 
+        DAG LOADING_PIPELINE should be triggered with following: 
         ```{dag}```
         """.format(
             guid=project.guid,
-            dag_id=self.DAG_NAME,
             dag=json.dumps({
                 'projects_to_run': [project.guid],
                 'callset_path': 'gs://test_bucket/test_path.vcf',
                 'sample_source': 'AnVIL',
                 'sample_type': 'WES',
+                'dataset_type': 'SNV_INDEL',
                 'reference_genome': genome_version,
             }, indent=4),
         )

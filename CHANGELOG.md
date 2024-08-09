@@ -2,6 +2,9 @@
 
 ## dev
 
+## 8/9/24
+* Update directory structure for search backend
+
 ## 8/2/24
 * Adds index_file_path to IGV Sample model (REQUIRES DB MIGRATION)
 
