@@ -568,7 +568,7 @@ def _load_aip_full_report_data(data: dict, user: User):
         Version of _load_aip_data that ingests a full AIP report rather than the
         cut down "seqr" format.
 
-        - Adds both the AIP-permissive and AIP-restrictive tags
+        - Adds both the Talos-permissive and Talos-restrictive tags
           depending on the presence of HPO matches in the variant.
         - Adds the First Seen metadata field to the tags.
 
@@ -629,11 +629,11 @@ def _load_aip_full_report_data(data: dict, user: User):
         saved_variant_map.update(new_variants_from_search)
 
     # Add the aip_permissive tag to all variants
-    aip_tag_type = VariantTagType.objects.get(name='AIP-permissive', project=None)
+    aip_tag_type = VariantTagType.objects.get(name='Talos-permissive', project=None)
     num_new, num_updated = _cpg_add_aip_tags_to_saved_variants(aip_tag_type, saved_variant_map, family_variant_data, category_map, user, restrictive=False)
 
     # Add the aip_restrictive tag to qualifying variants
-    aip_restrictive_tag_type = VariantTagType.objects.get(name='AIP-restrictive', project=None)
+    aip_restrictive_tag_type = VariantTagType.objects.get(name='Talos-restrictive', project=None)
     num_new_restrictive, num_updated_restrictive = _cpg_add_aip_tags_to_saved_variants(aip_restrictive_tag_type, saved_variant_map, family_variant_data, category_map, user, restrictive=True)
 
     summary_message = f'Loaded {num_new} new ({num_new_restrictive} restrictive) and {num_updated} updated ({num_updated_restrictive} restrictive) AIP tags for {len(family_id_map)} families'
@@ -672,13 +672,9 @@ def _cpg_add_aip_tags_to_saved_variants(aip_tag_type, saved_variant_map, family_
 
         # Copy selected metadata fields from the AIP results to the tag metadata.
         metadata = {}
-        for k in ['flags', 'independent', 'labels', 'panels', 'phenotypes', 'reasons', 'support_vars']:
+        for k in ['flags', 'independent', 'labels', 'panels', 'phenotypes', 'reasons', 'support_vars', 'phenotype_labels',
+                  'date_of_phenotype_match', 'evidence_last_updated',  'first_tagged']:
             metadata[k] = variant_result[k]
-
-        if restrictive:
-            metadata['first_tagged'] = variant_result.get('first_seen_restrictive', variant_result['first_seen'])
-        else:
-            metadata['first_tagged'] = variant_result['first_seen']
 
         # Add the categories using the date of ingest as the date.
         metadata['categories'] = {category: {'name': category_map[category], 'date': today} for category in variant_result['categories']}

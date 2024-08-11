@@ -437,7 +437,7 @@ def _format_functional_tags(tags):
     return tags
 
 
-AIP_TAG_TYPES = ['AIP', 'AIP-permissive', 'AIP-restrictive']
+AIP_TAG_TYPES = ['AIP', 'Talos-permissive', 'Talos-restrictive']
 GREGOR_FINDING_TAG_TYPE = 'GREGoR Finding'
 STRUCTURED_METADATA_TAG_TYPES = AIP_TAG_TYPES + [GREGOR_FINDING_TAG_TYPE,]
 def _format_variant_tags(tags):
