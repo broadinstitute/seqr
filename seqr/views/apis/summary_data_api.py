@@ -141,7 +141,7 @@ def hpo_summary_data(request, hpo_id):
     return create_json_response({'data': list(data)})
 
 
-AIP_INGEST_FULL_REPORT_DESC = 'CPG: Full AIP report'
+AIP_INGEST_FULL_REPORT_DESC = 'CPG: Full Talos report'
 
 
 @analyst_required
