@@ -1,7 +1,7 @@
 import { createSelector } from 'reselect'
 
 import { getSortedIndividualsByFamily, getGenesById, getUser } from 'redux/selectors'
-import { getVariantMainGeneId } from 'shared/utils/constants'
+import { getVariantMainGeneId, getVariantSummary } from 'shared/utils/constants'
 
 export const getSuccessStoryLoading = state => state.successStoryLoading.isLoading
 export const getSuccessStoryLoadingError = state => state.successStoryLoading.errorMessage
@@ -22,7 +22,7 @@ export const geVlmDefaultContactEmailByFamily = createSelector(
     const defaultEmail = {
       subject: `${gene || variant.variantId} variant match in seqr`,
       // TODO c. and p.
-      body: `Dear researcher,\n\nWe are interested in learning more about your case in seqr harboring a variant [c. and p.] in ${gene}.\n\nWe appreciate your assistance and look forward to hearing more from you.\n\nBest wishes,\n${user.displayName}`,
+      body: `Dear researcher,\n\nWe are interested in learning more about your case in seqr harboring ${getVariantSummary(variant)} in ${gene || 'no genes'}.\n\nWe appreciate your assistance and look forward to hearing more from you.\n\nBest wishes,\n${user.displayName}`,
     }
     return (variant.lookupFamilyGuids || []).reduce((acc, familyGuid) => {
       const individual = individualsByFamily[familyGuid]?.[0]

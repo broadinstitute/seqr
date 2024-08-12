@@ -7,8 +7,7 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_NOTES_FIELDS,
-  GENOME_VERSION_DISPLAY_LOOKUP,
-  getVariantMainTranscript,
+  getVariantSummary,
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HAS_DATA_FIELD,
   MME_TAG_NAME,
@@ -603,23 +602,9 @@ export const getMmeDefaultContactEmail = createSelector(
       geneSymbol => geneSymbol && submittedGenes.includes(geneSymbol),
     )
 
-    const submittedVariants = (submissionGeneVariants || []).map(({ variantGuid }) => {
-      const savedVariant = savedVariants[variantGuid]
-      const { alt, ref, chrom, pos, end, genomeVersion } = savedVariant
-      const genotype = (savedVariant.genotypes || {})[individualGuid] || {}
-      const mainTranscript = getVariantMainTranscript(savedVariant)
-      let consequence = `${(mainTranscript.majorConsequence || '').replace(/_variant/g, '').replace(/_/g, ' ')} variant`
-      let variantDetail = [(mainTranscript.hgvsc || '').split(':').pop(), (mainTranscript.hgvsp || '').split(':').pop()].filter(val => val).join('/')
-      const displayGenomeVersion = GENOME_VERSION_DISPLAY_LOOKUP[genomeVersion] || genomeVersion
-      let inheritance = genotype.numAlt === 1 ? 'heterozygous' : 'homozygous'
-      if (genotype.numAlt === -1) {
-        inheritance = 'copy number'
-        consequence = genotype.cn < 2 ? 'deletion' : 'duplication'
-        variantDetail = `CN=${genotype.cn}`
-      }
-      const position = ref ? `${pos} ${ref}>${alt}` : `${pos}-${end}`
-      return `a ${inheritance} ${consequence} ${chrom}:${position}${displayGenomeVersion ? ` (${displayGenomeVersion})` : ''}${variantDetail ? ` (${variantDetail})` : ''}`
-    }).join(', ')
+    const submittedVariants = (submissionGeneVariants || []).map(({ variantGuid }) => (
+      getVariantSummary(savedVariants[variantGuid], individualGuid)
+    )).join(', ')
 
     const submittedPhenotypeList = (phenotypes || []).filter(
       ({ observed, label }) => observed === 'yes' && label,

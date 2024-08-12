@@ -1526,6 +1526,26 @@ export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, s
   Object.values(transcripts),
 ).find(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)) || {}
 
+export const getVariantSummary = (variant, individualGuid) => {
+  const { alt, ref, chrom, pos, end, genomeVersion } = variant
+  const mainTranscript = getVariantMainTranscript(variant)
+  let consequence = `${(mainTranscript.majorConsequence || '').replace(/_variant/g, '').replace(/_/g, ' ')} variant`
+  let variantDetail = [(mainTranscript.hgvsc || '').split(':').pop(), (mainTranscript.hgvsp || '').split(':').pop()].filter(val => val).join('/')
+  const displayGenomeVersion = GENOME_VERSION_DISPLAY_LOOKUP[genomeVersion] || genomeVersion
+  let inheritance = ''
+  if (individualGuid) {
+    const genotype = (variant.genotypes || {})[individualGuid] || {}
+    inheritance = genotype.numAlt === 1 ? ' heterozygous' : ' homozygous'
+    if (genotype.numAlt === -1) {
+      inheritance = ' copy number'
+      consequence = genotype.cn < 2 ? 'deletion' : 'duplication'
+      variantDetail = `CN=${genotype.cn}`
+    }
+  }
+  const position = ref ? `${pos} ${ref}>${alt}` : `${pos}-${end}`
+  return `a${inheritance} ${consequence} ${chrom}:${position}${displayGenomeVersion ? ` (${displayGenomeVersion})` : ''}${variantDetail ? ` (${variantDetail})` : ''}`
+}
+
 const getPopAf = population => (variant) => {
   const populationData = (variant.populations || {})[population]
   return (populationData || {}).af
