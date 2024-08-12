@@ -21,8 +21,8 @@ export const geVlmDefaultContactEmailByFamily = createSelector(
     const gene = genesById[getVariantMainGeneId(variant)]?.geneSymbol
     const defaultEmail = {
       subject: `${gene || variant.variantId} variant match in seqr`,
-      // TODO c. and p.
-      body: `Dear researcher,\n\nWe are interested in learning more about your case in seqr harboring ${getVariantSummary(variant)} in ${gene || 'no genes'}.\n\nWe appreciate your assistance and look forward to hearing more from you.\n\nBest wishes,\n${user.displayName}`,
+      //
+      body: `Dear researcher,\n\nWe are interested in learning more about your case in seqr harboring ${getVariantSummary(variant)} in ${gene || 'no genes'} (${window.location.href}).\n\nWe appreciate your assistance and look forward to hearing more from you.\n\nBest wishes,\n${user.displayName}`,
     }
     return (variant.lookupFamilyGuids || []).reduce((acc, familyGuid) => {
       const individual = individualsByFamily[familyGuid]?.[0]
