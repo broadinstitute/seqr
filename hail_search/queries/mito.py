@@ -1,4 +1,4 @@
-import os
+from collections import defaultdict
 
 from aiohttp.web import HTTPNotFound
 import hail as hl
@@ -322,23 +322,20 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ).filter(hl.is_defined),
             )).filter(
                 lambda x: x[1].any(hl.is_defined)
-            ).starmap(lambda project_guid, family_indices: (
-                project_guid,
-                hl.dict(family_indices.map(lambda j: (lookup_ht.project_families[project_guid][j], True))),
+            ).starmap(lambda project_key, family_indices: (
+                project_key,
+                hl.dict(family_indices.map(lambda j: (lookup_ht.project_families[project_key][j], True))),
             ))), 1),
         )[0]
-
-        for project_guid, families in variant_projects.items():
-            if os.path.exists(self._get_table_path(f'projects/WES/{project_guid}.ht')):
-                sample_type = 'WES'
-            else:
-                sample_type = 'WGS'
-            for family_guid in families:
-                families[family_guid] = {sample_type: True}
 
         # Variant can be present in the lookup table with only ref calls, so is still not present in any projects
         if not variant_projects:
             raise HTTPNotFound()
+
+        new_variant_projects = defaultdict(lambda: defaultdict(dict))
+        for (project_guid, sample_type), families in variant_projects.items():
+            for family_guid, value in families.items():
+                new_variant_projects[project_guid][family_guid][sample_type] = value
 
         annotation_fields.update({
             'familyGenotypes': lambda r: hl.dict(r.family_entries.map(
@@ -346,9 +343,9 @@ class MitoHailTableQuery(BaseHailTableQuery):
             )),
         })
 
-        logger.info(f'Looking up {self.DATA_TYPE} variant in {len(variant_projects)} projects')
+        logger.info(f'Looking up {self.DATA_TYPE} variant in {len(new_variant_projects)} projects')
 
-        return super()._add_project_lookup_data(ht, annotation_fields, project_samples=variant_projects, **kwargs)
+        return super()._add_project_lookup_data(ht, annotation_fields, project_samples=new_variant_projects, **kwargs)
 
     @staticmethod
     def _stat_has_non_ref(s):
