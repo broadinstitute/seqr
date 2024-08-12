@@ -15,6 +15,7 @@ import FamilyVariantTags from 'shared/components/panel/variants/FamilyVariantTag
 import Variants, { Variant, StyledVariantRow } from 'shared/components/panel/variants/Variants'
 import { FamilyVariantIndividuals } from 'shared/components/panel/variants/VariantIndividuals'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
+import { sendVlmContactEmail } from '../reducers'
 import { geVlmDefaultContactEmailByFamily } from '../selectors'
 
 const FIELDS = [
@@ -48,7 +49,7 @@ const mapContactStateToProps = (state, ownProps) => {
 }
 
 const mapContactDispatchToProps = {
-  onSubmit: console.log,
+  onSubmit: sendVlmContactEmail,
 }
 
 const ContactButton = connect(mapContactStateToProps, mapContactDispatchToProps)(SendEmailButton)
