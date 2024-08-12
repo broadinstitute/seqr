@@ -14,7 +14,8 @@ import FamilyReads from 'shared/components/panel/family/FamilyReads'
 import FamilyVariantTags from 'shared/components/panel/variants/FamilyVariantTags'
 import Variants, { Variant, StyledVariantRow } from 'shared/components/panel/variants/Variants'
 import { FamilyVariantIndividuals } from 'shared/components/panel/variants/VariantIndividuals'
-import { getVariantMainGeneId, GENOME_VERSION_FIELD } from 'shared/utils/constants'
+import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
+import { geVlmDefaultContactEmailByFamily } from '../selectors'
 
 const FIELDS = [
   {
@@ -35,32 +36,31 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
-const defaultEmail = (variant, to, familyGuid, genesById) => ({
-  to,
-  familyGuid,
-  subject: `${genesById[getVariantMainGeneId(variant)]?.geneSymbol || variant.variantId} variant match in seqr`,
-  // TODO c. and p. , name
-  body: `Dear researcher,\n\nWe are interested in learning more about your case in seqr harboring a variant [c. and p.] in ${genesById[getVariantMainGeneId(variant)]?.geneSymbol}.\n\nWe appreciate your assistance and look forward to hearing more from you.\n\nBest wishes,\n\n[name]`,
-})
+const mapContactStateToProps = (state, ownProps) => {
+  const defaultEmail = geVlmDefaultContactEmailByFamily(state, ownProps)[ownProps.familyGuid]
+  const disabled = !defaultEmail?.to
+  return {
+    defaultEmail,
+    disabled,
+    buttonText: disabled ? 'Contact Opted Out' : null,
+    modalId: ownProps.familyGuid,
+  }
+}
 
-const individualDetail = ({ projectGuid, familyGuid, vlmContactEmail }, variant, genesById) => !projectGuid && (
-  <SendEmailButton
-    onSubmit={console.log}
-    defaultEmail={defaultEmail(variant, vlmContactEmail, familyGuid, genesById)}
-    disabled={!vlmContactEmail}
-    buttonText={vlmContactEmail ? null : 'Contact Opted Out'}
-    modalId={familyGuid}
-  />
-)
+const mapContactDispatchToProps = {
+  onSubmit: console.log,
+}
+
+const ContactButton = connect(mapContactStateToProps, mapContactDispatchToProps)(SendEmailButton)
 
 const LookupFamily = ({ familyGuid, variant, reads, showReads }) => (
   <StyledVariantRow>
     <Grid.Column width={16}>
       <FamilyVariantTags familyGuid={familyGuid} variant={variant} linkToSavedVariants />
     </Grid.Column>
-    <Grid.Column width={4} />
+    <Grid.Column width={4}><ContactButton familyGuid={familyGuid} variant={variant} /></Grid.Column>
     <Grid.Column width={12}>
-      <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} individualDetail={individualDetail} />
+      <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
       {showReads}
     </Grid.Column>
     <Grid.Column width={16}>{reads}</Grid.Column>

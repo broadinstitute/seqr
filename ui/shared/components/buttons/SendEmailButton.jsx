@@ -20,7 +20,7 @@ const CONTACT_FIELDS = [
 
 const SendEmailButton = React.memo((
   { defaultEmail, onSubmit, modalId, idField, draftOnly, editRecipient, modalTitleDetail, ...props },
-) => (
+) => (defaultEmail ? (
   // when submitOnChange is true, no submit button is shown
   <UpdateButton
     submitOnChange={draftOnly}
@@ -35,7 +35,7 @@ const SendEmailButton = React.memo((
     buttonFloated="right"
     {...props}
   />
-))
+) : null))
 
 SendEmailButton.propTypes = {
   defaultEmail: PropTypes.object.isRequired,
