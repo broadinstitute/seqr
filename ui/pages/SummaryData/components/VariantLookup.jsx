@@ -6,7 +6,7 @@ import { Grid, Header } from 'semantic-ui-react'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import StateDataLoader from 'shared/components/StateDataLoader'
-import UpdateButton from 'shared/components/buttons/UpdateButton'
+import SendEmailButton from 'shared/components/buttons/SendEmailButton'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { helpLabel } from 'shared/components/form/FormHelpers'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
@@ -35,31 +35,21 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
-const CONTACT_FIELDS = [
-  { name: 'subject', label: 'Subject:' },
-  { name: 'body', component: BaseSemanticInput, inputType: 'TextArea', rows: 12 },
-]
-
-const defaultEmail = (variant, to, genesById) => ({
+const defaultEmail = (variant, to, familyGuid, genesById) => ({
   to,
+  familyGuid,
   subject: `${genesById[getVariantMainGeneId(variant)]?.geneSymbol || variant.variantId} variant match in seqr`,
   // TODO c. and p. , name
   body: `Dear researcher,\n\nWe are interested in learning more about your case in seqr harboring a variant [c. and p.] in ${genesById[getVariantMainGeneId(variant)]?.geneSymbol}.\n\nWe appreciate your assistance and look forward to hearing more from you.\n\nBest wishes,\n\n[name]`,
 })
 
 const individualDetail = ({ projectGuid, familyGuid, vlmContactEmail }, variant, genesById) => !projectGuid && (
-  <UpdateButton
+  <SendEmailButton
     onSubmit={console.log}
-    initialValues={defaultEmail(variant, vlmContactEmail, genesById)}
-    formFields={CONTACT_FIELDS}
+    defaultEmail={defaultEmail(variant, vlmContactEmail, familyGuid, genesById)}
     disabled={!vlmContactEmail}
     buttonText={vlmContactEmail ? null : 'Contact Opted Out'}
-    modalTitle="Send Contact Email"
-    modalId={`contactEmail-${familyGuid}`}
-    editIconName="mail"
-    submitButtonText="Send"
-    buttonFloated="right"
-    showErrorPanel
+    modalId={familyGuid}
   />
 )
 
