@@ -1064,8 +1064,9 @@ const SORT_BY_EIGEN = 'EIGEN'
 const SORT_BY_MPC = 'MPC'
 const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
-const SORT_BY_AIP_DATE = 'AIP_CATEGORY_DATE'
-const SORT_BY_AIP_FIRST_TAGGED = 'AIP_FIRST_TAGGED'
+const SORT_BY_TALOS_DATE = 'TALOS_CATEGORY_DATE'
+const SORT_BY_TALOS_FIRST_TAGGED = 'TALOS_FIRST_TAGGED'
+const SORT_BY_TALOS_PHENO_DATE = 'TALOS_PHENO_DATE'
 const SORT_BY_SIZE = 'SIZE'
 
 export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectByGuid) => (
@@ -1222,35 +1223,47 @@ const VARIANT_SORT_OPTONS = [
     ),
   },
   {
-    value: SORT_BY_AIP_FIRST_TAGGED,
-    text: 'AIP: Last Tagged',
+    value: SORT_BY_TALOS_FIRST_TAGGED,
+    text: 'TALOS: Date first Tagged',
     comparator: (a, b, genesById, tagsByGuid) => {
-      const getAipFirstTaggedDate = (variant) => {
+      const getTalosFirstTaggedDate = (variant) => {
         const aipMetadata = variant.tagGuids.map(tagGuid => tagsByGuid[tagGuid]?.aipMetadata)
         const dates = (aipMetadata || []).map(metadata => metadata?.first_tagged || '')
         return dates.filter(date => date !== null).sort().reverse()[0] || ''
       }
 
-      return getAipFirstTaggedDate(b).localeCompare(getAipFirstTaggedDate(a))
+      return getTalosFirstTaggedDate(b).localeCompare(getTalosFirstTaggedDate(a))
     },
   },
   {
-    value: SORT_BY_AIP_DATE,
-    text: 'AIP: Evidence Last Updated',
+    value: SORT_BY_TALOS_DATE,
+    text: 'TALOS: Date Evidence Updated',
     comparator: (a, b, genesById, tagsByGuid) => {
-      const getLatestAipCatagoryDate = (variant) => {
+      const getLatestTalosCatagoryDate = (variant) => {
         const aipMetadata = variant.tagGuids.map(tagGuid => tagsByGuid[tagGuid]?.aipMetadata)
-        const dates = (aipMetadata || []).map(metadata => Object.values(metadata?.categories || {})
-          .map(data => data.date)).flat()
+        const dates = (aipMetadata || []).map(metadata => metadata?.evidence_last_updated || '')
         return dates.filter(date => date !== null).sort().reverse()[0] || ''
       }
 
-      return getLatestAipCatagoryDate(b).localeCompare(getLatestAipCatagoryDate(a))
+      return getLatestTalosCatagoryDate(b).localeCompare(getLatestTalosCatagoryDate(a))
+    },
+  },
+  {
+    value: SORT_BY_TALOS_PHENO_DATE,
+    text: 'TALOS: Date Phenotype Match Fist Found',
+    comparator: (a, b, genesById, tagsByGuid) => {
+      const getLatestTalosPhenoDate = (variant) => {
+        const aipMetadata = variant.tagGuids.map(tagGuid => tagsByGuid[tagGuid]?.aipMetadata)
+        const dates = (aipMetadata || []).map(metadata => metadata?.date_of_phenotype_match || '')
+        return dates.filter(date => date !== null).sort().reverse()[0] || ''
+      }
+
+      return getLatestTalosPhenoDate(b).localeCompare(getLatestTalosPhenoDate(a))
     },
   },
 ]
-// CPG: AIP related sorting must be excluded from VARIANT_SEARCH_SORT_OPTONS
-const VARIANT_SEARCH_SORT_OPTONS = VARIANT_SORT_OPTONS.slice(1, VARIANT_SORT_OPTONS.length - 3)
+// CPG: TALOS related sorting must be excluded from VARIANT_SEARCH_SORT_OPTONS
+const VARIANT_SEARCH_SORT_OPTONS = VARIANT_SORT_OPTONS.slice(1, VARIANT_SORT_OPTONS.length - 4)
 
 export const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(
   (acc, opt) => ({

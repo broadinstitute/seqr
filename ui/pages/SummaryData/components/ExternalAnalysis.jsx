@@ -17,7 +17,7 @@ const UPLOAD_FIELDS = [
     component: Select,
     options: [
       ...FAMILY_ANALYSED_BY_DATA_TYPES.map(([value, text]) => ({ value, text })),
-      { value: 'AIP' }, { value: 'CPG: Full AIP report' },
+      { value: 'AIP' }, { value: 'CPG: Full Talos report' },
     ],
     validate: validators.required,
   },
@@ -29,7 +29,7 @@ const UPLOAD_FIELDS = [
         Drag-drop or click here to upload analysed families
         <br />
         <br />
-        File should include a &quot;Project&quot; and a &quot;Family&quot; column OR be valid AIP JSON
+        File should include a &quot;Project&quot; and a &quot;Family&quot; column OR be valid AIP/Talos JSON
       </div>
     ),
     validate: validateUploadedFile,
