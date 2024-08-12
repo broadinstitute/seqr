@@ -407,8 +407,9 @@ IndividualDetailField.propTypes = {
   field: PropTypes.string,
 }
 
-const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet, genesById }) => (
+const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet, genesById, individualDetail }) => (
   <IndividualsContainer>
+    {individualDetail && <IndividualCell>{individualDetail((individuals || [])[0])}</IndividualCell>}
     {(individuals || []).map(individual => (
       <IndividualCell key={individual.individualGuid} numIndividuals={individuals.length}>
         <PedigreeIcon
@@ -437,6 +438,7 @@ BaseVariantIndividuals.propTypes = {
   individuals: PropTypes.arrayOf(PropTypes.object),
   isCompoundHet: PropTypes.bool,
   genesById: PropTypes.object,
+  individualDetail: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({

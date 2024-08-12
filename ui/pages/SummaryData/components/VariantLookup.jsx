@@ -34,6 +34,8 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
+const individualDetail = individual => !individual.projectGuid && individual.vlmContactEmail
+
 const LookupFamily = ({ familyGuid, variant, reads, showReads }) => (
   <StyledVariantRow>
     <Grid.Column width={16}>
@@ -41,7 +43,7 @@ const LookupFamily = ({ familyGuid, variant, reads, showReads }) => (
     </Grid.Column>
     <Grid.Column width={4} />
     <Grid.Column width={12}>
-      <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
+      <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} individualDetail={individualDetail} />
       {showReads}
     </Grid.Column>
     <Grid.Column width={16}>{reads}</Grid.Column>
