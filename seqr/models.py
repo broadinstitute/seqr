@@ -968,6 +968,11 @@ class VariantFunctionalData(ModelWithGUID):
                 'description': 'Variant is believed to be part of the solve, explaining only some of the phenotypes.',
                 'color': '#1F42D9',
             })),
+            ('Validated Name', json.dumps({
+                'description': 'Variant name which differs from the computed name.',
+                'color': '#0E7694',
+                'metadata_title': 'Name',
+            })),
         )),
     )
 

@@ -45,6 +45,7 @@ const LIST_FORMAT_PROPS = {
 
 const METADATA_FIELD_PROPS = {
   [NOTES_METADATA_TITLE]: { width: 16, maxLength: 50, placeholder: 'Enter up to 50 characters' },
+  Name: { width: 16, maxLength: 100, placeholder: 'Enter up to 100 characters' },
   Reason: { width: 16, maxLength: 50, placeholder: 'Brief reason for excluding. Enter up to 50 characters' },
   'Test Type(s)': {
     width: 16,
