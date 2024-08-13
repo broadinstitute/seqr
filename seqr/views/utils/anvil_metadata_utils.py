@@ -267,7 +267,10 @@ def _get_nested_variant_name(v):
 
 
 def _get_sv_name(variant_json, pop_sv_name=True):
+    validated_sv_name = variant_json.pop('validated_sv_name', None)
     sv_name = variant_json.pop('svName', None) if pop_sv_name else variant_json.get('svName')
+    if validated_sv_name:
+        return validated_sv_name[0]
     if variant_json.get('svType'):
         return sv_name or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
     return None
@@ -324,13 +327,18 @@ def _get_parsed_saved_discovery_variants_by_family(
 ):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
 
-    project_saved_variants = SavedVariant.objects.filter(
-        varianttag__variant_tag_type__in=tag_types, family__id__in=families,
-        **({} if include_svs else {'alt__isnull': False}),
-    ).order_by('created_date').distinct().annotate(
+    annotations = dict(
         tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True),
         partial_hpo_terms=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Partial Phenotype Contribution')),
     )
+    if include_svs:
+        annotations['validated_sv_name'] = ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Validated Name'))
+        variant_attr_fields = ['validated_sv_name'] + (variant_attr_fields or [])
+
+    project_saved_variants = SavedVariant.objects.filter(
+        varianttag__variant_tag_type__in=tag_types, family__id__in=families,
+        **({} if include_svs else {'alt__isnull': False}),
+    ).order_by('created_date').distinct().annotate(**annotations)
 
     variants = []
     gene_ids = set()
