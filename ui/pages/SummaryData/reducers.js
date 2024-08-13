@@ -79,7 +79,7 @@ export const updateExternalAnalysis = values => dispatch => new HttpRequestHelpe
 ).post(values)
 
 export const sendVlmContactEmail = values => () => new HttpRequestHelper(
-  '/api/summary_data/send_email',
+  '/api/summary_data/send_vlm_email',
 ).post(values)
 
 export const reducers = {
