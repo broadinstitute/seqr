@@ -378,7 +378,7 @@ def send_vlm_email(request):
     email_message = EmailMessage(
         subject=request_json['subject'],
         body=request_json['body'],
-        bcc=[request_json['to']],
+        bcc=[s.strip() for s in request_json['to'].split(',')],
         cc=[request.user.email],
         reply_to=[request.user.email],
         to=[VLM_SEND_EMAIL],
