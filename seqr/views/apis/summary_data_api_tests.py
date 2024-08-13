@@ -50,7 +50,7 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "zygosity-2": "Heterozygous",
     "ref-1": "TC",
     "svType-2": "DEL",
-    "sv_name-2": "DEL:chr1:249045487-249045898",
+    "sv_name-2": "DEL:chr1:249045123-249045456",
     "chrom-2": "1",
     "pos-2": 249045487,
     'end-2': 249045898,
