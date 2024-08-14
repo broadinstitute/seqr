@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Remove ONT support (REQUIRES DB MIGRATION)
 
 ## 8/9/24
 * Update directory structure for search backend
