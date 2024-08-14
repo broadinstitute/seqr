@@ -100,6 +100,24 @@ const mapContentStateToProps = (state, ownProps) => ({
 
 const VariantSearchResultsContent = connect(mapContentStateToProps)(BaseVariantSearchResultsContent)
 
+const ErrorResults = ({ errorMessage, match }) => ([
+  <Grid.Row key="sort">
+    <Grid.Column width={16} floated="right" textAlign="right">
+      <SearchDisplayForm formLocation="Error" match={match} />
+    </Grid.Column>
+  </Grid.Row>,
+  <Grid.Row key="error">
+    <Grid.Column width={16}>
+      <Message error content={errorMessage} />
+    </Grid.Column>
+  </Grid.Row>,
+])
+
+ErrorResults.propTypes = {
+  errorMessage: PropTypes.string,
+  match: PropTypes.object,
+}
+
 const BaseVariantSearchResults = React.memo(({
   match, displayVariants, load, unload, initialLoad, variantsLoading, contextLoading, errorMessage, contentComponent,
   ...props
@@ -112,13 +130,7 @@ const BaseVariantSearchResults = React.memo(({
     unload={unload}
     initialLoad={initialLoad}
     reloadOnIdUpdate
-    errorMessage={errorMessage && (
-      <Grid.Row>
-        <Grid.Column width={16}>
-          <Message error content={errorMessage} />
-        </Grid.Column>
-      </Grid.Row>
-    )}
+    errorMessage={errorMessage && <ErrorResults errorMessage={errorMessage} match={match} />}
   >
     {React.createElement(contentComponent || VariantSearchResultsContent, { match, displayVariants, ...props })}
   </DataLoader>
