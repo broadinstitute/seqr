@@ -823,18 +823,22 @@ class VariantSearchAPITest(object):
                 'I0_F0_1-10439-AC-A': {
                     'affected': 'N', 'familyGuid': 'F0_1-10439-AC-A', 'features': [],
                     'individualGuid': 'I0_F0_1-10439-AC-A', 'sex': 'F',
+                    'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
                 },
                 'I0_F1_1-10439-AC-A': {
                     'affected': 'A', 'familyGuid': 'F1_1-10439-AC-A', 'individualGuid': 'I0_F1_1-10439-AC-A', 'sex': 'M',
                     'features': [{'category': 'HP:0001626', 'label': '1 terms'}, {'category': 'Other', 'label': '1 terms'}],
+                    'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
                 },
                 'I1_F0_1-10439-AC-A': {
                     'affected': 'N', 'familyGuid': 'F0_1-10439-AC-A', 'features': [],
                     'individualGuid': 'I1_F0_1-10439-AC-A', 'sex': 'M',
+                    'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
                 },
                 'I2_F0_1-10439-AC-A': {
                     'affected': 'A', 'familyGuid': 'F0_1-10439-AC-A', 'individualGuid': 'I2_F0_1-10439-AC-A', 'sex': 'F',
                     'features': [{'category': 'HP:0000707', 'label': '1 terms'}, {'category': 'HP:0001626', 'label': '1 terms'}],
+                    'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
                 },
             },
             'variants': [expected_variant],
