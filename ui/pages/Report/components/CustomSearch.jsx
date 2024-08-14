@@ -122,6 +122,7 @@ const CustomSearch = React.memo(({ match, history, loadContext, loading, searchP
             history={history}
             resultsPath="/report/custom_search"
             initialValues={searchParams}
+            match={match}
           >
             <InlineHeader content="Include All Projects: " />
             {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
