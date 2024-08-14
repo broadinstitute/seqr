@@ -333,8 +333,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 sample_type = 'WES'
             else:
                 sample_type = 'WGS'
-            for family_guid in families:
-                families[family_guid] = {sample_type: True}
+            for family_guid, value in families.items():
+                families[family_guid] = {sample_type: value}
 
         # Variant can be present in the lookup table with only ref calls, so is still not present in any projects
         if not variant_projects:
