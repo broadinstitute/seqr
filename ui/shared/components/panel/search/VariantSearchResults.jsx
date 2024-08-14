@@ -13,14 +13,13 @@ import {
   getVariantSearchDisplay,
   getSearchedVariantExportConfig,
 } from 'redux/selectors'
-import { VARIANT_SEARCH_SORT_FIELD, VARIANT_PAGINATION_FIELD } from '../../../utils/constants'
 import DataLoader from '../../DataLoader'
 import { QueryParamsEditor } from '../../QueryParamEditor'
 import { HorizontalSpacer } from '../../Spacers'
 import ExportTableButton from '../../buttons/ExportTableButton'
-import FormWrapper from '../../form/FormWrapper'
 import Variants from '../variants/Variants'
 import GeneBreakdown from './GeneBreakdown'
+import SearchDisplayForm from './SearchDisplayForm'
 
 const LargeRow = styled(Grid.Row)`
   font-size: 1.15em;
@@ -31,10 +30,6 @@ const LargeRow = styled(Grid.Row)`
 `
 
 const scrollToTop = () => window.scrollTo(0, 0)
-
-const FIELDS = [
-  VARIANT_SEARCH_SORT_FIELD,
-]
 
 export const DisplayVariants = React.memo(({ displayVariants, compoundHetToggle }) => (
   <Grid.Row>
@@ -50,15 +45,12 @@ DisplayVariants.propTypes = {
 }
 
 const BaseVariantSearchResultsContent = React.memo(({
-  match, variantSearchDisplay, searchedVariantExportConfig, onSubmit, totalVariantsCount, additionalDisplayEdit,
+  match, variantSearchDisplay, searchedVariantExportConfig, totalVariantsCount, additionalDisplayEdit,
   displayVariants, compoundHetToggle,
 }) => {
   const { searchHash } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
-  const paginationFields = totalVariantsCount > recordsPerPage ?
-    [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
-  const fields = [...FIELDS, ...paginationFields] // eslint-disable-line react-perf/jsx-no-new-array-as-prop
 
   return [
     <LargeRow key="resultsSummary">
@@ -69,15 +61,7 @@ const BaseVariantSearchResultsContent = React.memo(({
       </Grid.Column>
       <Grid.Column width={11} floated="right" textAlign="right">
         {additionalDisplayEdit}
-        <FormWrapper
-          onSubmit={onSubmit}
-          modalName="editSearchedVariantsDisplayTop"
-          initialValues={variantSearchDisplay}
-          closeOnSuccess={false}
-          submitOnChange
-          inline
-          fields={fields}
-        />
+        <SearchDisplayForm formLocation="Top" match={match} searchOnSubmit />
         <HorizontalSpacer width={10} />
         {searchedVariantExportConfig && <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" disabled={totalVariantsCount > 1000} />}
         <HorizontalSpacer width={10} />
@@ -87,15 +71,7 @@ const BaseVariantSearchResultsContent = React.memo(({
     <DisplayVariants key="variants" displayVariants={displayVariants} compoundHetToggle={compoundHetToggle} />,
     <LargeRow key="bottomPagination">
       <Grid.Column width={11} floated="right" textAlign="right">
-        <FormWrapper
-          onSubmit={onSubmit}
-          modalName="editSearchedVariantsDisplayBottom"
-          initialValues={variantSearchDisplay}
-          closeOnSuccess={false}
-          submitOnChange
-          inline
-          fields={paginationFields}
-        />
+        <SearchDisplayForm formLocation="Bottom" match={match} paginationOnly searchOnSubmit />
         <HorizontalSpacer width={10} />
         <Button onClick={scrollToTop}>Scroll To Top</Button>
         <HorizontalSpacer width={10} />
@@ -106,7 +82,6 @@ const BaseVariantSearchResultsContent = React.memo(({
 
 BaseVariantSearchResultsContent.propTypes = {
   match: PropTypes.object,
-  onSubmit: PropTypes.func,
   variantSearchDisplay: PropTypes.object,
   searchedVariantExportConfig: PropTypes.arrayOf(PropTypes.object),
   totalVariantsCount: PropTypes.number,
@@ -123,18 +98,25 @@ const mapContentStateToProps = (state, ownProps) => ({
   errorMessage: getSearchedVariantsErrorMessage(state),
 })
 
-const mapContentDispatchToProps = (dispatch, ownProps) => ({
-  onSubmit: (updates) => {
-    dispatch(loadSearchedVariants(ownProps.match.params, {
-      displayUpdates: updates,
-      ...ownProps,
-    }))
-  },
-})
+const VariantSearchResultsContent = connect(mapContentStateToProps)(BaseVariantSearchResultsContent)
 
-const VariantSearchResultsContent = connect(
-  mapContentStateToProps, mapContentDispatchToProps,
-)(BaseVariantSearchResultsContent)
+const ErrorResults = ({ errorMessage, match }) => ([
+  <Grid.Row key="sort">
+    <Grid.Column width={16} floated="right" textAlign="right">
+      <SearchDisplayForm formLocation="Error" match={match} />
+    </Grid.Column>
+  </Grid.Row>,
+  <Grid.Row key="error">
+    <Grid.Column width={16}>
+      <Message error content={errorMessage} />
+    </Grid.Column>
+  </Grid.Row>,
+])
+
+ErrorResults.propTypes = {
+  errorMessage: PropTypes.string,
+  match: PropTypes.object,
+}
 
 const BaseVariantSearchResults = React.memo(({
   match, displayVariants, load, unload, initialLoad, variantsLoading, contextLoading, errorMessage, contentComponent,
@@ -148,13 +130,7 @@ const BaseVariantSearchResults = React.memo(({
     unload={unload}
     initialLoad={initialLoad}
     reloadOnIdUpdate
-    errorMessage={errorMessage && (
-      <Grid.Row>
-        <Grid.Column width={16}>
-          <Message error content={errorMessage} />
-        </Grid.Column>
-      </Grid.Row>
-    )}
+    errorMessage={errorMessage && <ErrorResults errorMessage={errorMessage} match={match} />}
   >
     {React.createElement(contentComponent || VariantSearchResultsContent, { match, displayVariants, ...props })}
   </DataLoader>
