@@ -21,6 +21,8 @@ export const ANVIL_URL = 'https://anvil.terra.bio'
 export const GOOGLE_LOGIN_URL = '/login/google-oauth2'
 export const LOCAL_LOGIN_URL = '/login'
 
+export const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
+
 export const GENOME_VERSION_37 = '37'
 export const GENOME_VERSION_38 = '38'
 export const GENOME_VERSION_OPTIONS = [
