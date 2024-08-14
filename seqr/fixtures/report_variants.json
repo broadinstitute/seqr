@@ -168,5 +168,18 @@
         "functional_data_tag": "Partial Phenotype Contribution",
         "metadata": "Uncertain"
     }
+},
+{
+    "model": "seqr.variantfunctionaldata",
+    "pk": 31,
+    "fields": {
+        "guid": "VFD0000031_prefix_19107_DEL_r0",
+        "created_date": "2018-07-24T15:34:01.353Z",
+        "created_by": null,
+        "last_modified_date": "2024-07-24T15:34:01.365Z",
+        "saved_variants": [7],
+        "functional_data_tag": "Validated Name",
+        "metadata": "DEL:chr1:249045123-249045456"
+    }
 }
 ]
