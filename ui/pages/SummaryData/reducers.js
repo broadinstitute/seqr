@@ -78,6 +78,10 @@ export const updateExternalAnalysis = values => dispatch => new HttpRequestHelpe
   },
 ).post(values)
 
+export const sendVlmContactEmail = values => () => new HttpRequestHelper(
+  '/api/summary_data/send_vlm_email',
+).post(values)
+
 export const reducers = {
   successStoryLoading: loadingReducer(REQUEST_SUCCESS_STORY, RECEIVE_SUCCESS_STORY),
   successStoryRows: createSingleValueReducer(RECEIVE_SUCCESS_STORY, []),

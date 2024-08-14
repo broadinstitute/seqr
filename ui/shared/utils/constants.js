@@ -21,6 +21,8 @@ export const ANVIL_URL = 'https://anvil.terra.bio'
 export const GOOGLE_LOGIN_URL = '/login/google-oauth2'
 export const LOCAL_LOGIN_URL = '/login'
 
+export const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
+
 export const GENOME_VERSION_37 = '37'
 export const GENOME_VERSION_38 = '38'
 export const GENOME_VERSION_OPTIONS = [
@@ -1525,6 +1527,26 @@ export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selec
 export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => flatten(
   Object.values(transcripts),
 ).find(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)) || {}
+
+export const getVariantSummary = (variant, individualGuid) => {
+  const { alt, ref, chrom, pos, end, genomeVersion } = variant
+  const mainTranscript = getVariantMainTranscript(variant)
+  let consequence = `${(mainTranscript.majorConsequence || '').replace(/_variant/g, '').replace(/_/g, ' ')} variant`
+  let variantDetail = [(mainTranscript.hgvsc || '').split(':').pop(), (mainTranscript.hgvsp || '').split(':').pop()].filter(val => val).join('/')
+  const displayGenomeVersion = GENOME_VERSION_DISPLAY_LOOKUP[genomeVersion] || genomeVersion
+  let inheritance = ''
+  if (individualGuid) {
+    const genotype = (variant.genotypes || {})[individualGuid] || {}
+    inheritance = genotype.numAlt === 1 ? ' heterozygous' : ' homozygous'
+    if (genotype.numAlt === -1) {
+      inheritance = ' copy number'
+      consequence = genotype.cn < 2 ? 'deletion' : 'duplication'
+      variantDetail = `CN=${genotype.cn}`
+    }
+  }
+  const position = ref ? `${pos} ${ref}>${alt}` : `${pos}-${end}`
+  return `a${inheritance} ${consequence} ${chrom}:${position}${displayGenomeVersion ? ` (${displayGenomeVersion})` : ''}${variantDetail ? ` (${variantDetail})` : ''}`
+}
 
 const getPopAf = population => (variant) => {
   const populationData = (variant.populations || {})[population]

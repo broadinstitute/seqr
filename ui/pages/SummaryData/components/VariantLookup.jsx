@@ -6,6 +6,7 @@ import { Grid, Header } from 'semantic-ui-react'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import StateDataLoader from 'shared/components/StateDataLoader'
+import SendEmailButton from 'shared/components/buttons/SendEmailButton'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { helpLabel } from 'shared/components/form/FormHelpers'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
@@ -14,6 +15,8 @@ import FamilyVariantTags from 'shared/components/panel/variants/FamilyVariantTag
 import Variants, { Variant, StyledVariantRow } from 'shared/components/panel/variants/Variants'
 import { FamilyVariantIndividuals } from 'shared/components/panel/variants/VariantIndividuals'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
+import { sendVlmContactEmail } from '../reducers'
+import { geVlmDefaultContactEmailByFamily } from '../selectors'
 
 const FIELDS = [
   {
@@ -34,12 +37,29 @@ const FIELDS = [
   { required: true, ...GENOME_VERSION_FIELD },
 ]
 
+const mapContactStateToProps = (state, ownProps) => {
+  const defaultEmail = geVlmDefaultContactEmailByFamily(state, ownProps)[ownProps.familyGuid]
+  const disabled = !defaultEmail?.to
+  return {
+    defaultEmail,
+    disabled,
+    buttonText: disabled ? 'Contact Opted Out' : null,
+    modalId: ownProps.familyGuid,
+  }
+}
+
+const mapContactDispatchToProps = {
+  onSubmit: sendVlmContactEmail,
+}
+
+const ContactButton = connect(mapContactStateToProps, mapContactDispatchToProps)(SendEmailButton)
+
 const LookupFamily = ({ familyGuid, variant, reads, showReads }) => (
   <StyledVariantRow>
     <Grid.Column width={16}>
       <FamilyVariantTags familyGuid={familyGuid} variant={variant} linkToSavedVariants />
     </Grid.Column>
-    <Grid.Column width={4} />
+    <Grid.Column width={4}><ContactButton familyGuid={familyGuid} variant={variant} /></Grid.Column>
     <Grid.Column width={12}>
       <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
       {showReads}

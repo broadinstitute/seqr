@@ -6,6 +6,7 @@ import { Header, Segment, List, Icon } from 'semantic-ui-react'
 
 import { WORKSPACE_REQUIREMENTS } from 'shared/components/panel/LoadWorkspaceDataForm'
 import { ActiveDisabledNavLink } from 'shared/components/StyledComponents'
+import { VCF_DOCUMENTATION_URL } from 'shared/utils/constants'
 import { SeqrAvailability } from './LandingPage'
 
 const ENGLISH = 'en'
@@ -193,7 +194,7 @@ const FAQS = [
           regulatory approval is required to use seqr to analyze data stored on Terra or AnVIL. <br />
 
           To learn more about generating a joint called vcf, please refer to this &nbsp;
-          <a href="https://drive.google.com/file/d/1aE7vUvUOZw_r78Osjn1Q0Cs3c5DCuonz/view?usp=sharing" target="_blank" rel="noreferrer">
+          <a href={VCF_DOCUMENTATION_URL} target="_blank" rel="noreferrer">
             documentation
           </a>
         </div>
@@ -232,7 +233,7 @@ const FAQS = [
           <br />
 
           Para obtener más información sobre cómo generar un conjunto denominado vcf, consulte esta &nbsp;
-          <a href="https://drive.google.com/file/d/1aE7vUvUOZw_r78Osjn1Q0Cs3c5DCuonz/view?usp=sharing" target="_blank" rel="noreferrer">documentación</a>
+          <a href={VCF_DOCUMENTATION_URL} target="_blank" rel="noreferrer">documentación</a>
         </div>
       ),
     },

@@ -2,6 +2,10 @@
 
 ## dev
 
+## 8/14/24
+* Remove ONT support (REQUIRES DB MIGRATION)
+* Add "Validated Name" functional tag (REQUIRES DB MIGRATION)
+
 ## 8/9/24
 * Update directory structure for search backend
 
