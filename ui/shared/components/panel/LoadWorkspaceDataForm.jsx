@@ -17,6 +17,7 @@ import {
   INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED,
   SAMPLE_TYPE_OPTIONS,
+  VCF_DOCUMENTATION_URL,
 } from 'shared/utils/constants'
 import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
@@ -27,8 +28,6 @@ import PhiWarningUploadField from 'shared/components/form/PhiWarningUploadField'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { getAnvilLoadingDelayDate } from 'redux/selectors'
 import AnvilFileSelector from 'shared/components/form/AnvilFileSelector'
-
-const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
 
 export const WORKSPACE_REQUIREMENTS = [
   '"Writer" or "Owner" level access to the workspace',

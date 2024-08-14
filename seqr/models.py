@@ -700,7 +700,6 @@ class Sample(ModelWithGUID):
         (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
         (DATASET_TYPE_SV_CALLS, 'SV Calls'),
         (DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
-        ('ONT_SNV_INDEL', 'ONT Calls'),
     )
     DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
@@ -967,6 +966,11 @@ class VariantFunctionalData(ModelWithGUID):
                 'metadata_title': 'HPO Terms',
                 'description': 'Variant is believed to be part of the solve, explaining only some of the phenotypes.',
                 'color': '#1F42D9',
+            })),
+            ('Validated Name', json.dumps({
+                'description': 'Variant name which differs from the computed name.',
+                'color': '#0E7694',
+                'metadata_title': 'Name',
             })),
         )),
     )
