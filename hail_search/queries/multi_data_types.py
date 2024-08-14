@@ -8,13 +8,8 @@ from hail_search.queries.snv_indel import SnvIndelHailTableQuery
 from hail_search.queries.snv_indel_37 import SnvIndelHailTableQuery37
 from hail_search.queries.sv import SvHailTableQuery
 from hail_search.queries.gcnv import GcnvHailTableQuery
-from hail_search.queries.ont_snv_indel import OntSnvIndelHailTableQuery
-
-ONT_ENABLED = os.environ.get('ONT_ENABLED')
 
 QUERY_CLASSES = [SnvIndelHailTableQuery, SnvIndelHailTableQuery37, MitoHailTableQuery, SvHailTableQuery, GcnvHailTableQuery]
-if ONT_ENABLED:
-    QUERY_CLASSES.append(OntSnvIndelHailTableQuery)
 QUERY_CLASS_MAP = {(cls.DATA_TYPE, cls.GENOME_VERSION): cls for cls in QUERY_CLASSES}
 SNV_INDEL_DATA_TYPE = SnvIndelHailTableQuery.DATA_TYPE
 
