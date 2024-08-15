@@ -339,7 +339,7 @@ class BaseHailTableQuery(object):
 
         return ht, comp_het_ht
 
-    def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
+    def import_filtered_table(self, project_samples, num_families, **kwargs):
         if num_families == 1:
             family_sample_data = list(project_samples.values())[0]
             family_guid = list(family_sample_data.keys())[0]
