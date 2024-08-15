@@ -404,7 +404,6 @@ def gregor_export(request):
         format_id=_format_gregor_id,
         get_additional_individual_fields=_get_participant_row,
         post_process_variant=_post_process_gregor_variant,
-        include_svs=False,
         airtable_fields=[[PARTICIPANT_ID_FIELD, 'Recontactable'], [SMID_FIELD]],
         include_mondo=True,
         proband_only_variants=True,

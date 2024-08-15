@@ -162,7 +162,7 @@ def parse_anvil_metadata(
         get_additional_sample_fields: Callable[[Sample, dict], dict] = None,
         get_additional_individual_fields: Callable[[Individual, dict], dict] = None,
         individual_samples: dict[Individual, Sample] = None, individual_data_types: dict[str, Iterable[str]] = None,
-        airtable_fields: Iterable[str] = None, mme_value: Aggregate = None, include_svs: bool = True,
+        airtable_fields: Iterable[str] = None, mme_value: Aggregate = None,
         variant_json_fields: Iterable[str] = None, variant_attr_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
         include_no_individual_families: bool = False, omit_airtable: bool = False, include_family_name_display: bool = False, include_family_sample_metadata: bool = False,
         include_discovery_sample_id: bool = False, include_mondo: bool = False, omit_parent_mnvs: bool = False,
@@ -186,7 +186,7 @@ def parse_anvil_metadata(
             sample_ids.add(sample.sample_id)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(
-        list(family_data_by_id.keys()), bool(mme_value), include_svs, variant_json_fields, variant_attr_fields,
+        list(family_data_by_id.keys()), bool(mme_value), variant_json_fields, variant_attr_fields,
     )
 
     condition_map = _get_condition_map(family_data_by_id.values())
@@ -322,7 +322,7 @@ def _get_discovery_notes(variant, gene_variants, omit_parent_mnvs):
 
 
 def _get_parsed_saved_discovery_variants_by_family(
-        families: Iterable[Family], include_metadata: bool, include_svs: dict, variant_json_fields: list[str],
+        families: Iterable[Family], include_metadata: bool, variant_json_fields: list[str],
         variant_attr_fields: list[str],
 ):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
@@ -330,14 +330,11 @@ def _get_parsed_saved_discovery_variants_by_family(
     annotations = dict(
         tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True),
         partial_hpo_terms=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Partial Phenotype Contribution')),
+        validated_sv_name=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Validated Name')),
     )
-    if include_svs:
-        annotations['validated_sv_name'] = ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Validated Name'))
-        variant_attr_fields = ['validated_sv_name'] + (variant_attr_fields or [])
 
     project_saved_variants = SavedVariant.objects.filter(
         varianttag__variant_tag_type__in=tag_types, family__id__in=families,
-        **({} if include_svs else {'alt__isnull': False}),
     ).order_by('created_date').distinct().annotate(**annotations)
 
     variants = []
@@ -356,10 +353,6 @@ def _get_parsed_saved_discovery_variants_by_family(
             phenotype_contribution = 'Uncertain'
             partial_hpo_terms = ''
 
-        variant_fields = ['genotypes']
-        if include_svs:
-            variant_fields += ['svType', 'svName', 'end']
-
         parsed_variant = {
             'chrom': 'MT' if chrom == 'M' else chrom,
             'pos': pos,
@@ -370,18 +363,19 @@ def _get_parsed_saved_discovery_variants_by_family(
             'phenotype_contribution': phenotype_contribution,
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
-            **{k: variant_json.get(k) for k in variant_fields + (variant_json_fields or [])},
+            **{k: variant_json.get(k) for k in ['genotypes', 'svType', 'svName', 'end'] + (variant_json_fields or [])},
             'ClinGen_allele_ID': variant_json.get('CAID'),
-            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt'] + (variant_attr_fields or [])},
+            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt', 'validated_sv_name'] + (variant_attr_fields or [])},
         }
         if include_metadata:
             parsed_variant.update({
                 'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
             })
-        if include_svs:
-            parsed_variant.update({
-                'sv_name': _get_sv_name(parsed_variant),
-            })
+
+        # TODO clean up SV name logic
+        parsed_variant.update({
+            'sv_name': _get_sv_name(parsed_variant),
+        })
         variants.append(parsed_variant)
 
     genes_by_id = get_genes(gene_ids)
