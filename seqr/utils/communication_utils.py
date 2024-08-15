@@ -67,9 +67,13 @@ def send_project_notification(project, notification, email, subject):
 
 
 def _set_bulk_notification_stream(message):
-    message.esp_extra = {
-        'MessageStream': 'seqr-notifications',
-    }
+    set_email_message_stream(message, 'seqr-notifications')
     # Use batch API: emails are all sent with a single request and each recipient sees only their own email address
     message.merge_data = {}
+
+
+def set_email_message_stream(message, stream):
+    message.esp_extra = {
+        'MessageStream': stream,
+    }
 

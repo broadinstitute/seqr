@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 8/14/24
 * Remove ONT support (REQUIRES DB MIGRATION)
 * Add "Validated Name" functional tag (REQUIRES DB MIGRATION)
 
