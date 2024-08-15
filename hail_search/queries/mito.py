@@ -331,7 +331,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         for project_guid, families in variant_projects.items():
             # Temporarily use try/except to determine sample_type, to be removed when lookup table contains sample_type
             try:
-                hl.read_table(self._get_table_path(f'projects/WES/{project_guid}.ht'))
+                hl.read_table(self._get_table_path(f'projects/WES/{project_guid}.ht', use_ssd_dir=True))
                 sample_type = 'WES'
             except Exception:
                 sample_type = 'WGS'
