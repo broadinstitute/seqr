@@ -15,7 +15,7 @@ class ResetCachedSearchResultsTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        result = VariantSearchResults.objects.create(search_hash='abc', variant_search_id=1)
+        result = VariantSearchResults.objects.create(search_hash='abc', variant_search_id=79516)
         result.families.set(Family.objects.filter(pk=1))
         cls.result_guid = result.guid
 
