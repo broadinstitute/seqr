@@ -329,9 +329,11 @@ class MitoHailTableQuery(BaseHailTableQuery):
         )[0]
 
         for project_guid, families in variant_projects.items():
-            if os.path.exists(self._get_table_path(f'projects/WES/{project_guid}.ht')):
+            # Temporarily use try/except to determine sample_type, to be removed when lookup table contains sample_type
+            try:
+                hl.read_table(self._get_table_path(f'projects/WES/{project_guid}.ht', use_ssd_dir=True))
                 sample_type = 'WES'
-            else:
+            except Exception:
                 sample_type = 'WGS'
             for family_guid, value in families.items():
                 families[family_guid] = {sample_type: value}
