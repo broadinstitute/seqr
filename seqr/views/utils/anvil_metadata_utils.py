@@ -467,6 +467,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_
         genotypes = row['genotypes']
         individual_genotype = genotypes.get(individual.guid) or {}
         zygosity = _get_genotype_zygosity(individual_genotype)
+        copy_number = individual_genotype.get('cn') or -1
         if zygosity:
             heteroplasmy = individual_genotype.get('hl')
             findings_id = f'{participant_id}_{row["chrom"]}_{row["pos"]}'
@@ -477,7 +478,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_
                     HET: 'Heteroplasmy',
                     HOM_ALT: 'Homoplasmy',
                 }[zygosity],
-                'copy_number': individual_genotype.get('cn'),
+                'copy_number': copy_number if copy_number >= 0 else None,
                 'allele_balance_or_heteroplasmy_percentage': heteroplasmy,
                 'variant_inheritance': _get_variant_inheritance(individual, genotypes),
                 **row,

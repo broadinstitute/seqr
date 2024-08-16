@@ -728,17 +728,7 @@ export const VEP_GROUP_SV = 'structural'
 export const VEP_GROUP_SV_CONSEQUENCES = 'structural_consequence'
 export const VEP_GROUP_SV_NEW = 'new_structural_variants'
 
-const VEP_SV_TYPES = [
-  {
-    description: 'A deletion called from exome data',
-    text: 'Exome Deletion',
-    value: 'gCNV_DEL',
-  },
-  {
-    description: 'A duplication called from exome data',
-    text: 'Exome Duplication',
-    value: 'gCNV_DUP',
-  },
+export const SV_TYPES = [
   {
     description: 'A deletion called from genome data',
     text: 'Deletion',
@@ -779,6 +769,19 @@ const VEP_SV_TYPES = [
     text: 'Breakend',
     value: 'BND',
   },
+]
+const VEP_SV_TYPES = [
+  {
+    description: 'A deletion called from exome data',
+    text: 'Exome Deletion',
+    value: 'gCNV_DEL',
+  },
+  {
+    description: 'A duplication called from exome data',
+    text: 'Exome Duplication',
+    value: 'gCNV_DUP',
+  },
+  ...SV_TYPES,
 ]
 
 export const EXTENDED_INTRONIC_DESCRIPTION = "A variant which falls in the first 9 bases of the 5' end of intron or the within the last 9 bases of the 3' end of intron"
