@@ -498,9 +498,11 @@ BASE_VARIANT_METADATA_ROW = {
     'additional_family_members_with_variant': '',
     'allele_balance_or_heteroplasmy_percentage': None,
     'analysisStatus': 'Q',
+    'chrom_end': None,
     'clinvar': None,
     'condition_id': None,
-    'end': None,
+    'copy_number': None,
+    'pos_end': None,
     'hgvsc': '',
     'hgvsp': '',
     'method_of_discovery': 'SR-ES',
@@ -508,9 +510,10 @@ BASE_VARIANT_METADATA_ROW = {
     'phenotype_contribution': 'Full',
     'partial_contribution_explained': '',
     'seqr_chosen_consequence': None,
-    'svType': None,
+    'sv_type': None,
     'sv_name': None,
     'transcript': None,
+    'validated_name': None,
 }
 
 PARTICIPANT_TABLE = [
@@ -1323,7 +1326,6 @@ class ReportAPITest(AirtableTest):
             'condition_id': 'MONDO:0044970',
             'condition_inheritance': 'Unknown',
             'displayName': '2',
-            'end': 1912634,
             'familyGuid': 'F000002_2',
             'family_id': '2',
             'gene_of_interest': 'OR4G11P',
@@ -1350,7 +1352,7 @@ class ReportAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        row_ids += ['NA20889_1_248367227', 'NA20889_1_249045487']
+        row_ids += ['NA20889_1_248367227', 'NA20889_1_249045487_DEL']
         self.assertListEqual([r['genetic_findings_id'] for r in response_json['rows']], row_ids)
         self.assertDictEqual(response_json['rows'][1], expected_row)
         self.assertDictEqual(response_json['rows'][2], expected_mnv)
@@ -1361,7 +1363,8 @@ class ReportAPITest(AirtableTest):
             'chrom': '1',
             'ClinGen_allele_ID': 'CA1501729',
             'clinvar': {'alleleId': None, 'clinicalSignificance': '', 'goldStars': None, 'variationId': None},
-            'condition_id': 'MONDO:0008788',
+            'condition_id': 'OMIM:616126',
+            'condition_inheritance': 'Autosomal recessive',
             'displayName': '12',
             'familyGuid': 'F000012_12',
             'family_id': '12',
@@ -1369,6 +1372,7 @@ class ReportAPITest(AirtableTest):
             'gene_id': 'ENSG00000240361',
             'gene_known_for_phenotype': 'Candidate',
             'genetic_findings_id': 'NA20889_1_248367227',
+            'known_condition_name': 'Immunodeficiency 38',
             'hgvsc': 'c.3955G>A',
             'hgvsp': 'c.1586-17C>G',
             'participant_id': 'NA20889',
@@ -1392,21 +1396,23 @@ class ReportAPITest(AirtableTest):
             'condition_id': 'OMIM:616126',
             'condition_inheritance': 'Autosomal recessive',
             'known_condition_name': 'Immunodeficiency 38',
+            'copy_number': 1,
             'displayName': '12',
-            'end': 249045898,
+            'pos_end': 249045898,
             'familyGuid': 'F000012_12',
             'family_id': '12',
             'gene_of_interest': None,
             'gene_id': None,
             'gene_known_for_phenotype': 'Candidate',
-            'genetic_findings_id': 'NA20889_1_249045487',
+            'genetic_findings_id': 'NA20889_1_249045487_DEL',
             'participant_id': 'NA20889',
             'pos': 249045487,
             'projectGuid': 'R0003_test',
             'internal_project_id': 'Test Reprocessed Project',
             'ref': None,
-            'svType': 'DEL',
-            'sv_name': 'DEL:chr1:249045123-249045456',
+            'sv_type': 'DEL',
+            'sv_name': 'DEL:chr1:249045487-249045898',
+            'validated_name': 'DEL:chr1:249045123-249045456',
             'tags': ['Tier 1 - Novel gene and phenotype'],
             'variant_inheritance': 'unknown',
             'variant_reference_assembly': 'GRCh37',
