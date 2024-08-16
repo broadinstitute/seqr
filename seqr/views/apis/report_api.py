@@ -849,7 +849,7 @@ def family_metadata(request, project_guid):
             family = families_by_id[family_id]
             if 'inheritance_models' not in family:
                 family.update({'genes': set(), 'inheritance_models': set()})
-            family['genes'].update({v.get(GENE_COLUMN) or v.get('sv_name') or v.get('gene_id') or '' for v in row})
+            family['genes'].update({v.get(GENE_COLUMN) or v.get('validated_name') or v.get('sv_name') or v.get('gene_id') or '' for v in row})
             family['inheritance_models'].update({v['variant_inheritance'] for v in row})
 
     parse_anvil_metadata(
