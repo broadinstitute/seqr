@@ -471,6 +471,8 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_
         if zygosity:
             heteroplasmy = individual_genotype.get('hl')
             findings_id = f'{participant_id}_{row["chrom"]}_{row["pos"]}'
+            if row['sv_type']:
+                findings_id += f'_{row["sv_type"]}'
             parsed_row = {
                 'genetic_findings_id': findings_id,
                 'participant_id': participant_id,
@@ -587,7 +589,7 @@ def _get_condition_map(families):
     omim_conditions_by_id_gene = defaultdict(lambda: defaultdict(list))
     for omim in Omim.objects.filter(phenotype_mim_number__in=mim_numbers).values(
             'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance', 'chrom', 'start', 'end',
-            'gene__gene_id',
+            'gene__gene_id', 'gene__gene_symbol',
     ):
         omim_conditions_by_id_gene[omim['phenotype_mim_number']][omim['gene__gene_id']].append(omim)
 
@@ -628,6 +630,15 @@ def _update_conditions(family_subject_row, variants, omim_conditions, mondo_cond
                 variant_conditions += omim_conditions[mim_number][gene_id]
 
         if set_conditions_for_variants:
+            if v['sv_type'] and mim_numbers and not variant_conditions:
+                # For SVs report the gene linked to the condition instead of the annotated gene if conflicting
+                possible_gene_conditions = [
+                    conditions for mim_number in mim_numbers
+                    for gene_id, conditions in omim_conditions[mim_number].items() if gene_id and conditions
+                ]
+                if len(possible_gene_conditions) == 1:
+                    variant_conditions = possible_gene_conditions[0]
+                    v[GENE_COLUMN] = variant_conditions[0]['gene__gene_symbol']
             conditions = _format_omim_conditions(variant_conditions) if variant_conditions else mondo_condition
             v.update(conditions)
         else:
