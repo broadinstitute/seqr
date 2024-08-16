@@ -316,7 +316,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
             raise HTTPNotFound()
         variant_projects = lookup_ht.aggregate(hl.agg.take(
             hl.dict(hl.enumerate(lookup_ht.project_stats).starmap(lambda i, ps: (
-                lookup_ht.project_guids[i],
+                lookup_ht.project_sample_types[i],
                 hl.enumerate(ps).starmap(
                     lambda j, s: hl.or_missing(self._stat_has_non_ref(s), j)
                 ).filter(hl.is_defined),
