@@ -414,8 +414,8 @@ MOCK_DATA_MODEL = {
                 {'column': 'variant_reference_assembly', 'required': True, 'data_type': 'enumeration', 'enumerations': ['GRCh37', 'GRCh38']},
                 {'column': 'chrom', 'required': True},
                 {'column': 'pos', 'required': True, 'data_type': 'integer'},
-                {'column': 'ref','required': True},
-                {'column': 'alt', 'required': True},
+                {'column': 'ref','required': 'CONDITIONAL (variant_type = SNV/INDEL, variant_type = RE)'},
+                {'column': 'alt', 'required': 'CONDITIONAL (variant_type = SNV/INDEL, variant_type = RE)'},
                 {'column': 'ClinGen_allele_ID'},
                 {'column': 'gene_of_interest', 'required': True},
                 {'column': 'transcript'},
@@ -617,12 +617,13 @@ GENETIC_FINDINGS_TABLE = [
     ], [
         'Broad_NA20889_1_248367227', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '248367227', 'TC', 'T',
         'CA1501729', 'OR4G11P', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', '', 'unknown',
-        'Broad_NA20889_1_249045487', '', 'Candidate', 'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant',
+        'Broad_NA20889_1_249045487_DEL', '', 'Candidate', 'Immunodeficiency 38', 'OMIM:616126', 'Autosomal recessive',
         'Partial', 'HP:0000501|HP:0000365', '', 'SR-ES', '', '', '', '', '', '', '',
     ], [
-        'Broad_NA20889_1_249045487', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '249045487', 'A', 'G', '',
+        'Broad_NA20889_1_249045487_DEL', 'Broad_NA20889', '', 'SV', 'GRCh37', '1', '249045487', '', '', '',
         'OR4G11P', '', '', '', 'Heterozygous', '', 'unknown', 'Broad_NA20889_1_248367227', '', 'Candidate',
-        'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant', 'Full', '', '', 'SR-ES', '', '', '', '', '', '', '',
+        'Immunodeficiency 38', 'OMIM:616126', 'Autosomal recessive', 'Full', '', '', 'SR-ES', '', 'DEL', '',
+        '249045898', '1', 'DEL:chr1:249045123-249045456', '',
     ],
 ]
 
@@ -936,13 +937,9 @@ class ReportAPITest(AirtableTest):
         project.consent_code = 'H'
         project.save()
 
-        # Currently not reporting SV discoveries, so modify fixture data to report comp het pair
-        # Remove this once we are reporting SVs
+        # For SV variant, test reports in gene associated with OMIM condition even if not annotated
         variant = SavedVariant.objects.get(id=7)
-        variant.ref = 'A'
-        variant.alt = 'G'
-        variant.saved_variant_json['genotypes']['I000017_na20889']['numAlt'] = 1
-        variant.saved_variant_json['transcripts'] = {'ENSG00000240361': []}
+        variant.saved_variant_json['transcripts'] = {'ENSG00000135953': []}
         variant.save()
 
         responses.calls.reset()
