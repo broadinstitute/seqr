@@ -336,6 +336,7 @@ def _get_parsed_saved_discovery_variants_by_family(
         main_transcript = _get_variant_main_transcript(variant)
         gene_id = main_transcript.get('geneId')
         gene_ids.add(gene_id)
+        sv_type = variant_json.get('svType')
 
         partial_hpo_terms = variant.partial_hpo_terms[0] if variant.partial_hpo_terms else ''
         phenotype_contribution = 'Partial' if partial_hpo_terms else 'Full'
@@ -352,13 +353,14 @@ def _get_parsed_saved_discovery_variants_by_family(
             'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.tags else 'Candidate',
             'phenotype_contribution': phenotype_contribution,
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
-            'sv_name': (variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)) if variant_json.get('svType') else None,
+            'sv_type': sv_type,
+            'sv_name': (variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)) if sv_type else None,
+            'validated_name': variant.validated_name[0] if variant.validated_name else None,
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
             **{k: variant_json.get(k) for k in ['genotypes'] + (variant_json_fields or [])},
-            **{k: variant_json.get(field) for k, field in [
-                ('ClinGen_allele_ID', 'CAID'), ('sv_type', 'svType'), ('chrom_end', 'endChrom'), ('pos_end', 'end'),
-            ]},
-            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt', 'validated_name'] + (variant_attr_fields or [])},
+            **{k: variant_json.get(field) if sv_type else None for k, field in [('chrom_end', 'endChrom'), ('pos_end', 'end')]},
+            'ClinGen_allele_ID': variant_json.get('CAID'),
+            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt'] + (variant_attr_fields or [])},
         }
         if include_metadata:
             parsed_variant.update({

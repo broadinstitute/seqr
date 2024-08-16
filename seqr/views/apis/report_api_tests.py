@@ -437,8 +437,8 @@ MOCK_DATA_MODEL = {
                 {'column': 'notes'},
                 {'column': 'sv_type'},
                 {'column': 'chrom_end'},
-                {'column': 'pos_end'},
-                {'column': 'copy_number'},
+                {'column': 'pos_end', 'data_type': 'integer'},
+                {'column': 'copy_number', 'data_type': 'integer'},
                 {'column': 'hgvs'},
                 {'column': 'gene_disease_validity'},
             ]
