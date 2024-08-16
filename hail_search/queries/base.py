@@ -14,7 +14,7 @@ SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
 
 # Number of filtered genes at which pre-filtering a table by gene-intervals does not improve performance
 # Estimated based on behavior for several representative gene lists
-MAX_GENE_INTERVALS = 100
+MAX_GENE_INTERVALS = int(os.environ.get('MAX_GENE_INTERVALS', 100))
 
 # Optimal number of entry table partitions, balancing parallelization with partition overhead
 # Experimentally determined based on compound het search performance:
@@ -259,7 +259,7 @@ class BaseHailTableQuery(object):
         parsed_intervals = self._parse_intervals(intervals, **kwargs)
         parsed_annotations = self._parse_annotations(annotations, annotations_secondary, **kwargs)
         self.import_filtered_table(
-            *self._parse_sample_data(sample_data), parsed_intervals=parsed_intervals, parsed_annotations=parsed_annotations, **kwargs)
+            *self._parse_sample_data(sample_data), parsed_intervals=parsed_intervals, raw_intervals=intervals, parsed_annotations=parsed_annotations, **kwargs)
 
     @classmethod
     def _get_table_path(cls, path, use_ssd_dir=False):
@@ -339,7 +339,7 @@ class BaseHailTableQuery(object):
 
         return ht, comp_het_ht
 
-    def import_filtered_table(self, project_samples, num_families, intervals=None, **kwargs):
+    def import_filtered_table(self, project_samples, num_families, **kwargs):
         if num_families == 1:
             family_sample_data = list(project_samples.values())[0]
             family_guid = list(family_sample_data.keys())[0]
@@ -644,25 +644,28 @@ class BaseHailTableQuery(object):
 
         raw_intervals = intervals
         if self._should_add_chr_prefix():
-            intervals = [
-                f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
-                for interval in (intervals or [])
-            ]
-
-        if is_x_linked:
-            reference_genome = hl.get_reference(self.GENOME_VERSION)
-            intervals = (intervals or []) + [reference_genome.x_contigs[0]]
+            intervals = [[f'chr{interval[0]}', *interval[1:]] for interval in (intervals or [])]
 
         if len(intervals) > MAX_GENE_INTERVALS and len(intervals) == len(gene_ids or []):
-            return []
+            super_intervals = defaultdict(lambda: (1e9, 0))
+            for chrom, start, end in intervals:
+                super_intervals[chrom] = (min(super_intervals[chrom][0], start), max(super_intervals[chrom][1], end))
+            intervals = [(chrom, start, end) for chrom, (start, end) in super_intervals.items()]
 
         parsed_intervals = [
-            hl.eval(hl.parse_locus_interval(interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
-            for interval in intervals
+            hl.eval(hl.locus_interval(*interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
+            for interval in (intervals or [])
         ]
         invalid_intervals = [raw_intervals[i] for i, interval in enumerate(parsed_intervals) if interval is None]
         if invalid_intervals:
-            raise HTTPBadRequest(reason=f'Invalid intervals: {", ".join(invalid_intervals)}')
+            error_interval = ', '.join([f'{chrom}:{start}-{end}' for chrom, start, end in invalid_intervals])
+            raise HTTPBadRequest(reason=f'Invalid intervals: {error_interval}')
+
+        if is_x_linked:
+            reference_genome = hl.get_reference(self.GENOME_VERSION)
+            parsed_intervals.append(
+                hl.eval(hl.parse_locus_interval(reference_genome.x_contigs[0], reference_genome=self.GENOME_VERSION))
+            )
 
         return parsed_intervals
 
