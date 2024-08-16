@@ -196,6 +196,10 @@ export const navigateSavedHashedSearch = (search, navigateSearch, resultsPath, h
   })
 }
 
+export const updateSearchSort = updates => (dispatch) => {
+  dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates })
+}
+
 export const loadSearchedVariants = (
   { searchHash }, { displayUpdates, queryParams, updateQueryParams },
 ) => (dispatch, getState) => {

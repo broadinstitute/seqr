@@ -12,6 +12,7 @@ import {
 } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
+import SendEmailButton from 'shared/components/buttons/SendEmailButton'
 import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
 import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
@@ -127,7 +128,6 @@ const mapPhenotypeStateToProps = (state, ownProps) => ({
 
 const EditPhenotypesTable = connect(mapPhenotypeStateToProps)(BaseEditPhenotypesTable)
 
-const CONTACT_URL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
 const SUBMISSION_EDIT_FIELDS = [
   { ...MATCHMAKER_CONTACT_NAME_FIELD, name: 'contactName' },
   { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'contactHref' },
@@ -151,49 +151,20 @@ const SUBMISSION_EDIT_FIELDS = [
   },
 ]
 
-const CONTACT_FIELDS = [
-  {
-    name: 'to',
-    label: 'Send To:',
-    validate: val => (CONTACT_URL_REGEX.test(val) ? undefined : 'Invalid Contact Email'),
-  },
-  { name: 'subject', label: 'Subject:' },
-  { name: 'body', component: BaseSemanticInput, inputType: 'TextArea', rows: 12 },
-]
-
-const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit, canSend }) => (
-  // when submitOnChange is true, no submit button is shown
-  <UpdateButton
-    submitOnChange={!canSend}
-    onSubmit={canSend && onSubmit}
-    initialValues={defaultContactEmail}
-    formFields={CONTACT_FIELDS}
-    modalTitle={`${canSend ? 'Send' : 'Draft'} Contact Email for Patient ${defaultContactEmail.patientId}`}
-    modalId={`contactEmail-${defaultContactEmail.patientId}`}
-    buttonText="Contact Host"
-    editIconName="mail"
-    showErrorPanel
-    submitButtonText="Send"
-    buttonFloated="right"
-  />
-))
-
-BaseContactHostButton.propTypes = {
-  defaultContactEmail: PropTypes.object,
-  onSubmit: PropTypes.func,
-  canSend: PropTypes.bool,
-}
-
 const mapContactButtonStateToProps = (state, ownProps) => ({
-  defaultContactEmail: getMmeDefaultContactEmail(state, ownProps),
-  canSend: getCurrentProject(state).isAnalystProject,
+  defaultEmail: getMmeDefaultContactEmail(state, ownProps),
+  draftOnly: !getCurrentProject(state).isAnalystProject,
+  editRecipient: true,
+  buttonText: 'Contact Host',
+  idField: 'patientId',
+  modalTitleDetail: patientId => ` for Patient ${patientId}`,
 })
 
 const mapContactDispatchToProps = {
   onSubmit: sendMmeContactEmail,
 }
 
-const ContactHostButton = connect(mapContactButtonStateToProps, mapContactDispatchToProps)(BaseContactHostButton)
+const ContactHostButton = connect(mapContactButtonStateToProps, mapContactDispatchToProps)(SendEmailButton)
 
 const contactedLabel = (val) => {
   if (val.hostContacted) {

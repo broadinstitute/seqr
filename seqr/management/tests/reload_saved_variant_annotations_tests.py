@@ -31,7 +31,7 @@ class ReloadVariantAnnotationsTest(AnvilAuthenticationTestCase):
 
         with self.assertRaises(CommandError) as ce:
             call_command('reload_saved_variant_annotations', 'SV', 'GRCh37')
-        self.assertEqual(str(ce.exception), "Error: argument data_type: invalid choice: 'SV' (choose from 'MITO', 'ONT_SNV_INDEL', 'SNV_INDEL', 'SV_WES', 'SV_WGS')")
+        self.assertEqual(str(ce.exception), "Error: argument data_type: invalid choice: 'SV' (choose from 'MITO', 'SNV_INDEL', 'SV_WES', 'SV_WGS')")
 
         # Test success
         call_command('reload_saved_variant_annotations', 'SNV_INDEL', 'GRCh37')

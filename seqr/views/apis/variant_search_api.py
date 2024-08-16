@@ -585,6 +585,7 @@ def _update_lookup_variant(variant, response):
         (i.pop('family__guid'), i.pop('individual_id')): i
         for i in Individual.objects.filter(family__guid__in=no_access_families).values(
             'family__guid', 'individual_id', 'affected', 'sex', 'features',
+            vlmContactEmail=F('family__project__vlm_contact_email'),
         )
     }
     add_individual_hpo_details(individual_summary_map.values())

@@ -6,7 +6,7 @@ import mock
 import responses
 
 from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, hpo_summary_data, \
-    bulk_update_family_external_analysis, individual_metadata
+    bulk_update_family_external_analysis, individual_metadata, send_vlm_email
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest, PARSED_VARIANTS
 from seqr.models import FamilyAnalysedBy, SavedVariant, VariantTag
 from settings import AIRTABLE_URL
@@ -50,7 +50,7 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "zygosity-2": "Heterozygous",
     "ref-1": "TC",
     "svType-2": "DEL",
-    "sv_name-2": "DEL:chr1:249045487-249045898",
+    "sv_name-2": "DEL:chr1:249045123-249045456",
     "chrom-2": "1",
     "pos-2": 249045487,
     'end-2': 249045898,
@@ -714,6 +714,50 @@ class SummaryDataAPITest(AirtableTest):
 
         response = self.client.get(f'{gregor_projects_url}?includeAirtable=true')
         self._has_expected_metadata_response(response, multi_project_individuals, has_airtable=True, has_duplicate=True)
+
+    @mock.patch('seqr.views.apis.summary_data_api.EmailMessage')
+    def test_send_vlm_email(self, mock_email):
+        url = reverse(send_vlm_email)
+        self.check_require_login(url)
+
+        self.reset_logs()
+        body = {
+            'to': 'test@test.com , other_test@gmail.com',
+            'body': 'some email content',
+            'subject': 'some email subject'
+        }
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self._assert_expected_vlm_email(response, mock_email)
+
+        self.reset_logs()
+        mock_email.return_value.send.side_effect = Exception('Send failed')
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self._assert_expected_vlm_email(response, mock_email, additional_logs=[
+            ('VLM Email Error: Send failed', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+                'detail': body,
+            }),
+        ])
+
+    def _assert_expected_vlm_email(self, response, mock_email, additional_logs=None):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+
+        mock_email.assert_called_with(
+            subject='some email subject',
+            body='some email content',
+            bcc=['test@test.com', 'other_test@gmail.com'],
+            cc=['test_user_no_access@test.com'],
+            reply_to=['test_user_no_access@test.com'],
+            to=['vlm-noreply@broadinstitute.org'],
+            from_email='vlm-noreply@broadinstitute.org')
+        self.assertDictEqual(mock_email.return_value.esp_extra, {'MessageStream': 'vlm'})
+        mock_email.return_value.send.assert_called()
+
+        self.assert_json_logs(self.no_access_user, (additional_logs or []) + [
+            (None, {'httpRequest': mock.ANY, 'requestBody': mock.ANY})
+        ])
 
 
 # Tests for AnVIL access disabled
