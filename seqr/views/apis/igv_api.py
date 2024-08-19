@@ -150,6 +150,7 @@ GCNV_FILE_EXTENSIONS = tuple(ext for ext, sample_type in SAMPLE_TYPE_MAP if samp
 
 
 @pm_or_data_manager_required
+# TODO allow access
 def update_individual_igv_sample(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project

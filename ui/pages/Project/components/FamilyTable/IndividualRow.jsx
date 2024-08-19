@@ -8,6 +8,7 @@ import { Label, Popup, Form, Input, Loader } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
 import { SearchInput, YearSelector, RadioButtonGroup, ButtonRadioGroup, Select } from 'shared/components/form/Inputs'
+import { validators } from 'shared/components/form/FormHelpers'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import Modal from 'shared/components/modal/Modal'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
@@ -35,7 +36,7 @@ import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
   ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS,
 } from '../../constants'
-import { updateIndividuals } from '../../reducers'
+import { updateIndividuals, updateIndividualIGV } from '../../reducers'
 import { getCurrentProject, getParentOptionsByIndividual } from '../../selectors'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
@@ -500,8 +501,9 @@ const EDIT_INDIVIDUAL_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
   { ...field, component: connect(mapParentOptionsStateToProps)(Select), inline: true, width: 8 }
 )))
 
+// TODO dropdown with valid options
 const EDIT_IGV_FIELDS = [
-  { name: 'filePath', label: 'File' },
+  { name: 'filePath', label: 'IGV File Path', validate: validators.required },
 ]
 
 const EditIndividualButton = ({ project, displayName, fieldName, ...props }) => (
@@ -529,7 +531,9 @@ class IndividualRow extends React.PureComponent {
     individual: PropTypes.object.isRequired,
     mmeSubmission: PropTypes.object,
     samplesByGuid: PropTypes.object.isRequired,
+    alignmentSample: PropTypes.object,
     dispatchUpdateIndividual: PropTypes.func,
+    dispatchUpdateIndividualIGV: PropTypes.func,
     updateIndividualPedigree: PropTypes.func,
     tableName: PropTypes.string,
   }
@@ -552,7 +556,10 @@ class IndividualRow extends React.PureComponent {
   }
 
   render() {
-    const { project, individual, mmeSubmission, samplesByGuid, tableName, updateIndividualPedigree } = this.props
+    const {
+      project, individual, mmeSubmission, samplesByGuid, tableName, updateIndividualPedigree, alignmentSample,
+      dispatchUpdateIndividualIGV,
+    } = this.props
     const { displayName, sex, affected, createdDate, sampleGuids } = individual
 
     let loadedSamples = sampleGuids.map(
@@ -584,11 +591,11 @@ class IndividualRow extends React.PureComponent {
         />
         <EditIndividualButton
           fieldName=" IGV"
-          initialValues={individual}
+          initialValues={alignmentSample || individual}
           project={project}
           displayName={displayName}
           formFields={EDIT_IGV_FIELDS}
-          onSubmit={updateIndividualPedigree}
+          onSubmit={dispatchUpdateIndividualIGV}
         />
       </IndividualContainer>
     )
@@ -623,10 +630,14 @@ const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   samplesByGuid: getSamplesByGuid(state),
   mmeSubmission: getMmeSubmissionsByGuid(state)[ownProps.individual.mmeSubmissionGuid],
+  alignmentSample: (
+    getIGVSamplesByFamilySampleIndividual(state)[ownProps.individual.familyGuid]?.alignment || {}
+  )[ownProps.individual.individualGuid],
 })
 
 const mapDispatchToProps = {
   dispatchUpdateIndividual: updateIndividual,
+  dispatchUpdateIndividualIGV: values => updateIndividualIGV(values),
   updateIndividualPedigree: values => updateIndividuals({ individuals: [values], delete: values.delete }),
 }
 
