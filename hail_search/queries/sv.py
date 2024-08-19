@@ -9,6 +9,8 @@ class SvHailTableQuery(BaseHailTableQuery):
 
     DATA_TYPE = 'SV_WGS'
     KEY_FIELD = ('variant_id',)
+    SAMPLE_TYPES = ['WGS']
+
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['CN', 'GQ']}
     COMPUTED_GENOTYPE_FIELDS = {

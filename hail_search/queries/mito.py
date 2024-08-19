@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 
 from aiohttp.web import HTTPNotFound
 import hail as hl
@@ -7,6 +8,7 @@ import logging
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
     PATHOGENICTY_HGMD_SORT_KEY
+from hail_search.definitions import Projects
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
 MAX_LOAD_INTERVALS = 1000
@@ -22,6 +24,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     DATA_TYPE = 'MITO'
     KEY_FIELD = ('locus', 'alleles')
+    SAMPLE_TYPES = ['WES', 'WGS']
 
     TRANSCRIPTS_FIELD = 'sorted_transcript_consequences'
     TRANSCRIPT_CONSEQUENCE_FIELD = 'consequence_term'
@@ -322,25 +325,22 @@ class MitoHailTableQuery(BaseHailTableQuery):
                 ).filter(hl.is_defined),
             )).filter(
                 lambda x: x[1].any(hl.is_defined)
-            ).starmap(lambda project_guid, family_indices: (
-                project_guid,
-                hl.dict(family_indices.map(lambda j: (lookup_ht.project_families[project_guid][j], True))),
+            ).starmap(lambda project_key, family_indices: (
+                project_key,
+                hl.dict(family_indices.map(lambda j: (lookup_ht.project_families[project_key][j], True))),
             ))), 1),
         )[0]
-
-        for project_guid, families in variant_projects.items():
-            # Temporarily use try/except to determine sample_type, to be removed when lookup table contains sample_type
-            try:
-                hl.read_table(self._get_table_path(f'projects/WES/{project_guid}.ht', use_ssd_dir=True))
-                sample_type = 'WES'
-            except Exception:
-                sample_type = 'WGS'
-            for family_guid, value in families.items():
-                families[family_guid] = {sample_type: value}
 
         # Variant can be present in the lookup table with only ref calls, so is still not present in any projects
         if not variant_projects:
             raise HTTPNotFound()
+
+        variant_project_sample_types = defaultdict(lambda: defaultdict(dict))
+        for (project_guid, sample_type), families in variant_projects.items():
+            for family_guid, value in families.items():
+                variant_project_sample_types[project_guid][family_guid][sample_type] = value
+
+        projects = Projects.from_lookup_dict(variant_project_sample_types)
 
         annotation_fields.update({
             'familyGenotypes': lambda r: hl.dict(r.family_entries.map(
@@ -350,7 +350,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
         logger.info(f'Looking up {self.DATA_TYPE} variant in {len(variant_projects)} projects')
 
-        return super()._add_project_lookup_data(ht, annotation_fields, project_samples=variant_projects, **kwargs)
+        return super()._add_project_lookup_data(ht, annotation_fields, project_samples=projects, **kwargs)
 
     @staticmethod
     def _stat_has_non_ref(s):
