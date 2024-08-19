@@ -16,7 +16,7 @@ import { TAG_FORM_FIELD, TAG_FIELD_NAME } from '../constants'
 import { getTaggedVariantsByFamilyType, getProjectTagTypeOptions, getCurrentProject } from '../selectors'
 import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
 
-const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].map(val => val.toString()).splice(1)
+const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y', 'M'].map(val => val.toString()).splice(1)
 const ZYGOSITY_OPTIONS = [{ value: 0, name: 'Hom Ref' }, { value: 1, name: 'Het' }, { value: 2, name: 'Hom Alt' }]
 
 const SV_FIELD_NAME = 'svName'

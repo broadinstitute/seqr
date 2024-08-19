@@ -182,13 +182,13 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         self.search_model.search['locus'] = {'rawItems': 'M:10-100 '}
         query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(intervals=['M:10-100'], sample_data=EXPECTED_MITO_SAMPLE_DATA)
+        self._test_expected_search_call(intervals=[['M', 10, 100]], sample_data=EXPECTED_MITO_SAMPLE_DATA)
 
         self.search_model.search['locus']['rawItems'] += raw_locus
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             gene_ids=LOCATION_SEARCH['gene_ids'],
-            intervals=['M:10-100'] + LOCATION_SEARCH['intervals'],
+            intervals=[['M', 10, 100]] + LOCATION_SEARCH['intervals'],
             sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data, **EXPECTED_MITO_SAMPLE_DATA},
         )
 

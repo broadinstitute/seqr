@@ -46,13 +46,13 @@ if ! psql --host "$POSTGRES_SERVICE_HOSTNAME" -U "$POSTGRES_USERNAME" -l | grep 
     python -u manage.py migrate
     python -u manage.py migrate --database=reference_data
     python -u manage.py loaddata variant_tag_types
-    python -u manage.py loaddata variant_searches
     python -u manage.py update_all_reference_data --use-cached-omim
 else
     # run any pending migrations if the database already exists
     python -u manage.py migrate
     python -u manage.py migrate --database=reference_data
 fi
+python -u manage.py loaddata variant_searches
 
 python -u manage.py check
 
