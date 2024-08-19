@@ -675,9 +675,9 @@ class BaseHailTableQuery(object):
         for chrom, start, end in intervals[1:]:
             prev_chrom, prev_start, prev_end = merged_intervals[-1]
             if chrom == prev_chrom and start - prev_end < distance:
-                merged_intervals[-1] = (chrom, prev_start, max(prev_end, end))
+                merged_intervals[-1] = [chrom, prev_start, max(prev_end, end)]
             else:
-                merged_intervals.append((chrom, start, end))
+                merged_intervals.append([chrom, start, end])
 
         return cls.cluster_intervals(merged_intervals, distance=distance+100000, max_intervals=max_intervals)
 
