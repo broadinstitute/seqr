@@ -3,6 +3,7 @@ import json
 import re
 import requests
 
+from django.core.exceptions import PermissionDenied
 from django.http import StreamingHttpResponse, HttpResponse
 
 from seqr.models import Individual, IgvSample
@@ -12,8 +13,9 @@ from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_sample
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    login_and_policies_required, pm_or_data_manager_required, get_project_guids_user_can_view
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, external_anvil_project_can_edit, \
+    login_and_policies_required, pm_or_data_manager_required, get_project_guids_user_can_view, user_is_data_manager, \
+    user_is_pm
 
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 GS_STORAGE_URL = 'https://storage.googleapis.com'
@@ -149,12 +151,14 @@ SAMPLE_TYPE_MAP = [
 GCNV_FILE_EXTENSIONS = tuple(ext for ext, sample_type in SAMPLE_TYPE_MAP if sample_type == IgvSample.SAMPLE_TYPE_GCNV)
 
 
-@pm_or_data_manager_required
-# TODO allow access
+@login_and_policies_required
 def update_individual_igv_sample(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project
-    check_project_permissions(project, request.user, can_edit=True)
+    user = request.user
+
+    if not (user_is_pm(user) or user_is_data_manager(user) or external_anvil_project_can_edit(project, user)):
+        raise PermissionDenied(f'{user} does not have sufficient permissions for {project}')
 
     request_json = json.loads(request.body)
 
@@ -167,9 +171,9 @@ def update_individual_igv_sample(request, individual_guid):
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
                 file_path, ', '.join([suffix for suffix, _ in SAMPLE_TYPE_MAP])))
-        if not does_file_exist(file_path, user=request.user):
+        if not does_file_exist(file_path, user=user):
             raise Exception('Error accessing "{}"'.format(file_path))
-        if request_json.get('indexFilePath') and not does_file_exist(request_json['indexFilePath'], user=request.user):
+        if request_json.get('indexFilePath') and not does_file_exist(request_json['indexFilePath'], user=user):
             raise Exception('Error accessing "{}"'.format(request_json['indexFilePath']))
 
         sample, created = get_or_create_model_from_json(
@@ -177,7 +181,7 @@ def update_individual_igv_sample(request, individual_guid):
             update_json={
                 'file_path': file_path,
                 **{field: request_json.get(field) for field in ['sampleId', 'indexFilePath']}
-            }, user=request.user)
+            }, user=user)
 
         response = {
             'igvSamplesByGuid': {
