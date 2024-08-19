@@ -19,7 +19,7 @@ logger = SeqrLogger(__name__)
 DAG_NAME = 'LOADING_PIPELINE'
 AIRFLOW_AUTH_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
 SEQR_V2_DATASETS_GS_PATH = 'gs://seqr-datasets/v02'
-SEQR_V3_PEDIGREE_GS_PATH = 'gs://seqr-loading-temp/v03'
+SEQR_V3_PEDIGREE_GS_PATH = 'gs://seqr-loading-temp/v3.1'
 
 
 class DagRunningException(Exception):
@@ -161,7 +161,7 @@ def _get_dag_project_gs_path(project: str, genome_version: str, sample_type: str
 
 
 def _get_gs_pedigree_path(genome_version: str, sample_type: str, dataset_type: str):
-    return f'{SEQR_V3_PEDIGREE_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{sample_type}/{dataset_type}/pedigrees/'
+    return f'{SEQR_V3_PEDIGREE_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dataset_type}/pedigrees/{sample_type}/'
 
 
 def _wait_for_dag_variable_update(projects):
