@@ -8,12 +8,13 @@ import { SaveSearchButton } from './SavedSearch'
 import VariantSearchFormContent from './VariantSearchFormContent'
 import { getIntitialSearch, getMultiProjectFamilies } from '../selectors'
 
-const VariantSearchForm = React.memo(({ history, initialSearch, contentLoading, noEditProjects }) => (
+const VariantSearchForm = React.memo(({ history, initialSearch, contentLoading, noEditProjects, match }) => (
   <div>
     <VariantSearchFormContainer
       history={history}
       initialValues={initialSearch}
       loading={contentLoading}
+      match={match}
     >
       <VariantSearchFormContent noEditProjects={noEditProjects} />
       <SaveSearchButton />
@@ -23,6 +24,7 @@ const VariantSearchForm = React.memo(({ history, initialSearch, contentLoading, 
 
 VariantSearchForm.propTypes = {
   history: PropTypes.object,
+  match: PropTypes.object,
   initialSearch: PropTypes.object,
   contentLoading: PropTypes.bool,
   noEditProjects: PropTypes.bool,

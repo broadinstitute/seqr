@@ -256,9 +256,12 @@ class AuthenticationTestCase(TestCase):
             extra = extra or {}
             validate = extra.pop('validate', None)
             log_value = json.loads(logs[i])
-            self.assertDictEqual(log_value, {
-                'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, 'message': message, **extra,
-            })
+            expected_log = {
+                'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, **extra,
+            }
+            if message is not None:
+                expected_log['message'] = message
+            self.assertDictEqual(log_value, expected_log)
             if validate:
                 validate(log_value)
 

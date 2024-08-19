@@ -748,7 +748,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         )
 
         self.mock_gsutil.assert_called_with(
-            f'rsync -r {gs_path}', f'gs://seqr-loading-temp/v03/{genome_version}/WES/SNV_INDEL/pedigrees/', self.manager_user,
+            f'rsync -r {gs_path}', f'gs://seqr-loading-temp/v3.1/{genome_version}/SNV_INDEL/pedigrees/WES/', self.manager_user,
         )
 
         self.assert_airflow_calls(additional_tasks_check=test_add_data)

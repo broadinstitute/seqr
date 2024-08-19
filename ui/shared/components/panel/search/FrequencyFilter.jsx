@@ -147,7 +147,7 @@ const callsetChange = (onChange, initialValues) => val => onChange(
 
 const freqChange = (onChange, initialValues) => val => onChange(FREQUENCIES.reduce((acc, { name }) => ({
   ...acc, [name]: name !== THIS_CALLSET_FREQUENCY && name !== SV_CALLSET_FREQUENCY ? val : initialValues[name],
-}), initialValues || {}))
+}), {}))
 
 export const HeaderFrequencyFilter = ({ value, onChange, esEnabled, ...props }) => {
   const { callset, sv_callset: svCallset, ...freqValues } = value || {}
