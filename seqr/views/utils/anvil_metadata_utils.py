@@ -286,13 +286,14 @@ def _get_sorted_search_samples(projects):
 
 HET = 'Heterozygous'
 HOM_ALT = 'Homozygous'
+HEMI = 'Hemizygous'
 
 
-def _get_genotype_zygosity(genotype):
+def _get_genotype_zygosity(genotype, individual=None, variant=None):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
     if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
-        return HOM_ALT
+        return HEMI if (variant or {}).get('chrom') == 'X' and individual.sex == Individual.SEX_MALE else HOM_ALT
     if num_alt == 1 or cn == 1 or cn == 3:
         return HET
     return None
@@ -468,7 +469,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_
     for row in (rows or []):
         genotypes = row['genotypes']
         individual_genotype = genotypes.get(individual.guid) or {}
-        zygosity = _get_genotype_zygosity(individual_genotype)
+        zygosity = _get_genotype_zygosity(individual_genotype, individual, row)
         copy_number = individual_genotype.get('cn') or -1
         if zygosity:
             heteroplasmy = individual_genotype.get('hl')
