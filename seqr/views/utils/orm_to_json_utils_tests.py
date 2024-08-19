@@ -178,7 +178,7 @@ class JSONUtilsTest(object):
         self.assertSetEqual(set(json.keys()), fields)
 
     def test_json_for_saved_search(self):
-        searches = VariantSearch.objects.filter(id=1)
+        searches = VariantSearch.objects.filter(name='De Novo/Dominant Restrictive')
         user = User.objects.get(username='test_user')
         json = get_json_for_saved_searches(searches, user)[0]
 
