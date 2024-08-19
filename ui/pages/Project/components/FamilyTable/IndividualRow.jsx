@@ -29,7 +29,7 @@ import {
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import { updateIndividual } from 'redux/rootReducer'
-import { getSamplesByGuid, getMmeSubmissionsByGuid } from 'redux/selectors'
+import { getSamplesByGuid, getMmeSubmissionsByGuid, getIGVSamplesByFamilySampleIndividual } from 'redux/selectors'
 import { HPO_FORM_FIELDS } from '../HpoTerms'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
@@ -500,6 +500,28 @@ const EDIT_INDIVIDUAL_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
   { ...field, component: connect(mapParentOptionsStateToProps)(Select), inline: true, width: 8 }
 )))
 
+const EDIT_IGV_FIELDS = [
+  { name: 'filePath', label: 'File' },
+]
+
+const EditIndividualButton = ({ project, displayName, fieldName, ...props }) => (
+  <BaseFieldView
+    field={`${fieldName || 'core'}Edit`}
+    idField="individualGuid"
+    isEditable={!!project.workspaceName && !project.isAnalystProject && project.canEdit}
+    editLabel={`Edit${fieldName || ' Individual'}`}
+    modalTitle={`Edit ${displayName}${fieldName || ''}`}
+    showErrorPanel
+    {...props}
+  />
+)
+
+EditIndividualButton.propTypes = {
+  project: PropTypes.object.isRequired,
+  displayName: PropTypes.string,
+  fieldName: PropTypes.string,
+}
+
 class IndividualRow extends React.PureComponent {
 
   static propTypes = {
@@ -551,17 +573,21 @@ class IndividualRow extends React.PureComponent {
             {`ADDED ${new Date(createdDate).toLocaleDateString().toUpperCase()}`}
           </Detail>
         </div>
-        <BaseFieldView
-          field="coreEdit"
-          idField="individualGuid"
+        <EditIndividualButton
           initialValues={individual}
-          isEditable={!!project.workspaceName && !project.isAnalystProject && project.canEdit}
+          project={project}
+          displayName={displayName}
           isDeletable
           deleteConfirm={`Are you sure you want to delete ${displayName}? This action can not be undone`}
-          editLabel="Edit Individual"
           formFields={EDIT_INDIVIDUAL_FIELDS}
-          modalTitle={`Edit ${displayName}`}
-          showErrorPanel
+          onSubmit={updateIndividualPedigree}
+        />
+        <EditIndividualButton
+          fieldName=" IGV"
+          initialValues={individual}
+          project={project}
+          displayName={displayName}
+          formFields={EDIT_IGV_FIELDS}
           onSubmit={updateIndividualPedigree}
         />
       </IndividualContainer>
