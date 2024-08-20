@@ -3440,7 +3440,7 @@ class EsUtilsTest(TestCase):
                     'type': 'number',
                     'script': {
                         'params': {
-                            'omim_gene_ids': ['ENSG00000223972', 'ENSG00000135953']
+                            'omim_gene_ids': ['ENSG00000240361', 'ENSG00000135953']
                         },
                         'source': mock.ANY,
                     }
@@ -3450,7 +3450,7 @@ class EsUtilsTest(TestCase):
                     'type': 'number',
                     'script': {
                         'params': {
-                            'omim_gene_ids': ['ENSG00000223972', 'ENSG00000135953']
+                            'omim_gene_ids': ['ENSG00000240361', 'ENSG00000135953']
                         },
                         'source': mock.ANY,
                     }

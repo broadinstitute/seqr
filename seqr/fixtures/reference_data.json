@@ -1064,7 +1064,7 @@
     "model": "reference_data.omim",
     "pk": 1,
     "fields": {
-        "gene": 1,
+        "gene": 6,
         "mim_number": 147571,
         "gene_description": "ISG15 ubiquitin-like modifier",
         "comments": "",

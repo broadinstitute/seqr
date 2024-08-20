@@ -162,7 +162,7 @@ def parse_anvil_metadata(
         get_additional_sample_fields: Callable[[Sample, dict], dict] = None,
         get_additional_individual_fields: Callable[[Individual, dict], dict] = None,
         individual_samples: dict[Individual, Sample] = None, individual_data_types: dict[str, Iterable[str]] = None,
-        airtable_fields: Iterable[str] = None, mme_value: Aggregate = None, include_svs: bool = True,
+        airtable_fields: Iterable[str] = None, mme_value: Aggregate = None,
         variant_json_fields: Iterable[str] = None, variant_attr_fields: Iterable[str] = None, post_process_variant: Callable[[dict, list[dict]], dict] = None,
         include_no_individual_families: bool = False, omit_airtable: bool = False, include_family_name_display: bool = False, include_family_sample_metadata: bool = False,
         include_discovery_sample_id: bool = False, include_mondo: bool = False, omit_parent_mnvs: bool = False,
@@ -186,7 +186,7 @@ def parse_anvil_metadata(
             sample_ids.add(sample.sample_id)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(
-        list(family_data_by_id.keys()), bool(mme_value), include_svs, variant_json_fields, variant_attr_fields,
+        list(family_data_by_id.keys()), bool(mme_value), variant_json_fields, variant_attr_fields,
     )
 
     condition_map = _get_condition_map(family_data_by_id.values())
@@ -263,17 +263,7 @@ def parse_anvil_metadata(
 
 
 def _get_nested_variant_name(v):
-    return _get_sv_name(v, pop_sv_name=False) or f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}"
-
-
-def _get_sv_name(variant_json, pop_sv_name=True):
-    validated_sv_name = variant_json.pop('validated_sv_name', None)
-    sv_name = variant_json.pop('svName', None) if pop_sv_name else variant_json.get('svName')
-    if validated_sv_name:
-        return validated_sv_name[0]
-    if variant_json.get('svType'):
-        return sv_name or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
-    return None
+    return v['sv_name'] or f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}"
 
 
 def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date):
@@ -296,13 +286,14 @@ def _get_sorted_search_samples(projects):
 
 HET = 'Heterozygous'
 HOM_ALT = 'Homozygous'
+HEMI = 'Hemizygous'
 
 
-def _get_genotype_zygosity(genotype):
+def _get_genotype_zygosity(genotype, individual=None, variant=None):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
     if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
-        return HOM_ALT
+        return HEMI if (variant or {}).get('chrom') == 'X' and individual.sex == Individual.SEX_MALE else HOM_ALT
     if num_alt == 1 or cn == 1 or cn == 3:
         return HET
     return None
@@ -312,7 +303,7 @@ def _get_discovery_notes(variant, gene_variants, omit_parent_mnvs):
     parent_mnv = next((v for v in gene_variants if len(v['individual_genotype']) == 1), gene_variants[0])
     if parent_mnv['genetic_findings_id'] == variant['genetic_findings_id'] and omit_parent_mnvs:
         return None
-    variant_type = 'complex structural' if parent_mnv.get('svType') else 'multinucleotide'
+    variant_type = 'complex structural' if parent_mnv.get('sv_type') else 'multinucleotide'
     parent_name = _get_nested_variant_name(parent_mnv)
     parent_details = [parent_mnv[key] for key in ['hgvsc', 'hgvsp'] if parent_mnv.get(key)]
     parent = f'{parent_name} ({", ".join(parent_details)})' if parent_details else parent_name
@@ -322,7 +313,7 @@ def _get_discovery_notes(variant, gene_variants, omit_parent_mnvs):
 
 
 def _get_parsed_saved_discovery_variants_by_family(
-        families: Iterable[Family], include_metadata: bool, include_svs: dict, variant_json_fields: list[str],
+        families: Iterable[Family], include_metadata: bool, variant_json_fields: list[str],
         variant_attr_fields: list[str],
 ):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category=DISCOVERY_CATEGORY)
@@ -330,14 +321,11 @@ def _get_parsed_saved_discovery_variants_by_family(
     annotations = dict(
         tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True),
         partial_hpo_terms=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Partial Phenotype Contribution')),
+        validated_name=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Validated Name')),
     )
-    if include_svs:
-        annotations['validated_sv_name'] = ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Validated Name'))
-        variant_attr_fields = ['validated_sv_name'] + (variant_attr_fields or [])
 
     project_saved_variants = SavedVariant.objects.filter(
         varianttag__variant_tag_type__in=tag_types, family__id__in=families,
-        **({} if include_svs else {'alt__isnull': False}),
     ).order_by('created_date').distinct().annotate(**annotations)
 
     variants = []
@@ -349,16 +337,13 @@ def _get_parsed_saved_discovery_variants_by_family(
         main_transcript = _get_variant_main_transcript(variant)
         gene_id = main_transcript.get('geneId')
         gene_ids.add(gene_id)
+        sv_type = variant_json.get('svType')
 
         partial_hpo_terms = variant.partial_hpo_terms[0] if variant.partial_hpo_terms else ''
         phenotype_contribution = 'Partial' if partial_hpo_terms else 'Full'
         if partial_hpo_terms == 'Uncertain':
             phenotype_contribution = 'Uncertain'
             partial_hpo_terms = ''
-
-        variant_fields = ['genotypes']
-        if include_svs:
-            variant_fields += ['svType', 'svName', 'end']
 
         parsed_variant = {
             'chrom': 'MT' if chrom == 'M' else chrom,
@@ -369,18 +354,18 @@ def _get_parsed_saved_discovery_variants_by_family(
             'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.tags else 'Candidate',
             'phenotype_contribution': phenotype_contribution,
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
+            'sv_type': sv_type,
+            'sv_name': (variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)) if sv_type else None,
+            'validated_name': variant.validated_name[0] if variant.validated_name else None,
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
-            **{k: variant_json.get(k) for k in variant_fields + (variant_json_fields or [])},
+            **{k: variant_json.get(k) for k in ['genotypes'] + (variant_json_fields or [])},
+            **{k: variant_json.get(field) if sv_type else None for k, field in [('chrom_end', 'endChrom'), ('pos_end', 'end')]},
             'ClinGen_allele_ID': variant_json.get('CAID'),
             **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt'] + (variant_attr_fields or [])},
         }
         if include_metadata:
             parsed_variant.update({
                 'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
-            })
-        if include_svs:
-            parsed_variant.update({
-                'sv_name': _get_sv_name(parsed_variant),
             })
         variants.append(parsed_variant)
 
@@ -484,10 +469,13 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_
     for row in (rows or []):
         genotypes = row['genotypes']
         individual_genotype = genotypes.get(individual.guid) or {}
-        zygosity = _get_genotype_zygosity(individual_genotype)
+        zygosity = _get_genotype_zygosity(individual_genotype, individual, row)
+        copy_number = individual_genotype.get('cn') or -1
         if zygosity:
             heteroplasmy = individual_genotype.get('hl')
             findings_id = f'{participant_id}_{row["chrom"]}_{row["pos"]}'
+            if row['sv_type']:
+                findings_id += f'_{row["sv_type"]}'
             parsed_row = {
                 'genetic_findings_id': findings_id,
                 'participant_id': participant_id,
@@ -495,6 +483,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_
                     HET: 'Heteroplasmy',
                     HOM_ALT: 'Homoplasmy',
                 }[zygosity],
+                'copy_number': copy_number if copy_number >= 0 else None,
                 'allele_balance_or_heteroplasmy_percentage': heteroplasmy,
                 'variant_inheritance': _get_variant_inheritance(individual, genotypes),
                 **row,
@@ -603,7 +592,7 @@ def _get_condition_map(families):
     omim_conditions_by_id_gene = defaultdict(lambda: defaultdict(list))
     for omim in Omim.objects.filter(phenotype_mim_number__in=mim_numbers).values(
             'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance', 'chrom', 'start', 'end',
-            'gene__gene_id',
+            'gene__gene_id', 'gene__gene_symbol',
     ):
         omim_conditions_by_id_gene[omim['phenotype_mim_number']][omim['gene__gene_id']].append(omim)
 
@@ -644,6 +633,15 @@ def _update_conditions(family_subject_row, variants, omim_conditions, mondo_cond
                 variant_conditions += omim_conditions[mim_number][gene_id]
 
         if set_conditions_for_variants:
+            if v['sv_type'] and mim_numbers and not variant_conditions:
+                # For SVs report the gene linked to the condition instead of the annotated gene if conflicting
+                possible_gene_conditions = [
+                    conditions for mim_number in mim_numbers
+                    for gene_id, conditions in omim_conditions[mim_number].items() if gene_id and conditions
+                ]
+                if len(possible_gene_conditions) == 1:
+                    variant_conditions = possible_gene_conditions[0]
+                    v[GENE_COLUMN] = variant_conditions[0]['gene__gene_symbol']
             conditions = _format_omim_conditions(variant_conditions) if variant_conditions else mondo_condition
             v.update(conditions)
         else:

@@ -27,11 +27,11 @@ class GeneAPITest(AuthenticationTestCase):
         url = reverse(genes_info)
         self.check_require_login(url)
 
-        response = self.client.get('{}?geneIds={},ENSG00000269981,ENSG00000227232,foo'.format(url, GENE_ID))
+        response = self.client.get('{}?geneIds={},ENSG00000269981,ENSG00000240361,ENSG00000227232,foo'.format(url, GENE_ID))
         self.assertEqual(response.status_code, 200)
 
         genes = response.json()['genesById']
-        self.assertSetEqual(set(genes.keys()), {GENE_ID, 'ENSG00000269981', 'ENSG00000227232'})
+        self.assertSetEqual(set(genes.keys()), {GENE_ID, 'ENSG00000269981', 'ENSG00000240361', 'ENSG00000227232'})
         self.assertSetEqual(set(genes[GENE_ID].keys()), GENE_DETAIL_FIELDS)
         self.assertDictEqual(genes[GENE_ID], {
             'chromGrch37': None,
@@ -54,14 +54,19 @@ class GeneAPITest(AuthenticationTestCase):
             'geneNames': '',
             'geneSymbol': 'DDX11L1',
             'mgiMarkerId': None,
-            'mimNumber': 147571,
+            'mimNumber': None,
             'notes': [],
-            'omimPhenotypes': [{'mimNumber': 147571, 'phenotypeDescription': 'Immunodeficiency 38', 'phenotypeInheritance': 'Autosomal recessive', 'phenotypeMimNumber': 616126, 'chrom': '1', 'start': 11869, 'end': 14409}],
+            'omimPhenotypes': [],
             'primateAi': {'percentile25': 0.587214291096, 'percentile75': 0.821286439896},
             'sHet': {'postMean': 0.90576},
             'startGrch37': None,
             'startGrch38': 11869,
         })
+        self.assertEqual(genes['ENSG00000240361']['mimNumber'], 147571)
+        self.assertListEqual(
+            genes['ENSG00000240361']['omimPhenotypes'],
+            [{'mimNumber': 147571, 'phenotypeDescription': 'Immunodeficiency 38', 'phenotypeInheritance': 'Autosomal recessive', 'phenotypeMimNumber': 616126, 'chrom': '1', 'start': 11869, 'end': 14409}],
+        )
         self.assertDictEqual(genes['ENSG00000227232'], {
             'chromGrch37': '1',
             'chromGrch38': '1',
