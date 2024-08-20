@@ -502,19 +502,23 @@ const EDIT_INDIVIDUAL_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
   { ...field, component: connect(mapParentOptionsStateToProps)(Select), inline: true, width: 8 }
 )))
 
-const mapIgvOptionsStateToProps = state => ({
-  url: `/api/project/${getCurrentProject(state).projectGuid}/get_igv_options`,
-})
+const mapIgvOptionsStateToProps = (state) => {
+  const { namespace, name } = getCurrentProject(state)
+  return {
+    url: `/api/anvil_workspace/${namespace}/${name}/get_igv_options`,
+  }
+}
 
 const EDIT_IGV_FIELDS = [
   {
     name: 'filePath',
     label: 'IGV File Path',
     component: connect(mapIgvOptionsStateToProps)(LoadOptionsSelect),
-    optionsResponseKey: 'groups',
+    optionsResponseKey: 'igv_options',
+    formatOption: value => value,
     errorHeader: 'Unable to Load IGV Files',
-    validationErrorHeader: 'No User Groups Available',
-    validationErrorMessage: 'Contact your system administrator to have them configure user groups',
+    validationErrorHeader: 'No IGV Files Found',
+    validationErrorMessage: 'No BAMs or CRAMs were found in the workspace associated with this project',
     validate: validators.required,
   },
 ]

@@ -38,7 +38,7 @@ def _process_alignment_records(rows, num_id_cols=1, **kwargs):
         sample_id = None
         index_file_path = None
         if len(row) > num_cols:
-            if file_path.endswith(GCNV_FILE_EXTENSIONS):
+            if file_path.endswith(IgvSample.SAMPLE_TYPE_FILE_EXTENSIONS[IgvSample.SAMPLE_TYPE_GCNV]):
                 sample_id = row[num_cols]
             else:
                 index_file_path = row[num_cols]
@@ -140,17 +140,6 @@ def receive_bulk_igv_table_handler(request):
     return _process_igv_table_handler(_parse_uploaded_file, _get_valid_matched_individuals)
 
 
-SAMPLE_TYPE_MAP = [
-    ('bam', IgvSample.SAMPLE_TYPE_ALIGNMENT),
-    ('cram', IgvSample.SAMPLE_TYPE_ALIGNMENT),
-    ('bigWig', IgvSample.SAMPLE_TYPE_COVERAGE),
-    ('junctions.bed.gz', IgvSample.SAMPLE_TYPE_JUNCTION),
-    ('bed.gz', IgvSample.SAMPLE_TYPE_GCNV),
-]
-
-GCNV_FILE_EXTENSIONS = tuple(ext for ext, sample_type in SAMPLE_TYPE_MAP if sample_type == IgvSample.SAMPLE_TYPE_GCNV)
-
-
 @login_and_policies_required
 def update_individual_igv_sample(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
@@ -167,10 +156,10 @@ def update_individual_igv_sample(request, individual_guid):
         if not file_path:
             raise ValueError('request must contain fields: filePath')
 
-        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP if file_path.endswith(suffix)), None)
+        sample_type = next((st for st, suffixes in IgvSample.SAMPLE_TYPE_FILE_EXTENSIONS.items() if file_path.endswith(suffixes)), None)
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
-                file_path, ', '.join([suffix for suffix, _ in SAMPLE_TYPE_MAP])))
+                file_path, ', '.join([suffix for suffixes in IgvSample.SAMPLE_TYPE_FILE_EXTENSIONS.values() for suffix in suffixes])))
         if not does_file_exist(file_path, user=user):
             raise Exception('Error accessing "{}"'.format(file_path))
         if request_json.get('indexFilePath') and not does_file_exist(request_json['indexFilePath'], user=user):
