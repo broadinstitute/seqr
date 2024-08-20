@@ -728,17 +728,7 @@ export const VEP_GROUP_SV = 'structural'
 export const VEP_GROUP_SV_CONSEQUENCES = 'structural_consequence'
 export const VEP_GROUP_SV_NEW = 'new_structural_variants'
 
-const VEP_SV_TYPES = [
-  {
-    description: 'A deletion called from exome data',
-    text: 'Exome Deletion',
-    value: 'gCNV_DEL',
-  },
-  {
-    description: 'A duplication called from exome data',
-    text: 'Exome Duplication',
-    value: 'gCNV_DUP',
-  },
+export const SV_TYPES = [
   {
     description: 'A deletion called from genome data',
     text: 'Deletion',
@@ -779,6 +769,19 @@ const VEP_SV_TYPES = [
     text: 'Breakend',
     value: 'BND',
   },
+]
+const VEP_SV_TYPES = [
+  {
+    description: 'A deletion called from exome data',
+    text: 'Exome Deletion',
+    value: 'gCNV_DEL',
+  },
+  {
+    description: 'A duplication called from exome data',
+    text: 'Exome Duplication',
+    value: 'gCNV_DUP',
+  },
+  ...SV_TYPES,
 ]
 
 export const EXTENDED_INTRONIC_DESCRIPTION = "A variant which falls in the first 9 bases of the 5' end of intron or the within the last 9 bases of the 3' end of intron"
@@ -1885,7 +1888,8 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'variant_reference_assembly' },
   { name: 'chrom' },
   { name: 'pos' },
-  { name: 'end' },
+  { name: 'chrom_end' },
+  { name: 'pos_end' },
   { name: 'ref' },
   { name: 'alt' },
   { name: 'gene_of_interest', secondaryExportColumn: 'gene_id' },
@@ -1894,8 +1898,10 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'hgvsc' },
   { name: 'hgvsp' },
   { name: 'zygosity' },
+  { name: 'copy_number' },
   { name: 'sv_name' },
-  { name: 'sv_type', fieldName: 'svType', format: ({ svType }) => SVTYPE_LOOKUP[svType] || svType },
+  { name: 'validated_name' },
+  { name: 'sv_type', format: ({ sv_type }) => SVTYPE_LOOKUP[sv_type] || sv_type }, // eslint-disable-line camelcase
   { name: 'variant_inheritance' },
   { name: 'gene_known_for_phenotype' },
   { name: 'phenotype_contribution' },

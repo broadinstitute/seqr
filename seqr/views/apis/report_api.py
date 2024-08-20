@@ -122,7 +122,7 @@ def anvil_export(request, project_guid):
         if row_type == DISCOVERY_ROW_TYPE:
             missing_gene_rows = [
                 '{chrom}-{pos}-{ref}-{alt}'.format(**discovery_row) for discovery_row in row
-                if not (discovery_row.get(GENE_COLUMN) or discovery_row.get('svType'))]
+                if not (discovery_row.get(GENE_COLUMN) or discovery_row.get('sv_type'))]
             if missing_gene_rows:
                 raise ErrorsWarningsException(
                     [f'Discovery variant(s) {", ".join(missing_gene_rows)} in family {family_id} have no associated gene'])
@@ -135,7 +135,6 @@ def anvil_export(request, project_guid):
                     'Gene_Class': 'gene_known_for_phenotype',
                     'inheritance_description': 'variant_inheritance',
                     'variant_genome_build': 'variant_reference_assembly',
-                    'sv_type': 'svType',
                     'discovery_notes': 'notes',
                 }.items()},
                 **discovery_row,
@@ -390,10 +389,7 @@ def gregor_export(request):
             participant_rows.append({**row, 'consent_code': consent_code})
             smids_by_airtable_record_id.update(row[SMID_FIELD] or {})
         elif row_type == DISCOVERY_ROW_TYPE and row:
-            for variant in row:
-                genetic_findings_rows.append({
-                    **variant, 'variant_type': 'SNV/INDEL',
-                })
+            genetic_findings_rows.extend(row)
 
     parse_anvil_metadata(
         projects,
@@ -404,7 +400,6 @@ def gregor_export(request):
         format_id=_format_gregor_id,
         get_additional_individual_fields=_get_participant_row,
         post_process_variant=_post_process_gregor_variant,
-        include_svs=False,
         airtable_fields=[[PARTICIPANT_ID_FIELD, 'Recontactable'], [SMID_FIELD]],
         include_mondo=True,
         proband_only_variants=True,
@@ -583,9 +578,14 @@ def _get_phenotype_row(feature):
 
 
 def _post_process_gregor_variant(row, gene_variants):
-    return {'linked_variant': next(
-        v['genetic_findings_id'] for v in gene_variants if v['genetic_findings_id'] != row['genetic_findings_id']
-    ) if len(gene_variants) > 1 else None}
+    sv_name = row.pop('sv_name')
+    return {
+        'hgvs': row.pop('validated_name') or sv_name,
+        'linked_variant': next(
+            v['genetic_findings_id'] for v in gene_variants if v['genetic_findings_id'] != row['genetic_findings_id']
+        ) if len(gene_variants) > 1 else None,
+        'variant_type': 'SNV/INDEL' if row['alt'] else 'SV',
+    }
 
 
 def _get_airtable_row(data_type, airtable_metadata):
@@ -849,7 +849,7 @@ def family_metadata(request, project_guid):
             family = families_by_id[family_id]
             if 'inheritance_models' not in family:
                 family.update({'genes': set(), 'inheritance_models': set()})
-            family['genes'].update({v.get(GENE_COLUMN) or v.get('sv_name') or v.get('gene_id') or '' for v in row})
+            family['genes'].update({v.get(GENE_COLUMN) or v.get('validated_name') or v.get('sv_name') or v.get('gene_id') or '' for v in row})
             family['inheritance_models'].update({v['variant_inheritance'] for v in row})
 
     parse_anvil_metadata(

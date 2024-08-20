@@ -132,7 +132,7 @@ class FamilyAPITest(object):
                 'chrom': '1',
                 'start': 11869,
                 'end': 14409,
-                'geneSymbol': 'DDX11L1',
+                'geneSymbol': 'OR4G11P',
                 'mimNumber': 147571,
                 'phenotypeMimNumber': 616126,
                 'phenotypeDescription': 'Immunodeficiency 38',

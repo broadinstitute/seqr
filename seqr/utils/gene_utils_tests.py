@@ -16,7 +16,7 @@ class GeneUtilsTest(TestCase):
         self.assertSetEqual(set(json.keys()), GENE_DETAIL_FIELDS)
 
     def test_get_genes(self):
-        gene_ids = {GENE_ID, 'ENSG00000227232'}
+        gene_ids = {GENE_ID, 'ENSG00000227232', 'ENSG00000240361'}
         user = User.objects.get(pk=1)
 
         json = get_genes(gene_ids)
@@ -41,11 +41,15 @@ class GeneUtilsTest(TestCase):
         self.assertSetEqual(
             set(gene['constraints'].keys()), {'misZ', 'misZRank', 'pli', 'pliRank', 'louef', 'louefRank', 'totalGenes'})
         self.assertSetEqual(set(gene['cnSensitivity'].keys()), {'phi', 'pts'})
-        self.assertSetEqual(
-            set(gene['omimPhenotypes'][0].keys()),
-            {'mimNumber', 'phenotypeMimNumber', 'phenotypeDescription', 'phenotypeInheritance', 'chrom', 'start', 'end'})
+        self.assertListEqual(gene['omimPhenotypes'], [])
         self.assertSetEqual(set(gene['genCc'].keys()), {'hgncId', 'classifications'})
         self.assertSetEqual(set(gene['clinGen'].keys()), {'haploinsufficiency', 'triplosensitivity', 'href'})
+
+        omim_gene = json['ENSG00000240361']
+        self.assertSetEqual(
+            set(omim_gene['omimPhenotypes'][0].keys()),
+            {'mimNumber', 'phenotypeMimNumber', 'phenotypeDescription', 'phenotypeInheritance', 'chrom', 'start',
+             'end'})
 
         sparse_gene = json['ENSG00000227232']
         self.assertIsNone(sparse_gene['primateAi'])

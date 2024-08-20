@@ -92,7 +92,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user, sort='in_omim')
         self._test_expected_search_call(
             num_results=2,  dataset_type='SNV_INDEL', sample_data={'SNV_INDEL': EXPECTED_SAMPLE_DATA['SNV_INDEL']},
-            sort='in_omim', sort_metadata=['ENSG00000223972', 'ENSG00000135953'],
+            sort='in_omim', sort_metadata=['ENSG00000240361', 'ENSG00000135953'],
             **VARIANT_ID_SEARCH,
         )
 
