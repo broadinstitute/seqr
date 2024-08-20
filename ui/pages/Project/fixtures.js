@@ -282,6 +282,7 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedDate: '2016-12-06T10:28:00.000Z',
       createdDate: '2016-12-06T10:28:00.000Z',
       sampleGuids: ['S2310656_wal_mc16200_mc16203'],
+      igvSampleGuids: ['IS2310656_wal_mc16200_mc16203'],
       sex: 'F',
     },
     I021475_na19675_2: {
@@ -323,6 +324,14 @@ export const STATE_WITH_2_FAMILIES = {
       sampleId: "WAL_MC16200_MC16203",
       isActive: true,
       sampleType: "WES",
+    },
+  },
+  igvSamplesByGuid: {
+    IS2310656_wal_mc16200_mc16203: {
+      projectGuid: 'R0237_1000_genomes_demo',
+      individualGuid: 'I021476_na19678_2',
+      sampleGuid: 'IS2310656_wal_mc16200_mc16203',
+      filePath: 'gs://seqr-datasets/GRCh37/cmg_sankaran_wes/CMG_MYOSEQ_MC16203.cram',
     },
   },
   analysisGroupsByGuid: {
