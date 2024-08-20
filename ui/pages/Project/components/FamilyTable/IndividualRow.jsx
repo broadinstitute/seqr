@@ -9,6 +9,7 @@ import orderBy from 'lodash/orderBy'
 
 import { SearchInput, YearSelector, RadioButtonGroup, ButtonRadioGroup, Select } from 'shared/components/form/Inputs'
 import { validators } from 'shared/components/form/FormHelpers'
+import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import Modal from 'shared/components/modal/Modal'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
@@ -501,9 +502,21 @@ const EDIT_INDIVIDUAL_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
   { ...field, component: connect(mapParentOptionsStateToProps)(Select), inline: true, width: 8 }
 )))
 
-// TODO dropdown with valid options
+const mapIgvOptionsStateToProps = state => ({
+  url: `/api/project/${getCurrentProject(state).projectGuid}/get_igv_options`,
+})
+
 const EDIT_IGV_FIELDS = [
-  { name: 'filePath', label: 'IGV File Path', validate: validators.required },
+  {
+    name: 'filePath',
+    label: 'IGV File Path',
+    component: connect(mapIgvOptionsStateToProps)(LoadOptionsSelect),
+    optionsResponseKey: 'groups',
+    errorHeader: 'Unable to Load IGV Files',
+    validationErrorHeader: 'No User Groups Available',
+    validationErrorMessage: 'Contact your system administrator to have them configure user groups',
+    validate: validators.required,
+  },
 ]
 
 const EditIndividualButton = ({ project, displayName, fieldName, ...props }) => (
