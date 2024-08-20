@@ -171,6 +171,12 @@ class SearchUtilsTests(SearchTestHelper):
             search_func(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
 
+        build_specific_genes = 'CICP7, OR4F29'
+        self.search_model.search['locus']['rawItems'] = build_specific_genes
+        with self.assertRaises(InvalidSearchException) as cm:
+            search_func(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: CICP7')
+
         self.search_model.search['locus'] = {}
         self.search_model.search['inheritance'] = {'mode': 'recessive'}
         with self.assertRaises(InvalidSearchException) as cm:
@@ -237,6 +243,12 @@ class SearchUtilsTests(SearchTestHelper):
             str(cm.exception),
             'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde, Test Reprocessed Project; 38 - Non-Analyst Project',
         )
+
+        self.results_model.families.set(Family.objects.filter(guid='F000014_14'))
+        self.search_model.search['locus']['rawItems'] = build_specific_genes
+        with self.assertRaises(InvalidSearchException) as cm:
+            search_func(self.results_model, user=self.user)
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: OR4F29')
 
     def test_invalid_search_query_variants(self):
         with self.assertRaises(InvalidSearchException) as se:
