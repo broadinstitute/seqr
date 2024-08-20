@@ -8,14 +8,14 @@ from django.urls.base import reverse
 from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
     igv_genomes_proxy, receive_bulk_igv_table_handler
 from seqr.views.apis.igv_api import GS_STORAGE_ACCESS_CACHE_KEY
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 
 STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc9\t\xae']
 PROJECT_GUID = 'R0001_1kg'
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-class IgvAPITest(AuthenticationTestCase):
+class IgvAPITest(AnvilAuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
     @responses.activate
@@ -289,6 +289,20 @@ class IgvAPITest(AuthenticationTestCase):
         self.login_data_manager_user()
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'filePath': '/readviz/NA19675_new.cram',
+        }))
+        self.assertEqual(response.status_code, 200)
+
+        # Test External AnVIL projects
+        ext_anvil_edit_url = reverse(update_individual_igv_sample, args=['I000019_na21987'])
+        self.login_collaborator()
+        response = self.client.post(ext_anvil_edit_url, content_type='application/json', data=json.dumps({
+            'filePath': '/readviz/NA21987.cram',
+        }))
+        self.assertEqual(response.status_code, 403)
+
+        self.login_manager()
+        response = self.client.post(ext_anvil_edit_url, content_type='application/json', data=json.dumps({
+            'filePath': '/readviz/NA21987.cram',
         }))
         self.assertEqual(response.status_code, 200)
 
