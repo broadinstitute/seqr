@@ -171,11 +171,11 @@ class SearchUtilsTests(SearchTestHelper):
             search_func(self.results_model, user=self.user)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
 
-        build_specific_genes = 'CICP7, OR4F29, ENSG00000233653, ENSG00000256186'
+        build_specific_genes = 'DDX11L1, OR4F29, ENSG00000223972, ENSG00000256186'
         self.search_model.search['locus']['rawItems'] = build_specific_genes
         with self.assertRaises(InvalidSearchException) as cm:
             search_func(self.results_model, user=self.user)
-        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: CICP7, ENSG00000233653')
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: DDX11L1, ENSG00000223972')
 
         self.search_model.search['locus'] = {}
         self.search_model.search['inheritance'] = {'mode': 'recessive'}
@@ -345,12 +345,12 @@ class SearchUtilsTests(SearchTestHelper):
             search_fields=['locus'], rs_ids=['rs9876'], variant_ids=[], parsed_variant_ids=[],
         )
 
-        self.search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'
+        self.search_model.search['locus']['rawItems'] = 'WASH7P, chr2:1234-5678, chr7:100-10100%10, ENSG00000186092'
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             mock_get_variants, results_cache, sort='xpos', page=1, num_results=100, skip_genotype_filter=False,
             search_fields=['locus'], genes={
-                'ENSG00000223972': mock.ANY, 'ENSG00000186092': mock.ANY,
+                'ENSG00000227232': mock.ANY, 'ENSG00000186092': mock.ANY,
             }, intervals=[
                 {'chrom': '2', 'start': 1234, 'end': 5678, 'offset': None},
                 {'chrom': '7', 'start': 100, 'end': 10100, 'offset': 0.1},
@@ -359,7 +359,7 @@ class SearchUtilsTests(SearchTestHelper):
         parsed_genes = mock_get_variants.call_args.args[1]['parsedLocus']['genes']
         for gene in parsed_genes.values():
             self.assertSetEqual(set(gene.keys()), GENE_FIELDS)
-        self.assertEqual(parsed_genes['ENSG00000223972']['geneSymbol'], 'DDX11L1')
+        self.assertEqual(parsed_genes['ENSG00000227232']['geneSymbol'], 'WASH7P')
         self.assertEqual(parsed_genes['ENSG00000186092']['geneSymbol'], 'OR4F5')
 
         self.search_model.search.update({'pathogenicity': {'clinvar': ['pathogenic', 'likely_pathogenic']}, 'locus': {}})

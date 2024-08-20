@@ -277,7 +277,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(
             set(response_json['savedVariantsByGuid'].keys()),
             {'SV0000006_1248367227_r0003_tes', 'SV0000007_prefix_19107_DEL_r00'})
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000223972', 'ENSG00000240361'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000240361'})
         self.assertDictEqual(response_json['omimIntervals'], {'3': {
             'chrom': '1',
             'start': 249044482,
