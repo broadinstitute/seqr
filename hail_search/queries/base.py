@@ -10,7 +10,6 @@ from hail_search.constants import AFFECTED_ID, ALT_ALT, ANNOTATION_OVERRIDE_FIEL
     COMPOUND_HET, GENOME_VERSION_GRCh38, GROUPED_VARIANTS_FIELD, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS,  HAS_ANNOTATION_OVERRIDE, \
     HAS_ALT, HAS_REF,INHERITANCE_FILTERS, PATH_FREQ_OVERRIDE_CUTOFF, MALE, RECESSIVE, REF_ALT, REF_REF, \
     UNAFFECTED_ID, X_LINKED_RECESSIVE, XPOS, OMIM_SORT, FAMILY_GUID_FIELD, GENOTYPES_FIELD, AFFECTED_ID_MAP
-from hail_search.definitions import ProjectData, ProjectSamples, SampleType, Projects, Project, Family
 
 DATASETS_DIR = os.environ.get('DATASETS_DIR', '/hail_datasets')
 SSD_DATASETS_DIR = os.environ.get('SSD_DATASETS_DIR', DATASETS_DIR)
@@ -286,76 +285,24 @@ class BaseHailTableQuery(object):
         query_result = hl.query_table(query_table_path, ht.key).first().drop(*ht.key)
         return ht.annotate(**query_result)
 
-    def _parse_sample_data(self, sample_data: List[dict]) -> Tuple[Projects, int]:
+    def _parse_sample_data(self, sample_data):
         families = set()
         project_samples = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         for s in sample_data:
             families.add(s['family_guid'])
-            project_samples[s['project_guid']][s['family_guid']][s['sample_type']].append(s)
+            project_samples[s['project_guid']][s['sample_type']][s['family_guid']].append(s)
 
         num_families = len(families)
         logger.info(f'Loading {self.DATA_TYPE} data for {num_families} families in {len(project_samples)} projects')
-        return Projects.from_dict(project_samples), num_families
+        return project_samples, num_families
 
-    def _load_filtered_project_hts(self, project_samples, skip_all_missing=False, n_partitions=MAX_PARTITIONS, **kwargs):
-        if len(project_samples) == 1:
-            project_guid = list(project_samples.keys())[0]
-            # for variant lookup, project_samples looks like
-            #   {<project_guid>: {<family_guid>: {<sample_type>: True}, {<family_guid>: {<sample_type_2>: True}}, <project_guid_2>: ...}
-            # for variant search, project_samples looks like
-            #   {<project_guid>: {<family_guid>: {<sample_type>: [<sample_data>, <sample_data>, ...], <sample_type_2>: ...}, <family_guid_2>: ...}, <project_guid_2>: ...}
-            first_family_samples = list(project_samples[project_guid].values())[0]
-            sample_type = list(first_family_samples.keys())[0]
-            project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
-            return self._filter_entries_table(project_ht, project_samples[project_guid], **kwargs)
-
-        # Need to chunk tables or else evaluating table globals throws LineTooLong exception
-        # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
-        # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
-        chunk_size = 64
-        filtered_project_hts = []
-        filtered_comp_het_project_hts = []
-        project_hts = []
-        sample_data = {}
-        for project_guid, project_sample_data in project_samples.items():
-            first_family_samples = list(project_sample_data.values())[0]
-            sample_type = list(first_family_samples.keys())[0]
-            project_ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht', use_ssd_dir=True)
-
-            if project_ht is None:
-                continue
-            project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
-            sample_data.update(project_sample_data)
-
-            if len(project_hts) >= chunk_size:
-                self._filter_merged_project_hts(
-                    project_hts, sample_data, filtered_project_hts, filtered_comp_het_project_hts, n_partitions, **kwargs,
-                )
-                project_hts = []
-                sample_data = {}
-
-        self._filter_merged_project_hts(
-            project_hts, sample_data, filtered_project_hts, filtered_comp_het_project_hts, n_partitions, **kwargs,
-        )
-
-        ht = self._merge_project_hts(filtered_project_hts, n_partitions)
-        comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
-
-        return ht, comp_het_ht
-
-    def import_filtered_table(self, project_samples:  Dict[str, ProjectData], num_families, **kwargs):
-        if num_families == 1:
-            family_sample_data = list(project_samples.values())[0]
-            family_guid = list(family_sample_data.keys())[0]
-            sample_type = list(family_sample_data[family_guid].keys())[0]
-            family_ht = self._read_table(f'families/{sample_type}/{family_guid}.ht', use_ssd_dir=True)
-            family_ht = family_ht.transmute(family_entries=[family_ht.entries])
-            family_ht = family_ht.annotate_globals(
-                family_guids=[family_guid], family_samples={family_guid: family_ht.sample_ids},
+    def import_filtered_table(self, project_samples, num_families, **kwargs):
+        if num_families == 1 or len(project_samples) == 1:
+            families_ht, comp_het_families_ht = self.import_and_filter_entries_ht(
+                project_samples, num_families, **kwargs
             )
-            families_ht, comp_het_families_ht = self._filter_entries_table(family_ht, family_sample_data, **kwargs)
         else:
-            families_ht, comp_het_families_ht = self._load_filtered_project_hts(project_samples, **kwargs)
+            families_ht, comp_het_families_ht = self.import_and_filter_multiple_project_hts(project_samples, **kwargs)
 
         if comp_het_families_ht is not None:
             self._comp_het_ht = self._query_table_annotations(comp_het_families_ht, self._get_table_path('annotations.ht'))
@@ -366,52 +313,60 @@ class BaseHailTableQuery(object):
             self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
             self._ht = self._filter_annotated_table(self._ht, **kwargs)
 
-    def import_and_filter_entries_ht(self, projects: Projects, num_families: int, **kwargs):
-        # - Imports, prefilters, and filters one entries table (a family or project table) per sample type.
-        # - Returns the filtered entries table and the filtered ch table.
-        entries_hts_map: Dict[SampleType, hl.Table] = {}
-        project_guid, project_families = projects.get_one_project()
+    def import_and_filter_entries_ht(self, project_samples, num_families: int, **kwargs):
+        """
+        Imports, prefilters, and filters one entries table (a family or project table) per sample type.
+        Returns the filtered entries table and the filtered ch table.
+        """
+        entries_hts_map = defaultdict()
+        project_guid, project_sample_type_data = list(project_samples.items())[0]
+        sample_types = set(project_sample_type_data.keys())
         if num_families == 1:
-            family_guid, family_samples = project_families.get_one_family()
-            sample_types = family_samples.get_sample_types()
-            self._load_prefiltered_family_ht(family_guid, sample_types, entries_hts_map, **kwargs)
+            family_guid = list(list(project_sample_type_data.values())[0].keys())[0]
+            self._load_prefiltered_family_ht(family_guid, sample_types, entries_hts_map, project_sample_type_data, **kwargs)
         else:
-            sample_types = project_families.get_sample_types_for_all_families()
-            self._load_prefiltered_project_ht(project_guid, sample_types, entries_hts_map, **kwargs)
+            self._load_prefiltered_project_ht(project_guid, sample_types, entries_hts_map, project_sample_type_data, **kwargs)
 
         # If there is only one sample type, filter the single entries table.
         if len(entries_hts_map.keys()) == 1:
-            entries_ht = entries_hts_map[SampleType.WES] or entries_hts_map[SampleType.WGS]
-            return self._filter_entries_table(entries_ht, project_families, **kwargs)
+            sample_type, entries_ht = list(entries_hts_map.items())[0]
+            family_sample_data = project_samples[project_guid][sample_type]
+            return self._filter_entries_table(entries_ht, family_sample_data, sample_type, **kwargs)
 
+        # Project has multiple sample types
         # TODO If there are multiple sample types, filter both.
+        self._filter_entries_table_multiple_sample_types(entries_hts_map, **kwargs)
         pass
 
-    def _load_prefiltered_family_ht(self, family_guid: str, sample_types: Set[SampleType], entries_hts_map: dict, **kwargs):
+    def _load_prefiltered_family_ht(self, family_guid, sample_types, entries_hts_map, project_sample_type_data, **kwargs):
         for sample_type in sample_types:
-            ht = self._read_table(f'families/{sample_type.value}/{family_guid}.ht', use_ssd_dir=True)
+            ht = self._read_table(f'families/{sample_type}/{family_guid}.ht', use_ssd_dir=True)
             ht = ht.transmute(family_entries=[ht.entries])
             ht = ht.annotate_globals(family_guids=[family_guid], family_samples={family_guid: ht.sample_ids})
-            entries_hts_map[sample_type] = self._prefilter_entries_table(ht, **kwargs)
+            entries_hts_map[sample_type] = [
+                (self._prefilter_entries_table(ht, **kwargs), project_sample_type_data[sample_type])
+            ]
 
-    def _load_prefiltered_project_ht(self, project_guid: str, sample_types: Set[SampleType], entries_hts_map: dict, **kwargs):
+    def _load_prefiltered_project_ht(self, project_guid, sample_types, entries_hts_map, project_sample_type_data, **kwargs):
         for sample_type in sample_types:
-            path = f'projects/{sample_type.value}/{project_guid}.ht'
+            path = f'projects/{sample_type}/{project_guid}.ht'
             ht = self._read_table(path, use_ssd_dir=True)
-            entries_hts_map[sample_type] = self._prefilter_entries_table(ht, **kwargs)
+            entries_hts_map[sample_type] = [
+                (self._prefilter_entries_table(ht, **kwargs), project_sample_type_data[sample_type])
+            ]
 
-    def import_and_filter_multiple_project_hts(self, projects: Projects, n_partitions=MAX_PARTITIONS, **kwargs):
-        entries_hts_map: Dict[SampleType, List[Tuple[hl.Table, Project]]] = {}
-        self._load_prefiltered_project_hts(projects, entries_hts_map, n_partitions=n_partitions, **kwargs)
+    def import_and_filter_multiple_project_hts(self, project_samples, n_partitions=MAX_PARTITIONS, **kwargs):
+        entries_hts_map: Dict[str, List[Tuple[hl.Table, dict]]] = {}
+        self._load_prefiltered_project_hts(project_samples, entries_hts_map, n_partitions=n_partitions, **kwargs)
 
         # If there is only one sample type, filter and merge the project tables.
         if len(entries_hts_map.keys()) == 1:
-            entries_hts = entries_hts_map[SampleType.WES] or entries_hts_map[SampleType.WGS]
+            sample_type, entries_hts = list(entries_hts_map.items())[0]
             filtered_project_hts = []
             filtered_comp_het_project_hts = []
 
             for ht, project_families in entries_hts:
-                ht, comp_het_ht = self._filter_entries_table(ht, project_families, **kwargs)
+                ht, comp_het_ht = self._filter_entries_table(ht, project_families, sample_type, **kwargs)
                 if ht is not None:
                     filtered_project_hts.append(ht)
                 if comp_het_ht is not None:
@@ -421,55 +376,61 @@ class BaseHailTableQuery(object):
             comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
             return ht, comp_het_ht
 
-        # TODO Handle filtering genotypes and inheritance for multiple entry hts with multiple sample types
+        # TODO handle filtering genotypes and inheritance for multiple entry hts with multiple sample types
+        self._filter_entries_table_multiple_sample_types(entries_hts_map, **kwargs)
+
+        # todo merge
         pass
 
     def _load_prefiltered_project_hts(
-        self,
-        projects: Projects,
-        entries_hts_map: dict,
-        skip_all_missing=False,
-        n_partitions=MAX_PARTITIONS,
-        **kwargs
+        self, project_samples, entries_hts_map, skip_all_missing=False, n_partitions=MAX_PARTITIONS, **kwargs
     ):
         # Need to chunk tables or else evaluating table globals throws LineTooLong exception
         # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
         # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
         chunk_size = 64
-        sample_types = projects.get_sample_types_for_all_projects()
-        for sample_type in sample_types:
-            project_hts = []
-            project_family_data: Dict[str, Family] = {}
-            prefiltered_project_hts: List[Tuple[hl.Table, Project]] = []
-            for project_guid, project in projects.get_projects():
-                project_ht = self._read_table(
+        project_guid_chunks: List[List[str]] = []
+        current_chunk: List[str] = []
+        unmerged_entries_hts_map = defaultdict(dict)
+        for project_guid, project_sample_type_data in project_samples.items():
+            for sample_type, family_sample_data in project_sample_type_data:
+                ht = self._read_table(
                     f'projects/{sample_type}/{project_guid}.ht',
                     use_ssd_dir=True,
                     skip_missing_field='family_entries' if skip_all_missing else None,
                 )
-                if project_ht is None:
+                if ht is None:
                     continue
-                project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
-                project_family_data.update(project.families)
+                unmerged_entries_hts_map[sample_type][project_guid] = (ht, family_sample_data)
 
-                if len(project_hts) >= chunk_size:
-                    self._prefilter_merged_project_hts(
-                        project_hts,
-                        Project(families=project_family_data),
-                        prefiltered_project_hts,
-                        n_partitions,
-                        **kwargs
-                    )
-                    project_hts = []
-                    project_family_data = {}
+            current_chunk.append(project_guid)
+            if len(current_chunk) >= chunk_size:
+                project_guid_chunks.append(current_chunk)
+                current_chunk = []
 
-            self._prefilter_merged_project_hts(
-                project_hts,
-                Project(families=project_family_data),
-                prefiltered_project_hts,
-                n_partitions,
-                **kwargs
-            )
+        for sample_type, project_data in unmerged_entries_hts_map.items():
+            project_hts = []
+            project_family_data = {}
+            prefiltered_project_hts: List[Tuple[hl.Table, dict]] = []  # Ordered list of merged, prefiltered projects
+            for chunk in project_guid_chunks:
+                for project_guid in chunk:
+                    if project_guid not in project_data:
+                        continue
+
+                    project_ht, family_sample_data = project_data[project_guid]
+                    project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
+                    project_family_data.update(family_sample_data)
+
+                self._prefilter_merged_project_hts(
+                    project_hts,
+                    project_family_data,
+                    prefiltered_project_hts,
+                    n_partitions,
+                    **kwargs
+                )
+                project_hts = []
+                project_family_data = {}
+
             entries_hts_map[sample_type] = prefiltered_project_hts
 
     def _prefilter_merged_project_hts(self, project_hts, project_families, prefiltered_project_hts, n_partitions, **kwargs):
@@ -478,17 +439,6 @@ class BaseHailTableQuery(object):
         ht = self._merge_project_hts(project_hts, n_partitions, include_all_globals=True)
         ht = self._prefilter_entries_table(ht, **kwargs)
         prefiltered_project_hts.append((ht, project_families))
-
-    # def _filter_merged_project_hts(self, project_hts, sample_data, filtered_project_hts, filtered_comp_het_project_hts, n_partitions, **kwargs):
-    #     if not project_hts:
-    #         return
-    #     ht = self._merge_project_hts(project_hts, n_partitions, include_all_globals=True)
-    #     ht, comp_het_ht = self._filter_entries_table(ht, sample_data, **kwargs)
-    #     if ht is not None:
-    #         filtered_project_hts.append(ht)
-    #     if comp_het_ht is not None:
-    #         filtered_comp_het_project_hts.append(comp_het_ht)
-
 
     @staticmethod
     def _merge_project_hts(project_hts, n_partitions, include_all_globals=False):
@@ -514,15 +464,8 @@ class BaseHailTableQuery(object):
 
         return ht.transmute_globals(**global_expressions)
 
-    def _filter_entries_table(self, ht, project_families: Project, inheritance_filter=None, quality_filter=None, **kwargs):# Temporarily reset sample_data until full blended eS/GS support is added
-        # for family_guid, family in project.families:
-        #     if isinstance(list(samples_by_sample_type.values())[0], list):
-        #         samples = [s for samples in samples_by_sample_type.values() for s in samples]
-        #         sample_data[family_guid] = samples
-        #     else:
-        #         sample_data[family_guid] = True
-
-        ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_families)
+    def _filter_entries_table(self, ht, project_samples, sample_type, inheritance_filter=None, quality_filter=None, **kwargs):
+        ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_samples, sample_type)
 
         passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, **kwargs)
         if passes_quality_filter is not None:
@@ -534,20 +477,44 @@ class BaseHailTableQuery(object):
         ht, ch_ht = self._filter_inheritance(
             ht, inheritance_filter, sorted_family_sample_data,
         )
-
         return ht, ch_ht
 
-    def _add_entry_sample_families(self, ht, project_families: Project):
+    def _filter_entries_table_multiple_sample_types(self, entries_hts_map, inheritance_filter=None, quality_filter=None, **kwargs):
+        # entries_hts_map: {<sample_type>: [(ht, project_samples), (ht, project_samples), ...]}
+        for wes_hts, wgs_hts in zip(entries_hts_map['WES'], entries_hts_map['WGS']):
+            for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(wes_hts, wgs_hts):
+                wes_ht, wes_sorted_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples, 'WES')
+                wgs_ht, wgs_sorted_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples, 'WGS')
+                wes_ht = wes_ht.rename({'family_entries': 'wes_family_entries'})
+                wgs_ht = wgs_ht.rename({'family_entries': 'wgs_family_entries'})
+                ht = wes_ht.join(wgs_ht, how='outer')
+
+                passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, **kwargs)
+                if passes_quality_filter is not None:
+                    ht = ht.annotate(
+                        wes_passes=ht.wes_family_entries.map(
+                            lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
+                        ),
+                        wgs_passes=ht.wgs_family_entries.map(
+                            lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
+                        ))
+                    # Keep row if either wes or wgs passes quality check
+                    ht = ht.filter(ht.wes_passes.any(hl.is_defined) | ht.wgs_passes.any(hl.is_defined))
+                    ht = ht.drop('wes_passes', 'wgs_passes')
+
+                    # todo inheritance
+
+    def _add_entry_sample_families(self, ht, sample_data, sample_type):
         ht_globals = hl.eval(ht.globals)
 
         missing_samples = set()
         family_sample_index_data = []
         sorted_family_sample_data = []
-        family_guids = sorted(project_families.families.keys())
+        family_guids = sorted(sample_data.keys())
         for family_guid in family_guids:
             ht_family_samples = ht_globals.family_samples[family_guid]
-            samples = project_families.families[family_guid]
-            if samples is True:  # Lookup table
+            samples = sample_data[family_guid]
+            if samples is True:
                 samples = ht_family_samples
                 get_sample_data = lambda s: {'sampleId': s}
                 missing_family_samples = []
@@ -559,7 +526,7 @@ class BaseHailTableQuery(object):
             else:
                 family_index = ht_globals.family_guids.index(family_guid)
                 family_entry_data = {
-                    'sampleType': self._get_sample_type(family_index, ht_globals),
+                    'sampleType': sample_type,
                     'familyGuid': family_guid,
                 }
                 formatted_samples = [{**family_entry_data, **get_sample_data(s)} for s in samples]
