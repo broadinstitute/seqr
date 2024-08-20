@@ -1461,6 +1461,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
 
     @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
+    @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated', lambda x: True)
     @responses.activate
     def test_get_loaded_projects(self):

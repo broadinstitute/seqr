@@ -1,11 +1,12 @@
 import requests
 from collections import defaultdict
 from django.core.exceptions import PermissionDenied
+import re
 
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.terra_api_utils import is_google_authenticated
 
-from settings import AIRTABLE_API_KEY, AIRTABLE_URL
+from settings import AIRTABLE_API_KEY, AIRTABLE_URL, BASE_URL
 
 logger = SeqrLogger(__name__)
 
@@ -13,6 +14,11 @@ PAGE_SIZE = 100
 MAX_OR_FILTERS = PAGE_SIZE - 5
 
 ANVIL_REQUEST_TRACKING_TABLE = 'AnVIL Seqr Loading Requests Tracking'
+
+LOADABLE_PDO_STATUSES = [
+    'On hold for phenotips, but ready to load',
+    'Methods (Loading)',
+]
 
 
 class AirtableSession(object):
@@ -122,3 +128,13 @@ class AirtableSession(object):
         if missing:
             records_by_id.update(self._get_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', fields))
         return records_by_id
+
+    def get_loadable_pdos(self):
+        pdos = self.fetch_records(
+            'PDO', fields=['PassingCollaboratorSampleIDs', 'SeqrIDs', 'SeqrProjectURL'],
+            or_filters={'PDOStatus': LOADABLE_PDO_STATUSES}
+        )
+        return {record_id: {
+            'project_guid': re.match(f'{BASE_URL}project/([^/]+)/project_page', pdo['SeqrProjectURL']).group(1),
+            'sample_ids': [sample for sample in pdo['PassingCollaboratorSampleIDs'] + pdo['SeqrIDs'] if sample],
+        } for record_id, pdo in pdos.items()}

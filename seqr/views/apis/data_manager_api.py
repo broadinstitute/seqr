@@ -447,10 +447,6 @@ DATA_TYPE_FILE_EXTS = {
     Sample.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
 }
 
-LOADABLE_PDO_STATUSES = [
-    'On hold for phenotips, but ready to load',
-    'Methods (Loading)',
-]
 AVAILABLE_PDO_STATUSES = {
     'Available in seqr',
     'Historic',
@@ -491,18 +487,10 @@ def get_loaded_projects(request, sample_type, dataset_type):
 
 
 def _fetch_airtable_loadable_project_samples(user):
-    pdos = AirtableSession(user).fetch_records(
-        'PDO', fields=['PassingCollaboratorSampleIDs', 'SeqrIDs', 'SeqrProjectURL'],
-        or_filters={'PDOStatus': LOADABLE_PDO_STATUSES}
-    )
+    pdos = AirtableSession(user).get_loadable_pdos()
     project_samples = defaultdict(set)
     for pdo in pdos.values():
-        project_guid = re.match(
-            f'{BASE_URL}project/([^/]+)/project_page', pdo['SeqrProjectURL'],
-        ).group(1)
-        project_samples[project_guid].update([
-            sample_id for sample_id in pdo['PassingCollaboratorSampleIDs'] + pdo['SeqrIDs'] if sample_id
-        ])
+        project_samples[pdo['project_guid']].update(pdo['sample_ids'])
     return project_samples
 
 
