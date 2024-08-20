@@ -1,5 +1,3 @@
-from typing import List, Tuple, Dict, Set
-
 from aiohttp.web import HTTPBadRequest, HTTPNotFound
 from collections import defaultdict, namedtuple
 import hail as hl
@@ -318,7 +316,7 @@ class BaseHailTableQuery(object):
         Imports, prefilters, and filters one entries table (a family or project table) per sample type.
         Returns the filtered entries table and the filtered ch table.
         """
-        entries_hts_map = defaultdict()
+        entries_hts_map: dict[str, list[tuple[hl.Table, dict]]] = {}
         project_guid, project_sample_type_data = list(project_samples.items())[0]
         sample_types = set(project_sample_type_data.keys())
         if num_families == 1:
@@ -330,8 +328,7 @@ class BaseHailTableQuery(object):
         # If there is only one sample type, filter the single entries table.
         if len(entries_hts_map.keys()) == 1:
             sample_type, entries_hts = list(entries_hts_map.items())[0]
-            family_sample_data = project_samples[project_guid][sample_type]
-            return self._filter_entries_table(entries_hts[0][0], family_sample_data, sample_type, **kwargs)
+            return self._filter_entries_table(entries_hts[0][0], entries_hts[0][1], sample_type, **kwargs)
 
         # Project has multiple sample types
         # TODO If there are multiple sample types, filter both.
@@ -356,7 +353,7 @@ class BaseHailTableQuery(object):
             ]
 
     def import_and_filter_multiple_project_hts(self, project_samples, n_partitions=MAX_PARTITIONS, **kwargs):
-        entries_hts_map: Dict[str, List[Tuple[hl.Table, dict]]] = {}
+        entries_hts_map: dict[str, list[tuple[hl.Table, dict]]] = {}
         self._load_prefiltered_project_hts(project_samples, entries_hts_map, n_partitions=n_partitions, **kwargs)
 
         # If there is only one sample type, filter and merge the project tables.
@@ -364,7 +361,6 @@ class BaseHailTableQuery(object):
             sample_type, entries_hts = list(entries_hts_map.items())[0]
             filtered_project_hts = []
             filtered_comp_het_project_hts = []
-
             for ht, project_families in entries_hts:
                 ht, comp_het_ht = self._filter_entries_table(ht, project_families, sample_type, **kwargs)
                 if ht is not None:
@@ -376,11 +372,10 @@ class BaseHailTableQuery(object):
             comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
             return ht, comp_het_ht
 
-        # TODO handle filtering genotypes and inheritance for multiple entry hts with multiple sample types
-        self._filter_entries_table_multiple_sample_types(entries_hts_map, **kwargs)
-
-        # todo merge
-        pass
+        unmerged_hts, unmerged_comp_het_hts = self._filter_entries_table_multiple_sample_types(entries_hts_map, **kwargs)
+        merged_ht = self._merge_project_hts(unmerged_hts, n_partitions)
+        merged_comp_het_ht = self._merge_project_hts(unmerged_comp_het_hts, n_partitions)
+        return merged_ht, merged_comp_het_ht
 
     def _load_prefiltered_project_hts(
         self, project_samples, entries_hts_map, skip_all_missing=False, n_partitions=MAX_PARTITIONS, **kwargs
@@ -389,8 +384,8 @@ class BaseHailTableQuery(object):
         # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
         # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
         chunk_size = 64
-        project_guid_chunks: List[List[str]] = []
-        current_chunk: List[str] = []
+        project_guid_chunks: list[list[str]] = []
+        current_chunk: list[str] = []
         unmerged_entries_hts_map = defaultdict(dict)
         for project_guid, project_sample_type_data in project_samples.items():
             for sample_type, family_sample_data in project_sample_type_data.items():
@@ -483,32 +478,44 @@ class BaseHailTableQuery(object):
 
     def _filter_entries_table_multiple_sample_types(self, entries_hts_map, inheritance_filter=None, quality_filter=None, **kwargs):
         # entries_hts_map: {<sample_type>: [(ht, project_samples), (ht, project_samples), ...]}
+        wes_entries, wgs_entries = entries_hts_map['WES'], entries_hts_map['WGS']
+
+
         unmerged_filtered_hts = []
-        for wes_hts, wgs_hts in zip(entries_hts_map['WES'], entries_hts_map['WGS']):
-            for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(wes_hts, wgs_hts):
-                wes_ht, wes_sorted_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples, 'WES')
-                wgs_ht, wgs_sorted_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples, 'WGS')
-                wes_ht = wes_ht.rename({'family_entries': 'wes_family_entries'})
-                wgs_ht = wgs_ht.rename({'family_entries': 'wgs_family_entries'})
-                ht = wes_ht.join(wgs_ht, how='outer')
+        for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples)  in zip(entries_hts_map['WES'], entries_hts_map['WGS']):
+            wes_ht, wes_sorted_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples, 'WES')
+            wgs_ht, wgs_sorted_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples, 'WGS')
 
-                passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, **kwargs)
-                if passes_quality_filter is not None:
-                    ht = ht.annotate(
-                        wes_passes=ht.wes_family_entries.map(
-                            lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
-                        ),
-                        wgs_passes=ht.wgs_family_entries.map(
-                            lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
-                        ))
-                    # Keep row if either wes or wgs passes quality check
-                    ht = ht.filter(ht.wes_passes.any(hl.is_defined) | ht.wgs_passes.any(hl.is_defined))
-                    ht = ht.drop('wes_passes', 'wgs_passes')
 
-                    # todo inheritance
+            # Try doing the filtering together
+            # wes_ht = wes_ht.rename({'family_entries': 'wes_family_entries'})
+            # wgs_ht = wgs_ht.rename({'family_entries': 'wgs_family_entries'})
+            #
+            # ht = wes_ht.join(wgs_ht, how='outer')
+            #
+            # passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, **kwargs)
+            # if passes_quality_filter is not None:
+            #     ht = ht.annotate(
+            #         wes_passes=ht.wes_family_entries.map(
+            #             lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
+            #         ),
+            #         wgs_passes=ht.wgs_family_entries.map(
+            #             lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
+            #         ))
+            #     # Keep row if either wes or wgs passes quality check
+            #     ht = ht.filter(ht.wes_passes.any(hl.is_defined) | ht.wgs_passes.any(hl.is_defined))
+            #     ht = ht.drop('wes_passes', 'wgs_passes')
 
-                    unmerged_filtered_hts.append(ht)
+            # Try doing the filtering separately then reconciling the results
 
+
+            # todo inheritance
+
+            # todo merge here instead.
+
+            unmerged_filtered_hts.append(ht)
+
+        print(unmerged_filtered_hts)
         return unmerged_filtered_hts, None
 
     def _add_entry_sample_families(self, ht, sample_data, sample_type):
