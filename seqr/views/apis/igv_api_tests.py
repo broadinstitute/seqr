@@ -15,15 +15,15 @@ PROJECT_GUID = 'R0001_1kg'
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+@mock.patch('seqr.utils.file_utils.subprocess.Popen')
 class IgvAPITest(AnvilAuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
     @responses.activate
     @mock.patch('seqr.utils.file_utils.logger')
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.igv_api.safe_redis_get_json')
     @mock.patch('seqr.views.apis.igv_api.safe_redis_set_json')
-    def test_proxy_google_to_igv(self, mock_set_redis, mock_get_redis, mock_subprocess, mock_file_logger):
+    def test_proxy_google_to_igv(self, mock_set_redis, mock_get_redis, mock_file_logger, mock_subprocess):
         mock_ls_subprocess = mock.MagicMock()
         mock_access_token_subprocess = mock.MagicMock()
         mock_subprocess.side_effect = [mock_ls_subprocess, mock_access_token_subprocess]
@@ -75,7 +75,6 @@ class IgvAPITest(AnvilAuthenticationTestCase):
         mock_set_redis.assert_not_called()
         mock_subprocess.assert_not_called()
 
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.open')
     def test_proxy_local_to_igv(self, mock_open, mock_subprocess):
         mock_subprocess.return_value.stdout = STREAMING_READS_CONTENT
@@ -97,7 +96,8 @@ class IgvAPITest(AnvilAuthenticationTestCase):
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
         mock_open.assert_called_with('/project_A/sample_1.bai', 'rb')
 
-    def test_receive_alignment_table_handler(self):
+    def test_receive_alignment_table_handler(self, mock_subprocess):
+        mock_subprocess.return_value.wait.return_value = 0
         url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])
         self.check_pm_login(url)
 
@@ -134,7 +134,8 @@ class IgvAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
     @mock.patch('seqr.views.apis.igv_api.load_uploaded_file')
-    def test_receive_bulk_alignment_table_handler(self, mock_load_uploaded_file):
+    def test_receive_bulk_alignment_table_handler(self, mock_load_uploaded_file, mock_subprocess):
+        mock_subprocess.return_value.wait.return_value = 0
         url = reverse(receive_bulk_igv_table_handler)
         self.check_pm_login(url)
 
@@ -199,7 +200,7 @@ class IgvAPITest(AnvilAuthenticationTestCase):
             {'individualGuid': 'I000018_na21234', 'individualId': 'NA21234', 'filePath': 'gs://readviz/NA21234.cram', 'indexFilePath': None, 'sampleId': None}
         ])
 
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     def test_add_alignment_sample(self, mock_local_file_exists, mock_subprocess):
         url = reverse(update_individual_igv_sample, args=['I000001_na19675'])
@@ -307,7 +308,7 @@ class IgvAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
     @responses.activate
-    def test_igv_genomes_proxy(self):
+    def test_igv_genomes_proxy(self, mock_subprocess):
         url_path = 'igv.org.genomes/foo?query=true'
         s3_url = reverse(igv_genomes_proxy, args=['s3', url_path])
 
