@@ -82,7 +82,7 @@ def get_search_samples(projects, active_only=True):
     return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
-def _get_families_search_data(families, dataset_type=None):
+def _get_families_search_data(families, dataset_type):
     samples = _get_filtered_search_samples({'individual__family__in': families})
     if len(samples) < 1:
         raise InvalidSearchException('No search data found for families {}'.format(
@@ -93,7 +93,11 @@ def _get_families_search_data(families, dataset_type=None):
         if not samples:
             raise InvalidSearchException(f'Unable to search against dataset type "{dataset_type}"')
 
-    projects = Project.objects.filter(family__individual__sample__in=samples).values_list('genome_version', 'name').distinct()
+    return samples
+
+
+def _get_search_genome_version(families):
+    projects = Project.objects.filter(family__in=families).values_list('genome_version', 'name').distinct()
     project_versions = defaultdict(set)
     for genome_version, project_name in projects:
         project_versions[genome_version].add(project_name)
@@ -104,7 +108,7 @@ def _get_families_search_data(families, dataset_type=None):
         raise InvalidSearchException(
             f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
 
-    return samples, next(iter(project_versions.keys()))
+    return next(iter(project_versions.keys()))
 
 
 def delete_search_backend_data(data_id):
@@ -145,7 +149,8 @@ def _get_variants_for_variant_ids(families, variant_ids, user, user_email=None, 
     dataset_type = _variant_ids_dataset_type(parsed_variant_ids.values())
 
     return backend_specific_call(get_es_variants_for_variant_ids, get_hail_variants_for_variant_ids)(
-        *_get_families_search_data(families, dataset_type=dataset_type), parsed_variant_ids, user, user_email=user_email, **kwargs
+        _get_families_search_data(families, dataset_type=dataset_type), _get_search_genome_version(families),
+        parsed_variant_ids, user, user_email=user_email, **kwargs
     )
 
 
@@ -174,7 +179,8 @@ def variant_lookup(user, parsed_variant_id, **kwargs):
 
 
 def sv_variant_lookup(user, variant_id, families, **kwargs):
-    samples, _ = _get_families_search_data(families, dataset_type=Sample.DATASET_TYPE_SV_CALLS)
+    _get_search_genome_version(families)
+    samples = _get_families_search_data(families, dataset_type=Sample.DATASET_TYPE_SV_CALLS)
     return _variant_lookup(
         hail_sv_variant_lookup, user, variant_id, **kwargs, samples=samples, cache_key_suffix=user,
         dataset_type=Sample.DATASET_TYPE_SV_CALLS,
@@ -233,10 +239,14 @@ def query_variants(search_model, sort=XPOS_SORT_KEY, skip_genotype_filter=False,
 def _query_variants(search_model, user, previous_search_results, sort=None, num_results=100, **kwargs):
     search = deepcopy(search_model.variant_search.search)
 
+    families = search_model.families.all()
+    genome_version = _get_search_genome_version(families)
+    _validate_sort(sort, families)
+
     rs_ids = None
     variant_ids = None
     parsed_variant_ids = None
-    genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
+    genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}), genome_version=genome_version)
     if invalid_items:
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
     if not (genes or intervals):
@@ -257,9 +267,6 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
     }
     parsed_search.update(search)
 
-    families = search_model.families.all()
-    _validate_sort(sort, families)
-
     dataset_type, secondary_dataset_type, lookup_dataset_type = _search_dataset_type(parsed_search)
     parsed_search.update({'dataset_type': dataset_type, 'secondary_dataset_type': secondary_dataset_type})
     search_dataset_type = None
@@ -269,7 +276,7 @@ def _query_variants(search_model, user, previous_search_results, sort=None, num_
         elif dataset_type == Sample.DATASET_TYPE_SV_CALLS:
             search_dataset_type = DATASET_TYPE_NO_MITO
 
-    samples, genome_version = _get_families_search_data(families, dataset_type=search_dataset_type)
+    samples = _get_families_search_data(families, dataset_type=search_dataset_type)
     if parsed_search.get('inheritance'):
         samples = _parse_inheritance(parsed_search, samples)
 

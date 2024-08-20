@@ -40,8 +40,11 @@ def _get_genes(gene_ids, user=None, gene_fields=None):
     return {gene['geneId']: gene for gene in _get_json_for_genes(genes, user=user, gene_fields=gene_fields)}
 
 
-def get_gene_ids_for_gene_symbols(gene_symbols):
-    genes = GeneInfo.objects.filter(gene_symbol__in=gene_symbols).only('gene_symbol', 'gene_id').order_by('-gencode_release')
+def get_gene_ids_for_gene_symbols(gene_symbols, genome_version=None):
+    gene_filter = {'gene_symbol__in': gene_symbols}
+    if genome_version:
+        gene_filter[f'start_grch{genome_version}__isnull'] = False
+    genes = GeneInfo.objects.filter(**gene_filter).only('gene_symbol', 'gene_id').order_by('-gencode_release')
     symbols_to_ids = defaultdict(list)
     for gene in genes:
         symbols_to_ids[gene.gene_symbol].append(gene.gene_id)
@@ -150,7 +153,7 @@ def _get_json_for_genes(genes, user=None, gene_fields=None):
     return _get_json_for_models(genes, process_result=_process_result)
 
 
-def parse_locus_list_items(request_json):
+def parse_locus_list_items(request_json, genome_version=None):
     raw_items = request_json.get('rawItems')
     if not raw_items:
         return None, None, None
@@ -185,7 +188,7 @@ def parse_locus_list_items(request_json):
         else:
             gene_symbols.add(item.replace('<TAB>', ''))
 
-    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols)
+    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols, genome_version=genome_version)
     invalid_items += [symbol for symbol in gene_symbols if not gene_symbols_to_ids.get(symbol)]
     gene_ids.update({gene_ids[0] for gene_ids in gene_symbols_to_ids.values() if len(gene_ids)})
     genes_by_id = get_genes(list(gene_ids)) if gene_ids else {}

@@ -895,7 +895,7 @@ def import_gregor_metadata(request, project_guid):
         genes.add(variant[GENE_COLUMN])
         finding_id_map[variant['genetic_findings_id']] = variant_id
 
-    gene_symbols_to_ids = {k: v[0] for k, v in get_gene_ids_for_gene_symbols(genes).items()}
+    gene_symbols_to_ids = {k: v[0] for k, v in get_gene_ids_for_gene_symbols(genes, genome_version=project.genome_version).items()}
     missing_genes = set()
     for variant in family_variant_data.values():
         gene = variant[GENE_COLUMN]
