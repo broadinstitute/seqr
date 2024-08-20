@@ -329,9 +329,9 @@ class BaseHailTableQuery(object):
 
         # If there is only one sample type, filter the single entries table.
         if len(entries_hts_map.keys()) == 1:
-            sample_type, entries_ht = list(entries_hts_map.items())[0]
+            sample_type, entries_hts = list(entries_hts_map.items())[0]
             family_sample_data = project_samples[project_guid][sample_type]
-            return self._filter_entries_table(entries_ht, family_sample_data, sample_type, **kwargs)
+            return self._filter_entries_table(entries_hts[0][0], family_sample_data, sample_type, **kwargs)
 
         # Project has multiple sample types
         # TODO If there are multiple sample types, filter both.
@@ -393,7 +393,7 @@ class BaseHailTableQuery(object):
         current_chunk: List[str] = []
         unmerged_entries_hts_map = defaultdict(dict)
         for project_guid, project_sample_type_data in project_samples.items():
-            for sample_type, family_sample_data in project_sample_type_data:
+            for sample_type, family_sample_data in project_sample_type_data.items():
                 ht = self._read_table(
                     f'projects/{sample_type}/{project_guid}.ht',
                     use_ssd_dir=True,
@@ -408,13 +408,15 @@ class BaseHailTableQuery(object):
                 project_guid_chunks.append(current_chunk)
                 current_chunk = []
 
+        project_guid_chunks.append(current_chunk)
+
         for sample_type, project_data in unmerged_entries_hts_map.items():
             project_hts = []
             project_family_data = {}
             prefiltered_project_hts: List[Tuple[hl.Table, dict]] = []  # Ordered list of merged, prefiltered projects
             for chunk in project_guid_chunks:
                 for project_guid in chunk:
-                    if project_guid not in project_data:
+                    if project_guid not in project_data:  # There is no project ht for this sample_type
                         continue
 
                     project_ht, family_sample_data = project_data[project_guid]
@@ -481,6 +483,7 @@ class BaseHailTableQuery(object):
 
     def _filter_entries_table_multiple_sample_types(self, entries_hts_map, inheritance_filter=None, quality_filter=None, **kwargs):
         # entries_hts_map: {<sample_type>: [(ht, project_samples), (ht, project_samples), ...]}
+        unmerged_filtered_hts = []
         for wes_hts, wgs_hts in zip(entries_hts_map['WES'], entries_hts_map['WGS']):
             for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(wes_hts, wgs_hts):
                 wes_ht, wes_sorted_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples, 'WES')
@@ -503,6 +506,10 @@ class BaseHailTableQuery(object):
                     ht = ht.drop('wes_passes', 'wgs_passes')
 
                     # todo inheritance
+
+                    unmerged_filtered_hts.append(ht)
+
+        return unmerged_filtered_hts, None
 
     def _add_entry_sample_families(self, ht, sample_data, sample_type):
         ht_globals = hl.eval(ht.globals)
@@ -640,6 +647,10 @@ class BaseHailTableQuery(object):
                 unaffected_filter |= gentoype_entry_indices.size() < 2
             is_valid &= unaffected_filter
         return hl.or_missing(is_valid, entries)
+
+
+    # def _filter_inheritance_multiple_sample_types(self, ht, inheritance_filter, ):
+
 
     def _get_family_passes_quality_filter(self, quality_filter, ht, **kwargs):
         quality_filter = quality_filter or {}
