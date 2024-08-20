@@ -523,5 +523,5 @@ def get_family_phenotype_gene_scores(request, family_guid):
     gene_ids = {gene_id for indiv in phenotype_prioritization.values() for gene_id in indiv.keys()}
     return create_json_response({
         'phenotypeGeneScores': phenotype_prioritization,
-        'genesById': get_genes_for_variant_display(gene_ids)
+        'genesById': get_genes_for_variant_display(gene_ids, project.genome_version),
     })

@@ -20,19 +20,18 @@ def get_genes(gene_ids, genome_version=None):
     return _get_genes(gene_ids, genome_version=genome_version)
 
 
-def get_genes_for_variant_display(gene_ids):
-    return _get_genes(gene_ids, gene_fields=VARIANT_GENE_DISPLAY_FIELDS)
+def get_genes_for_variant_display(gene_ids, genome_version):
+    return _get_genes(gene_ids, gene_fields=VARIANT_GENE_DISPLAY_FIELDS, genome_version=genome_version)
 
 
-def get_genes_for_variants(gene_ids):
-    return _get_genes(gene_ids, gene_fields=VARIANT_GENE_FIELDS)
+def get_genes_for_variants(gene_ids, genome_version=None):
+    return _get_genes(gene_ids, gene_fields=VARIANT_GENE_FIELDS, genome_version=genome_version)
 
 
 def get_genes_with_detail(gene_ids, user):
     return _get_genes(gene_ids, user=user, gene_fields=ALL_GENE_FIELDS)
 
 
-# TODO all usages?
 def _get_genes(gene_ids, user=None, gene_fields=None, genome_version=None):
     gene_filter = {}
     _add_genome_version_filter(gene_filter, genome_version)
