@@ -425,7 +425,6 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.utils.file_utils.logger')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_get_anvil_igv_options(self, *args):
-        # Requesting to load data from a workspace without an existing project
         url = reverse(get_anvil_igv_options, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1])
         expected_options = [
             {'name': '/test.bam', 'value': 'gs://test_bucket/test.bam'},
@@ -436,7 +435,6 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.utils.file_utils.logger')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_get_anvil_vcf_list(self, *args):
-        # Requesting to load data from a workspace without an existing project
         url = reverse(get_anvil_vcf_list, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1])
         expected_files = [
             '/test.vcf', '/data/test.vcf.gz', '/data/test-101.vcf.gz', '/data/test-102.vcf.gz', '/sharded/test-*.vcf.gz',
