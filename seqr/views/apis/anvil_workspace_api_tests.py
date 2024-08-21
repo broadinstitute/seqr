@@ -7,7 +7,7 @@ import responses
 
 from seqr.models import Project, Family, Individual
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
-    validate_anvil_vcf, grant_workspace_access, add_workspace_data, get_anvil_vcf_list
+    validate_anvil_vcf, grant_workspace_access, add_workspace_data, get_anvil_vcf_list, get_anvil_igv_options
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, AirflowTestCase, \
     TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME, TEST_WORKSPACE_NAME1, TEST_NO_PROJECT_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME2
 from seqr.views.utils.terra_api_utils import remove_token, TerraAPIException, TerraRefreshTokenFailedException
@@ -424,9 +424,24 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
 
     @mock.patch('seqr.utils.file_utils.logger')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_get_anvil_vcf_list(self, mock_subprocess, mock_file_logger, mock_utils_logger):
-        # Requesting to load data from a workspace without an existing project
+    def test_get_anvil_igv_options(self, *args):
+        url = reverse(get_anvil_igv_options, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1])
+        expected_options = [
+            {'name': '/test.bam', 'value': 'gs://test_bucket/test.bam'},
+            {'name': '/data/test.cram', 'value': 'gs://test_bucket/data/test.cram'},
+        ]
+        self._test_get_workspace_files(url, 'igv_options', expected_options, *args)
+
+    @mock.patch('seqr.utils.file_utils.logger')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_get_anvil_vcf_list(self, *args):
         url = reverse(get_anvil_vcf_list, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1])
+        expected_files = [
+            '/test.vcf', '/data/test.vcf.gz', '/data/test-101.vcf.gz', '/data/test-102.vcf.gz', '/sharded/test-*.vcf.gz',
+        ]
+        self._test_get_workspace_files(url, 'dataPathList', expected_files, *args)
+
+    def _test_get_workspace_files(self, url, response_key, expected_files, mock_subprocess, mock_file_logger, mock_utils_logger):
         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
         mock_utils_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
                                                      .format(TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1),
@@ -436,7 +451,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_subprocess.return_value.communicate.return_value = b'', None
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'dataPathList': []})
+        self.assertDictEqual(response.json(), {response_key: []})
         mock_subprocess.assert_called_with('gsutil ls gs://test_bucket', stdout=-1, stderr=-1, shell=True)  # nosec
         mock_file_logger.info.assert_called_with('==> gsutil ls gs://test_bucket', self.manager_user)
 
@@ -446,6 +461,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_subprocess.return_value.communicate.return_value = b'\n'.join([
             b'Warning: some packages are out of date',
             b'gs://test_bucket/test.vcf', b'gs://test_bucket/test.tsv',
+            b'gs://test_bucket/test.bam', b'gs://test_bucket/test.bam.bai', b'gs://test_bucket/data/test.cram',
             # path with common prefix but not sharded VCFs
             b'gs://test_bucket/data/test.vcf.gz', b'gs://test_bucket/data/test-101.vcf.gz',
             b'gs://test_bucket/data/test-102.vcf.gz',
@@ -455,8 +471,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         ]), None
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'dataPathList': ['/test.vcf', '/data/test.vcf.gz', '/data/test-101.vcf.gz',
-                                                                '/data/test-102.vcf.gz', '/sharded/test-*.vcf.gz']})
+        self.assertDictEqual(response.json(), {response_key: expected_files})
         mock_subprocess.assert_has_calls([
             mock.call('gsutil ls gs://test_bucket', stdout=-1, stderr=-1, shell=True),  # nosec
             mock.call().communicate(),
@@ -748,7 +763,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         )
 
         self.mock_gsutil.assert_called_with(
-            f'rsync -r {gs_path}', f'gs://seqr-loading-temp/v03/{genome_version}/WES/SNV_INDEL/pedigrees/', self.manager_user,
+            f'rsync -r {gs_path}', f'gs://seqr-loading-temp/v3.1/{genome_version}/SNV_INDEL/pedigrees/WES/', self.manager_user,
         )
 
         self.assert_airflow_calls(additional_tasks_check=test_add_data)

@@ -92,7 +92,7 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
         query_variants(self.results_model, user=self.user, sort='in_omim')
         self._test_expected_search_call(
             num_results=2,  dataset_type='SNV_INDEL', sample_data={'SNV_INDEL': EXPECTED_SAMPLE_DATA['SNV_INDEL']},
-            sort='in_omim', sort_metadata=['ENSG00000223972', 'ENSG00000135953'],
+            sort='in_omim', sort_metadata=['ENSG00000240361', 'ENSG00000135953'],
             **VARIANT_ID_SEARCH,
         )
 
@@ -182,13 +182,13 @@ class HailSearchUtilsTests(SearchTestHelper, TestCase):
 
         self.search_model.search['locus'] = {'rawItems': 'M:10-100 '}
         query_variants(self.results_model, user=self.user)
-        self._test_expected_search_call(intervals=['M:10-100'], sample_data=EXPECTED_MITO_SAMPLE_DATA)
+        self._test_expected_search_call(intervals=[['M', 10, 100]], sample_data=EXPECTED_MITO_SAMPLE_DATA)
 
         self.search_model.search['locus']['rawItems'] += raw_locus
         query_variants(self.results_model, user=self.user)
         self._test_expected_search_call(
             gene_ids=LOCATION_SEARCH['gene_ids'],
-            intervals=['M:10-100'] + LOCATION_SEARCH['intervals'],
+            intervals=[['M', 10, 100]] + LOCATION_SEARCH['intervals'],
             sample_data={**MULTI_PROJECT_SAMPLE_DATA, **sv_sample_data, **EXPECTED_MITO_SAMPLE_DATA},
         )
 

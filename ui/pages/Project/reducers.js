@@ -198,15 +198,22 @@ export const addVariantsDataset = values => (dispatch, getState) => new HttpRequ
   },
 ).post(values)
 
+export const updateIndividualIGV = (values, onError) => dispatch => (
+  new HttpRequestHelper(
+    `/api/individual/${values.individualGuid}/update_igv_sample`,
+    responseJson => dispatch({ type: RECEIVE_DATA, updatesById: responseJson }),
+    onError,
+  ).post(values)
+)
+
 export const addIGVDataset = ({ mappingFile, ...values }) => (dispatch) => {
   const errors = []
 
   return Promise.all(mappingFile.updates.map(
-    ({ individualGuid, individualId, ...update }) => new HttpRequestHelper(
-      `/api/individual/${individualGuid}/update_igv_sample`,
-      responseJson => dispatch({ type: RECEIVE_DATA, updatesById: responseJson }),
+    ({ individualGuid, individualId, ...update }) => updateIndividualIGV(
+      { individualGuid, ...update, ...values },
       e => errors.push(`Error updating ${individualId}: ${e.body && e.body.error ? e.body.error : e.message}`),
-    ).post({ ...update, ...values }),
+    )(dispatch),
   )).then(() => {
     if (errors.length) {
       const err = new Error()

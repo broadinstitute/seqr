@@ -780,6 +780,12 @@ class IgvSample(ModelWithGUID):
         (SAMPLE_TYPE_JUNCTION, 'RNAseq Junction'),
         (SAMPLE_TYPE_GCNV, 'gCNV'),
     )
+    SAMPLE_TYPE_FILE_EXTENSIONS = {
+        SAMPLE_TYPE_ALIGNMENT: ('bam', 'cram'),
+        SAMPLE_TYPE_COVERAGE: ('bigWig',),
+        SAMPLE_TYPE_JUNCTION: ('junctions.bed.gz',),
+        SAMPLE_TYPE_GCNV: ('bed.gz',),
+    }
 
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
     sample_type = models.CharField(max_length=15, choices=SAMPLE_TYPE_CHOICES)

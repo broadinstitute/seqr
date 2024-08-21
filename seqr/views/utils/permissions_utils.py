@@ -123,7 +123,7 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
     return _get_project_and_check_permissions(project_guid, user, check_project_permissions, **kwargs)
 
 def get_project_and_check_pm_permissions(project_guid, user, override_permission_func=None):
-    return _get_project_and_check_permissions(project_guid, user, _check_project_pm_permission,
+    return _get_project_and_check_permissions(project_guid, user, check_project_pm_permission,
                                               override_permission_func=override_permission_func)
 
 def _get_project_and_check_permissions(project_guid, user, _check_permission_func, **kwargs):
@@ -131,7 +131,7 @@ def _get_project_and_check_permissions(project_guid, user, _check_permission_fun
     _check_permission_func(project, user, **kwargs)
     return project
 
-def _check_project_pm_permission(project, user, override_permission_func=None, **kwargs):
+def check_project_pm_permission(project, user, override_permission_func=None, **kwargs):
     if user_is_pm(user) or (project.has_case_review and has_project_permissions(project, user, can_edit=True)):
         return
 

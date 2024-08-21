@@ -145,7 +145,7 @@ from seqr.views.apis.project_api import create_project_handler, update_project_h
     project_samples, project_notifications, mark_read_project_notifications, subscribe_project_notifications
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
-    grant_workspace_access, validate_anvil_vcf, add_workspace_data, get_anvil_vcf_list
+    grant_workspace_access, validate_anvil_vcf, add_workspace_data, get_anvil_vcf_list, get_anvil_igv_options
 from matchmaker.views import external_api
 from seqr.views.utils.file_utils import save_temp_file
 from seqr.views.apis.feature_updates_api import get_feature_updates
@@ -351,6 +351,7 @@ api_endpoints = {
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/validate_vcf': validate_anvil_vcf,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/submit': create_project_from_workspace,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/get_vcf_list': get_anvil_vcf_list,
+    'anvil_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/get_igv_options': get_anvil_igv_options,
 
     'feature_updates': get_feature_updates,
 
