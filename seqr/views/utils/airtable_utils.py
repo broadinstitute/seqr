@@ -5,7 +5,7 @@ from django.core.exceptions import PermissionDenied
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.terra_api_utils import is_google_authenticated
 
-from settings import AIRTABLE_API_KEY, AIRTABLE_URL
+from settings import AIRTABLE_API_KEY, AIRTABLE_URL, BASE_URL
 
 logger = SeqrLogger(__name__)
 
@@ -14,6 +14,11 @@ MAX_OR_FILTERS = PAGE_SIZE - 5
 MAX_UPDATE_RECORDS = 10
 
 ANVIL_REQUEST_TRACKING_TABLE = 'AnVIL Seqr Loading Requests Tracking'
+
+LOADABLE_PDO_STATUSES = [
+    'On hold for phenotips, but ready to load',
+    'Methods (Loading)',
+]
 
 
 class AirtableSession(object):
@@ -125,3 +130,14 @@ class AirtableSession(object):
         if missing:
             records_by_id.update(self._get_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', fields))
         return records_by_id
+
+    def get_project_samples_with_status(self, project_samples, pdo_statuses):
+        sample_ids = [sample_id for _, sample_id in project_samples]
+        samples_by_id = self.get_samples_for_sample_ids(sample_ids, ['PDOStatus', 'SeqrProject'])
+        matched_samples = [(project, sample_id, [
+            s for s in samples_by_id.get(sample_id, [])
+            if f'{BASE_URL}project/{project}/project_page' in s['SeqrProject'] and any(
+                status in pdo_statuses for status in s['PDOStatus']
+            )
+        ]) for project, sample_id in project_samples]
+        return [match for match in matched_samples if match[2]]

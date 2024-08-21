@@ -13,6 +13,7 @@ from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.search.add_data_utils import notify_search_data_loaded
 from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
+from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     get_saved_variants
@@ -91,6 +92,9 @@ class Command(BaseCommand):
         # Reset cached results for all projects, as seqr AFs will have changed for all projects when new data is added
         reset_cached_search_results(project=None)
 
+        # Update Airtable PDOs
+        session = AirtableSession(user)
+
         # Send loading notifications
         update_sample_data_by_project = {
             s['individual__family__project']: s for s in updated_samples.values('individual__family__project').annotate(
@@ -111,6 +115,7 @@ class Command(BaseCommand):
             updated_project_families.append((project.id, project.name, project.genome_version, project_families))
 
         # Send failure notifications
+        # TODO include new PDO names
         failed_family_samples = metadata.get('failed_family_samples', {})
         failed_families_by_guid = {f['guid']: f for f in Family.objects.filter(
             guid__in={family for families in failed_family_samples.values() for family in families}
