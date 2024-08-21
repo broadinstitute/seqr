@@ -22,7 +22,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_exists
 
 from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
-from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES
+from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data
 from seqr.views.utils.file_utils import parse_file, get_temp_file_path, load_uploaded_file, persist_temp_file
@@ -447,6 +447,10 @@ DATA_TYPE_FILE_EXTS = {
     Sample.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
 }
 
+LOADABLE_PDO_STATUSES = [
+    'On hold for phenotips, but ready to load',
+    'Methods (Loading)',
+]
 AVAILABLE_PDO_STATUSES = {
     'Available in seqr',
     'Historic',
@@ -589,10 +593,16 @@ def _get_valid_project_samples(project_samples, sample_type, user):
 
 
 def _get_loaded_samples(project_samples, user):
-    return [
-        (project, sample_id) for project, sample_id, _ in
-        AirtableSession(user).get_project_samples_with_status(project_samples, AVAILABLE_PDO_STATUSES)
-    ]
+    sample_ids = [sample_id for _, sample_id in project_samples]
+    samples_by_id = AirtableSession(user).get_samples_for_sample_ids(sample_ids, ['PDOStatus', 'SeqrProject'])
+    return [(project, sample_id) for project, sample_id in project_samples if any(
+        _is_loaded_airtable_sample(s, project) for s in samples_by_id.get(sample_id, [])
+    )]
+
+
+def _is_loaded_airtable_sample(sample, project_guid):
+    return f'{BASE_URL}project/{project_guid}/project_page' in sample['SeqrProject'] and any(
+        status in AVAILABLE_PDO_STATUSES for status in sample['PDOStatus'])
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

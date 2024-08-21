@@ -1589,7 +1589,6 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         }
 
     @responses.activate
-    @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
