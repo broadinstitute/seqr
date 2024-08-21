@@ -79,11 +79,12 @@ class AirtableSession(object):
         self._session.params = {}
         update = getattr(self._session, update_type)
         errors = []
+        updated_records = []
         for i in range(0, len(records), MAX_UPDATE_RECORDS):
             try:
                 response = update(f'{self._url}/{record_type}', json={'records': records[i:i + MAX_UPDATE_RECORDS]})
                 response.raise_for_status()
-                records += response.json()['records']
+                updated_records += response.json()['records']
             except Exception as e:
                 errors.append(str(e))
 
@@ -92,7 +93,7 @@ class AirtableSession(object):
                 f'Airtable {update_type} "{record_type}" error: {";".join(errors)}', self._user, detail=error_detail,
             )
 
-        return records
+        return updated_records
 
     def fetch_records(self, record_type, fields, or_filters, and_filters=None, page_size=PAGE_SIZE):
         self._session.params.update({'fields[]': fields, 'pageSize': page_size})

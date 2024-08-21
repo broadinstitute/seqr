@@ -47,6 +47,72 @@ INTERNAL_HTML_EMAIL = f'Dear seqr user,<br /><br />' \
                       f'<a href=https://seqr.broadinstitute.org/project/{PROJECT_GUID}/project_page>Test Reprocessed Project</a>' \
                       f'<br /><br />All the best,<br />The seqr team'
 
+PDO_QUERY_FIELDS = '&'.join([f'fields[]={field}' for field in [
+    'PDO', 'PDOStatus', 'SeqrLoadingDate', 'GATKShortReadCallsetPath', 'SeqrProjectURL', 'TerraProjectURL',
+    'SequencingProduct', 'PDOName', 'SequencingSubmissionDate', 'SequencingCompletionDate', 'CallsetRequestedDate',
+    'CallsetCompletionDate', 'Project', 'Metrics Checked', 'gCNV_SV_CallsetPath', 'DRAGENShortReadCallsetPath',
+]])
+AIRTABLE_SAMPLE_RECORDS = {
+  'records': [
+    {
+      'id': 'rec2B6OGmQpAkQW3s',
+      'fields': {
+        'CollaboratorSampleID': 'NA19675_1',
+        'PDOID': ['recW24C2CJW5lT64K'],
+      },
+    },
+    {
+      'id': 'recfMYDEZpPtzAIeV',
+      'fields': {
+        'CollaboratorSampleID': 'NA19678',
+        'PDOID': ['recW24C2CJW5lT64K'],
+      },
+    },
+    {
+      'id': 'rec2B67GmXpAkQW8z',
+      'fields': {
+        'CollaboratorSampleID': 'NA19679',
+        'PDOID': ['rec2Nkg10N1KssPc3'],
+      },
+    },
+    {
+      'id': 'rec2Nkg10N1KssPc3',
+      'fields': {
+        'SeqrCollaboratorSampleID': 'HG00731',
+        'CollaboratorSampleID': 'VCGS_FAM203_621_D2',
+        'PDOID': ['recW24C2CJW5lT64K'],
+      },
+    },
+    {
+      'id': 'recrbZh9Hn1UFtMi2',
+      'fields': {
+        'SeqrCollaboratorSampleID': 'NA20888',
+        'CollaboratorSampleID': 'NA20888_D1',
+        'PDOID': ['recW24C2CJW5lT64K'],
+      },
+    },
+    {
+      'id': 'rec2Nkg1fKssJc7',
+      'fields': {
+        'CollaboratorSampleID': 'NA20889',
+        'PDOID': ['rec0RWBVfDVbtlBSL'],
+      },
+    },
+]}
+AIRTABLE_PDO_RECORDS = {
+  'records': [
+    {
+      'id': 'recW24C2CJW5lT64K',
+      'fields': {
+        'PDO': 'PDO-1234',
+        'SeqrProjectURL': 'https://test-seqr.org/project/R0003_test/project_page',
+        'PDOStatus': 'Methods (Loading)',
+        'PDOName': 'RGP_WGS_12',
+      }
+    },
+  ]
+}
+
 
 @mock.patch('seqr.utils.search.hail_search_utils.HAIL_BACKEND_SERVICE_HOSTNAME', MOCK_HAIL_HOST)
 @mock.patch('seqr.models.random.randint', lambda *args: GUID_ID)
@@ -123,6 +189,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         )
 
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.MAX_LOOKUP_VARIANTS', 1)
+    @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.airtable_utils.logger')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     @responses.activate
@@ -131,6 +198,16 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             responses.GET,
             "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
             json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
+        responses.add(
+            responses.GET,
+            "http://testairtable/app3Y97xtbbaOopVR/Samples?fields[]=CollaboratorSampleID&fields[]=SeqrCollaboratorSampleID&fields[]=PDOID&pageSize=100&filterByFormula=AND({SeqrProject}='https://test-seqr.org/project/R0003_test/project_page',OR(PDOStatus='Methods (Loading)',PDOStatus='On hold for phenotips, but ready to load'))",
+            json=AIRTABLE_SAMPLE_RECORDS)
+        responses.add(
+            responses.GET,
+            f"http://testairtable/app3Y97xtbbaOopVR/PDO?{PDO_QUERY_FIELDS}&pageSize=100&filterByFormula=OR(RECORD_ID()='recW24C2CJW5lT64K')",
+            json=AIRTABLE_PDO_RECORDS)
+        # TODO patch PDOs, create PDOs, patch samples
+        # TODO test paging for patch (MAX_UPDATE_RECORDS)
         responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
             'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
             'total': 1,

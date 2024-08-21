@@ -119,7 +119,7 @@ class Command(BaseCommand):
             updated_families.update(project_families)
             updated_project_families.append((project.id, project.name, project.genome_version, project_families))
             if is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-                split_project_pdos[project] = self._update_pdos(session, project, sample_ids)
+                split_project_pdos[project.name] = self._update_pdos(session, project.guid, sample_ids)
 
         # Send failure notifications
         failed_family_samples = metadata.get('failed_family_samples', {})
@@ -153,11 +153,11 @@ class Command(BaseCommand):
         logger.info('DONE')
 
     @staticmethod
-    def _update_pdos(session, project, sample_ids):
+    def _update_pdos(session, project_guid, sample_ids):
         airtable_samples = session.fetch_records(
             'Samples', fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOID'],
             or_filters={'PDOStatus': LOADABLE_PDO_STATUSES},
-            and_filters={'SeqrProject': f'{BASE_URL}project/{project}/project_page'}
+            and_filters={'SeqrProject': f'{BASE_URL}project/{project_guid}/project_page'}
         )
 
         pdo_ids = set()
@@ -173,6 +173,9 @@ class Command(BaseCommand):
         if pdo_ids:
             session.safe_patch_records_by_id('PDO', pdo_ids, {'PDOStatus': AVAILABLE_PDO_STATUS})
 
+        skipped_pdo_samples = {
+            pdo_id: sample_ids for pdo_id, sample_ids in skipped_pdo_samples.items() if pdo_id in pdo_ids
+        }
         if not skipped_pdo_samples:
             return []
 
@@ -189,7 +192,9 @@ class Command(BaseCommand):
         ])
         pdo_id_map = {pdos_to_create[record['fields']['PDO']][0]: record['id'] for record in new_pdos}
         for pdo_id, sample_record_ids in skipped_pdo_samples.items():
-            session.safe_patch_records_by_id('Samples', sample_record_ids, {'PDOID': [pdo_id_map[pdo_id]]})
+            new_pdo_id = pdo_id_map.get(pdo_id)
+            if new_pdo_id:
+                session.safe_patch_records_by_id('Samples', sample_record_ids, {'PDOID': [new_pdo_id]})
 
         return sorted(pdos_to_create.keys())
 
