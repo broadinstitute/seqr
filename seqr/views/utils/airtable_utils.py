@@ -79,7 +79,6 @@ class AirtableSession(object):
         self._session.params = {}
         update = getattr(self._session, update_type)
         errors = []
-        records = []
         for i in range(0, len(records), MAX_UPDATE_RECORDS):
             try:
                 response = update(f'{self._url}/{record_type}', json={'records': records[i:i + MAX_UPDATE_RECORDS]})

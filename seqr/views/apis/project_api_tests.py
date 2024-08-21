@@ -108,8 +108,7 @@ class ProjectAPITest(object):
             responses.GET,
             f"{self.AIRTABLE_TRACKING_URL}?fields[]=Status&pageSize=100&filterByFormula=AND({{AnVIL Project URL}}='/project/{project_guid}/project_page',OR(Status='Available in Seqr',Status='Loading',Status='Loading Requested'))",
             json=MOCK_RECORDS)
-        responses.add(responses.PATCH, f'{self.AIRTABLE_TRACKING_URL}/recH4SEO1CeoIlOiE', status=400)
-        responses.add(responses.PATCH, f'{self.AIRTABLE_TRACKING_URL}/recSgwrXNkmlIB5eM')
+        responses.add(responses.PATCH, self.AIRTABLE_TRACKING_URL, status=400)
         delete_project_url = reverse(delete_project_handler, args=[project_guid])
         response = self.client.post(delete_project_url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
@@ -720,16 +719,15 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         ])
 
     def _assert_expected_airtable_requests(self, mock_airtable_logger):
-        self.assertEqual(responses.calls[1].request.url, f'{self.AIRTABLE_TRACKING_URL}/recH4SEO1CeoIlOiE')
+        self.assertEqual(responses.calls[1].request.url, self.AIRTABLE_TRACKING_URL)
         self.assertEqual(responses.calls[1].request.method, 'PATCH')
-        self.assertDictEqual(json.loads(responses.calls[1].request.body), {'fields': {'Status': 'Project Deleted'}})
-
-        self.assertEqual(responses.calls[2].request.url, f'{self.AIRTABLE_TRACKING_URL}/recSgwrXNkmlIB5eM')
-        self.assertEqual(responses.calls[2].request.method, 'PATCH')
-        self.assertDictEqual(json.loads(responses.calls[2].request.body), {'fields': {'Status': 'Project Deleted'}})
+        self.assertDictEqual(json.loads(responses.calls[1].request.body), {'records': [
+            {'id': 'recH4SEO1CeoIlOiE', 'fields': {'Status': 'Project Deleted'}},
+            {'id': 'recSgwrXNkmlIB5eM', 'fields': {'Status': 'Project Deleted'}},
+        ]})
 
         mock_airtable_logger.error.assert_called_with(
-            'Airtable patch "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking/recH4SEO1CeoIlOiE',
+            'Airtable patch "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking',
             self.pm_user, detail={
                 'or_filters': {'Status': ['Loading', 'Loading Requested', 'Available in Seqr']},
                 'and_filters': {'AnVIL Project URL': '/project/R0005_new_project/project_page'},

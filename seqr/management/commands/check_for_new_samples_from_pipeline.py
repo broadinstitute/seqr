@@ -108,7 +108,7 @@ class Command(BaseCommand):
         updated_project_families = []
         updated_families = set()
         split_project_pdos = {}
-        session = AirtableSession(user)
+        session = AirtableSession(user=None)
         for project, sample_ids in samples_by_project.items():
             project_sample_data = update_sample_data_by_project[project.id]
             notify_search_data_loaded(
