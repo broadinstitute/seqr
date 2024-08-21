@@ -3,6 +3,7 @@ import json
 import re
 import requests
 
+from django.core.exceptions import PermissionDenied
 from django.http import StreamingHttpResponse, HttpResponse
 
 from seqr.models import Individual, IgvSample
@@ -12,8 +13,9 @@ from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_sample
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    login_and_policies_required, pm_or_data_manager_required, get_project_guids_user_can_view
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, external_anvil_project_can_edit, \
+    login_and_policies_required, pm_or_data_manager_required, get_project_guids_user_can_view, user_is_data_manager, \
+    user_is_pm
 
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 GS_STORAGE_URL = 'https://storage.googleapis.com'
@@ -36,7 +38,7 @@ def _process_alignment_records(rows, num_id_cols=1, **kwargs):
         sample_id = None
         index_file_path = None
         if len(row) > num_cols:
-            if file_path.endswith(GCNV_FILE_EXTENSIONS):
+            if file_path.endswith(IgvSample.SAMPLE_TYPE_FILE_EXTENSIONS[IgvSample.SAMPLE_TYPE_GCNV]):
                 sample_id = row[num_cols]
             else:
                 index_file_path = row[num_cols]
@@ -138,22 +140,14 @@ def receive_bulk_igv_table_handler(request):
     return _process_igv_table_handler(_parse_uploaded_file, _get_valid_matched_individuals)
 
 
-SAMPLE_TYPE_MAP = [
-    ('bam', IgvSample.SAMPLE_TYPE_ALIGNMENT),
-    ('cram', IgvSample.SAMPLE_TYPE_ALIGNMENT),
-    ('bigWig', IgvSample.SAMPLE_TYPE_COVERAGE),
-    ('junctions.bed.gz', IgvSample.SAMPLE_TYPE_JUNCTION),
-    ('bed.gz', IgvSample.SAMPLE_TYPE_GCNV),
-]
-
-GCNV_FILE_EXTENSIONS = tuple(ext for ext, sample_type in SAMPLE_TYPE_MAP if sample_type == IgvSample.SAMPLE_TYPE_GCNV)
-
-
-@pm_or_data_manager_required
+@login_and_policies_required
 def update_individual_igv_sample(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project
-    check_project_permissions(project, request.user, can_edit=True)
+    user = request.user
+
+    if not (user_is_pm(user) or user_is_data_manager(user) or external_anvil_project_can_edit(project, user)):
+        raise PermissionDenied(f'{user} does not have sufficient permissions for {project}')
 
     request_json = json.loads(request.body)
 
@@ -162,13 +156,13 @@ def update_individual_igv_sample(request, individual_guid):
         if not file_path:
             raise ValueError('request must contain fields: filePath')
 
-        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP if file_path.endswith(suffix)), None)
+        sample_type = next((st for st, suffixes in IgvSample.SAMPLE_TYPE_FILE_EXTENSIONS.items() if file_path.endswith(suffixes)), None)
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
-                file_path, ', '.join([suffix for suffix, _ in SAMPLE_TYPE_MAP])))
-        if not does_file_exist(file_path, user=request.user):
+                file_path, ', '.join([suffix for suffixes in IgvSample.SAMPLE_TYPE_FILE_EXTENSIONS.values() for suffix in suffixes])))
+        if not does_file_exist(file_path, user=user):
             raise Exception('Error accessing "{}"'.format(file_path))
-        if request_json.get('indexFilePath') and not does_file_exist(request_json['indexFilePath'], user=request.user):
+        if request_json.get('indexFilePath') and not does_file_exist(request_json['indexFilePath'], user=user):
             raise Exception('Error accessing "{}"'.format(request_json['indexFilePath']))
 
         sample, created = get_or_create_model_from_json(
@@ -176,7 +170,7 @@ def update_individual_igv_sample(request, individual_guid):
             update_json={
                 'file_path': file_path,
                 **{field: request_json.get(field) for field in ['sampleId', 'indexFilePath']}
-            }, user=request.user)
+            }, user=user)
 
         response = {
             'igvSamplesByGuid': {

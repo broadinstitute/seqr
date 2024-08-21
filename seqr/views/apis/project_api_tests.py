@@ -16,7 +16,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
     PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
     SAMPLE_FIELDS, SUMMARY_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
     FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
-    EXT_WORKSPACE_NAMESPACE, EXT_WORKSPACE_NAME, DYNAMIC_ANALYSIS_GROUP_FIELDS
+    EXT_WORKSPACE_NAMESPACE, TEST_EMPTY_PROJECT_WORKSPACE, DYNAMIC_ANALYSIS_GROUP_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
@@ -28,7 +28,7 @@ BASE_CREATE_PROJECT_JSON = {
     'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38', 'isDemo': True,
     'disableMme': True, 'consentCode': 'H',
 }
-WORKSPACE_JSON = {'workspaceName': EXT_WORKSPACE_NAME, 'workspaceNamespace': EXT_WORKSPACE_NAMESPACE}
+WORKSPACE_JSON = {'workspaceName': TEST_EMPTY_PROJECT_WORKSPACE, 'workspaceNamespace': EXT_WORKSPACE_NAMESPACE}
 WORKSPACE_CREATE_PROJECT_JSON = deepcopy(WORKSPACE_JSON)
 WORKSPACE_CREATE_PROJECT_JSON.update(BASE_CREATE_PROJECT_JSON)
 
@@ -206,13 +206,13 @@ class ProjectAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), PROJECT_FIELDS)
 
-        self.assertEqual(response_json['workspaceName'], EXT_WORKSPACE_NAME)
+        self.assertEqual(response_json['workspaceName'], TEST_EMPTY_PROJECT_WORKSPACE)
         self.assertEqual(response_json['workspaceNamespace'], EXT_WORKSPACE_NAMESPACE)
         self.assertEqual(response_json['genomeVersion'], '37')
         self.assertNotEqual(response_json['description'], 'updated project description')
 
         project = Project.objects.get(guid=PROJECT_GUID)
-        self.assertEqual(project.workspace_name, EXT_WORKSPACE_NAME)
+        self.assertEqual(project.workspace_name, TEST_EMPTY_PROJECT_WORKSPACE)
         self.assertEqual(project.workspace_namespace, EXT_WORKSPACE_NAMESPACE)
 
     def test_project_page_data(self):
@@ -716,7 +716,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
             mock.call(self.pm_user)])
         self.mock_get_ws_access_level.assert_has_calls([
             mock.call(self.pm_user, 'bar', 'foo'),
-            mock.call(self.pm_user, 'ext-data', 'anvil-non-analyst-project 1000 Genomes Demo'),
+            mock.call(self.pm_user, 'ext-data', 'empty'),
         ])
 
     def _assert_expected_airtable_requests(self, mock_airtable_logger):
@@ -764,7 +764,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         super(AnvilProjectAPITest, self).test_project_overview()
         self.mock_list_workspaces.assert_not_called()
         self.assert_no_extra_anvil_calls()
-        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', 'empty')
+        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'ext-data', 'empty')
         self.assertEqual(self.mock_get_ws_access_level.call_count, 4)
 
     def test_project_collaborators(self):

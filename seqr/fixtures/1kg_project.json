@@ -36,7 +36,7 @@
         "description": "",
         "consent_code": "H",
         "workspace_name": "empty",
-        "workspace_namespace": "my-seqr-billing",
+        "workspace_namespace": "ext-data",
         "subscribers": 6,
 	"can_edit_group": 2,
 	"can_view_group": 3,
