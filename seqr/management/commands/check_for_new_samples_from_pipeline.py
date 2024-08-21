@@ -17,7 +17,7 @@ from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     get_saved_variants
-from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
+from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -111,14 +111,15 @@ class Command(BaseCommand):
         session = AirtableSession(user=None, no_auth=True)
         for project, sample_ids in samples_by_project.items():
             project_sample_data = update_sample_data_by_project[project.id]
-            notify_search_data_loaded(
+            is_internal = notify_search_data_loaded(
                 project, dataset_type, sample_type, inactivated_sample_guids,
                 updated_samples=project_sample_data['samples'], num_samples=len(sample_ids),
             )
             project_families = project_sample_data['family_guids']
             updated_families.update(project_families)
             updated_project_families.append((project.id, project.name, project.genome_version, project_families))
-            split_project_pdos[project] = self._update_pdos(session, project, sample_ids)
+            if is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+                split_project_pdos[project] = self._update_pdos(session, project, sample_ids)
 
         # Send failure notifications
         failed_family_samples = metadata.get('failed_family_samples', {})

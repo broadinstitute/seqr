@@ -90,3 +90,4 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
         email=email,
         subject='New data available in seqr',
     )
+    return is_internal
