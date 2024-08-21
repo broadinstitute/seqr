@@ -895,7 +895,7 @@ def import_gregor_metadata(request, project_guid):
         genes.add(variant[GENE_COLUMN])
         finding_id_map[variant['genetic_findings_id']] = variant_id
 
-    gene_symbols_to_ids = {k: v[0] for k, v in get_gene_ids_for_gene_symbols(genes).items()}
+    gene_symbols_to_ids = {k: v[0] for k, v in get_gene_ids_for_gene_symbols(genes, genome_version=project.genome_version).items()}
     missing_genes = set()
     for variant in family_variant_data.values():
         gene = variant[GENE_COLUMN]
@@ -965,7 +965,8 @@ def _parse_participant_val(column, value, participant_sample_lookup):
 @login_and_policies_required
 def get_individual_rna_seq_data(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
-    check_project_permissions(individual.family.project, request.user)
+    project = individual.family.project
+    check_project_permissions(project, request.user)
 
     filters = {'sample__individual': individual}
     outlier_data = get_json_for_rna_seq_outliers(filters, significant_only=False, individual_guid=individual_guid)
@@ -973,7 +974,7 @@ def get_individual_rna_seq_data(request, individual_guid):
     genes_to_show = get_genes({
         gene_id for rna_data in outlier_data.get(individual_guid, {}).values() for gene_id, data in rna_data.items()
         if any([d['isSignificant'] for d in (data if isinstance(data, list) else [data])])
-    })
+    }, genome_version=project.genome_version)
 
     return create_json_response({
         'rnaSeqData': outlier_data,

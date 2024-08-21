@@ -7,6 +7,7 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 from urllib3.exceptions import MaxRetryError
 
 from panelapp.models import PaLocusList, PaLocusListGene
+from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.logging_utils import SeqrLogger
@@ -47,7 +48,7 @@ def import_all_panels(user, panel_app_api_url, label=None):
                 panel_genes_by_id = {_extract_ensembl_id_from_json(gene): gene for gene in all_genes_for_panel
                                      if _extract_ensembl_id_from_json(gene)}
                 raw_ensbl_38_gene_ids_csv = ','.join(panel_genes_by_id.keys())
-                genes_by_id, _, invalid_items = parse_locus_list_items({'rawItems': raw_ensbl_38_gene_ids_csv})
+                genes_by_id, _, invalid_items = parse_locus_list_items({'rawItems': raw_ensbl_38_gene_ids_csv}, genome_version=GENOME_VERSION_GRCh38)
                 if len(invalid_items) > 0:
                     logger.warning('Genes found in panel {} but not in reference data, ignoring genes {}'
                                    .format(panel_app_id, invalid_items), user)

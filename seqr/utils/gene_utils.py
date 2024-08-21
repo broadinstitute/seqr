@@ -16,32 +16,40 @@ def get_gene(gene_id, user):
     return gene_json
 
 
-def get_genes(gene_ids):
-    return _get_genes(gene_ids)
+def get_genes(gene_ids, genome_version=None):
+    return _get_genes(gene_ids, genome_version=genome_version)
 
 
-def get_genes_for_variant_display(gene_ids):
-    return _get_genes(gene_ids, gene_fields=VARIANT_GENE_DISPLAY_FIELDS)
+def get_genes_for_variant_display(gene_ids, genome_version):
+    return _get_genes(gene_ids, gene_fields=VARIANT_GENE_DISPLAY_FIELDS, genome_version=genome_version)
 
 
-def get_genes_for_variants(gene_ids):
-    return _get_genes(gene_ids, gene_fields=VARIANT_GENE_FIELDS)
+def get_genes_for_variants(gene_ids, genome_version=None):
+    return _get_genes(gene_ids, gene_fields=VARIANT_GENE_FIELDS, genome_version=genome_version)
 
 
 def get_genes_with_detail(gene_ids, user):
     return _get_genes(gene_ids, user=user, gene_fields=ALL_GENE_FIELDS)
 
 
-def _get_genes(gene_ids, user=None, gene_fields=None):
+def _get_genes(gene_ids, user=None, gene_fields=None, genome_version=None):
     gene_filter = {}
+    _add_genome_version_filter(gene_filter, genome_version)
     if gene_ids is not None:
         gene_filter['gene_id__in'] = gene_ids
     genes = GeneInfo.objects.filter(**gene_filter)
     return {gene['geneId']: gene for gene in _get_json_for_genes(genes, user=user, gene_fields=gene_fields)}
 
 
-def get_gene_ids_for_gene_symbols(gene_symbols):
-    genes = GeneInfo.objects.filter(gene_symbol__in=gene_symbols).only('gene_symbol', 'gene_id').order_by('-gencode_release')
+def _add_genome_version_filter(gene_filter, genome_version):
+    if genome_version:
+        gene_filter[f'start_grch{genome_version}__isnull'] = False
+
+
+def get_gene_ids_for_gene_symbols(gene_symbols, genome_version=None):
+    gene_filter = {'gene_symbol__in': gene_symbols}
+    _add_genome_version_filter(gene_filter, genome_version)
+    genes = GeneInfo.objects.filter(**gene_filter).only('gene_symbol', 'gene_id').order_by('-gencode_release')
     symbols_to_ids = defaultdict(list)
     for gene in genes:
         symbols_to_ids[gene.gene_symbol].append(gene.gene_id)
@@ -150,7 +158,7 @@ def _get_json_for_genes(genes, user=None, gene_fields=None):
     return _get_json_for_models(genes, process_result=_process_result)
 
 
-def parse_locus_list_items(request_json):
+def parse_locus_list_items(request_json, genome_version=None):
     raw_items = request_json.get('rawItems')
     if not raw_items:
         return None, None, None
@@ -185,9 +193,9 @@ def parse_locus_list_items(request_json):
         else:
             gene_symbols.add(item.replace('<TAB>', ''))
 
-    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols)
+    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols, genome_version=genome_version)
     invalid_items += [symbol for symbol in gene_symbols if not gene_symbols_to_ids.get(symbol)]
     gene_ids.update({gene_ids[0] for gene_ids in gene_symbols_to_ids.values() if len(gene_ids)})
-    genes_by_id = get_genes(list(gene_ids)) if gene_ids else {}
+    genes_by_id = get_genes(list(gene_ids), genome_version=genome_version) if gene_ids else {}
     invalid_items += [gene_id for gene_id in gene_ids if not genes_by_id.get(gene_id)]
     return genes_by_id, intervals, invalid_items

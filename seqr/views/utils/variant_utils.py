@@ -269,7 +269,11 @@ def _saved_variant_genes_transcripts(variants):
             for family_guid in var['familyGuids']:
                 family_genes[family_guid].update(var.get('transcripts', {}).keys())
 
-    genes = get_genes_for_variants(gene_ids)
+    projects = Project.objects.filter(family__guid__in=family_genes.keys()).distinct()
+    genome_versions = {p.genome_version for p in projects}
+    genome_version = list(genome_versions)[0] if len(genome_versions) == 1 else None
+
+    genes = get_genes_for_variants(gene_ids, genome_version=genome_version)
     for gene in genes.values():
         if gene:
             gene['locusListGuids'] = []
@@ -281,7 +285,7 @@ def _saved_variant_genes_transcripts(variants):
         )
     } if transcript_ids else None
 
-    return genes, transcripts, family_genes
+    return genes, transcripts, family_genes, projects
 
 
 def get_omim_intervals_query(variants):
@@ -386,9 +390,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     if not variants:
         return response
 
-    genes, transcripts, family_genes = _saved_variant_genes_transcripts(variants)
+    genes, transcripts, family_genes, projects = _saved_variant_genes_transcripts(variants)
 
-    projects = Project.objects.filter(family__guid__in=family_genes.keys()).distinct()
     project = list(projects)[0] if len(projects) == 1 else None
 
     discovery_tags = None
