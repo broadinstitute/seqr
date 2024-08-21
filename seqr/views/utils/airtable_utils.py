@@ -11,6 +11,7 @@ logger = SeqrLogger(__name__)
 
 PAGE_SIZE = 100
 MAX_OR_FILTERS = PAGE_SIZE - 5
+MAX_UPDATE_RECORDS = 10
 
 ANVIL_REQUEST_TRACKING_TABLE = 'AnVIL Seqr Loading Requests Tracking'
 
@@ -49,13 +50,13 @@ class AirtableSession(object):
 
     def safe_patch_records(self, record_type, record_or_filters, record_and_filters, update, max_records=PAGE_SIZE - 1):
         try:
-            self._patch_record(record_type, record_or_filters, record_and_filters, update, max_records)
+            self._patch_records(record_type, record_or_filters, record_and_filters, update, max_records)
         except Exception as e:
             logger.error(f'Airtable patch "{record_type}" error: {e}', self._user, detail={
                 'or_filters': record_or_filters, 'and_filters': record_and_filters, 'update': update,
             })
 
-    def _patch_record(self, record_type, record_or_filters, record_and_filters, update, max_records):
+    def _patch_records(self, record_type, record_or_filters, record_and_filters, update, max_records):
         records = self.fetch_records(
             record_type, fields=record_or_filters.keys(), or_filters=record_or_filters, and_filters=record_and_filters,
             page_size=max_records+1,
@@ -65,9 +66,11 @@ class AirtableSession(object):
 
         self._session.params = {}
         errors = []
-        for record_id in records.keys():
+        record_ids = list(records.keys())
+        for i in range(0, len(records), MAX_UPDATE_RECORDS):
+            update_chunk = [{'id': record_id, 'fields': update} for record_id in record_ids[i:i + MAX_UPDATE_RECORDS]]
             try:
-                response = self._session.patch(f'{self._url}/{record_type}/{record_id}', json={'fields': update})
+                response = self._session.patch(f'{self._url}/{record_type}', json={'records': update_chunk})
                 response.raise_for_status()
             except Exception as e:
                 errors.append(str(e))
