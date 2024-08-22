@@ -71,7 +71,7 @@ class AirtableSession(object):
 
     def safe_patch_records_by_id(self, record_type, record_ids, update, error_detail=None):
         self._safe_bulk_update_records(
-            'patch', record_type, [{'id': record_id, 'fields': update} for record_id in record_ids],
+            'patch', record_type, [{'id': record_id, 'fields': update} for record_id in sorted(record_ids)],
             error_detail=error_detail or {'record_ids': record_ids, 'update': update},
         )
 

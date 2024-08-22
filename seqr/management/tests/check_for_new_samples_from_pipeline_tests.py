@@ -168,9 +168,9 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         ])
 
         # Test reload saved variants
-        self.assertEqual(len(responses.calls), len(reload_calls) + (3 if has_additional_requests else 0))
+        self.assertEqual(len(responses.calls), len(reload_calls) + (8 if has_additional_requests else 0))
         for i, call in enumerate(reload_calls):
-            resp = responses.calls[i+(1 if has_additional_requests else 0)]
+            resp = responses.calls[i+(6 if has_additional_requests else 0)]
             self.assertEqual(resp.request.url, f'{MOCK_HAIL_HOST}:5000/search')
             self.assertEqual(resp.request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(resp.request.body), call)
@@ -198,20 +198,21 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             responses.GET,
             "http://testairtable/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking?fields[]=Status&pageSize=2&filterByFormula=AND({AnVIL Project URL}='https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',OR(Status='Loading',Status='Loading Requested'))",
             json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
+        airtable_samples_url = 'http://testairtable/app3Y97xtbbaOopVR/Samples'
+        airtable_pdo_url = 'http://testairtable/app3Y97xtbbaOopVR/PDO'
         responses.add(
             responses.GET,
-            "http://testairtable/app3Y97xtbbaOopVR/Samples?fields[]=CollaboratorSampleID&fields[]=SeqrCollaboratorSampleID&fields[]=PDOID&pageSize=100&filterByFormula=AND({SeqrProject}='https://test-seqr.org/project/R0003_test/project_page',OR(PDOStatus='Methods (Loading)',PDOStatus='On hold for phenotips, but ready to load'))",
+            f"{airtable_samples_url}?fields[]=CollaboratorSampleID&fields[]=SeqrCollaboratorSampleID&fields[]=PDOID&pageSize=100&filterByFormula=AND({{SeqrProject}}='https://test-seqr.org/project/R0003_test/project_page',OR(PDOStatus='Methods (Loading)',PDOStatus='On hold for phenotips, but ready to load'))",
             json=AIRTABLE_SAMPLE_RECORDS)
         responses.add(
             responses.GET,
-            f"http://testairtable/app3Y97xtbbaOopVR/PDO?{PDO_QUERY_FIELDS}&pageSize=100&filterByFormula=OR(RECORD_ID()='recW24C2CJW5lT64K')",
+            f"{airtable_pdo_url}?{PDO_QUERY_FIELDS}&pageSize=100&filterByFormula=OR(RECORD_ID()='recW24C2CJW5lT64K')",
             json=AIRTABLE_PDO_RECORDS)
-        responses.add(responses.PATCH, 'http://testairtable/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS)
-        responses.add(responses.PATCH, 'http://testairtable/app3Y97xtbbaOopVR/PDO', json=AIRTABLE_PDO_RECORDS)
-        responses.add_callback(responses.POST, 'http://testairtable/app3Y97xtbbaOopVR/PDO', callback=lambda request: (
-            200, {}, json.dumps({'records': [{'id': f'rec{i}', **r} for i, r in enumerate(json.loads(request.body)['records'])]})
-        ))
-        # TODO test actual calls patch/post
+        responses.add(responses.PATCH, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS)
+        responses.add(responses.PATCH, airtable_pdo_url, json=AIRTABLE_PDO_RECORDS)
+        responses.add_callback(responses.POST, airtable_pdo_url, callback=lambda request: (200, {}, json.dumps({
+            'records': [{'id': f'rec{i}ABC123', **r} for i, r in enumerate(json.loads(request.body)['records'])]
+        })))
         # TODO test paging for patch (MAX_UPDATE_RECORDS)
         # TODO test with an error in patch?
         responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
@@ -346,9 +347,35 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         ])
         self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
 
+        # Test airtable PDO updates
+        update_pdos_request = responses.calls[1].request
+        self.assertEqual(update_pdos_request.url, airtable_pdo_url)
+        self.assertEqual(update_pdos_request.method, 'PATCH')
+        self.assertDictEqual(json.loads(update_pdos_request.body), {'records': [
+            {'id': 'rec0RWBVfDVbtlBSL', 'fields': {'PDOStatus': 'Available in seqr'}},
+            {'id': 'recW24C2CJW5lT64K', 'fields': {'PDOStatus': 'Available in seqr'}},
+        ]})
+        create_pdos_request = responses.calls[3].request
+        self.assertEqual(create_pdos_request.url, airtable_pdo_url)
+        self.assertEqual(create_pdos_request.method, 'POST')
+        self.assertDictEqual(json.loads(create_pdos_request.body), {'records': [{'fields': {
+            'PDO': 'PDO-1234_sr',
+            'SeqrProjectURL': 'https://test-seqr.org/project/R0003_test/project_page',
+            'PDOStatus': 'Methods (Loading)',
+            'PDOName': 'RGP_WGS_12',
+        }}]})
+        update_samples_request = responses.calls[4].request
+        self.assertEqual(update_samples_request.url, airtable_samples_url)
+        self.assertEqual(update_samples_request.method, 'PATCH')
+        self.assertDictEqual(json.loads(update_samples_request.body), {'records': [
+            {'id': 'rec2B6OGmQpAkQW3s', 'fields': {'PDOID': ['rec0ABC123']}},
+            {'id': 'rec2Nkg10N1KssPc3', 'fields': {'PDOID': ['rec0ABC123']}},
+            {'id': 'recfMYDEZpPtzAIeV', 'fields': {'PDOID': ['rec0ABC123']}},
+        ]})
+
         # Test SavedVariant model updated
         for i, variant_id in enumerate([['1', 1562437, 'G', 'CA'], ['1', 46859832, 'G', 'A']]):
-            multi_lookup_request = responses.calls[3+i].request
+            multi_lookup_request = responses.calls[8+i].request
             self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_HOST}:5000/multi_lookup')
             self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(multi_lookup_request.body), {
