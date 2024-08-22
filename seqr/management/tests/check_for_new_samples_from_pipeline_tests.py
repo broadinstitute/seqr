@@ -206,8 +206,14 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             responses.GET,
             f"http://testairtable/app3Y97xtbbaOopVR/PDO?{PDO_QUERY_FIELDS}&pageSize=100&filterByFormula=OR(RECORD_ID()='recW24C2CJW5lT64K')",
             json=AIRTABLE_PDO_RECORDS)
-        # TODO patch PDOs, create PDOs, patch samples
+        responses.add(responses.PATCH, 'http://testairtable/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS)
+        responses.add(responses.PATCH, 'http://testairtable/app3Y97xtbbaOopVR/PDO', json=AIRTABLE_PDO_RECORDS)
+        responses.add_callback(responses.POST, 'http://testairtable/app3Y97xtbbaOopVR/PDO', callback=lambda request: (
+            200, {}, json.dumps({'records': [{'id': f'rec{i}', **r} for i, r in enumerate(json.loads(request.body)['records'])]})
+        ))
+        # TODO test actual calls patch/post
         # TODO test paging for patch (MAX_UPDATE_RECORDS)
+        # TODO test with an error in patch?
         responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
             'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
             'total': 1,
