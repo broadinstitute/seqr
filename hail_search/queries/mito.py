@@ -1,4 +1,4 @@
-import os
+from collections import defaultdict
 
 from aiohttp.web import HTTPNotFound
 import hail as hl
@@ -310,33 +310,28 @@ class MitoHailTableQuery(BaseHailTableQuery):
 
     def _add_project_lookup_data(self, ht, annotation_fields, *args, **kwargs):
         # Get all the project-families for the looked up variant formatted as a dict of dicts:
-        # {<project_guid>: {<family_guid>: {<sample_type>: True}, {<family_guid_2>: {<sample_type_2>: True}}, <project_guid_2>: ...}
+        # {<project_guid>: {<sample_type>: {<family_guid>: True}, <sample_type_2>: {<family_guid_2>: True}}, <project_guid_2>: ...}
         lookup_ht = self._read_table('lookup.ht', use_ssd_dir=True, skip_missing_field='project_stats')
         if lookup_ht is None:
             raise HTTPNotFound()
         variant_projects = lookup_ht.aggregate(hl.agg.take(
             hl.dict(hl.enumerate(lookup_ht.project_stats).starmap(lambda i, ps: (
-                lookup_ht.project_guids[i],
+                lookup_ht.project_sample_types[i],
                 hl.enumerate(ps).starmap(
                     lambda j, s: hl.or_missing(self._stat_has_non_ref(s), j)
                 ).filter(hl.is_defined),
             )).filter(
                 lambda x: x[1].any(hl.is_defined)
-            ).starmap(lambda project_guid, family_indices: (
-                project_guid,
-                hl.dict(family_indices.map(lambda j: (lookup_ht.project_families[project_guid][j], True))),
-            ))), 1),
+            ).starmap(lambda project_key, family_indices: (
+                project_key,
+                hl.dict(family_indices.map(lambda j: (lookup_ht.project_families[project_key][j], True))),
+            )).group_by(
+                lambda x: x[0][0]
+            ).map_values(
+                lambda project_data: hl.dict(project_data.starmap(
+                    lambda project_key, families: (project_key[1], families)
+            )))), 1)
         )[0]
-
-        for project_guid, families in variant_projects.items():
-            # Temporarily use try/except to determine sample_type, to be removed when lookup table contains sample_type
-            try:
-                hl.read_table(self._get_table_path(f'projects/WES/{project_guid}.ht', use_ssd_dir=True))
-                sample_type = 'WES'
-            except Exception:
-                sample_type = 'WGS'
-            for family_guid, value in families.items():
-                families[family_guid] = {sample_type: value}
 
         # Variant can be present in the lookup table with only ref calls, so is still not present in any projects
         if not variant_projects:
