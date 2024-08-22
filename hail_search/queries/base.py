@@ -38,7 +38,6 @@ class BaseHailTableQuery(object):
     DATA_TYPE = None
     KEY_FIELD = None
     LOADED_GLOBALS = None
-    SAMPLE_TYPES = []
 
     GENOTYPE_QUERY_MAP = {
         REF_REF: lambda gt: gt.is_hom_ref(),
@@ -105,9 +104,10 @@ class BaseHailTableQuery(object):
         annotation_fields = {
             GENOTYPES_FIELD: lambda r: r.family_entries.flatmap(lambda x: x).filter(
                 lambda gt: hl.is_defined(gt.individualGuid)
-            ).group_by(lambda x: x.individualGuid).map_values(lambda x: self._get_sample_genotype(
-                x[0], r, select_fields=['individualGuid'], include_genotype_overrides=include_genotype_overrides,
-            )),
+            ).group_by(lambda x: x.individualGuid).map_values(lambda x: x.map(
+                lambda sample: self._get_sample_genotype(
+                    sample, r, select_fields=['individualGuid'], include_genotype_overrides=include_genotype_overrides,
+            ))),
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population) for population in self.POPULATIONS.keys()
             }),
@@ -333,7 +333,6 @@ class BaseHailTableQuery(object):
         # Project has multiple sample types
         # TODO If there are multiple sample types, filter both.
         self._filter_entries_table_multiple_sample_types(entries_hts_map, **kwargs)
-        pass
 
     def _load_prefiltered_family_ht(self, family_guid, sample_types, entries_hts_map, project_sample_type_data, **kwargs):
         for sample_type in sample_types:
@@ -378,7 +377,7 @@ class BaseHailTableQuery(object):
         return merged_ht, merged_comp_het_ht
 
     def _load_prefiltered_project_hts(
-        self, project_samples, entries_hts_map, skip_all_missing=False, n_partitions=MAX_PARTITIONS, **kwargs
+        self, project_samples, entries_hts_map, n_partitions=MAX_PARTITIONS, **kwargs
     ):
         # Need to chunk tables or else evaluating table globals throws LineTooLong exception
         # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
@@ -389,11 +388,7 @@ class BaseHailTableQuery(object):
         unmerged_entries_hts_map = defaultdict(dict)
         for project_guid, project_sample_type_data in project_samples.items():
             for sample_type, family_sample_data in project_sample_type_data.items():
-                ht = self._read_table(
-                    f'projects/{sample_type}/{project_guid}.ht',
-                    use_ssd_dir=True,
-                    skip_missing_field='family_entries' if skip_all_missing else None,
-                )
+                ht = self._read_table(f'projects/{sample_type}/{project_guid}.ht',use_ssd_dir=True)
                 if ht is None:
                     continue
                 unmerged_entries_hts_map[sample_type][project_guid] = (ht, family_sample_data)
@@ -408,13 +403,15 @@ class BaseHailTableQuery(object):
         for sample_type, project_data in unmerged_entries_hts_map.items():
             project_hts = []
             project_family_data = {}
-            prefiltered_project_hts: List[Tuple[hl.Table, dict]] = []  # Ordered list of merged, prefiltered projects
+            prefiltered_project_hts: list[tuple[hl.Table, dict]] = []  # Ordered list of merged, prefiltered projects
             for chunk in project_guid_chunks:
                 for project_guid in chunk:
                     if project_guid not in project_data:  # There is no project ht for this sample_type
                         continue
 
                     project_ht, family_sample_data = project_data[project_guid]
+                    # SV and GCNV do not already have sample_type in their globals
+                    project_ht = project_ht.annotate_globals(sample_type=sample_type)
                     project_hts.append(project_ht.select_globals('sample_type', 'family_guids', 'family_samples'))
                     project_family_data.update(family_sample_data)
 
@@ -455,7 +452,6 @@ class BaseHailTableQuery(object):
         }
         if include_all_globals:
             global_expressions.update({
-                'sample_types':  ht.project_globals.flatmap(lambda x: x.family_guids.map(lambda _: x.sample_type)),
                 'family_samples': hl.dict(ht.project_globals.flatmap(lambda x: x.family_samples.items())),
             })
 
@@ -478,14 +474,23 @@ class BaseHailTableQuery(object):
 
     def _filter_entries_table_multiple_sample_types(self, entries_hts_map, inheritance_filter=None, quality_filter=None, **kwargs):
         # entries_hts_map: {<sample_type>: [(ht, project_samples), (ht, project_samples), ...]}
+        filtered_project_hts = []
+        filtered_comp_het_project_hts = []
         wes_entries, wgs_entries = entries_hts_map['WES'], entries_hts_map['WGS']
+        for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(wes_entries, wgs_entries):
+            filtered_wes_ht, wes_comp_het_ht = self._filter_entries_table(wes_ht, wes_project_samples, 'WES', inheritance_filter, quality_filter,  **kwargs)
+            filtered_wgs_ht, wgs_comp_het_ht = self._filter_entries_table(wgs_ht, wgs_project_samples, 'WGS', inheritance_filter, quality_filter, **kwargs)
 
+            # TODO: add logic to un-filter the filtered tables based on edge case criteria
 
-        unmerged_filtered_hts = []
-        for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples)  in zip(entries_hts_map['WES'], entries_hts_map['WGS']):
-            wes_ht, wes_sorted_family_sample_data = self._add_entry_sample_families(wes_ht, wes_project_samples, 'WES')
-            wgs_ht, wgs_sorted_family_sample_data = self._add_entry_sample_families(wgs_ht, wgs_project_samples, 'WGS')
-
+            if filtered_wes_ht is not None:
+                filtered_project_hts.append(filtered_wes_ht)
+            if wes_comp_het_ht is not None:
+                filtered_comp_het_project_hts.append(wes_comp_het_ht)
+            if filtered_wgs_ht is not None:
+                filtered_project_hts.append(filtered_wgs_ht)
+            if wgs_comp_het_ht is not None:
+                filtered_comp_het_project_hts.append(wgs_comp_het_ht)
 
             # Try doing the filtering together
             # wes_ht = wes_ht.rename({'family_entries': 'wes_family_entries'})
@@ -508,15 +513,7 @@ class BaseHailTableQuery(object):
 
             # Try doing the filtering separately then reconciling the results
 
-
-            # todo inheritance
-
-            # todo merge here instead.
-
-            unmerged_filtered_hts.append(ht)
-
-        print(unmerged_filtered_hts)
-        return unmerged_filtered_hts, None
+        return filtered_project_hts, filtered_comp_het_project_hts
 
     def _add_entry_sample_families(self, ht, sample_data, sample_type):
         ht_globals = hl.eval(ht.globals)
@@ -572,12 +569,6 @@ class BaseHailTableQuery(object):
             affected_id=AFFECTED_ID_MAP.get(sample['affected']),
             is_male='sex' in sample and sample['sex'] == MALE,
         )
-
-    @classmethod
-    def _get_sample_type(cls, family_index, ht_globals):
-        if 'sample_types' in ht_globals:
-            return ht_globals.sample_types[family_index]
-        return ht_globals.sample_type
 
     def _filter_inheritance(self, ht, inheritance_filter, sorted_family_sample_data):
         any_valid_entry = lambda x: self.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
@@ -654,9 +645,6 @@ class BaseHailTableQuery(object):
                 unaffected_filter |= gentoype_entry_indices.size() < 2
             is_valid &= unaffected_filter
         return hl.or_missing(is_valid, entries)
-
-
-    # def _filter_inheritance_multiple_sample_types(self, ht, inheritance_filter, ):
 
 
     def _get_family_passes_quality_filter(self, quality_filter, ht, **kwargs):
@@ -1227,10 +1215,9 @@ class BaseHailTableQuery(object):
 
         return formatted.aggregate(hl.agg.take(formatted.row, len(variant_ids)))
 
-    def _add_project_lookup_data(self, ht, annotation_fields, include_sample_annotations=False, projects=None, **kwargs):
-        if projects:
-            # projects_ht, _ = self._load_filtered_project_hts(project_samples, skip_all_missing=True, n_partitions=1)
-            # TODO call import_and_filter_multiple_project_hts()
+    def _add_project_lookup_data(self, ht, annotation_fields, include_sample_annotations=False, project_samples=None, **kwargs):
+        if project_samples:
+            projects_ht, _ = self.import_and_filter_multiple_project_hts(project_samples, n_partitions=1)
             ht = ht.annotate(**projects_ht[ht.key])
 
         return ht, include_sample_annotations

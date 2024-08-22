@@ -28,10 +28,10 @@ PROJECT_2_VARIANT = {
     'rsid': 'rs375931351',
     'familyGuids': ['F000011_11'],
     'genotypes': {
-        'I000015_na20885': {
+        'I000015_na20885': [{
             'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
             'numAlt': 1, 'dp': 8, 'gq': 14, 'ab': 0.875,
-        }
+        }],
     },
     'genotypeFilters': '',
     'clinvar': None,
@@ -80,13 +80,13 @@ GRCH37_VARIANT = {
     'rsid': 'rs72611576',
     'familyGuids': ['F000002_2'],
     'genotypes': {
-        'I000004_hg00731': {
-            'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
+        'I000004_hg00731': [{
+            'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731',
             'familyGuid': 'F000002_2', 'numAlt': 2, 'dp': 16, 'gq': 48, 'ab': 1,
-        }, 'I000006_hg00733': {
-            'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733',
+        }], 'I000006_hg00733': [{
+            'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733',
             'familyGuid': 'F000002_2', 'numAlt': 1, 'dp': 49, 'gq': 99, 'ab': 0.6530612111091614,
-        },
+        }],
     },
     'genotypeFilters': 'VQSRTrancheSNP99.90to99.95',
     'populations': {
@@ -126,10 +126,10 @@ GRCH37_VARIANT = {
 FAMILY_3_VARIANT = deepcopy(VARIANT3)
 FAMILY_3_VARIANT['familyGuids'] = ['F000003_3']
 FAMILY_3_VARIANT['genotypes'] = {
-    'I000007_na20870': {
+    'I000007_na20870': [{
         'sampleId': 'NA20870', 'sampleType': 'WES', 'individualGuid': 'I000007_na20870', 'familyGuid': 'F000003_3',
         'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.6785714285714286,
-    },
+    }],
 }
 
 MULTI_FAMILY_VARIANT = deepcopy(VARIANT3)
@@ -146,20 +146,20 @@ MULTI_DATA_TYPE_COMP_HET_VARIANT2 = {**VARIANT2, 'selectedMainTranscriptId': 'EN
 PROJECT_2_VARIANT1 = deepcopy(VARIANT1)
 PROJECT_2_VARIANT1['familyGuids'] = ['F000011_11']
 PROJECT_2_VARIANT1['genotypes'] = {
-    'I000015_na20885': {
+    'I000015_na20885': [{
         'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
         'numAlt': 2, 'dp': 6, 'gq': 16, 'ab': 1.0,
-    },
+    }],
 }
 MULTI_PROJECT_VARIANT1 = deepcopy(VARIANT1)
 MULTI_PROJECT_VARIANT1['familyGuids'] += PROJECT_2_VARIANT1['familyGuids']
 MULTI_PROJECT_VARIANT1['genotypes'].update(PROJECT_2_VARIANT1['genotypes'])
 MULTI_PROJECT_VARIANT2 = deepcopy(VARIANT2)
 MULTI_PROJECT_VARIANT2['familyGuids'].append('F000011_11')
-MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = {
+MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = [{
     'sampleId': 'NA20885', 'sampleType': 'WES', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
     'numAlt': 1, 'dp': 28, 'gq': 99, 'ab': 0.5,
-}
+}]
 
 NO_GENOTYPE_GCNV_VARIANT = {**GCNV_VARIANT4, 'numExon': 8, 'end': 38736268}
 
@@ -628,7 +628,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         self.assertDictEqual(resp_json, {
             **{k: v for k, v in GRCH37_VARIANT.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}},
             'familyGenotypes': {GRCH37_VARIANT['familyGuids'][0]: [
-                {k: v for k, v in g.items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
+                {k: v for k, v in g[0].items() if k != 'individualGuid'} for g in GRCH37_VARIANT['genotypes'].values()
             ]},
         })
 
@@ -639,7 +639,7 @@ class HailSearchTestCase(AioHTTPTestCase):
         self.assertDictEqual(resp_json, {
             **{k: v for k, v in MITO_VARIANT1.items() if k not in {'familyGuids', 'genotypes', 'genotypeFilters'}},
             'familyGenotypes': {MITO_VARIANT1['familyGuids'][0]: [
-                {k: v for k, v in g.items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
+                {k: v for k, v in g[0].items() if k != 'individualGuid'} for g in MITO_VARIANT1['genotypes'].values()
             ]},
         })
 
@@ -655,8 +655,8 @@ class HailSearchTestCase(AioHTTPTestCase):
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {
             **NO_GENOTYPE_GCNV_VARIANT, 'genotypes': {
-                individual: {k: v for k, v in genotype.items() if k not in {'start', 'end', 'numExon', 'geneIds'}}
-                for individual, genotype in GCNV_VARIANT4['genotypes'].items()
+                individual: [{k: v for k, v in sample.items() if k not in {'start', 'end', 'numExon', 'geneIds'}}  for sample in genotypes]
+                for individual, genotypes in GCNV_VARIANT4['genotypes'].items()
             }
         })
 
