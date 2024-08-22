@@ -9,6 +9,7 @@ from django.http import StreamingHttpResponse, HttpResponse
 from seqr.models import Individual, IgvSample
 from seqr.utils.file_utils import file_iter, does_file_exist, is_google_bucket_file_path, run_command, get_google_project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
+from seqr.views.utils.dataset_utils import convert_django_meta_to_http_headers
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -19,8 +20,9 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 GS_STORAGE_URL = 'https://storage.googleapis.com'
+S3_KEY = 's3'
 CLOUD_STORAGE_URLS = {
-    's3': 'https://s3.amazonaws.com',
+    S3_KEY: 'https://s3.amazonaws.com',
     'gs': GS_STORAGE_URL,
 }
 TIMEOUT = 300
@@ -272,6 +274,8 @@ def igv_genomes_proxy(request, cloud_host, file_path):
     range_header = request.META.get('HTTP_RANGE')
     if range_header:
         headers['Range'] = range_header
+    if cloud_host == S3_KEY:
+        headers.update(convert_django_meta_to_http_headers(request))
 
     genome_response = requests.get(f'{CLOUD_STORAGE_URLS[cloud_host]}/{file_path}', headers=headers, timeout=TIMEOUT)
     proxy_response = HttpResponse(
@@ -279,3 +283,4 @@ def igv_genomes_proxy(request, cloud_host, file_path):
         status=genome_response.status_code,
     )
     return proxy_response
+

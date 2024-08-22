@@ -620,3 +620,18 @@ def load_phenotype_prioritization_data_file(file_path, user):
                 raise ValueError(f'Multiple tools found {tool} and {row_dict["tool"]}. Only one in a file is supported.')
 
     return tool, data_by_project_sample_id
+
+
+def convert_django_meta_to_http_headers(request):
+
+    def convert_key(key):
+        # converting Django's all-caps keys (eg. 'HTTP_RANGE') to regular HTTP header keys (eg. 'Range')
+        return key.replace("HTTP_", "").replace('_', '-').title()
+
+    http_headers = {
+        convert_key(key): str(value).lstrip()
+        for key, value in request.META.items()
+        if key.startswith("HTTP_") or (key in ('CONTENT_LENGTH', 'CONTENT_TYPE') and value)
+    }
+
+    return http_headers
