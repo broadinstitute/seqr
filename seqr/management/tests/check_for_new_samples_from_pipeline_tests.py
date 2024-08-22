@@ -168,9 +168,9 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         ])
 
         # Test reload saved variants
-        self.assertEqual(len(responses.calls), len(reload_calls) + (8 if has_additional_requests else 0))
+        self.assertEqual(len(responses.calls), len(reload_calls) + (9 if has_additional_requests else 0))
         for i, call in enumerate(reload_calls):
-            resp = responses.calls[i+(6 if has_additional_requests else 0)]
+            resp = responses.calls[i+(7 if has_additional_requests else 0)]
             self.assertEqual(resp.request.url, f'{MOCK_HAIL_HOST}:5000/search')
             self.assertEqual(resp.request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(resp.request.body), call)
@@ -214,7 +214,6 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         responses.add_callback(responses.POST, airtable_pdo_url, callback=lambda request: (200, {}, json.dumps({
             'records': [{'id': f'rec{i}ABC123', **r} for i, r in enumerate(json.loads(request.body)['records'])]
         })))
-        # TODO test paging for patch (MAX_UPDATE_RECORDS)
         # TODO test with an error in patch?
         responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
             'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
@@ -371,12 +370,17 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertDictEqual(json.loads(update_samples_request.body), {'records': [
             {'id': 'rec2B6OGmQpAkQW3s', 'fields': {'PDOID': ['rec0ABC123']}},
             {'id': 'rec2Nkg10N1KssPc3', 'fields': {'PDOID': ['rec0ABC123']}},
+        ]})
+        update_samples_request_2 = responses.calls[5].request
+        self.assertEqual(update_samples_request_2.url, airtable_samples_url)
+        self.assertEqual(update_samples_request_2.method, 'PATCH')
+        self.assertDictEqual(json.loads(update_samples_request_2.body), {'records': [
             {'id': 'recfMYDEZpPtzAIeV', 'fields': {'PDOID': ['rec0ABC123']}},
         ]})
 
         # Test SavedVariant model updated
         for i, variant_id in enumerate([['1', 1562437, 'G', 'CA'], ['1', 46859832, 'G', 'A']]):
-            multi_lookup_request = responses.calls[8+i].request
+            multi_lookup_request = responses.calls[9+i].request
             self.assertEqual(multi_lookup_request.url, f'{MOCK_HAIL_HOST}:5000/multi_lookup')
             self.assertEqual(multi_lookup_request.headers.get('From'), 'manage_command')
             self.assertDictEqual(json.loads(multi_lookup_request.body), {
