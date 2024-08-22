@@ -190,6 +190,7 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
 
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.MAX_LOOKUP_VARIANTS', 1)
     @mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.BASE_URL', 'https://test-seqr.org/')
+    @mock.patch('seqr.views.utils.airtable_utils.MAX_UPDATE_RECORDS', 2)
     @mock.patch('seqr.views.utils.airtable_utils.logger')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     @responses.activate
