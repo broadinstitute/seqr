@@ -210,11 +210,10 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
             f"{airtable_pdo_url}?{PDO_QUERY_FIELDS}&pageSize=100&filterByFormula=OR(RECORD_ID()='recW24C2CJW5lT64K')",
             json=AIRTABLE_PDO_RECORDS)
         responses.add(responses.PATCH, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS)
-        responses.add(responses.PATCH, airtable_pdo_url, json=AIRTABLE_PDO_RECORDS)
+        responses.add(responses.PATCH, airtable_pdo_url, status=400)
         responses.add_callback(responses.POST, airtable_pdo_url, callback=lambda request: (200, {}, json.dumps({
             'records': [{'id': f'rec{i}ABC123', **r} for i, r in enumerate(json.loads(request.body)['records'])]
         })))
-        # TODO test with an error in patch?
         responses.add(responses.POST, f'{MOCK_HAIL_HOST}:5000/search', status=200, json={
             'results': [{'variantId': '1-248367227-TC-T', 'familyGuids': ['F000014_14'], 'updated_field': 'updated_value'}],
             'total': 1,
@@ -463,11 +462,15 @@ class CheckNewSamplesTest(AnvilAuthenticationTestCase):
         self.assertDictEqual(mock_email.return_value.esp_extra, {'MessageStream': 'seqr-notifications'})
         self.assertDictEqual(mock_email.return_value.merge_data, {})
 
-        mock_airtable_utils.error.assert_called_with(
+        self.assertEqual(mock_airtable_utils.error.call_count, 2)
+        mock_airtable_utils.error.assert_has_calls([mock.call(
+            f'Airtable patch "PDO" error: 400 Client Error: Bad Request for url: {airtable_pdo_url}', None, detail={
+                'record_ids': {'rec0RWBVfDVbtlBSL', 'recW24C2CJW5lT64K'}, 'update': {'PDOStatus': 'Available in seqr'}}
+        ), mock.call(
             'Airtable patch "AnVIL Seqr Loading Requests Tracking" error: Unable to identify record to update', None, detail={
                 'or_filters': {'Status': ['Loading', 'Loading Requested']},
                 'and_filters': {'AnVIL Project URL': 'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page'},
-                'update': {'Status': 'Available in Seqr'}})
+                'update': {'Status': 'Available in Seqr'}})])
 
         self.assertEqual(self.manager_user.notifications.count(), 3)
         self.assertEqual(
