@@ -557,7 +557,6 @@ def variant_lookup_handler(request):
     else:
         variant = variant_lookup(request.user, parsed_variant_id, **kwargs)
         variants = [variant]
-        print('findme', variants)
         families = Family.objects.filter(
             guid__in=variant['familyGenotypes'],
             project__guid__in=get_project_guids_user_can_view(request.user, limit_data_manager=True),
