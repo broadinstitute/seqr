@@ -167,6 +167,8 @@ def _get_compound_het_es_variants(results_model, **kwargs):
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class VariantSearchAPITest(object):
 
+    maxDiff = None
+
     def _assert_expected_search_context(self, response_json):
         self.assertSetEqual(set(response_json), set(EXPECTED_SEARCH_CONTEXT_RESPONSE))
         self.assertDictEqual(response_json, EXPECTED_SEARCH_CONTEXT_RESPONSE)
@@ -429,6 +431,19 @@ class VariantSearchAPITest(object):
              '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '', '2', '', '', '', '', '', 'HG00731',
              '1', '99', '1.0', 'HG00732', '0', '99', '0.4594594594594595', 'HG00733', '1', '99', '0.4074074074074074'],
         ]
+        # print([line.split('\t') for line in response.content.decode().strip().split('\n')])
+        actual_content = [line.split('\t') for line in response.content.decode().strip().split('\n')]
+
+        differences = []
+        for i, (actual_line, expected_line) in enumerate(zip(actual_content, expected_content)):
+            if actual_line != expected_line:
+                differences.append((i, actual_line, expected_line))
+
+        if differences:
+            print(f"Differences found at indices: {differences}")
+        else:
+            print("No differences found")
+
         self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], expected_content)
 
         # test export with max families

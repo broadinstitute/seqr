@@ -68,6 +68,12 @@ PROJECT_2_VARIANT = {
     '_sort': [1000010146],
     'CAID': 'CA520798130',
 }
+PROJECT_2_VARIANT_BOTH_SAMPLE_TYPES = deepcopy(PROJECT_2_VARIANT)
+PROJECT_2_VARIANT_BOTH_SAMPLE_TYPES['genotypes']['I000015_na20885'].append({
+    'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
+    'numAlt': 1, 'dp': 8, 'gq': 14, 'ab': 0.875,
+})
+PROJECT_2_VARIANT_BOTH_SAMPLE_TYPES['familyGuids'].append('F000011_11')
 
 GRCH37_VARIANT = {
     'variantId': '7-143270172-A-G',
@@ -196,6 +202,8 @@ def _sorted(variant, sorts):
 
 class HailSearchTestCase(AioHTTPTestCase):
 
+    maxDiff = None
+
     async def get_application(self):
         return await init_web_app()
 
@@ -316,9 +324,19 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
     async def test_multi_project_multi_sample_type_search(self):
+        expected_results = [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
+        for variant in expected_results:
+            if 'I000015_na20885' in variant['genotypes']:
+                variant['genotypes']['I000015_na20885'].append({**variant['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
+                variant['familyGuids'].append('F000011_11')
+
+        expected_gene_counts = {
+            'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+            'ENSG00000177000': {'total': 4, 'families': {'F000002_2': 2, 'F000011_11': 2}},
+            'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 1, 'F000011_11': 2}},
+        }
         await self._assert_expected_search(
-            [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4],
-            gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
+            expected_results, gene_counts=expected_gene_counts, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
         )
 
     async def test_inheritance_filter(self):
@@ -524,8 +542,9 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
         # Test "large" gene list search
+        # Expect VARIANT2 to be filtered out due to intervals
         await self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4], omit_data_type='SV_WES', intervals=LOCATION_SEARCH['intervals'],
+            [MULTI_FAMILY_VARIANT, VARIANT4], omit_data_type='SV_WES', intervals=LOCATION_SEARCH['intervals'],
             gene_ids=LOCATION_SEARCH['gene_ids'] + ['ENSG00000277258', 'ENSG00000275023'],
         )
 
