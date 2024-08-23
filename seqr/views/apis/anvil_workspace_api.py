@@ -13,7 +13,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Project, CAN_EDIT, Sample, Individual
+from seqr.models import Project, CAN_EDIT, Sample, Individual, IgvSample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
@@ -109,15 +109,30 @@ def grant_workspace_access(request, namespace, name):
     return create_json_response({'success': True})
 
 
-@anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
-def get_anvil_vcf_list(request, namespace, name, workspace_meta):
+def _get_workspace_files(request, namespace, name, workspace_meta):
     bucket_name = workspace_meta['workspace']['bucketName']
     bucket_path = 'gs://{bucket}'.format(bucket=bucket_name.rstrip('/'))
-    data_path_list = [path.replace(bucket_path, '') for path in get_gs_file_list(bucket_path, request.user)
-                      if path.endswith(VCF_FILE_EXTENSIONS)]
+    return bucket_path, get_gs_file_list(bucket_path, request.user)
+
+
+@anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
+def get_anvil_vcf_list(*args):
+    bucket_path, file_list = _get_workspace_files(*args)
+    data_path_list = [path.replace(bucket_path, '') for path in file_list if path.endswith(VCF_FILE_EXTENSIONS)]
     data_path_list = _merge_sharded_vcf(data_path_list)
 
     return create_json_response({'dataPathList': data_path_list})
+
+
+@anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
+def get_anvil_igv_options(*args):
+    bucket_path, file_list = _get_workspace_files(*args)
+    igv_options = [
+        {'name': path.replace(bucket_path, ''), 'value': path} for path in file_list
+        if path.endswith(IgvSample.SAMPLE_TYPE_FILE_EXTENSIONS[IgvSample.SAMPLE_TYPE_ALIGNMENT])
+    ]
+
+    return create_json_response({'igv_options': igv_options})
 
 
 @anvil_workspace_access_required(meta_fields=['workspace.bucketName'])

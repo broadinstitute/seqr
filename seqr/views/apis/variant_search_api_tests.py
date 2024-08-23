@@ -132,7 +132,7 @@ EXPECTED_TRANSCRIPTS_RESPONSE = {
 
 EXPECTED_SEARCH_CONTEXT_RESPONSE = {
     'savedSearchesByGuid': {
-        'VS0000001_de_novo_dominant_res': mock.ANY, 'VS0000002_recessive_restrictiv': mock.ANY, 'VS0000003_de_novo_dominant_per': mock.ANY,
+        'VS0079516_': mock.ANY, 'VS0079525_': mock.ANY, 'VS0079517_': mock.ANY, 'VS0145435_': mock.ANY,
     },
     'projectsByGuid': {PROJECT_GUID: mock.ANY},
     'familiesByGuid': mock.ANY,
@@ -715,7 +715,7 @@ class VariantSearchAPITest(object):
         expected_response['projectsByGuid']['R0003_test'] = mock.ANY
         self.assertSetEqual(set(response_json), set(expected_response))
         self.assertDictEqual(response_json, expected_response)
-        self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
+        self.assertEqual(len(response_json['savedSearchesByGuid']), 4)
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_CONTEXT_FIELDS)
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'SNV_INDEL', 'SV', 'MITO'})
         self.assertSetEqual(set(response_json['projectsByGuid']['R0003_test']['datasetTypes']), {'SNV_INDEL'})
@@ -951,7 +951,7 @@ class VariantSearchAPITest(object):
 
         response = self.client.get(get_saved_search_url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()['savedSearchesByGuid']), 3)
+        self.assertEqual(len(response.json()['savedSearchesByGuid']), 4)
 
         create_saved_search_url = reverse(create_saved_search_handler)
 
@@ -986,7 +986,7 @@ class VariantSearchAPITest(object):
 
         response = self.client.get(get_saved_search_url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()['savedSearchesByGuid']), 4)
+        self.assertEqual(len(response.json()['savedSearchesByGuid']), 5)
 
         # Test cannot save different searches with the same name
         body['filters'] = {'test': 'filter'}
@@ -1016,7 +1016,7 @@ class VariantSearchAPITest(object):
 
         response = self.client.get(get_saved_search_url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()['savedSearchesByGuid']), 3)
+        self.assertEqual(len(response.json()['savedSearchesByGuid']), 4)
 
         global_saved_search_guid = next(iter(response.json()['savedSearchesByGuid']))
 

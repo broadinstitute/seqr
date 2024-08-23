@@ -10,7 +10,7 @@ import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { Select, IntegerInput, LargeMultiselect } from 'shared/components/form/Inputs'
 import { validators, configuredField } from 'shared/components/form/FormHelpers'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
-import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
+import { GENOME_VERSION_FIELD, SV_TYPES } from 'shared/utils/constants'
 
 import { TAG_FORM_FIELD, TAG_FIELD_NAME } from '../constants'
 import { getTaggedVariantsByFamilyType, getProjectTagTypeOptions, getCurrentProject } from '../selectors'
@@ -131,16 +131,6 @@ const SAVED_VARIANT_FIELD = {
   control: SavedVariantField,
 }
 
-const SV_TYPE_OPTIONS = [
-  { value: 'DEL', text: 'Deletion' },
-  { value: 'DUP', text: 'Duplication' },
-  { value: 'Multiallelic CNV' },
-  { value: 'Insertion' },
-  { value: 'Inversion' },
-  { value: 'Complex SVs' },
-  { value: 'Other' },
-]
-
 const validateHasTranscriptId = (value, allValues, props, name) => {
   if (!value) {
     return undefined
@@ -193,7 +183,7 @@ const SV_FIELDS = [
     name: 'svType',
     label: 'SV Type',
     component: Select,
-    options: SV_TYPE_OPTIONS,
+    options: SV_TYPES,
     validate: validators.required,
     width: 8,
   },

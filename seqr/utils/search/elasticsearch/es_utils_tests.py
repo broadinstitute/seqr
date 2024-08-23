@@ -1460,7 +1460,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
         search_model.search = {
             'inheritance': {'mode': 'compound_het'},
-            'locus': {'rawItems': 'DDX11L1'},
+            'locus': {'rawItems': 'WASH7P'},
             'annotations': {'frameshift': ['frameshift_variant']},
         }
         search_model.save()
@@ -1603,7 +1603,7 @@ class EsUtilsTest(TestCase):
             'in_silico': {'cadd': '11.5', 'sift': 'D', 'fathmm': 'D'},
             'inheritance': {'mode': 'de_novo'},
             'customQuery': {'term': {'customFlag': 'flagVal'}},
-            'locus': {'rawItems': 'DDX11L1, chr2:1234-5678, chr7:100-10100%10', 'excludeLocations': True},
+            'locus': {'rawItems': 'WASH7P, chr2:1234-5678, chr7:100-10100%10', 'excludeLocations': True},
         })
 
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
@@ -1626,7 +1626,7 @@ class EsUtilsTest(TestCase):
                             {'range': {'xpos': {'gte': 2000000001}}},
                             {'range': {'xstop': {'lte': 2300000000}}},
                         ]}},
-                        {'terms': {'geneIds': ['ENSG00000223972']}},
+                        {'terms': {'geneIds': ['ENSG00000227232']}},
                         {'bool': {'must': [
                             {'range': {'xpos': {'gte': 7000000001, 'lte': 7000001100}}},
                             {'range': {'xstop': {'gte': 7000009100, 'lte': 7000011100}}}]}},
@@ -3440,7 +3440,7 @@ class EsUtilsTest(TestCase):
                     'type': 'number',
                     'script': {
                         'params': {
-                            'omim_gene_ids': ['ENSG00000223972', 'ENSG00000135953']
+                            'omim_gene_ids': ['ENSG00000240361', 'ENSG00000135953']
                         },
                         'source': mock.ANY,
                     }
@@ -3450,7 +3450,7 @@ class EsUtilsTest(TestCase):
                     'type': 'number',
                     'script': {
                         'params': {
-                            'omim_gene_ids': ['ENSG00000223972', 'ENSG00000135953']
+                            'omim_gene_ids': ['ENSG00000240361', 'ENSG00000135953']
                         },
                         'source': mock.ANY,
                     }

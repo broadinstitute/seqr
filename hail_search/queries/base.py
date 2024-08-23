@@ -646,7 +646,6 @@ class BaseHailTableQuery(object):
             is_valid &= unaffected_filter
         return hl.or_missing(is_valid, entries)
 
-
     def _get_family_passes_quality_filter(self, quality_filter, ht, **kwargs):
         quality_filter = quality_filter or {}
 

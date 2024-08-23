@@ -374,7 +374,7 @@ ANVIL_WORKSPACES = [{
         'bucketName': 'test_bucket'
     },
 }, {
-    'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
+    'workspace_namespace': EXT_WORKSPACE_NAMESPACE,
     'workspace_name': TEST_EMPTY_PROJECT_WORKSPACE,
     'public': False,
     'acl': {
@@ -423,12 +423,6 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": True,
             "canCompute": True
-        },
-        'test_pm_user@test.com': {
-            "accessLevel": "WRITER",
-            "pending": False,
-            "canShare": False,
-            "canCompute": False
         },
     },
     'workspace': {

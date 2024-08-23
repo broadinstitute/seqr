@@ -36,7 +36,7 @@
         "description": "",
         "consent_code": "H",
         "workspace_name": "empty",
-        "workspace_namespace": "my-seqr-billing",
+        "workspace_namespace": "ext-data",
         "subscribers": 6,
 	"can_edit_group": 2,
 	"can_view_group": 3,
@@ -156,6 +156,7 @@
         "coded_phenotype": "microcephaly, seizures",
         "mondo_id": "MONDO:0044976",
         "post_discovery_mondo_id": "MONDO:0044970",
+        "post_discovery_omim_numbers": [615123],
         "case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
         "case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
     }

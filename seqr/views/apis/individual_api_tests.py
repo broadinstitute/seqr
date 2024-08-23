@@ -18,7 +18,7 @@ from seqr.views.apis.individual_api import edit_individuals_handler, update_indi
     get_hpo_terms, get_individual_rna_seq_data, import_gregor_metadata
 from seqr.views.apis.report_api_tests import PARTICIPANT_TABLE, PHENOTYPE_TABLE, EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, GENETIC_FINDINGS_TABLE
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, INDIVIDUAL_FIELDS, \
-    INDIVIDUAL_CORE_FIELDS, CORE_INTERNAL_INDIVIDUAL_FIELDS
+    INDIVIDUAL_CORE_FIELDS, CORE_INTERNAL_INDIVIDUAL_FIELDS, GENE_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 PM_REQUIRED_PROJECT_GUID = 'R0003_test'
@@ -996,6 +996,11 @@ class IndividualAPITest(object):
         genetic_findings_table = deepcopy(GENETIC_FINDINGS_TABLE)
         genetic_findings_table[2] = genetic_findings_table[2][:11] + genetic_findings_table[4][11:14] + \
                                     genetic_findings_table[2][14:]
+        genetic_findings_table.append([
+            'Broad_NA20889_1_249045487', 'Broad_NA20889', '', 'SNV/INDEL', 'GRCh37', '1', '249045487', 'A', 'G', '',
+            'OR4G11P', '', '', '', 'Heterozygous', '', 'unknown', 'Broad_NA20889_1_248367227', '', 'Candidate',
+            'IRIDA syndrome', 'MONDO:0008788', 'Autosomal dominant', 'Full', '', '', 'SR-ES', '', '', '', '', '', '', '',
+        ])
         self._set_metadata_file_iter(mock_subprocess, genetic_findings_table)
 
         url = reverse(import_gregor_metadata, args=[PM_REQUIRED_PROJECT_GUID])
@@ -1177,9 +1182,9 @@ class IndividualAPITest(object):
         self.assertIsNone(comp_het_tag.metadata)
         self.assertDictEqual(json.loads(next(t for t in existing_variant_tags if t != comp_het_tag).metadata), {
             'gene_known_for_phenotype': 'Candidate',
-            'condition_id': 'MONDO:0008788',
-            'known_condition_name': 'IRIDA syndrome',
-            'condition_inheritance': 'Autosomal dominant',
+            'condition_id': 'OMIM:616126',
+            'known_condition_name': 'Immunodeficiency 38',
+            'condition_inheritance': 'Autosomal recessive',
         })
         self.assertDictEqual(json.loads(next(t for t in new_variant_tags if t != comp_het_tag).metadata), {
             'gene_known_for_phenotype': 'Candidate',
@@ -1293,6 +1298,7 @@ class IndividualAPITest(object):
             outliers_by_pos[132885746]
         )
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
+        self.assertSetEqual(set(response_json['genesById']['ENSG00000135953'].keys()), GENE_FIELDS)
 
     def test_get_individual_rna_seq_data_is_significant(self):
         url = reverse(get_individual_rna_seq_data, args=[INDIVIDUAL_GUID])

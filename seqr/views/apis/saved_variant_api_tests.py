@@ -277,7 +277,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(
             set(response_json['savedVariantsByGuid'].keys()),
             {'SV0000006_1248367227_r0003_tes', 'SV0000007_prefix_19107_DEL_r00'})
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000223972', 'ENSG00000240361'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000240361'})
         self.assertDictEqual(response_json['omimIntervals'], {'3': {
             'chrom': '1',
             'start': 249044482,
@@ -1011,7 +1011,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)
         self.mock_list_workspaces.assert_called_with(self.analyst_user)
         self.mock_get_ws_access_level.assert_called_with(
-            mock.ANY, 'my-seqr-billing', 'empty')
+            mock.ANY, 'ext-data', 'empty')
         self.mock_get_ws_access_level.assert_any_call(
             mock.ANY, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.assertEqual(self.mock_get_ws_access_level.call_count, 17)

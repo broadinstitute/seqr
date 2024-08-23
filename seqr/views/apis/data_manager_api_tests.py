@@ -1662,7 +1662,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             self.assertRegex(error, '400 Client Error: Bad Request')
 
         dag_json = dag_json.replace('mito_callset.mt', 'sv_callset.vcf').replace(
-            'WGS', 'WES').replace('MITO', 'GCNV').replace('v01', 'v03')
+            'WGS', 'WES').replace('MITO', 'GCNV').replace('v01', 'v3.1')
         error_message = f"""ERROR triggering internal WES SV loading: {errors[0]}
         
         DAG LOADING_PIPELINE should be triggered with following: 
@@ -1761,7 +1761,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             ) for project in self.PROJECTS
         ] + [
             mock.call(
-                f'gsutil rsync -r gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/ gs://seqr-loading-temp/v03/GRCh38/{sample_type}/{dataset_type}/pedigrees/',
+                f'gsutil rsync -r gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/ gs://seqr-loading-temp/v3.1/GRCh38/{dataset_type}/pedigrees/{sample_type}/',
                 stdout=-1, stderr=-2, shell=True,  # nosec
             ) for project in self.PROJECTS
         ], any_order=True)

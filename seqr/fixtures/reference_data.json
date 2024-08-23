@@ -5,9 +5,9 @@
     "fields": {
         "gene_id": "ENSG00000223972",
         "gene_symbol": "DDX11L1",
-        "chrom_grch37": "1",
-        "start_grch37": 11869,
-        "end_grch37": 14409,
+        "chrom_grch37": null,
+        "start_grch37": null,
+        "end_grch37": null,
         "strand_grch37": "+",
         "coding_region_size_grch37": 0,
         "chrom_grch38": "1",
@@ -1064,7 +1064,7 @@
     "model": "reference_data.omim",
     "pk": 1,
     "fields": {
-        "gene": 1,
+        "gene": 6,
         "mim_number": 147571,
         "gene_description": "ISG15 ubiquitin-like modifier",
         "comments": "",
