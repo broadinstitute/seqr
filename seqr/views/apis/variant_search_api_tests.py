@@ -821,10 +821,10 @@ class VariantSearchAPITest(object):
             'familyGuids': [],
             'lookupFamilyGuids': ['F0_1-10439-AC-A', 'F1_1-10439-AC-A'],
             'genotypes': {
-                'I0_F0_1-10439-AC-A': {'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'sampleType': 'WES'},
-                'I1_F0_1-10439-AC-A': {'ab': 0.0, 'dp': 24, 'gq': 0, 'numAlt': 0, 'sampleType': 'WES'},
-                'I2_F0_1-10439-AC-A': {'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 1, 'sampleType': 'WES'},
-                'I0_F1_1-10439-AC-A': {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'sampleType': 'WES'},
+                'I0_F0_1-10439-AC-A': [{'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'sampleType': 'WES'}],
+                'I1_F0_1-10439-AC-A': [{'ab': 0.0, 'dp': 24, 'gq': 0, 'numAlt': 0, 'sampleType': 'WES'}],
+                'I2_F0_1-10439-AC-A': [{'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 1, 'sampleType': 'WES'}],
+                'I0_F1_1-10439-AC-A': [{'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'sampleType': 'WES'}],
             },
         }
         del expected_variant['familyGenotypes']
@@ -888,7 +888,7 @@ class VariantSearchAPITest(object):
         expected_variant.update({
             'lookupFamilyGuids': ['F000002_2', 'F000011_11'],
             'genotypes': {
-                individual_guid: {**expected_variant['genotypes'][anon_individual_guid], **genotype}
+                individual_guid: [{**expected_variant['genotypes'][anon_individual_guid][0], **genotype}]
                 for individual_guid, anon_individual_guid, genotype in individual_guid_map
             },
             'genomeVersion': '37',
@@ -918,7 +918,6 @@ class VariantSearchAPITest(object):
         del expected_body['savedVariantsByGuid']['SV0000001_2103343353_r0390_100']
         for k in ['VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100']:
             del expected_body['variantTagsByGuid'][k]
-
         self.assertDictEqual(response.json(), expected_body)
         mock_variant_lookup.assert_called_with(
             self.collaborator_user, ('1', 10439, 'AC', 'A'), genome_version='37',

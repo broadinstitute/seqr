@@ -590,15 +590,13 @@ def _update_lookup_variant(variant, response):
         )
     }
     add_individual_hpo_details(individual_summary_map.values())
-
-    variant['genotypes'] = {}
+    variant['genotypes'] = defaultdict(list)
     variant['lookupFamilyGuids'] = variant.pop('familyGuids')
     variant['familyGuids'] = []
     for family_guid in variant['lookupFamilyGuids']:
-        variant['genotypes'].update({
-            individual_guid_map[(family_guid, genotype['sampleId'])]: genotype
-            for genotype in variant['familyGenotypes'].pop(family_guid)
-        })
+        for genotype in variant['familyGenotypes'].pop(family_guid):
+            individual_guid = individual_guid_map[(family_guid, genotype['sampleId'])]
+            variant['genotypes'][individual_guid].append(genotype)
 
     for i, genotypes in enumerate(variant.pop('familyGenotypes').values()):
         family_guid = f'F{i}_{variant["variantId"]}'
@@ -618,4 +616,4 @@ def _update_lookup_variant(variant, response):
                     for category, count in feature_category_count.items()
                 ],
             }
-            variant['genotypes'][individual_guid] = genotype
+            variant['genotypes'][individual_guid].append(genotype)

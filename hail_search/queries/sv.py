@@ -10,7 +10,6 @@ class SvHailTableQuery(BaseHailTableQuery):
     DATA_TYPE = 'SV_WGS'
     KEY_FIELD = ('variant_id',)
 
-
     GENOTYPE_FIELDS = {f.lower(): f for f in ['CN', 'GQ']}
     COMPUTED_GENOTYPE_FIELDS = {
         k: lambda entry, field, *args: entry.concordance[field] for k in ['new_call', 'prev_call', 'prev_num_alt']
