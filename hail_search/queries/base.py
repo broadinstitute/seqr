@@ -328,11 +328,14 @@ class BaseHailTableQuery(object):
         # If there is only one sample type, filter the single entries table.
         if len(entries_hts_map.keys()) == 1:
             sample_type, entries_hts = list(entries_hts_map.items())[0]
-            return self._filter_entries_table(entries_hts[0][0], entries_hts[0][1], sample_type, **kwargs)
+            ht, sorted_family_sample_data = self._add_entry_sample_families(
+                ht=entries_hts[0][0], sample_data=entries_hts[0][1], sample_type=sample_type,
+            )
+            return self._filter_entries_table(ht, sorted_family_sample_data, **kwargs)
 
         # Project has multiple sample types
-        # TODO If there are multiple sample types, filter both.
-        self._filter_entries_table_multiple_sample_types(entries_hts_map, **kwargs)
+        ht_list, comp_het_list = self._filter_entries_table_multiple_sample_types(entries_hts_map, **kwargs)
+        return ht_list[0], comp_het_list[0]
 
     def _load_prefiltered_family_ht(self, family_guid, sample_types, entries_hts_map, project_sample_type_data, **kwargs):
         for sample_type in sample_types:
@@ -457,9 +460,7 @@ class BaseHailTableQuery(object):
 
         return ht.transmute_globals(**global_expressions)
 
-    def _filter_entries_table(self, ht, project_samples, sample_type, inheritance_filter=None, quality_filter=None, **kwargs):
-        ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_samples, sample_type)
-
+    def _filter_entries_table(self, ht, sorted_family_sample_data, inheritance_filter=None, quality_filter=None, **kwargs):
         passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, **kwargs)
         if passes_quality_filter is not None:
             ht = ht.annotate(family_entries=ht.family_entries.map(
@@ -478,40 +479,36 @@ class BaseHailTableQuery(object):
         filtered_comp_het_project_hts = []
         wes_entries, wgs_entries = entries_hts_map['WES'], entries_hts_map['WGS']
         for (wes_ht, wes_project_samples), (wgs_ht, wgs_project_samples) in zip(wes_entries, wgs_entries):
-            filtered_wes_ht, wes_comp_het_ht = self._filter_entries_table(wes_ht, wes_project_samples, 'WES', inheritance_filter, quality_filter,  **kwargs)
-            filtered_wgs_ht, wgs_comp_het_ht = self._filter_entries_table(wgs_ht, wgs_project_samples, 'WGS', inheritance_filter, quality_filter, **kwargs)
+            wes_ht, wes_sorted_family_sample_data = self._add_entry_sample_families(
+                wes_ht, wes_project_samples, 'WES'
+            )
+            filtered_wes_ht, wes_comp_het_ht = self._filter_entries_table(
+                wes_ht, wes_sorted_family_sample_data, inheritance_filter, quality_filter, **kwargs
+            )
+            wgs_ht, wgs_sorted_family_sample_data = self._add_entry_sample_families(
+                wgs_ht, wgs_project_samples, 'WGS'
+            )
+            filtered_wgs_ht, wgs_comp_het_ht = self._filter_entries_table(
+                wgs_ht, wgs_sorted_family_sample_data, inheritance_filter, quality_filter, **kwargs
+            )
 
-            # TODO: add logic to un-filter the filtered tables based on edge case criteria
+            # Get variants filtered out of WES but are still in WGS
+            dropped_wes_ht = wes_ht.anti_join(filtered_wes_ht)
+            extra_wes_ht = dropped_wes_ht.semi_join(filtered_wgs_ht)
+            filtered_wes_ht = filtered_wes_ht.union(extra_wes_ht)
 
-            if filtered_wes_ht is not None:
-                filtered_project_hts.append(filtered_wes_ht)
-            if wes_comp_het_ht is not None:
-                filtered_comp_het_project_hts.append(wes_comp_het_ht)
-            if filtered_wgs_ht is not None:
-                filtered_project_hts.append(filtered_wgs_ht)
-            if wgs_comp_het_ht is not None:
-                filtered_comp_het_project_hts.append(wgs_comp_het_ht)
+            # Get variants filtered out of WGS but are still in WES
+            dropped_wgs_ht = wgs_ht.anti_join(filtered_wgs_ht)
+            extra_wgs_ht = dropped_wgs_ht.semi_join(filtered_wes_ht)
+            filtered_wgs_ht = filtered_wgs_ht.union(extra_wgs_ht)
 
-            # Try doing the filtering together
-            # wes_ht = wes_ht.rename({'family_entries': 'wes_family_entries'})
-            # wgs_ht = wgs_ht.rename({'family_entries': 'wgs_family_entries'})
-            #
-            # ht = wes_ht.join(wgs_ht, how='outer')
-            #
-            # passes_quality_filter = self._get_family_passes_quality_filter(quality_filter, ht, **kwargs)
-            # if passes_quality_filter is not None:
-            #     ht = ht.annotate(
-            #         wes_passes=ht.wes_family_entries.map(
-            #             lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
-            #         ),
-            #         wgs_passes=ht.wgs_family_entries.map(
-            #             lambda entries: hl.or_missing(passes_quality_filter(entries), entries)
-            #         ))
-            #     # Keep row if either wes or wgs passes quality check
-            #     ht = ht.filter(ht.wes_passes.any(hl.is_defined) | ht.wgs_passes.any(hl.is_defined))
-            #     ht = ht.drop('wes_passes', 'wgs_passes')
+            for project_ht in (filtered_wes_ht, filtered_wgs_ht):
+                if project_ht is not None:
+                    filtered_project_hts.append(project_ht)
 
-            # Try doing the filtering separately then reconciling the results
+            for comp_het_ht in (wes_comp_het_ht, wgs_comp_het_ht):
+                if comp_het_ht is not None:
+                    filtered_comp_het_project_hts.append(comp_het_ht)
 
         return filtered_project_hts, filtered_comp_het_project_hts
 
@@ -530,6 +527,7 @@ class BaseHailTableQuery(object):
                 get_sample_data = lambda s: {'sampleId': s}
                 missing_family_samples = []
             else:
+                # For searches, update family_entries with additional sample-level data
                 get_sample_data = self._sample_entry_data
                 missing_family_samples = [s['sample_id'] for s in samples if s['sample_id'] not in ht_family_samples]
             if missing_family_samples:
