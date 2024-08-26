@@ -854,8 +854,8 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         self.mock_airflow_logger.warning.assert_called_with(
             'LOADING_PIPELINE DAG is running and cannot be triggered again.', self.manager_user)
         self.mock_airtable_logger.error.assert_called_with(
-            f'Airtable create "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: '
-            f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', self.manager_user)
+            f'Airtable post "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: '
+            f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', self.manager_user, detail=mock.ANY)
 
         slack_message_on_failure = """ERROR triggering AnVIL loading for project {guid}: LOADING_PIPELINE DAG is running and cannot be triggered again.
         
