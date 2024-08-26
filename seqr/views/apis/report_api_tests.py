@@ -1443,6 +1443,8 @@ class ReportAPITest(AirtableTest):
 
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
+    # TODO tests failing for non-local reports
+
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
     ADDITIONAL_FAMILIES = ['F000014_14']
     ADDITIONAL_FINDINGS = ['NA21234_1_248367227']

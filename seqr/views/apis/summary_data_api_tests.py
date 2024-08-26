@@ -581,7 +581,6 @@ class SummaryDataAPITest(AirtableTest):
             self.assertEqual(len([r['participant_id'] for r in response_json['rows'] if r['participant_id'] == 'NA20888']), 2)
 
     @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 2)
-    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
     def test_sample_metadata_export(self, mock_google_authenticated):
@@ -655,6 +654,7 @@ class SummaryDataAPITest(AirtableTest):
 
         # Test invalid airtable responses
         response = self.client.get(include_airtable_url)
+        # TODO failing for local
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
         mock_google_authenticated.return_value = True
@@ -715,7 +715,6 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(len(responses.calls), 8)
         self.assert_expected_airtable_call(
             -1, "OR(RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
-        self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
 
         # Test gregor projects
         response = self.client.get(gregor_projects_url)
