@@ -549,6 +549,7 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', MOCK_AIRTABLE_KEY)
         patcher.start()
+        self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
 
     @classmethod
