@@ -22,7 +22,7 @@ export const VARIANT = {
   genomeVersion: "37",
   geneIds: ['ENSG00000228198'],
   genotypes: {
-    NA19675: {
+    NA19675: [{
       ab: 1,
       ad: "0,74",
       alleles: ["T", "T"],
@@ -31,8 +31,8 @@ export const VARIANT = {
       gq: 99,
       numAlt: 2,
       pl: "358,132,0",
-    },
-    NA19678: {
+    }],
+    NA19678: [{
       ab: 0,
       ad: "77,0",
       alleles: ["TC", "TC"],
@@ -41,8 +41,8 @@ export const VARIANT = {
       gq: 99,
       numAlt: 0,
       pl: "0,232,3036",
-    },
-    NA19679: {
+    }],
+    NA19679: [{
       ab: 0,
       ad: "71,0",
       alleles: ["TC", "TC"],
@@ -51,7 +51,7 @@ export const VARIANT = {
       gq: 99,
       numAlt: 0,
       pl: "0,213,1918",
-    },
+    }],
   },
   hgmd: {accession: null, class: null},
   liftedOverChrom: "",
@@ -101,19 +101,19 @@ export const SV_VARIANT = {
   genomeVersion: "37",
   geneIds: ['ENSG00000228198', 'ENSG00000164458'],
   genotypes: {
-    NA19675: {
+    NA19675: [{
       cn: 0,
       qs: 57,
       numAlt: -1,
-    },
-    NA19678: {
+    }],
+    NA19678: [{
       cn: 2,
       numAlt: -1,
-    },
-    NA19679: {
+    }],
+    NA19679: [{
       cn: 2,
       numAlt: -1,
-    },
+    }],
   },
   liftedOverChrom: "",
   liftedOverGenomeVersion: "38",
