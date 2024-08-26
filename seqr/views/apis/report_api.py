@@ -31,8 +31,8 @@ logger = SeqrLogger(__name__)
 MONDO_BASE_URL = 'https://monarchinitiative.org/v3/api/entity'
 
 
-anvil_enabled_analyst_required = active_user_has_policies_and_passes_test(
-    lambda user: user_is_analyst(user) and anvil_enabled())
+airtable_enabled_analyst_required = active_user_has_policies_and_passes_test(
+    lambda user: user_is_analyst(user) and AirtableSession.is_airtable_enabled())
 
 
 @pm_or_analyst_required
@@ -115,7 +115,7 @@ PHENOTYPE_PROJECT_CATEGORIES = [
 ]
 
 
-@anvil_enabled_analyst_required
+@airtable_enabled_analyst_required
 def anvil_export(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
@@ -353,7 +353,7 @@ HPO_QUALIFIERS = {
 }
 
 
-@anvil_enabled_analyst_required
+@airtable_enabled_analyst_required
 def gregor_export(request):
     request_json = json.loads(request.body)
     missing_required_fields = [field for field in ['consentCode', 'deliveryPath'] if not request_json.get(field)]
