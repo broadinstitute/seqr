@@ -174,7 +174,7 @@ class Command(BaseCommand):
             session.safe_patch_records_by_id('PDO', pdo_ids, {'PDOStatus': AVAILABLE_PDO_STATUS})
 
         skipped_pdo_samples = {
-            pdo_id: sample_ids for pdo_id, sample_ids in skipped_pdo_samples.items() if pdo_id in pdo_ids
+            pdo_id: sample_record_ids for pdo_id, sample_record_ids in skipped_pdo_samples.items() if pdo_id in pdo_ids
         }
         if not skipped_pdo_samples:
             return []
