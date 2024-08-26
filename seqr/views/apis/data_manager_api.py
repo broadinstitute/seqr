@@ -24,7 +24,7 @@ from seqr.utils.vcf_utils import validate_vcf_exists
 from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
-    post_process_rna_data
+    post_process_rna_data, convert_django_meta_to_http_headers
 from seqr.views.utils.file_utils import parse_file, get_temp_file_path, load_uploaded_file, persist_temp_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -618,7 +618,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 @data_manager_required
 @csrf_exempt
 def proxy_to_kibana(request):
-    headers = _convert_django_meta_to_http_headers(request.META)
+    headers = convert_django_meta_to_http_headers(request)
     headers['Host'] = KIBANA_SERVER
     if KIBANA_ELASTICSEARCH_PASSWORD:
         token = base64.b64encode('kibana:{}'.format(KIBANA_ELASTICSEARCH_PASSWORD).encode('utf-8'))
@@ -652,19 +652,3 @@ def proxy_to_kibana(request):
     except (ConnectionError, RequestConnectionError) as e:
         logger.error(str(e), request.user)
         return HttpResponse("Error: Unable to connect to Kibana {}".format(e), status=400)
-
-
-def _convert_django_meta_to_http_headers(request_meta_dict):
-    """Converts django request.META dictionary into a dictionary of HTTP headers."""
-
-    def convert_key(key):
-        # converting Django's all-caps keys (eg. 'HTTP_RANGE') to regular HTTP header keys (eg. 'Range')
-        return key.replace("HTTP_", "").replace('_', '-').title()
-
-    http_headers = {
-        convert_key(key): str(value).lstrip()
-        for key, value in request_meta_dict.items()
-        if key.startswith("HTTP_") or (key in ('CONTENT_LENGTH', 'CONTENT_TYPE') and value)
-    }
-
-    return http_headers
