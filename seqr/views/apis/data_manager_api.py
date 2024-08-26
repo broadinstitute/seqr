@@ -471,14 +471,8 @@ def get_loaded_projects(request, sample_type, dataset_type):
     projects = get_internal_projects().filter(is_demo=False)
     project_samples = None
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        try:
-            airtable_session = AirtableSession(request.user)
-        except ValueError:
-            # Airtable is not configured for the deployment
-            airtable_session = None
-        if airtable_session:
-            project_samples = _fetch_airtable_loadable_project_samples(airtable_session)
-            import pdb; pdb.set_trace()
+        if AirtableSession.is_airtable_enabled():
+            project_samples = _fetch_airtable_loadable_project_samples(request.user)
             projects = projects.filter(guid__in=project_samples.keys())
         exclude_sample_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
         # Include projects with either the matched sample type OR with no loaded data
@@ -499,8 +493,8 @@ def get_loaded_projects(request, sample_type, dataset_type):
     return create_json_response({'projects': list(projects)})
 
 
-def _fetch_airtable_loadable_project_samples(session):
-    pdos = session.fetch_records(
+def _fetch_airtable_loadable_project_samples(user):
+    pdos = AirtableSession(user).fetch_records(
         'PDO', fields=['PassingCollaboratorSampleIDs', 'SeqrIDs', 'SeqrProjectURL'],
         or_filters={'PDOStatus': LOADABLE_PDO_STATUSES}
     )
