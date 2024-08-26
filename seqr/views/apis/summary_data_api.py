@@ -274,7 +274,7 @@ GREGOR_CATEGORY = 'gregor'
 def _get_metadata_projects(request, project_guid):
     is_analyst = user_is_analyst(request.user)
     is_all_projects = project_guid == ALL_PROJECTS
-    include_airtable = 'true' in request.GET.get('includeAirtable', '') and is_analyst and not is_all_projects
+    include_airtable = 'true' in request.GET.get('includeAirtable', '') and AirtableSession.is_airtable_enabled() and is_analyst and not is_all_projects
     if is_all_projects:
         projects = get_internal_projects() if is_analyst else Project.objects.filter(
             guid__in=get_project_guids_user_can_view(request.user))
