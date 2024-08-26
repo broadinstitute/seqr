@@ -9,7 +9,6 @@ class GcnvHailTableQuery(SvHailTableQuery):
     DATA_TYPE = 'SV_WES'
     SV_TYPE_PREFIX = 'gCNV_'
 
-
     #  gCNV data has no ref/ref calls so a missing entry indicates ref/ref
     GENOTYPE_QUERY_MAP = {
         **SvHailTableQuery.GENOTYPE_QUERY_MAP,
