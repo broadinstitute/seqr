@@ -355,6 +355,10 @@ class BaseHailTableQuery(object):
             ]
 
     def import_and_filter_multiple_project_hts(self, project_samples, n_partitions=MAX_PARTITIONS, **kwargs):
+        """
+        Imports, prefilters, and filters multiple entries tables per sample type.
+        Returns the merged and filtered entries table and ch table.
+        """
         entries_hts_map: dict[str, list[tuple[hl.Table, dict]]] = {}
         self._load_prefiltered_project_hts(project_samples, entries_hts_map, n_partitions=n_partitions, **kwargs)
 
@@ -382,6 +386,10 @@ class BaseHailTableQuery(object):
     def _load_prefiltered_project_hts(
         self, project_samples, entries_hts_map, n_partitions=MAX_PARTITIONS, **kwargs
     ):
+        """
+        For each sample type, loads and pre-filters a list of project tables.
+        The project tables are chunked such that for both sample types, the same variants should be in the same chunk.
+        """
         # Need to chunk tables or else evaluating table globals throws LineTooLong exception
         # However, minimizing number of chunks minimizes number of aggregations/ evals and improves performance
         # Adapted from https://discuss.hail.is/t/importing-many-sample-specific-vcfs/2002/8
