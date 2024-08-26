@@ -426,11 +426,10 @@ SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER = ('social_core.pipeline.social_auth.associa
 SOCIAL_AUTH_PIPELINE_LOG = ('seqr.utils.social_auth_pipeline.log_signed_in',)
 SOCIAL_AUTH_PIPELINE_CLOUD_BASE = (
     'social_core.pipeline.user.get_username',
-    'social_core.pipeline.user.create_user',
-    SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER,
-    'social_core.pipeline.social_auth.load_extra_data',
-    'social_core.pipeline.user.user_details'
-)
+    'social_core.pipeline.user.create_user') + \
+    SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER + \
+    ('social_core.pipeline.social_auth.load_extra_data',
+     'social_core.pipeline.user.user_details')
 
 TERRA_PERMS_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_PERMS_CACHE_EXPIRE_SECONDS', 60)
 TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS', 300)
