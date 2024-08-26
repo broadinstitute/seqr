@@ -46,7 +46,7 @@ DisplayVariants.propTypes = {
 
 const BaseVariantSearchResultsContent = React.memo(({
   match, variantSearchDisplay, searchedVariantExportConfig, totalVariantsCount, additionalDisplayEdit,
-  displayVariants, compoundHetToggle,
+  displayVariants, compoundHetToggle, ...props
 }) => {
   const { searchHash } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
@@ -61,7 +61,7 @@ const BaseVariantSearchResultsContent = React.memo(({
       </Grid.Column>
       <Grid.Column width={11} floated="right" textAlign="right">
         {additionalDisplayEdit}
-        <SearchDisplayForm formLocation="Top" match={match} searchOnSubmit />
+        <SearchDisplayForm formLocation="Top" match={match} searchOnSubmit {...props} />
         <HorizontalSpacer width={10} />
         {searchedVariantExportConfig && <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" disabled={totalVariantsCount > 1000} />}
         <HorizontalSpacer width={10} />
@@ -71,7 +71,7 @@ const BaseVariantSearchResultsContent = React.memo(({
     <DisplayVariants key="variants" displayVariants={displayVariants} compoundHetToggle={compoundHetToggle} />,
     <LargeRow key="bottomPagination">
       <Grid.Column width={11} floated="right" textAlign="right">
-        <SearchDisplayForm formLocation="Bottom" match={match} paginationOnly searchOnSubmit />
+        <SearchDisplayForm formLocation="Bottom" match={match} paginationOnly searchOnSubmit {...props} />
         <HorizontalSpacer width={10} />
         <Button onClick={scrollToTop}>Scroll To Top</Button>
         <HorizontalSpacer width={10} />
