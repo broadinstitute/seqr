@@ -67,7 +67,7 @@ def send_project_notification(project, notification, email, subject):
     try:
         send_html_email(**email_kwargs)
     except Exception as e:
-        logger.error(f'Error sending project email for {project.guid}: {e}', detail=email_kwargs)
+        logger.error(f'Error sending project email for {project.guid}: {e}', extra={'detail': email_kwargs})
 
 
 def _set_bulk_notification_stream(message):
