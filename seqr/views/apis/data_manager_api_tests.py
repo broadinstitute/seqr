@@ -1481,6 +1481,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
 
         # test with airtable filter
+        # TODO failing
         responses.add(
             responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/PDO', json=AIRTABLE_PDO_RECORDS, status=200,
         )
