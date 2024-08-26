@@ -547,6 +547,8 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_group_members = patcher.start()
         self.mock_get_group_members.side_effect = get_group_members_side_effect
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', MOCK_AIRTABLE_KEY)
+        patcher.start()
         super(AnvilAuthenticationTestCase, self).setUp()
 
     @classmethod
@@ -565,6 +567,7 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
 
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
+MOCK_AIRTABLE_KEY = 'airflow_access'
 DAG_NAME = 'LOADING_PIPELINE'
 PROJECT_GUID = 'R0001_1kg'
 
@@ -720,6 +723,10 @@ class AirtableTest(object):
             expected_params.update(additional_params)
         self.assertDictEqual(responses.calls[call_index].request.params, expected_params)
         self.assertListEqual(self._get_list_param(responses.calls[call_index].request, 'fields%5B%5D'), fields)
+        self.assert_expected_airtable_headers(call_index)
+
+    def assert_expected_airtable_headers(self, call_index):
+        self.assertEqual(responses.calls[call_index].request.headers['Authorization'], f'Bearer {MOCK_AIRTABLE_KEY}')
 
     @staticmethod
     def _get_list_param(call, param):
