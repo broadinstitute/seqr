@@ -30,6 +30,7 @@ class AuthenticationTestCase(TestCase):
     NO_POLICY_USER = 'no_policy'
 
     ES_HOSTNAME = 'testhost'
+    MOCK_AIRTABLE_KEY = ''
 
     super_user = None
     analyst_user = None
@@ -43,6 +44,9 @@ class AuthenticationTestCase(TestCase):
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', self.ES_HOSTNAME)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', self.MOCK_AIRTABLE_KEY)
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.permissions_utils.SEQR_PRIVACY_VERSION', 2.1)
@@ -509,6 +513,7 @@ def get_group_members_side_effect(user, group, use_sa_credentials=False):
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
     ES_HOSTNAME = ''
+    MOCK_AIRTABLE_KEY = 'airflow_access'
 
     # mock the terra apis
     def setUp(self):
@@ -547,9 +552,6 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_group_members = patcher.start()
         self.mock_get_group_members.side_effect = get_group_members_side_effect
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', MOCK_AIRTABLE_KEY)
-        patcher.start()
-        self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
 
     @classmethod
@@ -568,7 +570,6 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
 
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
-MOCK_AIRTABLE_KEY = 'airflow_access'
 DAG_NAME = 'LOADING_PIPELINE'
 PROJECT_GUID = 'R0001_1kg'
 
@@ -727,7 +728,7 @@ class AirtableTest(object):
         self.assert_expected_airtable_headers(call_index)
 
     def assert_expected_airtable_headers(self, call_index):
-        self.assertEqual(responses.calls[call_index].request.headers['Authorization'], f'Bearer {MOCK_AIRTABLE_KEY}')
+        self.assertEqual(responses.calls[call_index].request.headers['Authorization'], f'Bearer {self.MOCK_AIRTABLE_KEY}')
 
     @staticmethod
     def _get_list_param(call, param):
