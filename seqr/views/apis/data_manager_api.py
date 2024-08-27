@@ -513,19 +513,18 @@ def load_data(request):
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and has_airtable:
         individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
 
-    loading_args = (project_models, sample_type, dataset_type, request_json['filePath'], request.user)
+    loading_args = (
+        project_models, sample_type, dataset_type, request_json['genomeVersion'], request_json['filePath'],
+    )
     if has_airtable:
         success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
         error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
         trigger_airflow_data_loading(
-            *loading_args, success_message, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message,
-            is_internal=True, individual_ids=individual_ids,
+            *loading_args, user=request.user, success_message=success_message, error_message=error_message,
+            success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True, individual_ids=individual_ids,
         )
     else:
-        genome_version = '38'  # TODO get from UI and use loading_args
-        request_json, _ = prepare_data_loading_request(
-            project_models, sample_type, dataset_type, genome_version, data_path, user, pedigree_dir=DATASETS_DIR,
-        )
+        request_json, _ = prepare_data_loading_request(*loading_args, user=request.user, pedigree_dir=DATASETS_DIR)
         _trigger_loading_pipeline_api(request_json)
 
     return create_json_response({'success': True})

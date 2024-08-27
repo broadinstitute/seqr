@@ -11,6 +11,7 @@ import {
   DATASET_TYPE_SV_CALLS,
   DATASET_TYPE_MITO_CALLS,
   DATASET_TYPE_SNV_INDEL_CALLS,
+  GENOME_VERSION_FIELD,
 } from 'shared/utils/constants'
 
 const formatProjectOption = opt => ({
@@ -68,6 +69,11 @@ const LOAD_DATA_PAGES = [
           DATASET_TYPE_SV_CALLS,
           DATASET_TYPE_MITO_CALLS,
         ].map(value => ({ value, text: value.replace('_', '/') })),
+        validate: validators.required,
+      },
+      {
+        ...GENOME_VERSION_FIELD,
+        component: ButtonRadioGroup,
         validate: validators.required,
       },
     ],

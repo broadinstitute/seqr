@@ -21,15 +21,12 @@ class DagRunningException(Exception):
     pass
 
 
-def trigger_airflow_data_loading(projects: list[Project], sample_type: str, dataset_type: str, data_path: str, user: User,
-                                 success_message: str, success_slack_channel: str, error_message: str,
-                                 genome_version: str = GENOME_VERSION_GRCh38, is_internal: bool = False,
-                                 individual_ids: list[str] = None):
+def trigger_airflow_data_loading(*args, user: User, success_message: str, success_slack_channel: str,
+                                 error_message: str, is_internal: bool = False, individual_ids: list[str] = None):
 
     success = True
     updated_variables, gs_path = prepare_data_loading_request(
-        projects, sample_type, dataset_type, genome_version, data_path, user,
-        pedigree_dir=SEQR_V3_PEDIGREE_GS_PATH, individual_ids=individual_ids,
+        *args, user, pedigree_dir=SEQR_V3_PEDIGREE_GS_PATH, individual_ids=individual_ids,
     )
     updated_variables['sample_source'] = 'Broad_Internal' if is_internal else 'AnVIL'
     upload_info = [f'Pedigree files have been uploaded to {gs_path}']

@@ -1587,7 +1587,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.mock_subprocess.return_value = mock_subprocess
         mock_subprocess.wait.return_value = 0
         mock_subprocess.communicate.return_value = b'', b'File not found'
-        body = {'filePath': 'gs://test_bucket/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'projects': [
+        body = {'filePath': 'gs://test_bucket/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'genomeVersion': '38', 'projects': [
             json.dumps({'projectGuid': 'R0001_1kg'}), json.dumps(PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
         ]}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
