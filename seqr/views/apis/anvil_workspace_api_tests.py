@@ -8,7 +8,7 @@ import responses
 from seqr.models import Project, Family, Individual
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     validate_anvil_vcf, grant_workspace_access, add_workspace_data, get_anvil_vcf_list, get_anvil_igv_options
-from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, AirflowTestCase, \
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, AirflowTestCase, AirtableTest, \
     TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME, TEST_WORKSPACE_NAME1, TEST_NO_PROJECT_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME2
 from seqr.views.utils.terra_api_utils import remove_token, TerraAPIException, TerraRefreshTokenFailedException
 from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
@@ -67,7 +67,6 @@ REQUEST_BODY.update(VALIDATE_VFC_RESPONSE)
 TEMP_PATH = '/temp_path/temp_filename'
 
 MOCK_AIRTABLE_URL = 'http://testairtable'
-MOCK_AIRTABLE_KEY = 'mock_key' # nosec
 
 PROJECT1_SAMPLES = ['HG00735', 'NA19678', 'NA20870', 'HG00732', 'NA19675_1', 'NA20874', 'HG00733', 'HG00731']
 PROJECT2_SAMPLES = ['NA20885', 'NA19675_1', 'NA19678', 'HG00735']
@@ -484,7 +483,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         ])
 
 
-class LoadAnvilDataAPITest(AirflowTestCase):
+class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
     fixtures = ['users', 'social_auth', 'reference_data', '1kg_project']
 
     LOADING_PROJECT_GUID = f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
@@ -509,9 +508,6 @@ class LoadAnvilDataAPITest(AirflowTestCase):
     def setUp(self):
         # Set up api responses
         responses.add(responses.POST, f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', status=400)
-        patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', MOCK_AIRTABLE_KEY)
-        patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', MOCK_AIRTABLE_URL)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -770,7 +766,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             'Number of Samples': 8 if test_add_data else 3,
             'Status': 'Loading',
         }}]})
-        self.assertEqual(responses.calls[-1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))
+        self.assert_expected_airtable_headers(-1)
 
         dag_json = {
             'projects_to_run': [project.guid],

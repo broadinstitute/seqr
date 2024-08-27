@@ -405,8 +405,8 @@ EMPTY_PROJECT_OPTION = {
     'dataTypeLastLoaded': None,
     'name': 'Empty Project',
     'projectGuid': 'R0002_empty',
-    'sampleIds': ['HG00738', 'HG00739'],
 }
+EMPTY_PROJECT_SAMPLES_OPTION = {**EMPTY_PROJECT_OPTION, 'sampleIds': ['HG00738', 'HG00739']}
 
 AIRTABLE_PDO_RECORDS = {
     'records': [
@@ -1390,8 +1390,8 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
 
+    @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing', 'ext-data'])
     @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
-    @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated', lambda x: True)
     @responses.activate
     def test_get_loaded_projects(self):
         url = reverse(get_loaded_projects, args=['WGS', 'SV'])
@@ -1417,20 +1417,23 @@ class DataManagerAPITest(AirtableTest):
         snv_indel_url = url.replace('SV', 'SNV_INDEL')
         response = self.client.get(snv_indel_url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'projects': [EMPTY_PROJECT_OPTION, PROJECT_SAMPLES_OPTION]})
-        self.assert_expected_airtable_call(
-            call_index=0, filter_formula="OR(PDOStatus='Methods (Loading)',PDOStatus='On hold for phenotips, but ready to load')",
-            fields=['PassingCollaboratorSampleIDs', 'SeqrIDs', 'SeqrProjectURL'],
-        )
+        self.assertDictEqual(response.json(), {'projects': self.WGS_PROJECT_OPTIONS})
+        self._assert_expected_get_projects_requests()
 
         # test projects with no data loaded are returned for any sample type
         response = self.client.get(snv_indel_url.replace('WGS', 'WES'))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'projects': [EMPTY_PROJECT_OPTION]})
+        self.assertDictEqual(response.json(), {'projects': self.WES_PROJECT_OPTIONS})
 
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
+
+    WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_OPTION, PROJECT_OPTION]
+    WES_PROJECT_OPTIONS = [
+        {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:25:55.397Z'},
+        EMPTY_PROJECT_OPTION,
+    ]
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.os.path.isfile')
@@ -1452,6 +1455,9 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_does_file_exist.return_value = True
         self.mock_file_iter.return_value += stdout
 
+    def _assert_expected_get_projects_requests(self):
+        self.assertEqual(len(responses.calls), 0)
+
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
@@ -1459,6 +1465,8 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 
     LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
     PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
+    WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION, PROJECT_SAMPLES_OPTION]
+    WES_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -1505,9 +1513,13 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Deleting indices is disabled for the hail backend')
 
-    def test_get_loaded_projects(self, *args, **kwargs):
-        # Test relies on the local-only project data, and has no real difference for local/ non-local behavior
-        pass
+    def _assert_expected_get_projects_requests(self):
+        self.assertEqual(len(responses.calls), 1)
+        self.assert_expected_airtable_call(
+            call_index=0,
+            filter_formula="OR(PDOStatus='Methods (Loading)',PDOStatus='On hold for phenotips, but ready to load')",
+            fields=['PassingCollaboratorSampleIDs', 'SeqrIDs', 'SeqrProjectURL'],
+        )
 
     @staticmethod
     def _get_dag_variable_overrides(*args, **kwargs):
