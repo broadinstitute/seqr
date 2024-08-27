@@ -467,16 +467,19 @@ def get_loaded_projects(request, sample_type, dataset_type):
     projects = get_internal_projects().filter(is_demo=False)
     project_samples = None
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        project_samples = _fetch_airtable_loadable_project_samples(request.user)
-        projects = projects.filter(guid__in=project_samples.keys())
+        if AirtableSession.is_airtable_enabled():
+            project_samples = _fetch_airtable_loadable_project_samples(request.user)
+            projects = projects.filter(guid__in=project_samples.keys())
         exclude_sample_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
         # Include projects with either the matched sample type OR with no loaded data
         projects = projects.exclude(family__individual__sample__sample_type=exclude_sample_type)
     else:
+        # All other data types can only be loaded to projects which already have loaded data
         projects = projects.filter(family__individual__sample__sample_type=sample_type)
 
     projects = projects.distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
-        'family__individual__sample__loaded_date', filter=Q(family__individual__sample__dataset_type=dataset_type),
+        'family__individual__sample__loaded_date',
+        filter=Q(family__individual__sample__dataset_type=dataset_type) & Q(family__individual__sample__sample_type=sample_type),
     ))
 
     if project_samples:
