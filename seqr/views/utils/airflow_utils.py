@@ -26,10 +26,10 @@ class DagRunningException(Exception):
     pass
 
 
-def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type: str, data_path: str, user: User,
-                         success_message: str, success_slack_channel: str, error_message: str,
-                         genome_version: str = GENOME_VERSION_GRCh38, is_internal: bool = False,
-                         individual_ids: list[str] = None, additional_project_files: dict = None):
+def trigger_airflow_data_loading(projects: list[Project], sample_type: str, dataset_type: str, data_path: str, user: User,
+                                 success_message: str, success_slack_channel: str, error_message: str,
+                                 genome_version: str = GENOME_VERSION_GRCh38, is_internal: bool = False,
+                                 individual_ids: list[str] = None, additional_project_files: dict = None):
 
     success = True
     project_guids = sorted([p.guid for p in projects])

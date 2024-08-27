@@ -21,7 +21,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_exists
 
-from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
+from seqr.views.utils.airflow_utils import trigger_airflow_data_loading, write_data_loading_pedigree
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data
@@ -524,15 +524,16 @@ def load_data(request):
 
     additional_project_files = None
     individual_ids = None
-    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and AirtableSession.is_airtable_enabled():
         individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
         additional_project_files = {
             project_guid: (f'{project_guid}_ids', ['s'], [{'s': sample_id} for sample_id in sample_ids])
             for project_guid, sample_ids in project_samples.items()
         }
 
+    # TODO add support for local trigger
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
-    trigger_data_loading(
+    trigger_airflow_data_loading(
         project_models, sample_type, dataset_type, request_json['filePath'], request.user, success_message,
         SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
         is_internal=True, individual_ids=individual_ids, additional_project_files=additional_project_files,
