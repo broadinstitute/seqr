@@ -15,6 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.communication_utils import send_project_notification
+from seqr.utils.search.add_data_utils import prepare_data_loading_request
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
@@ -32,7 +33,7 @@ from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data
 
 from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
+from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL, DATASETS_DIR
 
 logger = SeqrLogger(__name__)
 
@@ -507,17 +508,25 @@ def load_data(request):
         missing = sorted(set(project_samples.keys()) - {p.guid for p in project_models})
         return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
 
+    has_airtable = AirtableSession.is_airtable_enabled()
     individual_ids = None
-    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and AirtableSession.is_airtable_enabled():
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and has_airtable:
         individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
 
-    # TODO add support for local trigger
-    success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
-    trigger_airflow_data_loading(
-        project_models, sample_type, dataset_type, request_json['filePath'], request.user, success_message,
-        SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
-        is_internal=True, individual_ids=individual_ids,
-    )
+    loading_args = (project_models, sample_type, dataset_type, request_json['filePath'], request.user)
+    if has_airtable:
+        success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
+        error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
+        trigger_airflow_data_loading(
+            *loading_args, success_message, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message,
+            is_internal=True, individual_ids=individual_ids,
+        )
+    else:
+        genome_version = '38'  # TODO get from UI and use loading_args
+        request_json, _ = prepare_data_loading_request(
+            project_models, sample_type, dataset_type, genome_version, data_path, user, pedigree_dir=DATASETS_DIR,
+        )
+        _trigger_loading_pipeline_api(request_json)
 
     return create_json_response({'success': True})
 
@@ -587,6 +596,10 @@ def _get_loaded_samples(project_samples, user):
 def _is_loaded_airtable_sample(sample, project_guid):
     return f'{BASE_URL}project/{project_guid}/project_page' in sample['SeqrProject'] and any(
         status in AVAILABLE_PDO_STATUSES for status in sample['PDOStatus'])
+
+
+def _trigger_loading_pipeline_api(request_json):
+   pass  # TODO actually implement
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

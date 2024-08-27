@@ -155,6 +155,8 @@ else:
     MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR, 'media/')
     MEDIA_URL = '/media/'
 
+DATASETS_DIR = os.environ.get('DATASETS_DIR')
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
