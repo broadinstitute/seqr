@@ -1389,6 +1389,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
+        # TODo clean up test for Local vs Anvil
         body['filePath'] = body['filePath'].replace('gs://test_bucket', '/local_dir')
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -1507,6 +1508,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
     LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
+    CALLSET_DIR = 'gs://test_bucket'
     PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION, PROJECT_SAMPLES_OPTION]
     WES_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
@@ -1572,6 +1574,13 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'sample_type': 'WGS',
             'dataset_type': 'MITO',
         }
+    
+    def _assert_expected_load_data_requests(self, **kwargs):
+        self.assert_airflow_calls(**kwargs)
+
+    def _set_loading_trigger_error(self):
+        self.set_dag_trigger_error_response(status=400)
+        self.mock_authorized_session.reset_mock()
 
     @responses.activate
     @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
@@ -1582,12 +1591,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.check_pm_login(url)
 
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
-        mock_subprocess = mock.MagicMock()
-        self.mock_subprocess.side_effect = None
-        self.mock_subprocess.return_value = mock_subprocess
-        mock_subprocess.wait.return_value = 0
-        mock_subprocess.communicate.return_value = b'', b'File not found'
-        body = {'filePath': 'gs://test_bucket/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'genomeVersion': '38', 'projects': [
+        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'genomeVersion': '38', 'projects': [
             json.dumps({'projectGuid': 'R0001_1kg'}), json.dumps(PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
         ]}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1599,8 +1603,8 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
-        self.assert_airflow_calls()
-        self._has_expected_gs_calls(mock_open, 'MITO')
+        self._assert_expected_load_data_requests()
+        self._has_expected_ped_files(mock_open, 'MITO')
 
         dag_json = """{
     "projects_to_run": [
@@ -1613,6 +1617,29 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     "reference_genome": "GRCh38",
     "sample_source": "Broad_Internal"
 }"""
+        self._assert_success_notification(dag_json)
+
+        # Test loading trigger error
+        self._set_loading_trigger_error()
+        mock_open.reset_mock()
+        responses.calls.reset()
+
+        body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf', 'sampleType': 'WES'})
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+
+        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV')
+        self._has_expected_ped_files(mock_open, 'SV', sample_type='WES')
+        self._assert_error_notification(dag_json)
+
+        # Test loading with sample subset
+        mock_open.reset_mock()
+        body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(PROJECT_SAMPLES_OPTION)]})
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self._test_load_sample_subset(response, url, body, mock_open)
+
+    def _assert_success_notification(self, dag_json):
         message = f"""*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
 
         Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/MITO/pedigrees/WGS/
@@ -1621,24 +1648,9 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         ```{dag_json}```
     """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message)
-
-        # Test loading trigger error
-        self.set_dag_trigger_error_response(status=400)
-        self.mock_authorized_session.reset_mock()
         self.mock_slack.reset_mock()
-        self.mock_subprocess.reset_mock()
-        mock_open.reset_mock()
-        responses.calls.reset()
-        mock_subprocess.reset_mock()
-        mock_subprocess.communicate.return_value = b'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_SV/\ngs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal_SV/v01/\ngs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal_GCNV/v02/', b''
 
-        body.update({'datasetType': 'SV', 'filePath': 'gs://test_bucket/sv_callset.vcf', 'sampleType': 'WES'})
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
-
-        self.assert_airflow_calls(trigger_error=True, dataset_type='GCNV')
-        self._has_expected_gs_calls(mock_open, 'SV', is_second_dag=True, sample_type='WES')
+    def _assert_error_notification(self, dag_json):
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
         errors = [call.args[0] for call in self.mock_airflow_logger.error.call_args_list]
@@ -1654,11 +1666,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
-        # Test loading with sample subset
-        mock_open.reset_mock()
-        mock_subprocess.reset_mock()
-        body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(PROJECT_SAMPLES_OPTION)]})
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+    def _test_load_sample_subset(self, response, url, body, mock_open):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
@@ -1694,8 +1702,6 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             fields=['SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
 
-        self.mock_subprocess.reset_mock()
-        mock_subprocess.reset_mock()
         responses.calls.reset()
         responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS, status=200)
         body['projects'] = [
@@ -1706,14 +1712,14 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
-        self._has_expected_gs_calls(mock_open, 'SNV_INDEL', sample_type='WES', has_project_subset=True)
+        self._has_expected_ped_files(mock_open, 'SNV_INDEL', sample_type='WES', has_project_subset=True)
         self.assert_expected_airtable_call(
             call_index=0,
             filter_formula="OR({CollaboratorSampleID}='NA19678')",
             fields=['CollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
 
-    def _has_expected_gs_calls(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False, **kwargs):
+    def _has_expected_ped_files(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False):
         mock_open.assert_has_calls([
             mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in self.PROJECTS
         ], any_order=True)
@@ -1737,3 +1743,4 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             f'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/GRCh38/{dataset_type}/pedigrees/{sample_type}/',
             stdout=-1, stderr=-2, shell=True,  # nosec
         )
+        self.mock_subprocess.reset_mock()
