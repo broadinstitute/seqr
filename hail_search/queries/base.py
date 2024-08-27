@@ -311,7 +311,7 @@ class BaseHailTableQuery(object):
             self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
             self._ht = self._filter_annotated_table(self._ht, **kwargs)
 
-    def import_and_filter_entries_ht(self, project_samples, num_families: int, **kwargs):
+    def import_and_filter_entries_ht(self, project_samples, num_families: int,  n_partitions=MAX_PARTITIONS, **kwargs):
         """
         Imports, prefilters, and filters one entries table (a family or project table) per sample type.
         Returns the filtered entries table and the filtered ch table.
@@ -334,8 +334,10 @@ class BaseHailTableQuery(object):
             return self._filter_entries_table(ht, sorted_family_sample_data, **kwargs)
 
         # Project has multiple sample types
-        ht_list, comp_het_list = self._filter_entries_table_multiple_sample_types(entries_hts_map, **kwargs)
-        return ht_list[0], comp_het_list[0]
+        unmerged_hts, unmerged_comp_het_hts = self._filter_entries_table_multiple_sample_types(entries_hts_map, **kwargs)
+        merged_ht = self._merge_project_hts(unmerged_hts, n_partitions)
+        merged_comp_het_ht = self._merge_project_hts(unmerged_comp_het_hts, n_partitions)
+        return merged_ht, merged_comp_het_ht
 
     def _load_prefiltered_family_ht(self, family_guid, sample_types, entries_hts_map, project_sample_type_data, **kwargs):
         for sample_type in sample_types:

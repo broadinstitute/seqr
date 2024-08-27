@@ -169,6 +169,250 @@ MULTI_PROJECT_VARIANT2['genotypes']['I000015_na20885'] = [{
 
 NO_GENOTYPE_GCNV_VARIANT = {**GCNV_VARIANT4, 'numExon': 8, 'end': 38736268}
 
+FAMILY_4_VARIANT = {
+    'xpos': 4052038257,
+    'rsid': None,
+    'CAID': 'CA10604324',
+    'genotypes': {
+        'I00001_BON_UC4991': [
+            {
+                'sampleId': 'BON_UC499_1_1',
+                'sampleType': 'WES',
+                'familyGuid': 'F000004_4',
+                'individualGuid': 'I00001_BON_UC4991',
+                'numAlt': 1,
+                'dp': 14,
+                'gq': 99,
+                'ab': 0.3571428656578064,
+            },
+            {
+                'sampleId': 'BON_UC499_1_1',
+                'sampleType': 'WGS',
+                'familyGuid': 'F000004_4',
+                'individualGuid': 'I00001_BON_UC4991',
+                'numAlt': 1,
+                'dp': 36,
+                'gq': 99,
+                'ab': 0.3611111044883728,
+            },
+        ],
+        'I00003_BON_UC4993': [
+            {
+                'sampleId': 'BON_UC499_3_1',
+                'sampleType': 'WES',
+                'familyGuid': 'F000004_4',
+                'individualGuid': 'I00003_BON_UC4993',
+                'numAlt': 0,
+                'dp': None,
+                'gq': 40,
+                'ab': None,
+            },
+            {
+                'sampleId': 'BON_UC499_3_1',
+                'sampleType': 'WGS',
+                'familyGuid': 'F000004_4',
+                'individualGuid': 'I00003_BON_UC4993',
+                'numAlt': 0,
+                'dp': 34,
+                'gq': 40,
+                'ab': 0.0,
+            },
+        ],
+        'I00004_BON_UC4994': [
+            {
+                'sampleId': 'BON_UC499_4_1',
+                'sampleType': 'WES',
+                'familyGuid': 'F000004_4',
+                'individualGuid': 'I00004_BON_UC4994',
+                'numAlt': 0,
+                'dp': None,
+                'gq': 0,
+                'ab': None,
+            },
+            {
+                'sampleId': 'BON_UC499_4_1',
+                'sampleType': 'WGS',
+                'familyGuid': 'F000004_4',
+                'individualGuid': 'I00004_BON_UC4994',
+                'numAlt': 1,
+                'dp': 29,
+                'gq': 99,
+                'ab': 0.517241358757019,
+            },
+        ],
+    },
+    'populations': {
+        'seqr': {'af': 0.000141964788781479, 'ac': 6, 'an': 42264, 'hom': 0},
+        'topmed': {
+            'af': 6.044809924787842e-05,
+            'ac': 16,
+            'an': 264690,
+            'hom': 0,
+            'het': 16,
+        },
+        'exac': {
+            'af': 0.0,
+            'ac': 0,
+            'an': 0,
+            'hom': 0,
+            'hemi': 0,
+            'het': 0,
+            'filter_af': 0.0,
+        },
+        'gnomad_exomes': {
+            'af': 0.0,
+            'ac': 0,
+            'an': 0,
+            'hom': 0,
+            'hemi': 0,
+            'filter_af': 0.0,
+        },
+        'gnomad_genomes': {
+            'af': 0.0,
+            'ac': 0,
+            'an': 0,
+            'hom': 0,
+            'hemi': 0,
+            'filter_af': 0.0,
+        },
+    },
+    'predictions': {
+        'cadd': 18.1200008392334,
+        'eigen': None,
+        'mpc': None,
+        'primate_ai': None,
+        'splice_ai': 0.0,
+        'splice_ai_consequence': 'No consequence',
+        'mut_taster': None,
+        'polyphen': None,
+        'revel': None,
+        'sift': None,
+        'fathmm': None,
+        'mut_pred': None,
+        'vest': None,
+        'gnomad_noncoding': 2.711364507675171,
+    },
+    'chrom': '4',
+    'pos': 52038257,
+    'ref': 'CAT',
+    'alt': 'C',
+    'mainTranscriptId': 'ENST00000381431',
+    'selectedMainTranscriptId': None,
+    'familyGuids': ['F000004_4', 'F000004_4'],
+    'genotypeFilters': '',
+    'variantId': '4-52038257-CAT-C',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': '4',
+    'liftedOverPos': 52904423,
+    'clinvar': {
+        'alleleId': 267097,
+        'conflictingPathogenicities': None,
+        'goldStars': 2,
+        'submitters': [
+            'GeneDx',
+            'Eurofins Ntd Llc (ga)',
+            'Natera, Inc.',
+            'Invitae',
+            'Clinical Genetics and Genomics, Karolinska University Hospital',
+            'Revvity Omics, Revvity',
+            'Illumina Laboratory Services, Illumina',
+            'Baylor Genetics',
+        ],
+        'conditions': [
+            'not provided',
+            'not provided',
+            'Autosomal recessive limb-girdle muscular dystrophy type 2E',
+            'Autosomal recessive limb-girdle muscular dystrophy type 2E',
+            'not provided',
+            'Autosomal recessive limb-girdle muscular dystrophy type 2E',
+            'Qualitative or quantitative defects of beta-sarcoglycan',
+            'Autosomal recessive limb-girdle muscular dystrophy type 2E',
+        ],
+        'pathogenicity': 'Pathogenic/Likely_pathogenic',
+        'assertions': [],
+        'version': '2024-02-21',
+    },
+    'hgmd': {'accession': 'CD086203', 'class': 'DM'},
+    'screenRegionType': 'PLS',
+    'transcripts': {
+        'ENSG00000163069': [
+            {
+                'aminoAcids': 'M/X',
+                'canonical': 1,
+                'codons': 'ATg/g',
+                'geneId': 'ENSG00000163069',
+                'hgvsc': 'ENST00000381431.10:c.1_2del',
+                'hgvsp': 'ENSP00000370839.6:p.Met1?',
+                'transcriptId': 'ENST00000381431',
+                'maneSelect': 'NM_000232.5',
+                'manePlusClinical': None,
+                'exon': {'index': 1, 'total': 6},
+                'intron': None,
+                'alphamissense': {'pathogenicity': None},
+                'loftee': {'isLofNagnag': None, 'lofFilters': None},
+                'spliceregion': {
+                    'extended_intronic_splice_region_variant': False
+                },
+                'utrannotator': {
+                    'existingInframeOorfs': None,
+                    'existingOutofframeOorfs': None,
+                    'existingUorfs': None,
+                    'fiveutrAnnotation': None,
+                    'fiveutrConsequence': None,
+                },
+                'refseqTranscriptId': 'NM_000232.5',
+                'biotype': 'protein_coding',
+                'majorConsequence': 'frameshift_variant',
+                'transcriptRank': 0,
+            }
+        ]
+    },
+    'sortedMotifFeatureConsequences': [
+        {
+            'motifFeatureId': 'ENSM00525017134',
+            'consequenceTerms': ['TF_binding_site_variant'],
+        },
+        {
+            'motifFeatureId': 'ENSM00190765165',
+            'consequenceTerms': ['TF_binding_site_variant'],
+        },
+        {
+            'motifFeatureId': 'ENSM00191195279',
+            'consequenceTerms': ['TF_binding_site_variant'],
+        },
+        {
+            'motifFeatureId': 'ENSM00026078608',
+            'consequenceTerms': ['TF_binding_site_variant'],
+        },
+    ],
+    'sortedRegulatoryFeatureConsequences': [
+        {
+            'regulatoryFeatureId': 'ENSR00000168217',
+            'biotype': 'promoter',
+            'consequenceTerms': ['regulatory_region_variant'],
+        }
+    ],
+    '_sort': [4052038257],
+    'genomeVersion': '38',
+}
+
+FAMILY_4_SAMPLE_DATA = {
+    'SNV_INDEL': [
+        {'sample_id': 'BON_UC499_1_1', 'individual_guid': 'I00001_BON_UC4991', 'family_guid': 'F000004_4',
+         'affected': 'A', 'project_guid': 'Project_4', 'sample_type': 'WES', 'sex': 'F'},
+        {'sample_id': 'BON_UC499_1_1', 'individual_guid': 'I00001_BON_UC4991', 'family_guid': 'F000004_4',
+         'affected': 'A', 'project_guid': 'Project_4', 'sample_type': 'WGS', 'sex': 'F'},
+        {'sample_id': 'BON_UC499_3_1', 'individual_guid': 'I00003_BON_UC4993', 'family_guid': 'F000004_4',
+         'affected': 'N', 'project_guid': 'Project_4', 'sample_type': 'WES', 'sex': 'F'},
+        {'sample_id': 'BON_UC499_3_1', 'individual_guid': 'I00003_BON_UC4993', 'family_guid': 'F000004_4',
+         'affected': 'N', 'project_guid': 'Project_4', 'sample_type': 'WGS', 'sex': 'F'},
+        {'sample_id': 'BON_UC499_4_1', 'individual_guid': 'I00004_BON_UC4994', 'family_guid': 'F000004_4',
+         'affected': 'N', 'project_guid': 'Project_4', 'sample_type': 'WES', 'sex': 'M'},
+        {'sample_id': 'BON_UC499_4_1', 'individual_guid': 'I00004_BON_UC4994', 'family_guid': 'F000004_4',
+         'affected': 'N', 'project_guid': 'Project_4', 'sample_type': 'WGS', 'sex': 'M'},
+    ]
+}
+
 # Ensures no variants are filtered out by annotation/path filters for compound hets
 COMP_HET_ALL_PASS_FILTERS = {
     'annotations': {'splice_ai': '0.0', 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
@@ -337,6 +581,10 @@ class HailSearchTestCase(AioHTTPTestCase):
         }
         await self._assert_expected_search(
             expected_results, gene_counts=expected_gene_counts, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
+        )
+
+        await self._assert_expected_search(
+            [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA,
         )
 
     async def test_inheritance_filter(self):
