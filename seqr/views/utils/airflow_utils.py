@@ -14,6 +14,7 @@ logger = SeqrLogger(__name__)
 
 DAG_NAME = 'LOADING_PIPELINE'
 AIRFLOW_AUTH_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
+SEQR_V3_PEDIGREE_GS_PATH = 'gs://seqr-loading-temp/v3.1'
 
 
 class DagRunningException(Exception):
@@ -27,7 +28,8 @@ def trigger_airflow_data_loading(projects: list[Project], sample_type: str, data
 
     success = True
     updated_variables, gs_path = prepare_data_loading_request(
-        projects, sample_type, dataset_type, genome_version, data_path, user, individual_ids,
+        projects, sample_type, dataset_type, genome_version, data_path, user,
+        pedigree_dir=SEQR_V3_PEDIGREE_GS_PATH, individual_ids=individual_ids,
     )
     updated_variables['sample_source'] = 'Broad_Internal' if is_internal else 'AnVIL'
     upload_info = [f'Pedigree files have been uploaded to {gs_path}']

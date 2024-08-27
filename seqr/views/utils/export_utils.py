@@ -6,7 +6,7 @@ import zipfile
 
 from django.http.response import HttpResponse
 
-from seqr.utils.file_utils import mv_file_to_gs
+from seqr.utils.file_utils import mv_file_to_gs, is_google_bucket_file_path
 from seqr.views.utils.json_utils import _to_title_case
 
 DELIMITERS = {
@@ -97,9 +97,12 @@ def export_multiple_files(files, zip_filename, **kwargs):
         return response
 
 
-def write_multiple_files_to_gs(files, gs_path, user, **kwargs):
+def write_multiple_files(files, file_path, user, **kwargs):
+    is_gs_path = is_google_bucket_file_path(file_path)
     with TemporaryDirectory() as temp_dir_name:
+        dir_name = temp_dir_name if is_gs_path else file_path
         for filename, content in _format_files_content(files, **kwargs):
-            with open(f'{temp_dir_name}/{filename}', 'w') as f:
+            with open(f'{dir_name}/{filename}', 'w') as f:
                 f.write(content)
-        mv_file_to_gs(f'{temp_dir_name}/*', gs_path, user)
+        if is_gs_path:
+            mv_file_to_gs(f'{temp_dir_name}/*', file_path, user)

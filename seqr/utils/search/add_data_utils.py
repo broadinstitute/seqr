@@ -10,14 +10,12 @@ from seqr.utils.search.utils import backend_specific_call
 from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_and_get_samples
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
-from seqr.views.utils.export_utils import write_multiple_files_to_gs
+from seqr.views.utils.export_utils import write_multiple_files
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL, ANVIL_UI_URL, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
 logger = SeqrLogger(__name__)
-
-SEQR_V3_PEDIGREE_GS_PATH = 'gs://seqr-loading-temp/v3.1'
 
 
 def _hail_backend_error(*args, **kwargs):
@@ -105,7 +103,7 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
 
 
 def prepare_data_loading_request(projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
-                                 data_path: str, user: User, individual_ids: list[str] = None):
+                                 data_path: str, user: User, pedigree_dir: str, individual_ids: list[str] = None):
     variables = {
         'projects_to_run': sorted([p.guid for p in projects]),
         'callset_path': data_path,
@@ -113,9 +111,9 @@ def prepare_data_loading_request(projects: list[Project], sample_type: str, data
         'dataset_type': _dag_dataset_type(sample_type, dataset_type),
         'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
     }
-    gs_path = _get_gs_pedigree_path(genome_version, sample_type, dataset_type)
-    _upload_data_loading_files(projects, user, gs_path, individual_ids)
-    return variables, gs_path
+    file_path = _get_pedigree_path(pedigree_dir, genome_version, sample_type, dataset_type)
+    _upload_data_loading_files(projects, user, file_path, individual_ids)
+    return variables, file_path
 
 
 def _dag_dataset_type(sample_type: str, dataset_type: str):
@@ -123,11 +121,11 @@ def _dag_dataset_type(sample_type: str, dataset_type: str):
         else dataset_type
 
 
-def _get_gs_pedigree_path(genome_version: str, sample_type: str, dataset_type: str):
-    return f'{SEQR_V3_PEDIGREE_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dataset_type}/pedigrees/{sample_type}/'
+def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str, dataset_type: str):
+    return f'{pedigree_dir}/{GENOME_VERSION_LOOKUP[genome_version]}/{dataset_type}/pedigrees/{sample_type}/'
 
 
-def _upload_data_loading_files(projects: list[Project], user: User, gs_path: str, individual_ids: list[str]):
+def _upload_data_loading_files(projects: list[Project], user: User, file_path: str, individual_ids: list[str]):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
         'Family_ID': F('family__family_id'),
@@ -147,8 +145,8 @@ def _upload_data_loading_files(projects: list[Project], user: User, gs_path: str
     files = [(f'{project_guid}_pedigree', header, rows) for project_guid, rows in data_by_project.items()]
 
     try:
-        write_multiple_files_to_gs(files, gs_path, user, file_format='tsv')
+        write_multiple_files(files, file_path, user, file_format='tsv')
     except Exception as e:
-        logger.error(f'Uploading Pedigrees to Google Storage failed. Errors: {e}', user, detail={
+        logger.error(f'Uploading Pedigrees failed. Errors: {e}', user, detail={
             project: rows for project, _, rows in files
         })

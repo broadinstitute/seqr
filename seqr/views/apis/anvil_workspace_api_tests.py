@@ -840,7 +840,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         project = Project.objects.get(**workspace)
 
         self.mock_add_data_utils_logger.error.assert_called_with(
-            'Uploading Pedigrees to Google Storage failed. Errors: Something wrong while moving the file.',
+            'Uploading Pedigrees failed. Errors: Something wrong while moving the file.',
             self.manager_user, detail={f'{project.guid}_pedigree': sample_data})
         self.mock_api_logger.error.assert_not_called()
         self.mock_airflow_logger.warning.assert_called_with(
