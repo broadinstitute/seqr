@@ -546,9 +546,6 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_group_members = patcher.start()
         self.mock_get_group_members.side_effect = get_group_members_side_effect
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', MOCK_AIRTABLE_KEY)
-        patcher.start()
-        self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
 
     @classmethod
@@ -563,7 +560,6 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
 
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
-MOCK_AIRTABLE_KEY = 'airflow_access'
 DAG_NAME = 'LOADING_PIPELINE'
 PROJECT_GUID = 'R0001_1kg'
 
