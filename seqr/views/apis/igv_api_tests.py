@@ -317,10 +317,11 @@ class IgvAPITest(AnvilAuthenticationTestCase):
             responses.GET, 'https://s3.amazonaws.com/igv.org.genomes/foo?query=true', match_querystring=True,
             content_type='application/json', body=json.dumps(expected_body))
 
-        response = self.client.get(s3_url)
+        response = self.client.get(s3_url, HTTP_TEST_HEADER='test/value')
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(json.loads(response.content), expected_body)
         self.assertIsNone(responses.calls[0].request.headers.get('Range'))
+        self.assertEqual(responses.calls[0].request.headers.get('Test-Header'), 'test/value')
 
         # test with range header proxy
         gs_url = reverse(igv_genomes_proxy, args=['gs', 'test-bucket/foo.fasta'])
@@ -329,7 +330,8 @@ class IgvAPITest(AnvilAuthenticationTestCase):
             responses.GET, 'https://storage.googleapis.com/test-bucket/foo.fasta', match_querystring=True,
             body=expected_content)
 
-        response = self.client.get(gs_url, HTTP_RANGE='bytes=100-200')
+        response = self.client.get(gs_url, HTTP_RANGE='bytes=100-200', HTTP_TEST_HEADER='test/value')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content.decode(), expected_content)
         self.assertEqual(responses.calls[1].request.headers.get('Range'), 'bytes=100-200')
+        self.assertIsNone(responses.calls[1].request.headers.get('Test-Header'))

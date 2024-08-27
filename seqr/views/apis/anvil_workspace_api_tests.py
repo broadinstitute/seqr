@@ -529,9 +529,6 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         self.mock_mv_file = patcher.start()
         self.mock_mv_file.return_value = True
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.run_gsutil_with_wait')
-        self.mock_gsutil = patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
         mock_tempdir = patcher.start()
         mock_tempdir.return_value.__enter__.return_value = TEMP_PATH
@@ -753,13 +750,9 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
             '\n'.join(['\t'.join(row) for row in [header] + rows])
         )
 
-        gs_path = f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base/'
+        gs_path = f'gs://seqr-loading-temp/v3.1/{genome_version}/SNV_INDEL/pedigrees/WES/'
         self.mock_mv_file.assert_called_with(
             f'{TEMP_PATH}/*', gs_path, self.manager_user
-        )
-
-        self.mock_gsutil.assert_called_with(
-            f'rsync -r {gs_path}', f'gs://seqr-loading-temp/v3.1/{genome_version}/SNV_INDEL/pedigrees/WES/', self.manager_user,
         )
 
         self.assert_airflow_calls(additional_tasks_check=test_add_data)
@@ -790,7 +783,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
 
-        Pedigree file has been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/
+        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/{version}/SNV_INDEL/pedigrees/WES/
 
         DAG LOADING_PIPELINE is triggered with following:
         ```{dag}```
@@ -844,14 +837,14 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         project = Project.objects.get(**workspace)
 
         self.mock_airflow_logger.error.assert_called_with(
-            'Uploading Pedigree to Google Storage failed. Errors: Something wrong while moving the file.',
-            self.manager_user, detail=sample_data)
+            'Uploading Pedigrees to Google Storage failed. Errors: Something wrong while moving the file.',
+            self.manager_user, detail={f'{project.guid}_pedigree': sample_data})
         self.mock_api_logger.error.assert_not_called()
         self.mock_airflow_logger.warning.assert_called_with(
             'LOADING_PIPELINE DAG is running and cannot be triggered again.', self.manager_user)
         self.mock_airtable_logger.error.assert_called_with(
-            f'Airtable create "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: '
-            f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', self.manager_user)
+            f'Airtable post "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: '
+            f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', self.manager_user, detail=mock.ANY)
 
         slack_message_on_failure = """ERROR triggering AnVIL loading for project {guid}: LOADING_PIPELINE DAG is running and cannot be triggered again.
         

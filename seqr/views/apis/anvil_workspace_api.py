@@ -307,15 +307,15 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
         SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, f'ERROR triggering AnVIL loading for project {project.guid}',
         genome_version=project.genome_version,
     )
-    AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
-        ANVIL_REQUEST_TRACKING_TABLE, {
+    AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_records(
+        ANVIL_REQUEST_TRACKING_TABLE, [{
             'Requester Name': user.get_full_name(),
             'Requester Email': user.email,
             'AnVIL Project URL': _get_seqr_project_url(project),
             'Initial Request Date': datetime.now().strftime('%Y-%m-%d'),
             'Number of Samples': len(sample_ids),
             'Status': 'Loading' if trigger_success else 'Loading Requested'
-        })
+        }])
 
     loading_warning_date = ANVIL_LOADING_DELAY_EMAIL_START_DATE and datetime.strptime(ANVIL_LOADING_DELAY_EMAIL_START_DATE, '%Y-%m-%d')
     if loading_warning_date and loading_warning_date <= datetime.now():

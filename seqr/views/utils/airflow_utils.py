@@ -3,13 +3,11 @@ from django.contrib.auth.models import User
 from django.db.models import F
 import google.auth
 from google.auth.transport.requests import AuthorizedSession
-import itertools
 import json
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Individual, Sample, Project
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.file_utils import does_file_exist, run_gsutil_with_wait
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from settings import AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
@@ -29,7 +27,7 @@ class DagRunningException(Exception):
 def trigger_airflow_data_loading(projects: list[Project], sample_type: str, dataset_type: str, data_path: str, user: User,
                                  success_message: str, success_slack_channel: str, error_message: str,
                                  genome_version: str = GENOME_VERSION_GRCh38, is_internal: bool = False,
-                                 individual_ids: list[str] = None, additional_project_files: dict = None):
+                                 individual_ids: list[str] = None):
 
     success = True
     project_guids = sorted([p.guid for p in projects])
@@ -42,10 +40,7 @@ def trigger_airflow_data_loading(projects: list[Project], sample_type: str, data
         'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
     }
 
-    upload_info = _upload_data_loading_files(
-        projects, is_internal, user, genome_version, sample_type, dataset_type=dataset_type,
-        individual_ids=individual_ids, additional_project_files=additional_project_files,
-    )
+    upload_info = _upload_data_loading_files(projects, user, genome_version, sample_type, dataset_type, individual_ids)
 
     try:
         _check_dag_running_state()
@@ -61,21 +56,6 @@ def trigger_airflow_data_loading(projects: list[Project], sample_type: str, data
     if success or success_slack_channel != SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL:
         _send_load_data_slack_msg([success_message] + upload_info, success_slack_channel, updated_variables)
     return success
-
-
-def write_data_loading_pedigree(project: Project, user: User):
-    match = next((
-        (callset, sample_type) for callset, sample_type in itertools.product(['Internal', 'External', 'AnVIL'], ['WGS', 'WES'])
-        if does_file_exist(_get_dag_project_gs_path(
-        project.guid, project.genome_version, sample_type, is_internal=callset != 'AnVIL', callset=callset,
-    ))), None)
-    if not match:
-        raise ValueError(f'No {SEQR_V2_DATASETS_GS_PATH} project directory found for {project.guid}')
-    callset, sample_type = match
-    _upload_data_loading_files(
-        [project], is_internal=callset != 'AnVIL', user=user, genome_version=project.genome_version,
-        sample_type=sample_type, callset=callset,
-    )
 
 
 def _send_load_data_slack_msg(messages: list[str], channel: str, dag: dict):
@@ -110,9 +90,8 @@ def _dag_dataset_type(sample_type: str, dataset_type: str):
         else dataset_type
 
 
-def _upload_data_loading_files(projects: list[Project], is_internal: bool,
-                               user: User, genome_version: str, sample_type: str, dataset_type: str = None, callset: str = 'Internal',
-                               individual_ids: list[str] = None, additional_project_files: dict = None):
+def _upload_data_loading_files(projects: list[Project], user: User, genome_version: str, sample_type: str, dataset_type: str,
+                               individual_ids: list[str]):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
         'Family_ID': F('family__family_id'),
@@ -129,35 +108,18 @@ def _upload_data_loading_files(projects: list[Project], is_internal: bool,
         data_by_project[row.pop('project')].append(row)
 
     info = []
-    for project_guid, rows in data_by_project.items():
-        gs_path = _get_dag_project_gs_path(project_guid, genome_version, sample_type, is_internal, callset)
-        try:
-            files, file_suffixes = _parse_project_upload_files(project_guid, rows, file_annotations.keys(), additional_project_files)
-            write_multiple_files_to_gs(files, gs_path, user, file_format='tsv', file_suffixes=file_suffixes)
-            if dataset_type:
-                additional_gs_path = _get_gs_pedigree_path(genome_version, sample_type, dataset_type)
-                run_gsutil_with_wait(f'rsync -r {gs_path}', additional_gs_path, user)
-        except Exception as e:
-            logger.error(f'Uploading Pedigree to Google Storage failed. Errors: {e}', user, detail=rows)
-        info.append(f'Pedigree file has been uploaded to {gs_path}')
+    header = list(file_annotations.keys())
+    files = [(f'{project_guid}_pedigree', header, rows) for project_guid, rows in data_by_project.items()]
+    gs_path = _get_gs_pedigree_path(genome_version, sample_type, dataset_type)
+    try:
+        write_multiple_files_to_gs(files, gs_path, user, file_format='tsv')
+    except Exception as e:
+        logger.error(f'Uploading Pedigrees to Google Storage failed. Errors: {e}', user, detail={
+            project: rows for project, _, rows in files
+        })
+    info.append(f'Pedigree files have been uploaded to {gs_path}')
 
     return info
-
-
-def _parse_project_upload_files(project_guid, rows, header, additional_project_files):
-    files = [(f'{project_guid}_pedigree', header, rows)]
-    file_suffixes = None
-    additional_file = additional_project_files and additional_project_files.get(project_guid)
-    if additional_file:
-        files.append(additional_file)
-        file_suffixes = {additional_file[0]: 'txt'}
-    return files, file_suffixes
-
-
-def _get_dag_project_gs_path(project: str, genome_version: str, sample_type: str, is_internal: bool, callset: str):
-    dag_name = f'RDG_{sample_type}_Broad_{callset}' if is_internal else f'AnVIL_{sample_type}'
-    dag_path = f'{SEQR_V2_DATASETS_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_name}'
-    return f'{dag_path}/base/projects/{project}/' if is_internal else f'{dag_path}/{project}/base/'
 
 
 def _get_gs_pedigree_path(genome_version: str, sample_type: str, dataset_type: str):

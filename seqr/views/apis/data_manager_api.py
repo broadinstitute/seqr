@@ -21,10 +21,10 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_exists
 
-from seqr.views.utils.airflow_utils import trigger_airflow_data_loading, write_data_loading_pedigree
-from seqr.views.utils.airtable_utils import AirtableSession
+from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
+from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
-    post_process_rna_data
+    post_process_rna_data, convert_django_meta_to_http_headers
 from seqr.views.utils.file_utils import parse_file, get_temp_file_path, load_uploaded_file, persist_temp_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -431,28 +431,13 @@ def load_phenotype_prioritization_data(request):
     })
 
 
-@data_manager_required
-def write_pedigree(request, project_guid):
-    project = Project.objects.get(guid=project_guid)
-    try:
-        write_data_loading_pedigree(project, request.user)
-    except ValueError as e:
-        return create_json_response({'error': str(e)}, status=400)
-
-    return create_json_response({'success': True})
-
-
 DATA_TYPE_FILE_EXTS = {
     Sample.DATASET_TYPE_MITO_CALLS: ('.mt',),
     Sample.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
 }
 
-LOADABLE_PDO_STATUSES = [
-    'On hold for phenotips, but ready to load',
-    'Methods (Loading)',
-]
 AVAILABLE_PDO_STATUSES = {
-    'Available in seqr',
+    AVAILABLE_PDO_STATUS,
     'Historic',
 }
 
@@ -522,21 +507,16 @@ def load_data(request):
         missing = sorted(set(project_samples.keys()) - {p.guid for p in project_models})
         return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
 
-    additional_project_files = None
     individual_ids = None
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and AirtableSession.is_airtable_enabled():
         individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
-        additional_project_files = {
-            project_guid: (f'{project_guid}_ids', ['s'], [{'s': sample_id} for sample_id in sample_ids])
-            for project_guid, sample_ids in project_samples.items()
-        }
 
     # TODO add support for local trigger
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
     trigger_airflow_data_loading(
         project_models, sample_type, dataset_type, request_json['filePath'], request.user, success_message,
         SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
-        is_internal=True, individual_ids=individual_ids, additional_project_files=additional_project_files,
+        is_internal=True, individual_ids=individual_ids,
     )
 
     return create_json_response({'success': True})
@@ -622,7 +602,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 @data_manager_required
 @csrf_exempt
 def proxy_to_kibana(request):
-    headers = _convert_django_meta_to_http_headers(request.META)
+    headers = convert_django_meta_to_http_headers(request)
     headers['Host'] = KIBANA_SERVER
     if KIBANA_ELASTICSEARCH_PASSWORD:
         token = base64.b64encode('kibana:{}'.format(KIBANA_ELASTICSEARCH_PASSWORD).encode('utf-8'))
@@ -656,19 +636,3 @@ def proxy_to_kibana(request):
     except (ConnectionError, RequestConnectionError) as e:
         logger.error(str(e), request.user)
         return HttpResponse("Error: Unable to connect to Kibana {}".format(e), status=400)
-
-
-def _convert_django_meta_to_http_headers(request_meta_dict):
-    """Converts django request.META dictionary into a dictionary of HTTP headers."""
-
-    def convert_key(key):
-        # converting Django's all-caps keys (eg. 'HTTP_RANGE') to regular HTTP header keys (eg. 'Range')
-        return key.replace("HTTP_", "").replace('_', '-').title()
-
-    http_headers = {
-        convert_key(key): str(value).lstrip()
-        for key, value in request_meta_dict.items()
-        if key.startswith("HTTP_") or (key in ('CONTENT_LENGTH', 'CONTENT_TYPE') and value)
-    }
-
-    return http_headers
