@@ -21,7 +21,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_exists
 
-from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
+from seqr.views.utils.airflow_utils import trigger_data_loading
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data, convert_django_meta_to_http_headers
@@ -429,17 +429,6 @@ def load_phenotype_prioritization_data(request):
         'info': info,
         'success': True
     })
-
-
-@data_manager_required
-def write_pedigree(request, project_guid):
-    project = Project.objects.get(guid=project_guid)
-    try:
-        write_data_loading_pedigree(project, request.user)
-    except ValueError as e:
-        return create_json_response({'error': str(e)}, status=400)
-
-    return create_json_response({'success': True})
 
 
 DATA_TYPE_FILE_EXTS = {

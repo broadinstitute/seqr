@@ -3,13 +3,11 @@ from django.contrib.auth.models import User
 from django.db.models import F
 import google.auth
 from google.auth.transport.requests import AuthorizedSession
-import itertools
 import json
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Individual, Sample, Project
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.file_utils import does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from settings import AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
@@ -60,22 +58,6 @@ def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type
     return success
 
 
-def write_data_loading_pedigree(project: Project, user: User):
-    # TODO fix all of this
-    match = next((
-        (callset, sample_type) for callset, sample_type in itertools.product(['Internal', 'External', 'AnVIL'], ['WGS', 'WES'])
-        if does_file_exist(_get_dag_project_gs_path(
-        project.guid, project.genome_version, sample_type, is_internal=callset != 'AnVIL', callset=callset,
-    ))), None)
-    if not match:
-        raise ValueError(f'No {SEQR_V2_DATASETS_GS_PATH} project directory found for {project.guid}')
-    callset, sample_type = match
-    _upload_data_loading_files(
-        [project], is_internal=callset != 'AnVIL', user=user, genome_version=project.genome_version,
-        sample_type=sample_type, callset=callset,
-    )
-
-
 def _send_load_data_slack_msg(messages: list[str], channel: str, dag: dict):
     message = '\n\n        '.join(messages)
     message_content = f"""{message}
@@ -109,7 +91,7 @@ def _dag_dataset_type(sample_type: str, dataset_type: str):
 
 
 def _upload_data_loading_files(projects: list[Project], user: User, genome_version: str, sample_type: str, dataset_type: str,
-                               individual_ids: list[str] = None):
+                               individual_ids: list[str]):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
         'Family_ID': F('family__family_id'),
@@ -138,12 +120,6 @@ def _upload_data_loading_files(projects: list[Project], user: User, genome_versi
     info.append(f'Pedigree files have been uploaded to {gs_path}')
 
     return info
-
-
-def _get_dag_project_gs_path(project: str, genome_version: str, sample_type: str, is_internal: bool, callset: str):
-    dag_name = f'RDG_{sample_type}_Broad_{callset}' if is_internal else f'AnVIL_{sample_type}'
-    dag_path = f'{SEQR_V2_DATASETS_GS_PATH}/{GENOME_VERSION_LOOKUP[genome_version]}/{dag_name}'
-    return f'{dag_path}/base/projects/{project}/' if is_internal else f'{dag_path}/{project}/base/'
 
 
 def _get_gs_pedigree_path(genome_version: str, sample_type: str, dataset_type: str):
