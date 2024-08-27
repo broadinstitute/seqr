@@ -6,7 +6,7 @@ import requests
 from seqr.views.utils.json_utils import create_json_response
 
 FEED_URL = (
-    "https://github.com/broadinstitute/seqr/discussions/categories/feature-updates.atom"
+    "https://github.com/orgs/community/discussions/categories/discussions.atom"
 )
 TIMEOUT = 5
 
