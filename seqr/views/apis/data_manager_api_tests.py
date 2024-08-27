@@ -1630,9 +1630,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
 }"""
         message = f"""*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
 
-        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0001_1kg/
-
-        Pedigree file has been uploaded to gs://seqr-datasets/v02/GRCh38/RDG_WGS_Broad_Internal/base/projects/R0004_non_analyst_project/
+        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/MITO/pedigrees/WGS/
 
         DAG LOADING_PIPELINE is triggered with following:
         ```{dag_json}```
@@ -1643,6 +1641,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.set_dag_trigger_error_response(status=400)
         self.mock_authorized_session.reset_mock()
         self.mock_slack.reset_mock()
+        self.mock_subprocess.reset_mock()
         mock_open.reset_mock()
         responses.calls.reset()
         mock_subprocess.reset_mock()
@@ -1710,6 +1709,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             fields=['SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
 
+        self.mock_subprocess.reset_mock()
         mock_subprocess.reset_mock()
         responses.calls.reset()
         responses.add(responses.GET, airtable_samples_url, json=AIRTABLE_SAMPLE_RECORDS, status=200)
@@ -1736,32 +1736,19 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             [row.split('\t') for row in write_call.args[0].split('\n')]
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
         ]
-        self.assertEqual(len(files), 4 if has_project_subset else 2)
-        if has_project_subset:
-            self.assertEqual(len(files[1]), 4)
-            self.assertListEqual(files[1], [['s'], ['NA19675_1'], ['NA19679'], ['NA19678']])
-            self.assertEqual(len(files[3]), 3)
-            self.assertListEqual(files[3], [['s'], ['NA21234'], ['NA21987']])
+        self.assertEqual(len(files), 2)
 
         num_rows = 4 if has_project_subset else 15
         self.assertEqual(len(files[0]), num_rows)
         self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
-        ped_file = files[2 if has_project_subset else 1]
-        self.assertEqual(len(ped_file), 3)
-        self.assertListEqual(ped_file, [
+        self.assertEqual(len(files[1]), 3)
+        self.assertListEqual(files[1], [
             PEDIGREE_HEADER,
             ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'],
             ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
         ])
 
-        self.mock_subprocess.assert_has_calls([
-            mock.call(
-                f'gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/',
-                stdout=-1, stderr=-2, shell=True,  # nosec
-            ) for project in self.PROJECTS
-        ] + [
-            mock.call(
-                f'gsutil rsync -r gs://seqr-datasets/v02/GRCh38/RDG_{sample_type}_Broad_Internal/base/projects/{project}/ gs://seqr-loading-temp/v3.1/GRCh38/{dataset_type}/pedigrees/{sample_type}/',
-                stdout=-1, stderr=-2, shell=True,  # nosec
-            ) for project in self.PROJECTS
-        ], any_order=True)
+        self.mock_subprocess.assert_called_once_with(
+            f'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/GRCh38/{dataset_type}/pedigrees/{sample_type}/',
+            stdout=-1, stderr=-2, shell=True,  # nosec
+        )
