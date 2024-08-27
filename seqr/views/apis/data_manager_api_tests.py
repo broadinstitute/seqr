@@ -1526,6 +1526,26 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._test_load_sample_subset(response, url, body, mock_open)
 
+    def _has_expected_ped_files(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False):
+        mock_open.assert_has_calls([
+            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in self.PROJECTS
+        ], any_order=True)
+        files = [
+            [row.split('\t') for row in write_call.args[0].split('\n')]
+            for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
+        ]
+        self.assertEqual(len(files), 2)
+
+        num_rows = 4 if has_project_subset else 15
+        self.assertEqual(len(files[0]), num_rows)
+        self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
+        self.assertEqual(len(files[1]), 3)
+        self.assertListEqual(files[1], [
+            PEDIGREE_HEADER,
+            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'],
+            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
+        ])
+
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -1721,24 +1741,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         )
 
     def _has_expected_ped_files(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False):
-        mock_open.assert_has_calls([
-            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in self.PROJECTS
-        ], any_order=True)
-        files = [
-            [row.split('\t') for row in write_call.args[0].split('\n')]
-            for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
-        ]
-        self.assertEqual(len(files), 2)
-
-        num_rows = 4 if has_project_subset else 15
-        self.assertEqual(len(files[0]), num_rows)
-        self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
-        self.assertEqual(len(files[1]), 3)
-        self.assertListEqual(files[1], [
-            PEDIGREE_HEADER,
-            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'],
-            ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
-        ])
+        super()._has_expected_ped_files(mock_open, dataset_type, sample_type, has_project_subset)
 
         self.mock_subprocess.assert_called_once_with(
             f'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/GRCh38/{dataset_type}/pedigrees/{sample_type}/',
