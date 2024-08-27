@@ -91,7 +91,7 @@ const LoadData = () => (
   <FormWizard
     pages={LOAD_DATA_PAGES}
     formatSubmitUrl={formatSubmitUrl}
-    successMessage="Data loading has been triggered, and further updates will be posted in slack"
+    successMessage="Data loading has been triggered"
     noModal
   />
 )
