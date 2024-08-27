@@ -1469,10 +1469,68 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'projects': self.WES_PROJECT_OPTIONS})
 
+    @responses.activate
+    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
+    @mock.patch('seqr.views.utils.export_utils.open')
+    @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
+    def test_load_data(self, mock_temp_dir, mock_open):
+        url = reverse(load_data)
+        self.check_pm_login(url)
+
+        mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
+        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'genomeVersion': '38', 'projects': [
+            json.dumps({'projectGuid': 'R0001_1kg'}), json.dumps(PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
+        ]}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
+
+        body['projects'] = body['projects'][:-1]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+
+        self._assert_expected_load_data_requests()
+        self._has_expected_ped_files(mock_open, 'MITO')
+
+        dag_json = """{
+    "projects_to_run": [
+        "R0001_1kg",
+        "R0004_non_analyst_project"
+    ],
+    "callset_path": "gs://test_bucket/mito_callset.mt",
+    "sample_type": "WGS",
+    "dataset_type": "MITO",
+    "reference_genome": "GRCh38",
+    "sample_source": "Broad_Internal"
+}"""
+        self._assert_success_notification(dag_json)
+
+        # Test loading trigger error
+        self._set_loading_trigger_error()
+        mock_open.reset_mock()
+        responses.calls.reset()
+
+        body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf', 'sampleType': 'WES'})
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+
+        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV')
+        self._has_expected_ped_files(mock_open, 'SV', sample_type='WES')
+        self._assert_error_notification(dag_json)
+
+        # Test loading with sample subset
+        mock_open.reset_mock()
+        body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(PROJECT_SAMPLES_OPTION)]})
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self._test_load_sample_subset(response, url, body, mock_open)
+
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
+    CALLSET_DIR = '/local_datasets'
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_OPTION, PROJECT_OPTION]
     WES_PROJECT_OPTIONS = [
         {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:25:55.397Z'},
@@ -1581,63 +1639,6 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _set_loading_trigger_error(self):
         self.set_dag_trigger_error_response(status=400)
         self.mock_authorized_session.reset_mock()
-
-    @responses.activate
-    @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
-    @mock.patch('seqr.views.utils.export_utils.open')
-    @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
-    def test_load_data(self, mock_temp_dir, mock_open):
-        url = reverse(load_data)
-        self.check_pm_login(url)
-
-        mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
-        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'genomeVersion': '38', 'projects': [
-            json.dumps({'projectGuid': 'R0001_1kg'}), json.dumps(PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
-        ]}
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
-
-        body['projects'] = body['projects'][:-1]
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
-
-        self._assert_expected_load_data_requests()
-        self._has_expected_ped_files(mock_open, 'MITO')
-
-        dag_json = """{
-    "projects_to_run": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "callset_path": "gs://test_bucket/mito_callset.mt",
-    "sample_type": "WGS",
-    "dataset_type": "MITO",
-    "reference_genome": "GRCh38",
-    "sample_source": "Broad_Internal"
-}"""
-        self._assert_success_notification(dag_json)
-
-        # Test loading trigger error
-        self._set_loading_trigger_error()
-        mock_open.reset_mock()
-        responses.calls.reset()
-
-        body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf', 'sampleType': 'WES'})
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
-
-        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV')
-        self._has_expected_ped_files(mock_open, 'SV', sample_type='WES')
-        self._assert_error_notification(dag_json)
-
-        # Test loading with sample subset
-        mock_open.reset_mock()
-        body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(PROJECT_SAMPLES_OPTION)]})
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._test_load_sample_subset(response, url, body, mock_open)
 
     def _assert_success_notification(self, dag_json):
         message = f"""*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
