@@ -33,7 +33,8 @@ from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data
 
 from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL, DATASETS_DIR
+from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL, \
+    DATASETS_DIR, PIPELINE_RUNNER_SERVER
 
 logger = SeqrLogger(__name__)
 
@@ -525,7 +526,8 @@ def load_data(request):
         )
     else:
         request_json, _ = prepare_data_loading_request(*loading_args, user=request.user, pedigree_dir=DATASETS_DIR)
-        _trigger_loading_pipeline_api(request_json)
+        response = requests.post(f'{PIPELINE_RUNNER_SERVER}/loading_pipeline_enqueue', json=request_json, timeout=60)
+        response.raise_for_status()
 
     return create_json_response({'success': True})
 
@@ -595,10 +597,6 @@ def _get_loaded_samples(project_samples, user):
 def _is_loaded_airtable_sample(sample, project_guid):
     return f'{BASE_URL}project/{project_guid}/project_page' in sample['SeqrProject'] and any(
         status in AVAILABLE_PDO_STATUSES for status in sample['PDOStatus'])
-
-
-def _trigger_loading_pipeline_api(request_json):
-   pass  # TODO actually implement
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
