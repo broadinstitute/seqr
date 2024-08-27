@@ -106,3 +106,5 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
             record_and_filters={'AnVIL Project URL': url},
             update={'Status': 'Available in Seqr'},
         )
+
+    return is_internal

@@ -22,7 +22,7 @@ from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_exists
 
 from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
-from seqr.views.utils.airtable_utils import AirtableSession
+from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data, convert_django_meta_to_http_headers
 from seqr.views.utils.file_utils import parse_file, get_temp_file_path, load_uploaded_file, persist_temp_file
@@ -447,12 +447,8 @@ DATA_TYPE_FILE_EXTS = {
     Sample.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
 }
 
-LOADABLE_PDO_STATUSES = [
-    'On hold for phenotips, but ready to load',
-    'Methods (Loading)',
-]
 AVAILABLE_PDO_STATUSES = {
-    'Available in seqr',
+    AVAILABLE_PDO_STATUS,
     'Historic',
 }
 
