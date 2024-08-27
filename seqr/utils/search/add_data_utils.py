@@ -4,7 +4,6 @@ from seqr.utils.search.utils import backend_specific_call
 from seqr.utils.search.elasticsearch.es_utils import validate_es_index_metadata_and_get_samples
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file
-from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL, ANVIL_UI_URL, \
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
@@ -74,9 +73,7 @@ def _basic_notify_search_data_loaded(project, dataset_type, sample_type, inactiv
     return sample_summary, new_sample_ids, url
 
 
-def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sample_guids, updated_samples, num_samples):
-    is_internal = not project_has_anvil(project) or is_internal_anvil_project(project)
-
+def notify_search_data_loaded(project, is_internal, dataset_type, sample_type, inactivated_sample_guids, updated_samples, num_samples):
     if is_internal:
         format_email = _format_email
     else:
@@ -106,5 +103,3 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
             record_and_filters={'AnVIL Project URL': url},
             update={'Status': 'Available in Seqr'},
         )
-
-    return is_internal
