@@ -1608,10 +1608,10 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         "R0004_non_analyst_project"
     ],
     "callset_path": "gs://test_bucket/mito_callset.mt",
-    "sample_source": "Broad_Internal",
     "sample_type": "WGS",
     "dataset_type": "MITO",
-    "reference_genome": "GRCh38"
+    "reference_genome": "GRCh38",
+    "sample_source": "Broad_Internal"
 }"""
         message = f"""*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
 
