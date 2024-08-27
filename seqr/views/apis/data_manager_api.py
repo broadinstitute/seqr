@@ -515,20 +515,15 @@ def load_data(request):
         missing = sorted(set(project_samples.keys()) - {p.guid for p in project_models})
         return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
 
-    additional_project_files = None
     individual_ids = None
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
-        additional_project_files = {
-            project_guid: (f'{project_guid}_ids', ['s'], [{'s': sample_id} for sample_id in sample_ids])
-            for project_guid, sample_ids in project_samples.items()
-        }
 
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
     trigger_data_loading(
         project_models, sample_type, dataset_type, request_json['filePath'], request.user, success_message,
         SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
-        is_internal=True, individual_ids=individual_ids, additional_project_files=additional_project_files,
+        is_internal=True, individual_ids=individual_ids,
     )
 
     return create_json_response({'success': True})

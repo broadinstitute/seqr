@@ -29,7 +29,7 @@ class DagRunningException(Exception):
 def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type: str, data_path: str, user: User,
                          success_message: str, success_slack_channel: str, error_message: str,
                          genome_version: str = GENOME_VERSION_GRCh38, is_internal: bool = False,
-                         individual_ids: list[str] = None, additional_project_files: dict = None):
+                         individual_ids: list[str] = None):
 
     success = True
     project_guids = sorted([p.guid for p in projects])
@@ -44,7 +44,7 @@ def trigger_data_loading(projects: list[Project], sample_type: str, dataset_type
 
     upload_info = _upload_data_loading_files(
         projects, is_internal, user, genome_version, sample_type, dataset_type=dataset_type,
-        individual_ids=individual_ids, additional_project_files=additional_project_files,
+        individual_ids=individual_ids,
     )
 
     try:
@@ -112,7 +112,7 @@ def _dag_dataset_type(sample_type: str, dataset_type: str):
 
 def _upload_data_loading_files(projects: list[Project], is_internal: bool,
                                user: User, genome_version: str, sample_type: str, dataset_type: str = None, callset: str = 'Internal',
-                               individual_ids: list[str] = None, additional_project_files: dict = None):
+                               individual_ids: list[str] = None):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
         'Family_ID': F('family__family_id'),
@@ -132,8 +132,8 @@ def _upload_data_loading_files(projects: list[Project], is_internal: bool,
     for project_guid, rows in data_by_project.items():
         gs_path = _get_dag_project_gs_path(project_guid, genome_version, sample_type, is_internal, callset)
         try:
-            files, file_suffixes = _parse_project_upload_files(project_guid, rows, file_annotations.keys(), additional_project_files)
-            write_multiple_files_to_gs(files, gs_path, user, file_format='tsv', file_suffixes=file_suffixes)
+            files = [(f'{project_guid}_pedigree', file_annotations.keys(), rows)]
+            write_multiple_files_to_gs(files, gs_path, user, file_format='tsv')
             if dataset_type:
                 additional_gs_path = _get_gs_pedigree_path(genome_version, sample_type, dataset_type)
                 run_gsutil_with_wait(f'rsync -r {gs_path}', additional_gs_path, user)
@@ -142,16 +142,6 @@ def _upload_data_loading_files(projects: list[Project], is_internal: bool,
         info.append(f'Pedigree file has been uploaded to {gs_path}')
 
     return info
-
-
-def _parse_project_upload_files(project_guid, rows, header, additional_project_files):
-    files = [(f'{project_guid}_pedigree', header, rows)]
-    file_suffixes = None
-    additional_file = additional_project_files and additional_project_files.get(project_guid)
-    if additional_file:
-        files.append(additional_file)
-        file_suffixes = {additional_file[0]: 'txt'}
-    return files, file_suffixes
 
 
 def _get_dag_project_gs_path(project: str, genome_version: str, sample_type: str, is_internal: bool, callset: str):
