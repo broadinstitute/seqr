@@ -528,6 +528,7 @@ def load_data(request):
         request_json, _ = prepare_data_loading_request(*loading_args, user=request.user, pedigree_dir=LOADING_DATASETS_DIR)
         response = requests.post(f'{PIPELINE_RUNNER_SERVER}/loading_pipeline_enqueue', json=request_json, timeout=60)
         response.raise_for_status()
+        logger.info('Triggered loading pipeline', request.user, detail=request_json)
 
     return create_json_response({'success': True})
 

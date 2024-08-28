@@ -462,6 +462,8 @@ AIRTABLE_SECONDARY_SAMPLE_RECORDS = {
     ],
 }
 
+PIPELINE_RUNNER_URL = 'http://pipeline-runner:6000/loading_pipeline_enqueue'
+
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class DataManagerAPITest(AirtableTest):
@@ -1481,8 +1483,7 @@ class DataManagerAPITest(AirtableTest):
         url = reverse(load_data)
         self.check_pm_login(url)
 
-        pipeline_runner_url = 'http://pipeline-runner:6000/loading_pipeline_enqueue'
-        responses.add(responses.POST, pipeline_runner_url)
+        responses.add(responses.POST, PIPELINE_RUNNER_URL)
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'genomeVersion': '38', 'projects': [
             json.dumps({'projectGuid': 'R0001_1kg'}), json.dumps(PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
@@ -1491,6 +1492,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
 
+        self.reset_logs()
         body['projects'] = body['projects'][:-1]
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
@@ -1499,32 +1501,29 @@ class DataManagerAPITest(AirtableTest):
         self._assert_expected_load_data_requests()
         self._has_expected_ped_files(mock_open, 'MITO')
 
-        dag_json = """{
-    "projects_to_run": [
-        "R0001_1kg",
-        "R0004_non_analyst_project"
-    ],
-    "callset_path": "gs://test_bucket/mito_callset.mt",
-    "sample_type": "WGS",
-    "dataset_type": "MITO",
-    "reference_genome": "GRCh38",
-    "sample_source": "Broad_Internal"
-}"""
+        dag_json = {
+            'projects_to_run': [
+                'R0001_1kg',
+                'R0004_non_analyst_project'
+            ],
+            'callset_path': f'{self.CALLSET_DIR}/mito_callset.mt',
+            'sample_type': 'WGS',
+            'dataset_type': 'MITO',
+            'reference_genome': 'GRCh38',
+        }
         self._assert_success_notification(dag_json)
 
         # Test loading trigger error
         self._set_loading_trigger_error()
         mock_open.reset_mock()
         responses.calls.reset()
+        self.reset_logs()
 
         body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf', 'sampleType': 'WES'})
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
-
-        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV')
+        self._assert_trigger_error(response, body, dag_json)
+        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV', sample_type='WES')
         self._has_expected_ped_files(mock_open, 'SV', sample_type='WES')
-        self._assert_error_notification(dag_json)
 
         # Test loading with sample subset
         mock_open.reset_mock()
@@ -1587,12 +1586,12 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _assert_expected_get_projects_requests(self):
         self.assertEqual(len(responses.calls), 0)
 
-    def _assert_expected_load_data_requests(self, dataset_type='MITO', **kwargs):
+    def _assert_expected_load_data_requests(self, dataset_type='MITO', sample_type='WGS', trigger_error=False):
         self.assertEqual(len(responses.calls), 1)
         self.assertDictEqual(json.loads(responses.calls[0].request.body), {
             'projects_to_run': [PROJECT_GUID, NON_ANALYST_PROJECT_GUID],
-            'callset_path': '/local_datasets/mito_callset.mt',
-            'sample_type': 'WGS',
+            'callset_path': '/local_datasets/sv_callset.vcf' if trigger_error else '/local_datasets/mito_callset.mt',
+            'sample_type': sample_type,
             'dataset_type': dataset_type,
             'reference_genome': 'GRCh38',
         })
@@ -1600,6 +1599,22 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     @staticmethod
     def _local_pedigree_path(dataset_type, sample_type):
         return f'/local_datasets/GRCh38/{dataset_type}/pedigrees/{sample_type}'
+
+    def _assert_success_notification(self, dag_json):
+        self.maxDiff = None
+        self.assert_json_logs(self.pm_user, [('Triggered loading pipeline', {'detail': dag_json})])
+
+    def _set_loading_trigger_error(self):
+        responses.add(responses.POST, PIPELINE_RUNNER_URL, status=400)
+
+    def _assert_trigger_error(self, response, body, *args):
+        self.assertEqual(response.status_code, 400)
+        error = f'400 Client Error: Bad Request for url: {PIPELINE_RUNNER_URL}'
+        self.assertDictEqual(response.json(), {'error': error})
+        self.maxDiff = None
+        self.assert_json_logs(self.pm_user, [
+            (error, {'severity': 'WARNING', 'requestBody': body, 'httpRequest': mock.ANY, 'traceback': mock.ANY}),
+        ])
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -1682,24 +1697,29 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         self.mock_authorized_session.reset_mock()
 
     def _assert_success_notification(self, dag_json):
+        dag_json['sample_source'] = 'Broad_Internal'
+
         message = f"""*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
 
         Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/MITO/pedigrees/WGS
 
         DAG LOADING_PIPELINE is triggered with following:
-        ```{dag_json}```
+        ```{json.dumps(dag_json, indent=4)}```
     """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message)
         self.mock_slack.reset_mock()
 
-    def _assert_error_notification(self, dag_json):
+    def _assert_trigger_error(self, response, body, dag_json):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+
         self.mock_airflow_logger.warning.assert_not_called()
         self.mock_airflow_logger.error.assert_called_with(mock.ANY, self.pm_user)
         errors = [call.args[0] for call in self.mock_airflow_logger.error.call_args_list]
         for error in errors:
             self.assertRegex(error, '400 Client Error: Bad Request')
 
-        dag_json = dag_json.replace('mito_callset.mt', 'sv_callset.vcf').replace(
+        dag_json = json.dumps(dag_json, indent=4).replace('mito_callset.mt', 'sv_callset.vcf').replace(
             'WGS', 'WES').replace('MITO', 'GCNV').replace('v01', 'v3.1')
         error_message = f"""ERROR triggering internal WES SV loading: {errors[0]}
         

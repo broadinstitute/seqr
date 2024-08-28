@@ -637,7 +637,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'state': 'running'}
         ]})
 
-    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None):
+    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, **kwargs):
         self.mock_airflow_logger.info.assert_not_called()
 
         # Test triggering anvil dags
