@@ -1377,7 +1377,7 @@ class DataManagerAPITest(AirtableTest):
         mock_glob.return_value = []
         mock_subprocess.return_value.wait.return_value = -1
         mock_subprocess.return_value.stdout = [b'File not found']
-        body = {'filePath': 'gs://test_bucket/mito_callset.mt', 'datasetType': 'SV'}
+        body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'SV'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
@@ -1387,20 +1387,10 @@ class DataManagerAPITest(AirtableTest):
         body['datasetType'] = 'MITO'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], ['Data file or path gs://test_bucket/mito_callset.mt is not found.'])
-
-        mock_subprocess.return_value.wait.return_value = 0
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
-
-        # TODo clean up test for Local vs Anvil
-        body['filePath'] = body['filePath'].replace('gs://test_bucket', '/local_dir')
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], ['Data file or path /local_dir/mito_callset.mt is not found.'])
+        self.assertListEqual(response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/mito_callset.mt is not found.'])
 
         mock_os_isfile.return_value = True
+        mock_subprocess.return_value.wait.return_value = 0
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
@@ -1408,27 +1398,16 @@ class DataManagerAPITest(AirtableTest):
         mock_subprocess.return_value.communicate.return_value = (
             b'', b'CommandException: One or more URLs matched no objects.',
         )
-        body = {'filePath': 'gs://test_bucket/sharded_vcf/part0*.vcf', 'datasetType': 'SNV_INDEL'}
+        body = {'filePath': f'{self.CALLSET_DIR}/sharded_vcf/part0*.vcf', 'datasetType': 'SNV_INDEL'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(
-            response.json()['errors'], ['Data file or path gs://test_bucket/sharded_vcf/part0*.vcf is not found.'],
+            response.json()['errors'], [f'Data file or path {self.CALLSET_DIR}/sharded_vcf/part0*.vcf is not found.'],
         )
 
         mock_subprocess.return_value.communicate.return_value = (
             b'gs://test_bucket/sharded_vcf/part001.vcf\ngs://test_bucket/sharded_vcf/part002.vcf\n', b'',
         )
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
-
-        body['filePath'] = body['filePath'].replace('gs://test_bucket', '/local_dir')
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 400)
-        self.assertListEqual(
-            response.json()['errors'], ['Data file or path /local_dir/sharded_vcf/part0*.vcf is not found.'],
-        )
-
         mock_glob.return_value = ['/local_dir/sharded_vcf/part001.vcf', '/local_dir/sharded_vcf/part002.vcf']
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
