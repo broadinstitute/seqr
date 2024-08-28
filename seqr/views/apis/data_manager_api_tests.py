@@ -17,6 +17,7 @@ from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlie
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 PROJECT_GUID = 'R0001_1kg'
+NON_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
 
 ES_CAT_ALLOCATION=[{
     'node': 'node-1',
@@ -464,6 +465,8 @@ AIRTABLE_SECONDARY_SAMPLE_RECORDS = {
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class DataManagerAPITest(AirtableTest):
+
+    PROJECTS = [PROJECT_GUID, NON_ANALYST_PROJECT_GUID]
 
     @urllib3_responses.activate
     def test_elasticsearch_status(self):
@@ -1470,6 +1473,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'projects': self.WES_PROJECT_OPTIONS})
 
     @responses.activate
+    @mock.patch('seqr.views.apis.data_manager_api.LOADING_DATASETS_DIR', '/local_datasets')
     @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
@@ -1477,6 +1481,8 @@ class DataManagerAPITest(AirtableTest):
         url = reverse(load_data)
         self.check_pm_login(url)
 
+        pipeline_runner_url = 'http://pipeline-runner:6000/loading_pipeline_enqueue'
+        responses.add(responses.POST, pipeline_runner_url)
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         body = {'filePath': f'{self.CALLSET_DIR}/mito_callset.mt', 'datasetType': 'MITO', 'sampleType': 'WGS', 'genomeVersion': '38', 'projects': [
             json.dumps({'projectGuid': 'R0001_1kg'}), json.dumps(PROJECT_OPTION), json.dumps({'projectGuid': 'R0005_not_project'}),
@@ -1528,7 +1534,8 @@ class DataManagerAPITest(AirtableTest):
 
     def _has_expected_ped_files(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False):
         mock_open.assert_has_calls([
-            mock.call(f'/mock/tmp/{project}_pedigree.tsv', 'w') for project in self.PROJECTS
+            mock.call(f'{self._local_pedigree_path(dataset_type, sample_type)}/{project}_pedigree.tsv', 'w')
+            for project in self.PROJECTS
         ], any_order=True)
         files = [
             [row.split('\t') for row in write_call.args[0].split('\n')]
@@ -1580,14 +1587,28 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _assert_expected_get_projects_requests(self):
         self.assertEqual(len(responses.calls), 0)
 
+    def _assert_expected_load_data_requests(self, dataset_type='MITO', **kwargs):
+        self.assertEqual(len(responses.calls), 1)
+        self.assertDictEqual(json.loads(responses.calls[0].request.body), {
+            'projects_to_run': [PROJECT_GUID, NON_ANALYST_PROJECT_GUID],
+            'callset_path': '/local_datasets/mito_callset.mt',
+            'sample_type': 'WGS',
+            'dataset_type': dataset_type,
+            'reference_genome': 'GRCh38',
+        })
+
+    @staticmethod
+    def _local_pedigree_path(dataset_type, sample_type):
+        return f'/local_datasets/GRCh38/{dataset_type}/pedigrees/{sample_type}'
+
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
-    LOADING_PROJECT_GUID = 'R0004_non_analyst_project'
+    LOADING_PROJECT_GUID = NON_ANALYST_PROJECT_GUID
     CALLSET_DIR = 'gs://test_bucket'
-    PROJECTS = [PROJECT_GUID, LOADING_PROJECT_GUID]
+    LOCAL_WRITE_DIR = '/mock/tmp'
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION, PROJECT_SAMPLES_OPTION]
     WES_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
 
@@ -1663,7 +1684,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _assert_success_notification(self, dag_json):
         message = f"""*test_pm_user@test.com* triggered loading internal WGS MITO data for 2 projects
 
-        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/MITO/pedigrees/WGS/
+        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/GRCh38/MITO/pedigrees/WGS
 
         DAG LOADING_PIPELINE is triggered with following:
         ```{dag_json}```
@@ -1739,6 +1760,10 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             filter_formula="OR({CollaboratorSampleID}='NA19678')",
             fields=['CollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
+
+    @staticmethod
+    def _local_pedigree_path(*args):
+        return '/mock/tmp'
 
     def _has_expected_ped_files(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False):
         super()._has_expected_ped_files(mock_open, dataset_type, sample_type, has_project_subset)

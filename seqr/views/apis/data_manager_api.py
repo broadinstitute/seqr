@@ -34,7 +34,7 @@ from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data
 from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL, \
-    DATASETS_DIR, PIPELINE_RUNNER_SERVER
+    LOADING_DATASETS_DIR, PIPELINE_RUNNER_SERVER
 
 logger = SeqrLogger(__name__)
 
@@ -525,7 +525,7 @@ def load_data(request):
             success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True, individual_ids=individual_ids,
         )
     else:
-        request_json, _ = prepare_data_loading_request(*loading_args, user=request.user, pedigree_dir=DATASETS_DIR)
+        request_json, _ = prepare_data_loading_request(*loading_args, user=request.user, pedigree_dir=LOADING_DATASETS_DIR)
         response = requests.post(f'{PIPELINE_RUNNER_SERVER}/loading_pipeline_enqueue', json=request_json, timeout=60)
         response.raise_for_status()
 

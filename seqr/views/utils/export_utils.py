@@ -105,4 +105,4 @@ def write_multiple_files(files, file_path, user, **kwargs):
             with open(f'{dir_name}/{filename}', 'w') as f:
                 f.write(content)
         if is_gs_path:
-            mv_file_to_gs(f'{temp_dir_name}/*', file_path, user)
+            mv_file_to_gs(f'{temp_dir_name}/*', f'{file_path}/', user)

@@ -122,7 +122,7 @@ def _dag_dataset_type(sample_type: str, dataset_type: str):
 
 
 def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str, dataset_type: str):
-    return f'{pedigree_dir}/{GENOME_VERSION_LOOKUP[genome_version]}/{dataset_type}/pedigrees/{sample_type}/'
+    return f'{pedigree_dir}/{GENOME_VERSION_LOOKUP[genome_version]}/{dataset_type}/pedigrees/{sample_type}'
 
 
 def _upload_data_loading_files(projects: list[Project], user: User, file_path: str, individual_ids: list[str]):
