@@ -1526,6 +1526,7 @@ class DataManagerAPITest(AirtableTest):
         self._has_expected_ped_files(mock_open, 'SV', sample_type='WES')
 
         # Test loading with sample subset
+        responses.add(responses.POST, PIPELINE_RUNNER_URL)
         mock_open.reset_mock()
         body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(PROJECT_SAMPLES_OPTION)]})
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -1615,6 +1616,12 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assert_json_logs(self.pm_user, [
             (error, {'severity': 'WARNING', 'requestBody': body, 'httpRequest': mock.ANY, 'traceback': mock.ANY}),
         ])
+
+    def _test_load_sample_subset(self, response, url, body, mock_open):
+        # Loading with sample subset does not change behavior when airtable is disabled
+        self.assertEqual(response.status_code, 200)
+        self._assert_expected_load_data_requests()
+        self._has_expected_ped_files(mock_open, 'SNV_INDEL')
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
