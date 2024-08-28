@@ -1477,9 +1477,10 @@ class DataManagerAPITest(AirtableTest):
     @responses.activate
     @mock.patch('seqr.views.apis.data_manager_api.LOADING_DATASETS_DIR', '/local_datasets')
     @mock.patch('seqr.views.apis.data_manager_api.BASE_URL', 'https://seqr.broadinstitute.org/')
+    @mock.patch('seqr.views.utils.export_utils.os.makedirs')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
-    def test_load_data(self, mock_temp_dir, mock_open):
+    def test_load_data(self, mock_temp_dir, mock_open, mock_mkdir):
         url = reverse(load_data)
         self.check_pm_login(url)
 
@@ -1499,7 +1500,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(response.json(), {'success': True})
 
         self._assert_expected_load_data_requests()
-        self._has_expected_ped_files(mock_open, 'MITO')
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'MITO')
 
         dag_json = {
             'projects_to_run': [
@@ -1516,6 +1517,7 @@ class DataManagerAPITest(AirtableTest):
         # Test loading trigger error
         self._set_loading_trigger_error()
         mock_open.reset_mock()
+        mock_mkdir.reset_mock()
         responses.calls.reset()
         self.reset_logs()
 
@@ -1523,17 +1525,35 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._assert_trigger_error(response, body, dag_json)
         self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV', sample_type='WES')
-        self._has_expected_ped_files(mock_open, 'SV', sample_type='WES')
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'SV', sample_type='WES')
 
         # Test loading with sample subset
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
         responses.calls.reset()
         mock_open.reset_mock()
+        mock_mkdir.reset_mock()
         body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(PROJECT_SAMPLES_OPTION)]})
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._test_load_sample_subset(mock_open, response, url, body)
+        self._test_load_sample_subset(mock_open, mock_mkdir, response, url, body)
 
-    def _has_expected_ped_files(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False, single_project=False):
+        # Test write pedigree error
+        self.reset_logs()
+        responses.calls.reset()
+        mock_mkdir.reset_mock()
+        mock_open.reset_mock()
+        mock_open.side_effect = OSError('Restricted filesystem')
+        self.login_data_manager_user()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self._assert_write_pedigree_error(response)
+        self.assert_json_logs(self.data_manager_user, [
+            ('Uploading Pedigrees failed. Errors: Restricted filesystem', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+                'detail': {'R0004_non_analyst_project_pedigree': mock.ANY},
+            }),
+        ])
+
+    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', has_project_subset=False, single_project=False):
         mock_open.assert_has_calls([
             mock.call(f'{self._local_pedigree_path(dataset_type, sample_type)}/{project}_pedigree.tsv', 'w')
             for project in self.PROJECTS[(1 if single_project else 0):]
@@ -1607,6 +1627,10 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _local_pedigree_path(dataset_type, sample_type):
         return f'/local_datasets/GRCh38/{dataset_type}/pedigrees/{sample_type}'
 
+    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', **kwargs):
+        super()._has_expected_ped_files(mock_open, mock_mkdir, dataset_type, sample_type, **kwargs)
+        mock_mkdir.assert_called_once_with(self._local_pedigree_path(dataset_type, sample_type), exist_ok=True)
+
     def _assert_success_notification(self, dag_json):
         self.maxDiff = None
         self.assert_json_logs(self.pm_user, [('Triggered loading pipeline', {'detail': dag_json})])
@@ -1623,11 +1647,16 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
             (error, {'severity': 'WARNING', 'requestBody': body, 'httpRequest': mock.ANY, 'traceback': mock.ANY}),
         ])
 
-    def _test_load_sample_subset(self, mock_open, response, *args):
+    def _test_load_sample_subset(self, mock_open, mock_mkdir, response, *args):
         # Loading with sample subset does not change behavior when airtable is disabled
         self.assertEqual(response.status_code, 200)
         self._assert_expected_load_data_requests(dataset_type='SNV_INDEL', skip_project=True, trigger_error=True)
-        self._has_expected_ped_files(mock_open, 'SNV_INDEL', single_project=True)
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', single_project=True)
+
+    def _assert_write_pedigree_error(self, response):
+        self.assertEqual(response.status_code, 500)
+        self.assertDictEqual(response.json(), {'error': 'Restricted filesystem'})
+        self.assertEqual(len(responses.calls), 0)
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -1741,7 +1770,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
-    def _test_load_sample_subset(self, mock_open, response, url, body):
+    def _test_load_sample_subset(self, mock_open, mock_mkdir, response, url, body):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
@@ -1787,22 +1816,28 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
-        self._has_expected_ped_files(mock_open, 'SNV_INDEL', sample_type='WES', has_project_subset=True)
+        self._has_expected_ped_files(mock_open, mock_mkdir, 'SNV_INDEL', sample_type='WES', has_project_subset=True)
         self.assert_expected_airtable_call(
             call_index=0,
             filter_formula="OR({CollaboratorSampleID}='NA19678')",
             fields=['CollaboratorSampleID', 'PDOStatus', 'SeqrProject'],
         )
+        body['projects'] = body['projects'][1:]
 
     @staticmethod
     def _local_pedigree_path(*args):
         return '/mock/tmp'
 
-    def _has_expected_ped_files(self, mock_open, dataset_type, sample_type='WGS', **kwargs):
-        super()._has_expected_ped_files(mock_open, dataset_type, sample_type, **kwargs)
+    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', **kwargs):
+        super()._has_expected_ped_files(mock_open, mock_mkdir, dataset_type, sample_type, **kwargs)
 
+        mock_mkdir.assert_not_called()
         self.mock_subprocess.assert_called_once_with(
             f'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/GRCh38/{dataset_type}/pedigrees/{sample_type}/',
             stdout=-1, stderr=-2, shell=True,  # nosec
         )
         self.mock_subprocess.reset_mock()
+
+    def _assert_write_pedigree_error(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(responses.calls), 1)
