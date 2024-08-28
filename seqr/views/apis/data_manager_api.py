@@ -512,9 +512,10 @@ def load_data(request):
         individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
 
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
+    error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
     trigger_data_loading(
-        project_models, sample_type, dataset_type, request_json['filePath'], request.user, success_message,
-        SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
+        project_models, sample_type, dataset_type, request_json['filePath'], user=request.user, success_message=success_message,
+        success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message=error_message,
         is_internal=True, individual_ids=individual_ids,
     )
 
