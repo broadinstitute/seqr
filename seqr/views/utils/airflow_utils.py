@@ -6,8 +6,8 @@ import json
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.add_data_utils import prepare_data_loading_request
+from seqr.utils.logging_utils import SeqrLogger
 from settings import AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
@@ -22,11 +22,11 @@ class DagRunningException(Exception):
 
 
 def trigger_airflow_data_loading(*args, user: User, success_message: str, success_slack_channel: str,
-                                 error_message: str, is_internal: bool = False, individual_ids: list[str] = None):
+                                 error_message: str, is_internal: bool = False, **kwargs):
 
     success = True
     updated_variables, gs_path = prepare_data_loading_request(
-        *args, user, pedigree_dir=SEQR_V3_PEDIGREE_GS_PATH, individual_ids=individual_ids,
+        *args, user, pedigree_dir=SEQR_V3_PEDIGREE_GS_PATH, **kwargs,
     )
     updated_variables['sample_source'] = 'Broad_Internal' if is_internal else 'AnVIL'
     upload_info = [f'Pedigree files have been uploaded to {gs_path}']

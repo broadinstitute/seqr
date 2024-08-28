@@ -105,8 +105,9 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
 def prepare_data_loading_request(projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
                                  data_path: str, user: User, pedigree_dir: str, individual_ids: list[str] = None,
                                  raise_pedigree_error: bool = False):
+    project_guids = sorted([p.guid for p in projects])
     variables = {
-        'projects_to_run': sorted([p.guid for p in projects]),
+        'projects_to_run': project_guids,
         'callset_path': data_path,
         'sample_type': sample_type,
         'dataset_type': _dag_dataset_type(sample_type, dataset_type),
