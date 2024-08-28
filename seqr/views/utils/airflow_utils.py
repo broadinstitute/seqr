@@ -3,8 +3,6 @@ import google.auth
 from google.auth.transport.requests import AuthorizedSession
 import json
 
-from reference_data.models import GENOME_VERSION_GRCh38
-from seqr.models import Project
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.search.add_data_utils import prepare_data_loading_request
 from seqr.utils.logging_utils import SeqrLogger
