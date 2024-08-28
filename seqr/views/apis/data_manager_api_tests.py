@@ -1527,27 +1527,30 @@ class DataManagerAPITest(AirtableTest):
 
         # Test loading with sample subset
         responses.add(responses.POST, PIPELINE_RUNNER_URL)
+        responses.calls.reset()
         mock_open.reset_mock()
         body.update({'datasetType': 'SNV_INDEL', 'sampleType': 'WGS', 'projects': [json.dumps(PROJECT_SAMPLES_OPTION)]})
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._test_load_sample_subset(response, url, body, mock_open)
+        self._test_load_sample_subset(mock_open, response, url, body)
 
-    def _has_expected_ped_files(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False):
+    def _has_expected_ped_files(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False, single_project=False):
         mock_open.assert_has_calls([
             mock.call(f'{self._local_pedigree_path(dataset_type, sample_type)}/{project}_pedigree.tsv', 'w')
-            for project in self.PROJECTS
+            for project in self.PROJECTS[(1 if single_project else 0):]
         ], any_order=True)
         files = [
             [row.split('\t') for row in write_call.args[0].split('\n')]
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
         ]
-        self.assertEqual(len(files), 2)
+        self.assertEqual(len(files), 1 if single_project else 2)
 
         num_rows = 4 if has_project_subset else 15
-        self.assertEqual(len(files[0]), num_rows)
-        self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
-        self.assertEqual(len(files[1]), 3)
-        self.assertListEqual(files[1], [
+        if not single_project:
+            self.assertEqual(len(files[0]), num_rows)
+            self.assertListEqual(files[0][:5], [PEDIGREE_HEADER] + EXPECTED_PEDIGREE_ROWS[:num_rows-1])
+        file = files[0 if single_project else 1]
+        self.assertEqual(len(file), 3)
+        self.assertListEqual(file, [
             PEDIGREE_HEADER,
             ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21234', '', '', 'F'],
             ['R0004_non_analyst_project', 'F000014_14', '14', 'NA21987', '', '', 'M'],
@@ -1587,10 +1590,13 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _assert_expected_get_projects_requests(self):
         self.assertEqual(len(responses.calls), 0)
 
-    def _assert_expected_load_data_requests(self, dataset_type='MITO', sample_type='WGS', trigger_error=False):
+    def _assert_expected_load_data_requests(self, dataset_type='MITO', sample_type='WGS', trigger_error=False, skip_project=False):
         self.assertEqual(len(responses.calls), 1)
+        projects = [PROJECT_GUID, NON_ANALYST_PROJECT_GUID]
+        if skip_project:
+            projects = projects[1:]
         self.assertDictEqual(json.loads(responses.calls[0].request.body), {
-            'projects_to_run': [PROJECT_GUID, NON_ANALYST_PROJECT_GUID],
+            'projects_to_run': projects,
             'callset_path': '/local_datasets/sv_callset.vcf' if trigger_error else '/local_datasets/mito_callset.mt',
             'sample_type': sample_type,
             'dataset_type': dataset_type,
@@ -1617,11 +1623,11 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
             (error, {'severity': 'WARNING', 'requestBody': body, 'httpRequest': mock.ANY, 'traceback': mock.ANY}),
         ])
 
-    def _test_load_sample_subset(self, response, url, body, mock_open):
+    def _test_load_sample_subset(self, mock_open, response, *args):
         # Loading with sample subset does not change behavior when airtable is disabled
         self.assertEqual(response.status_code, 200)
-        self._assert_expected_load_data_requests()
-        self._has_expected_ped_files(mock_open, 'SNV_INDEL')
+        self._assert_expected_load_data_requests(dataset_type='SNV_INDEL', skip_project=True, trigger_error=True)
+        self._has_expected_ped_files(mock_open, 'SNV_INDEL', single_project=True)
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -1735,7 +1741,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
         """
         self.mock_slack.assert_called_once_with(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message)
 
-    def _test_load_sample_subset(self, response, url, body, mock_open):
+    def _test_load_sample_subset(self, mock_open, response, url, body):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
@@ -1792,8 +1798,8 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _local_pedigree_path(*args):
         return '/mock/tmp'
 
-    def _has_expected_ped_files(self, mock_open, dataset_type, sample_type='WGS', has_project_subset=False):
-        super()._has_expected_ped_files(mock_open, dataset_type, sample_type, has_project_subset)
+    def _has_expected_ped_files(self, mock_open, dataset_type, sample_type='WGS', **kwargs):
+        super()._has_expected_ped_files(mock_open, dataset_type, sample_type, **kwargs)
 
         self.mock_subprocess.assert_called_once_with(
             f'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/GRCh38/{dataset_type}/pedigrees/{sample_type}/',
