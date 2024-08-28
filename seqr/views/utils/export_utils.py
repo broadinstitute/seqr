@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import json
 import openpyxl as xl
+import os
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 import zipfile
 
@@ -99,6 +100,8 @@ def export_multiple_files(files, zip_filename, **kwargs):
 
 def write_multiple_files(files, file_path, user, **kwargs):
     is_gs_path = is_google_bucket_file_path(file_path)
+    if not is_gs_path:
+        os.makedirs(file_path, exist_ok=True)
     with TemporaryDirectory() as temp_dir_name:
         dir_name = temp_dir_name if is_gs_path else file_path
         for filename, content in _format_files_content(files, **kwargs):

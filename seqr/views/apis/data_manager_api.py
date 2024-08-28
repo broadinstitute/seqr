@@ -525,7 +525,9 @@ def load_data(request):
             success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True, individual_ids=individual_ids,
         )
     else:
-        request_json, _ = prepare_data_loading_request(*loading_args, user=request.user, pedigree_dir=LOADING_DATASETS_DIR)
+        request_json, _ = prepare_data_loading_request(
+            *loading_args, user=request.user, pedigree_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
+        )
         response = requests.post(f'{PIPELINE_RUNNER_SERVER}/loading_pipeline_enqueue', json=request_json, timeout=60)
         response.raise_for_status()
         logger.info('Triggered loading pipeline', request.user, detail=request_json)

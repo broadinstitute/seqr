@@ -103,7 +103,8 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
 
 
 def prepare_data_loading_request(projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
-                                 data_path: str, user: User, pedigree_dir: str, individual_ids: list[str] = None):
+                                 data_path: str, user: User, pedigree_dir: str, individual_ids: list[str] = None,
+                                 raise_pedigree_error: bool = False):
     variables = {
         'projects_to_run': sorted([p.guid for p in projects]),
         'callset_path': data_path,
@@ -112,7 +113,7 @@ def prepare_data_loading_request(projects: list[Project], sample_type: str, data
         'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
     }
     file_path = _get_pedigree_path(pedigree_dir, genome_version, sample_type, dataset_type)
-    _upload_data_loading_files(projects, user, file_path, individual_ids)
+    _upload_data_loading_files(projects, user, file_path, individual_ids, raise_pedigree_error)
     return variables, file_path
 
 
@@ -125,7 +126,7 @@ def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str,
     return f'{pedigree_dir}/{GENOME_VERSION_LOOKUP[genome_version]}/{dataset_type}/pedigrees/{sample_type}'
 
 
-def _upload_data_loading_files(projects: list[Project], user: User, file_path: str, individual_ids: list[str]):
+def _upload_data_loading_files(projects: list[Project], user: User, file_path: str, individual_ids: list[str], raise_error: bool):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
         'Family_ID': F('family__family_id'),
@@ -150,3 +151,5 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
         logger.error(f'Uploading Pedigrees failed. Errors: {e}', user, detail={
             project: rows for project, _, rows in files
         })
+        if raise_error:
+            raise e
