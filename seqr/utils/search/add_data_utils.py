@@ -103,8 +103,8 @@ def notify_search_data_loaded(project, dataset_type, sample_type, inactivated_sa
 
 
 def prepare_data_loading_request(projects: list[Project], sample_type: str, dataset_type: str, genome_version: str,
-                                 data_path: str, user: User, pedigree_dir: str, individual_ids: list[str] = None,
-                                 raise_pedigree_error: bool = False):
+                                 data_path: str, user: User, pedigree_dir: str,  raise_pedigree_error: bool = False,
+                                 individual_ids: list[str] = None):
     project_guids = sorted([p.guid for p in projects])
     variables = {
         'projects_to_run': project_guids,
@@ -121,10 +121,6 @@ def prepare_data_loading_request(projects: list[Project], sample_type: str, data
 def _dag_dataset_type(sample_type: str, dataset_type: str):
     return 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
         else dataset_type
-
-
-def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str, dataset_type: str):
-    return f'{pedigree_dir}/{GENOME_VERSION_LOOKUP[genome_version]}/{dataset_type}/pedigrees/{sample_type}'
 
 
 def _upload_data_loading_files(projects: list[Project], user: User, file_path: str, individual_ids: list[str], raise_error: bool):
@@ -154,3 +150,7 @@ def _upload_data_loading_files(projects: list[Project], user: User, file_path: s
         })
         if raise_error:
             raise e
+
+
+def _get_pedigree_path(pedigree_dir: str, genome_version: str, sample_type: str, dataset_type: str):
+    return f'{pedigree_dir}/{GENOME_VERSION_LOOKUP[genome_version]}/{dataset_type}/pedigrees/{sample_type}'
