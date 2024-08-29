@@ -8,7 +8,7 @@ import responses
 from seqr.models import Project, Family, Individual
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     validate_anvil_vcf, grant_workspace_access, add_workspace_data, get_anvil_vcf_list, get_anvil_igv_options
-from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, AirflowTestCase, \
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, AirflowTestCase, AirtableTest, \
     TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME, TEST_WORKSPACE_NAME1, TEST_NO_PROJECT_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME2
 from seqr.views.utils.terra_api_utils import remove_token, TerraAPIException, TerraRefreshTokenFailedException
 from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
@@ -67,7 +67,6 @@ REQUEST_BODY.update(VALIDATE_VFC_RESPONSE)
 TEMP_PATH = '/temp_path/temp_filename'
 
 MOCK_AIRTABLE_URL = 'http://testairtable'
-MOCK_AIRTABLE_KEY = 'mock_key' # nosec
 
 PROJECT1_SAMPLES = ['HG00735', 'NA19678', 'NA20870', 'HG00732', 'NA19675_1', 'NA20874', 'HG00733', 'HG00731']
 PROJECT2_SAMPLES = ['NA20885', 'NA19675_1', 'NA19678', 'HG00735']
@@ -484,7 +483,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         ])
 
 
-class LoadAnvilDataAPITest(AirflowTestCase):
+class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
     fixtures = ['users', 'social_auth', 'reference_data', '1kg_project']
 
     LOADING_PROJECT_GUID = f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
@@ -509,9 +508,6 @@ class LoadAnvilDataAPITest(AirflowTestCase):
     def setUp(self):
         # Set up api responses
         responses.add(responses.POST, f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking', status=400)
-        patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', MOCK_AIRTABLE_KEY)
-        patcher.start()
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', MOCK_AIRTABLE_URL)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -525,6 +521,9 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         patcher = mock.patch('seqr.views.utils.airtable_utils.logger')
         self.mock_airtable_logger = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.search.add_data_utils.logger')
+        self.mock_add_data_utils_logger = patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
         self.mock_load_file = patcher.start()
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA
@@ -532,9 +531,6 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         patcher = mock.patch('seqr.views.utils.export_utils.mv_file_to_gs')
         self.mock_mv_file = patcher.start()
         self.mock_mv_file.return_value = True
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.airflow_utils.run_gsutil_with_wait')
-        self.mock_gsutil = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
         mock_tempdir = patcher.start()
@@ -757,13 +753,9 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             '\n'.join(['\t'.join(row) for row in [header] + rows])
         )
 
-        gs_path = f'gs://seqr-datasets/v02/{genome_version}/AnVIL_WES/{project.guid}/base/'
+        gs_path = f'gs://seqr-loading-temp/v3.1/{genome_version}/SNV_INDEL/pedigrees/WES/'
         self.mock_mv_file.assert_called_with(
             f'{TEMP_PATH}/*', gs_path, self.manager_user
-        )
-
-        self.mock_gsutil.assert_called_with(
-            f'rsync -r {gs_path}', f'gs://seqr-loading-temp/v3.1/{genome_version}/SNV_INDEL/pedigrees/WES/', self.manager_user,
         )
 
         self.assert_airflow_calls(additional_tasks_check=test_add_data)
@@ -777,7 +769,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
             'Number of Samples': 8 if test_add_data else 3,
             'Status': 'Loading',
         }}]})
-        self.assertEqual(responses.calls[-1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))
+        self.assert_expected_airtable_headers(-1)
 
         dag_json = {
             'projects_to_run': [project.guid],
@@ -794,7 +786,7 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         *test_user_manager@test.com* requested to load {sample_summary} WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})
 
-        Pedigree file has been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/
+        Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/{version}/SNV_INDEL/pedigrees/WES/
 
         DAG LOADING_PIPELINE is triggered with following:
         ```{dag}```
@@ -847,9 +839,9 @@ class LoadAnvilDataAPITest(AirflowTestCase):
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(**workspace)
 
-        self.mock_airflow_logger.error.assert_called_with(
-            'Uploading Pedigree to Google Storage failed. Errors: Something wrong while moving the file.',
-            self.manager_user, detail=sample_data)
+        self.mock_add_data_utils_logger.error.assert_called_with(
+            'Uploading Pedigrees to Google Storage failed. Errors: Something wrong while moving the file.',
+            self.manager_user, detail={f'{project.guid}_pedigree': sample_data})
         self.mock_api_logger.error.assert_not_called()
         self.mock_airflow_logger.warning.assert_called_with(
             'LOADING_PIPELINE DAG is running and cannot be triggered again.', self.manager_user)

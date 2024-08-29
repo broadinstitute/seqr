@@ -21,7 +21,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_exists
 
-from seqr.views.utils.airflow_utils import trigger_data_loading, write_data_loading_pedigree
+from seqr.views.utils.airflow_utils import trigger_data_loading
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data, convert_django_meta_to_http_headers
@@ -431,17 +431,6 @@ def load_phenotype_prioritization_data(request):
     })
 
 
-@data_manager_required
-def write_pedigree(request, project_guid):
-    project = Project.objects.get(guid=project_guid)
-    try:
-        write_data_loading_pedigree(project, request.user)
-    except ValueError as e:
-        return create_json_response({'error': str(e)}, status=400)
-
-    return create_json_response({'success': True})
-
-
 DATA_TYPE_FILE_EXTS = {
     Sample.DATASET_TYPE_MITO_CALLS: ('.mt',),
     Sample.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
@@ -467,16 +456,19 @@ def get_loaded_projects(request, sample_type, dataset_type):
     projects = get_internal_projects().filter(is_demo=False)
     project_samples = None
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        project_samples = _fetch_airtable_loadable_project_samples(request.user)
-        projects = projects.filter(guid__in=project_samples.keys())
+        if AirtableSession.is_airtable_enabled():
+            project_samples = _fetch_airtable_loadable_project_samples(request.user)
+            projects = projects.filter(guid__in=project_samples.keys())
         exclude_sample_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
         # Include projects with either the matched sample type OR with no loaded data
         projects = projects.exclude(family__individual__sample__sample_type=exclude_sample_type)
     else:
+        # All other data types can only be loaded to projects which already have loaded data
         projects = projects.filter(family__individual__sample__sample_type=sample_type)
 
     projects = projects.distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
-        'family__individual__sample__loaded_date', filter=Q(family__individual__sample__dataset_type=dataset_type),
+        'family__individual__sample__loaded_date',
+        filter=Q(family__individual__sample__dataset_type=dataset_type) & Q(family__individual__sample__sample_type=sample_type),
     ))
 
     if project_samples:
@@ -515,20 +507,16 @@ def load_data(request):
         missing = sorted(set(project_samples.keys()) - {p.guid for p in project_models})
         return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
 
-    additional_project_files = None
     individual_ids = None
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
-        additional_project_files = {
-            project_guid: (f'{project_guid}_ids', ['s'], [{'s': sample_id} for sample_id in sample_ids])
-            for project_guid, sample_ids in project_samples.items()
-        }
 
     success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
+    error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
     trigger_data_loading(
-        project_models, sample_type, dataset_type, request_json['filePath'], request.user, success_message,
-        SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, f'ERROR triggering internal {sample_type} {dataset_type} loading',
-        is_internal=True, individual_ids=individual_ids, additional_project_files=additional_project_files,
+        project_models, sample_type, dataset_type, request_json['filePath'], user=request.user, success_message=success_message,
+        success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message=error_message,
+        is_internal=True, individual_ids=individual_ids,
     )
 
     return create_json_response({'success': True})

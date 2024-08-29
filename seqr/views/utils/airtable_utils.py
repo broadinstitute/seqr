@@ -31,7 +31,14 @@ class AirtableSession(object):
         ANVIL_BASE: 'appUelDNM3BnWaR7M',
     }
 
+    @staticmethod
+    def is_airtable_enabled():
+        return bool(AIRTABLE_API_KEY)
+
     def __init__(self, user, base=RDG_BASE, no_auth=False):
+        if not self.is_airtable_enabled():
+            raise ValueError('Airtable is not configured')
+
         self._user = user
         if not no_auth:
             self._check_user_access(base)

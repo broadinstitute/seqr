@@ -30,6 +30,7 @@ class AuthenticationTestCase(TestCase):
     NO_POLICY_USER = 'no_policy'
 
     ES_HOSTNAME = 'testhost'
+    MOCK_AIRTABLE_KEY = ''
 
     super_user = None
     analyst_user = None
@@ -43,6 +44,9 @@ class AuthenticationTestCase(TestCase):
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', self.ES_HOSTNAME)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', self.MOCK_AIRTABLE_KEY)
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.permissions_utils.SEQR_PRIVACY_VERSION', 2.1)
@@ -94,12 +98,6 @@ class AuthenticationTestCase(TestCase):
 
         pm_group = Group.objects.get(pk=5)
         pm_group.user_set.add(cls.pm_user)
-
-    @classmethod
-    def add_analyst_project(cls, project_id):
-        analyst_group = Group.objects.get(pk=4)
-        assign_perm(user_or_group=analyst_group, perm=CAN_VIEW, obj=Project.objects.filter(id=project_id))
-        return True
 
     def check_require_login(self, url, **request_kwargs):
         self._check_login(url, self.AUTHENTICATED_USER, **request_kwargs)
@@ -509,6 +507,7 @@ def get_group_members_side_effect(user, group, use_sa_credentials=False):
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
     ES_HOSTNAME = ''
+    MOCK_AIRTABLE_KEY = 'airflow_access'
 
     # mock the terra apis
     def setUp(self):
@@ -553,10 +552,6 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
     def add_additional_user_groups(cls):
         analyst_group = Group.objects.get(pk=4)
         analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
-
-    @classmethod
-    def add_analyst_project(cls, project_id):
-        return False
 
     def assert_no_extra_anvil_calls(self):
         self.mock_get_ws_acl.assert_not_called()
@@ -720,6 +715,10 @@ class AirtableTest(object):
             expected_params.update(additional_params)
         self.assertDictEqual(responses.calls[call_index].request.params, expected_params)
         self.assertListEqual(self._get_list_param(responses.calls[call_index].request, 'fields%5B%5D'), fields)
+        self.assert_expected_airtable_headers(call_index)
+
+    def assert_expected_airtable_headers(self, call_index):
+        self.assertEqual(responses.calls[call_index].request.headers['Authorization'], f'Bearer {self.MOCK_AIRTABLE_KEY}')
 
     @staticmethod
     def _get_list_param(call, param):
