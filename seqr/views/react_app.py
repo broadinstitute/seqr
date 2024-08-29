@@ -11,7 +11,7 @@ from seqr.models import WarningMessage
 from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, get_json_for_current_user
 from seqr.views.utils.permissions_utils import login_active_required
-from seqr.views.utils.terra_api_utils import google_auth_enabled
+from seqr.views.utils.terra_api_utils import oauth_provider_login
 
 
 @login_active_required(login_url=LOGIN_URL)
@@ -51,7 +51,7 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
     initial_json = {'meta':  {
         'version': '{}-{}'.format(SEQR_VERSION, ui_version),
         'hijakEnabled': DEBUG or False,
-        'googleLoginEnabled': google_auth_enabled(),
+        'oauthLoginProviderUrl': oauth_provider_login(),
         'elasticsearchEnabled': backend_specific_call(True, False),
         'warningMessages': [message.json() for message in WarningMessage.objects.all()],
         'anvilLoadingDelayDate': ANVIL_LOADING_DELAY_EMAIL_START_DATE if should_show_loading_delay else None,

@@ -59,8 +59,16 @@ class TerraRefreshTokenFailedException(TerraAPIException):
         super(TerraRefreshTokenFailedException, self).__init__(message, 401)
 
 
-def google_auth_enabled():
+def oauth_enabled():
     return bool(SOCIAL_AUTH_GOOGLE_OAUTH2_KEY) or bool(SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY)
+
+
+def oauth_provider_login():
+    if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY:
+        return '/login/google-oauth2'
+    if SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY:
+        return '/login/azuread-v2-tenant-oauth2'
+    return ''
 
 
 def anvil_enabled():
@@ -101,7 +109,7 @@ def _get_call_args(path, headers=None, root_url=None):
 
 
 def _safe_get_social(user):
-    if not google_auth_enabled() or not hasattr(user, 'social_auth'):
+    if not oauth_enabled() or not hasattr(user, 'social_auth'):
         return None
     return user.social_auth.filter(provider=SOCIAL_AUTH_PROVIDER).first()
 

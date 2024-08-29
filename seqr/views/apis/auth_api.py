@@ -12,14 +12,14 @@ import json
 
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.terra_api_utils import google_auth_enabled, remove_token
+from seqr.views.utils.terra_api_utils import oauth_enabled, remove_token
 from settings import LOGIN_URL, POLICY_REQUIRED_URL
 
 logger = SeqrLogger(__name__)
 
 
 def login_view(request):
-    if google_auth_enabled():
+    if oauth_enabled():
         raise PermissionDenied('Username/ password authentication is disabled')
 
     request_json = json.loads(request.body)

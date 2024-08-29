@@ -23,7 +23,7 @@ class AppPageTest(object):
         self.assertDictEqual(initial_json['meta'], {
             'version': mock.ANY,
             'hijakEnabled': False,
-            'googleLoginEnabled': self.GOOGLE_ENABLED,
+            'oauthLoginProviderUrl': self.OAUTH_PROVIDER,
             'elasticsearchEnabled': bool(self.ES_HOSTNAME),
             'warningMessages': [{'id': 1, 'header': 'Warning!', 'message': 'A sample warning'}],
             'anvilLoadingDelayDate': anvil_loading_date,
@@ -99,12 +99,12 @@ class AppPageTest(object):
 
 class LocalAppPageTest(AuthenticationTestCase, AppPageTest):
     fixtures = ['users']
-    GOOGLE_ENABLED = False
+    OAUTH_PROVIDER = ''
 
 
 class AnvilAppPageTest(AnvilAuthenticationTestCase, AppPageTest):
     fixtures = ['users']
-    GOOGLE_ENABLED = True
+    OAUTH_PROVIDER = 'cloud'
 
     def test_react_page(self, *args, **kwargs):
         super(AnvilAppPageTest, self).test_react_page(*args, **kwargs)

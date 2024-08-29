@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'
 import { Popup, Icon } from 'semantic-ui-react'
 
 import { fetchProjects } from 'redux/rootReducer'
-import { getProjectsIsLoading, getUser, getGoogleLoginEnabled } from 'redux/selectors'
+import { getProjectsIsLoading, getUser, getOauthLoginEnabled } from 'redux/selectors'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
@@ -186,14 +186,14 @@ COLUMNS_NO_ANVIL.splice(2, 1)
 const SUPERUSER_COLUMNS_NO_ANVIL = [...SUPERUSER_COLUMNS]
 SUPERUSER_COLUMNS_NO_ANVIL.splice(2, 1)
 
-const getColumns = (googleLoginEnabled, isAnvil, isSuperuser) => {
-  if (googleLoginEnabled && isAnvil) {
+const getColumns = (oauthLoginEnabled, isAnvil, isSuperuser) => {
+  if (oauthLoginEnabled && isAnvil) {
     return isSuperuser ? SUPERUSER_COLUMNS : COLUMNS
   }
   return isSuperuser ? SUPERUSER_COLUMNS_NO_ANVIL : COLUMNS_NO_ANVIL
 }
 
-const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, googleLoginEnabled }) => (
+const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, oauthLoginEnabled }) => (
   <DataLoader content load={load} loading={false}>
     <ProjectTableContainer>
       <VerticalSpacer height={10} />
@@ -210,7 +210,7 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, google
         emptyContent="0 projects found"
         loading={loading}
         data={visibleProjects}
-        columns={getColumns(googleLoginEnabled, user.isAnvil, user.isSuperuser)}
+        columns={getColumns(oauthLoginEnabled, user.isAnvil, user.isSuperuser)}
         footer={user.isPm ? <CreateProjectButton /> : null}
         downloadTableType="Projects"
         downloadFileName="projects"
@@ -224,7 +224,7 @@ ProjectsTable.propTypes = {
   loading: PropTypes.bool.isRequired,
   user: PropTypes.object,
   load: PropTypes.func,
-  googleLoginEnabled: PropTypes.bool,
+  oauthLoginEnabled: PropTypes.bool,
 }
 
 export { ProjectsTable as ProjectsTableComponent }
@@ -233,7 +233,7 @@ const mapStateToProps = state => ({
   visibleProjects: getVisibleProjects(state),
   loading: getProjectsIsLoading(state),
   user: getUser(state),
-  googleLoginEnabled: getGoogleLoginEnabled(state),
+  oauthLoginEnabled: getOauthLoginEnabled(state),
 })
 
 const mapDispatchToProps = {

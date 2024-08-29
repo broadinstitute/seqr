@@ -1,10 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Segment, Message, Button, Icon } from 'semantic-ui-react'
+import { getOauthLoginProviderUrl } from 'redux/selectors'
 
-import { ANVIL_URL, GOOGLE_LOGIN_URL } from 'shared/utils/constants'
+import { ANVIL_URL } from 'shared/utils/constants'
 
-const GOGGLE_SETUP_URL = 'https://support.terra.bio/hc/en-us/articles/360029186611-Setting-up-a-Google-account-with-a-non-Google-email'
+const GOOGLE_SETUP_URL = 'https://support.terra.bio/hc/en-us/articles/360029186611-Setting-up-a-Google-account-with-a-non-Google-email'
 
 const ERROR_MESSAGES = {
   anvil_registration: (
@@ -20,20 +21,20 @@ const ERROR_MESSAGES = {
       <br />
       If the email associated with your account is not managed by google,
       follow
-      <a href={GOGGLE_SETUP_URL} target="_blank" rel="noreferrer">these instructions </a>
+      <a href={GOOGLE_SETUP_URL} target="_blank" rel="noreferrer">these instructions </a>
       to register the email with google before registering with AnVIL.
     </span>
   ),
-  no_account: 'No seqr account found for the selected Google user',
+  no_account: 'No seqr account found for the selected user identity',
 }
 
-const LoginError = ({ location, match }) => (
+const LoginError = ({ location, match, oauthLoginProviderUrl }) => (
   <Segment textAlign="center" padded="very" basic>
     <Message error compact>
       {ERROR_MESSAGES[match.params.error] || `Unknown error occured: ${match.params.error}`}
     </Message>
     <div>
-      <Button as="a" href={`${GOOGLE_LOGIN_URL}${location.search}`} primary>
+      <Button as="a" href={`${oauthLoginProviderUrl}${location.search}`} primary>
         <Icon name="google" />
         Sign in to seqr
       </Button>
@@ -44,6 +45,11 @@ const LoginError = ({ location, match }) => (
 LoginError.propTypes = {
   location: PropTypes.object,
   match: PropTypes.object,
+  oauthLoginProviderUrl: PropTypes.string,
 }
 
-export default LoginError
+const mapStateToProps = state => ({
+  oauthLoginProviderUrl: getOauthLoginProviderUrl(state),
+})
+
+export default connect(mapStateToProps)(LoginError)
