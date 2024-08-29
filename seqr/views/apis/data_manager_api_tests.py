@@ -1807,7 +1807,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
     def _local_pedigree_path(*args):
         return '/mock/tmp'
 
-    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', **kwargs):
+    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, *args, sample_type='WGS', **kwargs):
         super()._has_expected_ped_files(mock_open, mock_mkdir, dataset_type, sample_type, **kwargs)
 
         mock_mkdir.assert_not_called()
