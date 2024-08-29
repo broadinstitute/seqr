@@ -152,8 +152,8 @@ class MitoHailTableQuery(BaseHailTableQuery):
             self._load_table_kwargs = {'_intervals': parsed_intervals, '_filter_intervals': True}
         return parsed_intervals
 
-    def _get_family_passes_quality_filter(self, quality_filter, ht, pathogenicity=None, **kwargs):
-        passes_quality = super()._get_family_passes_quality_filter(quality_filter, ht)
+    def _get_family_passes_quality_filter(self, quality_filter, ht, filters_field_name, pathogenicity=None, **kwargs):
+        passes_quality = super()._get_family_passes_quality_filter(quality_filter, ht, filters_field_name)
         clinvar_path_ht = False if passes_quality is None else self._get_loaded_clinvar_prefilter_ht(pathogenicity)
         if not clinvar_path_ht:
             return passes_quality

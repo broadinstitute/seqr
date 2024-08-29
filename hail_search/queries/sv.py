@@ -85,8 +85,8 @@ class SvHailTableQuery(BaseHailTableQuery):
         parsed_annotations[NEW_SV_FIELD] = (annotations or {}).get(NEW_SV_FIELD)
         return parsed_annotations
 
-    def _get_family_passes_quality_filter(self, quality_filter, ht, parsed_annotations=None, **kwargs):
-        passes_quality = super()._get_family_passes_quality_filter(quality_filter, ht)
+    def _get_family_passes_quality_filter(self, quality_filter, ht, filters_field_name, parsed_annotations=None, **kwargs):
+        passes_quality = super()._get_family_passes_quality_filter(quality_filter, ht, filters_field_name)
         if not (parsed_annotations or {}).get(NEW_SV_FIELD):
             return passes_quality
 
