@@ -6,10 +6,9 @@ import logging
 
 from hail_search.constants import ABSENT_PATH_SORT_OFFSET, CLINVAR_KEY, CLINVAR_MITO_KEY, CLINVAR_LIKELY_PATH_FILTER, CLINVAR_PATH_FILTER, \
     CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, ALLOWED_TRANSCRIPTS, ALLOWED_SECONDARY_TRANSCRIPTS, PATHOGENICTY_SORT_KEY, CONSEQUENCE_SORT, \
-    PATHOGENICTY_HGMD_SORT_KEY
+    PATHOGENICTY_HGMD_SORT_KEY, MAX_LOAD_INTERVALS
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath, QualityFilterFormat
 
-MAX_LOAD_INTERVALS = 1000
 
 logger = logging.getLogger(__name__)
 
@@ -215,6 +214,10 @@ class MitoHailTableQuery(BaseHailTableQuery):
             ht = hl.filter_intervals(ht, parsed_intervals, keep=False)
         elif len(parsed_intervals or []) >= MAX_LOAD_INTERVALS:
             ht = hl.filter_intervals(ht, parsed_intervals)
+
+        if '_n_partitions' not in self._load_table_kwargs:
+            ht = ht.naive_coalesce(self._n_partitions)
+
         return ht
 
     def _get_allowed_consequence_ids(self, annotations):
