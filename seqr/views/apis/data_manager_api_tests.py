@@ -1606,8 +1606,8 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     def _local_pedigree_path(dataset_type, sample_type):
         return f'/local_datasets/GRCh38/{dataset_type}/pedigrees/{sample_type}'
 
-    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, sample_type='WGS', **kwargs):
-        super()._has_expected_ped_files(mock_open, mock_mkdir, dataset_type, sample_type, **kwargs)
+    def _has_expected_ped_files(self, mock_open, mock_mkdir, dataset_type, *args, sample_type='WGS', **kwargs):
+        super()._has_expected_ped_files(mock_open, mock_mkdir, dataset_type,  *args, sample_type, **kwargs)
         mock_mkdir.assert_called_once_with(self._local_pedigree_path(dataset_type, sample_type), exist_ok=True)
 
     def _assert_success_notification(self, dag_json):
@@ -1709,7 +1709,7 @@ class AnvilDataManagerAPITest(AirflowTestCase, DataManagerAPITest):
             'sample_type': 'WGS',
             'dataset_type': 'MITO',
         }
-    
+
     def _assert_expected_load_data_requests(self, **kwargs):
         self.assert_airflow_calls(**kwargs)
 
