@@ -521,6 +521,9 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         patcher = mock.patch('seqr.views.utils.airtable_utils.logger')
         self.mock_airtable_logger = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.utils.search.add_data_utils.logger')
+        self.mock_add_data_utils_logger = patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
         self.mock_load_file = patcher.start()
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA
@@ -836,7 +839,7 @@ class LoadAnvilDataAPITest(AirflowTestCase, AirtableTest):
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(**workspace)
 
-        self.mock_airflow_logger.error.assert_called_with(
+        self.mock_add_data_utils_logger.error.assert_called_with(
             'Uploading Pedigrees to Google Storage failed. Errors: Something wrong while moving the file.',
             self.manager_user, detail={f'{project.guid}_pedigree': sample_data})
         self.mock_api_logger.error.assert_not_called()
