@@ -71,7 +71,7 @@ INHERITANCE_FILTERS = {
     },
 }
 
-PREFILTER_FREQ_CUTOFF = 0.01
+PREFILTER_FREQ_CUTOFF = 0.001  # TODO actually handle diff cutoffs for diff builds
 PATH_FREQ_OVERRIDE_CUTOFF = 0.05
 CLINVAR_PATH_FILTER = 'pathogenic'
 CLINVAR_LIKELY_PATH_FILTER = 'likely_pathogenic'

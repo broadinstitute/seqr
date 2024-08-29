@@ -211,6 +211,7 @@ class MitoHailTableQuery(BaseHailTableQuery):
         ]
 
     def _prefilter_entries_table(self, ht, parsed_intervals=None, exclude_intervals=False, **kwargs):
+        print(f'applies filter_intervals: {len(parsed_intervals or []) >= MAX_LOAD_INTERVALS}')
         if exclude_intervals and parsed_intervals:
             ht = hl.filter_intervals(ht, parsed_intervals, keep=False)
         elif len(parsed_intervals or []) >= MAX_LOAD_INTERVALS:

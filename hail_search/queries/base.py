@@ -357,6 +357,8 @@ class BaseHailTableQuery(object):
             self._comp_het_ht = self._filter_compound_hets()
 
         if families_ht is not None:
+            count = families_ht.count()
+            raise ValueError(f'Filtered entries table rows: {count}')
             self._ht = self._query_table_annotations(families_ht, self._get_table_path('annotations.ht'))
             self._ht = self._filter_annotated_table(self._ht, **kwargs)
 

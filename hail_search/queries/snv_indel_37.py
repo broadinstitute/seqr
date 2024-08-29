@@ -77,6 +77,7 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
         ht = super()._prefilter_entries_table(ht, *args, **kwargs)
         load_table_intervals = self._load_table_kwargs.get('_intervals') or []
         no_interval_prefilter = not load_table_intervals or len(raw_intervals or []) > len(load_table_intervals)
+        print(f'no_interval_prefilter: {no_interval_prefilter}')
         if 'variant_ht' not in self._load_table_kwargs and no_interval_prefilter:
             af_ht = self._get_loaded_filter_ht(
                 GNOMAD_GENOMES_FIELD, 'high_af_variants.ht', self._get_gnomad_af_prefilter, **kwargs)
@@ -87,7 +88,7 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
     def _get_gnomad_af_prefilter(self, frequencies=None, pathogenicity=None, **kwargs):
         gnomad_genomes_filter = (frequencies or {}).get(GNOMAD_GENOMES_FIELD, {})
         af_cutoff = gnomad_genomes_filter.get('af')
-        if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
+        if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:  # TODO also prefilter for hh
             af_cutoff = PREFILTER_FREQ_CUTOFF
         if af_cutoff is None:
             return False
