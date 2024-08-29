@@ -383,6 +383,18 @@ SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL = 'seqr_loading_notifications'
 #########################################################
 #  Social auth specific settings
 #########################################################
+SOCIAL_AUTH_PROVIDER = ''
+
+#########################################################
+#  AZUREAD
+SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_AZUREAD_V2_OAUTH2_CLIENT_ID')
+SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_AZUREAD_V2_OAUTH2_SECRET')
+SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_TENANT_ID = os.environ.get('SOCIAL_AUTH_AZUREAD_V2_OAUTH2_TENANT')
+if SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY:
+    SOCIAL_AUTH_PROVIDER = 'azuread-v2-tenant-oauth2'
+
+#########################################################
+# GOOGLE
 SOCIAL_AUTH_GOOGLE_OAUTH2_IGNORE_DEFAULT_SCOPE = True
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.profile',
@@ -390,25 +402,16 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'openid'
 ]
 
-SOCIAL_AUTH_PROVIDER = 'google-oauth2'
-GOOGLE_LOGIN_REQUIRED_URL = '/login/{}'.format(SOCIAL_AUTH_PROVIDER)
-
-
 # Use Google sub ID as the user ID, safer than using email
 USE_UNIQUE_USER_ID = True
-
+GOOGLE_LOGIN_REQUIRED_URL = '/login/google-oauth2'
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
-# LOGIN_URL = GOOGLE_LOGIN_REQUIRED_URL if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '/login'
+if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY:
+    SOCIAL_AUTH_PROVIDER = 'google-oauth2'
 
-#########################################################
-#  Social auth AzureAD specific settings
-#########################################################
-SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_AZUREAD_V2_OAUTH2_CLIENT_ID')
-SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_AZUREAD_V2_OAUTH2_SECRET')
-SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_TENANT_ID = os.environ.get('SOCIAL_AUTH_AZUREAD_V2_OAUTH2_TENANT')
-LOGIN_URL = '/login/azuread-v2-tenant-oauth2' if SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY else '/login'
-
+# Build the login URL based on the provider (if any).
+LOGIN_URL = '/'.join(filter(None, ['/login', SOCIAL_AUTH_PROVIDER]))
 
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
 SOCIAL_AUTH_URL_NAMESPACE = 'social'

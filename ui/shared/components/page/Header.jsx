@@ -7,7 +7,7 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 import { updateUser } from 'redux/rootReducer'
-import { getUser, getOauthLoginProviderUrl } from 'redux/selectors'
+import { getUser, getOauthLoginProvider } from 'redux/selectors'
 import { USER_NAME_FIELDS, LOCAL_LOGIN_URL, FEATURE_UPDATES_PATH } from 'shared/utils/constants'
 import UpdateButton from '../buttons/UpdateButton'
 
@@ -18,7 +18,7 @@ const HeaderMenu = styled(Menu)`
   padding-right: 100px;
 `
 
-const PageHeader = React.memo(({ user, oauthLoginProviderUrl, onSubmit }) => (
+const PageHeader = React.memo(({ user, oauthLoginProvider, onSubmit }) => (
   <HeaderMenu borderless inverted attached>
     <Menu.Item as={Link} to="/"><Header size="medium" inverted>seqr</Header></Menu.Item>
     {Object.keys(user).length ? [
@@ -53,20 +53,20 @@ const PageHeader = React.memo(({ user, oauthLoginProviderUrl, onSubmit }) => (
       </Dropdown>,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
     ] :
-    <Menu.Item as="a" href={oauthLoginProviderUrl || LOCAL_LOGIN_URL}>Log in</Menu.Item>}
+    <Menu.Item as="a" href={oauthLoginProvider ? `/login/${oauthLoginProvider}` : LOCAL_LOGIN_URL}>Log in</Menu.Item>
   </HeaderMenu>
 ))
 
 PageHeader.propTypes = {
   user: PropTypes.object,
-  oauthLoginProviderUrl: PropTypes.string,
+  oauthLoginProvider: PropTypes.string,
   onSubmit: PropTypes.func,
 }
 
 // wrap top-level component so that redux state is passed in as props
 const mapStateToProps = state => ({
   user: getUser(state),
-  oauthLoginProviderUrl: getOauthLoginProviderUrl(state),
+  oauthLoginProvider: getOauthLoginProvider(state),
 })
 
 const mapDispatchToProps = {

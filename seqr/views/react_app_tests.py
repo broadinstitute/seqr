@@ -23,7 +23,7 @@ class AppPageTest(object):
         self.assertDictEqual(initial_json['meta'], {
             'version': mock.ANY,
             'hijakEnabled': False,
-            'oauthLoginProviderUrl': self.OAUTH_PROVIDER,
+            'oauthLoginProvider': self.OAUTH_PROVIDER,
             'elasticsearchEnabled': bool(self.ES_HOSTNAME),
             'warningMessages': [{'id': 1, 'header': 'Warning!', 'message': 'A sample warning'}],
             'anvilLoadingDelayDate': anvil_loading_date,

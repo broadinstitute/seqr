@@ -14,8 +14,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
 from settings import SEQR_VERSION, TERRA_API_ROOT_URL, TERRA_PERMS_CACHE_EXPIRE_SECONDS, SERVICE_ACCOUNT_CREDENTIALS, \
-    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SOCIAL_AUTH_GOOGLE_OAUTH2_KEY, SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY, \
-    SERVICE_ACCOUNT_FOR_ANVIL, SOCIAL_AUTH_PROVIDER
+    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SERVICE_ACCOUNT_FOR_ANVIL, SOCIAL_AUTH_PROVIDER
 
 SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
 OWNER_ACCESS_LEVEL = 'OWNER'
@@ -60,15 +59,7 @@ class TerraRefreshTokenFailedException(TerraAPIException):
 
 
 def oauth_enabled():
-    return bool(SOCIAL_AUTH_GOOGLE_OAUTH2_KEY) or bool(SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY)
-
-
-def oauth_provider_login():
-    if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY:
-        return '/login/google-oauth2'
-    if SOCIAL_AUTH_AZUREAD_V2_TENANT_OAUTH2_KEY:
-        return '/login/azuread-v2-tenant-oauth2'
-    return ''
+    return bool(SOCIAL_AUTH_PROVIDER)
 
 
 def anvil_enabled():

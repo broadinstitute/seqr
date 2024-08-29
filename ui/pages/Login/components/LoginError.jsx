@@ -1,7 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 import { Segment, Message, Button, Icon } from 'semantic-ui-react'
-import { getOauthLoginProviderUrl } from 'redux/selectors'
+import { getOauthLoginProvider } from 'redux/selectors'
 
 import { ANVIL_URL } from 'shared/utils/constants'
 
@@ -28,14 +29,14 @@ const ERROR_MESSAGES = {
   no_account: 'No seqr account found for the selected user identity',
 }
 
-const LoginError = ({ location, match, oauthLoginProviderUrl }) => (
+const LoginError = ({ location, match, oauthLoginProvider }) => (
   <Segment textAlign="center" padded="very" basic>
     <Message error compact>
       {ERROR_MESSAGES[match.params.error] || `Unknown error occured: ${match.params.error}`}
     </Message>
     <div>
-      <Button as="a" href={`${oauthLoginProviderUrl}${location.search}`} primary>
-        <Icon name="google" />
+      <Button as="a" href={`/login/${oauthLoginProvider}${location.search}`} primary>
+        <Icon name="cloud" />
         Sign in to seqr
       </Button>
     </div>
@@ -45,11 +46,11 @@ const LoginError = ({ location, match, oauthLoginProviderUrl }) => (
 LoginError.propTypes = {
   location: PropTypes.object,
   match: PropTypes.object,
-  oauthLoginProviderUrl: PropTypes.string,
+  oauthLoginProvider: PropTypes.string,
 }
 
 const mapStateToProps = state => ({
-  oauthLoginProviderUrl: getOauthLoginProviderUrl(state),
+  oauthLoginProvider: getOauthLoginProvider(state),
 })
 
 export default connect(mapStateToProps)(LoginError)
