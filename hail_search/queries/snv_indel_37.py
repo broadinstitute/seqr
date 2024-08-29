@@ -2,7 +2,7 @@ from collections import OrderedDict
 import hail as hl
 
 from hail_search.constants import CLINVAR_KEY, CLINVAR_MITO_KEY, HGMD_KEY, HGMD_PATH_RANGES, \
-    GNOMAD_GENOMES_FIELD, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
+    GNOMAD_GENOMES_FIELD, PREFILTER_FREQ_CUTOFF, PATH_FREQ_OVERRIDE_CUTOFF, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     SPLICE_AI_FIELD, GENOME_VERSION_GRCh37
 from hail_search.queries.base import PredictionPath, QualityFilterFormat
 from hail_search.queries.mito import MitoHailTableQuery
@@ -69,7 +69,7 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
     }
 
     FREQUENCY_PREFILTER_FIELDS = OrderedDict([
-        (True, 0.01),
+        (True, PREFILTER_FREQ_CUTOFF),
         ('is_gt_10_percent', 0.1),
     ])
 
@@ -88,7 +88,7 @@ class SnvIndelHailTableQuery37(MitoHailTableQuery):
         gnomad_genomes_filter = (frequencies or {}).get(GNOMAD_GENOMES_FIELD, {})
         af_cutoff = gnomad_genomes_filter.get('af')
         if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
-            af_cutoff = list(self.FREQUENCY_PREFILTER_FIELDS.values())[0]
+            af_cutoff = PREFILTER_FREQ_CUTOFF
         if af_cutoff is None:
             return False
 

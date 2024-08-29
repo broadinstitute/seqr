@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import hail as hl
 
-from hail_search.constants import GENOME_VERSION_GRCh38, SCREEN_KEY, ALPHAMISSENSE_SORT, \
+from hail_search.constants import GENOME_VERSION_GRCh38, SCREEN_KEY, PREFILTER_FREQ_CUTOFF, ALPHAMISSENSE_SORT, \
     UTR_ANNOTATOR_KEY, EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY
 from hail_search.queries.base import BaseHailTableQuery, PredictionPath
 from hail_search.queries.snv_indel_37 import SnvIndelHailTableQuery37
@@ -25,7 +25,7 @@ class SnvIndelHailTableQuery(SnvIndelHailTableQuery37):
     ]
     FREQUENCY_PREFILTER_FIELDS = OrderedDict([
         (True, 0.001),
-        ('is_gt_1_percent', 0.01),
+        ('is_gt_1_percent', PREFILTER_FREQ_CUTOFF),
         ('is_gt_3_percent', 0.03),
         ('is_gt_5_percent', 0.05),
         ('is_gt_10_percent', 0.1),
