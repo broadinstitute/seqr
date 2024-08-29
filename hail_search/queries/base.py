@@ -635,7 +635,8 @@ class BaseHailTableQuery(object):
         ht = None if self._inheritance_mode == COMPOUND_HET else self._annotate_families_inheritance(
             ht, self._inheritance_mode, inheritance_filter, sorted_family_sample_data,
         )
-        ht = ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
+        if ht:
+            ht = ht.filter(ht.family_entries.any(hl.is_defined)).select_globals('family_guids')
         return ht, comp_het_ht
 
     def _annotate_families_inheritance(
