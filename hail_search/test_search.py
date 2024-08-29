@@ -573,11 +573,6 @@ class HailSearchTestCase(AioHTTPTestCase):
             if 'I000015_na20885' in variant['genotypes']:
                 variant['genotypes']['I000015_na20885'].append({**variant['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
 
-        # expected_gene_counts = {
-        #     'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-        #     'ENSG00000177000': {'total': 4, 'families': {'F000002_2': 2, 'F000011_11': 2}},
-        #     'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 1, 'F000011_11': 2}},
-        # }
         await self._assert_expected_search(
             expected_results, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
         )

@@ -362,6 +362,11 @@ class BaseHailTableQuery(object):
         """
         Imports, prefilters, and filters multiple entries tables per sample type.
         Returns the merged and filtered entries table and ch table.
+
+        In the variant lookup control flow, project_samples looks like this:
+            {<project_guid>: {<sample_type>: {<family_guid>: True}, <sample_type_2>: {<family_guid_2>: True}}, <project_guid_2>: ...}
+        In the variant search control flow, project_samples looks like this:
+            {<project_guid>: {<sample_type>: {<family_guid>: [<sample_data>, <sample_data>, ...]}, <sample_type_2>: {<family_guid_2>: []} ...}, <project_guid_2>: ...}
         """
         entries_hts_map: dict[str, list[tuple[hl.Table, dict]]] = {}
         self._load_prefiltered_project_hts(project_samples, entries_hts_map, n_partitions=n_partitions, **kwargs)
