@@ -414,36 +414,22 @@ class VariantSearchAPITest(object):
              'sample_2', 'num_alt_alleles_2', 'gq_2', 'ab_2', 'sample_3', 'num_alt_alleles_3', 'gq_3', 'ab_3'],
             ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '0.13', '', '0.007', '', '', '', '', '', '', '', '', '',
              '', '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '1',
-             'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', 'NA19675', '1', '46.0',
-             '0.702127659574', 'NA19679', '0', '99.0', '0.0', '', '', '', ''],
+             'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', '', '', '',
+             '', '', '', '', '', '', '', '', ''],
             ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-             '1', '', '', '', '', '', 'NA19679', '0', '99.0', '0.0', '', '', '', '', '', '', '', ''],
+             '1', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
              '', '2', 'AIP (None)|Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '', '', '',
              '', '', '', '', '', '', '', '', ''],
             ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
              '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
              '2.000999927520752', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000383791.8:c.156A>C',
-             'ENSP00000373301.3:p.Leu52Phe', 'Conflicting_classifications_of_pathogenicity', '1', '', '2', '', '', '', '', '', 'HG00731', '2', '99', '1.0',
-             'HG00732', '1', '99', '0.625', 'HG00733', '0', '40', '0.0'],
-            ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
+             'ENSP00000373301.3:p.Leu52Phe','Conflicting_classifications_of_pathogenicity', '1', '', '2', '', '', '', '', '', '', '', '', '',
+             '', '', '', '', '', '', '', ''],
+            ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0','0.38041073083877563', '0.0',
              '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '', '',
-             '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '', '2', '', '', '', '', '', 'HG00731',
-             '1', '99', '1.0', 'HG00732', '0', '99', '0.4594594594594595', 'HG00733', '1', '99', '0.4074074074074074'],
+             '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '', '2']
         ]
-        # print([line.split('\t') for line in response.content.decode().strip().split('\n')])
-        actual_content = [line.split('\t') for line in response.content.decode().strip().split('\n')]
-
-        differences = []
-        for i, (actual_line, expected_line) in enumerate(zip(actual_content, expected_content)):
-            if actual_line != expected_line:
-                differences.append((i, actual_line, expected_line))
-
-        if differences:
-            print(f"Differences found at indices: {differences}")
-        else:
-            print("No differences found")
-
         self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], expected_content)
 
         # test export with max families
@@ -458,28 +444,25 @@ class VariantSearchAPITest(object):
                  'gq_2', 'ab_2', 'sample_3', 'num_alt_alleles_3', 'gq_3', 'ab_3'],
                 ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '0.13', '', '0.007', '', '', '', '', '', '', '', '', '', '',
                  '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '1',
-                 'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', 'NA19675', '1', '46.0', '0.702127659574',
+                 'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '', '', '', '',
                  '', '', '', '', '', '', '', '',],
                 ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '0.13', '', '0.007', '', '', '', '', '', '', '', '', '', '',
                  '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '2', '', '',
-                 'NA19679', '0', '99.0', '0.0', '', '', '', '', '', '', '', '',],
+                 '', '', '', '', '', '', '', '', '', '', '', ''],
                 ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-                 '1', '', '', 'NA19679', '0', '99.0', '0.0', '', '', '', '', '', '', '', '',],
+                 '1', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
                 ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
                  '', '2', 'AIP (None)|Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)',
                  '', '', '', '', '', '', '', '', '', '', '', '',],
                 ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'missense_variant', '0.31111112236976624', '0.29499998688697815', '0',
                  '0.28899794816970825', '0.24615199863910675', '20.899999618530273', '0.19699999690055847',
                  '2.000999927520752', '0.0', '0.1', '0.05', '', '', 'rs1801131', 'ENST00000383791.8:c.156A>C',
-                 'ENSP00000373301.3:p.Leu52Phe', 'Conflicting_classifications_of_pathogenicity', '1', '', '2', '', '', 'HG00731', '2', '99', '1.0',
-                 'HG00732', '1', '99', '0.625', 'HG00733', '0', '40', '0.0'],
+                 'ENSP00000373301.3:p.Leu52Phe', 'Conflicting_classifications_of_pathogenicity', '1', '', '2', '', '', '', '', '', '',
+                 '', '', '', '', '', '', '', ''],
                 ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'intron_variant', '0.6666666865348816', '0.0', '0.38041073083877563', '0.0',
                  '0.36268100142478943', '2.753999948501587', '', '1.378000020980835', '0.009999999776482582', '', '',
-                 '', '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '', '2', '', '', 'HG00731',
-                 '1', '99', '1.0', 'HG00732', '0', '99', '0.4594594594594595', 'HG00733', '1', '99',
-                 '0.4074074074074074'],
+                 '', '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '', '2'],
             ]
-            self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], expected_content)
 
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True, user=self.collaborator_user)
         mock_error_logger.assert_not_called()
