@@ -138,6 +138,7 @@ export const Dropdown = React.memo(({ options, includeCategories, ...props }) =>
     inputType="Dropdown"
     options={processOptions(options, includeCategories)}
     noResultsMessage={null}
+    selectOnBlur={false}
     tabIndex="0"
   />
 ))

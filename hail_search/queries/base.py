@@ -742,10 +742,7 @@ class BaseHailTableQuery(object):
             intervals = [[f'chr{interval[0]}', *interval[1:]] for interval in (intervals or [])]
 
         if len(intervals) > MAX_GENE_INTERVALS and len(intervals) == len(gene_ids or []):
-            super_intervals = defaultdict(lambda: (1e9, 0))
-            for chrom, start, end in intervals:
-                super_intervals[chrom] = (min(super_intervals[chrom][0], start), max(super_intervals[chrom][1], end))
-            intervals = [(chrom, start, end) for chrom, (start, end) in super_intervals.items()]
+            intervals = self.cluster_intervals(sorted(intervals))
 
         parsed_intervals = [
             hl.eval(hl.locus_interval(*interval, reference_genome=self.GENOME_VERSION, invalid_missing=True))
@@ -763,6 +760,21 @@ class BaseHailTableQuery(object):
             )
 
         return parsed_intervals
+
+    @classmethod
+    def cluster_intervals(cls, intervals, distance=100000, max_intervals=MAX_GENE_INTERVALS):
+        if len(intervals) <= max_intervals:
+            return intervals
+
+        merged_intervals = [intervals[0]]
+        for chrom, start, end in intervals[1:]:
+            prev_chrom, prev_start, prev_end = merged_intervals[-1]
+            if chrom == prev_chrom and start - prev_end < distance:
+                merged_intervals[-1] = [chrom, prev_start, max(prev_end, end)]
+            else:
+                merged_intervals.append([chrom, start, end])
+
+        return cls.cluster_intervals(merged_intervals, distance=distance+100000, max_intervals=max_intervals)
 
     def _should_add_chr_prefix(self):
         return self.GENOME_VERSION == GENOME_VERSION_GRCh38

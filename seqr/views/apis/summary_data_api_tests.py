@@ -581,11 +581,8 @@ class SummaryDataAPITest(AirtableTest):
             self.assertEqual(len([r['participant_id'] for r in response_json['rows'] if r['participant_id'] == 'NA20888']), 2)
 
     @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 2)
-    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
-    @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
-    def test_sample_metadata_export(self, mock_google_authenticated):
-        mock_google_authenticated.return_value = False
+    def test_sample_metadata_export(self):
         url = reverse(individual_metadata, args=['R0003_test'])
         self.check_require_login(url)
 
@@ -654,11 +651,16 @@ class SummaryDataAPITest(AirtableTest):
         self._has_expected_metadata_response(response, all_project_individuals, has_duplicate=True)
 
         # Test invalid airtable responses
-        response = self.client.get(include_airtable_url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-        mock_google_authenticated.return_value = True
+        self._test_metadata_airtable_responses(include_airtable_url, expected_individuals)
 
+        # Test gregor projects
+        response = self.client.get(gregor_projects_url)
+        self._has_expected_metadata_response(response, multi_project_individuals, has_duplicate=True)
+
+        response = self.client.get(f'{gregor_projects_url}?includeAirtable=true')
+        self._has_expected_metadata_response(response, multi_project_individuals, has_airtable=self.HAS_AIRTABLE, has_duplicate=True)
+
+    def _test_metadata_airtable_responses(self, include_airtable_url, expected_individuals):
         responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=402)
         response = self.client.get(include_airtable_url)
         self.assertEqual(response.status_code, 402)
@@ -682,7 +684,6 @@ class SummaryDataAPITest(AirtableTest):
                 'validate': lambda log_value: self.assertTrue(log_value['traceback'].startswith('Traceback'))
             })
         ])
-
 
         responses.reset()
         responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),
@@ -715,14 +716,6 @@ class SummaryDataAPITest(AirtableTest):
         self.assertEqual(len(responses.calls), 8)
         self.assert_expected_airtable_call(
             -1, "OR(RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
-        self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
-
-        # Test gregor projects
-        response = self.client.get(gregor_projects_url)
-        self._has_expected_metadata_response(response, multi_project_individuals, has_duplicate=True)
-
-        response = self.client.get(f'{gregor_projects_url}?includeAirtable=true')
-        self._has_expected_metadata_response(response, multi_project_individuals, has_airtable=True, has_duplicate=True)
 
     @mock.patch('seqr.views.apis.summary_data_api.EmailMessage')
     def test_send_vlm_email(self, mock_email):
@@ -774,6 +767,13 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = ['NA21234', 'NA21987']
+    HAS_AIRTABLE = False
+
+    def _test_metadata_airtable_responses(self, include_airtable_url, expected_individuals):
+        # Returns successfully without airtable data when disabled
+        response = self.client.get(include_airtable_url)
+        self.assertEqual(response.status_code, 200)
+        self._has_expected_metadata_response(response, expected_individuals)
 
 
 def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
@@ -790,6 +790,7 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
     NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = []
+    HAS_AIRTABLE = True
 
     def test_mme_details(self, *args):
         super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
