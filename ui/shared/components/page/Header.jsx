@@ -18,44 +18,48 @@ const HeaderMenu = styled(Menu)`
   padding-right: 100px;
 `
 
-const PageHeader = React.memo(({ user, oauthLoginProvider, onSubmit }) => (
-  <HeaderMenu borderless inverted attached>
-    <Menu.Item as={Link} to="/"><Header size="medium" inverted>seqr</Header></Menu.Item>
-    {Object.keys(user).length ? [
-      <Menu.Item key="summary_data" as={Link} to="/summary_data" content="Summary Data" />,
-      (user.isAnalyst || user.isPm) ? <Menu.Item key="report" as={Link} to="/report" content="Reports" /> : null,
-      (user.isDataManager || user.isPm) ? <Menu.Item key="data_management" as={Link} to="/data_management" content="Data Management" /> : null,
-      <Menu.Item key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
-    ] : null }
-    <Menu.Item key="spacer" position="right" />
-    <Menu.Item key="feature_updates" as={Link} to={FEATURE_UPDATES_PATH} content="Feature Updates" />
-    {Object.keys(user).length ? [
-      <Dropdown
-        item
-        key="user"
-        trigger={
-          <span>
-            Logged in as &nbsp;
-            <b>{user.displayName || user.email}</b>
-          </span>
-        }
-      >
-        <Dropdown.Menu>
-          <UpdateButton
-            trigger={<Dropdown.Item icon="write" text="Edit User Info" />}
-            modalId="updateUser"
-            modalTitle="Edit User Info"
-            initialValues={user}
-            formFields={USER_NAME_FIELDS}
-            onSubmit={onSubmit}
-          />
-        </Dropdown.Menu>
-      </Dropdown>,
-      <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
-    ] :
-    <Menu.Item as="a" href={oauthLoginProvider ? `/login/${oauthLoginProvider}` : LOCAL_LOGIN_URL}>Log in</Menu.Item>
-  </HeaderMenu>
-))
+const PageHeader = React.memo(({ user, oauthLoginProvider, onSubmit }) => {
+  const loginUrl = oauthLoginProvider ? `/login/${oauthLoginProvider}` : LOCAL_LOGIN_URL
+
+  return (
+    <HeaderMenu borderless inverted attached>
+      <Menu.Item as={Link} to="/"><Header size="medium" inverted>seqr</Header></Menu.Item>
+      {Object.keys(user).length ? [
+        <Menu.Item key="summary_data" as={Link} to="/summary_data" content="Summary Data" />,
+        (user.isAnalyst || user.isPm) ? <Menu.Item key="report" as={Link} to="/report" content="Reports" /> : null,
+        (user.isDataManager || user.isPm) ? <Menu.Item key="data_management" as={Link} to="/data_management" content="Data Management" /> : null,
+        <Menu.Item key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
+      ] : null }
+      <Menu.Item key="spacer" position="right" />
+      <Menu.Item key="feature_updates" as={Link} to={FEATURE_UPDATES_PATH} content="Feature Updates" />
+      {Object.keys(user).length ? [
+        <Dropdown
+          item
+          key="user"
+          trigger={
+            <span>
+              Logged in as &nbsp;
+              <b>{user.displayName || user.email}</b>
+            </span>
+          }
+        >
+          <Dropdown.Menu>
+            <UpdateButton
+              trigger={<Dropdown.Item icon="write" text="Edit User Info" />}
+              modalId="updateUser"
+              modalTitle="Edit User Info"
+              initialValues={user}
+              formFields={USER_NAME_FIELDS}
+              onSubmit={onSubmit}
+            />
+          </Dropdown.Menu>
+        </Dropdown>,
+        <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
+      ] :
+      <Menu.Item as="a" href={loginUrl}>Log in</Menu.Item> }
+    </HeaderMenu>
+  )
+})
 
 PageHeader.propTypes = {
   user: PropTypes.object,
