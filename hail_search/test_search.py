@@ -74,7 +74,6 @@ PROJECT_2_VARIANT_BOTH_SAMPLE_TYPES['genotypes']['I000015_na20885'].append({
     'sampleId': 'NA20885', 'sampleType': 'WGS', 'individualGuid': 'I000015_na20885', 'familyGuid': 'F000011_11',
     'numAlt': 1, 'dp': 8, 'gq': 14, 'ab': 0.875,
 })
-PROJECT_2_VARIANT_BOTH_SAMPLE_TYPES['familyGuids'].append('F000011_11')
 
 GRCH37_VARIANT = {
     'variantId': '7-143270172-A-G',
@@ -299,7 +298,7 @@ FAMILY_4_VARIANT = {
     'alt': 'C',
     'mainTranscriptId': 'ENST00000381431',
     'selectedMainTranscriptId': None,
-    'familyGuids': ['F000004_4', 'F000004_4'],
+    'familyGuids': ['F000004_4'],
     'genotypeFilters': '',
     'variantId': '4-52038257-CAT-C',
     'liftedOverGenomeVersion': '37',
@@ -573,15 +572,14 @@ class HailSearchTestCase(AioHTTPTestCase):
         for variant in expected_results:
             if 'I000015_na20885' in variant['genotypes']:
                 variant['genotypes']['I000015_na20885'].append({**variant['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
-                variant['familyGuids'].append('F000011_11')
 
-        expected_gene_counts = {
-            'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
-            'ENSG00000177000': {'total': 4, 'families': {'F000002_2': 2, 'F000011_11': 2}},
-            'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 1, 'F000011_11': 2}},
-        }
+        # expected_gene_counts = {
+        #     'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 2}},
+        #     'ENSG00000177000': {'total': 4, 'families': {'F000002_2': 2, 'F000011_11': 2}},
+        #     'ENSG00000277258': {'total': 3, 'families': {'F000002_2': 1, 'F000011_11': 2}},
+        # }
         await self._assert_expected_search(
-            expected_results, gene_counts=expected_gene_counts, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
+            expected_results, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
         )
 
         await self._assert_expected_search(

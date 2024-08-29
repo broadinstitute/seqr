@@ -66,7 +66,9 @@ class BaseHailTableQuery(object):
     TRANSCRIPTS_FIELD = None
     CORE_FIELDS = [XPOS]
     BASE_ANNOTATION_FIELDS = {
-        FAMILY_GUID_FIELD: lambda r: hl.array(hl.set(r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid))),
+        FAMILY_GUID_FIELD: lambda r: hl.array(hl.set(
+            r.family_entries.filter(hl.is_defined).map(lambda entries: entries.first().familyGuid))
+        ).filter(hl.is_defined),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
         'variantId': lambda r: r.variant_id,
     }
@@ -333,8 +335,8 @@ class BaseHailTableQuery(object):
             )
             return self._filter_entries_table(ht, sorted_family_sample_data, **kwargs)
 
-        # Project has multiple sample types
-        unmerged_hts, unmerged_comp_het_hts = self._filter_entries_table_multiple_sample_types(entries_hts_map, **kwargs)
+        # Project has both sample types
+        unmerged_hts, unmerged_comp_het_hts = self._filter_entries_table_both_sample_types(entries_hts_map, **kwargs)
         merged_ht = self._merge_project_hts(unmerged_hts, n_partitions)
         merged_comp_het_ht = self._merge_project_hts(unmerged_comp_het_hts, n_partitions)
         return merged_ht, merged_comp_het_ht
@@ -383,8 +385,7 @@ class BaseHailTableQuery(object):
             comp_het_ht = self._merge_project_hts(filtered_comp_het_project_hts, n_partitions)
             return ht, comp_het_ht
 
-        # Projects have multiple sample types
-        unmerged_hts, unmerged_comp_het_hts = self._filter_entries_table_multiple_sample_types(entries_hts_map, **kwargs)
+        unmerged_hts, unmerged_comp_het_hts = self._filter_entries_table_both_sample_types(entries_hts_map, **kwargs)
         merged_ht = self._merge_project_hts(unmerged_hts, n_partitions)
         merged_comp_het_ht = self._merge_project_hts(unmerged_comp_het_hts, n_partitions)
         return merged_ht, merged_comp_het_ht
@@ -487,7 +488,7 @@ class BaseHailTableQuery(object):
         )
         return ht, ch_ht
 
-    def _filter_entries_table_multiple_sample_types(self, entries_hts_map, inheritance_filter=None, quality_filter=None, **kwargs):
+    def _filter_entries_table_both_sample_types(self, entries_hts_map, inheritance_filter=None, quality_filter=None, **kwargs):
         # entries_hts_map: {<sample_type>: [(ht, project_samples), (ht, project_samples), ...]}
         filtered_project_hts = []
         filtered_comp_het_project_hts = []
@@ -519,32 +520,46 @@ class BaseHailTableQuery(object):
                     wgs_passes=ht.wgs_family_entries.map(
                         lambda entries: hl.or_missing(wgs_passes_quality_filter(entries), entries)
                     ))
-                ht.describe()
             else:
                 ht = ht.annotate(wgs_passes=ht.wgs_family_entries)
 
             ht = ht.filter(ht.wes_passes.any(hl.is_defined) | ht.wgs_passes.any(hl.is_defined))
 
             # Filter by inheritance, keeping both genotypes for variants even if only one passes inheritance
-            ht, ch_ht =  self._filter_inheritance_multiple_sample_types(
+            ht, ch_ht =  self._filter_inheritance_both_sample_types(
                 ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data
             )
             if ht:
-                filtered_project_hts.append(self._merge_multiple_sample_types_project_ht(ht))
+                filtered_project_hts.append(self._merge_both_sample_types_project_ht(ht))
             if ch_ht:
-                filtered_comp_het_project_hts.append(self._merge_multiple_sample_types_project_ht(ch_ht))
+                filtered_comp_het_project_hts.append(self._merge_both_sample_types_project_ht(ch_ht))
 
         return filtered_project_hts, filtered_comp_het_project_hts
 
     @staticmethod
-    def _merge_multiple_sample_types_project_ht(ht):
+    def _merge_both_sample_types_project_ht(ht):
         ht = ht.drop('wes_passes', 'wgs_passes')
+        family_entries_dtype = hl.tarray(hl.tstruct(
+            GQ=hl.tint32,
+            AB=hl.tfloat64,
+            DP=hl.tint32,
+            GT=hl.tcall,
+            sampleType=hl.tstr,
+            familyGuid=hl.tstr,
+            sampleId=hl.tstr,
+            individualGuid=hl.tstr,
+            affected_id=hl.tint32,
+            is_male=hl.tbool
+        ))
         ht = ht.transmute(
-            family_entries=ht.wes_family_entries.extend(ht.wgs_family_entries),
-            filters=ht.wes_filters.union(ht.wgs_filters),
+            family_entries=hl.coalesce(ht.wes_family_entries, hl.empty_array(family_entries_dtype)).extend(
+                hl.coalesce(ht.wgs_family_entries, hl.empty_array(family_entries_dtype))
+            ),
+            filters=hl.coalesce(ht.wes_filters, hl.empty_set(hl.tstr)).union(
+                hl.coalesce(ht.wgs_filters, hl.empty_set(hl.tstr))
+            )
         )
-        ht = ht.transmute_globals(family_guids=ht.family_guids.extend(ht.family_guids_1))
-        return ht
+        return ht.transmute_globals(family_guids=ht.family_guids.extend(ht.family_guids_1))
 
     def _add_entry_sample_families(self, ht, sample_data, sample_type):
         ht_globals = hl.eval(ht.globals)
@@ -698,7 +713,7 @@ class BaseHailTableQuery(object):
             is_valid &= unaffected_filter
         return hl.or_missing(is_valid, entries)
 
-    def _filter_inheritance_multiple_sample_types(self, ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
+    def _filter_inheritance_both_sample_types(self, ht, inheritance_filter, sorted_wes_family_sample_data, sorted_wgs_family_sample_data):
         any_valid_entry, is_any_affected = self._get_any_family_member_gt_has_alt_filter()
         ht = ht.annotate(
             wes_passes=ht.wes_family_entries.map(
