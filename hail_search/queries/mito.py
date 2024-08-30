@@ -210,12 +210,13 @@ class MitoHailTableQuery(BaseHailTableQuery):
         ]
 
     def _prefilter_entries_table(self, ht, parsed_intervals=None, exclude_intervals=False, **kwargs):
+        num_intervals = len(parsed_intervals or [])
         if exclude_intervals and parsed_intervals:
             ht = hl.filter_intervals(ht, parsed_intervals, keep=False)
-        elif len(parsed_intervals or []) >= MAX_LOAD_INTERVALS:
+        elif num_intervals >= MAX_LOAD_INTERVALS:
             ht = hl.filter_intervals(ht, parsed_intervals)
 
-        if '_n_partitions' not in self._load_table_kwargs:
+        if '_n_partitions' not in self._load_table_kwargs and num_intervals > self._n_partitions:
             ht = ht.naive_coalesce(self._n_partitions)
 
         return ht
