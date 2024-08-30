@@ -15,6 +15,7 @@ from seqr.utils.search.utils import parse_valid_variant_id
 from seqr.utils.search.hail_search_utils import hail_variant_multi_lookup, search_data_type
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import match_and_update_search_samples
+from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from seqr.views.utils.variant_utils import reset_cached_search_results, update_projects_saved_variant_json, \
     get_saved_variants
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
@@ -111,8 +112,9 @@ class Command(BaseCommand):
         session = AirtableSession(user=None, no_auth=True)
         for project, sample_ids in samples_by_project.items():
             project_sample_data = update_sample_data_by_project[project.id]
-            is_internal = notify_search_data_loaded(
-                project, dataset_type, sample_type, inactivated_sample_guids,
+            is_internal = not project_has_anvil(project) or is_internal_anvil_project(project)
+            notify_search_data_loaded(
+                project, is_internal, dataset_type, sample_type, inactivated_sample_guids,
                 updated_samples=project_sample_data['samples'], num_samples=len(sample_ids),
             )
             project_families = project_sample_data['family_guids']
