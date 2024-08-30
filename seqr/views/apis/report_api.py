@@ -15,7 +15,7 @@ from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, \
     FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, \
     EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, GENE_COLUMN, FAMILY_INDIVIDUAL_FIELDS
-from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
+from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import user_is_analyst, get_project_and_check_permissions, \
     get_project_guids_user_can_view, get_internal_projects, pm_or_analyst_required, active_user_has_policies_and_passes_test
@@ -452,7 +452,7 @@ def gregor_export(request):
     else:
         warnings = errors + warnings
 
-    write_multiple_files_to_gs(files, file_path, request.user, file_format='tsv')
+    write_multiple_files(files, file_path, request.user, file_format='tsv')
 
     return create_json_response({
         'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families'],
