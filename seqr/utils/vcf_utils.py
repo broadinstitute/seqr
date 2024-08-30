@@ -3,7 +3,7 @@ import re
 from collections import defaultdict
 
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.file_utils import file_iter, does_file_exist, get_gs_file_list
+from seqr.utils.file_utils import file_iter, does_file_exist, list_files
 from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
 
 BLOCK_SIZE = 65536
@@ -97,7 +97,7 @@ def validate_vcf_exists(data_path, user, path_name=None, allowed_exts=None):
 
     file_to_check = None
     if '*' in data_path:
-        files = get_gs_file_list(data_path, user, check_subfolders=False, allow_missing=True)
+        files = list_files(data_path, user)
         if files:
             file_to_check = files[0]
     elif does_file_exist(data_path, user=user):

@@ -15,13 +15,14 @@ from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.communication_utils import send_project_notification
+from seqr.utils.search.add_data_utils import prepare_data_loading_request
 from seqr.utils.search.utils import get_search_backend_status, delete_search_backend_data
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_exists
 
-from seqr.views.utils.airflow_utils import trigger_data_loading
+from seqr.views.utils.airflow_utils import trigger_airflow_data_loading
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.dataset_utils import load_rna_seq, load_phenotype_prioritization_data_file, RNA_DATA_TYPE_CONFIGS, \
     post_process_rna_data, convert_django_meta_to_http_headers
@@ -32,7 +33,8 @@ from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data
 
 from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL
+from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, BASE_URL, \
+    LOADING_DATASETS_DIR, PIPELINE_RUNNER_SERVER
 
 logger = SeqrLogger(__name__)
 
@@ -507,17 +509,28 @@ def load_data(request):
         missing = sorted(set(project_samples.keys()) - {p.guid for p in project_models})
         return create_json_response({'error': f'The following projects are invalid: {", ".join(missing)}'}, status=400)
 
+    has_airtable = AirtableSession.is_airtable_enabled()
     individual_ids = None
-    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and has_airtable:
         individual_ids = _get_valid_project_samples(project_samples, sample_type, request.user)
 
-    success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
-    error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
-    trigger_data_loading(
-        project_models, sample_type, dataset_type, request_json['filePath'], user=request.user, success_message=success_message,
-        success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error_message=error_message,
-        is_internal=True, individual_ids=individual_ids,
+    loading_args = (
+        project_models, sample_type, dataset_type, request_json['genomeVersion'], request_json['filePath'],
     )
+    if has_airtable:
+        success_message = f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(projects)} projects'
+        error_message = f'ERROR triggering internal {sample_type} {dataset_type} loading'
+        trigger_airflow_data_loading(
+            *loading_args, user=request.user, success_message=success_message, error_message=error_message,
+            success_slack_channel=SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, is_internal=True, individual_ids=individual_ids,
+        )
+    else:
+        request_json, _ = prepare_data_loading_request(
+            *loading_args, user=request.user, pedigree_dir=LOADING_DATASETS_DIR, raise_pedigree_error=True,
+        )
+        response = requests.post(f'{PIPELINE_RUNNER_SERVER}/loading_pipeline_enqueue', json=request_json, timeout=60)
+        response.raise_for_status()
+        logger.info('Triggered loading pipeline', request.user, detail=request_json)
 
     return create_json_response({'success': True})
 
