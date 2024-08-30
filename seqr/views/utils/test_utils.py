@@ -637,7 +637,7 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
             'state': 'running'}
         ]})
 
-    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None):
+    def assert_airflow_calls(self, trigger_error=False, additional_tasks_check=False, dataset_type=None, **kwargs):
         self.mock_airflow_logger.info.assert_not_called()
 
         # Test triggering anvil dags
@@ -653,10 +653,10 @@ class AirflowTestCase(AnvilAuthenticationTestCase):
         dag_variables = {
             'projects_to_run': [dag_variable_overrides['project']] if 'project' in dag_variable_overrides else self.PROJECTS,
             'callset_path': f'gs://test_bucket/{dag_variable_overrides["callset_path"]}',
-            'sample_source': dag_variable_overrides['sample_source'],
             'sample_type': dag_variable_overrides['sample_type'],
             'dataset_type': dataset_type or dag_variable_overrides['dataset_type'],
             'reference_genome': dag_variable_overrides.get('reference_genome', 'GRCh38'),
+            'sample_source': dag_variable_overrides['sample_source'],
         }
         self._assert_airflow_calls(dag_variables, call_count)
 

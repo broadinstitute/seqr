@@ -1,3 +1,4 @@
+import glob
 import gzip
 import os
 import subprocess # nosec
@@ -45,6 +46,12 @@ def does_file_exist(file_path, user=None):
             logger.info(' '.join(errors), user)
         return success
     return os.path.isfile(file_path)
+
+
+def list_files(wildcard_path, user):
+    if is_google_bucket_file_path(wildcard_path):
+        return get_gs_file_list(wildcard_path, user, check_subfolders=False, allow_missing=True)
+    return [file_path for file_path in glob.glob(wildcard_path) if os.path.isfile(file_path)]
 
 
 def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs):
