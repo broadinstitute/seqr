@@ -358,7 +358,7 @@ class BaseHailTableQuery(object):
                 (self._prefilter_entries_table(ht, **kwargs), project_sample_type_data[sample_type])
             ]
 
-    def import_and_filter_multiple_project_hts(self, project_samples, n_partitions=MAX_PARTITIONS, **kwargs):
+    def import_and_filter_multiple_project_hts(self, project_samples: dict, n_partitions=MAX_PARTITIONS, **kwargs):
         """
         Imports, prefilters, and filters multiple entries tables per sample type.
         Returns the merged and filtered entries table and ch table.
@@ -377,9 +377,7 @@ class BaseHailTableQuery(object):
             filtered_project_hts = []
             filtered_comp_het_project_hts = []
             for ht, project_families in entries_hts:
-                ht, sorted_family_sample_data = self._add_entry_sample_families(
-                    ht=ht, sample_data=project_families, sample_type=sample_type,
-                )
+                ht, sorted_family_sample_data = self._add_entry_sample_families(ht, project_families, sample_type)
                 ht, comp_het_ht = self._filter_entries_table(ht, sorted_family_sample_data, **kwargs)
                 if ht is not None:
                     filtered_project_hts.append(ht)
@@ -542,7 +540,7 @@ class BaseHailTableQuery(object):
         return filtered_project_hts, filtered_comp_het_project_hts
 
     @staticmethod
-    def _merge_both_sample_types_project_ht(ht):
+    def _merge_both_sample_types_project_ht(ht: hl.Table):
         ht = ht.drop('wes_passes', 'wgs_passes')
         family_entries_dtype = hl.tarray(hl.tstruct(
             GQ=hl.tint32,
@@ -566,7 +564,7 @@ class BaseHailTableQuery(object):
         )
         return ht.transmute_globals(family_guids=ht.family_guids.extend(ht.family_guids_1))
 
-    def _add_entry_sample_families(self, ht, sample_data, sample_type):
+    def _add_entry_sample_families(self, ht: hl.Table, sample_data: dict, sample_type: str):
         ht_globals = hl.eval(ht.globals)
 
         missing_samples = set()
@@ -578,10 +576,14 @@ class BaseHailTableQuery(object):
             samples = sample_data[family_guid]
             if samples is True:
                 samples = ht_family_samples
-                get_sample_data = lambda s: {'sampleId': s}
+                get_sample_data = lambda s: {
+                    'sampleId': s,
+                    'individualGuid': hl.missing(hl.tstr),
+                    'affected_id': hl.missing(hl.tint),
+                    'is_male': hl.missing(hl.tbool)
+                }
                 missing_family_samples = []
             else:
-                # For searches, update family_entries with additional sample-level data
                 get_sample_data = self._sample_entry_data
                 missing_family_samples = [s['sample_id'] for s in samples if s['sample_id'] not in ht_family_samples]
             if missing_family_samples:

@@ -413,6 +413,116 @@ FAMILY_4_SAMPLE_DATA = {
     ]
 }
 
+FAMILY_5_VARIANT = {
+    "xpos": 2044312653,
+    "rsid": None,
+    "CAID": "CA127830",
+    "genotypes": {},
+    "populations": {
+        "seqr": {
+            "af": 0.003060524584725499,
+            "ac": 232,
+            "an": 75804,
+            "hom": 3
+        },
+        "topmed": {
+            "af": 0.002274360042065382,
+            "ac": 602,
+            "an": 264690,
+            "hom": 1,
+            "het": 600
+        },
+        "exac": {
+            "af": 0.0,
+            "ac": 0,
+            "an": 0,
+            "hom": 0,
+            "hemi": 0,
+            "het": 0,
+            "filter_af": 0.0
+        },
+        "gnomad_exomes": {
+            "af": 0.0,
+            "ac": 0,
+            "an": 0,
+            "hom": 0,
+            "hemi": 0,
+            "filter_af": 0.0
+        },
+        "gnomad_genomes": {
+            "af": 0.0,
+            "ac": 0,
+            "an": 0,
+            "hom": 0,
+            "hemi": 0,
+            "filter_af": 0.0
+        }
+    },
+    "predictions": {
+        "cadd": 22.799999237060547,
+        "eigen": None,
+        "mpc": None,
+        "primate_ai": 0.6688539981842041,
+        "splice_ai": 0.0,
+        "splice_ai_consequence": "No consequence",
+        "mut_taster": None,
+        "polyphen": None,
+        "revel": None,
+        "sift": None,
+        "fathmm": None,
+        "mut_pred": None,
+        "vest": None,
+        "gnomad_noncoding": -3.0888006687164307
+    },
+    "chrom": "2",
+    "pos": 44312653,
+    "ref": "T",
+    "alt": "C",
+    "mainTranscriptId": None,
+    "selectedMainTranscriptId": None,
+    "familyGuids": [],
+    "genotypeFilters": "",
+    "variantId": "2-44312653-T-C",
+    "liftedOverGenomeVersion": "37",
+    "liftedOverChrom": "2",
+    "liftedOverPos": 44539792,
+    "clinvar": {
+        "alleleId": 33154,
+        "conflictingPathogenicities": None,
+        "goldStars": 2,
+        "submitters": [],
+        "conditions": [],
+        "pathogenicity": "Pathogenic/Likely_pathogenic",
+        "assertions": [],
+        "version": "2024-02-21"
+    },
+    "hgmd": {
+        "accession": "CM941281",
+        "class": "DM"
+    },
+    "screenRegionType": None,
+    "transcripts": {},
+    "sortedMotifFeatureConsequences": None,
+    "sortedRegulatoryFeatureConsequences": None,
+    "_sort": [
+        2044312653
+    ],
+    "genomeVersion": "38"
+}
+
+FAMILY_5_SAMPLE_DATA = {
+    'SNV_INDEL': [
+        {'sample_id': 'BON_B15-95_1_D1', 'individual_guid': 'I00001_bon_b15_95_1_d1', 'family_guid': 'F000005_5',
+         'affected': 'A', 'project_guid': 'Project_4', 'sample_type': 'WES', 'sex': 'F'},
+        {'sample_id': 'BON_B15-95_1_D1', 'individual_guid': 'I00001_bon_b15_95_1_d1', 'family_guid': 'F000005_5',
+         'affected': 'A', 'project_guid': 'Project_4', 'sample_type': 'WGS', 'sex': 'F'},
+        {'sample_id': 'BON_B15-95_3_D1', 'individual_guid': 'I00003_bon_b15_95_3_d1', 'family_guid': 'F000005_5',
+         'affected': 'N', 'project_guid': 'Project_4', 'sample_type': 'WES', 'sex': 'F'},
+        {'sample_id': 'BON_B15-95_4_D1', 'individual_guid': 'I00004_bon_b15_95_4_d1', 'family_guid': 'F000005_5',
+         'affected': 'N', 'project_guid': 'Project_4', 'sample_type': 'WES', 'sex': 'M'},
+    ]
+}
+
 # Ensures no variants are filtered out by annotation/path filters for compound hets
 COMP_HET_ALL_PASS_FILTERS = {
     'annotations': {'splice_ai': '0.0', 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
@@ -568,17 +678,30 @@ class HailSearchTestCase(AioHTTPTestCase):
         )
 
     async def test_multi_project_multi_sample_type_search(self):
-        expected_results = [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
-        for variant in expected_results:
-            if 'I000015_na20885' in variant['genotypes']:
-                variant['genotypes']['I000015_na20885'].append({**variant['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
+        expected_variants = [PROJECT_2_VARIANT, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, VARIANT3, VARIANT4]
+        expected_results = []
+        for variant in expected_variants:
+            v = deepcopy(variant)
+            if 'I000015_na20885' in v['genotypes']:
+                v['genotypes']['I000015_na20885'].append({**v['genotypes']['I000015_na20885'][0], 'sampleType': 'WGS'})
+            expected_results.append(v)
 
         await self._assert_expected_search(
             expected_results, gene_counts=GENE_COUNTS, sample_data=MULTI_PROJECT_SAMPLE_TYPES_SAMPLE_DATA,
         )
 
+        # Variant is de novo in exome but maternally inherited in genome. Expect variant to be returned.
+        inheritance_mode = 'de_novo'
         await self._assert_expected_search(
-            [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA,
+            [FAMILY_4_VARIANT], sample_data=FAMILY_4_SAMPLE_DATA, inheritance_mode=inheritance_mode,
+        )
+
+        # Variant is inherited in exome and there is no parental data for this variant in genome.
+        # Expect variant to be absent from response.
+        # TODO: this test fails. Fix it.
+        inheritance_mode = 'de_novo'
+        await self._assert_expected_search(
+            [FAMILY_5_VARIANT], sample_data=FAMILY_5_SAMPLE_DATA, inheritance_mode=inheritance_mode,
         )
 
     async def test_inheritance_filter(self):
