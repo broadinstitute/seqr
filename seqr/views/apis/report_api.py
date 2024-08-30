@@ -15,10 +15,10 @@ from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, \
     FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, \
     EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, GENE_COLUMN, FAMILY_INDIVIDUAL_FIELDS
-from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files_to_gs
+from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
-    get_project_guids_user_can_view, get_internal_projects, pm_or_analyst_required
+from seqr.views.utils.permissions_utils import user_is_analyst, get_project_and_check_permissions, \
+    get_project_guids_user_can_view, get_internal_projects, pm_or_analyst_required, active_user_has_policies_and_passes_test
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
@@ -29,6 +29,10 @@ from settings import GREGOR_DATA_MODEL_URL
 logger = SeqrLogger(__name__)
 
 MONDO_BASE_URL = 'https://monarchinitiative.org/v3/api/entity'
+
+
+airtable_enabled_analyst_required = active_user_has_policies_and_passes_test(
+    lambda user: user_is_analyst(user) and AirtableSession.is_airtable_enabled())
 
 
 @pm_or_analyst_required
@@ -111,7 +115,7 @@ PHENOTYPE_PROJECT_CATEGORIES = [
 ]
 
 
-@analyst_required
+@airtable_enabled_analyst_required
 def anvil_export(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
@@ -349,7 +353,7 @@ HPO_QUALIFIERS = {
 }
 
 
-@analyst_required
+@airtable_enabled_analyst_required
 def gregor_export(request):
     request_json = json.loads(request.body)
     missing_required_fields = [field for field in ['consentCode', 'deliveryPath'] if not request_json.get(field)]
@@ -448,7 +452,7 @@ def gregor_export(request):
     else:
         warnings = errors + warnings
 
-    write_multiple_files_to_gs(files, file_path, request.user, file_format='tsv')
+    write_multiple_files(files, file_path, request.user, file_format='tsv')
 
     return create_json_response({
         'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families'],

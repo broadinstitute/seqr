@@ -677,10 +677,8 @@ class ReportAPITest(AirtableTest):
         self.check_no_analyst_no_access(url, has_override=self.HAS_PM_OVERRIDE)
 
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
-    @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
-    def test_anvil_export(self, mock_google_authenticated,  mock_zip):
-        mock_google_authenticated.return_value = False
+    def test_anvil_export(self, mock_zip):
         url = reverse(anvil_export, args=[PROJECT_GUID])
         self.check_analyst_login(url)
 
@@ -689,13 +687,19 @@ class ReportAPITest(AirtableTest):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
+        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
+        response = self.client.get(url)
+        self._check_anvil_export_response(response, mock_zip, no_analyst_project_url)
+
+        # Test non-broad analysts do not have access
+        self.login_pm_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
-        mock_google_authenticated.return_value = True
 
-        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
-        response = self.client.get(url)
+        self.check_no_analyst_no_access(url)
+
+    def _check_anvil_export_response(self, response, mock_zip, no_analyst_project_url):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.get('content-disposition'),
@@ -764,30 +768,27 @@ class ReportAPITest(AirtableTest):
             'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
 
-        added_perm = self.add_analyst_project(4)
-        if added_perm:
-            response = self.client.get(no_analyst_project_url)
-            self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.json()['errors'], ['Discovery variant(s) 1-248367227-TC-T in family 14 have no associated gene'])
-
-        self.check_no_analyst_no_access(url)
-
-        # Test non-broad analysts do not have access
-        self.login_pm_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
+        self.login_data_manager_user()
+        self.mock_get_groups.side_effect = lambda user: ['Analysts']
+        response = self.client.get(no_analyst_project_url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['errors'],
+                         ['Discovery variant(s) 1-248367227-TC-T in family 14 have no associated gene'])
 
     @mock.patch('seqr.views.apis.report_api.GREGOR_DATA_MODEL_URL', MOCK_DATA_MODEL_URL)
-    @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @mock.patch('seqr.views.apis.report_api.datetime')
     @mock.patch('seqr.views.utils.export_utils.open')
     @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @responses.activate
-    def test_gregor_export(self, mock_subprocess, mock_temp_dir, mock_open, mock_datetime, mock_google_authenticated):
+    def test_gregor_export(self, *args):
+        url = reverse(gregor_export)
+        self.check_analyst_login(url)
+
+        self._test_gregor_export(url, *args)
+
+    def _test_gregor_export(self, url, mock_subprocess, mock_temp_dir, mock_open, mock_datetime):
         mock_datetime.now.return_value.year = 2020
-        mock_google_authenticated.return_value = False
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         mock_subprocess.return_value.wait.return_value = 1
 
@@ -798,9 +799,6 @@ class ReportAPITest(AirtableTest):
             responses.GET, '{}/app3Y97xtbbaOopVR/GREGoR Data Model'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_RECORDS,
             status=200)
         responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
-
-        url = reverse(gregor_export)
-        self.check_analyst_login(url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
@@ -817,11 +815,6 @@ class ReportAPITest(AirtableTest):
         self.assertListEqual(response.json()['errors'], ['Invalid Delivery Path: folder not found'])
 
         mock_subprocess.return_value.wait.return_value = 0
-        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-
-        mock_google_authenticated.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
@@ -976,7 +969,7 @@ class ReportAPITest(AirtableTest):
         mock_subprocess.assert_has_calls([
             mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
-            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),  # nosec
+            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload/', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
         ])
 
@@ -1443,6 +1436,7 @@ class ReportAPITest(AirtableTest):
 
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
+
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
     ADDITIONAL_FAMILIES = ['F000014_14']
     ADDITIONAL_FINDINGS = ['NA21234_1_248367227']
@@ -1461,6 +1455,13 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
             'RNA__E': {'non_demo': 1},
         },
     }
+
+    def _check_anvil_export_response(self, response, *args):
+        self.assertEqual(response.status_code, 403)
+
+    def _test_gregor_export(self, url, *args):
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 403)
 
 
 class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
